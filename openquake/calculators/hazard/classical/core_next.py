@@ -289,12 +289,11 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         sources_per_task = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
+        progress = dict(total=0, computed=0)
         # The following two counters are dicts so that we can use them in the
         # closures below:
-        total_sources_to_compute = dict(value=0)
-        # When `sources_computed` becomes equal to `total_sources_to_compute`,
+        # When `progress['compute']` becomes equal to `progress['total']`,
         # `execute` can conclude.
-        sources_computed = dict(value=0)
 
         def task_complete_callback(body, message):
             """
@@ -313,7 +312,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             num_sources = body['num_sources']
 
             assert job_id == job.id
-            sources_computed['value'] += num_sources
+            progress['computed'] += num_sources
 
             message.ack()
 
@@ -333,7 +332,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                         is_complete=False, lt_realization=lt_rlz)
                 source_ids = source_progress.values_list('parsed_source_id',
                                                          flat=True)
-                total_sources_to_compute['value'] += len(source_ids)
+                progress['total'] += len(source_ids)
 
                 for offset in xrange(0, len(source_ids), sources_per_task):
                     task_args = (job.id, lt_rlz.id,
@@ -341,39 +340,30 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                     yield task_args
 
         task_gen = task_arg_gen()
-        # First: Queue up the initial tasks.
-        for _ in xrange(concurrent_tasks):
-            try:
-                hazard_curves.apply_async(task_gen.next())
-            except StopIteration:
-                # If we get a `StopIteration` here, that means we have a number
-                # of tasks < concurrent_tasks.
-                # This basically just means that we could be under-utilizing
-                # worker node resources.
-                break
 
-        exchange = kombu.Exchange(
-            config.get_section('hazard')['task_exchange'], type='direct')
+        exchange, conn_args = _exchange_and_conn_args()
 
         routing_key = _ROUTING_KEY_FMT % dict(job_id=job.id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % job.id, exchange=exchange,
-            routing_key=routing_key)
-
-        amqp_cfg = config.get_section('amqp')
-        conn_args = {
-            'hostname': amqp_cfg['host'],
-            'userid': amqp_cfg['user'],
-            'password': amqp_cfg['password'],
-            'virtual_host': amqp_cfg['vhost'],
-        }
+            routing_key=routing_key, durable=False, auto_delete=True)
 
         with kombu.BrokerConnection(**conn_args) as conn:
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue,
                                callbacks=[task_complete_callback]):
-                while (sources_computed['value']
-                               < total_sources_to_compute['value']):
+                # First: Queue up the initial tasks.
+                for _ in xrange(concurrent_tasks):
+                    try:
+                        hazard_curves.apply_async(task_gen.next())
+                    except StopIteration:
+                        # If we get a `StopIteration` here, that means we have
+                        # a number of tasks < concurrent_tasks.
+                        # This basically just means that we could be
+                        # under-utilizing worker node resources.
+                        break
+
+                while (progress['computed'] < progress['total']):
                     # This blocks until a message is received.
                     conn.drain_events()
 
@@ -519,25 +509,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # expensive operation (at least for small calculations), but this is
     # wasted work.
     logs.LOG.debug('> creating site collection')
-    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [nhlib.site.Site(
-            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-    site_coll = nhlib.site.SiteCollection(sites)
+    site_coll = get_site_collection(hc)
     logs.LOG.debug('< done creating site collection')
 
     # Prepare args for the calculator.
@@ -603,6 +575,62 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     signal_task_complete(job_id, len(src_ids))
 
 
+def get_site_collection(hc):
+    """
+    Create a `SiteCollection`, which is needed by nhlib to compute hazard
+    curves.
+
+    :param hc:
+        Instance of a :class:`~openquake.db.models.HazardCalculation`. We need
+        this in order to get the points of interest for a calculation as well
+        as load pre-computed site data or access reference site parameters.
+
+    :returns:
+        :class:`nhlib.site.SiteCollection` instance.
+    """
+    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
+    if len(site_data) > 0:
+        site_data = site_data[0]
+        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
+                    site_data.vs30_measured, site_data.z1pt0s,
+                    site_data.z2pt5s)
+        sites = [nhlib.site.Site(
+            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
+            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
+    else:
+        # Use the calculation reference parameters to make a site collection.
+        points = hc.points_to_compute()
+        measured = hc.reference_vs30_type == 'measured'
+        sites = [
+            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
+                            hc.reference_depth_to_2pt5km_per_sec,
+                            hc.reference_depth_to_1pt0km_per_sec)
+            for pt in points]
+
+    return nhlib.site.SiteCollection(sites)
+
+
+def _exchange_and_conn_args():
+    """
+    Helper method to setup an exchange for task communication and the args
+    needed to create a broker connection.
+    """
+
+    exchange = kombu.Exchange(
+        config.get_section('hazard')['task_exchange'], type='direct')
+
+    amqp_cfg = config.get_section('amqp')
+    conn_args = {
+        'hostname': amqp_cfg['host'],
+        'userid': amqp_cfg['user'],
+        'password': amqp_cfg['password'],
+        'virtual_host': amqp_cfg['vhost'],
+    }
+
+    return exchange, conn_args
+
+
+
 def signal_task_complete(job_id, num_sources):
     """
     Send a signal back through a dedicated queue to the 'control node' to
@@ -621,16 +649,7 @@ def signal_task_complete(job_id, num_sources):
     # Maybe we can remove this.
     msg = dict(job_id=job_id, num_sources=num_sources)
 
-    exchange = kombu.Exchange(
-        config.get_section('hazard')['task_exchange'], type='direct')
-
-    amqp_cfg = config.get_section('amqp')
-    conn_args = {
-        'hostname': amqp_cfg['host'],
-        'userid': amqp_cfg['user'],
-        'password': amqp_cfg['password'],
-        'virtual_host': amqp_cfg['vhost'],
-    }
+    exchange, conn_args = _exchange_and_conn_args()
 
     routing_key = _ROUTING_KEY_FMT % dict(job_id=job_id)
 
