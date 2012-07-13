@@ -1539,6 +1539,10 @@ CREATE TABLE oqmif.exposure_model (
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
 
+    unit_type VARCHAR NOT NULL DEFAULT 'economic_value'
+        CONSTRAINT unit_type_value
+        CHECK(unit_type IN ('count', 'economic_value', 'both')),
+
     -- area type
     area_type VARCHAR CONSTRAINT area_type_value
         CHECK(area_type IS NULL OR area_type = 'per_asset'
