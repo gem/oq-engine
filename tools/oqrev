@@ -140,7 +140,7 @@ do
         fi
 
         # Is the pull request still open?
-        pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' $pullreq_file | head -1`
+        pr_state=`awk '/class="state/ { split($0,F,/[<>]/); print F[3];}' $pullreq_file | head -1`
         if [ "$pr_state" != "Open" ]; then
             echo "https://github.com/gem/$repo/pull/$pull is not open any more"
             exit 4
