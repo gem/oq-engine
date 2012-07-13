@@ -133,24 +133,24 @@ class GetOutputsTestCase(BaseExportTestCase):
         # Set up test Output records
         self.uhs_output = models.Output(
             owner=self.uhs_job.owner, oq_job=self.uhs_job,
-            db_backed=True, output_type='uh_spectra')
+            output_type='uh_spectra')
         self.uhs_output.save()
 
         self.cpsha_hc_output = models.Output(
             owner=self.cpsha_job_fail.owner,
-            oq_job=self.cpsha_job_fail, db_backed=True,
+            oq_job=self.cpsha_job_fail,
             output_type='hazard_curve')
         self.cpsha_hc_output.save()
 
         self.cpsha_mean_hc_output = models.Output(
             owner=self.cpsha_job_fail.owner,
-            oq_job=self.cpsha_job_fail, db_backed=True,
+            oq_job=self.cpsha_job_fail,
             output_type='hazard_curve')
         self.cpsha_mean_hc_output.save()
 
         self.cpsha_lc_output = models.Output(
             owner=self.cpsha_job_fail.owner,
-            oq_job=self.cpsha_job_fail, db_backed=True,
+            oq_job=self.cpsha_job_fail,
             output_type='loss_curve')
         self.cpsha_lc_output.save()
 
