@@ -1539,10 +1539,6 @@ CREATE TABLE oqmif.exposure_model (
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
 
-    unit_type VARCHAR NOT NULL DEFAULT 'economic_value'
-        CONSTRAINT unit_type_value
-        CHECK(unit_type IN ('count', 'economic_value', 'both')),
-
     -- area type
     area_type VARCHAR CONSTRAINT area_type_value
         CHECK(area_type IS NULL OR area_type = 'per_asset'
@@ -1571,6 +1567,10 @@ CREATE TABLE oqmif.exposure_model (
               OR stco_type = 'per_area' OR stco_type = 'aggregated'),
     -- structural cost unit
     stco_unit VARCHAR,
+
+    unit_type VARCHAR CONSTRAINT unit_type_value
+        CHECK(unit_type IS NULL OR
+              unit_type IN ('count', 'economic_value', 'both')),
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL

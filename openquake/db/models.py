@@ -1375,6 +1375,13 @@ class ExposureModel(djm.Model):
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    UNIT_CHOICES = (
+        (u'count', u'Only the number of units is of interest'),
+        (u'economic_value', u'Economic value'),
+        (u'both', u'Number of units and the economic value is of interest'),
+    )
+    unit_type = djm.TextField(null=True, choices=UNIT_CHOICES)
+
     class Meta:
         db_table = 'oqmif\".\"exposure_model'
 
