@@ -221,11 +221,11 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("RC/DMRF-D/HR", assets[1].taxonomy)
         self.assertEqual(Site(9.15333, 45.12200), _to_site(assets[1].site))
         day, night = sorted(assets[1].occupancy_set.all(),
-                            key=lambda o: o.description)
+                            key=lambda o: o.category)
         self.assertEqual(12, day.occupants)
-        self.assertEqual("day", day.description)
+        self.assertEqual("day", day.category)
         self.assertEqual(50, night.occupants)
-        self.assertEqual("night", night.description)
+        self.assertEqual("night", night.category)
 
         self.assertEqual("asset_03", assets[2].asset_ref)
         self.assertEqual(118, assets[2].area)
@@ -239,11 +239,11 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("RC/DMRF-D/LR", assets[2].taxonomy)
         self.assertEqual(Site(9.14777, 45.17999), _to_site(assets[2].site))
         morning, afternoon = sorted(assets[2].occupancy_set.all(),
-                                    key=lambda o: o.description)
+                                    key=lambda o: o.category)
         self.assertEqual(5, afternoon.occupants)
-        self.assertEqual("late afternoon", afternoon.description)
+        self.assertEqual("late afternoon", afternoon.category)
         self.assertEqual(36, morning.occupants)
-        self.assertEqual("early morning", morning.description)
+        self.assertEqual("early morning", morning.category)
 
 
 class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):

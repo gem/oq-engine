@@ -1385,7 +1385,13 @@ class Occupancy(djm.Model):
     '''
 
     exposure_data = djm.ForeignKey("ExposureData")
-    description = djm.TextField()
+    CATEGORY_CHOICES = (
+        (u'average', u'Average occupancy value'),
+        (u'day', u'Occupancy value during the day'),
+        (u'night', u'Occupancy value during the night'),
+        (u'transit', u'Occupancy value of people in transit'),
+    )
+    category = djm.TextField(choices=CATEGORY_CHOICES)
     occupants = djm.IntegerField()
 
     class Meta:
