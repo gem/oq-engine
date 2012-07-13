@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 help() {
 cat <<HSD
 `basename $0` is a tool that helps reviewing OpenQuake branches of others
