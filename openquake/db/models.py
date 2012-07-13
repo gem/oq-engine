@@ -861,6 +861,7 @@ class OqJobProfile(djm.Model):
     include_subduction_fault_source = djm.NullBooleanField(null=True)
     lrem_steps_per_interval = djm.IntegerField(null=True)
     loss_curves_output_prefix = djm.TextField(null=True)
+    insured_losses = djm.NullBooleanField(null=True)
     # Only used for Event-Based Risk calculations.
     loss_histogram_bins = djm.IntegerField(null=True)
     maximum_distance = djm.FloatField(null=True)

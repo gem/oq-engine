@@ -1191,152 +1191,46 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
 
-        self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
+        self.gmvs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
-    def test_computes_the_mean_loss_from_loss_ratios(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+        self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
+        self.eps_provider = EpsilonProvider(self.asset, self.epsilons)
 
-        self.assertEqual(100, scenario._mean_loss_from_loss_ratios(
-                         loss_ratios, asset))
+    def test_compute_uninsured_losses(self):
+        expected = numpy.array([72.23120833, 410.55950159, 180.02423357,
+                                171.02684563, 250.77079384, 39.45861103,
+                                114.54372035, 288.28653452, 473.38307021,
+                                488.47447798])
 
-    def test_computes_the_mean_loss(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
-        epsilon_provider = EpsilonProvider(asset, self.epsilons)
+        self.assertTrue(numpy.allclose(expected,
+            scenario.compute_uninsured_losses(self.vuln_function,
+                self.gmvs, self.eps_provider, self.asset)))
 
-        self.assertTrue(numpy.allclose(2.4887999999999999,
-                        scenario.compute_mean_loss(
-                            self.vuln_function, self.gmfs, epsilon_provider,
-                            asset),
-                        atol=0.0001))
+    def test_insurance_boundaries_defined(self):
+        self.asset.ref = 'a14'
+        self.asset.ins_limit = 700
+        self.asset.deductible = 300
+        self.assertTrue(scenario.insurance_boundaries_defind(self.asset))
 
-    def test_computes_the_stddev_loss_from_loss_ratios(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+        self.asset.ins_limit = None
+        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
+                self.asset)
 
-        self.assertTrue(numpy.allclose(61.237,
-                        scenario._stddev_loss_from_loss_ratios(
-                        loss_ratios, asset), atol=0.001))
+        self.asset.ins_limit = 700
+        self.asset.deductible = None
+        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
+                self.asset)
 
-    def test_computes_the_stddev_loss(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
-        epsilon_provider = EpsilonProvider(asset, self.epsilons)
+    def test_compute_insured_losses(self):
+        self.asset.deductible = 150
+        self.asset.ins_limit = 300
+        expected = numpy.array([0, 300, 180.02423357, 171.02684563,
+                                250.77079384, 0, 0, 288.28653452, 300, 300])
 
-        self.assertTrue(numpy.allclose(1.631,
-                        scenario.compute_stddev_loss(
-                            self.vuln_function, self.gmfs, epsilon_provider,
-                            asset),
-                        atol=0.002))
-
-    def test_calls_the_loss_ratios_calculator_correctly(self):
-        gmfs = {"IMLs": ()}
-        epsilon_provider = object()
-        vuln_model = {"ID": self.vuln_function}
-        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
-                                    stco=10)
-
-        def loss_ratios_calculator(
-            vuln_function, ground_motion_field_set, epsilon_provider, asset):
-
-            self.assertTrue(asset == asset)
-            self.assertTrue(epsilon_provider == epsilon_provider)
-            self.assertTrue(ground_motion_field_set == gmfs)
-            self.assertTrue(vuln_function == self.vuln_function)
-
-            return numpy.array([])
-
-        calculator = scenario.SumPerGroundMotionField(
-            vuln_model, epsilon_provider, lr_calculator=loss_ratios_calculator)
-
-        calculator.add(gmfs, asset)
-
-    def test_keeps_track_of_the_sum_of_the_losses(self):
-        loss_ratios = [
-            [0.140147324, 0.151530140, 0.016176042, 0.101786402, 0.025190577],
-            [0.154760019, 0.001203867, 0.370820698, 0.220145117, 0.067291408],
-            [0.010945875, 0.413257970, 0.267141193, 0.040157738, 0.001981645]]
-
-        def loss_ratios_calculator(
-            vuln_function, ground_motion_field_set, epsilon_provider, asset):
-
-            return loss_ratios.pop(0)
-
-        vuln_model = {"ID": self.vuln_function}
-        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
-                                    stco=100)
-
-        calculator = scenario.SumPerGroundMotionField(
-            vuln_model, None, lr_calculator=loss_ratios_calculator)
-
-        self.assertTrue(numpy.allclose([], calculator.losses))
-
-        calculator.add(None, asset)
-        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
-                                    stco=300)
-        calculator.add(None, asset)
-        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
-                                    stco=200)
-        calculator.add(None, asset)
-
-        expected_sum = [62.63191284, 98.16576808,
-                        166.2920523, 84.25372286, 23.10280904]
-
-        self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
-
-    def test_handles_empty_losses_correctly(self):
-        calculator = scenario.SumPerGroundMotionField(None, None)
-        losses = numpy.array([1.0, 2.0])
-
-        self.assertTrue(numpy.allclose([], calculator.losses))
-
-        calculator.sum_losses(numpy.array([]))
-        calculator.sum_losses(losses)
-        calculator.sum_losses(numpy.array([]))
-        calculator.sum_losses(losses)
-        calculator.sum_losses(numpy.array([]))
-
-        self.assertTrue(numpy.allclose([2.0, 4.0], calculator.losses))
-
-    def test_computes_the_mean_from_the_current_sum(self):
-        calculator = scenario.SumPerGroundMotionField(None, None)
-
-        sum_of_losses = numpy.array(
-            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
-
-        calculator.losses = sum_of_losses
-
-        self.assertTrue(numpy.allclose(86.88925302, calculator.mean))
-
-    def test_computes_the_stddev_from_the_current_sum(self):
-        calculator = scenario.SumPerGroundMotionField(None, None)
-
-        sum_of_losses = numpy.array(
-            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
-
-        calculator.losses = sum_of_losses
-
-        self.assertTrue(numpy.allclose(52.66886967, calculator.stddev))
-
-    def test_skips_the_distribution_with_unknown_vuln_function(self):
-        """The asset refers to an unknown vulnerability function.
-
-        In case the asset defines an unknown vulnerability function
-        (key 'taxonomy') the given ground
-        motion field set is ignored.
-        """
-        vuln_model = {"ID": self.vuln_function}
-        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="XX",
-                                    asset_ref="ID", stco=100)
-
-        calculator = scenario.SumPerGroundMotionField(vuln_model, None)
-
-        self.assertTrue(numpy.allclose([], calculator.losses))
-
-        calculator.add(None, asset)
-
-        # still None, no losses are added
-        self.assertTrue(numpy.allclose([], calculator.losses))
+        self.assertTrue(numpy.allclose(expected,
+            scenario.compute_insured_losses(self.vuln_function,
+                self.gmvs, self.eps_provider, self.asset)))
 
 
 class RiskCommonTestCase(unittest.TestCase):

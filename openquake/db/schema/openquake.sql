@@ -630,6 +630,7 @@ CREATE TABLE uiapi.oq_job_profile (
         CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
                             'disaggregation', 'uhs', 'scenario_damage',
                             'classical_bcr', 'event_based_bcr')),
+    insured_losses BOOLEAN,
     -- Job type: hazard and/or risk.
     job_type VARCHAR[] CONSTRAINT job_type_value
         CHECK(((job_type IS NOT NULL)

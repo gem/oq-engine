@@ -24,7 +24,6 @@ import math
 import numpy
 
 from itertools import izip
-from numpy import zeros
 from numpy import empty
 from numpy import allclose
 from numpy import sin, cos, arctan2, sqrt, radians
@@ -386,72 +385,6 @@ class Site(nhlib_geo.Point):
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
-
-
-class Field(object):
-    """Uses a 2 dimensional numpy array to store a field of values."""
-
-    def __init__(self, field=None, rows=1, cols=1):
-        if field is not None:
-            self.field = field
-        else:
-            self.field = zeros((rows, cols))
-
-    def get(self, row, col):
-        """ Return the value at self.field[row][col]
-            :param row
-            :param col
-        """
-        try:
-            return self.field[row][col]
-        except IndexError:
-            print "Field with shape [%s] doesn't have value at [%s][%s]" % (
-                self.field.shape, row, col)
-
-    @classmethod
-    def from_json(cls, json_str, grid=None):
-        """Construct a field from a serialized version in
-        json format."""
-        assert grid
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls.from_dict(as_dict, grid=grid)
-
-    @classmethod
-    def from_dict(cls, values, transform=math.exp, grid=None):
-        """Construct a field from a dictionary.
-        """
-        assert grid
-        assert grid.cell_size
-        field = zeros((grid.rows, grid.columns))
-
-        for _key, field_site in values.items():
-            point = grid.point_at(
-                Site(field_site['lon'], field_site['lat']))
-            field[point.row][point.column] = transform(
-                    float(field_site['mag']))
-
-        return cls(field)
-
-
-class FieldSet(object):
-    """ An iterator for a set of fields """
-
-    def __init__(self, as_dict, grid):
-        assert grid
-        self.grid = grid
-        self.fields = as_dict.values()[0]  # NOTE: There's a junk wrapper
-
-    @classmethod
-    def from_json(cls, json_str, grid=None):
-        """ Construct a field set from a serialized version in json format """
-        assert grid
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls(as_dict, grid=grid)
-
-    def __iter__(self):
-        """Pop off the fields sequentially"""
-        for field in self.fields.values():
-            yield Field.from_dict(field, grid=self.grid)
 
 
 def range_clip(val, val_range):

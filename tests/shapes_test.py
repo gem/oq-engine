@@ -27,8 +27,6 @@ from numpy import allclose
 from openquake import shapes
 from openquake.utils import round_float
 
-from tests.utils import helpers
-
 
 def coord_list_from_wkt(wkt):
     """
@@ -797,24 +795,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
         test(60.6198752, site3, site6)
         test(48.2952067, site5, site3)
         test(43.7518411, site5, site6)
-
-
-class FieldTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.gmf_string = open(helpers.get_data_path("gmfs.json")).readline()
-        region = shapes.Region.from_coordinates(
-                 [(-118.30, 34.12), (-118.18, 34.12),
-                 (-118.18, 34.00), (-118.30, 34.00)])
-        region.cell_size = 0.02
-        self.grid = region.grid
-
-    def test_can_serialize_field(self):
-        field_set = shapes.FieldSet.from_json(self.gmf_string, grid=self.grid)
-        for field in field_set:
-            print field.field
-            self.assertTrue(field)
-            print field.get(5, 5)
 
 
 class GridTestCase(unittest.TestCase):
