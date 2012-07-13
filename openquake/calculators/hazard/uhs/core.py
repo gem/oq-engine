@@ -185,7 +185,6 @@ def write_uh_spectra(job_ctxt):
         owner=oq_job.owner,
         oq_job=oq_job,
         display_name='UH Spectra for calculation id %s' % oq_job.id,
-        db_backed=True,
         output_type='uh_spectra')
     output.save()
 
