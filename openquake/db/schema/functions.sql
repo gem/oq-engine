@@ -300,6 +300,9 @@ AS $$
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
 
+    if emdl["unit_type"] == "count" and NEW["number_of_units"] is not None:
+        return "OK"
+
     if NEW["stco"] is None and emdl["category"] != "population":
         raise Exception(fmt("structural cost is mandatory for category <%s>" %
                             emdl["category"]))
@@ -343,6 +346,7 @@ $$ LANGUAGE plpythonu;
 
 COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
+
 
 -- Damage Distribution, Per Asset
 CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
@@ -612,11 +616,11 @@ CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
-CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
+CREATE TRIGGER oqmif_exposure_model_before_insert_trig
 BEFORE INSERT ON oqmif.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
-CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
+CREATE TRIGGER oqmif_exposure_data_before_insert_trig
 BEFORE INSERT ON oqmif.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 
