@@ -190,6 +190,30 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.post_execute()
 
+        lt_rlzs = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation.id)
+
+        self.assertEqual(2, len(lt_rlzs))
+
+        # Now we test that the htemp results were copied to the final location
+        # in `hzrdr.hazard_curve` and `hzrdr.hazard_curve_data`.
+        for rlz in lt_rlzs:
+            # get hazard curves for this realization
+            [pga_curves] = models.HazardCurve.objects.filter(
+                lt_realization=rlz.id, imt='PGA')
+            [sa_curves] = models.HazardCurve.objects.filter(
+                lt_realization=rlz.id, imt='SA', sa_period=0.025)
+
+            # In this calculation, we have 120 sites of interest.
+            # We should have exactly that many curves per realization
+            # per IMT.
+            pga_curve_data = models.HazardCurveData.objects.filter(
+                hazard_curve=pga_curves.id)
+            self.assertEqual(120, len(pga_curve_data))
+            sa_curve_data = models.HazardCurveData.objects.filter(
+                hazard_curve=pga_curves.id)
+            self.assertEqual(120, len(sa_curve_data))
+
 
 class ImtsToNhlibTestCase(unittest.TestCase):
     """
