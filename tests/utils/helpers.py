@@ -428,26 +428,26 @@ class TestStore(object):
 
     _conn = None
 
-    @staticmethod
-    def kvs():
+    @classmethod
+    def kvs(cls):
         TestStore.open()
         return TestStore._conn
 
-    @staticmethod
-    def open():
+    @classmethod
+    def open(cls):
         """Initialize the test store."""
         if TestStore._conn is not None:
             return
         TestStore._conn = redis.Redis(db=int(config.get("kvs", "test_db")))
 
-    @staticmethod
-    def close():
+    @classmethod
+    def close(cls):
         """Close the test store."""
         TestStore._conn.flushdb()
         TestStore._conn = None
 
-    @staticmethod
-    def nextkey():
+    @classmethod
+    def nextkey(cls):
         """Generate an unused key
 
         :return: The test store key generated.
@@ -456,8 +456,8 @@ class TestStore(object):
         TestStore.open()
         return TestStore._conn.incr('the-key', amount=1)
 
-    @staticmethod
-    def add(obj):
+    @classmethod
+    def add(cls, obj):
         """Add a datum to the store and return the key chosen.
 
         :param obj: The datum to be added to the store.
@@ -467,8 +467,8 @@ class TestStore(object):
         TestStore.open()
         return TestStore.put(TestStore.nextkey(), obj)
 
-    @staticmethod
-    def put(key, obj):
+    @classmethod
+    def put(cls, key, obj):
         """Append the datum to the kvs list identified the given `key`.
 
         :param key: The key for the datum to be added to the store.
@@ -483,8 +483,8 @@ class TestStore(object):
             TestStore._conn.rpush(key, obj)
         return key
 
-    @staticmethod
-    def remove(oid):
+    @classmethod
+    def remove(cls, oid):
         """Remove the datum with given identifier from the store.
 
         :param oid: The identifier associated with the datum to be removed.
@@ -492,8 +492,8 @@ class TestStore(object):
         TestStore.open()
         TestStore._conn.delete(oid)
 
-    @staticmethod
-    def lookup(oid):
+    @classmethod
+    def lookup(cls, oid):
         """Return the datum associated with `oid` or `None`.
 
         :param oid: The identifier of the datum sought.
@@ -505,8 +505,8 @@ class TestStore(object):
         else:
             return TestStore._conn.lindex(oid, 0)
 
-    @staticmethod
-    def set(key, obj):
+    @classmethod
+    def set(cls, key, obj):
         """Asssociate a single datum with the given `key`.
 
         :param key: The key for the datum to be added to the store.
@@ -516,8 +516,8 @@ class TestStore(object):
         TestStore.open()
         TestStore._conn.set(key, obj)
 
-    @staticmethod
-    def get(key):
+    @classmethod
+    def get(cls, key):
         """Return the datum associated with the given `key` or `None`.
 
         :param key: The key of the datum sought.
