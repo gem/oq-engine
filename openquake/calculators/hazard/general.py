@@ -39,7 +39,6 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.job import params as job_params
-from openquake.job.config import ValidationException
 from openquake.logs import LOG
 from openquake.nrml import parsers as nrml_parsers
 from openquake.utils import config

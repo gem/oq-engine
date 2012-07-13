@@ -20,9 +20,12 @@
 """Utility functions related to splitting work into tasks."""
 
 import itertools
+
 from celery.task.sets import TaskSet
+from celery.task import task
 
 from openquake import logs
+from openquake.db import models
 
 
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
@@ -163,3 +166,39 @@ def calculator_for_task(job_id, job_type):
     calculator = CALCS[job_type][calc_mode](job_ctxt)
 
     return calculator
+
+
+def oqtask(task_func):
+    """
+    Task function decorator which sets up logging and catches (and logs) any
+    errors which occur inside the task. Also checks to make sure the job is
+    actually still running. If it is not running, raise a
+    :exc:`JobCompletedError`. (This also means that the task doesn't get
+    executed, so we don't do useless computation.)
+    """
+
+    def wrapped(*args, **kwargs):
+        """
+        Initialize logs, make sure the job is still running, and run the task
+        code surrounded by a try-except. If any error occurs, log it as a
+        critical failure.
+        """
+        # job_id is always assumed to be the first arugment passed to a task
+        # this is the only required argument
+        job_id = args[0]
+        # Set up logging via amqp.
+        logs.init_logs_amqp_send(level='debug', job_id=job_id)
+        try:
+            # check if the job is still running
+            job = models.OqJob.objects.get(id=job_id)
+            if not job.status == 'executing' and not job.is_running:
+                # the job is not running
+                raise JobCompletedError(job_id)
+            # the job is running, proceed with task execution
+            task_func(*args, **kwargs)
+        # TODO: should we do something different with the JobCompletedError?
+        except Exception, err:
+            logs.LOG.critical('Error occurred in task: %s' % str(err))
+            logs.LOG.exception(err)
+
+    return task(wrapped, ignore_result=True)

@@ -3,8 +3,7 @@
 The available optional flags are also tested: applyToBranches, applyToTectonicRegionType,
 applyToSources, applyToSourceType -->
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <logicTree logicTreeID="lt1">
         <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -19,8 +18,8 @@ applyToSources, applyToSourceType -->
         </logicTreeBranchingLevel>
 
         <logicTreeBranchingLevel branchingLevelID="bl2">
-			<!-- Here we test uncertaintyType="bGRRelative" and the applyToTectonicRegionType filter.
-			Only the Stable Shallow Crust source should be modified, that is src_1 -->
+            <!-- Here we test uncertaintyType="bGRRelative" and the applyToTectonicRegionType filter.
+            Only the Stable Shallow Crust source should be modified, that is src_1 -->
             <logicTreeBranchSet uncertaintyType="bGRRelative" branchSetID="bs2" applyToTectonicRegionType="Stable Shallow Crust">
 
                 <logicTreeBranch branchID="b2">
@@ -36,10 +35,10 @@ applyToSources, applyToSourceType -->
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
 
-		<logicTreeBranchingLevel branchingLevelID="bl3">
+        <logicTreeBranchingLevel branchingLevelID="bl3">
 
-			<!-- Here we test uncertaintyType="maxMagRelative" and the applyToBranches and applyToSources filter.
-			Only the src_02 and src_3 from source model coming out of branch b2 should be modified.-->
+            <!-- Here we test uncertaintyType="maxMagRelative" and the applyToBranches and applyToSources filter.
+            Only the src_02 and src_3 from source model coming out of branch b2 should be modified.-->
             <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs2" applyToBranches="b2" applyToSources="src_2 src_3">
 
                 <logicTreeBranch branchID="b4">
@@ -54,8 +53,8 @@ applyToSources, applyToSourceType -->
 
             </logicTreeBranchSet>
 
-			<!-- Here we test uncertaintyType="maxMagRelative" and the applyToBranches and applyToSourceType filter.
-			Only the point source from source model coming out of branch b3 should be modified.-->
+            <!-- Here we test uncertaintyType="maxMagRelative" and the applyToBranches and applyToSourceType filter.
+            Only the point source from source model coming out of branch b3 should be modified.-->
             <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs2" applyToBranches="b3" applyToSourceType="point">
 
                 <logicTreeBranch branchID="b6">
