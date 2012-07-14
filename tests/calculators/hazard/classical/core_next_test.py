@@ -19,6 +19,7 @@ import unittest
 
 import kombu
 import nhlib.imt
+import numpy
 
 from nose.plugins.attrib import attr
 
@@ -217,6 +218,55 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
                 hazard_curve=pga_curves.id)
             self.assertEqual(120, len(sa_curve_data))
 
+    def test_hazard_curves_task(self):
+        # Test the `hazard_curves` task, but execute it as a normal function
+        # (for purposes of test coverage).
+        hc = self.job.hazard_calculation
+        max_dist = hc.maximum_distance
+
+        self.calc.pre_execute()
+
+        # Update job status to move on to the execution phase.
+        self.job.is_running = True
+
+        self.job.status = 'executing'
+        self.job.save()
+
+        src_prog = models.SourceProgress.objects.filter(
+            is_complete=False,
+            lt_realization__hazard_calculation=hc).latest('id')
+
+        src_id = src_prog.parsed_source.id
+        lt_rlz = src_prog.lt_realization
+
+        exchange, conn_args = core_next._exchange_and_conn_args()
+
+        routing_key = core_next._ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        task_signal_queue = kombu.Queue(
+            'htasks.job.%s' % self.job.id, exchange=exchange,
+            routing_key=routing_key, durable=False, auto_delete=True)
+
+        def test_callback(body, message):
+            self.assertEqual(dict(job_id=self.job.id, num_sources=1),
+                             body)
+            message.ack()
+
+
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
+                # call the task as a normal function
+                core_next.hazard_curves(self.job.id, lt_rlz.id, [src_id])
+                # wait for the completion signal
+                conn.drain_events()
+
+        # refresh the source_progress record and make sure it is marked as
+        # complete
+        src_prog = models.SourceProgress.objects.get(id=src_prog.id)
+        self.assertTrue(src_prog.is_complete)
+        # We'll leave more detail testing of results to a QA test (which will
+        # take much more time to execute).
+
 
 class ImtsToNhlibTestCase(unittest.TestCase):
     """
@@ -315,6 +365,29 @@ class HelpersTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+    def test_update_result_matrix_with_scalars(self):
+        init = 0.0
+        result = core_next.update_result_matrix(init, 0.2)
+        # The first time we apply this formula on a 0.0 value,
+        # result is equal to the first new value we apply.
+        self.assertAlmostEqual(0.2, result)
+
+        result = core_next.update_result_matrix(result, 0.3)
+        self.assertAlmostEqual(0.44, result)
+
+    def test_update_result_matrix_numpy_arrays(self):
+        init = numpy.zeros((4, 4))
+        first = numpy.array([0.2] * 16).reshape((4, 4))
+
+        result = core_next.update_result_matrix(init, first)
+        numpy.testing.assert_allclose(first, result)
+
+        second = numpy.array([0.3] * 16).reshape((4, 4))
+        result = core_next.update_result_matrix(result, second)
+
+        expected = numpy.array([0.44] * 16).reshape((4, 4))
+        numpy.testing.assert_allclose(expected, result)
 
 
 class SignalTestCase(unittest.TestCase):

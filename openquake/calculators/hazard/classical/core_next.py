@@ -440,6 +440,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # TODO: delete htemp stuff
 
 
+# Silencing 'Too many local variables'
+# pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.progress_indicator('h')
 def hazard_curves(job_id, lt_rlz_id, src_ids):
@@ -551,9 +553,8 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             # with parsed_source_id from src_ids are marked as complete,
             # and rollback and abort if there is at least one
 
-            hc_progress.result_matrix = (
-                1 - (1 - hc_progress.result_matrix)
-                * (1 - matrices[nhlib_imt]))
+            hc_progress.result_matrix = update_result_matrix(
+                hc_progress.result_matrix, matrices[nhlib_imt])
             hc_progress.save()
 
             models.SourceProgress.objects.filter(lt_realization=lt_rlz,
@@ -573,6 +574,28 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
     signal_task_complete(job_id, len(src_ids))
+
+
+def update_result_matrix(current, new):
+    """
+    Use the following formula to combine multiple iterations of results:
+
+    `result = 1 - (1 - current) * (1 - new)`
+
+    This is used to incrementally update hazard curve results by combining an
+    initial value with some new results. (Each set of new results is computed
+    over only a subset of seismic sources defined in the calculation model.)
+
+    Parameters are expected to be multi-dimensional numpy arrays, but the
+    formula will also work with scalars.
+
+    :param current:
+        Numpy array representing the current result matrix value.
+    :param new:
+        Numpy array representing the new results which need to be combined with
+        the current value. This should be the same shape as `current`.
+    """
+    return 1 - (1 - current) * (1 - new)
 
 
 def get_site_collection(hc):
@@ -628,7 +651,6 @@ def _exchange_and_conn_args():
     }
 
     return exchange, conn_args
-
 
 
 def signal_task_complete(job_id, num_sources):
