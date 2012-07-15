@@ -252,7 +252,7 @@ In case of "count" we will only require the "number_of_units" to be set and do n
 
 COMMENT ON TABLE oqmif.occupancy IS 'Occupancy for a given exposure data set';
 COMMENT ON COLUMN oqmif.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
-COMMENT ON COLUMN oqmif.occupancy.description IS 'describes the occupancy data e.g. day, night etc.';
+COMMENT ON COLUMN oqmif.occupancy.category IS 'occupancy data category, may be one of: average, day, night, transit';
 COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
 

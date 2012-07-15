@@ -1613,7 +1613,8 @@ ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 CREATE TABLE oqmif.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL,
+    category VARCHAR NOT NULL CONSTRAINT category_value
+        CHECK(category IN ('average', 'day', 'night', 'transit')),
     occupants INTEGER NOT NULL
 ) TABLESPACE oqmif_ts;
 
