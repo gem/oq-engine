@@ -774,14 +774,10 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl = models.ExposureModel(
             input=emdl_input, owner=self.job.owner, unit_type="count",
             name="exposure-data-testing", category="economic loss")
-        self.mdl.stco_type = "aggregated"
-        self.mdl.stco_unit = "GYD"
+        self.mdl.save()
 
     def test_exposure_data_with_area_and_unit_type_count(self):
         # the area cost must not be present when unit_type is set to "count"
-        self.mdl.stco_type = None
-        self.mdl.stco_unit = None
-        self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
@@ -800,9 +796,6 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_exposure_data_with_coco_and_unit_type_count(self):
         # the content cost must not be present when unit_type is set to "count"
-        self.mdl.stco_type = None
-        self.mdl.stco_unit = None
-        self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
@@ -822,9 +815,6 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
     def test_exposure_data_with_reco_and_unit_type_count(self):
         # the retrofitting cost must not be present when unit_type is set to
         # "count"
-        self.mdl.stco_type = None
-        self.mdl.stco_unit = None
-        self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
@@ -844,9 +834,6 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
     def test_exposure_data_with_stco_and_unit_type_count(self):
         # the structural cost must not be present when unit_type is set to
         # "count"
-        self.mdl.stco_type = None
-        self.mdl.stco_unit = None
-        self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
