@@ -100,7 +100,6 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
         self.assertRaises(ValueError, writer.validate_metadata)
 
-
     def test_serialize(self):
         # Just a basic serialization test.
         expected = StringIO.StringIO("""\
