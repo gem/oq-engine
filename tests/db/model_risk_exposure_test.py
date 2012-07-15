@@ -675,8 +675,8 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
         i2j.save()
 
     def test_insert_expo_model_with_unit_type_count(self):
-        # When the unit_type is set to "count" the area type and unit are not
-        # allowed.
+        # inserting an exposure model with unit_type = "count" works as long as
+        # we omit the area/coco/reco/stco type and unit.
         mdl = models.ExposureModel(
             input=self.emdl_input, owner=self.job.owner, unit_type="count",
             name="exposure-data-testing", category="economic loss")
