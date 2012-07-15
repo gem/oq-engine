@@ -139,8 +139,10 @@ def list_calculations():
     if len(jobs) > 0:
         print 'ID\tStatus\tDescription'
         for c in jobs:
-            print '%s\t%s\t%s' % (c.id, c.status,
-                                  c.hazard_calculation.description)
+            # TODO: For now, only display hazard calculations
+            if c.hazard_calculation is not None:
+                print '%s\t%s\t%s' % (c.id, c.status,
+                                      c.hazard_calculation.description)
 
 
 def list_outputs(job_id):
