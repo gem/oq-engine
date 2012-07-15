@@ -674,6 +674,14 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=self.emdl_input, oq_job=self.job)
         i2j.save()
 
+    def test_insert_expo_model_with_unit_type_count(self):
+        # When the unit_type is set to "count" the area type and unit are not
+        # allowed.
+        mdl = models.ExposureModel(
+            input=self.emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
+        mdl.save()
+
     def test_unit_type_count_and_area(self):
         # When the unit_type is set to "count" the area type and unit are not
         # allowed.
@@ -775,6 +783,16 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
             input=emdl_input, owner=self.job.owner, unit_type="count",
             name="exposure-data-testing", category="economic loss")
         self.mdl.save()
+
+    def test_exposure_data_unit_type_count(self):
+        # the unit_type is set to "count" and we can insert an `exposure_data`
+        # row as long as we omit the area, coco, reco and stco properties.
+        site = shapes.Site(-122.5000, 37.5000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt())
+        edata.save()
 
     def test_exposure_data_with_area_and_unit_type_count(self):
         # the area cost must not be present when unit_type is set to "count"
