@@ -254,6 +254,20 @@ AS $$
             raise Exception(fmt("%s (%s) and %s (%s) must both be either "
                                 "defined or undefined" %
                                 (a, NEW[a], b, NEW[b])))
+    def check_nor(keys):
+        """Raise exception if any one of the items is defined."""
+        defined = []
+        for key in keys:
+            if NEW[key] is not None:
+                defined.append(key)
+        if defined:
+            raise Exception(fmt("We are in counting mode: neither of these "
+                                "must be set %s" % defined))
+
+    if emdl["unit_type"] == "count":
+        check_nor(["area_unit", "area_type", "coco_unit", "coco_type",
+                   "reco_unit", "reco_type", "stco_unit", "stco_type"])
+        return "OK"
 
     if NEW["area_type"] is None:
         violations = []
@@ -290,10 +304,20 @@ COMMENT ON FUNCTION pcheck_exposure_model() IS
 CREATE OR REPLACE FUNCTION pcheck_exposure_data()
   RETURNS TRIGGER
 AS $$
+    NEW = TD["new"] # new data resulting from insert or update
+
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
 
-    NEW = TD["new"] # new data resulting from insert or update
+    def check_nor(keys):
+        """Raise exception if any one of the items is defined."""
+        defined = []
+        for key in keys:
+            if NEW[key] is not None:
+                defined.append(key)
+        if defined:
+            raise Exception(fmt("We are in counting mode: neither of these "
+                                "must be set %s" % defined))
 
     # get the associated exposure model record
     q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
@@ -302,6 +326,7 @@ AS $$
 
     if emdl["unit_type"] == "count":
         if NEW["number_of_units"] is not None:
+            check_nor(["area", "coco" "stco", "reco"])
             return "OK"
         else:
             raise Exception(fmt("number of units is mandatory for models "
