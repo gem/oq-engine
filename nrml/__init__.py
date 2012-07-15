@@ -22,7 +22,10 @@ import os
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 
-NS_MAP = dict(nrml=NAMESPACE, gml=GML_NAMESPACE)
+PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
+#: Default namespace is nrml, so we can be implicit about nrml elements we
+#: write
+SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 
 _NRML_SCHEMA_FILE = 'nrml.xsd'
 
