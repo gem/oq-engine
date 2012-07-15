@@ -264,7 +264,7 @@ AS $$
             raise Exception(fmt("We are in counting mode: neither of these "
                                 "must be set %s" % defined))
 
-    if emdl["unit_type"] == "count":
+    if NEW["unit_type"] == "count":
         check_nor(["area_unit", "area_type", "coco_unit", "coco_type",
                    "reco_unit", "reco_type", "stco_unit", "stco_type"])
         return "OK"
@@ -326,7 +326,7 @@ AS $$
 
     if emdl["unit_type"] == "count":
         if NEW["number_of_units"] is not None:
-            check_nor(["area", "coco" "stco", "reco"])
+            check_nor(["area", "coco", "stco", "reco"])
             return "OK"
         else:
             raise Exception(fmt("number of units is mandatory for models "

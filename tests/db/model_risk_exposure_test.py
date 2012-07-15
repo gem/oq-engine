@@ -652,8 +652,107 @@ class PerAssetValueTestCase(DjangoTestCase):
         self.assertEqual(111.1, models.per_asset_value(exd))
 
 
-class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
+class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the exposure_data database constraints with unit_type == 'count'"""
+
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = cls.setup_classic_job()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        self.emdl_input = models.Input(
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        self.emdl_input.save()
+        i2j = models.Input2job(input=self.emdl_input, oq_job=self.job)
+        i2j.save()
+
+
+    def test_unit_type_count_and_area(self):
+        # When the unit_type is set to "count" the area type and unit are not
+        # allowed.
+        mdl = models.ExposureModel(
+            input=self.emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
+        mdl.area_type = "per_area"
+        mdl.area_unit = "ATS"
+        try:
+            mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['area_unit', 'area_type'] (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_unit_type_count_and_coco(self):
+        # When the unit_type is set to "count" the coco type and unit are not
+        # allowed.
+        mdl = models.ExposureModel(
+            input=self.emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
+        mdl.coco_type = "per_coco"
+        mdl.coco_unit = "ATS"
+        try:
+            mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['coco_unit', 'coco_type'] (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_unit_type_count_and_reco(self):
+        # When the unit_type is set to "count" the reco type and unit are not
+        # allowed.
+        mdl = models.ExposureModel(
+            input=self.emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
+        mdl.reco_type = "per_reco"
+        mdl.reco_unit = "ATS"
+        try:
+            mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['reco_unit', 'reco_type'] (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_unit_type_count_and_stco(self):
+        # When the unit_type is set to "count" the stco type and unit are not
+        # allowed.
+        mdl = models.ExposureModel(
+            input=self.emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
+        mdl.stco_type = "per_stco"
+        mdl.stco_unit = "ATS"
+        try:
+            mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['stco_unit', 'stco_type'] (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+
+class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
+    """Test the exposure_data database constraints."""
 
     job = None
 
@@ -673,154 +772,92 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
         self.mdl = models.ExposureModel(
-            input=emdl_input, owner=self.job.owner,
-            name="exposure-data-testing", category="economic loss",
-            unit_type="count")
+            input=emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss")
         self.mdl.stco_type = "aggregated"
         self.mdl.stco_unit = "GYD"
 
-    def test_exposure_data_with_no_stco_and_population(self):
-        # the structural cost needs not be present when we calculate exposure
-        # in terms of population
+    def test_exposure_data_with_area_and_unit_type_count(self):
+        # the area cost must not be present when unit_type is set to "count"
         self.mdl.stco_type = None
         self.mdl.stco_unit = None
-        self.mdl.category = "population"
         self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), site=site.point.to_wkt())
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt(), area=112)
         try:
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: number of units is mandatory for models with unit "
-                "type <count> (exposure_data)",
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['area'] (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
-    def test_exposure_reco_type_but_no_reco_value(self):
-        # the retrofitting cost must be present if the retrofitting cost type
-        # is set.
-        self.mdl.reco_type = "per_asset"
-        self.mdl.reco_unit = "INR"
+    def test_exposure_data_with_coco_and_unit_type_count(self):
+        # the content cost must not be present when unit_type is set to "count"
+        self.mdl.stco_type = None
+        self.mdl.stco_unit = None
         self.mdl.save()
-        site = shapes.Site(-121.8000, 38.2000)
+        site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=18.0, number_of_units=22,
-            site=site.point.to_wkt())
-        edata.save()
-
-    def test_exposure_coco_type_but_no_coco_value(self):
-        # the contents cost must be present if the contents cost type
-        # is set.
-        self.mdl.coco_type = "per_asset"
-        self.mdl.coco_unit = "MUR"
-        self.mdl.save()
-        site = shapes.Site(-121.7000, 38.3000)
-        edata = models.ExposureData(
-            exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=19.0, number_of_units=23,
-            site=site.point.to_wkt())
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt(), coco=112)
         try:
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: contents cost is mandatory for "
-                "<coco_type=per_asset> (exposure_data)",
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['coco'] (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
-    def test_exposure_stco_type_but_no_stco_value(self):
-        # the structural cost must be present if the structural cost type
-        # is set.
-        self.mdl.category = "population"
+    def test_exposure_data_with_reco_and_unit_type_count(self):
+        # the retrofitting cost must not be present when unit_type is set to
+        # "count"
+        self.mdl.stco_type = None
+        self.mdl.stco_unit = None
         self.mdl.save()
-        site = shapes.Site(-121.6000, 38.4000)
+        site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), number_of_units=24,
-            site=site.point.to_wkt())
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt(), reco=112)
         try:
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: structural cost is mandatory for "
-                "<stco_type=aggregated> (exposure_data)",
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['reco'] (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
-    def test_exposure_reco_type_per_area_but_no_area_value(self):
-        # the area must be set if the retrofitting cost type is 'per_area'
-        self.mdl.reco_type = "per_area"
-        self.mdl.reco_unit = "NPR"
-        self.mdl.area_type = "aggregated"
-        self.mdl.area_unit = "PKR"
+    def test_exposure_data_with_stco_and_unit_type_count(self):
+        # the structural cost must not be present when unit_type is set to
+        # "count"
+        self.mdl.stco_type = None
+        self.mdl.stco_unit = None
         self.mdl.save()
-        site = shapes.Site(-121.5000, 38.5000)
+        site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=20.0,
-            site=site.point.to_wkt())
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt(), stco=112)
         try:
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: area is mandatory for <reco_type=per_area> "
-                "(exposure_data)",
-                de.args[0].split('\n', 1)[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
-
-    def test_exposure_coco_type_per_area_but_no_area_value(self):
-        # the area must be set if the contents cost type is 'per_area'
-        self.mdl.coco_type = "per_area"
-        self.mdl.coco_unit = "SCR"
-        self.mdl.area_type = "aggregated"
-        self.mdl.area_unit = "LKR"
-        self.mdl.save()
-        site = shapes.Site(-121.4000, 38.6000)
-        edata = models.ExposureData(
-            exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=21.0,
-            site=site.point.to_wkt())
-        try:
-            edata.save()
-        except DatabaseError, de:
-            self.assertEqual(
-                "Exception: area is mandatory for <coco_type=per_area> "
-                "(exposure_data)",
-                de.args[0].split('\n', 1)[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
-
-    def test_exposure_stco_type_per_area_but_no_area_value(self):
-        # the area must be set if the structural cost type is 'per_area'
-        self.mdl.stco_type = "per_area"
-        self.mdl.stco_unit = "IDR"
-        self.mdl.area_type = "aggregated"
-        self.mdl.area_unit = "ATS"
-        self.mdl.save()
-        site = shapes.Site(-121.3000, 38.7000)
-        edata = models.ExposureData(
-            exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=22.0,
-            site=site.point.to_wkt())
-        try:
-            edata.save()
-        except DatabaseError, de:
-            self.assertEqual(
-                "Exception: area is mandatory for <stco_type=per_area> "
-                "(exposure_data)",
+                "Exception: We are in counting mode: neither of these must "
+                "be set ['stco'] (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
