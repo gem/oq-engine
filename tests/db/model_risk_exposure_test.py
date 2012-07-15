@@ -673,7 +673,6 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=self.emdl_input, oq_job=self.job)
         i2j.save()
 
-
     def test_unit_type_count_and_area(self):
         # When the unit_type is set to "count" the area type and unit are not
         # allowed.
