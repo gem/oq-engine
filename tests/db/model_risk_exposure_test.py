@@ -653,7 +653,8 @@ class PerAssetValueTestCase(DjangoTestCase):
 
 
 class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
-    """Test the exposure_data database constraints with unit_type == 'count'"""
+    """Test the exposure_model database constraints with
+       unit_type == 'count'"""
 
     job = None
 
@@ -751,7 +752,7 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
 
 
 class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
-    """Test the exposure_data database constraints."""
+    """Test the exposure_data database constraints with unit_type == 'count'"""
 
     job = None
 
