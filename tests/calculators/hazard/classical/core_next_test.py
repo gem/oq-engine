@@ -181,6 +181,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_execute_and_post_execute(self):
+        hc = self.job.hazard_calculation
+
         self.calc.pre_execute()
 
         # Update job status to move on to the execution phase.
@@ -217,6 +219,18 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             sa_curve_data = models.HazardCurveData.objects.filter(
                 hazard_curve=pga_curves.id)
             self.assertEqual(120, len(sa_curve_data))
+
+        # last thing, make sure that post_execute cleaned up the htemp tables
+        hcp = models.HazardCurveProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id)
+        self.assertEqual(0, len(hcp))
+
+        sp = models.SourceProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id)
+        self.assertEqual(0, len(sp))
+
+        sd = models.SiteData.objects.filter(hazard_calculation=hc.id)
+        self.assertEqual(0, len(sd))
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function
