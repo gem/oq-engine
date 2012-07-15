@@ -199,7 +199,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             sp_inserter = writer.BulkInserter(models.SourceProgress)
             for ps in parsed_sources:
                 sp_inserter.add_entry(
-                    lt_realization_id=lt_rlz.id, parsed_source_id=ps.id)
+                    lt_realization_id=lt_rlz.id, parsed_source_id=ps.id,
+                    is_complete=False)
             sp_inserter.flush()
 
             # Now stub out the curve result records for this realization:
@@ -280,10 +281,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
         """
-        # TODO: unittest
-        # TODO: Fix deadlocking of execute method when tasks encounter
-        # exceptions. Perhaps put in a try/except in the task and signal back
-        # the failure (via amqp)?
         job = self.job
         hc = job.hazard_calculation
         sources_per_task = int(config.get('hazard', 'block_size'))
@@ -378,9 +375,16 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
     def post_execute(self):
         """
-        Create the final output eecords for hazard curves.
+        Create the final output eecords for hazard curves. This is done by
+        copying the temporary results from `htemp.hazard_curve_progress` to
+        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
+        the actual curve PoE values). Foreign keys are made from
+        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
+        is need to export the full hazard curve results).
+
+        Finally, all data for the calculation which is stored in the `htemp`
+        tables is deleted (at this point, it is no longer needed).
         """
-        # TODO: better doc
         hc = self.job.hazard_calculation
         im = hc.intensity_measure_types_and_levels
         points = hc.points_to_compute()
@@ -424,20 +428,25 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                 [hc_progress] = models.HazardCurveProgress.objects.filter(
                     lt_realization=rlz.id, imt=imt)
 
+                hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
                 for i, poes in enumerate(hc_progress.result_matrix):
-                    # TODO: Bulk insert HazardCurveData
                     # We do some weird slicing here (to get a single element)
                     # because the nhlib Mesh object doesn't support indexing.
-                    # TODO: Mesh should support this
+                    # TODO: nhlib Mesh should support this
                     [location] = points[i:i + 1]
-                    haz_curve_data = models.HazardCurveData(
-                        hazard_curve=haz_curve,
-                        poes=poes,
-                        location=location.wkt2d
-                    )
-                    haz_curve_data.save()
+                    hc_data_inserter.add_entry(
+                        hazard_curve_id=haz_curve.id,
+                        poes=poes.tolist(),
+                        location=location.wkt2d)
 
-        # TODO: delete htemp stuff
+                hc_data_inserter.flush()
+
+        # delete temporary data
+        models.HazardCurveProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id).delete()
+        models.SourceProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id).delete()
+        models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
 
 
 # Silencing 'Too many local variables'
@@ -491,7 +500,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
         Performs lazy loading, converting and processing of sources.
         """
         for src_id in src_ids:
-            parsed_source = models.ParsedSource.objects.get(pk=src_id)
+            parsed_source = models.ParsedSource.objects.get(id=src_id)
 
             nhlib_source = source.nrml_to_nhlib(
                 parsed_source.nrml, hc.rupture_mesh_spacing,
@@ -549,24 +558,41 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             [hc_progress] = models.HazardCurveProgress.objects.raw(
                 query, [lt_rlz.id, imt])
 
-            # TODO: check here if any of records in source progress model
-            # with parsed_source_id from src_ids are marked as complete,
-            # and rollback and abort if there is at least one
-
             hc_progress.result_matrix = update_result_matrix(
                 hc_progress.result_matrix, matrices[nhlib_imt])
             hc_progress.save()
 
-            models.SourceProgress.objects.filter(lt_realization=lt_rlz,
-                                                 parsed_source__in=src_ids) \
-                                         .update(is_complete=True)
-
-            lt_rlz.completed_sources += len(src_ids)
-            if lt_rlz.completed_sources == lt_rlz.total_sources:
-                lt_rlz.is_complete = True
-
-            lt_rlz.save()
             logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
+
+        # Before the transaction completes:
+
+        # Check here if any of records in source progress model
+        # with parsed_source_id from src_ids are marked as complete,
+        # and rollback and abort if there is at least one
+        src_prog = models.SourceProgress.objects.filter(
+            lt_realization=lt_rlz, parsed_source__in=src_ids)
+
+        if any(x.is_complete for x in src_prog):
+            msg = (
+                'One or more `source_progress` records were marked as '
+                'complete. This was unexpected and probably means that the'
+                ' calculation workload was not distributed properly.'
+            )
+            logs.LOG.critical(msg)
+            transaction.rollback()
+            raise RuntimeError(msg)
+
+        # Mark source_progress records as complete
+        src_prog.update(is_complete=True)
+
+        # Update realiation progress,
+        # mark realization as complete if it is done
+        lt_rlz.completed_sources += len(src_ids)
+        if lt_rlz.completed_sources == lt_rlz.total_sources:
+            lt_rlz.is_complete = True
+
+        lt_rlz.save()
+
     logs.LOG.debug('< transaction complete')
 
     # Last thing, signal back the control node to indicate the completion of
@@ -666,9 +692,9 @@ def signal_task_complete(job_id, num_sources):
     :param int num_sources:
         Number of sources computed in the completed task.
     """
-    # TODO: The job ID may be redundant (since it's in the routing key), but
+    # The job ID may be redundant (since it's in the routing key), but
     # we can put this here for a sanity check on the receiver side.
-    # Maybe we can remove this.
+    # Maybe we can remove this
     msg = dict(job_id=job_id, num_sources=num_sources)
 
     exchange, conn_args = _exchange_and_conn_args()
@@ -692,7 +718,8 @@ def im_dict_to_nhlib(im_dict):
         :mod:`nhlib.imt` for more information.
     """
     # TODO: file a bug about  SA periods in nhlib imts.
-    # Why are values of 0.0 not allowed?
+    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
+    # there must be a reason why we can't do this.
     nhlib_im = {}
 
     for imt, imls in im_dict.items():
