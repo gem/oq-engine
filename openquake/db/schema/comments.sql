@@ -245,6 +245,9 @@ COMMENT ON COLUMN oqmif.exposure_model.reco_unit IS 'unit of measure for the ret
 COMMENT ON COLUMN oqmif.exposure_model.stco_type IS 'structural cost type, one of: aggregated, per_area or per_asset';
 COMMENT ON COLUMN oqmif.exposure_model.stco_unit IS 'unit of measure for the structural type';
 COMMENT ON COLUMN oqmif.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
+COMMENT ON COLUMN oqmif.exposure_model.unit_type IS 'The possible values are count, economic_value or both.
+
+In case of "count" we will only require the "number_of_units" to be set and do not enforce the existing INSERT/UPDATE constraints on the exposure database tables. If the "economic_value" is set these constraints *will* be enforced as usual.';
 
 
 COMMENT ON TABLE oqmif.occupancy IS 'Occupancy for a given exposure data set';

@@ -145,7 +145,8 @@ class ExposureModelFile(producer.FileProducer):
                 # type and unit for area, contents cost, retrofitting cost
                 # and structural cost.
                 attrs = ("areaType", "areaUnit", "cocoType", "cocoUnit",
-                         "recoType", "recoUnit", "stcoType", "stcoUnit")
+                         "recoType", "recoUnit", "stcoType", "stcoUnit",
+                         "unitType")
                 for attr_name in attrs:
                     attr_value = element.get(attr_name)
                     if attr_value is not None:
