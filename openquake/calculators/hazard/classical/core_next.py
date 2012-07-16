@@ -287,8 +287,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
         progress = dict(total=0, computed=0)
-        # The following two counters are dicts so that we can use them in the
-        # closures below:
+        # The following two counters are in a dict so that we can use them in
+        # the closures below.
         # When `progress['compute']` becomes equal to `progress['total']`,
         # `execute` can conclude.
 
