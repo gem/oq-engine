@@ -1541,32 +1541,34 @@ CREATE TABLE oqmif.exposure_model (
 
     -- area type
     area_type VARCHAR CONSTRAINT area_type_value
-        CHECK(area_type IS NULL OR area_type = 'per_asset'
-              OR area_type = 'aggregated'),
-
+        CHECK(area_type IS NULL OR area_type IN ('per_asset', 'aggregated')),
     -- area unit
     area_unit VARCHAR,
 
     -- contents cost type
     coco_type VARCHAR CONSTRAINT coco_type_value
-        CHECK(coco_type IS NULL OR coco_type = 'per_asset'
-              OR coco_type = 'per_area' OR coco_type = 'aggregated'),
+        CHECK(coco_type IS NULL OR
+              coco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- contents cost unit
     coco_unit VARCHAR,
 
     -- retrofitting cost type
     reco_type VARCHAR CONSTRAINT reco_type_value
-        CHECK(reco_type IS NULL OR reco_type = 'per_asset'
-              OR reco_type = 'per_area' OR reco_type = 'aggregated'),
+        CHECK(reco_type IS NULL OR
+              reco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- retrofitting cost unit
     reco_unit VARCHAR,
 
     -- structural cost type
     stco_type VARCHAR CONSTRAINT stco_type_value
-        CHECK(stco_type IS NULL OR stco_type = 'per_asset'
-              OR stco_type = 'per_area' OR stco_type = 'aggregated'),
+        CHECK(stco_type IS NULL OR
+              stco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- structural cost unit
     stco_unit VARCHAR,
+
+    unit_type VARCHAR CONSTRAINT unit_type_value
+        CHECK(unit_type IS NULL OR
+              unit_type IN ('count', 'economic_value', 'both')),
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
