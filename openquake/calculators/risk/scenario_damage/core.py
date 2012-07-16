@@ -83,7 +83,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             oq_job=oq_job,
             display_name="SDA (damage distributions per asset) "
                 "results for calculation id %s" % oq_job.id,
-            db_backed=True,
             output_type="dmg_dist_per_asset")
 
         output.save()
@@ -97,7 +96,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             oq_job=oq_job,
             display_name="SDA (damage distributions per taxonomy) "
                 "results for calculation id %s" % oq_job.id,
-            db_backed=True,
             output_type="dmg_dist_per_taxonomy")
 
         output.save()
@@ -111,7 +109,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             oq_job=oq_job,
             display_name="SDA (total damage distributions) "
                 "results for calculation id %s" % oq_job.id,
-            db_backed=True,
             output_type="dmg_dist_total")
 
         output.save()

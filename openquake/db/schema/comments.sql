@@ -77,15 +77,15 @@ use this polygon in distance calculations.';
 -- hzrdr schema tables ------------------------------------------
 COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
 COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdr.lt_realization_id IS 'Only required for non-statistical curves';
-COMMENT ON COLUMN hzrdr.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
-COMMENT ON COLUMN hzrdr.imls IS 'Intensity Measure Levels common to this set of hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.lt_realization_id IS 'Only required for non-statistical curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
+COMMENT ON COLUMN hzrdr.hazard_curve.imls IS 'Intensity Measure Levels common to this set of hazard curves';
 COMMENT ON COLUMN hzrdr.hazard_curve.statistics IS 'Statistic type, one of:
     - Mean     (mean)
     - Quantile (quantile)';
 COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
-COMMENT ON COLUMN hzrdr.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
-COMMENT ON COLUMN hzrdr.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
+COMMENT ON COLUMN hzrdr.hazard_curve.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
 
 
 COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
@@ -336,9 +336,7 @@ COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calcu
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
-COMMENT ON COLUMN uiapi.output.db_backed IS 'True if the output''s data resides in the database and not in a file.';
 COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
-COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server (optional).';
 COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - unknown
     - hazard_curve
@@ -348,7 +346,7 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - loss_map
     - collapse_map
     - bcr_distribution';
-COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
+
 
 COMMENT ON TABLE uiapi.src2ltsrc IS '
 Associate an "lt_source" type input (a logic tree source) with "source"

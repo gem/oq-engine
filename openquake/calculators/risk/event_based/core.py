@@ -94,8 +94,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         agg_lc_display_name = (
             'Aggregate Loss Curve for calculation %s' % job.id)
         output = models.Output(
-            oq_job=job, owner=job.owner,
-            display_name=agg_lc_display_name, db_backed=True,
+            oq_job=job, owner=job.owner, display_name=agg_lc_display_name,
             output_type='agg_loss_curve')
         output.save()
 
