@@ -136,8 +136,6 @@ class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
         self.assertEqual(1, len(self.job.output_set.all()))
 
         output = self.job.output_set.get()
-        self.assertTrue(output.db_backed)
-        self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_curve", output.output_type)
 
@@ -306,8 +304,6 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         # Output record
         self.assertEqual(1, len(self.job.output_set.all()))
         output = self.job.output_set.get()
-        self.assertTrue(output.db_backed)
-        self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_map", output.output_type)
 
@@ -373,8 +369,6 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         # Output record
         self.assertEqual(1, len(self.job.output_set.all()))
         output = self.job.output_set.get()
-        self.assertTrue(output.db_backed)
-        self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_map", output.output_type)
 
