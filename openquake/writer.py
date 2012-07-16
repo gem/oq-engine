@@ -147,7 +147,7 @@ class DBWriter(object):
             LOGGER.info("using output = '%s'", self.output)
         else:
             self.output = models.Output(
-                owner=job.owner, oq_job=job, db_backed=True,
+                owner=job.owner, oq_job=job,
                 display_name=basename(self.nrml_path), output_type=output_type)
             self.output.save()
             LOGGER.info("creating output = '%s'", self.output)

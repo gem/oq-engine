@@ -860,8 +860,6 @@ CREATE TABLE uiapi.output (
     path VARCHAR UNIQUE,
     -- The GUI display name to be used for this output.
     display_name VARCHAR NOT NULL,
-    -- True if the output's data resides in the database and not in a file.
-    db_backed boolean NOT NULL DEFAULT FALSE,
     -- Output type, one of:
     --      hazard_curve
     --      hazard_map
@@ -879,15 +877,6 @@ CREATE TABLE uiapi.output (
             'gmf', 'loss_curve', 'loss_map', 'collapse_map',
             'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
             'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
-    -- Number of bytes in file
-    size INTEGER NOT NULL DEFAULT 0,
-    -- The full path of the shapefile generated for a hazard or loss map
-    -- (optional).
-    shapefile_path VARCHAR,
-    -- The min/max value is only needed for hazard/loss maps (for the
-    -- generation of the relative color scale)
-    min_value float,
-    max_value float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;

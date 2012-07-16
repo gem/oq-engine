@@ -49,8 +49,7 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         cls.ddpa_output = models.Output(
             owner=default_user, oq_job=cls.job,
             display_name='Test dmg dist per asset',
-            output_type='dmg_dist_per_asset',
-            db_backed=True)
+            output_type='dmg_dist_per_asset')
         cls.ddpa_output.save()
 
         cls.ddpa = models.DmgDistPerAsset(
@@ -80,8 +79,7 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         cls.ddpt_output = models.Output(
             owner=default_user, oq_job=cls.job,
             display_name='Test dmg dist per taxonomy',
-            output_type='dmg_dist_per_taxonomy',
-            db_backed=True)
+            output_type='dmg_dist_per_taxonomy')
         cls.ddpt_output.save()
 
         cls.ddpt = models.DmgDistPerTaxonomy(
@@ -92,8 +90,7 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         cls.ddt_output = models.Output(
             owner=default_user, oq_job=cls.job,
             display_name='Test dmg dist total',
-            output_type='dmg_dist_total',
-            db_backed=True)
+            output_type='dmg_dist_total')
         cls.ddt_output.save()
 
         cls.ddt = models.DmgDistTotal(

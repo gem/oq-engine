@@ -926,9 +926,7 @@ class Output(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')
-    path = djm.TextField(null=True, unique=True)
     display_name = djm.TextField()
-    db_backed = djm.BooleanField(default=False)
     OUTPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
         (u'hazard_curve', u'Hazard Curve'),
@@ -945,14 +943,6 @@ class Output(djm.Model):
         (u'dmg_dist_total', u'Total Damage Distribution'),
     )
     output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
-    # Number of bytes in the file:
-    size = djm.IntegerField(default=0)
-    # TODO(LB): We should consider removing shapefile_path; as far I know, it's
-    # obsolete.
-    shapefile_path = djm.TextField(null=True)
-    min_value = djm.FloatField(null=True)
-    max_value = djm.FloatField(null=True)
-
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     def __str__(self):
