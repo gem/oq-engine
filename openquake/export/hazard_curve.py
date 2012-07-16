@@ -45,7 +45,7 @@ def export_hazard_curves(output, target_dir):
     hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id)
 
     filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
-    path = os.path.join(target_dir, filename)
+    path = os.path.abspath(os.path.join(target_dir, filename))
 
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
