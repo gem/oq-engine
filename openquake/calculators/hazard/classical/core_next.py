@@ -375,7 +375,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
     def post_execute(self):
         """
-        Create the final output eecords for hazard curves. This is done by
+        Create the final output records for hazard curves. This is done by
         copying the temporary results from `htemp.hazard_curve_progress` to
         `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
         the actual curve PoE values). Foreign keys are made from
@@ -429,11 +429,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                     lt_realization=rlz.id, imt=imt)
 
                 hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
-                for i, poes in enumerate(hc_progress.result_matrix):
-                    # We do some weird slicing here (to get a single element)
-                    # because the nhlib Mesh object doesn't support indexing.
-                    # TODO: nhlib Mesh should support this
-                    [location] = points[i:i + 1]
+                for i, location in enumerate(points):
+                    poes = hc_progress.result_matrix[i]
                     hc_data_inserter.add_entry(
                         hazard_curve_id=haz_curve.id,
                         poes=poes.tolist(),
