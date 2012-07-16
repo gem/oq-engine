@@ -40,7 +40,7 @@ def _xpath(elem, expr):
     :param elem:
         A :class:`lxml.etree._Element` instance.
     """
-    return elem.xpath(expr, namespaces=nrml.NS_MAP)
+    return elem.xpath(expr, namespaces=nrml.PARSE_NS_MAP)
 
 
 class SourceModelParser(object):
