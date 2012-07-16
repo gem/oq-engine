@@ -138,7 +138,6 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
             owner=self.job.owner,
             oq_job=self.job,
             display_name="",
-            db_backed=True,
             output_type="dmg_dist_per_asset")
 
         output.save()
@@ -230,7 +229,6 @@ class DmgDistPerTaxonomyXMLWriterTestCase(
             owner=self.job.owner,
             oq_job=self.job,
             display_name="",
-            db_backed=True,
             output_type="dmg_dist_per_taxonomy")
 
         output.save()
@@ -315,7 +313,6 @@ class DmgDistTotalXMLWriterTestCase(
             owner=self.job.owner,
             oq_job=self.job,
             display_name="",
-            db_backed=True,
             output_type="dmg_dist_total")
 
         output.save()

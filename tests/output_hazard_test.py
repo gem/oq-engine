@@ -204,8 +204,6 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
 
         # Make sure the inserted output record has the right data.
         output = self.job.output_set.get()
-        self.assertTrue(output.db_backed)
-        self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
 
@@ -256,20 +254,6 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA()),
                          len(hazard_map.hazardmapdata_set.all()))
         self.assertEqual(0, len(output.lossmap_set.all()))
-
-    def test_serialize_sets_min_max_values(self):
-        """
-        serialize() sets the minimum and maximum values on the output record.
-        """
-        # Call the function under test.
-        self.writer.serialize(HAZARD_MAP_MEAN_DATA())
-
-        minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
-        maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
-        # After calling the function under test we see the expected map data.
-        output = self.job.output_set.get()
-        self.assertEqual(round_float(minimum), round_float(output.min_value))
-        self.assertEqual(round_float(maximum), round_float(output.max_value))
 
 
 @unittest.skip
