@@ -25,6 +25,7 @@ from openquake.export.risk import export_agg_loss_curve
 from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
+from nose.plugins.attrib import attr
 
 from qa_tests.data.probabilistic_event_based_risk.test_data import (
     mb_loss_curves, mb_loss_ratio_curves, mb_loss_maps, mb_aggregate_curve,
@@ -88,6 +89,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_aggregate_curve(job_id, OUTPUT_DIR, mb_aggregate_curve,
             0.05)
 
+    @attr('slow')
     def test_sampled_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
