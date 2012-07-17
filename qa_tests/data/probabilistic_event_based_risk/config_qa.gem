@@ -115,7 +115,7 @@ SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 # (used if Event Based approach is chosen)
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 # (used if probabilistic event based approach is chosen)
-NUMBER_OF_SEISMICITY_HISTORIES = 1
+NUMBER_OF_SEISMICITY_HISTORIES = 100
 
 [RISK]
 
