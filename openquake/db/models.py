@@ -949,6 +949,16 @@ class OqJobProfile(djm.Model):
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
 
+    DEFAULT_POP_CAT_CHOICES = (
+        (u'day', u'Population during the day'),
+        (u'night', u'Population during the night'),
+        (u'in_transit', u'Population in transit'))
+    default_pop_cat = djm.TextField(
+        null=True, choices=DEFAULT_POP_CAT_CHOICES,
+        help_text="In the absence of an average population datum "
+        "for exposure the user may want to specify that a day/night/transit "
+        "population value should be used instead.")
+
     class Meta:
         db_table = 'uiapi\".\"oq_job_profile'
 
