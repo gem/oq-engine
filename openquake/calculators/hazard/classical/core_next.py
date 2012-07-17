@@ -585,13 +585,8 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
         # Update realiation progress,
         # mark realization as complete if it is done
-        # First, refresh the logic tree realization record using a
-        # `select for update`:
-        query = """
-        SELECT * FROM hzrdr.lt_realization
-        WHERE id = %s
-        FOR UPDATE"""
-        [lt_rlz] = models.LtRealization.objects.raw(query, [lt_rlz.id])
+        # First, refresh the logic tree realization record:
+        lt_rlz = models.LtRealization.objects.get(id=lt_rlz.id)
 
         lt_rlz.completed_sources += len(src_ids)
         if lt_rlz.completed_sources == lt_rlz.total_sources:
