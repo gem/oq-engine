@@ -38,6 +38,7 @@ def _export_fn_map():
     # pylint: disable=W0404
     from openquake.export import uhs
     from openquake.export import risk
+    from openquake.export import hazard_curve
 
     fn_map = {
         'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
@@ -45,6 +46,7 @@ def _export_fn_map():
         'dmg_dist_total': risk.export_dmg_dist_total,
         'uh_spectra': uhs.export_uhs,
         'agg_loss_curve': risk.export_agg_loss_curve,
+        'hazard_curve': hazard_curve.export_hazard_curves,
     }
     return fn_map
 
