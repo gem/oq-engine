@@ -1619,6 +1619,15 @@ CREATE TABLE oqmif.occupancy (
 ) TABLESPACE oqmif_ts;
 
 
+CREATE TABLE oqmif.population (
+    id SERIAL PRIMARY KEY,
+    exposure_data_id INTEGER NOT NULL,
+    category VARCHAR NOT NULL CONSTRAINT category_value
+        CHECK(category IN ('day', 'night', 'transit')),
+    occupants INTEGER NOT NULL
+) TABLESPACE oqmif_ts;
+
+
 -- Vulnerability model
 CREATE TABLE riski.vulnerability_model (
     id SERIAL PRIMARY KEY,
@@ -2024,6 +2033,10 @@ REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.occupancy ADD CONSTRAINT
 oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE oqmif.population ADD CONSTRAINT
+oqmif_population_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
 
 ALTER TABLE riski.vulnerability_function ADD CONSTRAINT

@@ -56,6 +56,7 @@ GRANT ALL ON SEQUENCE hzrdr.uh_spectrum_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.occupancy_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE oqmif.population_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE riski.ffc_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.ffd_id_seq to GROUP openquake;
@@ -215,6 +216,10 @@ GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 -- oqmif.occupancy
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
+
+-- oqmif.population
+GRANT SELECT ON oqmif.population TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.population TO oq_job_init;
 
 -- riski.ffc
 GRANT SELECT ON riski.ffc TO GROUP openquake;
