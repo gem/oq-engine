@@ -28,8 +28,8 @@ from tests.utils import helpers
 from nose.plugins.attrib import attr
 
 from qa_tests.data.probabilistic_event_based_risk.test_data import (
-    mb_loss_curves, mb_loss_ratio_curves, mb_loss_maps, mb_aggregate_curve,
-    sb_loss_curves, sb_loss_ratio_curves, sb_loss_maps, sb_aggregate_curve)
+    MB_LOSS_CURVES, MB_LOSS_RATIO_CURVES, MB_LOSS_MAPS, MB_AGGREGATE_CURVE,
+    SB_LOSS_CURVES, SB_LOSS_RATIO_CURVES, SB_LOSS_MAPS, SB_AGGREGATE_CURVE)
 
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
@@ -82,11 +82,11 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_job_succeeded(OUTPUT_DIR)
         job_id = OqJob.objects.latest("id").id
 
-        self._verify_loss_maps(OUTPUT_DIR, mb_loss_maps, 0.05)
+        self._verify_loss_maps(OUTPUT_DIR, MB_LOSS_MAPS, 0.05)
         self._verify_loss_ratio_curves(job_id, OUTPUT_DIR,
-            mb_loss_ratio_curves, 0.05)
-        self._verify_loss_curves(job_id, OUTPUT_DIR, mb_loss_curves, 0.05)
-        self._verify_aggregate_curve(job_id, OUTPUT_DIR, mb_aggregate_curve,
+            MB_LOSS_RATIO_CURVES, 0.05)
+        self._verify_loss_curves(job_id, OUTPUT_DIR, MB_LOSS_CURVES, 0.05)
+        self._verify_aggregate_curve(job_id, OUTPUT_DIR, MB_AGGREGATE_CURVE,
             0.05)
 
     @attr('slow')
@@ -97,12 +97,12 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_job_succeeded(QA_OUTPUT_DIR)
         job_id = OqJob.objects.latest("id").id
 
-        self._verify_loss_maps(QA_OUTPUT_DIR, sb_loss_maps, 0.05)
+        self._verify_loss_maps(QA_OUTPUT_DIR, SB_LOSS_MAPS, 0.05)
         self._verify_loss_ratio_curves(job_id, QA_OUTPUT_DIR,
-            sb_loss_ratio_curves, 0.05)
-        self._verify_loss_curves(job_id, QA_OUTPUT_DIR, sb_loss_curves, 0.05)
+            SB_LOSS_RATIO_CURVES, 0.05)
+        self._verify_loss_curves(job_id, QA_OUTPUT_DIR, SB_LOSS_CURVES, 0.05)
         self._verify_aggregate_curve(job_id, QA_OUTPUT_DIR,
-            sb_aggregate_curve, 0.05)
+            SB_AGGREGATE_CURVE, 0.05)
 
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
