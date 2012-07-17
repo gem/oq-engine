@@ -27,7 +27,8 @@ from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
 
 from qa_tests.data.probabilistic_event_based_risk.test_data import (
-    mb_loss_curves, mb_loss_ratio_curves, mb_loss_maps, mb_aggregate_curve)
+    mb_loss_curves, mb_loss_ratio_curves, mb_loss_maps, mb_aggregate_curve,
+    sb_loss_curves, sb_loss_ratio_curves, sb_loss_maps, sb_aggregate_curve)
 
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
@@ -80,21 +81,26 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_job_succeeded(OUTPUT_DIR)
         job_id = OqJob.objects.latest("id").id
 
-        self._verify_loss_maps(OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(job_id, OUTPUT_DIR, 0.05)
-        self._verify_loss_curves(job_id, OUTPUT_DIR, 0.05)
-        self._verify_aggregate_curve(job_id, OUTPUT_DIR, 0.05)
+        self._verify_loss_maps(OUTPUT_DIR, mb_loss_maps, 0.05)
+        self._verify_loss_ratio_curves(job_id, OUTPUT_DIR,
+            mb_loss_ratio_curves, 0.05)
+        self._verify_loss_curves(job_id, OUTPUT_DIR, mb_loss_curves, 0.05)
+        self._verify_aggregate_curve(job_id, OUTPUT_DIR, mb_aggregate_curve,
+            0.05)
 
     def test_sampled_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
         self._run_job(cfg)
         self._verify_job_succeeded(QA_OUTPUT_DIR)
+        job_id = OqJob.objects.latest("id").id
 
-        self._verify_loss_maps(QA_OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(job_id, QA_OUTPUT_DIR, 0.10)
-        self._verify_loss_curves(job_id, QA_OUTPUT_DIR, 0.10)
-        self._verify_aggregate_curve(job_id, QA_OUTPUT_DIR, 0.05)
+        self._verify_loss_maps(QA_OUTPUT_DIR, sb_loss_maps, 0.05)
+        self._verify_loss_ratio_curves(job_id, QA_OUTPUT_DIR,
+            sb_loss_ratio_curves, 0.05)
+        self._verify_loss_curves(job_id, QA_OUTPUT_DIR, sb_loss_curves, 0.05)
+        self._verify_aggregate_curve(job_id, QA_OUTPUT_DIR,
+            sb_aggregate_curve, 0.05)
 
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
@@ -110,18 +116,18 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._run_job(cfg)
         self._verify_job_succeeded(OUTPUT_DIR)
 
-    def _verify_loss_curves(self, job_id, output_dir, tol):
+    def _verify_loss_curves(self, job_id, output_dir, expected_results, tol):
         filename = "%s/loss_curves-loss-block-#%s-block#0.xml" % (
                 output_dir, job_id)
 
-        self._verify_assets(filename, mb_loss_curves, XPATH_LOSS, tol)
+        self._verify_assets(filename, expected_results, XPATH_LOSS, tol)
 
-    def _verify_loss_ratio_curves(self, job_id, output_dir, tol):
+    def _verify_loss_ratio_curves(self, job_id, output_dir,
+                                  expected_results, tol):
         filename = "%s/loss_curves-block-#%s-block#0.xml" % (
                 output_dir, job_id)
 
-        self._verify_assets(filename, mb_loss_ratio_curves,
-            XPATH_LOSS_RATIO, tol)
+        self._verify_assets(filename, expected_results, XPATH_LOSS_RATIO, tol)
 
     def _verify_job_succeeded(self, output_dir):
         job = OqJob.objects.latest("id")
@@ -136,16 +142,17 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         for f in expected_files:
             self.assertTrue(os.path.exists(os.path.join(output_dir, f)))
 
-    def _verify_loss_maps(self, output_dir, tol):
+    def _verify_loss_maps(self, output_dir, expected_results, tol):
         filename = "%s/losses_at-0.99.xml" % output_dir
         root = get_root(filename)
 
         for i, asset_id in enumerate(ASSETS_ID):
             closs = float(elem_content(root, XPATH_LOSS_MAP, asset_id))
             self.assertTrue(numpy.allclose(
-                closs, mb_loss_maps[i], atol=0.0, rtol=tol))
+                closs, expected_results[i], atol=0.0, rtol=tol))
 
-    def _verify_aggregate_curve(self, job_id, output_dir, tol):
+    def _verify_aggregate_curve(self, job_id, output_dir, expected_results,
+                                tol):
         [output] = Output.objects.filter(
             oq_job=job_id,
             output_type="agg_loss_curve")
@@ -156,9 +163,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         losses = [float(x) for x in elem_content(root, XPATH_AC_LOSS).split()]
 
         self.assertTrue(numpy.allclose(
-                poes, mb_aggregate_curve[0], atol=0.0, rtol=tol))
+                poes, expected_results[0], atol=0.0, rtol=tol))
         self.assertTrue(numpy.allclose(
-                losses, mb_aggregate_curve[1], atol=0.0, rtol=tol))
+                losses, expected_results[1], atol=0.0, rtol=tol))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ["--output-type=xml"])
