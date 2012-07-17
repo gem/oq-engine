@@ -605,21 +605,23 @@ class PerAssetValueTestCase(DjangoTestCase):
     """Test and exercise the per_asset_value() function."""
 
     # risk exposure data
-    REXD = namedtuple(
-        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
+    REXD = namedtuple("REXD", "category, cost, cost_type, area, area_type, "
+                              "number_of_units, unit_type")
 
     def test_per_asset_value_with_cost_type_aggreggated(self):
         # When the cost type is 'aggregated' per_asset_value() simply returns
         # the cost value.
         exd = self.REXD(category="eval", cost=22.0, cost_type="aggregated",
-                        area=0.0, area_type="aggregated", number_of_units=0.0)
+                        area=0.0, area_type="aggregated", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_asset(self):
         # When the cost type is 'per_asset' per_asset_value() returns:
         # cost * number_of_units
         exd = self.REXD(category="eval", cost=23.0, cost_type="per_asset",
-                        area=0.0, area_type="aggregated", number_of_units=2.0)
+                        area=0.0, area_type="aggregated", number_of_units=2.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.number_of_units,
                          models.per_asset_value(exd))
 
@@ -627,14 +629,16 @@ class PerAssetValueTestCase(DjangoTestCase):
         # When the cost type is 'per_area' and the area type is 'aggregated'
         # per_asset_value() returns: cost * area
         exd = self.REXD(category="eval", cost=24.0, cost_type="per_area",
-                        area=3.0, area_type="aggregated", number_of_units=0.0)
+                        area=3.0, area_type="aggregated", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.area, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_area_and_per_asset(self):
         # When the cost type is 'per_area' and the area type is 'per_asset'
         # per_asset_value() returns: cost * area * number_of_units
         exd = self.REXD(category="eval", cost=25.0, cost_type="per_area",
-                        area=4.0, area_type="per_asset", number_of_units=5.0)
+                        area=4.0, area_type="per_asset", number_of_units=5.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.area * exd.number_of_units,
                          models.per_asset_value(exd))
 
@@ -642,14 +646,24 @@ class PerAssetValueTestCase(DjangoTestCase):
         # When the exposure data is invalid per_asset_value() raises
         # `ValueError`
         exd = self.REXD(category="eval", cost=26.0, cost_type="too-expensive",
-                        area=0.0, area_type="rough", number_of_units=0.0)
+                        area=0.0, area_type="rough", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertRaises(ValueError, models.per_asset_value, exd)
 
     def test_per_asset_value_with_population_exposure_data(self):
         # For population exposure data the `number_of_units` is returned
         exd = self.REXD(category="population", cost=None, cost_type=None,
-                        area=None, area_type=None, number_of_units=111.1)
+                        area=None, area_type=None, number_of_units=111.1,
+                        unit_type="economic_value")
         self.assertEqual(111.1, models.per_asset_value(exd))
+
+    def test_per_asset_value_with_unit_type_count(self):
+        # When the unit_type is set to "count" we simply return the
+        # `number_of_units`.
+        exd = self.REXD(category="whatever", cost=None, cost_type=None,
+                        area=None, area_type=None, number_of_units=112.2,
+                        unit_type="count")
+        self.assertEqual(112.2, models.per_asset_value(exd))
 
 
 class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
@@ -676,7 +690,7 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_insert_expo_model_with_unit_type_count(self):
         # inserting an exposure model with unit_type = "count" works as long as
-        # we omit the area/coco/reco/stco type and unit.
+        # we omit the area/reco/stco type and unit.
         mdl = models.ExposureModel(
             input=self.emdl_input, owner=self.job.owner, unit_type="count",
             name="exposure-data-testing", category="economic loss")
@@ -702,23 +716,14 @@ class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
             self.fail("DatabaseError not raised")
 
     def test_unit_type_count_and_coco(self):
-        # When the unit_type is set to "count" the coco type and unit are not
-        # allowed.
+        # When the unit_type is set to "count" the coco type and unit may
+        # be present.
         mdl = models.ExposureModel(
             input=self.emdl_input, owner=self.job.owner, unit_type="count",
             name="exposure-data-testing", category="economic loss")
-        mdl.coco_type = "per_coco"
+        mdl.coco_type = "per_asset"
         mdl.coco_unit = "ATS"
-        try:
-            mdl.save()
-        except DatabaseError, de:
-            self.assertEqual(
-                "Exception: We are in counting mode: neither of these must "
-                "be set ['coco_unit', 'coco_type'] (exposure_model)",
-                de.args[0].split('\n', 1)[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
+        mdl.save()
 
     def test_unit_type_count_and_reco(self):
         # When the unit_type is set to "count" the reco type and unit are not
@@ -786,7 +791,7 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_exposure_data_unit_type_count(self):
         # the unit_type is set to "count" and we can insert an `exposure_data`
-        # row as long as we omit the area, coco, reco and stco properties.
+        # row as long as we omit the area, reco and stco properties.
         site = shapes.Site(-122.5000, 37.5000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
@@ -807,24 +812,6 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
             self.assertEqual(
                 "Exception: We are in counting mode: neither of these must "
                 "be set ['area'] (exposure_data)",
-                de.args[0].split('\n', 1)[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
-
-    def test_exposure_data_with_coco_and_unit_type_count(self):
-        # the content cost must not be present when unit_type is set to "count"
-        site = shapes.Site(-122.5000, 37.5000)
-        edata = models.ExposureData(
-            exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), number_of_units=111,
-            site=site.point.to_wkt(), coco=112)
-        try:
-            edata.save()
-        except DatabaseError, de:
-            self.assertEqual(
-                "Exception: We are in counting mode: neither of these must "
-                "be set ['coco'] (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
@@ -863,6 +850,61 @@ class ExposureDataUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
             self.assertEqual(
                 "Exception: We are in counting mode: neither of these must "
                 "be set ['stco'] (exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+
+class ExposureDataUnitsOnlyAndCocoTestCase(DjangoTestCase, helpers.DbTestCase):
+    """Test the exposure_data database constraints with unit_type == 'count'
+       and a defined 'coco_type'."""
+
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = cls.setup_classic_job()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        emdl_input = models.Input(
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
+        self.mdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner, unit_type="count",
+            name="exposure-data-testing", category="economic loss",
+            coco_type="per_asset", coco_unit="USD")
+        self.mdl.save()
+
+    def test_exposure_data_with_coco_and_unit_type_count(self):
+        # the content cost may be present when unit_type is set to "count"
+        site = shapes.Site(-122.5000, 37.5000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt(), coco=112)
+        edata.save()
+
+    def test_exposure_data_with_coco_type_but_no_value(self):
+        # if the content cost type is set the value must be set as well.
+        site = shapes.Site(-122.5000, 37.5000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site=site.point.to_wkt())
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: contents cost is mandatory for "
+                "<coco_type=per_asset> (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
