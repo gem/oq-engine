@@ -93,10 +93,13 @@ def per_asset_value(exd):
         - area
         - area_type
         - number_of_units
+        - unit_type
     :returns: the per-asset value as a `float`
     :raises: `ValueError` in case of a malformed (risk exposure data) input
     """
     if exd.category is not None and exd.category == "population":
+        return exd.number_of_units
+    if exd.unit_type is not None and exd.unit_type == "count":
         return exd.number_of_units
     if exd.cost_type == "aggregated":
         return exd.cost
@@ -1410,8 +1413,8 @@ class ExposureData(djm.Model):
     Per-asset risk exposure data
     '''
 
-    REXD = namedtuple(
-        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
+    REXD = namedtuple("REXD", "category, cost, cost_type, area, area_type, "
+                              "number_of_units, unit_type")
 
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
@@ -1443,7 +1446,8 @@ class ExposureData(djm.Model):
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+            category=self.exposure_model.category,
+            unit_type=self.exposure_model.unit_type)
         return per_asset_value(exd)
 
     @property
@@ -1453,7 +1457,8 @@ class ExposureData(djm.Model):
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+            category=self.exposure_model.category,
+            unit_type=self.exposure_model.unit_type)
         return per_asset_value(exd)
 
     class Meta:

@@ -605,21 +605,23 @@ class PerAssetValueTestCase(DjangoTestCase):
     """Test and exercise the per_asset_value() function."""
 
     # risk exposure data
-    REXD = namedtuple(
-        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
+    REXD = namedtuple("REXD", "category, cost, cost_type, area, area_type, "
+                              "number_of_units, unit_type")
 
     def test_per_asset_value_with_cost_type_aggreggated(self):
         # When the cost type is 'aggregated' per_asset_value() simply returns
         # the cost value.
         exd = self.REXD(category="eval", cost=22.0, cost_type="aggregated",
-                        area=0.0, area_type="aggregated", number_of_units=0.0)
+                        area=0.0, area_type="aggregated", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_asset(self):
         # When the cost type is 'per_asset' per_asset_value() returns:
         # cost * number_of_units
         exd = self.REXD(category="eval", cost=23.0, cost_type="per_asset",
-                        area=0.0, area_type="aggregated", number_of_units=2.0)
+                        area=0.0, area_type="aggregated", number_of_units=2.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.number_of_units,
                          models.per_asset_value(exd))
 
@@ -627,14 +629,16 @@ class PerAssetValueTestCase(DjangoTestCase):
         # When the cost type is 'per_area' and the area type is 'aggregated'
         # per_asset_value() returns: cost * area
         exd = self.REXD(category="eval", cost=24.0, cost_type="per_area",
-                        area=3.0, area_type="aggregated", number_of_units=0.0)
+                        area=3.0, area_type="aggregated", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.area, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_area_and_per_asset(self):
         # When the cost type is 'per_area' and the area type is 'per_asset'
         # per_asset_value() returns: cost * area * number_of_units
         exd = self.REXD(category="eval", cost=25.0, cost_type="per_area",
-                        area=4.0, area_type="per_asset", number_of_units=5.0)
+                        area=4.0, area_type="per_asset", number_of_units=5.0,
+                        unit_type="economic_value")
         self.assertEqual(exd.cost * exd.area * exd.number_of_units,
                          models.per_asset_value(exd))
 
@@ -642,14 +646,24 @@ class PerAssetValueTestCase(DjangoTestCase):
         # When the exposure data is invalid per_asset_value() raises
         # `ValueError`
         exd = self.REXD(category="eval", cost=26.0, cost_type="too-expensive",
-                        area=0.0, area_type="rough", number_of_units=0.0)
+                        area=0.0, area_type="rough", number_of_units=0.0,
+                        unit_type="economic_value")
         self.assertRaises(ValueError, models.per_asset_value, exd)
 
     def test_per_asset_value_with_population_exposure_data(self):
         # For population exposure data the `number_of_units` is returned
         exd = self.REXD(category="population", cost=None, cost_type=None,
-                        area=None, area_type=None, number_of_units=111.1)
+                        area=None, area_type=None, number_of_units=111.1,
+                        unit_type="economic_value")
         self.assertEqual(111.1, models.per_asset_value(exd))
+
+    def test_per_asset_value_with_unit_type_count(self):
+        # When the unit_type is set to "count" we simply return the
+        # `number_of_units`.
+        exd = self.REXD(category="whatever", cost=None, cost_type=None,
+                        area=None, area_type=None, number_of_units=112.2,
+                        unit_type="count")
+        self.assertEqual(112.2, models.per_asset_value(exd))
 
 
 class ExposureModelUnitsOnlyTestCase(DjangoTestCase, helpers.DbTestCase):
