@@ -100,6 +100,18 @@ class ProbabilisticRupture(Rupture):
         rate = self.occurrence_rate
         return tom.get_probability_one_or_more_occurrences(rate)
 
+    def get_probability_one_occurrence(self):
+        """
+        Return the probability of this rupture to occur exactly one time.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability_one_occurrence`
+        of an assigned temporal occurrence model.
+        """
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_one_occurrence(rate)
+
+
     def sample_number_of_occurrences(self):
         """
         Draw a random sample from the distribution and return a number
