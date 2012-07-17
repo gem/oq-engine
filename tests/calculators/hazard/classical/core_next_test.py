@@ -202,6 +202,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # Now we test that the htemp results were copied to the final location
         # in `hzrdr.hazard_curve` and `hzrdr.hazard_curve_data`.
         for rlz in lt_rlzs:
+            self.assertEqual(rlz.total_sources, rlz.completed_sources)
+            self.assertTrue(rlz.is_complete)
+
             # get hazard curves for this realization
             [pga_curves] = models.HazardCurve.objects.filter(
                 lt_realization=rlz.id, imt='PGA')
