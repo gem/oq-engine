@@ -25,7 +25,6 @@ from nose.plugins.attrib import attr
 
 from openquake.calculators.hazard.classical import core_next
 from openquake.db import models
-from openquake.input import logictree
 from tests.utils import helpers
 
 
@@ -155,7 +154,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(118, ltr2.total_sources)
         self.assertEqual(0, ltr2.completed_sources)
 
-
         for ltr in (ltr1, ltr2):
             # Now check that we have source_progress records for each
             # realization.
@@ -217,7 +215,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
                 hazard_curve=pga_curves.id)
             self.assertEqual(120, len(pga_curve_data))
             sa_curve_data = models.HazardCurveData.objects.filter(
-                hazard_curve=pga_curves.id)
+                hazard_curve=sa_curves.id)
             self.assertEqual(120, len(sa_curve_data))
 
         # last thing, make sure that post_execute cleaned up the htemp tables
@@ -236,7 +234,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # Test the `hazard_curves` task, but execute it as a normal function
         # (for purposes of test coverage).
         hc = self.job.hazard_calculation
-        max_dist = hc.maximum_distance
 
         self.calc.pre_execute()
 
@@ -264,7 +261,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             self.assertEqual(dict(job_id=self.job.id, num_sources=1),
                              body)
             message.ack()
-
 
         with kombu.BrokerConnection(**conn_args) as conn:
             task_signal_queue(conn.channel()).declare()
@@ -314,7 +310,7 @@ class ImtsToNhlibTestCase(unittest.TestCase):
         actual = core_next.im_dict_to_nhlib(imts_in)
         self.assertEqual(len(expected), len(actual))
 
-        for i, (exp_imt, exp_imls) in enumerate(expected.items()):
+        for exp_imt, exp_imls in expected.items():
             act_imls = actual[exp_imt]
             self.assertEqual(exp_imls, act_imls)
 
@@ -365,7 +361,6 @@ class HelpersTestCase(unittest.TestCase):
         cfg = helpers.demo_file(
             'simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        calc = core_next.ClassicalHazardCalculator(job)
 
         site_coll = core_next.get_site_collection(job.hazard_calculation)
 
