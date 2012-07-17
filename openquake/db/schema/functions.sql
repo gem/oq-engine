@@ -265,8 +265,9 @@ AS $$
                                 "must be set %s" % defined))
 
     if NEW["unit_type"] == "count":
-        check_nor(["area_unit", "area_type", "coco_unit", "coco_type",
-                   "reco_unit", "reco_type", "stco_unit", "stco_type"])
+        check_xor("coco_unit", "coco_type")
+        check_nor(["area_unit", "area_type", "reco_unit", "reco_type",
+                   "stco_unit", "stco_type"])
         return "OK"
 
     if NEW["area_type"] is None:
@@ -326,7 +327,10 @@ AS $$
 
     if emdl["unit_type"] == "count":
         if NEW["number_of_units"] is not None:
-            check_nor(["area", "coco", "stco", "reco"])
+            check_nor(["area", "stco", "reco"])
+            if NEW["coco"] is None and emdl["coco_type"] is not None:
+                raise Exception(fmt("contents cost is mandatory for "
+                                    "<coco_type=%s>" % emdl["coco_type"]))
             return "OK"
         else:
             raise Exception(fmt("number of units is mandatory for models "
