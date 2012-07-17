@@ -256,6 +256,12 @@ COMMENT ON COLUMN oqmif.occupancy.category IS 'occupancy data category, may be o
 COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
 
+COMMENT ON TABLE oqmif.population IS 'Occupancy for a given exposure data set';
+COMMENT ON COLUMN oqmif.population.exposure_data_id IS 'Foreign key to the exposure data set to which the population data applies.';
+COMMENT ON COLUMN oqmif.population.category IS 'population data category, may be one of: day, night, transit';
+COMMENT ON COLUMN oqmif.population.occupants IS 'number of occupants';
+
+
 -- riski schema tables ------------------------------------------
 COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
 COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';

@@ -1408,6 +1408,24 @@ class Occupancy(djm.Model):
         db_table = 'oqmif\".\"occupancy'
 
 
+class Population(djm.Model):
+    '''
+    Asset population data
+    '''
+
+    exposure_data = djm.ForeignKey("ExposureData")
+    CATEGORY_CHOICES = (
+        (u'day', u'Population value during the day'),
+        (u'night', u'Population value during the night'),
+        (u'transit', u'Population value of people in transit'),
+    )
+    category = djm.TextField(choices=CATEGORY_CHOICES)
+    occupants = djm.IntegerField()
+
+    class Meta:
+        db_table = 'oqmif\".\"population'
+
+
 class ExposureData(djm.Model):
     '''
     Per-asset risk exposure data
