@@ -544,6 +544,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     logs.LOG.debug('> starting transaction')
     with transaction.commit_on_success():
         logs.LOG.debug('looping over IMTs')
+
         for imt in hc.intensity_measure_types_and_levels.keys():
             logs.LOG.debug('> updating hazard for IMT=%s' % imt)
             nhlib_imt = _imt_to_nhlib(imt)
@@ -584,11 +585,15 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
         # Update realiation progress,
         # mark realization as complete if it is done
+        # First, refresh the logic tree realization record:
+        lt_rlz = models.LtRealization.objects.get(id=lt_rlz.id)
+
         lt_rlz.completed_sources += len(src_ids)
         if lt_rlz.completed_sources == lt_rlz.total_sources:
             lt_rlz.is_complete = True
 
         lt_rlz.save()
+
 
     logs.LOG.debug('< transaction complete')
 
