@@ -1127,7 +1127,9 @@ CREATE TABLE uiapi.oq_job_profile (
     -- In the absence of an average population datum for exposure the user may
     -- want to specify that a day/night/transit population value should be used
     -- instead.
-    default_pop_cat VARCHAR,
+    default_pop_cat VARCHAR CONSTRAINT default_pop_cat_value
+        CHECK(default_pop_cat IS NULL OR
+              default_pop_cat IN ('day', 'night', 'in_transit')),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
