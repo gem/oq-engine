@@ -136,3 +136,51 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     eps_bins = numpy.linspace(-truncation_level, truncation_level, n_epsilons)
 
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+
+
+def _arange_data_in_bins(bins_data, bin_edges):
+    mags, dists, lons, lats, joint_probs, tect_reg_types = bins_data
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+    shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
+             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
+    diss_matrix = numpy.zeros(shape)
+
+    for i_mag in xrange(len(mag_bins) - 1):
+        mag_idx = mags <= mag_bins[i_mag + 1]
+        if i_mag != 0:
+            mag_idx &= mags > mag_bins[i_mag]
+
+        for i_dist in xrange(len(dist_bins) - 1):
+            dist_idx = dists <= dist_bins[i_dist + 1]
+            if i_dist != 0:
+                dist_idx &= dists > dist_bins[i_dist]
+
+            for i_lon in xrange(len(lon_bins) - 1):
+                extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
+                lon_idx = extents >= 0
+                if i_lon != 0:
+                    extents = get_longitudinal_extent(lon_bins[i_lon], lons)
+                    lon_idx &= extents > 0
+
+                for i_lat in xrange(len(lat_bins) - 1):
+                    lat_idx = lats <= lat_bins[i_lat + 1]
+                    if i_lat != 0:
+                        lat_idx &= lats > lat_bins[i_lat]
+
+                    for i_eps in xrange(len(eps_bins) - 1):
+
+                        for i_trt in xrange(len(trt_bins)):
+                            trt_idx = trt_bins == i_trt
+
+                            prob_idx = mag_idx & dist_idx & lon_idx \
+                                       & lat_idx & trt_idx
+                            diss_idx = i_mag, i_dist, i_lon, \
+                                       i_lat, i_eps, i_trt
+
+                            diss_matrix[diss_idx] = numpy.sum(
+                                joint_probs[prob_idx, i_eps]
+                            )
+
+    diss_matrix /= numpy.sum(diss_matrix)
+
+    return diss_matrix
