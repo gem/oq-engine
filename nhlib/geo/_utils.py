@@ -89,12 +89,7 @@ def get_longitudinal_extent(lon1, lon2):
         otherwise. Absolute value of the result doesn't exceed 180 for
         valid parameters values.
     """
-    extent = lon2 - lon1
-    if extent > 180:
-        extent = -360 + extent
-    elif extent < -180:
-        extent = 360 + extent
-    return extent
+    return (lon2 - lon1 + 180) % 360 - 180
 
 
 def get_spherical_bounding_box(lons, lats):
