@@ -38,10 +38,13 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
     dists = []
     lons = []
     lats = []
-    tect_reg_types = set()
+    tect_reg_types = []
     joint_probs = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
+
+    _next_trt_num = 0
+    trt_nums = {}
 
     sources_sites = ((source, sitecol) for source in sources)
     # here we ignore filtered site collection because either it is the same
@@ -50,6 +53,12 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
     for source, s_sites in source_site_filter(sources_sites):
         tect_reg = source.tectonic_region_type
         gsim = gsims[tect_reg]
+
+        if not tect_reg in trt_nums:
+            trt_nums[tect_reg] = _next_trt_num
+            _next_trt_num += 1
+        tect_reg = trt_nums[tect_reg]
+
         ruptures_sites = ((rupture, s_sites)
                           for rupture in source.iter_ruptures(tom))
         for rupture, r_sites in rupture_site_filter(ruptures_sites):
@@ -60,7 +69,7 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
             [closest_point] = rupture.surface.get_closest_points(sitemesh)
             lons.append(closest_point.longitude)
             lats.append(closest_point.latitude)
-            tect_reg_types.add(tect_reg)
+            tect_reg_types.append(tect_reg)
 
             # compute conditional probability of exceeding iml given
             # the current rupture, and different epsilon level, that is
@@ -81,9 +90,15 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
+    tect_reg_types = numpy.array(tect_reg_types, int)
     joint_probs = numpy.array(joint_probs, float)
 
-    return mags, dists, lons, lats, joint_probs, tect_reg_types
+    trt_bins = [
+        trt for (num, trt) in sorted((num, trt)
+                                     for (trt, num) in trt_nums.items())
+    ]
+
+    return mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -91,7 +106,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     """
     Define bin edges for disaggregation histograms.
     """
-    mags, dists, lons, lats, _joint_probs, tect_reg_types = bins_data
+    mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
 
     mag_bins = numpy.arange(
         numpy.floor(mags.min() / mag_bin_width) * mag_bin_width,
@@ -119,7 +134,5 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     )
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level, n_epsilons)
-
-    trt_bins = list(tect_reg_types)
 
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins

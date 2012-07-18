@@ -125,7 +125,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
 
     def test_no_filters(self):
         mags, dists, lons, \
-        lats, joint_probs, tect_reg_types = disagg._collect_bins_data(
+        lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
             self.sources, self.site, self.iml, self.imt, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=filters.source_site_noop_filter,
@@ -152,7 +152,8 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                            [0., 0., 0.],
                            [0., 0.004, 0.0016],
                            [0.003, 0.015, 0.003]])
-        self.assertEqual(tect_reg_types, set(('trt1', 'trt2')))
+        aae(trts, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1])
+        self.assertEqual(trt_bins, ['trt1', 'trt2'])
 
     def test_filters(self):
         def source_site_filter(sources_sites):
@@ -167,7 +168,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                 yield rupture, sites
 
         mags, dists, lons, \
-        lats, joint_probs, tect_reg_types = disagg._collect_bins_data(
+        lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
             self.sources, self.site, self.iml, self.imt, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=source_site_filter,
@@ -185,7 +186,8 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                            [0.03, 0.04, 0.03],
                            [0., 0., 0.01],
                            [0., 0., 0.]])
-        self.assertEqual(tect_reg_types, set(('trt1', )))
+        aae(trts, [0, 0, 0, 0])
+        self.assertEqual(trt_bins, ['trt1'])
 
 
 class DefineBinsTestCase(unittest.TestCase):
@@ -195,12 +197,13 @@ class DefineBinsTestCase(unittest.TestCase):
         lats = numpy.array([-25, -10, 0.6, -20, -15])
         lons = numpy.array([179, -179, 176.4, -179.55, 180])
         joint_probs = None
-        tect_region_types = set(['foo', 'bar', 'baz'])
+        trts = [0, 1, 2, 2, 1]
+        trt_bins = ['foo', 'bar', 'baz']
 
-        bins_data = mags, dists, lons, lats, joint_probs, tect_region_types
+        bins_data = mags, dists, lons, lats, joint_probs, trts, trt_bins
 
         mag_bins, dist_bins, lon_bins, lat_bins, \
-        eps_bins, trt_bins = disagg._define_bins(
+        eps_bins, trt_bins_ = disagg._define_bins(
             bins_data, mag_bin_width=1, dist_bin_width=4.2,
             coord_bin_width=1.2, truncation_level=1, n_epsilons=5
         )
@@ -215,5 +218,4 @@ class DefineBinsTestCase(unittest.TestCase):
                         -15.6, -14.4, -13.2, -12., -10.8, -9.6, -8.4, -7.2,
                         -6., -4.8, -3.6, -2.4, -1.2, 0.])
         aae(eps_bins, [-1., -0.5, 0. , 0.5, 1. ])
-        self.assertIsInstance(trt_bins, list)
-        self.assertEqual(set(trt_bins), tect_region_types)
+        self.assertIs(trt_bins, trt_bins_)
