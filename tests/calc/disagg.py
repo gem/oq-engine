@@ -18,6 +18,7 @@ import unittest
 import numpy
 
 from nhlib.calc import disagg
+from nhlib.calc import filters
 from nhlib.tom import PoissonTOM
 from nhlib.geo import Point, Mesh
 from nhlib.site import Site
@@ -76,15 +77,13 @@ class _BaseDisaggTestCase(unittest.TestCase):
             assert len(sctx) == 1
             return numpy.array([self.disaggregated_poes[rctx]])
 
-
-class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def setUp(self):
         self.ruptures_and_poes1 = [
             ([0, 0, 0], self.FakeRupture(5, 0.1, 3, 22, 44)),
             ([0.1, 0.2, 0.1], self.FakeRupture(5, 0.2, 11, 22, 44)),
             ([0, 0, 0.3], self.FakeRupture(5, 0.01, 12, 22, 45)),
             ([0, 0.05, 0.001], self.FakeRupture(5, 0.33, 13, 22, 45)),
-            ([0, 0, 0], self.FakeRupture(5, 0.4, 14, 21, 44)),
+            ([0, 0, 0], self.FakeRupture(9, 0.4, 14, 21, 44)),
             ([0, 0, 0.02], self.FakeRupture(5, 0.05, 11, 21, 44)),
             ([0.04, 0.1, 0.04], self.FakeRupture(5, 0.53, 11, 21, 45)),
             ([0.2, 0.3, 0.2], self.FakeRupture(5, 0.066, 10, 21, 45)),
@@ -112,22 +111,31 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         )
         self.site = Site(Point(0, 0), 2, False, 4, 5)
 
-    def test_no_filters(self):
-        iml, imt, truncation_level = object(), object(), object()
-        gsim = self.FakeGSIM(iml, imt, truncation_level, n_epsilons=3,
-                             disaggregated_poes=self.disagreggated_poes)
-        gsims = {'trt1': gsim, 'trt2': gsim}
-        sources = [self.source1, self.source2]
 
-        mags, dists, lons, lats, joint_probs, tect_reg_types \
-                = disagg._collect_bins_data(sources, self.site, iml, imt,
-                                            gsims, self.tom, truncation_level,
-                                            n_epsilons=3)
+class CollectBinsDataTestCase(_BaseDisaggTestCase):
+    def setUp(self):
+        super(CollectBinsDataTestCase, self).setUp()
+        self.iml, self.imt, self.truncation_level = object(), object(), \
+                                                    object()
+        gsim = self.FakeGSIM(self.iml, self.imt, self.truncation_level,
+                             n_epsilons=3,
+                             disaggregated_poes=self.disagreggated_poes)
+        self.gsims = {'trt1': gsim, 'trt2': gsim}
+        self.sources = [self.source1, self.source2]
+
+    def test_no_filters(self):
+        mags, dists, lons, \
+        lats, joint_probs, tect_reg_types = disagg._collect_bins_data(
+            self.sources, self.site, self.iml, self.imt, self.gsims,
+            self.tom, self.truncation_level, n_epsilons=3,
+            source_site_filter=filters.source_site_noop_filter,
+            rupture_site_filter=filters.rupture_site_noop_filter
+        )
 
         aae = numpy.testing.assert_array_equal
         aaae = numpy.testing.assert_array_almost_equal
 
-        aae(mags, [5,  5,  5,  5,  5,  5,  5,  5,  6,  6,  6,  8,  7])
+        aae(mags, [5,  5,  5,  5,  9,  5,  5,  5,  6,  6,  6,  8,  7])
         aae(dists, [3, 11, 12, 13, 14, 11, 11, 10, 12, 12, 11, 5, 5])
         aae(lons, [22, 22, 22, 22, 21, 21, 21, 21, 22, 21, 22, 11, 11])
         aae(lats, [44, 44, 45, 45, 44, 44, 45, 45, 44, 44, 45, 45, 46])
@@ -145,3 +153,36 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                            [0., 0.004, 0.0016],
                            [0.003, 0.015, 0.003]])
         self.assertEqual(tect_reg_types, set(('trt1', 'trt2')))
+
+    def test_filters(self):
+        def source_site_filter(sources_sites):
+            for source, sites in sources_sites:
+                if source is self.source2:
+                    continue
+                yield source, sites
+        def rupture_site_filter(rupture_sites):
+            for rupture, sites in rupture_sites:
+                if rupture.mag < 6:
+                    continue
+                yield rupture, sites
+
+        mags, dists, lons, \
+        lats, joint_probs, tect_reg_types = disagg._collect_bins_data(
+            self.sources, self.site, self.iml, self.imt, self.gsims,
+            self.tom, self.truncation_level, n_epsilons=3,
+            source_site_filter=source_site_filter,
+            rupture_site_filter=rupture_site_filter
+        )
+
+        aae = numpy.testing.assert_array_equal
+        aaae = numpy.testing.assert_array_almost_equal
+
+        aae(mags, [9, 6, 6, 6])
+        aae(dists, [14, 12, 12, 11])
+        aae(lons, [21, 22, 21, 22])
+        aae(lats, [44, 44, 44, 45])
+        aaae(joint_probs, [[0., 0., 0.],
+                           [0.03, 0.04, 0.03],
+                           [0., 0., 0.01],
+                           [0., 0., 0.]])
+        self.assertEqual(tect_reg_types, set(('trt1', )))

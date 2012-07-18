@@ -28,8 +28,8 @@ def disaggregation():
 
 
 def _collect_bins_data(sources, site, iml, imt, gsims, tom,
-                       truncation_level, n_epsilons):
-    # TODO: filters
+                       truncation_level, n_epsilons,
+                       source_site_filter, rupture_site_filter):
     mags = []
     dists = []
     lons = []
@@ -39,10 +39,16 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
-    for source in sources:
+    sources_sites = ((source, sitecol) for source in sources)
+    # here we ignore filtered site collection because either it is the same
+    # as the original one (with one site), or the source/rupture is filtered
+    # out and doesn't show up in the filter's output
+    for source, s_sites in source_site_filter(sources_sites):
         tect_reg = source.tectonic_region_type
         gsim = gsims[tect_reg]
-        for rupture in source.iter_ruptures(tom):
+        ruptures_sites = ((rupture, s_sites)
+                          for rupture in source.iter_ruptures(tom))
+        for rupture, r_sites in rupture_site_filter(ruptures_sites):
             # extract rupture parameters of interest
             mags.append(rupture.mag)
             [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
