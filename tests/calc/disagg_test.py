@@ -126,7 +126,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         mags, dists, lons, \
         lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
-            self.sources, self.site, self.iml, self.imt, self.gsims,
+            self.sources, self.site, self.imt, self.iml, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=filters.source_site_noop_filter,
             rupture_site_filter=filters.rupture_site_noop_filter
@@ -169,7 +169,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
 
         mags, dists, lons, \
         lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
-            self.sources, self.site, self.iml, self.imt, self.gsims,
+            self.sources, self.site, self.imt, self.iml, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter

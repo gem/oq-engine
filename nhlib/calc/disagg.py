@@ -31,7 +31,7 @@ def disaggregation():
 
 
 
-def _collect_bins_data(sources, site, iml, imt, gsims, tom,
+def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     mags = []
