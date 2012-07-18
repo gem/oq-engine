@@ -186,3 +186,34 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                            [0., 0., 0.01],
                            [0., 0., 0.]])
         self.assertEqual(tect_reg_types, set(('trt1', )))
+
+
+class DefineBinsTestCase(unittest.TestCase):
+    def test(self):
+        mags = numpy.array([4.4, 5, 3.2, 7, 5.9])
+        dists = numpy.array([4, 1.2, 3.5, 52.1, 17])
+        lats = numpy.array([-25, -10, 0.6, -20, -15])
+        lons = numpy.array([179, -179, 176.4, -179.55, 180])
+        joint_probs = None
+        tect_region_types = set(['foo', 'bar', 'baz'])
+
+        bins_data = mags, dists, lons, lats, joint_probs, tect_region_types
+
+        mag_bins, dist_bins, lon_bins, lat_bins, \
+        eps_bins, trt_bins = disagg._define_bins(
+            bins_data, mag_bin_width=1, dist_bin_width=4.2,
+            coord_bin_width=1.2, truncation_level=1, n_epsilons=5
+        )
+
+        aae = numpy.testing.assert_array_equal
+        aaae = numpy.testing.assert_array_almost_equal
+        aae(mag_bins, [3, 4, 5, 6])
+        aaae(dist_bins, [0., 4.2, 8.4, 12.6, 16.8, 21., 25.2, 29.4, 33.6,
+                         37.8, 42., 46.2, 50.4])
+        aaae(lon_bins, [176.4, 177.91578947, 179.43157895, -179.05263158, -178.8])
+        aaae(lat_bins, [-25.2, -24., -22.8, -21.6, -20.4, -19.2, -18., -16.8,
+                        -15.6, -14.4, -13.2, -12., -10.8, -9.6, -8.4, -7.2,
+                        -6., -4.8, -3.6, -2.4, -1.2, 0.])
+        aae(eps_bins, [-1., -0.5, 0. , 0.5, 1. ])
+        self.assertIsInstance(trt_bins, list)
+        self.assertEqual(set(trt_bins), tect_region_types)

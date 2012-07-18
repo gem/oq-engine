@@ -19,6 +19,10 @@
 import numpy
 
 from nhlib.site import SiteCollection
+# TODO: this shouldn't be imported from a geo package's private module
+from nhlib.geo._utils import get_spherical_bounding_box, \
+                             get_longitudinal_extent
+from nhlib.geo.geodetic import npoints_between
 
 
 def disaggregation():
@@ -80,3 +84,42 @@ def _collect_bins_data(sources, site, iml, imt, gsims, tom,
     joint_probs = numpy.array(joint_probs, float)
 
     return mags, dists, lons, lats, joint_probs, tect_reg_types
+
+
+def _define_bins(bins_data, mag_bin_width, dist_bin_width,
+                 coord_bin_width, truncation_level, n_epsilons):
+    """
+    Define bin edges for disaggregation histograms.
+    """
+    mags, dists, lons, lats, _joint_probs, tect_reg_types = bins_data
+
+    mag_bins = numpy.arange(
+        numpy.floor(mags.min() / mag_bin_width) * mag_bin_width,
+        numpy.ceil(mags.max() / mag_bin_width) * mag_bin_width,
+        mag_bin_width
+    )
+
+    dist_bins = numpy.arange(
+        numpy.floor(dists.min() / dist_bin_width) * dist_bin_width,
+        numpy.ceil(dists.max() / dist_bin_width) * dist_bin_width,
+        dist_bin_width
+    )
+
+    west, east, north, south = get_spherical_bounding_box(lons, lats)
+    west = numpy.floor(west / coord_bin_width) * coord_bin_width
+    east = numpy.ceil(east / coord_bin_width) * coord_bin_width
+    lon_extent = get_longitudinal_extent(west, east)
+    lon_bins, _, _ = npoints_between(west, 0, 0, east, 0, 0,
+                                     numpy.round(lon_extent) / coord_bin_width)
+
+    lat_bins = numpy.arange(
+        numpy.floor(south / coord_bin_width) * coord_bin_width,
+        numpy.ceil(north / coord_bin_width) * coord_bin_width,
+        coord_bin_width
+    )
+
+    eps_bins = numpy.linspace(-truncation_level, truncation_level, n_epsilons)
+
+    trt_bins = list(tect_reg_types)
+
+    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
