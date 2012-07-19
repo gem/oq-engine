@@ -16,8 +16,11 @@
 """
 :mod:`nhlib.calc.disagg` contains :func:`disaggregation`.
 """
+# TODO: document module better
+# TODO: add pmf-extractor functions
 import numpy
 
+from nhlib.calc import filters
 from nhlib.site import SiteCollection
 # TODO: this shouldn't be imported from a geo package's private module
 from nhlib.geo._utils import get_spherical_bounding_box, \
@@ -25,15 +28,26 @@ from nhlib.geo._utils import get_spherical_bounding_box, \
 from nhlib.geo.geodetic import npoints_between
 
 
-def disaggregation():
-    """
-    """
-
+def disaggregation(sources, site, imt, iml, gsims, tom,
+                   truncation_level, n_epsilons,
+                   mag_bin_width, dist_bin_width, coord_bin_width,
+                   source_site_filter=filters.source_site_noop_filter,
+                   rupture_site_filter=filters.rupture_site_noop_filter):
+    # TODO: document
+    # TODO: unittest
+    bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
+                                   truncation_level, n_epsilons,
+                                   source_site_filter, rupture_site_filter)
+    bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
+                             coord_bin_width, truncation_level, n_epsilons)
+    diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
+    return bin_edges, diss_matrix
 
 
 def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
+    # TODO: document
     mags = []
     dists = []
     lons = []
@@ -106,6 +120,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     """
     Define bin edges for disaggregation histograms.
     """
+    # TODO: document better
     mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
 
     mag_bins = numpy.arange(
@@ -140,6 +155,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
+    # TODO: document
     mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
