@@ -139,8 +139,8 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
 
 
-def _arange_data_in_bins(bins_data, bin_edges):
-    mags, dists, lons, lats, joint_probs, tect_reg_types = bins_data
+def _arrange_data_in_bins(bins_data, bin_edges):
+    mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
@@ -171,7 +171,7 @@ def _arange_data_in_bins(bins_data, bin_edges):
                     for i_eps in xrange(len(eps_bins) - 1):
 
                         for i_trt in xrange(len(trt_bins)):
-                            trt_idx = trt_bins == i_trt
+                            trt_idx = tect_reg_types == i_trt
 
                             prob_idx = mag_idx & dist_idx & lon_idx \
                                        & lat_idx & trt_idx

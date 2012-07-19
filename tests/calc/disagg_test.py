@@ -135,7 +135,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae = numpy.testing.assert_array_equal
         aaae = numpy.testing.assert_array_almost_equal
 
-        aae(mags, [5,  5,  5,  5,  9,  5,  5,  5,  6,  6,  6,  8,  7])
+        aae(mags, [5, 5, 5, 5, 9, 5, 5, 5, 6, 6, 6, 8, 7])
         aae(dists, [3, 11, 12, 13, 14, 11, 11, 10, 12, 12, 11, 5, 5])
         aae(lons, [22, 22, 22, 22, 21, 21, 21, 21, 22, 21, 22, 11, 11])
         aae(lats, [44, 44, 45, 45, 44, 44, 45, 45, 44, 44, 45, 45, 46])
@@ -219,3 +219,70 @@ class DefineBinsTestCase(unittest.TestCase):
                         -6., -4.8, -3.6, -2.4, -1.2, 0., 1.2])
         aae(eps_bins, [-1., -0.5, 0., 0.5, 1.])
         self.assertIs(trt_bins, trt_bins_)
+
+
+class ArangeDataInBinsTestCase(unittest.TestCase):
+    def test(self):
+        mags = numpy.array([5, 9, 5, 5, 9, 7, 5, 5, 6, 6, 9.2, 8, 7], float)
+        dists = numpy.array([3, 1, 5, 13, 14, 6, 12, 10, 7, 4, 11, 13.4, 5],
+                            float)
+        lons = numpy.array([22, 21, 20, 21, 21, 22, 21, 21,
+                            20.3, 21, 20.5, 21.5, 22], float)
+        lats = numpy.array([44, 44, 45, 45, 44, 44, 45, 45,
+                            44, 44, 45, 45, 43.3], float)
+        joint_probs = numpy.array([[0., 0., 0.],
+                                   [0.02, 0.04, 0.02],
+                                   [0., 0., 0.003],
+                                   [0., 0.0165, 0.00033],
+                                   [0., 0., 0.],
+                                   [0., 0., 0.001],
+                                   [0.0212, 0.053, 0.0212],
+                                   [0.0132, 0.0198, 0.0132],
+                                   [0.03, 0.04, 0.03],
+                                   [0., 0., 0.01],
+                                   [0., 0., 0.],
+                                   [0., 0.004, 0.0016],
+                                   [0.003, 0.015, 0.003]])
+        trts = numpy.array([0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1], int)
+        trt_bins = ['trt1', 'trt2']
+
+        bins_data = mags, dists, lons, lats, joint_probs, trts, trt_bins
+
+        mag_bins = numpy.array([4, 6, 8, 10], float)
+        dist_bins = numpy.array([0, 4, 8, 12, 16], float)
+        lon_bins = numpy.array([19.2, 21, 22.8], float)
+        lat_bins = numpy.array([43.2, 44.4, 45.6], float)
+        eps_bins = numpy.array([-1.2, -0.4, 0.4, 1.2], float)
+
+        bin_edges = mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+
+        diss_matrix = disagg._arrange_data_in_bins(bins_data, bin_edges)
+
+        self.assertEqual(diss_matrix.shape, (3, 4, 2, 2, 3, 2))
+        self.assertAlmostEqual(diss_matrix.sum(), 1)
+
+        for idx, value in [((0, 0, 0, 0, 2, 0), 0.0263831),
+                           ((0, 1, 0, 0, 0, 0), 0.0791494),
+                           ((0, 1, 0, 0, 1, 0), 0.1055325),
+                           ((0, 1, 0, 0, 2, 0), 0.0791494),
+                           ((0, 1, 0, 1, 2, 1), 0.0079149),
+                           ((0, 2, 0, 1, 0, 0), 0.0559322),
+                           ((0, 2, 0, 1, 0, 1), 0.0348257),
+                           ((0, 2, 0, 1, 1, 0), 0.1398306),
+                           ((0, 2, 0, 1, 1, 1), 0.0522386),
+                           ((0, 2, 0, 1, 2, 0), 0.0559322),
+                           ((0, 2, 0, 1, 2, 1), 0.0348257),
+                           ((0, 3, 0, 1, 1, 1), 0.0435322),
+                           ((0, 3, 0, 1, 2, 1), 0.0008706),
+                           ((1, 1, 1, 0, 0, 1), 0.0079149),
+                           ((1, 1, 1, 0, 1, 1), 0.0395747),
+                           ((1, 1, 1, 0, 2, 1), 0.0105533),
+                           ((1, 3, 1, 1, 1, 1), 0.0105533),
+                           ((1, 3, 1, 1, 2, 1), 0.0042213),
+                           ((2, 0, 0, 0, 0, 0), 0.0527663),
+                           ((2, 0, 0, 0, 1, 0), 0.1055325),
+                           ((2, 0, 0, 0, 2, 0), 0.0527663)]:
+            self.assertAlmostEqual(diss_matrix[idx], value)
+            diss_matrix[idx] = 0
+
+        self.assertEqual(diss_matrix.sum(), 0)
