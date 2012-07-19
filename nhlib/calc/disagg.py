@@ -110,13 +110,13 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
     mag_bins = numpy.arange(
         numpy.floor(mags.min() / mag_bin_width) * mag_bin_width,
-        numpy.ceil(mags.max() / mag_bin_width) * mag_bin_width,
+        (numpy.ceil(mags.max() / mag_bin_width) + 1) * mag_bin_width,
         mag_bin_width
     )
 
     dist_bins = numpy.arange(
         numpy.floor(dists.min() / dist_bin_width) * dist_bin_width,
-        numpy.ceil(dists.max() / dist_bin_width) * dist_bin_width,
+        (numpy.ceil(dists.max() / dist_bin_width) + 1) * dist_bin_width,
         dist_bin_width
     )
 
@@ -125,15 +125,16 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
     lon_bins, _, _ = npoints_between(west, 0, 0, east, 0, 0,
-                                     numpy.round(lon_extent) / coord_bin_width)
+                                     numpy.round(lon_extent / coord_bin_width))
 
     lat_bins = numpy.arange(
         numpy.floor(south / coord_bin_width) * coord_bin_width,
-        numpy.ceil(north / coord_bin_width) * coord_bin_width,
+        (numpy.ceil(north / coord_bin_width) + 1) * coord_bin_width,
         coord_bin_width
     )
 
-    eps_bins = numpy.linspace(-truncation_level, truncation_level, n_epsilons)
+    eps_bins = numpy.linspace(-truncation_level, truncation_level,
+                              n_epsilons + 1)
 
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
 

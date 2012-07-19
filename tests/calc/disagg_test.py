@@ -205,17 +205,17 @@ class DefineBinsTestCase(unittest.TestCase):
         mag_bins, dist_bins, lon_bins, lat_bins, \
         eps_bins, trt_bins_ = disagg._define_bins(
             bins_data, mag_bin_width=1, dist_bin_width=4.2,
-            coord_bin_width=1.2, truncation_level=1, n_epsilons=5
+            coord_bin_width=1.2, truncation_level=1, n_epsilons=4
         )
 
         aae = numpy.testing.assert_array_equal
         aaae = numpy.testing.assert_array_almost_equal
-        aae(mag_bins, [3, 4, 5, 6])
+        aae(mag_bins, [3, 4, 5, 6, 7])
         aaae(dist_bins, [0., 4.2, 8.4, 12.6, 16.8, 21., 25.2, 29.4, 33.6,
-                         37.8, 42., 46.2, 50.4])
-        aaae(lon_bins, [176.4, 177.91578947, 179.43157895, -179.05263158, -178.8])
+                         37.8, 42., 46.2, 50.4, 54.6])
+        aaae(lon_bins, [176.4, 178., 179.6, -178.8])
         aaae(lat_bins, [-25.2, -24., -22.8, -21.6, -20.4, -19.2, -18., -16.8,
                         -15.6, -14.4, -13.2, -12., -10.8, -9.6, -8.4, -7.2,
-                        -6., -4.8, -3.6, -2.4, -1.2, 0.])
-        aae(eps_bins, [-1., -0.5, 0. , 0.5, 1. ])
+                        -6., -4.8, -3.6, -2.4, -1.2, 0., 1.2])
+        aae(eps_bins, [-1., -0.5, 0., 0.5, 1.])
         self.assertIs(trt_bins, trt_bins_)
