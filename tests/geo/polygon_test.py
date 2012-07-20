@@ -19,7 +19,7 @@ import numpy
 import shapely.geometry
 
 from nhlib import geo
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 from nhlib.geo import polygon
 
 

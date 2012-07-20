@@ -21,7 +21,7 @@ import numpy
 from nhlib.geo.point import Point
 from nhlib.geo.polygon import Polygon
 from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 from tests import assert_angles_equal
 from tests.geo import _mesh_test_data

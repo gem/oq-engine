@@ -23,7 +23,7 @@ import shapely.geometry
 
 from nhlib.geo.point import Point
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class Mesh(object):

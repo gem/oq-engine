@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package-private module :mod:`nhlib.geo._utils` contains functions that are
-common to several geographical primitives.
+Module :mod:`nhlib.geo.utils` contains functions that are common to several
+geographical primitives and some other low-level spatial operations.
 """
 import numpy
 import shapely.geometry

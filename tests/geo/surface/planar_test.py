@@ -19,7 +19,7 @@ import numpy
 
 from nhlib.geo import Point
 from nhlib.geo.mesh import Mesh
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 from nhlib.geo.surface.planar import PlanarSurface
 
 from tests.geo.surface import _planar_test_data as test_data

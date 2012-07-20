@@ -21,7 +21,7 @@ import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
 
 
 #: Polygon upsampling step for long edges, in kilometers.

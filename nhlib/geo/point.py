@@ -19,7 +19,7 @@ Module :mod:`nhlib.geo.point` defines :class:`Point`.
 import shapely.geometry
 
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class Point(object):

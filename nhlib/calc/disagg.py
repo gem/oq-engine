@@ -22,9 +22,8 @@ import numpy
 
 from nhlib.calc import filters
 from nhlib.site import SiteCollection
-# TODO: this shouldn't be imported from a geo package's private module
-from nhlib.geo._utils import get_spherical_bounding_box, \
-                             get_longitudinal_extent
+from nhlib.geo.utils import get_spherical_bounding_box, \
+                            get_longitudinal_extent
 from nhlib.geo.geodetic import npoints_between
 
 

@@ -23,7 +23,7 @@ import numpy
 
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class SimpleFaultSurface(BaseSurface):
