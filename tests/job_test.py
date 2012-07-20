@@ -758,10 +758,15 @@ class RunJobTestCase(unittest.TestCase):
             engine._launch_job = before_launch
 
     def test_computes_sites_in_region_when_specified(self):
-        """When we have hazard jobs only, and we specify a region,
-        we use the standard algorithm to split the region in sites. In this
-        example, the region has just four sites (the region boundaries).
-        """
+        # When we have hazard jobs only, and we specify a region,
+        #we use the standard algorithm to split the region in sites. In this
+        # example, the region has just four sites (the region boundaries).
+        class FakeJobProfile(object):
+
+            @property
+            def workaround_1027041(self):
+                return False
+
         sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
         input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
 
@@ -769,11 +774,34 @@ class RunJobTestCase(unittest.TestCase):
                 config.REGION_GRID_SPACING: 1.0}
 
         engine = helpers.create_job(params, sections=sections)
+        engine.oq_job_profile = FakeJobProfile()
 
         expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
                 shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
 
         self.assertEqual(expected_sites, engine.sites_to_compute())
+
+    def test_computes_sites_in_region_when_specified_workaround_1027041(self):
+        class FakeJobProfile(object):
+
+            @property
+            def workaround_1027041(self):
+                return True
+
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+        engine.oq_job_profile = FakeJobProfile()
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEqual(expected_sites, engine.sites_to_compute())
+
 
     def test_computes_specific_sites_when_specified(self):
         """When we have hazard jobs only, and we specify a list of sites
@@ -794,6 +822,12 @@ class RunJobTestCase(unittest.TestCase):
 
     def test_computes_sites_in_region_with_risk_jobs(self):
         """When we have hazard and risk jobs, we always use the region."""
+        class FakeJobProfile(object):
+
+            @property
+            def workaround_1027041(self):
+                return False
+
         sections = [config.HAZARD_SECTION,
                     config.GENERAL_SECTION, config.RISK_SECTION]
 
@@ -803,6 +837,7 @@ class RunJobTestCase(unittest.TestCase):
                 config.REGION_GRID_SPACING: 1.0}
 
         engine = helpers.create_job(params, sections=sections)
+        engine.oq_job_profile = FakeJobProfile()
 
         expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
                 shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]

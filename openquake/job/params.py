@@ -410,3 +410,4 @@ define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
              to_job=float)
+define_param('WORKAROUND_1027041', 'workaround_1027041', to_job=str2bool)

@@ -45,13 +45,13 @@ logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 class Region(object):
     """A container of polygons, used for bounds checking."""
 
-    def __init__(self, polygon):
+    def __init__(self, polygon, cell_size=0.1):
         self._grid = None
-        self.cell_size = 0.1
+        self.cell_size = cell_size
         self.polygon = polygon
 
     @classmethod
-    def from_coordinates(cls, coordinates):
+    def from_coordinates(cls, coordinates, cell_size=0.1):
         """
         Build a region from a list of polygon coordinates.
 
@@ -66,7 +66,7 @@ class Region(object):
         coordinates = [(round_float(pt[0]), round_float(pt[1]))
                 for pt in coordinates]
 
-        return cls(geometry.Polygon(coordinates))
+        return cls(geometry.Polygon(coordinates), cell_size=cell_size)
 
     @classmethod
     def from_simple(cls, top_left, bottom_right):
@@ -212,6 +212,7 @@ class Grid(object):
 
     def __init__(self, region, cell_size):
         self.cell_size = cell_size
+        self.region = region
 
         # center of the lower left cell of this grid
         self.llc = region.lower_left_corner
@@ -326,13 +327,18 @@ class Grid(object):
                 point = GridPoint(self, col, row)
                 yield point
 
-    def centers(self):
+    def centers(self, workaround_1027041=False):
         """
         Return the set of sites defining the center of
         the cells contained in this grid.
+        :param bool workaround:
+            https://bugs.launchpad.net/openquake/+bug/1027041
         """
-
-        return [point.site for point in self]
+        if workaround_1027041:
+            return [point.site for point in self
+                    if self.region.polygon.intersects(point.site.point)]
+        else:
+            return [point.site for point in self]
 
 
 class Site(nhlib_geo.Point):
