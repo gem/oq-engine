@@ -111,18 +111,17 @@ class _BaseDisaggTestCase(unittest.TestCase):
         )
         self.site = Site(Point(0, 0), 2, False, 4, 5)
 
-
-class CollectBinsDataTestCase(_BaseDisaggTestCase):
-    def setUp(self):
-        super(CollectBinsDataTestCase, self).setUp()
         self.iml, self.imt, self.truncation_level = object(), object(), \
                                                     object()
         gsim = self.FakeGSIM(self.iml, self.imt, self.truncation_level,
                              n_epsilons=3,
                              disaggregated_poes=self.disagreggated_poes)
+        self.gsim = gsim
         self.gsims = {'trt1': gsim, 'trt2': gsim}
         self.sources = [self.source1, self.source2]
 
+
+class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         mags, dists, lons, \
         lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
@@ -286,3 +285,39 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
             diss_matrix[idx] = 0
 
         self.assertEqual(diss_matrix.sum(), 0)
+
+
+class DisaggregateTestCase(_BaseDisaggTestCase):
+    def test(self):
+        self.gsim.truncation_level = self.truncation_level = 1
+        bin_edges, matrix = disagg.disaggregation(
+            self.sources, self.site, self.imt, self.iml, self.gsims,
+            self.tom, self.truncation_level, n_epsilons=3,
+            mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
+        )
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+        aaae = numpy.testing.assert_array_almost_equal
+        aaae(mag_bins, [3, 6, 9])
+        aaae(dist_bins, [0, 4, 8, 12, 16])
+        aaae(lon_bins, [9.6, 12.48, 15.36, 18.24, 21.12, 24.])
+        aaae(lat_bins, [43.2, 45.6, 48., 50.4])
+        aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
+        self.assertEqual(trt_bins, ['trt1', 'trt2'])
+
+        for idx, value in [((0, 2, 3, 0, 0, 0), 0.0907580),
+                           ((0, 2, 3, 0, 1, 0), 0.1920692),
+                           ((0, 2, 3, 0, 2, 0), 0.1197794),
+                           ((0, 2, 4, 0, 0, 0), 0.1319157),
+                           ((0, 2, 4, 0, 1, 0), 0.2110651),
+                           ((0, 2, 4, 0, 2, 0), 0.1398306),
+                           ((0, 3, 4, 0, 1, 0), 0.0435322),
+                           ((0, 3, 4, 0, 2, 0), 0.0008706),
+                           ((1, 1, 0, 0, 1, 1), 0.0105533),
+                           ((1, 1, 0, 0, 2, 1), 0.0042213),
+                           ((1, 1, 0, 1, 0, 1), 0.0079149),
+                           ((1, 1, 0, 1, 1, 1), 0.0395747),
+                           ((1, 1, 0, 1, 2, 1), 0.0079149)]:
+            self.assertAlmostEqual(matrix[idx], value)
+            matrix[idx] = 0
+
+        self.assertEqual(matrix.sum(), 0)
