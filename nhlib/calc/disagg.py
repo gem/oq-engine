@@ -33,7 +33,75 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
                    mag_bin_width, dist_bin_width, coord_bin_width,
                    source_site_filter=filters.source_site_noop_filter,
                    rupture_site_filter=filters.rupture_site_noop_filter):
-    # TODO: document
+    """
+    Compute "Disaggregation" matrix representing conditional probability
+    distribution of
+
+    - rupture magnitude,
+    - joyner-boore distance from rupture surface to site,
+    - longitude and latitude of surface projection of rupture closest point
+      to site,
+    - epsilon: number of standard deviations by which an intensity measure
+      level deviates from the median value predicted by a gsim, given
+      the rupture parameters.
+    - rupture tectonic region type,
+
+    given the event that an intensity measure type ``imt`` exceeds an intensity
+    measure level ``iml`` at a geographical location ``site``.
+
+    In other words, the disaggregation matrix allows to identify the most
+    likely scenarios (classified in terms of the above mentioned parameters)
+    that contribute to a given level of hazard (as specified by an intensity
+    measure level). Note that the disaggregation matrix is computed assuming
+    each rupture to occur only once in the given time span.
+
+    For more detailed information about disaggregation see for instance
+    "Disaggregation of seismic hazard', Paolo Bazzurro, C. Allin Cornell,
+    Bulletin of the Seismological Society of America, Vol.89, pp.501-520,
+    April 1999".
+
+    :param sources:
+        Seismic source model, as for :mod:`PSHA <nhlib.calc.hazard_curve>`
+        calculator it should be an iterator of seismic sources.
+    :param site:
+        :class:`~nhlib.site.Site` of interest to calculate disaggregation
+        matrix for.
+    :param imt:
+        Instance of :mod:`intensity measure type <nhlib.imt>` class.
+    :param iml:
+        Intensity measure level. A float value in units of ``imt``.
+    :param gsims:
+        Tectonic region type to GSIM objects mapping.
+    :param tom:
+        Instance of temporal occurrence model object,
+        such as :class:`~nhlib.tom.PoissonTOM`. It is used for calculation
+        of rupture occurrence probability.
+    :param truncation_level:
+        Float, number of standard deviations for truncation of the intensity
+        distribution.
+    :param n_epsilons:
+        Integer number of epsilon histogram bins in the result matrix.
+    :param mag_bin_width:
+        Magnitude discretization step, width of one magnitude histogram bin.
+    :param dist_bin_width:
+        Distance histogram discretization step, in km.
+    :param coord_bin_width:
+        Longitude and latitude histograms discretization step,
+        in decimal degrees.
+    :param source_site_filter:
+        Optional source-site filter function. See :mod:`nhlib.calc.filters`.
+    :param rupture_site_filter:
+        Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
+
+    :returns:
+        A tuple of two items. First is itself a tuple of bin edges information
+        for (in specified order) magnitude, distance, longitude, latitude,
+        epsilon and tectonic region types.
+
+        Second item is 6d-array representing the full disaggregation matrix.
+        Dimensions are in the same order as bin edges in the first item
+        of the result tuple.
+    """
     bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
@@ -46,7 +114,14 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
 def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
-    # TODO: document
+    """
+    Extract values of magnitude, distance, closest point, tectonic region
+    types and PoE distribution.
+
+    This method processes the source model (generates ruptures) and collects
+    all needed parameters to arrays. It also defines tectonic region type
+    bins sequence.
+    """
     mags = []
     dists = []
     lons = []
@@ -118,8 +193,12 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
                  coord_bin_width, truncation_level, n_epsilons):
     """
     Define bin edges for disaggregation histograms.
+
+    Given bins data as provided by :func:`_collect_bins_data`, this function
+    finds edges of histograms, taking into account maximum and minimum values
+    of magnitude, distance and coordinates as well as requested sizes/numbers
+    of bins.
     """
-    # TODO: document better
     mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
 
     mag_bins = numpy.arange(
@@ -154,7 +233,10 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
-    # TODO: document
+    """
+    Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
+    from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
+    """
     mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
