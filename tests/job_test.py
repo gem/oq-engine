@@ -802,7 +802,6 @@ class RunJobTestCase(unittest.TestCase):
 
         self.assertEqual(expected_sites, engine.sites_to_compute())
 
-
     def test_computes_specific_sites_when_specified(self):
         """When we have hazard jobs only, and we specify a list of sites
         (SITES parameter in the configuration file) we trigger the
