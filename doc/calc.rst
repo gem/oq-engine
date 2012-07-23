@@ -21,6 +21,21 @@ Hazard curve
     :members:
 
 
+--------------------
+Ground-Motion Fields
+--------------------
+
+.. automodule:: nhlib.calc.gmf
+    :members:
+
+
+Correlation models
+------------------
+
+.. automodule:: nhlib.correlation
+    :members:
+
+
 -------
 Filters
 -------

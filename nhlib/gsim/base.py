@@ -224,7 +224,7 @@ class GroundShakingIntensityModel(object):
 
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
-            imls = self._convert_imls(imls)
+            imls = self.to_distribution_values(imls)
             mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
             return (imls <= mean).astype(float)
@@ -237,7 +237,7 @@ class GroundShakingIntensityModel(object):
             else:
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
-            imls = self._convert_imls(imls)
+            imls = self.to_distribution_values(imls)
             mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
@@ -245,11 +245,23 @@ class GroundShakingIntensityModel(object):
             return distribution.sf((imls - mean) / stddev)
 
     @abc.abstractmethod
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Convert a list of IML values to a numpy array and convert the actual
-        values with respect to intensity measure distribution (like taking
-        the natural logarithm for :class:`GMPE`).
+        Convert a list or array of values in units of IMT to a numpy array
+        of values of intensity measure distribution (like taking the natural
+        logarithm for :class:`GMPE`).
+
+        This method is implemented by both :class:`GMPE` and :class:`IPE`
+        so there is no need to override it in actual GSIM implementations.
+        """
+
+    @abc.abstractmethod
+    def to_imt_unit_values(self, values):
+        """
+        Convert a list or array of values of intensity measure distribution
+        (like ones returned from :meth:`get_mean_and_stddevs`) to values
+        in units of IMT. This is the opposite operation
+        to :meth:`to_distribution_values`.
 
         This method is implemented by both :class:`GMPE` and :class:`IPE`
         so there is no need to override it in actual GSIM implementations.
@@ -328,11 +340,17 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Returns numpy array of natural logarithms of ``imls``.
+        Returns numpy array of natural logarithms of ``values``.
         """
-        return numpy.log(imls)
+        return numpy.log(values)
+
+    def to_imt_unit_values(self, values):
+        """
+        Returns numpy array of exponents of ``values``.
+        """
+        return numpy.exp(values)
 
 
 class IPE(GroundShakingIntensityModel):
@@ -342,11 +360,17 @@ class IPE(GroundShakingIntensityModel):
     intensity measures that are normally distributed. In particular,
     for :class:`~nhlib.imt.MMI`.
     """
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Returns numpy array of ``imls`` without any conversion.
+        Returns numpy array of ``values`` without any conversion.
         """
-        return numpy.array(imls, dtype=float)
+        return numpy.array(values, dtype=float)
+
+    def to_imt_unit_values(self, values):
+        """
+        Returns numpy array of ``values`` without any conversion.
+        """
+        return numpy.array(values, dtype=float)
 
 
 class SitesContext(object):
