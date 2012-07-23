@@ -36,17 +36,13 @@ def _export_fn_map():
     """
     # Silencing `Reimport <module>` warnings
     # pylint: disable=W0404
-    from openquake.export import uhs
     from openquake.export import risk
-    from openquake.export import hazard
 
     fn_map = {
         'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
         'dmg_dist_per_taxonomy': risk.export_dmg_dist_per_taxonomy,
         'dmg_dist_total': risk.export_dmg_dist_total,
-        'uh_spectra': uhs.export_uhs,
         'agg_loss_curve': risk.export_agg_loss_curve,
-        'hazard_curve': hazard.export_hazard_curves,
     }
     return fn_map
 
