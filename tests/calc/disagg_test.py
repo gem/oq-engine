@@ -321,3 +321,135 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
             matrix[idx] = 0
 
         self.assertEqual(matrix.sum(), 0)
+
+
+class PMFExtractorsTestCase(unittest.TestCase):
+    def setUp(self):
+        super(PMFExtractorsTestCase, self).setUp()
+
+        self.aae = numpy.testing.assert_almost_equal
+
+        # test matrix is not normalized, but that's fine for test
+        self.matrix = numpy.array(
+        [ # magnitude
+            [ # distance
+                [ # longitude
+                    [ # latitude
+                        [ # epsilon
+                            [0.00, 0.20, 0.50], # trt
+                            [0.33, 0.44, 0.55],
+                            [0.10, 0.11, 0.12]],
+                        [
+                            [0.60, 0.30, 0.20],
+                            [0.50, 0.50, 0.30],
+                            [0.00, 0.10, 0.20]]],
+                    [
+                        [
+                            [0.10, 0.50, 0.78],
+                            [0.15, 0.31, 0.21],
+                            [0.74, 0.20, 0.95]],
+                        [
+                            [0.05, 0.82, 0.99],
+                            [0.55, 0.02, 0.63],
+                            [0.52, 0.49, 0.21]]]],
+                [
+                    [
+                        [
+                            [0.98, 0.59, 0.13],
+                            [0.72, 0.40, 0.12],
+                            [0.16, 0.61, 0.53]],
+                        [
+                            [0.04, 0.94, 0.84],
+                            [0.13, 0.03, 0.31],
+                            [0.95, 0.34, 0.31]]],
+                    [
+                        [
+                            [0.25, 0.46, 0.34],
+                            [0.79, 0.71, 0.17],
+                            [0.5, 0.61, 0.7]],
+                        [
+                            [0.79, 0.15, 0.29],
+                            [0.79, 0.14, 0.72],
+                            [0.40, 0.84, 0.24]]]]],
+            [
+                [
+                    [
+                        [
+                            [0.49, 0.73, 0.79],
+                            [0.54, 0.20, 0.04],
+                            [0.40, 0.32, 0.06]],
+                        [
+                            [0.73, 0.04, 0.60],
+                            [0.53, 0.65, 0.71],
+                            [0.47, 0.93, 0.70]]],
+                    [
+                        [
+                            [0.32, 0.78, 0.97],
+                            [0.75, 0.07, 0.59],
+                            [0.03, 0.94, 0.12]],
+                        [
+                            [0.12, 0.15, 0.47],
+                            [0.12, 0.62, 0.02],
+                            [0.93, 0.13, 0.23]]]],
+                [
+                    [
+                        [
+                            [0.17, 0.14, 1.00],
+                            [0.34, 0.27, 0.08],
+                            [0.11, 0.85, 0.85]],
+                        [
+                            [0.76, 0.03, 0.86],
+                            [0.97, 0.30, 0.80],
+                            [0.67, 0.84, 0.41]]],
+                    [
+                        [
+                            [0.27, 0.36, 0.96],
+                            [0.52, 0.77, 0.35],
+                            [0.39, 0.88, 0.20]],
+                        [
+                            [0.86, 0.17, 0.07],
+                            [0.48, 0.44, 0.69],
+                            [0.14, 0.61, 0.67]]]]]])
+
+    def test_mag(self):
+        pmf = disagg.mag_pmf(self.matrix)
+        self.aae(pmf, [30.29, 34.57])
+
+    def test_dist(self):
+        pmf = disagg.dist_pmf(self.matrix)
+        self.aae(pmf, [29.56, 35.3])
+
+    def test_trt(self):
+        pmf = disagg.trt_pmf(self.matrix)
+        self.aae(pmf, [21.25, 21.03, 22.58])
+
+    def test_mag_dist(self):
+        pmf = disagg.mag_dist_pmf(self.matrix)
+        self.aae(pmf, [[13.27, 17.02],
+                       [16.29, 18.28]])
+
+    def test_mag_dist_eps(self):
+        pmf = disagg.mag_dist_eps_pmf(self.matrix)
+        self.aae(pmf, [[[5.04, 4.49, 3.74],
+                        [5.80, 5.03, 6.19]],
+                       [[6.19, 4.84, 5.26],
+                        [5.65, 6.01, 6.62]]])
+
+    def test_lon_Lat(self):
+        pmf = disagg.lon_lat_pmf(self.matrix)
+        self.aae(pmf, [[13.97, 17.59],
+                       [17.74, 15.56]])
+
+    def test_mag_lon_lat(self):
+        pmf = disagg.mag_lon_lat_pmf(self.matrix)
+        self.aae(pmf, [[[6.59,  6.59],
+                        [8.47,  8.64]],
+                       [[7.38, 11.],
+                        [9.27,  6.92]]])
+
+    def test_lon_lat_trt(self):
+        pmf = disagg.lon_lat_trt_pmf(self.matrix)
+        self.aae(pmf, [[[4.34, 4.86, 4.77],
+                        [6.35, 5.00, 6.24]],
+                       [[4.81, 6.59, 6.34],
+                        [5.75, 4.58, 5.23]]])
