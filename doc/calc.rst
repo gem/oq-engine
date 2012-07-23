@@ -5,6 +5,14 @@ Calculators
 .. automodule:: nhlib.calc
 
 
+--------------------
+Stochastic event set
+--------------------
+
+.. automodule:: nhlib.calc.stochastic
+    :members:
+
+
 ------------
 Hazard curve
 ------------

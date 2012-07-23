@@ -98,3 +98,15 @@ class ProbabilisticRupture(Rupture):
         return self.temporal_occurrence_model.get_probability(
             self.occurrence_rate
         )
+
+    def sample_number_of_occurrences(self):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.sample_number_of_occurrences`
+        of an assigned temporal occurrence model.
+        """
+        return self.temporal_occurrence_model.sample_number_of_occurrences(
+            self.occurrence_rate
+        )

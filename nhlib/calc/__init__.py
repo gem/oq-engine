@@ -19,4 +19,5 @@ and utilities for them, such as :mod:`~nhlib.calc.filters`.
 """
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
 from nhlib.calc.gmf import ground_motion_fields
+from nhlib.calc.stochastic import stochastic_event_set_poissonian
 from nhlib.calc import filters
