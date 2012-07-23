@@ -57,7 +57,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
             # Just to be thorough, let's make sure we can export everything:
             exported_files = []
             for o in outputs:
-                files = hazard.export_hazard_curves(o, target_dir)
+                files = hazard.export(o.id, target_dir)
                 exported_files.extend(files)
 
             self.assertEqual(4, len(exported_files))
