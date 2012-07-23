@@ -594,7 +594,6 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
         lt_rlz.save()
 
-
     logs.LOG.debug('< transaction complete')
 
     # Last thing, signal back the control node to indicate the completion of
