@@ -36,6 +36,28 @@ Correlation models
     :members:
 
 
+--------------
+Disaggregation
+--------------
+
+.. automodule:: nhlib.calc.disagg
+
+.. autofunction:: disaggregation
+
+
+PMF-Extractors
+--------------
+
+.. autofunction:: mag_pmf
+.. autofunction:: dist_pmf
+.. autofunction:: trt_pmf
+.. autofunction:: mag_dist_pmf
+.. autofunction:: mag_dist_eps_pmf
+.. autofunction:: lon_lat_pmf
+.. autofunction:: mag_lon_lat_pmf
+.. autofunction:: lon_lat_trt_pmf
+
+
 -------
 Filters
 -------
