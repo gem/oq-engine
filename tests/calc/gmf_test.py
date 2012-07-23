@@ -23,9 +23,10 @@ from nhlib.imt import SA, PGV
 from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
 from nhlib.calc.gmf import ground_motion_fields
+from nhlib.correlation import JB2009CorrelationModel
 
 
-class GMFCalcNoCorrelationTestCase(unittest.TestCase):
+class BaseGMFCalcTestCase(unittest.TestCase):
     def setUp(self):
         self.mean1 = 1
         self.mean2 = 5
@@ -46,14 +47,15 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.stddev3 = (self.inter3 ** 2 + self.intra3 ** 2) ** 0.5
         self.stddev45 = (self.inter45 ** 2 + self.intra45 ** 2) ** 0.5
         self.stddev67 = (self.inter67 ** 2 + self.intra67 ** 2) ** 0.5
-        p0 = Point(0, 0)
-        sites = [Site(p0, self.mean1, False, self.inter1, self.intra1),
-                 Site(p0, self.mean2, True, self.inter2, self.intra2),
-                 Site(p0, self.mean3, False, self.inter3, self.intra3),
-                 Site(p0, self.mean4567, True, self.inter45, self.intra45),
-                 Site(p0, self.mean4567, False, self.inter45, self.intra45),
-                 Site(p0, self.mean4567, True, self.inter67, self.intra67),
-                 Site(p0, self.mean4567, False, self.inter67, self.intra67)]
+        p = [Point(0, 0), Point(0, 0.1), Point(0, 0.2), Point(0, 0.3),
+             Point(0, 0.4), Point(0, 0.5), Point(0, 0.6)]
+        sites = [Site(p[0], self.mean1, False, self.inter1, self.intra1),
+                 Site(p[1], self.mean2, True, self.inter2, self.intra2),
+                 Site(p[2], self.mean3, False, self.inter3, self.intra3),
+                 Site(p[3], self.mean4567, True, self.inter45, self.intra45),
+                 Site(p[4], self.mean4567, False, self.inter45, self.intra45),
+                 Site(p[5], self.mean4567, True, self.inter67, self.intra67),
+                 Site(p[6], self.mean4567, False, self.inter67, self.intra67)]
         self.sites = SiteCollection(sites)
         self.rupture = object()
         self.imt1 = SA(10, 5)
@@ -77,10 +79,15 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
                 if gsim.expect_stddevs:
                     self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
                                                     const.StdDev.INTRA_EVENT])
-                    return mean.copy(), [std_inter.copy(), std_intra.copy()]
+                    # + 10 is needed to make sure that to_imt_unit_values()
+                    # is called on the result of gmf calc
+                    return mean + 10, [std_inter, std_intra]
                 else:
                     self.assertEqual(stddev_types, [])
-                    return mean.copy(), []
+                    return mean + 10, []
+
+            def to_imt_unit_values(gsim, intensities):
+                return intensities - 10.
 
         def rupture_site_filter(rupture_site_gen):
             [(rupture, sites)] = rupture_site_gen
@@ -92,6 +99,8 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
 
         self.gsim = FakeGSIM()
 
+
+class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
     def test_no_filtering_no_truncation(self):
         truncation_level = None
         numpy.random.seed(3)
@@ -119,11 +128,11 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         assert_allclose((intensity[6].mean(), intensity[6].std()),
                         (self.mean4567, self.stddev67), rtol=4e-2)
 
-        # sites with zero inter-event stddev, should give exactly the same
-        # result, since intra-event distribution is sampled only once
-        assert_array_equal(intensity[3], intensity[4])
+        # sites with zero intra-event stddev, should give exactly the same
+        # result, since inter-event distribution is sampled only once
+        assert_array_equal(intensity[5], intensity[6])
 
-        self.assertFalse((intensity[5] == intensity[6]).all())
+        self.assertFalse((intensity[3] == intensity[4]).all())
 
     def test_no_filtering_with_truncation(self):
         truncation_level = 1.9
@@ -243,3 +252,77 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
             self.assertEqual(gmfs[self.imt2].shape, (7, 123))
             assert_array_equal(gmfs[self.imt1], 0)
             assert_array_equal(gmfs[self.imt2], 0)
+
+
+class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
+    def test_no_truncation(self):
+        mean = 10
+        inter = 1e-300
+        intra = 3
+        points = [Point(0, 0), Point(0, 0.05), Point(0.06, 0.025),
+                  Point(0, 1.0), Point(-10, -10)]
+        sites = [Site(point, mean, False, inter, intra) for point in points]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(23)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma}
+        )
+
+        sampled_corma = numpy.corrcoef(gmfs[self.imt1])
+        assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)
+
+    def test_no_correlation_mean_and_intra_respected(self):
+        mean1 = 10
+        mean2 = 14
+        inter = 1e-300
+        intra1 = 0.2
+        intra2 = 1.6
+        p1 = Point(0, 0)
+        p2 = Point(0, 0.3)
+        sites = [Site(p1, mean1, False, inter, intra1),
+                 Site(p2, mean2, False, inter, intra2)]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(41)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        s1_intensity, s2_intensity = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma}
+        )[self.imt1]
+
+        self.assertAlmostEqual(s1_intensity.mean(), mean1, delta=1e-3)
+        self.assertAlmostEqual(s2_intensity.mean(), mean2, delta=1e-3)
+        self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
+        self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
+
+    def test_array_instead_of_matrix(self):
+        mean = 10
+        inter = 1e-300
+        intra = 1
+        points = [Point(0, 0), Point(0, 0.23)]
+        sites = [Site(point, mean, False, inter, intra) for point in points]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(43)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma.A}
+        )
+
+        sampled_corma = numpy.corrcoef(gmfs[self.imt1])
+        assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)

@@ -21,6 +21,13 @@ Ground-Motion Fields
     :members:
 
 
+Correlation models
+------------------
+
+.. automodule:: nhlib.correlation
+    :members:
+
+
 -------
 Filters
 -------

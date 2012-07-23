@@ -24,7 +24,7 @@ from nhlib.calc import filters
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations,
+                         realizations, lt_correlation_matrices=None,
                          rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Given an earthquake rupture, the ground motion field calculator computes
@@ -51,6 +51,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         distribution, or ``None``.
     :param realizations:
         Integer number of GMF realizations to compute.
+    :param lt_correlation_matrices:
+        Optional dictionary mapping IMT objects (the same ones as in ``imts``)
+        to lower-triangular matrix, taken from Cholesky-decomposition
+        of sites correlation matrix. See :mod:`nhlib.correlation`.
     :param rupture_site_filter:
         Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
@@ -73,9 +77,11 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     result = {}
 
     if truncation_level == 0:
+        assert lt_correlation_matrices is None
         for imt in imts:
             mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        stddev_types=[])
+            mean = gsim.to_imt_unit_values(mean)
             mean.shape += (1, )
             mean = mean.repeat(realizations, axis=1)
             result[imt] = sites.expand(mean, total_sites, placeholder=0)
@@ -92,13 +98,29 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
             sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
         )
-        stddev_intra.shape += (1, )
-        stddev_inter.shape += (1, )
-        mean.shape += (1, )
-        intra_residual = stddev_intra * distribution.rvs(size=realizations)
-        inter_residual = stddev_inter * distribution.rvs(size=(len(sites),
+        stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
+        stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
+        mean = mean.reshape(mean.shape + (1, ))
+
+        intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
                                                                realizations))
-        gmf = mean + intra_residual + inter_residual
+        if lt_correlation_matrices is not None:
+            # intra-event residual for a single relization is a product
+            # of lower-triangle decomposed correlation matrix and vector
+            # of N random numbers (where N is equal to number of sites).
+            # we need to do that multiplication once per realization
+            # with the same matrix and different vectors. the only way
+            # to do it in a vectorized fashion is to multiply array
+            # of vectors by matrix instead of matrix by array (note
+            # that matrix multiplication is not commutative). so we use
+            # formula ``A B = (B^T A^T)^T`` to change an operands order.
+            intra_residual = numpy.dot(
+                intra_residual.transpose(),
+                numpy.array(lt_correlation_matrices[imt]).transpose()
+            ).transpose()
+
+        inter_residual = stddev_inter * distribution.rvs(size=realizations)
+        gmf = gsim.to_imt_unit_values(mean + intra_residual + inter_residual)
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result
