@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import numpy
+
 from nhlib.tom import PoissonTOM
 
 
@@ -35,3 +37,13 @@ class PoissonTOMTestCase(unittest.TestCase):
         aae = self.assertAlmostEqual
         aae(pdf.get_probability(occurrence_rate=0.1), 0.3934693)
         aae(pdf.get_probability(occurrence_rate=0.01), 0.0487706)
+
+    def test_sample_number_of_occurrences(self):
+        time_span = 40
+        rate = 0.05
+        num_samples = 8000
+        tom = PoissonTOM(time_span)
+        numpy.random.seed(31)
+        mean = sum(tom.sample_number_of_occurrences(rate)
+                   for i in xrange(num_samples)) / float(num_samples)
+        self.assertAlmostEqual(mean, rate * time_span, delta=1e-3)

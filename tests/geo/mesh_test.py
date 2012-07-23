@@ -203,6 +203,27 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
                    expected_distance_indexes=[2, 1])
 
 
+class MeshGetDistanceMatrixTestCase(unittest.TestCase):
+    def test_zeroes(self):
+        mesh = Mesh(numpy.zeros(1000), numpy.zeros(1000), None)
+        matrix = mesh.get_distance_matrix()
+        self.assertIsInstance(matrix, numpy.matrix)
+        self.assertEqual(matrix.shape, (1000, 1000))
+        self.assertTrue((matrix == 0).all())
+
+    def test(self):
+        mesh = Mesh(numpy.array([0., 1., 2., 3.]), numpy.zeros(4), None)
+        matrix = mesh.get_distance_matrix()
+        aaae = numpy.testing.assert_array_almost_equal
+        aaae(matrix[0], [[0, 111.2, 222.4, 333.6]], decimal=1)
+        aaae(matrix[1], [[111.2, 0, 111.2, 222.4]], decimal=1)
+        aaae(matrix[2], [[222.4, 111.2, 0, 111.2]], decimal=1)
+        aaae(matrix[3], [[333.6, 222.4, 111.2, 0]], decimal=1)
+        for i in xrange(4):
+            for j in xrange(i, 4):
+                self.assertEqual(matrix[i, j], matrix[j, i])
+
+
 class MeshConvexHullTestCase(unittest.TestCase):
     def test_two_points(self):
         mesh = Mesh(numpy.array([-10., -11.]), numpy.array([-12., -13.]), None)
