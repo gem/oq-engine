@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhlib.correlation` define correlation models for spatially-\
+Module :mod:`nhlib.correlation` defines correlation models for spatially-\
 distributed ground-shaking intensities.
 """
 import numpy

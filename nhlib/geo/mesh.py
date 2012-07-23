@@ -196,10 +196,10 @@ class Mesh(object):
         zero depth) and coordinate arrays are one-dimensional.
 
         .. warning::
-            Since its quadratic space and time complexity this method is safe
-            to use for meshes of up to several thousand points. For mesh of 10k
-            points it needs ~800 Mb for just the resulting matrix and four
-            times that much for intermediate storage.
+            Because of its quadratic space and time complexity this method
+            is safe to use for meshes of up to several thousand points. For
+            mesh of 10k points it needs ~800 Mb for just the resulting matrix
+            and four times that much for intermediate storage.
 
         :returns:
             Two-dimensional numpy array, square matrix of distances. The matrix

@@ -60,6 +60,14 @@ class Point(object):
         self.latitude = latitude
         self.longitude = longitude
 
+    @property
+    def wkt2d(self):
+        """
+        Generate WKT (Well-Known Text) to represent this point in 2 dimensions
+        (ignoring depth).
+        """
+        return 'POINT(%s %s)' % (self.longitude, self.latitude)
+
     def point_at(self, horizontal_distance, vertical_increment, azimuth):
         """
         Compute the point with given horizontal, vertical distances
