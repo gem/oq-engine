@@ -327,7 +327,7 @@ if __name__ == '__main__':
     elif args.list_hazard_outputs:
         list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
-        output_id, target_dir = args.export
+        output_id, target_dir = args.export_hazard
         output_id = int(output_id)
 
         export_hazard(output_id, target_dir)
