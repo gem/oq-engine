@@ -298,6 +298,14 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.surface.get_joyner_boore_distance(
                     site_collection.mesh
                 )
+            elif param == 'rhypo':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh
+                )
+            elif param == 'repi':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh, with_depths=False
+                )
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -400,7 +408,7 @@ class DistancesContext(object):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi')
 
 
 class RuptureContext(object):
