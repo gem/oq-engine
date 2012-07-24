@@ -294,7 +294,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'rjb rx rrup repi rhypo'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor'.split()
+            'mag rake dip ztor hypo_depth'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -308,6 +308,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
+        self.assertEqual(rctx.hypo_depth, 40)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
