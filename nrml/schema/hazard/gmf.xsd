@@ -6,50 +6,46 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
-
-    <xs:element name="groundMotionFieldSet" type="GroundMotionFieldSet" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="GroundMotionFieldSet">
-        <xs:annotation>
-            <xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
-        </xs:annotation>
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <!-- NOTE: the description attribute of old 'field' element can go into
-                         the optional gml:description element of the groundMotionFieldSet feature -->
-                    <xs:element name="GMPEParameters" type="GMPEParametersType"/>
-                    <xs:element ref="rupture" minOccurs="1" maxOccurs="unbounded"/>
-                    <xs:element ref="GMF" minOccurs="1" maxOccurs="unbounded"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:element name="gmfCollection" type="GMFCollection" />
+    <xs:complexType name="GMFCollection">
+        <xs:sequence>
+            <xs:element name="gmfSet" type="EventBasedGMFSet" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="required" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="required" />
     </xs:complexType>
 
-    <xs:element name="GMF" type="GMFType" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="GMFType">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element ref="GMFNode" minOccurs="1" maxOccurs="unbounded"/>
-                </xs:sequence>
-
-                <!-- NOTE: the optional attribute ruptureReference refers to the
-                     gml:id of one of the ruptures -->
-                <xs:attribute name="ruptureReference" type="xs:IDREF"/>
-            </xs:extension>
-        </xs:complexContent>
+    <!-- <gmfSet> for event-based calculator results -->
+    <xs:complexType name="EventBasedGMFSet">
+        <xs:sequence>
+            <xs:element ref="gmf" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
     </xs:complexType>
 
-    <xs:element name="GMFNode" type="GMFNodeType" substitutionGroup="fieldNode"/>
-    <xs:complexType name="GMFNodeType">
-        <xs:complexContent>
-            <xs:extension base="FieldNode">
-                <xs:sequence>
-                    <xs:element name="groundMotion" type="xs:double"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <!-- <gmfSet> for scenario calculator results -->
+    <xs:complexType name="ScenarioGMFSet">
+        <xs:sequence>
+            <xs:element ref="gmf" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
     </xs:complexType>
+
+    <xs:element name="gmf" type="GMF" />
+    <xs:complexType name="GMF">
+        <xs:sequence>
+            <xs:element name="node" type="GMFNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="GMFNode">
+        <xs:attribute name="iml" type="xs:float" use="required" />
+        <xs:attribute name="lon" type="xs:float" use="required" />
+        <xs:attribute name="lat" type="xs:float" use="required" />
+    </xs:complexType>
+
 
 </xs:schema>
