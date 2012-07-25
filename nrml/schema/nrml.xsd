@@ -20,6 +20,7 @@
     <xs:include schemaLocation="./hazard/logic_tree.xsd"/>
     <xs:include schemaLocation="./hazard/raw_source_model.xsd"/>
     <xs:include schemaLocation="./hazard/rupture.xsd"/>
+    <xs:include schemaLocation="./hazard/ses.xsd"/>
     <xs:include schemaLocation="./hazard/site_model.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/general.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/area_source.xsd"/>
@@ -69,6 +70,7 @@
             <xs:element ref="gmfCollection" />
             <!-- For Scenario GMFs -->
             <xs:element name="gmfSet" type="ScenarioGMFSet" />
+            <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
         </xs:choice>
     </xs:complexType>
 </xs:schema>
