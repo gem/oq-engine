@@ -20,8 +20,8 @@ import numpy
 from nhlib.const import TRT
 from nhlib.source.simple_fault import SimpleFaultSource
 from nhlib.source.rupture import ProbabilisticRupture
-from nhlib.mfd import TruncatedGRMFD
-from nhlib.scalerel.peer import PeerMSR
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhlib.scalerel import PeerMSR, WC1994
 from nhlib.geo import Point, Line
 from nhlib.tom import PoissonTOM
 
@@ -113,6 +113,33 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                              bin_width=1.0)
         self._test_ruptures(test_data.TEST5_RUPTURES,
                             self._make_source(mfd=mfd, aspect_ratio=1.0))
+
+    def test_Pago_VeianoMontaguto(self):
+        # regression test
+        fault_trace = Line([Point(15.2368, 41.1594), Point(15.1848, 41.1644),
+                            Point(15.1327, 41.1694), Point(15.0807, 41.1745),
+                            Point(15.0286, 41.1795), Point(14.9765, 41.1846),
+                            Point(14.9245, 41.1896), Point(14.8724, 41.1946),
+                            Point(14.8204, 41.1997)])
+        mfd = EvenlyDiscretizedMFD(min_mag=6.9, bin_width=0.2,
+                                   occurrence_rates=[1.0])
+        dip = 70.0
+        upper_seismogenic_depth = 11.0
+        lower_seismogenic_depth = 25.0
+        rake = -130
+        scalerel = WC1994()
+        rupture_mesh_spacing = 5
+        rupture_aspect_ratio = 1
+        tom = PoissonTOM(10)
+
+        fault = SimpleFaultSource(
+            'ITCS057', 'Pago Veiano-Montaguto', TRT.ACTIVE_SHALLOW_CRUST, mfd,
+            rupture_mesh_spacing, scalerel, rupture_aspect_ratio,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            fault_trace, dip, rake
+        )
+
+        self.assertEqual(len(list(fault.iter_ruptures(tom))), 1)
 
 
 class SimpleFaultParametersChecksTestCase(_BaseFaultSourceTestCase):
