@@ -155,6 +155,43 @@ class Mesh(object):
         """
         return self._geodetic_min_distance(mesh, indices=False)
 
+    def get_joyner_boore_distance(self, mesh):
+        """
+        Compute and return Joyner-Boore distance to each point of ``mesh``.
+        Point's depth is ignored.
+
+        See
+        :meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
+        for definition of this distance.
+
+        :returns:
+            numpy array of distances in km of the same shape as ``mesh``.
+            Distance value is considered to be zero if a point
+            lies inside the polygon enveloping the projection of the mesh
+            or on one of its edges.
+        """
+        depths1 = numpy.zeros_like(self.lons)
+        depths2 = numpy.zeros_like(mesh.lons)
+        distances = geodetic.min_distance(self.lons, self.lats, depths1,
+                                          mesh.lons, mesh.lats, depths2)
+        # TODO: document, describe distance threshold magic number
+        [idxs] = (distances < 40).nonzero()
+        if not len(idxs):
+            return distances
+
+        convex_hull = self.get_convex_hull()
+        proj = convex_hull._projection
+        polygon = convex_hull._polygon2d
+        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
+        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
+        distances_2d = numpy.fromiter(
+            (polygon.distance(shapely.geometry.Point(mesh_xx[i], mesh_yy[i]))
+             for i in xrange(len(idxs))),
+            dtype=float, count=len(idxs)
+        )
+        distances.put(idxs, distances_2d)
+        return distances
+
     def get_closest_points(self, mesh):
         """
         Find closest point of this mesh for each one in ``mesh``.
@@ -240,7 +277,8 @@ class Mesh(object):
         )
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons, self.lats)).copy()
+        coords = numpy.transpose(proj(self.lons.flatten(),
+                                      self.lats.flatten())).copy()
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         polygon2d = multipoint.convex_hull
@@ -292,111 +330,6 @@ class RectangularMesh(Mesh):
         if not depths.any():
             depths = None
         return cls(lons, lats, depths)
-
-    def _get_bounding_mesh(self, with_depths=True):
-        """
-        Create and return a :class:`Mesh` object that contains a subset
-        of points of this mesh. Only those points that lie on the borders
-        of the rectangular mesh are included in the result one.
-
-        If the original mesh is purely vertical (with point in all the
-        rows different only by their depths), and ``with_depths == False``,
-        the resulting bounding mesh is filtered from duplicates.
-
-        :param with_depths:
-            If set ``False`` the new mesh will have depths array
-            set to ``None``.
-        """
-        if self.depths is None:
-            with_depths = False
-
-        if 1 in self.lons.shape:
-            # the original mesh either has one row or one column of points.
-            # the result mesh should have the same points.
-            return Mesh(self.lons.flatten(), self.lats.flatten(),
-                        self.depths.flatten() if with_depths else None)
-
-        # if depths are ignored and there is only one row (or the top row
-        # is equal to last one), consider only that top row. this way
-        # we avoid duplicating each point for purely vertical rectangular
-        # meshes.
-        if (not with_depths
-            and (len(self.lons) == 1
-                 or ((self.lons[0] == self.lons[-1]).all()
-                     and (self.lats[0] == self.lats[-1]).all()))):
-            return Mesh(self.lons[0], self.lats[0], None)
-
-        # we need to perform the same operations on all three coordinate
-        # components (lons, lats and depths).
-        components_bounding = []
-        components_all = [self.lons, self.lats]
-        if with_depths:
-            components_all.append(self.depths)
-        for coords in components_all:
-            # the resulting coordinates are composed of four parts:
-            components_bounding.append(numpy.concatenate((
-                # the first row,
-                coords[0],
-                # the last column (excluding two corner points),
-                coords[1:-1, -1],
-                # the last row (in backward direction),
-                coords[-1][::-1],
-                # and the first column (backwards, excluding corner points).
-                coords[-2:0:-1, 0]
-            )))
-        if not with_depths:
-            components_bounding.append(None)
-        return Mesh(*components_bounding)
-
-    def get_joyner_boore_distance(self, mesh):
-        """
-        Compute and return Joyner-Boore distance to each point of ``mesh``.
-        Point's depth is ignored.
-
-        See
-        :meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
-        for definition of this distance.
-
-        :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
-            Distance value is considered to be zero if a point
-            lies inside the polygon enveloping the projection of the mesh
-            or on one of its edges.
-        """
-        bounding_mesh = self._get_bounding_mesh(with_depths=False)
-        assert bounding_mesh.depths is None
-        lons, lats = bounding_mesh.lons, bounding_mesh.lats
-        depths = numpy.zeros_like(lons)
-        proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(lons, lats)
-        )
-        xx, yy = proj(lons, lats)
-        mesh_2d = numpy.array([xx, yy], dtype=float).transpose().copy()
-        if len(xx) == 2:
-            mesh_2d = shapely.geometry.LineString(mesh_2d)
-        elif len(xx) == 1:
-            mesh_2d = shapely.geometry.Point(*mesh_2d)
-        elif len(xx) > 2:
-            mesh_2d = shapely.geometry.Polygon(mesh_2d)
-        mesh_lons, mesh_lats = mesh.lons.flatten(), mesh.lats.flatten()
-        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-
-        distances = []
-        for i in xrange(len(mesh_lons)):
-            point_2d = shapely.geometry.Point(mesh_xx[i], mesh_yy[i])
-            dist = mesh_2d.distance(point_2d)
-            if dist < 500:
-                # if the distance is below threshold of 500 kilometers,
-                # consider the distance measured on the projection accurate
-                # enough (an error doesn't exceed half km).
-                distances.append(dist)
-            else:
-                # ... otherwise get the precise distance between bounding mesh
-                # projection and the point projection using pure numerical way
-                distances.append(geodetic.min_distance(
-                    lons, lats, depths, mesh_lons[i], mesh_lats[i], 0
-                ))
-        return numpy.array(distances).reshape(mesh.shape)
 
     def get_middle_point(self):
         """
