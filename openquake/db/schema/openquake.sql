@@ -873,6 +873,7 @@ CREATE TABLE uiapi.output (
     --      hazard_curve
     --      hazard_map
     --      gmf
+    --      ses
     --      loss_curve
     --      loss_map
     --      collapse_map
@@ -883,7 +884,7 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'loss_curve', 'loss_map', 'collapse_map',
+            'gmf', 'ses', 'loss_curve', 'loss_map', 'collapse_map',
             'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
             'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
     last_update timestamp without time zone
@@ -1012,6 +1013,41 @@ CREATE TABLE hzrdr.hazard_curve_data (
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 
+
+-- Stochastic Event Set Collection
+-- A container for all of the Stochastic Event Sets in a given
+-- logic tree realization.
+CREATE TABLE hzrdr.ses_collection (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,
+    lt_realization_id INTEGER NOT NULL
+) TABLESPACE hzrdr_ts;
+
+-- Stochastic Event Set: A container for 1 or more ruptures associated with a
+-- specific investigation time span.
+CREATE TABLE hzrdr.ses (
+    id SERIAL PRIMARY KEY,
+    ses_collection_id INTEGER NOT NULL,
+    investigation_time float NOT NULL
+) TABLESPACE hzrdr_ts;
+
+-- A rupture as part of a Stochastic Event Set.
+-- Ruptures will have different geometrical definitions, depending on whether
+-- the event was generated from a point/area source or a simple/complex fault
+-- source.
+CREATE TABLE hzrdr.ses_rupture (
+    id SERIAL PRIMARY KEY,
+    ses_id INTEGER NOT NULL,
+    magnitude float NOT NULL,
+    strike float NOT NULL,
+    dip float NOT NULL,
+    rake float NOT NULL,
+    tectonic_region_type VARCHAR NOT NULL,
+    is_from_fault_source BOOLEAN NOT NULL,
+    lons BYTEA NOT NULL,
+    lats BYTEA NOT NULL,
+    depths BYTEA NOT NULL
+) TABLESPACE hzrdr_ts;
 
 -- GMF data.
 CREATE TABLE hzrdr.gmf_data (
@@ -1652,6 +1688,34 @@ ALTER TABLE hzrdr.lt_realization
 ADD CONSTRAINT hzrdr_lt_realization_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
+ON DELETE CASCADE;
+
+-- hzrdr.ses_collection to uiapi.output FK
+ALTER TABLE hzrdr.ses_collection
+ADD CONSTRAINT hzrdr_ses_collection_output_fk
+FOREIGN KEY (output_id)
+REFERENCES uiapi.output(id)
+ON DELETE CASCADE;
+
+-- hzrdr.ses_collection to hzrdr.lt_realization FK
+ALTER TABLE hzrdr.ses_collection
+ADD CONSTRAINT hzrdr_ses_collection_lt_realization_fk
+FOREIGN KEY (lt_realization_id)
+REFERENCES hzrdr.lt_realization(id)
+ON DELETE RESTRICT;
+
+-- hzrdr.ses to hzrdr.ses_collection FK
+ALTER TABLE hzrdr.ses
+ADD CONSTRAINT hzrdr_ses_ses_collection_fk
+FOREIGN KEY (ses_collection_id)
+REFERENCES hzrdr.ses_collection(id)
+ON DELETE CASCADE;
+
+-- hzrdr.ses_rupture to hzrdr.ses FK
+ALTER TABLE hzrdr.ses_rupture
+ADD CONSTRAINT hzrdr_ses_rupture_ses_fk
+FOREIGN KEY (ses_id)
+REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map
