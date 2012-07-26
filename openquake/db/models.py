@@ -984,6 +984,7 @@ class Output(djm.Model):
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'gmf', u'Ground Motion Field'),
+        (u'ses', u'Stochastic Event Set'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
@@ -1085,6 +1086,112 @@ class HazardCurveData(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve_data'
+
+
+class SESCollection(djm.Model):
+    """
+    Stochastic Event Set Collection: A container for 1 or more Stochastic Event
+    Sets for a given logic tree realization.
+
+    See also :class:`SES` and :class:`SESRupture`.
+    """
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_collection'
+
+
+class SES(djm.Model):
+    """
+    Stochastic Event Set: A container for 1 or more ruptures associated with a
+    specific investigation time span.
+
+    See also :class:`SESRupture`.
+    """
+    ses_collection = djm.ForeignKey('SESCollection')
+    investigation_time = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses'
+
+
+class SESRupture(djm.Model):
+    """
+    A rupture as part of a Stochastic Event Set.
+
+    Ruptures will have different geometrical definitions, depending on whether
+    the event was generated from a point/area source or a simple/complex fault
+    source.
+    """
+    ses = djm.ForeignKey('SES')
+    magnitude = djm.FloatField()
+    strike = djm.FloatField()
+    dip = djm.FloatField()
+    rake = djm.FloatField()
+    tectonic_region_type = djm.TextField()
+    # If True, this rupture was generated from a simple/complex fault
+    # source. If False, this rupture was generated from a point/area source.
+    is_from_fault_source = djm.BooleanField()
+    # The following fields can be interpreted different ways, depending on the
+    # value of `is_from_fault_source`.
+    # If `is_from_fault_source` is True, each of these fields should contain a
+    # 2D numpy array (all of the same shape). Each triple of (lon, lat, depth)
+    # for a given index represents the node of a rectangular mesh.
+    # If `is_from_fault_source` is False, each of these fields should contain
+    # a sequence (tuple, list, or numpy array, for example) of 4 values. In
+    # order, the triples of (lon, lat, depth) represent top left, top right,
+    # bottom right, and bottom left corners of the the rupture's planar
+    # surface.
+    lons = fields.PickleField()
+    lats = fields.PickleField()
+    depths = fields.PickleField()
+
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_rupture'
+
+    def _validate_planar_surface(self):
+        """
+        A rupture's planar surface (existing only in the case of ruptures from
+        area/point sources) may only consist of 4 points (top left, top right,
+        bottom right, and bottom left corners, in that order).
+
+        If the surface is not valid, a :exc:`ValueError` is raised.
+
+        This should only be used if `is_from_fault_source` is `False`.
+        """
+        if not (4 == len(self.lons) == len(self.lats) == len(self.depths)):
+            raise ValueError(
+                "Incorrect number of points; there should be exactly 4")
+
+    @property
+    def top_left_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[0], self.lats[0], self.depths[0]
+        return None
+
+    @property
+    def top_right_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[1], self.lats[1], self.depths[1]
+        return None
+
+    @property
+    def bottom_right_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[2], self.lats[2], self.depths[2]
+        return None
+
+    @property
+    def bottom_left_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[3], self.lats[3], self.depths[3]
+        return None
 
 
 class GmfData(djm.Model):
