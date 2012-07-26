@@ -1147,7 +1147,6 @@ class SESRupture(djm.Model):
     lats = fields.PickleField()
     depths = fields.PickleField()
 
-
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
 
