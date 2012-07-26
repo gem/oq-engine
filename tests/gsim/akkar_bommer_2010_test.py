@@ -29,6 +29,6 @@ class AkkarBommer2010TestCase(BaseGSIMTestCase):
                     max_discrep_percentage=0.1)
                     
     def test_std_total(self):
-        self.check('AKBO10/AK10_STD_TOTAL.csv',
+        self.check('/AKBO10/AK10_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
 """

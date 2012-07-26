@@ -218,6 +218,7 @@ class BooreAtkinson2008(GMPE):
         Vref = 760.0
 
         # equation (13d), values are zero for vs30 >= Vref = 760.0
+        print len(sites.vs30)
         bnl = np.zeros(len(sites.vs30))
 
         # equation (13a)

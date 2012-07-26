@@ -108,8 +108,8 @@ class AkB_2010_AttenRel(GMPE):
 
     def _get_site_type_dummy_variables(self,sites):        
                
-        Ss = np.zeros((len(sites),1))
-        Sa = np.zeros((len(sites),1))
+        Ss = np.zeros((len(sites.vs30),1))
+        Sa = np.zeros((len(sites.vs30),1))
         # Soft soil; Vs30 < 360 m/s. Page 199.
         idxSs = (sites.vs30 < 360) 
         # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
