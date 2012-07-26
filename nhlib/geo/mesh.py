@@ -170,10 +170,8 @@ class Mesh(object):
             lies inside the polygon enveloping the projection of the mesh
             or on one of its edges.
         """
-        depths1 = numpy.zeros_like(self.lons)
-        depths2 = numpy.zeros_like(mesh.lons)
-        distances = geodetic.min_distance(self.lons, self.lats, depths1,
-                                          mesh.lons, mesh.lats, depths2)
+        distances = geodetic.min_geodetic_distance(self.lons, self.lats,
+                                                   mesh.lons, mesh.lats)
         # TODO: document, describe distance threshold magic number
         [idxs] = (distances < 40).nonzero()
         if not len(idxs):

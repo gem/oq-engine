@@ -99,6 +99,41 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
+def min_geodetic_distance(mlons, mlats, slons, slats):
+    # TODO: document, unittest
+    assert mlons.shape == mlats.shape
+    slons, slats = numpy.array(slons), numpy.array(slats)
+    assert slons.shape == slats.shape
+    orig_shape = slons.shape
+    mlons = numpy.radians(mlons.flat)
+    mlats = numpy.radians(mlats.flat)
+    slons = numpy.radians(slons.flat)
+    slats = numpy.radians(slats.flat)
+    cos_mlats = numpy.cos(mlats)
+    cos_slats = numpy.cos(slats)
+
+    result = numpy.fromiter(
+        (
+            numpy.min(
+                # next five lines are the same as in geodetic_distance()
+                numpy.arcsin(numpy.sqrt(
+                    numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
+                    + cos_mlats * cos_slats[i]
+                      * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+                ).clip(-1., 1.))
+            ) * 2 * EARTH_RADIUS
+            for i in xrange(len(slats))
+        ),
+        dtype=float, count=len(slats)
+    )
+
+    if not orig_shape:
+        # original target point was a scalar, so return scalar as well
+        [result] = result
+        return result
+    else:
+        return result.reshape(orig_shape)
+
 def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     """
     Calculate the minimum distance between a collection of points and a point.
@@ -154,7 +189,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
             numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
             + cos_mlats * cos_slats[i]
               * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
+        ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
         + (mdepths - sdepths[i]) ** 2
         for i in xrange(len(slats))
     )
