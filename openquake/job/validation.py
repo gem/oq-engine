@@ -258,7 +258,7 @@ class BaseOQModelForm(ModelForm):
     be a Django model object (perhaps one from :mod:`openquake.db.models`).
 
     `data` can be specified to populate the form and model. If no `data` is
-    specified, the form will the current data the `instance`.
+    specified, the form will take the current data from the `instance`.
 
     You can also specify `files`. In the Django web form context, this
     represents a `dict` of name-file_object pairs. The file object type can be,
