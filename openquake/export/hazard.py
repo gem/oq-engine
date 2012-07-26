@@ -13,6 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Functionality for exporting and serializing hazard curve calculation results.
+"""
+
 
 import os
 
