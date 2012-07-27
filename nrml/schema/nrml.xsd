@@ -65,7 +65,10 @@
             <xs:element ref="collapseMap" />
             <xs:element ref="siteModel" />
             <xs:element ref="hazardCurves" />
+            <!-- For Event-Based GMFs -->
+            <xs:element ref="gmfCollection" />
+            <!-- For Scenario GMFs -->
+            <xs:element name="gmfSet" type="ScenarioGMFSet" />
         </xs:choice>
     </xs:complexType>
-
 </xs:schema>
