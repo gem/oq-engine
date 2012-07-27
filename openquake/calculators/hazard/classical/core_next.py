@@ -292,27 +292,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # When `progress['compute']` becomes equal to `progress['total']`,
         # `execute` can conclude.
 
-        def task_complete_callback(body, message):
-            """
-            :param dict body:
-                ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
-                number of sources computed).
-
-                Both values are `int`.
-            :param message:
-                A :class:`kombu.transport.pyamqplib.Message`, which contains
-                metadata about the message (including content type, channel,
-                etc.). See kombu docs for more details.
-            """
-            job_id = body['job_id']
-            num_sources = body['num_sources']
-
-            assert job_id == job.id
-            progress['computed'] += num_sources
-
-            message.ack()
-
         def task_arg_gen():
             """
             Loop through realizations and sources to generate a sequence of
@@ -338,6 +317,36 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
         task_gen = task_arg_gen()
 
+        def task_complete_callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_sources = body['num_sources']
+
+            assert job_id == job.id
+            progress['computed'] += num_sources
+
+            # Once we receive a completion signal, enqueue the next
+            # piece of work (if there's anything left to be done).
+            try:
+                hazard_curves.apply_async(task_gen.next())
+            except StopIteration:
+                # There are no more tasks to dispatch; now we just need
+                # to wait until all tasks signal completion.
+                pass
+
+            message.ack()
+
         exchange, conn_args = _exchange_and_conn_args()
 
         routing_key = _ROUTING_KEY_FMT % dict(job_id=job.id)
@@ -362,16 +371,11 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
                 while (progress['computed'] < progress['total']):
                     # This blocks until a message is received.
-                    conn.drain_events()
-
                     # Once we receive a completion signal, enqueue the next
                     # piece of work (if there's anything left to be done).
-                    try:
-                        hazard_curves.apply_async(task_gen.next())
-                    except StopIteration:
-                        # There are no more tasks to dispatch; now we just need
-                        # to wait until all tasks signal completion.
-                        pass
+                    # (The `task_complete_callback` will handle additional
+                    # queuing.)
+                    conn.drain_events()
 
     def post_execute(self):
         """
@@ -593,7 +597,6 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             lt_rlz.is_complete = True
 
         lt_rlz.save()
-
 
     logs.LOG.debug('< transaction complete')
 
