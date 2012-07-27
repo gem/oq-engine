@@ -41,17 +41,19 @@ LOGGER = logs.LOG
 
 logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 
+# In degrees
+DEFAULT_REGION_CELL_SIZE = 0.1
 
 class Region(object):
     """A container of polygons, used for bounds checking."""
 
-    def __init__(self, polygon, cell_size=0.1):
+    def __init__(self, polygon, cell_size=DEFAULT_REGION_CELL_SIZE):
         self._grid = None
         self.cell_size = cell_size
         self.polygon = polygon
 
     @classmethod
-    def from_coordinates(cls, coordinates, cell_size=0.1):
+    def from_coordinates(cls, coordinates, cell_size=DEFAULT_REGION_CELL_SIZE):
         """
         Build a region from a list of polygon coordinates.
 
@@ -334,6 +336,9 @@ class Grid(object):
         :param bool workaround:
             https://bugs.launchpad.net/openquake/+bug/1027041
         """
+        # TODO: This is purely a temporary workaround.
+        # Once nhlib integration is complete, this body of code will be dropped
+        # altogether.
         if workaround_1027041:
             return [point.site for point in self
                     if self.region.polygon.intersects(point.site.point)]
