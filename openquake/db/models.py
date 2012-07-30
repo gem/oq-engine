@@ -958,6 +958,10 @@ class OqJobProfile(djm.Model):
         help_text="In the absence of an average population datum "
         "for exposure the user may want to specify that a day/night/transit "
         "population value should be used instead.")
+    #: Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041
+    # TODO: This is purely a temporary workaround and will be removed and will
+    # be removed when nhlib integration is complete.
+    workaround_1027041 = djm.NullBooleanField(null=True, default=False)
 
     class Meta:
         db_table = 'uiapi\".\"oq_job_profile'
