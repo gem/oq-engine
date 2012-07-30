@@ -289,6 +289,8 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
+        # TODO: temporary workaround; remove me when nhlib integration is
+        # complete
         if self.oq_job_profile.workaround_1027041 is not None:
             workaround = self.oq_job_profile.workaround_1027041
             return region.grid.centers(workaround_1027041=workaround)
