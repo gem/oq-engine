@@ -29,7 +29,7 @@ import nhlib.calc
 import nhlib.imt
 import nhlib.site
 
-from django.db import transaction
+from django.db import transaction, connections
 from nrml import parsers as nrml_parsers
 
 from openquake import engine2
@@ -169,6 +169,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
         ltp = logictree.LogicTreeProcessor(hc.id)
 
+        hzrd_src_cache = {}
+
         # The first realization gets the seed we specified in the config file.
         for i in xrange(hc.number_of_logic_tree_samples):
             lt_rlz = models.LtRealization(hazard_calculation=hc)
@@ -184,31 +186,56 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             _, gsim_branch_ids = ltp.sample_gmpe_logictree(
                 rnd.randint(MIN_SINT_32, MAX_SINT_32))
             lt_rlz.gsim_lt_path = gsim_branch_ids
-
-            # Get the source model for this sample:
-            hzrd_src = models.Src2ltsrc.objects.get(
-                lt_src=smlt.id, filename=sm_name).hzrd_src
-            parsed_sources = models.ParsedSource.objects.filter(input=hzrd_src)
-
-            lt_rlz.total_sources = len(parsed_sources)
+            # we will update total_sources in initialize_source_progress()
+            lt_rlz.total_sources = -1
             lt_rlz.save()
 
-            # Create source_progress for this realization
-            # A bulk insert is more efficient because there could be lots of
-            # of individual sources.
-            sp_inserter = writer.BulkInserter(models.SourceProgress)
-            for ps in parsed_sources:
-                sp_inserter.add_entry(
-                    lt_realization_id=lt_rlz.id, parsed_source_id=ps.id,
-                    is_complete=False)
-            sp_inserter.flush()
+            if not sm_name in hzrd_src_cache:
+                # Get the source model for this sample:
+                hzrd_src = models.Src2ltsrc.objects.get(
+                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                # and cache it
+                hzrd_src_cache[sm_name] = hzrd_src
+            else:
+                hzrd_src = hzrd_src_cache[sm_name]
 
+            # Create source_progress objects
+            self.initialize_source_progress(lt_rlz, hzrd_src)
             # Now stub out the curve result records for this realization:
             self.initialize_hazard_curve_progress(lt_rlz)
 
             # update the seed for the next realization
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
             rnd.seed(seed)
+
+    def initialize_source_progress(self, lt_rlz, hzrd_src):
+        """
+        Create ``source_progress`` models for given logic tree realization
+        and set total sources of realization.
+
+        :param lt_rlz:
+            :class:`openquake.db.models.LtRealization` object to initialize
+            source progress for.
+        :param hztd_src:
+            :class:`openquake.db.models.Input` object that needed parsed
+            sources are referencing.
+        """
+        cursor = connections['reslt_writer'].cursor()
+        src_progress_tbl = models.SourceProgress._meta.db_table
+        parsed_src_tbl = models.ParsedSource._meta.db_table
+        lt_rlz_tbl = models.LtRealization._meta.db_table
+        cursor.execute("""
+            INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
+            SELECT %%s, id, FALSE
+            FROM "%s" WHERE input_id = %%s
+            """ % (src_progress_tbl, parsed_src_tbl),
+            [lt_rlz.id, hzrd_src.id])
+        cursor.execute("""
+            UPDATE "%s" SET total_sources = (
+                SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
+            )""" % (lt_rlz_tbl, src_progress_tbl),
+            [lt_rlz.id])
+        transaction.commit_unless_managed()
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """
