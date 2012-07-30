@@ -19,7 +19,53 @@ import os
 from nrml import writers as nrml_writers
 
 from openquake.db import models
+from openquake.export import core
+from openquake.export import uhs
 from openquake.export.core import makedirs
+
+
+def export(output_id, target_dir):
+    """
+    Export the given hazard calculation output from the database to the
+    specified directory.
+
+    :param int output_id:
+        ID of a :class:`openquake.db.models.Output`.
+    :param str target_dir:
+        Directory where output artifacts should be written.
+    :returns:
+        List of file names (including the full directory path) containing the
+        exported results.
+
+        The quantity and type of the result files depends on
+        the type of output, as well as calculation parameters. (See the
+        `output_type` attribute of :class:`openquake.db.models.Output`.)
+    """
+    output = models.Output.objects.get(id=output_id)
+
+    export_fn = _export_fn_map().get(
+        output.output_type, core._export_fn_not_implemented)
+
+    return export_fn(output, os.path.expanduser(target_dir))
+
+
+def _export_fn_map():
+    """
+    Creates a mapping from output type to export function.
+
+    Each export function should implement a common interface and accept two
+    arguments: a :class:`~openquake.db.models.Output` object and a target
+    dir (`str`).
+
+    Each function should return a list of the file names created by the export
+    action.
+    """
+
+    fn_map = {
+        'uh_spectra': uhs.export_uhs,
+        'hazard_curve': export_hazard_curves,
+    }
+    return fn_map
 
 
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
