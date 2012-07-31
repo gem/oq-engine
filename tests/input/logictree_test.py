@@ -36,10 +36,8 @@ from nhlib.gsim.sadigh_1997 import SadighEtAl1997
 from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from nrml.parsers import SourceModelParser
 
-from openquake.db import models
 from openquake.input import logictree
 from openquake.input.source import nrml_to_nhlib
-from openquake.engine import _insert_input_files
 
 from tests.utils import helpers
 
@@ -1661,6 +1659,42 @@ class BranchSetSampleTestCase(unittest.TestCase):
         bs.branches = [logictree.Branch(0, Decimal('1.0'), 0)]
         for i in xrange(10):
             self.assertEqual(bs.sample().branch_id, 0)
+
+
+class BranchSetEnumerateTestCase(unittest.TestCase):
+    def test_enumerate(self):
+        b0 = logictree.Branch('0', Decimal('0.5'), '0')
+        b1 = logictree.Branch('1', Decimal('0.5'), '1')
+        b00 = logictree.Branch('0.0', Decimal('0.3'), '0.0')
+        b01 = logictree.Branch('0.1', Decimal('0.3'), '0.1')
+        b02 = logictree.Branch('0.2', Decimal('0.4'), '0.2')
+        b10 = logictree.Branch('1.0', Decimal('1.0'), '1.0')
+        b100 = logictree.Branch('1.0.0', Decimal('0.1'), '1.0.0')
+        b101 = logictree.Branch('1.0.1', Decimal('0.9'), '1.0.1')
+        bs_root = logictree.BranchSet(None, None)
+        bs_root.branches = [b0, b1]
+        bs0 = logictree.BranchSet(None, None)
+        bs0.branches = [b00, b01, b02]
+        bs1 = logictree.BranchSet(None, None)
+        bs1.branches = [b10]
+        b0.child_branchset = bs0
+        b1.child_branchset = bs1
+        bs10 = logictree.BranchSet(None, None)
+        bs10.branches = [b100, b101]
+        b10.child_branchset = bs10
+
+        paths = bs_root.enumerate_paths()
+        self.assertEqual(paths.next(), [b0, b00])
+        self.assertEqual(paths.next(), [b0, b01])
+        self.assertEqual(paths.next(), [b0, b02])
+        self.assertEqual(paths.next(), [b1, b10, b100])
+        self.assertEqual(paths.next(), [b1, b10, b101])
+        self.assertRaises(StopIteration, paths.next)
+
+        paths = bs1.enumerate_paths()
+        self.assertEqual(paths.next(), [b10, b100])
+        self.assertEqual(paths.next(), [b10, b101])
+        self.assertRaises(StopIteration, paths.next)
 
 
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
