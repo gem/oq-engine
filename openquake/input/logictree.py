@@ -183,7 +183,7 @@ class BranchSet(object):
         :returns:
             Generator of two-item tuples. Each tuple contains weight
             of the path (calculated as a product of the weights of all path's
-            branches) and list of ids of branches in the path. Total sum
+            branches) and list of path's :class:`Branch` objects. Total sum
             of all paths' weights is 1.0
         """
         for path in self._enumerate_paths([]):
@@ -192,7 +192,7 @@ class BranchSet(object):
             while path:
                 path, branch = path
                 weight *= branch.weight
-                flat_path.append(branch.branch_id)
+                flat_path.append(branch)
             yield weight, flat_path[::-1]
 
     def _enumerate_paths(self, prefix_path):
