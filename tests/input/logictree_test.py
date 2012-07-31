@@ -1686,16 +1686,16 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         ae = self.assertEqual
 
         paths = bs_root.enumerate_paths()
-        ae(paths.next(), (Decimal('0.2112'), ['0', '0.0']))
-        ae(paths.next(), (Decimal('0.1728'), ['0', '0.1']))
-        ae(paths.next(), (Decimal('0.256'), ['0', '0.2']))
-        ae(paths.next(), (Decimal('0.036'), ['1', '1.0', '1.0.0']))
-        ae(paths.next(), (Decimal('0.32400'), ['1', '1.0', '1.0.1']))
+        ae(paths.next(), (Decimal('0.2112'), [b0, b00]))
+        ae(paths.next(), (Decimal('0.1728'), [b0, b01]))
+        ae(paths.next(), (Decimal('0.256'), [b0, b02]))
+        ae(paths.next(), (Decimal('0.036'), [b1, b10, b100]))
+        ae(paths.next(), (Decimal('0.32400'), [b1, b10, b101]))
         self.assertRaises(StopIteration, paths.next)
 
         paths = bs1.enumerate_paths()
-        ae(paths.next(), (Decimal('0.1'), ['1.0', '1.0.0']))
-        ae(paths.next(), (Decimal('0.9'), ['1.0', '1.0.1']))
+        ae(paths.next(), (Decimal('0.1'), [b10, b100]))
+        ae(paths.next(), (Decimal('0.9'), [b10, b101]))
         self.assertRaises(StopIteration, paths.next)
 
 
