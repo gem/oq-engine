@@ -149,13 +149,65 @@ class ClassicalHazardCalculator(base.CalculatorNext):
     def initialize_realizations(self):
         """
         Create records for the `hzrdr.lt_realization` and
-        `htemp.source_progress` records. To do this, we sample the source model
-        logic tree to choose a source model for the realization, then we sample
-        the GSIM logic tree. We record the logic tree paths for both trees in
-        the `lt_realization` record.
+        `htemp.source_progress` records.
 
-        Then we create `htemp.source_progress` records for each source in the
-        source model chosen for each realization.
+        This function works either in random sampling mode (when lt_realization
+        models get the random seed value) or in enumeration mode (when weight
+        values are populated). In both cases we record the logic tree paths
+        for both trees in the `lt_realization` record, as well as ordinal
+        number of the realization (zero-based).
+
+        Then we create `htemp.source_progress` records for each source
+        in the source model chosen for each realization,
+        see :meth:`initialize_source_progress`.
+        """
+        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
+            # random sampling of paths
+            self._initialize_realizations_montecarlo()
+        else:
+            # full paths enumeration
+            self._initialize_realizations_enumeration()
+
+    def _initialize_realizations_enumeration(self):
+        """
+        Perform full paths enumeration of logic trees and populate
+        lt_realization table.
+        """
+        # TODO: unittest
+        hc = self.job.hazard_calculation
+        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        ltp = logictree.LogicTreeProcessor(hc.id)
+        hzrd_src_cache = {}
+
+        for i, path_info in enumerate(ltp.enumerate_paths()):
+            sm_name, weight, sm_lt_path, gsim_lt_path = path_info
+
+            lt_rlz = models.LtRealization(
+                hazard_calculation=hc,
+                ordinal=i,
+                seed=None,
+                weight=weight,
+                sm_lt_path=sm_lt_path,
+                gsim_lt_path=gsim_lt_path)
+
+            if not sm_name in hzrd_src_cache:
+                # Get the source model for this sample:
+                hzrd_src = models.Src2ltsrc.objects.get(
+                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                # and cache it
+                hzrd_src_cache[sm_name] = hzrd_src
+            else:
+                hzrd_src = hzrd_src_cache[sm_name]
+
+            # Create source_progress objects
+            self.initialize_source_progress(lt_rlz, hzrd_src)
+            # Now stub out the curve result records for this realization
+            self.initialize_hazard_curve_progress(lt_rlz)
+
+    def _initialize_realizations_montecarlo(self):
+        """
+        Perform random sampling of both logic trees and populate lt_realization
+        table.
         """
         hc = self.job.hazard_calculation
 
