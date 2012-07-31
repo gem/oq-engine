@@ -24,7 +24,7 @@ from nose.plugins.attrib import attr
 
 from openquake.db import models
 from openquake.export import core as export_core
-from openquake.export import hazard_curve
+from openquake.export import hazard
 
 from tests.utils import helpers
 
@@ -57,7 +57,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
             # Just to be thorough, let's make sure we can export everything:
             exported_files = []
             for o in outputs:
-                files = hazard_curve.export_hazard_curves(o, target_dir)
+                files = hazard.export(o.id, target_dir)
                 exported_files.extend(files)
 
             self.assertEqual(4, len(exported_files))
