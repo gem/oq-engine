@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""This module contains functions and Django model forms for carrying out job
+"""
+This module contains functions and Django model forms for carrying out job
 profile validation.
 """
 
@@ -246,8 +247,45 @@ def poes_hazard_maps_is_valid(mdl):
     return True, []
 
 
+def ses_per_sample_is_valid(mdl):
+    sps = mdl.ses_per_sample
+
+    if not sps > 0:
+        return False, ['`Stochastic Event Sets Per Sample` (ses_per_sample) '
+                       'must be > 0']
+
+
+def ground_motion_correlation_model_is_valid(_mdl):
+    # No additional validation is required;
+    # the model form and fields will take care of validation based on the
+    # valid choices defined for this field.
+    return True, []
+
+
+def ground_motion_correlation_params_is_valid(_mdl):
+    # No additional validation is required;
+    # it is not appropriate to do detailed checks on the correlation model
+    # parameters at this point because the parameters are specific to a given
+    # correlation model.
+    # Field normalization should make sure that the input is properly formed.
+    return True, []
+
+
+def complete_logic_tree_ses_is_valid(mdl):
+    # This parameter is a simple True or False;
+    # field normalization should cover all of validation necessary.
+    return True, []
+
+
+def ground_motion_fields_is_valid(mdl):
+    # This parameter is a simple True or False;
+    # field normalization should cover all of validation necessary.
+    return True, []
+
+
 class BaseOQModelForm(ModelForm):
-    """This class is based on :class:`django.forms.ModelForm`. Constructor
+    """
+    This class is based on :class:`django.forms.ModelForm`. Constructor
     arguments are the same.
 
     Since we're using forms (at the moment) purely for model validation, it's
@@ -288,50 +326,9 @@ class BaseOQModelForm(ModelForm):
                 kwargs['data'] = instance.__dict__
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
 
-
-class ClassicalHazardCalculationForm(BaseOQModelForm):
-
-    # These fields require more complex validation.
-    # The rules for these fields depend on other parameters
-    # and files.
-    special_fields = (
-        'region',
-        'region_grid_spacing',
-        'sites',
-        'reference_vs30_value',
-        'reference_vs30_type',
-        'reference_depth_to_2pt5km_per_sec',
-        'reference_depth_to_1pt0km_per_sec',
-    )
-
-    class Meta:
-        model = models.HazardCalculation
-        fields = (
-            'description',
-            'calculation_mode',
-            'region',
-            'region_grid_spacing',
-            'sites',
-            'random_seed',
-            'number_of_logic_tree_samples',
-            'rupture_mesh_spacing',
-            'width_of_mfd_bin',
-            'area_source_discretization',
-            'reference_vs30_value',
-            'reference_vs30_type',
-            'reference_depth_to_2pt5km_per_sec',
-            'reference_depth_to_1pt0km_per_sec',
-            'investigation_time',
-            'intensity_measure_types_and_levels',
-            'truncation_level',
-            'maximum_distance',
-            'mean_hazard_curves',
-            'quantile_hazard_curves',
-            'poes_hazard_maps',
-        )
-
     def _add_error(self, field_name, error_msg):
-        """Add an error to the `errors` dict.
+        """
+        Add an error to the `errors` dict.
 
         If errors for the given ``field_name`` already exist append the error
         to that list. Otherwise, a new entry will have to be created for the
@@ -354,13 +351,14 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
                 self.errors[field_name] = [error_msg]
 
     def is_valid(self):
-        """Overrides :meth:`django.forms.ModelForm.is_valid` to perform
+        """
+        Overrides :meth:`django.forms.ModelForm.is_valid` to perform
         custom validation checks (in addition to superclass validation).
 
         :returns:
             If valid return `True`, else `False`.
         """
-        super_valid = super(ClassicalHazardCalculationForm, self).is_valid()
+        super_valid = super(BaseOQModelForm, self).is_valid()
         all_valid = super_valid
 
         # HazardCalculation
@@ -423,3 +421,45 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
                 self._add_error(field, errs)
 
         return all_valid
+
+
+class ClassicalHazardCalculationForm(BaseOQModelForm):
+
+    # These fields require more complex validation.
+    # The rules for these fields depend on other parameters
+    # and files.
+    special_fields = (
+        'region',
+        'region_grid_spacing',
+        'sites',
+        'reference_vs30_value',
+        'reference_vs30_type',
+        'reference_depth_to_2pt5km_per_sec',
+        'reference_depth_to_1pt0km_per_sec',
+    )
+
+    class Meta:
+        model = models.HazardCalculation
+        fields = (
+            'description',
+            'calculation_mode',
+            'region',
+            'region_grid_spacing',
+            'sites',
+            'random_seed',
+            'number_of_logic_tree_samples',
+            'rupture_mesh_spacing',
+            'width_of_mfd_bin',
+            'area_source_discretization',
+            'reference_vs30_value',
+            'reference_vs30_type',
+            'reference_depth_to_2pt5km_per_sec',
+            'reference_depth_to_1pt0km_per_sec',
+            'investigation_time',
+            'intensity_measure_types_and_levels',
+            'truncation_level',
+            'maximum_distance',
+            'mean_hazard_curves',
+            'quantile_hazard_curves',
+            'poes_hazard_maps',
+        )
