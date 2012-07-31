@@ -644,6 +644,12 @@ class HazardCalculation(djm.Model):
     ################################
     # Event-Based Calculator params:
     ################################
+    intensity_measure_types = fields.CharArrayField(
+        help_text=(
+            'List of intensity measure types (input for GMF calculation)'),
+        null=True,
+        blank=True,
+    )
     ses_per_sample = djm.IntegerField(
         help_text=('Number of Stochastic Event Sets to compute per logic tree'
                    ' sample/realization'),
