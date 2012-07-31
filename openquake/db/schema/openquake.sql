@@ -306,6 +306,7 @@ CREATE TABLE uiapi.hazard_calculation (
     truncation_level float NOT NULL,
     maximum_distance float NOT NULL,
     -- event-based calculator parameters:
+    intensity_measure_types VARCHAR[],
     ses_per_sample INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
