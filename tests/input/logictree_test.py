@@ -1959,6 +1959,47 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
                               SadighEtAl1997)
 
+    def test_enumerate_paths(self):
+        paths = self.proc.enumerate_paths()
+        ae = self.assertEqual
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b3', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b3', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b8'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+                          ['b1', 'b4', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+                          ['b1', 'b4', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b8'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b5', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b5', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b8'], ['b2', 'b3']))
+        self.assertRaises(StopIteration, paths.next)
+
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
     JOB_CONFIG = None
