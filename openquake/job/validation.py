@@ -39,9 +39,9 @@ def description_is_valid(_mdl):
     return True, []
 
 
-def calculation_mode_is_valid(mdl):
-    if not mdl.calculation_mode == 'classical':
-        return False, ['Calculation mode must be "classical"']
+def calculation_mode_is_valid(mdl, expected_calc_mode):
+    if not mdl.calculation_mode == expected_calc_mode:
+        return False, ['Calculation mode must be "%s"' % expected_calc_mode]
     return True, []
 
 
@@ -253,6 +253,7 @@ def ses_per_sample_is_valid(mdl):
     if not sps > 0:
         return False, ['`Stochastic Event Sets Per Sample` (ses_per_sample) '
                        'must be > 0']
+    return True, []
 
 
 def ground_motion_correlation_model_is_valid(_mdl):
@@ -309,6 +310,20 @@ class BaseOQModelForm(ModelForm):
     {'site_model_file': <Input: 174||site_model||0xdeadbeef||>}
     """
 
+    # These fields require more complex validation.
+    # The rules for these fields depend on other parameters
+    # and files.
+    # At the moment, these are common to all hazard calculation modes.
+    special_fields = (
+        'region',
+        'region_grid_spacing',
+        'sites',
+        'reference_vs30_value',
+        'reference_vs30_type',
+        'reference_depth_to_2pt5km_per_sec',
+        'reference_depth_to_1pt0km_per_sec',
+    )
+
     def __init__(self, *args, **kwargs):
         if not 'data' in kwargs:
             # Because we're not using ModelForms in exactly the
@@ -364,10 +379,15 @@ class BaseOQModelForm(ModelForm):
         # HazardCalculation
         hjp = self.instance
 
+        # First, check the calculation mode:
+        valid, errs = calculation_mode_is_valid(hjp, self.calc_mode)
+        all_valid &= valid
+        self._add_error('calculation_mode', errs)
+
         # Exclude special fields that require contextual validation.
         for field in sorted(set(self.fields) - set(self.special_fields)):
             valid, errs = eval('%s_is_valid' % field)(hjp)
-            all_valid = all_valid and valid
+            all_valid &= valid
 
             self._add_error(field, errs)
 
@@ -389,7 +409,7 @@ class BaseOQModelForm(ModelForm):
         elif hjp.region is not None:
             if hjp.region_grid_spacing is not None:
                 valid, errs = region_grid_spacing_is_valid(hjp)
-                all_valid = all_valid and valid
+                all_valid &= valid
 
                 self._add_error('region_grid_spacing', errs)
             else:
@@ -399,12 +419,12 @@ class BaseOQModelForm(ModelForm):
 
             # validate the region
             valid, errs = region_is_valid(hjp)
-            all_valid = all_valid and valid
+            all_valid &= valid
             self._add_error('region', errs)
         # Only sites was specified
         else:
             valid, errs = sites_is_valid(hjp)
-            all_valid = all_valid and valid
+            all_valid &= valid
             self._add_error('sites', errs)
 
         if 'site_model_file' not in self.files:
@@ -417,7 +437,7 @@ class BaseOQModelForm(ModelForm):
                 'reference_depth_to_1pt0km_per_sec',
             ):
                 valid, errs = eval('%s_is_valid' % field)(hjp)
-                all_valid = all_valid and valid
+                all_valid &= valid
                 self._add_error(field, errs)
 
         return all_valid
@@ -425,24 +445,12 @@ class BaseOQModelForm(ModelForm):
 
 class ClassicalHazardCalculationForm(BaseOQModelForm):
 
-    # These fields require more complex validation.
-    # The rules for these fields depend on other parameters
-    # and files.
-    special_fields = (
-        'region',
-        'region_grid_spacing',
-        'sites',
-        'reference_vs30_value',
-        'reference_vs30_type',
-        'reference_depth_to_2pt5km_per_sec',
-        'reference_depth_to_1pt0km_per_sec',
-    )
+    calc_mode = 'classical'
 
     class Meta:
         model = models.HazardCalculation
         fields = (
             'description',
-            'calculation_mode',
             'region',
             'region_grid_spacing',
             'sites',
@@ -462,4 +470,36 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
             'mean_hazard_curves',
             'quantile_hazard_curves',
             'poes_hazard_maps',
+        )
+
+
+class EventBasedHazardCalculationForm(BaseOQModelForm):
+
+    calc_mode = 'event_based'
+
+    class Meta:
+        model = models.HazardCalculation
+        fields = (
+            'description',
+            'region',
+            'region_grid_spacing',
+            'sites',
+            'random_seed',
+            'number_of_logic_tree_samples',
+            'rupture_mesh_spacing',
+            'width_of_mfd_bin',
+            'area_source_discretization',
+            'reference_vs30_value',
+            'reference_vs30_type',
+            'reference_depth_to_2pt5km_per_sec',
+            'reference_depth_to_1pt0km_per_sec',
+            'investigation_time',
+            'intensity_measure_types_and_levels',
+            'truncation_level',
+            'maximum_distance',
+            'ses_per_sample',
+            'ground_motion_correlation_model',
+            'ground_motion_correlation_params',
+            'complete_logic_tree_ses',
+            'ground_motion_fields',
         )
