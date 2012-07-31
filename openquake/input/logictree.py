@@ -181,15 +181,19 @@ class BranchSet(object):
         Generate all possible paths starting from this branch set.
 
         :returns:
-            Generator of lists. Each list contains :class:`Branch` objects
-            in their order of appearance in the path.
+            Generator of two-item tuples. Each tuple contains weight
+            of the path (calculated as a product of the weights of all path's
+            branches) and list of ids of branches in the path. Total sum
+            of all paths' weights is 1.0
         """
         for path in self._enumerate_paths([]):
             flat_path = []
+            weight = Decimal('1.0')
             while path:
                 path, branch = path
-                flat_path.append(branch)
-            yield flat_path[::-1]
+                weight *= branch.weight
+                flat_path.append(branch.branch_id)
+            yield weight, flat_path[::-1]
 
     def _enumerate_paths(self, prefix_path):
         """
