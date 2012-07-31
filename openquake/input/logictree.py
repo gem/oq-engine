@@ -211,6 +211,16 @@ class BranchSet(object):
             else:
                 yield path
 
+    def get_branch_by_id(self, branch_id):
+        """
+        Return :class:`Branch` object belonging to this branch set with id
+        equal to ``branch_id``.
+        """
+        for branch in self.branches:
+            if branch.branch_id == branch_id:
+                return branch
+        raise LogicTreeError("couldn't find branch %r" % branch_id)
+
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
         """
