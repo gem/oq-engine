@@ -144,6 +144,22 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_curve_data TO oq_reslt_writer;
 GRANT SELECT ON hzrdr.gmf_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.gmf_data TO oq_reslt_writer;
 
+-- hzrdr.gmf_collection
+GRANT SELECT ON hzrdr.gmf_collection TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_collection TO oq_reslt_writer;
+
+-- hzrdr.gmf_set
+GRANT SELECT ON hzrdr.gmf_set TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_set TO oq_reslt_writer;
+
+-- hzrdr.gmf
+GRANT SELECT ON hzrdr.gmf TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdr.gmf TO oq_reslt_writer;
+
+-- hzrdr.gmf_node
+GRANT SELECT ON hzrdr.gmf_node TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_node TO oq_reslt_writer;
+
 -- hzrdr.hazard_map
 GRANT SELECT ON hzrdr.hazard_map TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_map TO oq_reslt_writer;
