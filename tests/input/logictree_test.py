@@ -1663,10 +1663,10 @@ class BranchSetSampleTestCase(unittest.TestCase):
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
     def test_enumerate(self):
-        b0 = logictree.Branch('0', Decimal('0.5'), '0')
-        b1 = logictree.Branch('1', Decimal('0.5'), '1')
-        b00 = logictree.Branch('0.0', Decimal('0.3'), '0.0')
-        b01 = logictree.Branch('0.1', Decimal('0.3'), '0.1')
+        b0 = logictree.Branch('0', Decimal('0.64'), '0')
+        b1 = logictree.Branch('1', Decimal('0.36'), '1')
+        b00 = logictree.Branch('0.0', Decimal('0.33'), '0.0')
+        b01 = logictree.Branch('0.1', Decimal('0.27'), '0.1')
         b02 = logictree.Branch('0.2', Decimal('0.4'), '0.2')
         b10 = logictree.Branch('1.0', Decimal('1.0'), '1.0')
         b100 = logictree.Branch('1.0.0', Decimal('0.1'), '1.0.0')
@@ -1683,17 +1683,19 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         bs10.branches = [b100, b101]
         b10.child_branchset = bs10
 
+        ae = self.assertEqual
+
         paths = bs_root.enumerate_paths()
-        self.assertEqual(paths.next(), [b0, b00])
-        self.assertEqual(paths.next(), [b0, b01])
-        self.assertEqual(paths.next(), [b0, b02])
-        self.assertEqual(paths.next(), [b1, b10, b100])
-        self.assertEqual(paths.next(), [b1, b10, b101])
+        ae(paths.next(), (Decimal('0.2112'), ['0', '0.0']))
+        ae(paths.next(), (Decimal('0.1728'), ['0', '0.1']))
+        ae(paths.next(), (Decimal('0.256'), ['0', '0.2']))
+        ae(paths.next(), (Decimal('0.036'), ['1', '1.0', '1.0.0']))
+        ae(paths.next(), (Decimal('0.32400'), ['1', '1.0', '1.0.1']))
         self.assertRaises(StopIteration, paths.next)
 
         paths = bs1.enumerate_paths()
-        self.assertEqual(paths.next(), [b10, b100])
-        self.assertEqual(paths.next(), [b10, b101])
+        ae(paths.next(), (Decimal('0.1'), ['1.0', '1.0.0']))
+        ae(paths.next(), (Decimal('0.9'), ['1.0', '1.0.1']))
         self.assertRaises(StopIteration, paths.next)
 
 
