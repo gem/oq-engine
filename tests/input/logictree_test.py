@@ -1699,6 +1699,18 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         self.assertRaises(StopIteration, paths.next)
 
 
+class BranchSetGetBranchByIdTestCase(unittest.TestCase):
+    def test(self):
+        bs = logictree.BranchSet(None, None)
+        b1 = logictree.Branch('1', Decimal('0.33'), None)
+        b2 = logictree.Branch('2', Decimal('0.33'), None)
+        bbzz = logictree.Branch('bzz', Decimal('0.34'), None)
+        bs.branches = [b1, b2, bbzz]
+        self.assertIs(bs.get_branch_by_id('1'), b1)
+        self.assertIs(bs.get_branch_by_id('2'), b2)
+        self.assertIs(bs.get_branch_by_id('bzz'), bbzz)
+
+
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_ab_absolute(self):
         mfd = Mock()
