@@ -490,7 +490,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
+            intensity_measure_types=VALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
         )
@@ -521,7 +521,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
+            intensity_measure_types=VALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
             ses_per_sample=5,
@@ -535,3 +535,50 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         )
 
         self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_imts(self):
+        expected_errors = {
+            'intensity_measure_types': [
+                'SA(-0.1): SA period values must be >= 0',
+                ('SA<2.5>: SA must be specified with a period value, in the '
+                 'form `SA(N)`, where N is a value >= 0'),
+                'SA(2x): SA period value should be a float >= 0',
+                'PGZ: Invalid intensity measure type',
+            ],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types=INVALID_IML_IMT.keys(),
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            ses_per_sample=5,
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params={"vs30_clustering": True},
+            complete_logic_tree_ses=False,
+            ground_motion_fields=True,
+        )
+        form = validation.EventBasedHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)

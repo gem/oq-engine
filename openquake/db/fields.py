@@ -35,8 +35,15 @@ ARRAY_RE = re.compile('[\s,]+')
 # pylint: disable=R0904
 
 
-class FloatArrayFormField(forms.Field):
-    """Form field for properly handling float arrays/lists."""
+class StringArrayFormField(forms.Field):
+    """
+    Base class containing general functionality for handling list-like
+    parameters.
+    """
+    # No change; customize this in subclasses if a cast is needed (to `float`,
+    # for example)
+    cast = str
+    value_type = 'str'
 
     def clean(self, value):
         """Try to coerce either a string list of values (separated by
@@ -46,30 +53,38 @@ class FloatArrayFormField(forms.Field):
         """
         if isinstance(value, (tuple, list)):
             try:
-                value = [float(x) for x in value]
+                value = [self.cast(x) for x in value]
             except (TypeError, ValueError):
                 raise forms.ValidationError(
                     'Could not coerce sequence values to `float` values'
                 )
         elif isinstance(value, str):
             # it could be a string list, like this: "1, 2,3 , 4 5"
-            # try to convert it to a an actual list of floats
+            # try to convert it to a an actual list and cast the values to the
+            # chosen type
             if len(value) == 0:
                 # It's an empty string list
                 value = []
             else:
                 try:
-                    value = [float(x) for x in ARRAY_RE.split(value)]
+                    value = [self.cast(x) for x in ARRAY_RE.split(value)]
                 except ValueError:
                     raise forms.ValidationError(
-                        'Could not coerce `str` to a list of `float` values'
+                        'Could not coerce `str` to a list of `%s` values'
+                        % self.value_type
                     )
         else:
             raise forms.ValidationError(
-                'Could not convert value to `list` of `float` values: %s'
-                % value
+                'Could not convert value to `list` of `%s` values: %s'
+                % (self.value_type, value)
             )
         return value
+
+class FloatArrayFormField(StringArrayFormField):
+    """Form field for properly handling float arrays/lists."""
+
+    cast = float
+    value_type = 'float'
 
 
 class PickleFormField(forms.Field):
@@ -138,6 +153,14 @@ class CharArrayField(djm.Field):
             return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
         else:
             return None
+
+    def formfield(self, **kwargs):
+        """
+        Specify a custom form field type so forms know how to handle fields of this type.
+        """
+        defaults = {'form_class': StringArrayFormField}
+        defaults.update(kwargs)
+        return super(CharArrayField, self).formfield(**defaults)
 
 
 class PickleField(djm.Field):
