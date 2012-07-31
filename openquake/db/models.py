@@ -46,6 +46,16 @@ VS30_TYPE_CHOICES = (
    (u"inferred", u"Estimated value"),
 )
 
+IMT_CHOICES = (
+    (u'PGA', u'Peak Ground Acceleration'),
+    (u'PGV', u'Peak Ground Velocity'),
+    (u'PGD', u'Peak Ground Displacement'),
+    (u'SA', u'Spectral Acceleration'),
+    (u'IA', u'Arias Intensity'),
+    (u'RSD', u'Relative Significant Duration'),
+    (u'MMI', u'Modified Mercalli Intensity'),
+)
+
 
 def profile4job(job_id):
     """Return the job profile for the given job.
@@ -1058,7 +1068,7 @@ class HazardCurve(djm.Model):
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
-    imt = djm.TextField()
+    imt = djm.TextField(choices=IMT_CHOICES)
     imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -1193,9 +1203,62 @@ class SESRupture(djm.Model):
         return None
 
 
+class GmfCollection(djm.Model):
+    """
+    A collection of ground motion field (GMF) sets for a given logic tree
+    realization.
+    """
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_collection'
+
+
+class GmfSet(djm.Model):
+    """
+    A set of ground motion fields for a given investigation time (in years).
+    """
+    gmf_collection = djm.ForeignKey('GmfCollection')
+    investigation_time = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_set'
+
+
+class Gmf(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    gmf_set = djm.ForeignKey('GmfSet')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf'
+
+
+class GmfNode(djm.Model):
+    """
+    An indiviual node of a ground motion field, consisting of a ground motion
+    value/intensity measure level and a point geometry.
+    """
+    gmf = djm.ForeignKey('Gmf')
+    location = djm.PointField(srid=4326)
+    iml = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf'
+
+
 class GmfData(djm.Model):
     '''
     Ground Motion Field data
+
+    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
+    :class:`Gmf`, and :class:`GmfNode`.
     '''
     output = djm.ForeignKey('Output')
     ground_motion = djm.FloatField()
