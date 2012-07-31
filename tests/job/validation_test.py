@@ -23,37 +23,38 @@ from openquake.job import validation
 from tests.utils import helpers
 
 
+VALID_IML_IMT = {
+    "PGV": [0.005, 0.007, 0.0098],
+    "IA": [0.005, 0.007, 0.0098],
+    "PGD": [0.005, 0.007, 0.0098],
+    "MMI": [0.005, 0.007, 0.0098],
+    "PGA": [0.007, 0.005, 0.0098],
+    "RSD": [0.005, 0.007, 0.0098],
+    "SA(0)": [0.005, 0.007, 0.0098],
+    "SA(0.025)": [0.005, 0.007, 0.0098],
+    "SA(2.5)": [0.005, 0.007, 0.0098],
+    "SA(0.45)": [0.005, 0.007, 0.0098],
+}
+
+VALID_IML_IMT_STR = json.dumps(VALID_IML_IMT)
+
+INVALID_IML_IMT = {
+    "PGZ": [0.005, 0.007, 0.0098],
+    "IA": [0.0, 0.007, 0.0098],
+    "PGD": [],
+    "MMI": (0.005, 0.007, 0.0098),
+    "PGA": [-0.001, 0.6, 0.0098],
+    "RSD": [0.005, 0.007, 0.0098],
+    "SA(-0.1)": [0.005, 0.007, 0.0098],
+    "SA(0.025)": [0.005, 0.007, 0.0098],
+    "SA<2.5>": [0.005, 0.007, 0.0098],
+    "SA(0.45)": [0.005, 0.007, 0.0098],
+    "SA(2x)": [0.005, 0.007, 0.0098],
+}
+
+
 class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
-
-    VALID_IML_IMT = {
-        "PGV": [0.005, 0.007, 0.0098],
-        "IA": [0.005, 0.007, 0.0098],
-        "PGD": [0.005, 0.007, 0.0098],
-        "MMI": [0.005, 0.007, 0.0098],
-        "PGA": [0.007, 0.005, 0.0098],
-        "RSD": [0.005, 0.007, 0.0098],
-        "SA(0)": [0.005, 0.007, 0.0098],
-        "SA(0.025)": [0.005, 0.007, 0.0098],
-        "SA(2.5)": [0.005, 0.007, 0.0098],
-        "SA(0.45)": [0.005, 0.007, 0.0098],
-    }
-
-    VALID_IML_IMT_STR = json.dumps(VALID_IML_IMT)
-
-    INVALID_IML_IMT = {
-        "PGZ": [0.005, 0.007, 0.0098],
-        "IA": [0.0, 0.007, 0.0098],
-        "PGD": [],
-        "MMI": (0.005, 0.007, 0.0098),
-        "PGA": [-0.001, 0.6, 0.0098],
-        "RSD": [0.005, 0.007, 0.0098],
-        "SA(-0.1)": [0.005, 0.007, 0.0098],
-        "SA(0.025)": [0.005, 0.007, 0.0098],
-        "SA<2.5>": [0.005, 0.007, 0.0098],
-        "SA(0.45)": [0.005, 0.007, 0.0098],
-        "SA(2x)": [0.005, 0.007, 0.0098],
-    }
 
     def test_hazard_calculation_is_valid_region_only(self):
         hc = models.HazardCalculation(
@@ -75,7 +76,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -104,7 +105,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -139,7 +140,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0,
             reference_depth_to_1pt0km_per_sec=0,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -167,7 +168,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT_STR,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves='true',
@@ -195,7 +196,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -227,7 +228,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -249,8 +250,6 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
                 'Area source discretization must be > 0',
             ],
             'calculation_mode': [
-                'Select a valid choice. Classical is not one of the available '
-                'choices.',
                 'Calculation mode must be "classical"',
             ],
             'investigation_time': ['Investigation time must be > 0'],
@@ -315,7 +314,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0,
             reference_depth_to_1pt0km_per_sec=0,
             investigation_time=0,
-            intensity_measure_types_and_levels=self.INVALID_IML_IMT,
+            intensity_measure_types_and_levels=INVALID_IML_IMT,
             truncation_level=-0.1,
             maximum_distance=0,
             quantile_hazard_curves=[0.0, -0.1, 1.1],
@@ -365,7 +364,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             width_of_mfd_bin=1,
             area_source_discretization=1,
             investigation_time=1,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0,
             maximum_distance=1,
             quantile_hazard_curves=[0.0, 0.1, 1.0],
@@ -403,7 +402,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -448,7 +447,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             width_of_mfd_bin=1,
             area_source_discretization=1,
             investigation_time=1,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0,
             maximum_distance=1,
             quantile_hazard_curves=[0.0, 0.1, 1.0],
@@ -462,3 +461,77 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
+
+
+class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
+
+    def test_ses_per_sample_is_not_valid(self):
+        expected_errors = {
+            'ses_per_sample': ['`Stochastic Event Sets Per Sample` '
+                               '(ses_per_sample) must be > 0'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+        )
+        form = validation.EventBasedHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+    def test_valid_event_based_params(self):
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            ses_per_sample=5,
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params={"vs30_clustering": True},
+            complete_logic_tree_ses=False,
+            ground_motion_fields=True,
+        )
+        form = validation.EventBasedHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertTrue(form.is_valid(), dict(form.errors))
