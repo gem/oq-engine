@@ -173,7 +173,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
         """
-        # TODO: unittest
         hc = self.job.hazard_calculation
         [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
         ltp = logictree.LogicTreeProcessor(hc.id)
@@ -188,7 +187,10 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                 seed=None,
                 weight=weight,
                 sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path)
+                gsim_lt_path=gsim_lt_path,
+                # we will update total_sources in initialize_source_progress()
+                total_sources=-1)
+            lt_rlz.save()
 
             if not sm_name in hzrd_src_cache:
                 # Get the source model for this sample:
