@@ -176,6 +176,37 @@ class BranchSet(object):
                 return branch
         raise AssertionError('do weights really sum up to 1.0?')
 
+    def enumerate_paths(self):
+        """
+        Generate all possible paths starting from this branch set.
+
+        :returns:
+            Generator of lists. Each list contains :class:`Branch` objects
+            in their order of appearance in the path.
+        """
+        for path in self._enumerate_paths([]):
+            flat_path = []
+            while path:
+                path, branch = path
+                flat_path.append(branch)
+            yield flat_path[::-1]
+
+    def _enumerate_paths(self, prefix_path):
+        """
+        Recursive (private) part of :func:`enumerate_paths`. Returns generator
+        of recursive lists of two items, where second item is the branch object
+        and first one is itself list of two items.
+        """
+        if prefix_path is None:
+            prefix_path = []
+        for branch in self.branches:
+            path = [prefix_path, branch]
+            if branch.child_branchset is not None:
+                for subpath in branch.child_branchset._enumerate_paths(path):
+                    yield subpath
+            else:
+                yield path
+
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
         """
