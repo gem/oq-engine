@@ -69,7 +69,9 @@ import oqpath
 oqpath.set_oq_path()
 
 from openquake import __version__
+from openquake.db import models
 from openquake.export import core as export
+from openquake.export import hazard as hazard_export
 from openquake.utils import version as utils_version
 
 
@@ -77,63 +79,196 @@ def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
     parser = argparse.ArgumentParser(
-        description='Openquake - Seismic Hazard and Risk Analysis Engine')
+        description='OpenQuake - Seismic Hazard and Risk Analysis Engine')
 
     general_grp = parser.add_argument_group('General')
     general_grp.add_argument(
-        '--version', action='store_true', help='display version information')
+        '--version', action='store_true', help='Display version information')
     general_grp.add_argument(
         '--force-inputs', action='store_true',
-        help='parse model inputs and write them to the db no matter what')
+        help='Parse model inputs and write them to the DB no matter what')
+    general_grp.add_argument(
+        '--log-file', '-L',
+        help=('Location to store log messages; if not specified, log messages'
+              ' will be printed to the console'),
+        required=False, metavar='LOG_FILE')
+    general_grp.add_argument(
+        '--log-level', '-l',
+        help='Defaults to "warn"', required=False,
+        choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
+
+    hazard_grp = parser.add_argument_group('Hazard')
+    hazard_grp.add_argument(
+        '--run-hazard', help='Run a hazard job with the specified config file',
+        metavar='CONFIG_FILE')
+    hazard_grp.add_argument(
+        '--list-hazard-calculations',
+        help='List hazard calculation information',
+        action='store_true')
+    hazard_grp.add_argument(
+        '--list-hazard-outputs',
+        help='List outputs for the specified hazard calculation',
+        metavar='HAZARD_CALCULATION_ID')
+    hazard_grp.add_argument(
+        '--export-hazard',
+        help='Export the desired output to the specified directory',
+        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
     calc_grp = parser.add_argument_group('Run calculations')
     calc_grp.add_argument(
-        '--run-hazard', help='run a hazard job with the specified config file',
-        metavar='CONFIG_FILE')
-    calc_grp.add_argument(
         '--config-file', '--config_file',
-        help='(DEPRECATED) run a calculation with the specifed config file',
+        help='(DEPRECATED) Run a calculation with the specifed config file',
         metavar='CONFIG_FILE')
     calc_grp.add_argument(
         '--output-type', '--output_type',
-        help='defaults to "db"', required=False, choices=['db', 'xml'],
-        default='db')
-    calc_grp.add_argument(
-        '--log-level', '-l',
-        help='defaults to "warn"', required=False,
-        choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
-    calc_grp.add_argument(
-        '--log-file', '-L',
-        help=('location to store log messages; if not specified, log messages'
-              ' will be printed to the console'),
-        required=False, metavar='LOG_FILE')
+        help='(DEPRECATED) Defaults to "db"', required=False,
+        choices=['db', 'xml'], default='db')
 
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
         '--list-calculations',
-        help='list completed calculations', action='store_true')
+        help='(DEPRECATED) List completed calculations', action='store_true')
     export_grp.add_argument(
         '--list-outputs',
-        help='list outputs for a completed calculation', type=int,
+        help='(DEPRECATED) List outputs for a completed calculation', type=int,
         metavar='CALCULATION_ID')
     export_grp.add_argument(
         '--export',
-        help='export the desired output to the specified directory',
+        help=('(DEPRECATED) Export the desired output to the specified '
+              'directory'),
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
     return parser
 
 
+def run_hazard(cfg_file, log_level, log_file, force_inputs):
+    """
+    Run a hazard calculation using the specified config file and other options.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) file.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param bool force_inputs:
+        If `True`, don't attempt to reuse existing identical inputs; instead,
+        import fresh copies.
+    """
+    from openquake import engine2
+    from openquake.job import validation
+
+    try:
+        if log_file is not None:
+            try:
+                _touch_log_file(log_file)
+            except IOError as e:
+                raise IOError('Error writing to log file %s: %s'
+                              % (log_file, e.strerror))
+
+        job = engine2.prepare_job(getpass.getuser())
+        params, files = engine2.parse_config(
+            open(cfg_file, 'r'), force_inputs=force_inputs)
+        calculation = engine2.create_hazard_calculation(job.owner, params,
+                                                        files.values())
+        job.hazard_calculation = calculation
+        job.save()
+
+        # Validate the job:
+        form = validation.ClassicalHazardCalculationForm(
+            instance=calculation, files=files)
+        # For now, just print whether or not the job is valid.
+        if not form.is_valid():
+            print ('Job configuration is not valid. Errors: %s'
+                   % dict(form.errors))
+            sys.exit(1)
+
+        # Initialize the supervisor, instantiate the calculator,
+        # and run the calculation.
+        completed_job = engine2.run_hazard(job, log_level, log_file)
+        if completed_job is not None:
+            # We check for `None` here because the supervisor and executor
+            # process forks return to here as well. We want to ignore them.
+            if completed_job.status == 'complete':
+                print 'Job %s ran successfully' % completed_job.id
+            else:
+                print 'Job %s failed' % completed_job.id
+    except IOError as e:
+        print str(e)
+    except Exception as e:
+        raise
+
+
+def list_hazard_calculations():
+    print "Hazard calculations:"
+    hcs = models.HazardCalculation.objects.filter(
+        owner__user_name=getpass.getuser())
+    if len(hcs) == 0:
+        print 'None'
+    else:
+        for hc in hcs:
+            print 'Calculation ID: %s, Description: %s' % (
+                hc.id, hc.description)
+            jobs = models.OqJob.objects.filter(hazard_calculation=hc.id)
+            for j in jobs:
+                if j.is_running:
+                    status = 'pending'
+                else:
+                    if j.status == 'complete':
+                        status = 'successful'
+                    else:
+                        status = 'failed'
+                print '\tJob ID: %s, Status: %s' % (j.id, status)
+
+
+def list_hazard_outputs(hc_id):
+    """
+    List the outputs for a given
+    :class:`~openquake.db.models.HazardCalculation`.
+
+    :param hc_id:
+        ID of a hazard calculation.
+    """
+    outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
+    if len(outputs) > 0:
+        print 'ID\tOuput Type'
+        for o in outputs:
+            print '%s\t%s' % (o.id, o.output_type)
+
+
+def export_hazard(haz_output_id, target_dir):
+    """
+    Simple UI wrapper around
+    :func:`openquake.export.hazard.export` which prints a summary of files
+    exported, if any.
+    """
+    from django.core.exceptions import ObjectDoesNotExist
+    try:
+        files = hazard_export.export(haz_output_id, target_dir)
+        if len(files) > 0:
+            print 'Files Exported:'
+            for f in files:
+                print f
+    except NotImplementedError, err:
+        print err.message
+        print 'This feature is probably not implemented yet'
+    except ObjectDoesNotExist:
+        print 'No output found for OUTPUT_ID %s' % output_id
+
+
 def _touch_log_file(log_file):
     """If a log file destination is specified, attempt to open the file in
     'append' mode ('a'). If the specified file is not writable, an
-    :exception:`IOError` will be raised."""
+    :exc:`IOError` will be raised."""
     open(os.path.abspath(log_file), 'a').close()
 
 
 def list_calculations():
-    """Simple UI wrapper around
-    :function:`openquake.export.core.get_jobs`. It prints the results in
+    """
+    Deprecated.
+
+    Simple UI wrapper around
+    :func:`openquake.export.core.get_jobs`. It prints the results in
     a nice way."""
     jobs = export.get_jobs(getpass.getuser())
     if len(jobs) > 0:
@@ -146,8 +281,11 @@ def list_calculations():
 
 
 def list_outputs(job_id):
-    """Simple UI wrapper arround
-    :function:`openquake.export.core.get_outputs`. It prints the results in a
+    """
+    Deprecated.
+
+    Simple UI wrapper arround
+    :func:`openquake.export.core.get_outputs`. It prints the results in a
     nice way."""
     outputs = export.get_outputs(job_id)
     if len(outputs) > 0:
@@ -157,8 +295,11 @@ def list_outputs(job_id):
 
 
 def do_export(output_id, target_dir):
-    """Simple UI wrapper around
-    :function:`openquake.export.core.export`. It prints the results in a nice
+    """
+    Deprecated.
+
+    Simple UI wrapper around
+    :func:`openquake.export.core.export`. It prints the results in a nice
     way."""
     from django.core.exceptions import ObjectDoesNotExist
     try:
@@ -181,50 +322,18 @@ if __name__ == '__main__':
 
     if args.version:
         print utils_version.info(__version__)
+    elif args.list_hazard_calculations:
+        list_hazard_calculations()
+    elif args.list_hazard_outputs:
+        list_hazard_outputs(args.list_hazard_outputs)
+    elif args.export_hazard is not None:
+        output_id, target_dir = args.export_hazard
+        output_id = int(output_id)
+
+        export_hazard(output_id, target_dir)
     elif args.run_hazard is not None:
-        from openquake import engine2
-        from openquake.job import validation
-
-        try:
-            if args.log_file is not None:
-                try:
-                    _touch_log_file(args.log_file)
-                except IOError as e:
-                    raise IOError('Error writing to log file %s: %s'
-                                  % (args.log_file, e.strerror))
-
-            job = engine2.prepare_job(getpass.getuser())
-            params, files = engine2.parse_config(
-                open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
-            calculation = engine2.create_hazard_calculation(job.owner, params,
-                                                            files.values())
-            job.hazard_calculation = calculation
-            job.save()
-
-            # Validate the job:
-            form = validation.ClassicalHazardCalculationForm(
-                instance=calculation, files=files)
-            # For now, just print whether or not the job is valid.
-            if not form.is_valid():
-                print ('Job configuration is not valid. Errors: %s'
-                       % dict(form.errors))
-                sys.exit(1)
-
-            # Initialize the supervisor, instantiate the calculator,
-            # and run the calculation.
-            completed_job = engine2.run_hazard(
-                job, args.log_level, args.log_file)
-            if completed_job is not None:
-                # We check for `None` here because the supervisor and executor
-                # process forks return to here as well. We want to ignore them.
-                if completed_job.status == 'complete':
-                    print 'Job %s ran successfully' % completed_job.id
-                else:
-                    print 'Job %s failed' % completed_job.id
-        except IOError as e:
-            print str(e)
-        except Exception as e:
-            raise
+        run_hazard(args.run_hazard, args.log_level, args.log_file,
+                   args.force_inputs)
     elif args.config_file is not None:
         from openquake import job
         from openquake import engine

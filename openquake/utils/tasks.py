@@ -187,6 +187,8 @@ def oqtask(task_func):
         # this is the only required argument
         job_id = args[0]
         # Set up logging via amqp.
+        # TODO: The task function interface should include log level?
+        # Or store it somewhere with the oq_job?
         logs.init_logs_amqp_send(level='debug', job_id=job_id)
         try:
             # check if the job is still running
