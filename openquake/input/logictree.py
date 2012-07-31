@@ -1126,3 +1126,29 @@ class LogicTreeProcessor(object):
             trt_to_gsim[trt] = branch.value
             branchset = branch.child_branchset
         return trt_to_gsim, branch_ids
+
+    def enumerate_paths(self):
+        """
+        Generate all the possible paths through both logic trees.
+
+        :returns:
+            Generator of four items:
+
+            #. Source model file name, as a string.
+            #. Path's weight (decimal between 0 and 1). Sum of all paths'
+               weights is equal to 1.
+            #. List of source-model logic tree branch ids.
+            #. List of GMPE logic tree branch ids.
+        """
+        smlt_paths_gen = self.source_model_lt.root_branchset.enumerate_paths
+        gmpelt_paths_gen = self.gmpe_lt.root_branchset.enumerate_paths
+
+        for smlt_path_weight, smlt_path in smlt_paths_gen():
+            for gmpelt_path_weight, gmpelt_path in gmpelt_paths_gen():
+                weight = smlt_path_weight * gmpelt_path_weight
+                sm_name = smlt_path[0].value
+
+                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+                gmpelt_branch_ids = [branch.branch_id for branch in gmpelt_path]
+
+                yield sm_name, weight, smlt_branch_ids, gmpelt_branch_ids
