@@ -36,6 +36,10 @@ GRANT ALL ON SEQUENCE hzrdi.parsed_source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.site_model_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.gmf_collection_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.gmf_set_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.gmf_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.gmf_node_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_map_data_id_seq to GROUP openquake;
