@@ -21,7 +21,7 @@ profile validation.
 import re
 
 from django.forms import ModelForm
-from nhlib import imt
+from nhlib import imt as nhlib_imt
 
 from openquake.db import models
 
@@ -241,9 +241,9 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
             'reference_depth_to_2pt5km_per_sec',
             'reference_depth_to_1pt0km_per_sec',
             'investigation_time',
-            'intensity_measure_types_and_levels',
             'truncation_level',
             'maximum_distance',
+            'intensity_measure_types',
             'ses_per_sample',
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
@@ -388,10 +388,10 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     errors = []
 
     # SA intensity measure configs need special handling
-    imts = list(set(imt.__all__) - set(['SA']))
+    valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
 
     for im_type, imls in im.iteritems():
-        if im_type in imts:
+        if im_type in valid_imts:
             if not isinstance(imls, list):
                 valid = False
                 errors.append(
@@ -471,6 +471,46 @@ def poes_hazard_maps_is_valid(mdl):
         if not all([0.0 <= x <= 1.0 for x in phm]):
             return False, ['PoEs for hazard maps must be in the range [0, 1]']
     return True, []
+
+
+def intensity_measure_types_is_valid(mdl):
+    imts = mdl.intensity_measure_types
+
+    valid = True
+    errors = []
+
+    # SA intensity measure configs need special handling
+    valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
+
+    for imt in imts:
+        if 'SA' in imt:
+            match = re.match(r'^SA\(([^)]+?)\)$', imt)
+            if match is None:
+                # SA key is not formatted properly
+                valid = False
+                errors.append(
+                    '%s: SA must be specified with a period value, in the form'
+                    ' `SA(N)`, where N is a value >= 0' % imt
+                )
+            else:
+                # there's a match; make sure the period value is valid
+                sa_period = match.groups()[0]
+                try:
+                    if float(sa_period) < 0:
+                        valid = False
+                        errors.append(
+                            '%s: SA period values must be >= 0' % imt
+                        )
+                except ValueError:
+                    valid = False
+                    errors.append(
+                        '%s: SA period value should be a float >= 0' % imt
+                    )
+        elif not imt in valid_imts:
+            valid = False
+            errors.append('%s: Invalid intensity measure type' % imt)
+
+    return valid, errors
 
 
 def ses_per_sample_is_valid(mdl):
