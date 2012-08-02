@@ -100,7 +100,14 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
 
 
 def min_geodetic_distance(mlons, mlats, slons, slats):
-    # TODO: document, unittest
+    """
+    Same as :func:`min_distance`, but calculates only minimum geodetic distance
+    (doesn't accept depth values) and doesn't support ``indices=True`` mode.
+
+    This is an optimized version of :meth:`min_distance` that is suitable
+    for calculating the minimum distance between first mesh and each point
+    of the second mesh when both are defined on the earth surface.
+    """
     assert mlons.shape == mlats.shape
     slons, slats = numpy.array(slons), numpy.array(slats)
     assert slons.shape == slats.shape
