@@ -135,6 +135,7 @@ class MinDistanceTest(unittest.TestCase):
     def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
               expected_mpoint_indices):
         mlons, mlats, mdepths = map(numpy.array, (mlons, mlats, mdepths))
+        slons, slats, sdepths = map(numpy.array, (slons, slats, sdepths))
         actual_indices = geodetic.min_distance(mlons, mlats, mdepths,
                                                slons, slats, sdepths,
                                                indices=True)
@@ -150,6 +151,13 @@ class MinDistanceTest(unittest.TestCase):
             slons, slats, sdepths
         )
         self.assertTrue((dists == expected_distances).all())
+
+        # testing min_geodetic_distance with the same lons and lats
+        min_geod_distance = geodetic.min_geodetic_distance(mlons, mlats,
+                                                           slons, slats)
+        min_geo_distance2 = geodetic.min_distance(mlons, mlats, mdepths * 0,
+                                                  slons, slats, sdepths * 0)
+        numpy.testing.assert_almost_equal(min_geod_distance, min_geo_distance2)
 
     def test_one_point(self):
         mlons = numpy.array([-0.1, 0.0, 0.1])

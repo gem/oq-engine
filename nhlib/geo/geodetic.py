@@ -114,18 +114,16 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
 
     result = numpy.fromiter(
         (
-            numpy.min(
-                # next five lines are the same as in geodetic_distance()
-                numpy.arcsin(numpy.sqrt(
-                    numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-                    + cos_mlats * cos_slats[i]
-                      * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-                ).clip(-1., 1.))
-            ) * 2 * EARTH_RADIUS
+            # next five lines are the same as in geodetic_distance()
+            numpy.arcsin(numpy.sqrt(
+                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
+                + cos_mlats * cos_slats[i]
+                  * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+            ).clip(-1., 1.)).min()
             for i in xrange(len(slats))
         ),
         dtype=float, count=len(slats)
-    )
+    ) * (2 * EARTH_RADIUS)
 
     if not orig_shape:
         # original target point was a scalar, so return scalar as well
