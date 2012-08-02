@@ -1071,7 +1071,12 @@ CREATE TABLE hzrdr.lt_realization (
     -- can be null if no site_model was defined for the calculation
     site_data_id INTEGER,
     ordinal INTEGER NOT NULL,
-    seed INTEGER NOT NULL,
+    -- random seed number, used only for monte-carlo sampling of logic trees
+    seed INTEGER,
+    -- path weight, used only for full paths enumeration
+    weight NUMERIC CONSTRAINT seed_weight_xor
+        CHECK ((seed IS NULL AND weight IS NOT NULL)
+               OR (seed IS NOT NULL AND weight IS NULL)),
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     sm_lt_path VARCHAR[] NOT NULL,
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
