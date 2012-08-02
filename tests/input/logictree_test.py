@@ -1710,6 +1710,12 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
         self.assertIs(bs.get_branch_by_id('2'), b2)
         self.assertIs(bs.get_branch_by_id('bzz'), bbzz)
 
+    def test_nonexistent_branch(self):
+        bs = logictree.BranchSet(None, None)
+        br = logictree.Branch('br', Decimal('1.0'), None)
+        bs.branches.append(br)
+        self.assertRaises(AssertionError, bs.get_branch_by_id, 'bz')
+
 
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_ab_absolute(self):
