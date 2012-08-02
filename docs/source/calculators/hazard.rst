@@ -30,7 +30,7 @@ Sources:
 
 Classical PSHA Core
 ===================
-.. automodule:: openquake.calculators.hazard.classical.core
+.. automodule:: openquake.calculators.hazard.classical.core_next
 
 ***************************
 Event-Based PSHA Calculator
