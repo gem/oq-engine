@@ -1162,3 +1162,55 @@ class LogicTreeProcessor(object):
                 gmpelt_branch_ids = [branch.branch_id for branch in gmpelt_path]
 
                 yield sm_name, weight, smlt_branch_ids, gmpelt_branch_ids
+
+    def parse_source_model_logictree_path(self, branch_ids):
+        """
+        Parse the path through the source model logic tree and return
+        "apply uncertainties" function.
+
+        :param branch_ids:
+            List of string identifiers of branches, representing the path
+            through source model logic tree.
+        :return:
+            Function to be applied to all the sources as they get read from
+            the database and converted to nhlib representation. Function
+            takes one argument, that is the nhlib source object, and applies
+            uncertainties to it in-place.
+        """
+        branchset = self.source_model_lt.root_branchset
+        branchsets_and_uncertainties = []
+        branch_ids = branch_ids[::-1]
+
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            branchsets_and_uncertainties.append((branchset, branch.value))
+            branchset = branch.child_branchset
+
+        def apply_uncertainties(source):
+            for branchset, value in branchsets_and_uncertainties:
+                branchset.apply_uncertainty(value, source)
+
+        return apply_uncertainties
+
+    def parse_gmpe_logictree_path(self, branch_ids):
+        """
+        Same as :meth:`parse_source_model_logictree_path`, but for GMPE logic
+        tree.
+
+        :return:
+            Dictionary mapping tectonic region type names to instances
+            of nhlib GSIM objects.
+        """
+        branchset = self.gmpe_lt.root_branchset
+        trt_to_gsim = {}
+        branch_ids = branch_ids[::-1]
+
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            trt = branchset.filters['applyToTectonicRegionType']
+
+            assert trt not in trt_to_gsim
+            trt_to_gsim[trt] = branch.value
+            branchset = branch.child_branchset
+
+        return trt_to_gsim
