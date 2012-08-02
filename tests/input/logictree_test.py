@@ -1939,9 +1939,6 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
-    SOURCE_MODEL_LT = 'example-source-model-logictree.xml'
-    GMPE_LT = 'example-gmpe-logictree.xml'
-
     def setUp(self):
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_hazard_job(cfg)
@@ -2011,6 +2008,52 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
                           ['b1', 'b5', 'b8'], ['b2', 'b3']))
         self.assertRaises(StopIteration, paths.next)
+
+
+class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
+    def setUp(self):
+        cfg = helpers.get_data_path('classical_job.ini')
+        job = helpers.get_hazard_job(cfg)
+        self.uncertainties_applied = []
+        def apply_uncertainty(branchset, value, source):
+            fingerprint = (branchset.uncertainty_type, value)
+            self.uncertainties_applied.append(fingerprint)
+        self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
+        logictree.BranchSet.apply_uncertainty = apply_uncertainty
+        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+
+    def tearDown(self):
+        logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
+
+    def test_parse_source_model_logictree_path(self):
+        self.proc.parse_source_model_logictree_path(['b1', 'b5', 'b8'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('sourceModel', 'example-source-model.xml'),
+                          ('maxMagGRRelative', -0.2),
+                          ('bGRRelative', -0.1)])
+        del self.uncertainties_applied[:]
+        self.proc.parse_source_model_logictree_path(['b1', 'b3', 'b6'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('sourceModel', 'example-source-model.xml'),
+                          ('maxMagGRRelative', 0.2),
+                          ('bGRRelative', 0.1)])
+
+    def test_parse_gmpe_model_logictree_path(self):
+        from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+        from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+        gmpes = self.proc.parse_gmpe_logictree_path(['b2', 'b3'])
+        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
+                              ChiouYoungs2008)
+        self.assertIsInstance(gmpes.pop('Subduction Interface'),
+                              SadighEtAl1997)
+        self.assertEqual(gmpes, {})
+
+        gmpes = self.proc.parse_gmpe_logictree_path(['b1', 'b3'])
+        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
+                              SadighEtAl1997)
+        self.assertIsInstance(gmpes.pop('Subduction Interface'),
+                              SadighEtAl1997)
+        self.assertEqual(gmpes, {})
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
