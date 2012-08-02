@@ -170,13 +170,36 @@ class Mesh(object):
             lies inside the polygon enveloping the projection of the mesh
             or on one of its edges.
         """
+        # we perform a hybrid calculation (geodetic mesh-to-mesh distance
+        # and distance on the projection plane for close points). first,
+        # we find the closest geodetic distance for each point of target
+        # mesh to this one. in general that distance is greater than
+        # the exact distance to convex hull polygon of this mesh and
+        # it depends on mesh spacing. but the difference can be neglected
+        # if calculated geodetic distance is over some threshold.
         distances = geodetic.min_geodetic_distance(self.lons, self.lats,
                                                    mesh.lons, mesh.lats)
-        # TODO: document, describe distance threshold magic number
+
+        # here we find the points for which calculated mesh-to-mesh
+        # distance is below a threshold. this threshold is arbitrary:
+        # value of 40 km gives maximum error of 310 meters for meshes
+        # with spacing of 10 km and 5.4 km for meshes with spacing
+        # of 40 km and it wouldn't work right for meshes with more
+        # than 56 km between points.
         [idxs] = (distances < 40).nonzero()
         if not len(idxs):
+            # no point is close enough, return distances as they are
             return distances
 
+        # for all the points that are closer than the threshold we need
+        # to recalculate the distance and set it to zero, if point falls
+        # inside the convex hull polygon of the mesh. for doing that
+        # we project both this mesh and selected by distance threshold
+        # points of the second one on the same Cartesian space, define
+        # shapely polygon representing a convex hull and call shapely's
+        # polygon geometry "distance()" method, which gives the most
+        # accurate value of distance in km (and that value is zero
+        # for points inside the polygon).
         convex_hull = self.get_convex_hull()
         proj = convex_hull._projection
         polygon = convex_hull._polygon2d
@@ -187,7 +210,11 @@ class Mesh(object):
              for i in xrange(len(idxs))),
             dtype=float, count=len(idxs)
         )
+
+        # replace geodetic distance values for points-closer-than-the-threshold
+        # by more accurate point-to-polygon distance values.
         distances.put(idxs, distances_2d)
+
         return distances
 
     def get_closest_points(self, mesh):
