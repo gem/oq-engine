@@ -555,7 +555,3 @@ class BaseHazardCalculator(base.Calculator):
                 jsite_list.add(jsite)
 
         return jsite_list
-
-
-class BaseHazardCalculatorNext(base.CalculatorNext):
-    pass
