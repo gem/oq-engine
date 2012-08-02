@@ -31,6 +31,7 @@ from openquake import logs
 from openquake.db import models
 from openquake.supervising import supervisor
 
+
 def prepare_job(user_name="openquake"):
     """Create job for the given user, return it."""
     # See if the current user exists
