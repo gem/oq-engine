@@ -224,7 +224,22 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
         the final output.
     """
 
-    @general.preload
+    ltp = None
+
+
+    def create_logic_tree_processor(self):
+        """
+        Instantiate a :class:`openquake.input.logictree.LogicTreeProcessor`
+        with the source model and GMPE logic trees.
+        """
+        source_model_lt = self.job_ctxt.params.get(
+            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.job_ctxt.params.get('BASE_PATH')
+        self.ltp = logictree.LogicTreeProcessor(basepath, source_model_lt,
+                                                 gmpe_lt)
+
+
     def execute(self):
         """Main execution point for the Disaggregation calculator.
 
@@ -237,6 +252,7 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
             input.
         5) Finally, write an NRML/XML wrapper around the disagg. results.
         """
+        self.create_logic_tree_processor()
         # matrix results for this job will go here:
         result_dir = DisaggHazardCalculator.create_result_dir(
             config.get('nfs', 'base_dir'), self.job_ctxt.job_id)
@@ -348,9 +364,9 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
 
             general.store_source_model(self.job_ctxt.job_id,
                                        src_model_rnd.getrandbits(32),
-                                       self.job_ctxt.params, self.calc)
+                                       self.job_ctxt.params, self.ltp)
             general.store_gmpe_map(
-                self.job_ctxt.job_id, gmpe_rnd.getrandbits(32), self.calc)
+                self.job_ctxt.job_id, gmpe_rnd.getrandbits(32), self.ltp)
 
             for poe in poes:
                 task_site_pairs = []
