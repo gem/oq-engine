@@ -1167,9 +1167,6 @@ ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    -- pre-computed calculation point of interest to site parameters table
-    -- can be null if no site_model was defined for the calculation
-    site_data_id INTEGER,
     ordinal INTEGER NOT NULL,
     -- random seed number, used only for monte-carlo sampling of logic trees
     seed INTEGER,
@@ -1575,6 +1572,7 @@ CREATE TABLE htemp.hazard_curve_progress (
     result_matrix BYTEA NOT NULL
 ) TABLESPACE htemp_ts;
 
+-- pre-computed calculation point of interest to site parameters table
 CREATE TABLE htemp.site_data (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
