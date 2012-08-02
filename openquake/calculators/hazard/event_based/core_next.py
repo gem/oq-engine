@@ -15,7 +15,7 @@
 
 from nhlib import correlation
 
-from openquake.calculators.hazard import general as haz_general
+from openquake.calculators import base
 
 #: Ground motion correlation model map
 GM_CORRELATION_MODEL_MAP = {
@@ -23,7 +23,7 @@ GM_CORRELATION_MODEL_MAP = {
 }
 
 
-class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class EventBasedHazardCalculator(base.CalculatorNext):
     # TODO: Just a skeleton of the new calculator to get the engine bits and
     # param validation wired up
 
