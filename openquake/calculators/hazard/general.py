@@ -93,21 +93,6 @@ def get_iml_list(imls, intensity_measure_type):
         [IML_SCALING[intensity_measure_type](x) for x in imls])
 
 
-def preload(fn):
-    """A decorator for preload steps that must run on the Jobber node"""
-
-    @functools.wraps(fn)
-    def preloader(self, *args, **kwargs):  # pylint: disable=C0111
-        source_model_lt = self.job_ctxt.params.get(
-            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-        gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-        basepath = self.job_ctxt.params.get('BASE_PATH')
-        self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
-                                                 gmpe_lt)
-        return fn(self, *args, **kwargs)
-    return preloader
-
-
 @java.unpack_exception
 def generate_erf(job_id, cache):
     """ Generate the Earthquake Rupture Forecast from the source model data
