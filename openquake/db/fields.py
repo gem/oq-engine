@@ -156,7 +156,8 @@ class CharArrayField(djm.Field):
 
     def formfield(self, **kwargs):
         """
-        Specify a custom form field type so forms know how to handle fields of this type.
+        Specify a custom form field type so forms know how to handle fields of
+        this type.
         """
         defaults = {'form_class': StringArrayFormField}
         defaults.update(kwargs)
