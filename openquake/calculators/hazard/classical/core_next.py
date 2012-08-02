@@ -227,21 +227,24 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(hc.number_of_logic_tree_samples):
-            lt_rlz = models.LtRealization(hazard_calculation=hc)
-            lt_rlz.ordinal = i
-            lt_rlz.seed = seed
-
             # Sample source model logic tree branch paths:
-            sm_name, _, sm_lt_branch_ids = ltp.sample_source_model_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
-            lt_rlz.sm_lt_path = sm_lt_branch_ids
+            sm_name, sm_lt_path = ltp.sample_source_model_logictree(
+                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
 
             # Sample GSIM logic tree branch paths:
-            _, gsim_branch_ids = ltp.sample_gmpe_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
-            lt_rlz.gsim_lt_path = gsim_branch_ids
-            # we will update total_sources in initialize_source_progress()
-            lt_rlz.total_sources = -1
+            gsim_lt_path = ltp.sample_gmpe_logictree(
+                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
+
+            lt_rlz = models.LtRealization(
+                hazard_calculation=hc,
+                ordinal=i,
+                seed=seed,
+                weight=None,
+                sm_lt_path=sm_lt_path,
+                gsim_lt_path=gsim_lt_path,
+                # we will update total_sources in initialize_source_progress()
+                total_sources=-1
+            )
             lt_rlz.save()
 
             if not sm_name in hzrd_src_cache:
@@ -562,14 +565,9 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
 
-    # it is important to maintain the same way logic tree processor
-    # random generators are seeded here exactly the same as it is
-    # done in ClassicalHazardCalculator.initialize_realizations()
-    rnd = random.Random(lt_rlz.seed)
-    _, apply_uncertainties, _ = ltp.sample_source_model_logictree(
-            rnd.randint(MIN_SINT_32, MAX_SINT_32))
-    gsims, _ = ltp.sample_gmpe_logictree(
-            rnd.randint(MIN_SINT_32, MAX_SINT_32))
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     def gen_sources():
         """
