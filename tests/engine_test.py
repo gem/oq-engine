@@ -276,7 +276,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         # called once per job type (hazard, risk).
 
         # Calculation setup:
-        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('scenario_risk/config.gem')
 
         job = engine.prepare_job()
         job_profile, params, sections = engine.import_job_profile(
@@ -288,10 +288,10 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
             oq_job_profile=job_profile, oq_job=job)
 
         # Mocking setup:
-        cls_haz_calc = ('openquake.calculators.hazard.classical.core'
-                        '.ClassicalHazardCalculator')
-        cls_risk_calc = ('openquake.calculators.risk.classical.core'
-                         '.ClassicalRiskCalculator')
+        cls_haz_calc = ('openquake.calculators.hazard.scenario.core'
+                        '.ScenarioHazardCalculator')
+        cls_risk_calc = ('openquake.calculators.risk.scenario.core'
+                         '.ScenarioRiskCalculator')
         methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
         haz_patchers = [helpers.patch('%s.%s' % (cls_haz_calc, m))
                         for m in methods]

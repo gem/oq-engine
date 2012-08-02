@@ -16,8 +16,6 @@
 """This package contains Hazard calculator classes and utilities."""
 
 
-from openquake.calculators.hazard.classical.core import (
-    ClassicalHazardCalculator)
 from openquake.calculators.hazard.disagg.core import DisaggHazardCalculator
 from openquake.calculators.hazard.event_based.core import (
     EventBasedHazardCalculator)
@@ -31,8 +29,6 @@ from openquake.calculators.hazard.event_based.core_next import (
 
 
 CALCULATORS = {
-    'classical': ClassicalHazardCalculator,
-    'classical_bcr': ClassicalHazardCalculator,
     'event_based': EventBasedHazardCalculator,
     'event_based_bcr': EventBasedHazardCalculator,
     'disaggregation': DisaggHazardCalculator,
