@@ -80,6 +80,7 @@ class StringArrayFormField(forms.Field):
             )
         return value
 
+
 class FloatArrayFormField(StringArrayFormField):
     """Form field for properly handling float arrays/lists."""
 
