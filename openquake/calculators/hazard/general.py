@@ -34,7 +34,7 @@ from shapely import geometry
 from openquake import java
 from openquake import kvs
 from openquake import writer
-from openquake.calculators.base import Calculator
+from openquake.calculators import base
 from openquake.db import models
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
@@ -416,7 +416,7 @@ def set_java_site_parameters(jsite, sm_data):
     return jsite
 
 
-class BaseHazardCalculator(Calculator):
+class BaseHazardCalculator(base.Calculator):
     """Contains common functionality for Hazard calculators"""
 
     def initialize(self):
@@ -555,3 +555,7 @@ class BaseHazardCalculator(Calculator):
                 jsite_list.add(jsite)
 
         return jsite_list
+
+
+class BaseHazardCalculatorNext(base.CalculatorNext):
+    pass

@@ -23,7 +23,7 @@ import numpy
 
 from nose.plugins.attrib import attr
 
-from openquake.calculators.hazard.classical import core_next
+from openquake.calculators.hazard.classical import core
 from openquake.db import models
 from tests.utils import helpers
 
@@ -36,12 +36,12 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        self.calc = core_next.ClassicalHazardCalculator(self.job)
+        self.calc = core.ClassicalHazardCalculator(self.job)
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
-        base_path = ('openquake.calculators.hazard.classical.core_next'
+        base_path = ('openquake.calculators.hazard.classical.core'
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
@@ -86,7 +86,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         cfg = helpers.demo_file(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         self.job = helpers.get_hazard_job(cfg)
-        self.calc = core_next.ClassicalHazardCalculator(self.job)
+        self.calc = core.ClassicalHazardCalculator(self.job)
 
         self.calc.initialize_site_model()
         # If the site model isn't valid for the calculation geometry, a
@@ -276,9 +276,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         src_id = src_prog.parsed_source.id
         lt_rlz = src_prog.lt_realization
 
-        exchange, conn_args = core_next._exchange_and_conn_args()
+        exchange, conn_args = core._exchange_and_conn_args()
 
-        routing_key = core_next._ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        routing_key = core._ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
@@ -292,7 +292,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
-                core_next.hazard_curves(self.job.id, lt_rlz.id, [src_id])
+                core.hazard_curves(self.job.id, lt_rlz.id, [src_id])
                 # wait for the completion signal
                 conn.drain_events()
 
@@ -307,7 +307,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 class ImtsToNhlibTestCase(unittest.TestCase):
     """
     Tests for
-    :func:`openquake.calculators.hazard.classical.core_next.im_dict_to_nhlib`.
+    :func:`openquake.calculators.hazard.classical.core.im_dict_to_nhlib`.
     """
 
     def test_im_dict_to_nhlib(self):
@@ -326,14 +326,14 @@ class ImtsToNhlibTestCase(unittest.TestCase):
             nhlib.imt.PGA(): [1, 2],
             nhlib.imt.PGV(): [2, 3],
             nhlib.imt.PGD(): [3, 4],
-            nhlib.imt.SA(0.1, core_next.DEFAULT_SA_DAMPING): [0.1, 0.2],
-            nhlib.imt.SA(0.025, core_next.DEFAULT_SA_DAMPING): [0.2, 0.3],
+            nhlib.imt.SA(0.1, core.DEFAULT_SA_DAMPING): [0.1, 0.2],
+            nhlib.imt.SA(0.025, core.DEFAULT_SA_DAMPING): [0.2, 0.3],
             nhlib.imt.IA(): [0.3, 0.4],
             nhlib.imt.RSD(): [0.4, 0.5],
             nhlib.imt.MMI(): [0.5, 0.6],
         }
 
-        actual = core_next.im_dict_to_nhlib(imts_in)
+        actual = core.im_dict_to_nhlib(imts_in)
         self.assertEqual(len(expected), len(actual))
 
         for exp_imt, exp_imls in expected.items():
@@ -352,7 +352,7 @@ class HelpersTestCase(unittest.TestCase):
             'virtual_host': '/',
         }
 
-        exchange, conn_args = core_next._exchange_and_conn_args()
+        exchange, conn_args = core._exchange_and_conn_args()
 
         self.assertEqual('oq.htasks', exchange.name)
         self.assertEqual('direct', exchange.type)
@@ -364,13 +364,13 @@ class HelpersTestCase(unittest.TestCase):
         cfg = helpers.demo_file(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         job = helpers.get_hazard_job(cfg)
-        calc = core_next.ClassicalHazardCalculator(job)
+        calc = core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `site_data` table:
         calc.initialize_sources()
         calc.initialize_site_model()
 
-        site_coll = core_next.get_site_collection(job.hazard_calculation)
+        site_coll = core.get_site_collection(job.hazard_calculation)
         # Since we're using a pretty big site model, it's a bit excessive to
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
@@ -388,7 +388,7 @@ class HelpersTestCase(unittest.TestCase):
             'simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
 
-        site_coll = core_next.get_site_collection(job.hazard_calculation)
+        site_coll = core.get_site_collection(job.hazard_calculation)
 
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
@@ -403,23 +403,23 @@ class HelpersTestCase(unittest.TestCase):
 
     def test_update_result_matrix_with_scalars(self):
         init = 0.0
-        result = core_next.update_result_matrix(init, 0.2)
+        result = core.update_result_matrix(init, 0.2)
         # The first time we apply this formula on a 0.0 value,
         # result is equal to the first new value we apply.
         self.assertAlmostEqual(0.2, result)
 
-        result = core_next.update_result_matrix(result, 0.3)
+        result = core.update_result_matrix(result, 0.3)
         self.assertAlmostEqual(0.44, result)
 
     def test_update_result_matrix_numpy_arrays(self):
         init = numpy.zeros((4, 4))
         first = numpy.array([0.2] * 16).reshape((4, 4))
 
-        result = core_next.update_result_matrix(init, first)
+        result = core.update_result_matrix(init, first)
         numpy.testing.assert_allclose(first, result)
 
         second = numpy.array([0.3] * 16).reshape((4, 4))
-        result = core_next.update_result_matrix(result, second)
+        result = core.update_result_matrix(result, second)
 
         expected = numpy.array([0.44] * 16).reshape((4, 4))
         numpy.testing.assert_allclose(expected, result)
@@ -436,8 +436,8 @@ class SignalTestCase(unittest.TestCase):
                              body)
             message.ack()
 
-        exchange, conn_args = core_next._exchange_and_conn_args()
-        routing_key = core_next._ROUTING_KEY_FMT % dict(job_id=job_id)
+        exchange, conn_args = core._exchange_and_conn_args()
+        routing_key = core._ROUTING_KEY_FMT % dict(job_id=job_id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % job_id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
@@ -448,5 +448,5 @@ class SignalTestCase(unittest.TestCase):
                                callbacks=[test_callback]):
 
                 # send the signal:
-                core_next.signal_task_complete(job_id, num_sources)
+                core.signal_task_complete(job_id, num_sources)
                 conn.drain_events()
