@@ -630,6 +630,8 @@ class HazardCalculation(djm.Model):
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
             'measure levels for calculating probability of exceedence'),
+        null=True,
+        blank=True,
     )
     truncation_level = djm.FloatField(
         help_text='Level for ground motion distribution truncation',
