@@ -1946,27 +1946,15 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
 
     def test_sample_source_model(self):
-        sm_name, modify, branch_ids = \
-            self.proc.sample_source_model_logictree(42)
+        sm_name, branch_ids = self.proc.sample_source_model_logictree(42)
         self.assertEqual(['b1', 'b3', 'b7'], branch_ids)
         self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
-        trt_to_gsim, branch_ids = \
-            self.proc.sample_gmpe_logictree(random_seed=124)
+        branch_ids = self.proc.sample_gmpe_logictree(random_seed=124)
         self.assertEqual(['b2', 'b3'], branch_ids)
-        self.assertEqual(set(trt_to_gsim.keys()), set(['Active Shallow Crust',
-                                                  'Subduction Interface']))
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
-                              ChiouYoungs2008)
-        self.assertIsInstance(trt_to_gsim['Subduction Interface'],
-                              SadighEtAl1997)
-        trt_to_gsim, branch_ids = \
-            self.proc.sample_gmpe_logictree(random_seed=123)
+        branch_ids = self.proc.sample_gmpe_logictree(random_seed=123)
         self.assertEqual(['b1', 'b3'], branch_ids)
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
-                              SadighEtAl1997)
 
     def test_enumerate_paths(self):
         paths = self.proc.enumerate_paths()
@@ -2028,14 +2016,12 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def test_parse_source_model_logictree_path(self):
         self.proc.parse_source_model_logictree_path(['b1', 'b5', 'b8'])(None)
         self.assertEqual(self.uncertainties_applied,
-                         [('sourceModel', 'example-source-model.xml'),
-                          ('maxMagGRRelative', -0.2),
+                         [('maxMagGRRelative', -0.2),
                           ('bGRRelative', -0.1)])
         del self.uncertainties_applied[:]
         self.proc.parse_source_model_logictree_path(['b1', 'b3', 'b6'])(None)
         self.assertEqual(self.uncertainties_applied,
-                         [('sourceModel', 'example-source-model.xml'),
-                          ('maxMagGRRelative', 0.2),
+                         [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
 
     def test_parse_gmpe_model_logictree_path(self):
@@ -2081,9 +2067,9 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        sm_path, modify_source, branch_ids = \
-            proc.sample_source_model_logictree(0)
+        sm_path, branch_ids = proc.sample_source_model_logictree(0)
         self.assertEqual(expected_branch_ids, branch_ids)
+        modify_source = proc.parse_source_model_logictree_path(branch_ids)
 
         expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
