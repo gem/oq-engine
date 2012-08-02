@@ -200,9 +200,7 @@ class Mesh(object):
         # polygon geometry "distance()" method, which gives the most
         # accurate value of distance in km (and that value is zero
         # for points inside the polygon).
-        convex_hull = self.get_convex_hull()
-        proj = convex_hull._projection
-        polygon = convex_hull._polygon2d
+        proj, polygon = self._get_shapely_convex_hull()
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
         distances_2d = numpy.fromiter(
@@ -282,6 +280,30 @@ class Mesh(object):
         )
         return numpy.matrix(distances, copy=False)
 
+    def _get_shapely_convex_hull(self):
+        """
+        Create a projection centered in the center of this mesh and find
+        a polygon in that projection, enveloping all the points of the mesh.
+
+        :returns:
+            Tuple of two items: projection function and shapely 2d polygon.
+        """
+        # create a projection centered in the center of points collection
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+        )
+        # project all the points and create a shapely multipoint object.
+        # need to copy an array because otherwise shapely misinterprets it
+        coords = numpy.transpose(proj(self.lons.flatten(),
+                                      self.lats.flatten())).copy()
+        multipoint = shapely.geometry.MultiPoint(coords)
+        # create a 2d polygon from a convex hull around that multipoint.
+        # note that it can be point or line depending on number of points
+        # in the mesh and their arrangement.
+        polygon2d = multipoint.convex_hull
+
+        return proj, polygon2d
+
     def get_convex_hull(self):
         """
         Get a convex polygon object that contains projections of all the points
@@ -294,19 +316,7 @@ class Mesh(object):
             with a side length of 10 meters. If there were only two points,
             resulting polygon is a stripe 10 meters wide.
         """
-        # avoid circular imports
-        from nhlib.geo.polygon import Polygon
-        # create a projection centered in the center of points collection
-        proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
-        )
-        # project all the points and create a shapely multipoint object.
-        # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flatten(),
-                                      self.lats.flatten())).copy()
-        multipoint = shapely.geometry.MultiPoint(coords)
-        # create a 2d polygon from a convex hull around that multipoint
-        polygon2d = multipoint.convex_hull
+        proj, polygon2d = self._get_shapely_convex_hull()
         # if mesh had only one point, the convex hull is a point. if there
         # were two, it is a line string. we need to return a convex polygon
         # object, so extend that area-less geometries by some arbitrarily
@@ -314,6 +324,9 @@ class Mesh(object):
         if isinstance(polygon2d, (shapely.geometry.LineString,
                                   shapely.geometry.Point)):
             polygon2d = polygon2d.buffer(0.005, 1)
+
+        # avoid circular imports
+        from nhlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
 
 
