@@ -201,8 +201,6 @@ class BranchSet(object):
         of recursive lists of two items, where second item is the branch object
         and first one is itself list of two items.
         """
-        if prefix_path is None:
-            prefix_path = []
         for branch in self.branches:
             path = [prefix_path, branch]
             if branch.child_branchset is not None:
@@ -219,7 +217,7 @@ class BranchSet(object):
         for branch in self.branches:
             if branch.branch_id == branch_id:
                 return branch
-        raise LogicTreeError("couldn't find branch %r" % branch_id)
+        raise AssertionError("couldn't find branch %r" % branch_id)
 
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
