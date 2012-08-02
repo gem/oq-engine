@@ -669,8 +669,8 @@ class HazardCalculation(djm.Model):
         choices=GROUND_MOTION_CORRELATION_MODELS,
     )
     ground_motion_correlation_params = fields.DictField(
-        help_text= ('Parameters specific to the chosen ground motion'
-                    ' correlation model'),
+        help_text=('Parameters specific to the chosen ground motion'
+                   ' correlation model'),
         null=True,
         blank=True,
     )
