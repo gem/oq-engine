@@ -261,6 +261,7 @@ VALIDATOR_MAP = {
 # functions (the latter because some of the function names are very long).
 # pylint: disable=C0111,C0103
 
+
 def description_is_valid(_mdl):
     return True, []
 
@@ -381,57 +382,92 @@ def investigation_time_is_valid(mdl):
     return True, []
 
 
-def intensity_measure_types_and_levels_is_valid(mdl):
-    im = mdl.intensity_measure_types_and_levels
+def _validate_imt(imt):
+    """
+    Validate an intensity measure type string.
 
+    :returns:
+        A pair of values. The first is a `bool` indicating whether or not the
+        IMT is valid. The second value is a `list` of error messages. (If the
+        IMT is valid, the list should be empty.)
+    """
     valid = True
     errors = []
 
     # SA intensity measure configs need special handling
     valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
 
-    for im_type, imls in im.iteritems():
-        if im_type in valid_imts:
-            if not isinstance(imls, list):
-                valid = False
-                errors.append(
-                    '%s: IMLs must be specified as a list of floats' % im_type
-                )
-            else:
-                if len(imls) == 0:
-                    valid = False
-                    errors.append(
-                        '%s: IML lists must have at least 1 value' % im_type
-                    )
-                elif not all([x > 0 for x in imls]):
-                    valid = False
-                    errors.append('%s: IMLs must be > 0' % im_type)
-        elif 'SA' in im_type:
-            match = re.match(r'^SA\(([^)]+?)\)$', im_type)
-            if match is None:
-                # SA key is not formatted properly
-                valid = False
-                errors.append(
-                    '%s: SA must be specified with a period value, in the form'
-                    ' `SA(N)`, where N is a value >= 0' % im_type
-                )
-            else:
-                # there's a match; make sure the period value is valid
-                sa_period = match.groups()[0]
-                try:
-                    if float(sa_period) < 0:
-                        valid = False
-                        errors.append(
-                            '%s: SA period values must be >= 0' % im_type
-                        )
-                except ValueError:
-                    valid = False
-                    errors.append(
-                        '%s: SA period value should be a float >= 0' % im_type
-                    )
-        else:
+    if 'SA' in imt:
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
+        if match is None:
+            # SA key is not formatted properly
             valid = False
-            errors.append('%s: Invalid intensity measure type' % im_type)
+            errors.append(
+                '%s: SA must be specified with a period value, in the form'
+                ' `SA(N)`, where N is a value >= 0' % imt
+            )
+        else:
+            # there's a match; make sure the period value is valid
+            sa_period = match.groups()[0]
+            try:
+                if float(sa_period) < 0:
+                    valid = False
+                    errors.append(
+                        '%s: SA period values must be >= 0' % imt
+                    )
+            except ValueError:
+                valid = False
+                errors.append(
+                    '%s: SA period value should be a float >= 0' % imt
+                )
+    elif not imt in valid_imts:
+        valid = False
+        errors.append('%s: Invalid intensity measure type' % imt)
+
+    return valid, errors
+
+
+def intensity_measure_types_and_levels_is_valid(mdl):
+    im = mdl.intensity_measure_types_and_levels
+
+    valid = True
+    errors = []
+
+    for im_type, imls in im.iteritems():
+        # validate IMT:
+        valid_imt, imt_errors = _validate_imt(im_type)
+        valid &= valid_imt
+        errors.extend(imt_errors)
+
+        # validate IML values:
+        if not isinstance(imls, list):
+            valid = False
+            errors.append(
+                '%s: IMLs must be specified as a list of floats' % im_type
+            )
+        else:
+            if len(imls) == 0:
+                valid = False
+                errors.append(
+                    '%s: IML lists must have at least 1 value' % im_type
+                )
+            elif not all([x > 0 for x in imls]):
+                valid = False
+                errors.append('%s: IMLs must be > 0' % im_type)
+
+    return valid, errors
+
+
+def intensity_measure_types_is_valid(mdl):
+    imts = mdl.intensity_measure_types
+
+    valid = True
+    errors = []
+
+    for imt in imts:
+        valid_imt, imt_errors = _validate_imt(imt)
+        valid &= valid_imt
+        errors.extend(imt_errors)
 
     return valid, errors
 
@@ -473,44 +509,6 @@ def poes_hazard_maps_is_valid(mdl):
     return True, []
 
 
-def intensity_measure_types_is_valid(mdl):
-    imts = mdl.intensity_measure_types
-
-    valid = True
-    errors = []
-
-    # SA intensity measure configs need special handling
-    valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
-
-    for imt in imts:
-        if 'SA' in imt:
-            match = re.match(r'^SA\(([^)]+?)\)$', imt)
-            if match is None:
-                # SA key is not formatted properly
-                valid = False
-                errors.append(
-                    '%s: SA must be specified with a period value, in the form'
-                    ' `SA(N)`, where N is a value >= 0' % imt
-                )
-            else:
-                # there's a match; make sure the period value is valid
-                sa_period = match.groups()[0]
-                try:
-                    if float(sa_period) < 0:
-                        valid = False
-                        errors.append(
-                            '%s: SA period values must be >= 0' % imt
-                        )
-                except ValueError:
-                    valid = False
-                    errors.append(
-                        '%s: SA period value should be a float >= 0' % imt
-                    )
-        elif not imt in valid_imts:
-            valid = False
-            errors.append('%s: Invalid intensity measure type' % imt)
-
-    return valid, errors
 
 
 def ses_per_sample_is_valid(mdl):
