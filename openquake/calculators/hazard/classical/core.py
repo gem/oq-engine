@@ -17,7 +17,6 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
-import numpy
 import re
 
 import kombu
@@ -25,6 +24,7 @@ import nhlib
 import nhlib.calc
 import nhlib.imt
 import nhlib.site
+import numpy
 
 from django.db import transaction
 
@@ -42,259 +42,6 @@ from openquake.utils import tasks as utils_tasks
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
 DEFAULT_SA_DAMPING = 5.0
-# Routing key format string for communication between tasks and the control
-# node.
-_ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
-
-
-class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
-    """
-    Classical PSHA hazard calculator. Computes hazard curves for a given set of
-    points.
-
-    For each realization of the calculation, we randomly sample source models
-    and GMPEs (Ground Motion Prediction Equations) from logic trees.
-    """
-
-    def initialize_hazard_curve_progress(self, lt_rlz):
-        """
-        As a calculation progresses, workers will periodically update the
-        intermediate results. These results will be stored in
-        `htemp.hazard_curve_progress` until the calculation is completed.
-
-        Before the core calculation begins, we need to initalize these records,
-        one data set per IMT. Each dataset will be stored in the database as a
-        pickled 2D numpy array (with number of rows == calculation points of
-        interest and number of columns == number of IML values for a given
-        IMT).
-
-        We will create 1 `hazard_curve_progress` record per IMT per
-        realization.
-
-        :param lt_rlz:
-            :class:`openquake.db.models.LtRealization` object to associate
-            with these inital hazard curve values.
-        """
-        hc = self.job.hazard_calculation
-
-        num_points = len(hc.points_to_compute())
-
-        im_data = hc.intensity_measure_types_and_levels
-        for imt, imls in im_data.items():
-            hc_prog = models.HazardCurveProgress()
-            hc_prog.lt_realization = lt_rlz
-            hc_prog.imt = imt
-            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
-            hc_prog.save()
-
-    def pre_execute(self):
-        """
-        Do pre-execution work. At the moment, this work entails: parsing and
-        initializing sources, parsing and initializing the site model (if there
-        is one), and generating logic tree realizations. (The latter piece
-        basically defines the work to be done in the `execute` phase.)
-        """
-
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
-        # Deal with the site model and compute site data for the calculation
-        # (if a site model was specified, that is).
-        self.initialize_site_model()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        # This will also stub out hazard curve result records. Workers will
-        # update these periodically with partial results (partial meaning,
-        # result curves for just a subset of the overall sources) when some
-        # work is complete.
-        self.initialize_realizations(
-            rlz_callback=self.initialize_hazard_curve_progress)
-
-    def execute(self):
-        """
-        Calculation work is parallelized over sources, which means that each
-        task will compute hazard for all sites but only with a subset of the
-        seismic sources defined in the input model.
-
-        The general workflow is as follows:
-
-        1. Fill the queue with an initial set of tasks. The number of initial
-        tasks is configurable using the `concurrent_tasks` parameter in the
-        `[hazard]` section of the OpenQuake config file.
-
-        2. Wait for tasks to signal completion (via AMQP message) and enqueue a
-        new task each time another completes. Once all of the job work is
-        enqueued, we just wait until all of the tasks conclude.
-        """
-        job = self.job
-        hc = job.hazard_calculation
-        sources_per_task = int(config.get('hazard', 'block_size'))
-        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
-
-        progress = dict(total=0, computed=0)
-        # The following two counters are in a dict so that we can use them in
-        # the closures below.
-        # When `progress['compute']` becomes equal to `progress['total']`,
-        # `execute` can conclude.
-
-        def task_arg_gen():
-            """
-            Loop through realizations and sources to generate a sequence of
-            task arg tuples. Each tuple of args applies to a single task.
-
-            Yielded results are triples of (job_id, realization_id,
-            source_id_list).
-            """
-            realizations = models.LtRealization.objects.filter(
-                    hazard_calculation=hc, is_complete=False)
-
-            for lt_rlz in realizations:
-                source_progress = models.SourceProgress.objects.filter(
-                        is_complete=False, lt_realization=lt_rlz)
-                source_ids = source_progress.values_list('parsed_source_id',
-                                                         flat=True)
-                progress['total'] += len(source_ids)
-
-                for offset in xrange(0, len(source_ids), sources_per_task):
-                    task_args = (job.id, lt_rlz.id,
-                                 source_ids[offset:offset + sources_per_task])
-                    yield task_args
-
-        task_gen = task_arg_gen()
-
-        def task_complete_callback(body, message):
-            """
-            :param dict body:
-                ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
-                number of sources computed).
-
-                Both values are `int`.
-            :param message:
-                A :class:`kombu.transport.pyamqplib.Message`, which contains
-                metadata about the message (including content type, channel,
-                etc.). See kombu docs for more details.
-            """
-            job_id = body['job_id']
-            num_sources = body['num_sources']
-
-            assert job_id == job.id
-            progress['computed'] += num_sources
-
-            # Once we receive a completion signal, enqueue the next
-            # piece of work (if there's anything left to be done).
-            try:
-                hazard_curves.apply_async(task_gen.next())
-            except StopIteration:
-                # There are no more tasks to dispatch; now we just need
-                # to wait until all tasks signal completion.
-                pass
-
-            message.ack()
-
-        exchange, conn_args = _exchange_and_conn_args()
-
-        routing_key = _ROUTING_KEY_FMT % dict(job_id=job.id)
-        task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job.id, exchange=exchange,
-            routing_key=routing_key, durable=False, auto_delete=True)
-
-        with kombu.BrokerConnection(**conn_args) as conn:
-            task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[task_complete_callback]):
-                # First: Queue up the initial tasks.
-                for _ in xrange(concurrent_tasks):
-                    try:
-                        hazard_curves.apply_async(task_gen.next())
-                    except StopIteration:
-                        # If we get a `StopIteration` here, that means we have
-                        # a number of tasks < concurrent_tasks.
-                        # This basically just means that we could be
-                        # under-utilizing worker node resources.
-                        break
-
-                while (progress['computed'] < progress['total']):
-                    # This blocks until a message is received.
-                    # Once we receive a completion signal, enqueue the next
-                    # piece of work (if there's anything left to be done).
-                    # (The `task_complete_callback` will handle additional
-                    # queuing.)
-                    conn.drain_events()
-
-    def post_execute(self):
-        """
-        Create the final output records for hazard curves. This is done by
-        copying the temporary results from `htemp.hazard_curve_progress` to
-        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
-        the actual curve PoE values). Foreign keys are made from
-        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
-        is need to export the full hazard curve results).
-
-        Finally, all data for the calculation which is stored in the `htemp`
-        tables is deleted (at this point, it is no longer needed).
-        """
-        hc = self.job.hazard_calculation
-        im = hc.intensity_measure_types_and_levels
-        points = hc.points_to_compute()
-
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id)
-
-        for rlz in realizations:
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, imls in im.items():
-                sa_period = None
-                sa_damping = None
-                if 'SA' in imt:
-                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
-                    sa_period = float(match.group(1))
-                    sa_damping = DEFAULT_SA_DAMPING
-                    hc_im_type = 'SA'  # don't include the period
-                else:
-                    hc_im_type = imt
-
-                hco = models.Output(
-                    owner=hc.owner,
-                    oq_job=self.job,
-                    display_name="hc-rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
-                )
-                hco.save()
-
-                haz_curve = models.HazardCurve(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imls,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-                haz_curve.save()
-
-                [hc_progress] = models.HazardCurveProgress.objects.filter(
-                    lt_realization=rlz.id, imt=imt)
-
-                hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
-                for i, location in enumerate(points):
-                    poes = hc_progress.result_matrix[i]
-                    hc_data_inserter.add_entry(
-                        hazard_curve_id=haz_curve.id,
-                        poes=poes.tolist(),
-                        location=location.wkt2d)
-
-                hc_data_inserter.flush()
-
-        # delete temporary data
-        models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=hc.id).delete()
-        models.SourceProgress.objects.filter(
-            lt_realization__hazard_calculation=hc.id).delete()
-        models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
 
     def export(self, *args, **kwargs):
         """Export to NRML"""
@@ -458,6 +205,146 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     signal_task_complete(job_id, len(src_ids))
 
 
+class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
+    """
+    Classical PSHA hazard calculator. Computes hazard curves for a given set of
+    points.
+
+    For each realization of the calculation, we randomly sample source models
+    and GMPEs (Ground Motion Prediction Equations) from logic trees.
+    """
+
+    core_calc_task = hazard_curves
+
+    def initialize_hazard_curve_progress(self, lt_rlz):
+        """
+        As a calculation progresses, workers will periodically update the
+        intermediate results. These results will be stored in
+        `htemp.hazard_curve_progress` until the calculation is completed.
+
+        Before the core calculation begins, we need to initalize these records,
+        one data set per IMT. Each dataset will be stored in the database as a
+        pickled 2D numpy array (with number of rows == calculation points of
+        interest and number of columns == number of IML values for a given
+        IMT).
+
+        We will create 1 `hazard_curve_progress` record per IMT per
+        realization.
+
+        :param lt_rlz:
+            :class:`openquake.db.models.LtRealization` object to associate
+            with these inital hazard curve values.
+        """
+        hc = self.job.hazard_calculation
+
+        num_points = len(hc.points_to_compute())
+
+        im_data = hc.intensity_measure_types_and_levels
+        for imt, imls in im_data.items():
+            hc_prog = models.HazardCurveProgress()
+            hc_prog.lt_realization = lt_rlz
+            hc_prog.imt = imt
+            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
+            hc_prog.save()
+
+    def pre_execute(self):
+        """
+        Do pre-execution work. At the moment, this work entails: parsing and
+        initializing sources, parsing and initializing the site model (if there
+        is one), and generating logic tree realizations. (The latter piece
+        basically defines the work to be done in the `execute` phase.)
+        """
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
+
+        # Deal with the site model and compute site data for the calculation
+        # (if a site model was specified, that is).
+        self.initialize_site_model()
+
+        # Now bootstrap the logic tree realizations and related data.
+        # This defines for us the "work" that needs to be done when we reach
+        # the `execute` phase.
+        # This will also stub out hazard curve result records. Workers will
+        # update these periodically with partial results (partial meaning,
+        # result curves for just a subset of the overall sources) when some
+        # work is complete.
+        self.initialize_realizations(
+            rlz_callback=self.initialize_hazard_curve_progress)
+
+    def post_execute(self):
+        """
+        Create the final output records for hazard curves. This is done by
+        copying the temporary results from `htemp.hazard_curve_progress` to
+        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
+        the actual curve PoE values). Foreign keys are made from
+        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
+        is need to export the full hazard curve results).
+
+        Finally, all data for the calculation which is stored in the `htemp`
+        tables is deleted (at this point, it is no longer needed).
+        """
+        hc = self.job.hazard_calculation
+        im = hc.intensity_measure_types_and_levels
+        points = hc.points_to_compute()
+
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id)
+
+        for rlz in realizations:
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, imls in im.items():
+                sa_period = None
+                sa_damping = None
+                if 'SA' in imt:
+                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
+                    sa_period = float(match.group(1))
+                    sa_damping = DEFAULT_SA_DAMPING
+                    hc_im_type = 'SA'  # don't include the period
+                else:
+                    hc_im_type = imt
+
+                hco = models.Output(
+                    owner=hc.owner,
+                    oq_job=self.job,
+                    display_name="hc-rlz-%s" % rlz.id,
+                    output_type='hazard_curve',
+                )
+                hco.save()
+
+                haz_curve = models.HazardCurve(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+                haz_curve.save()
+
+                [hc_progress] = models.HazardCurveProgress.objects.filter(
+                    lt_realization=rlz.id, imt=imt)
+
+                hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
+                for i, location in enumerate(points):
+                    poes = hc_progress.result_matrix[i]
+                    hc_data_inserter.add_entry(
+                        hazard_curve_id=haz_curve.id,
+                        poes=poes.tolist(),
+                        location=location.wkt2d)
+
+                hc_data_inserter.flush()
+
+        # delete temporary data
+        models.HazardCurveProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id).delete()
+        models.SourceProgress.objects.filter(
+            lt_realization__hazard_calculation=hc.id).delete()
+        models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+
+
 def update_result_matrix(current, new):
     """
     Use the following formula to combine multiple iterations of results:
@@ -515,25 +402,6 @@ def get_site_collection(hc):
     return nhlib.site.SiteCollection(sites)
 
 
-def _exchange_and_conn_args():
-    """
-    Helper method to setup an exchange for task communication and the args
-    needed to create a broker connection.
-    """
-
-    exchange = kombu.Exchange(
-        config.get_section('hazard')['task_exchange'], type='direct')
-
-    amqp_cfg = config.get_section('amqp')
-    conn_args = {
-        'hostname': amqp_cfg['host'],
-        'userid': amqp_cfg['user'],
-        'password': amqp_cfg['password'],
-        'virtual_host': amqp_cfg['vhost'],
-    }
-
-    return exchange, conn_args
-
 
 def signal_task_complete(job_id, num_sources):
     """
@@ -553,9 +421,9 @@ def signal_task_complete(job_id, num_sources):
     # Maybe we can remove this
     msg = dict(job_id=job_id, num_sources=num_sources)
 
-    exchange, conn_args = _exchange_and_conn_args()
+    exchange, conn_args = general.exchange_and_conn_args()
 
-    routing_key = _ROUTING_KEY_FMT % dict(job_id=job_id)
+    routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
 
     with kombu.BrokerConnection(**conn_args) as conn:
         with conn.Producer(exchange=exchange,
