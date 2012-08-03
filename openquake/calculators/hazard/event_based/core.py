@@ -16,6 +16,7 @@
 """Core functionality for Event-Based hazard calculations."""
 
 import functools
+import hashlib
 import math
 import os
 import random
@@ -26,10 +27,11 @@ from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
+from openquake.calculators.hazard import general
 from openquake.output import hazard as hazard_output
+from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.calculators.hazard import general
 
 LOG = logs.LOG
 

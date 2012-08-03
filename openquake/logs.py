@@ -25,7 +25,6 @@ TODO(jmc): support debug level per logger.
 import logging
 import socket
 import threading
-import traceback
 
 import kombu
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
