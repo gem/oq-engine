@@ -721,7 +721,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
-            rlz_callback(lt_rlz)
+            if rlz_callback is not None:
+                rlz_callback(lt_rlz)
 
     def _initialize_realizations_montecarlo(self, rlz_callback=None):
         """
@@ -781,7 +782,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
-            rlz_callback(lt_rlz)
+            if rlz_callback is not None:
+                rlz_callback(lt_rlz)
 
             # update the seed for the next realization
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
