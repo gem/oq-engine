@@ -18,10 +18,6 @@
 
 """Common code for the hazard calculators."""
 
-import functools
-import hashlib
-import json
-import math
 import numpy
 import os
 import random
@@ -30,8 +26,6 @@ import StringIO
 from django.db import transaction, connections
 from nhlib import geo as nhlib_geo
 from nrml import parsers as nrml_parsers
-from scipy.interpolate import interp1d
-from scipy.stats.mstats import mquantiles
 from shapely import geometry
 
 from openquake import engine2
@@ -47,7 +41,6 @@ from openquake.job import params as job_params
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake.logs import LOG
-from openquake.utils import config
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
