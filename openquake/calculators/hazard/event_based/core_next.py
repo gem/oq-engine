@@ -28,8 +28,24 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     # param validation wired up
 
     def pre_execute(self):
-        # TODO: implement me
-        print "pre_execute"
+        """
+        Do pre-execution work. At the moment, this work entails: parsing and
+        initializing sources, parsing and initializing the site model (if there
+        is one), and generating logic tree realizations. (The latter piece
+        basically defines the work to be done in the `execute` phase.)
+        """
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
+
+        # Deal with the site model and compute site data for the calculation
+        # (if a site model was specified, that is).
+        self.initialize_site_model()
+
+        # Now bootstrap the logic tree realizations and related data.
+        # This defines for us the "work" that needs to be done when we reach
+        # the `execute` phase.
+        self.initialize_realizations()
 
     def execute(self):
         # TODO: implement me
