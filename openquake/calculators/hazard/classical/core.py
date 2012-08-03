@@ -92,21 +92,9 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    def gen_sources():
-        """
-        Nhlib source objects generator for a given set of sources.
-
-        Performs lazy loading, converting and processing of sources.
-        """
-        for src_id in src_ids:
-            parsed_source = models.ParsedSource.objects.get(id=src_id)
-
-            nhlib_source = source.nrml_to_nhlib(
-                parsed_source.nrml, hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
-
-            apply_uncertainties(nhlib_source)
-            yield nhlib_source
+    sources = general.gen_sources(
+        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+        hc.width_of_mfd_bin, hc.area_source_discretization)
 
     imts = im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
 
@@ -126,7 +114,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': gen_sources(),
+                   'sources': sources,
                    'imts': imts,
                    'sites': site_coll}
 
