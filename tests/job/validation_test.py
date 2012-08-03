@@ -256,7 +256,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             'investigation_time': ['Investigation time must be > 0'],
             'maximum_distance': ['Maximum distance must be > 0'],
             'number_of_logic_tree_samples': [
-                'Number of logic tree samples must be > 0',
+                'Number of logic tree samples must be >= 0',
             ],
             'poes_hazard_maps': [
                 'PoEs for hazard maps must be in the range [0, 1]',
@@ -307,7 +307,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             sites='-122.0  38.113 , -122.114,38.113',
             calculation_mode='Classical',
             random_seed=2147483648,
-            number_of_logic_tree_samples=0,
+            number_of_logic_tree_samples=-1,
             rupture_mesh_spacing=0,
             width_of_mfd_bin=0,
             area_source_discretization=0,
