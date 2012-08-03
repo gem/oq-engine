@@ -557,6 +557,7 @@ class HazardCalculation(djm.Model):
     #    "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -629,6 +630,8 @@ class HazardCalculation(djm.Model):
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
             'measure levels for calculating probability of exceedence'),
+        null=True,
+        blank=True,
     )
     truncation_level = djm.FloatField(
         help_text='Level for ground motion distribution truncation',
@@ -641,8 +644,42 @@ class HazardCalculation(djm.Model):
     )
 
     ################################
+    # Event-Based Calculator params:
+    ################################
+    intensity_measure_types = fields.CharArrayField(
+        help_text=(
+            'List of intensity measure types (input for GMF calculation)'),
+        null=True,
+        blank=True,
+    )
+    ses_per_sample = djm.IntegerField(
+        help_text=('Number of Stochastic Event Sets to compute per logic tree'
+                   ' sample/realization'),
+        null=True,
+        blank=True,
+    )
+    GROUND_MOTION_CORRELATION_MODELS = (
+        (u'JB2009', u'Jayaram-Baker 2009'),
+    )
+    ground_motion_correlation_model = djm.TextField(
+        help_text=('Name of the ground correlation model to use in the'
+                   ' calculation'),
+        null=True,
+        blank=True,
+        choices=GROUND_MOTION_CORRELATION_MODELS,
+    )
+    ground_motion_correlation_params = fields.DictField(
+        help_text=('Parameters specific to the chosen ground motion'
+                   ' correlation model'),
+        null=True,
+        blank=True,
+    )
+
+    ################################
     # Output/post-processing params:
     ################################
+    # Classical params:
+    ###################
     mean_hazard_curves = fields.OqNullBooleanField(
         help_text='Compute mean hazard curves',
         null=True,
@@ -657,6 +694,21 @@ class HazardCalculation(djm.Model):
         help_text=('PoEs (probabilities of exceedence) to be used for '
                    'computing hazard maps (from individual curves, mean and '
                    'quantile curves if calculated)'),
+        null=True,
+        blank=True,
+    )
+    # Event-Based params:
+    #####################
+    complete_logic_tree_ses = fields.OqNullBooleanField(
+        help_text=('If true, generate a collection of all of the stochastic '
+                   'event sets for all logic tree samples with an adjusted '
+                   'investgation time'),
+        null=True,
+        blank=True,
+    )
+    ground_motion_fields = fields.OqNullBooleanField(
+        help_text=('If true, ground motion fields will be computed (in '
+                   'addition to stochastic event sets)'),
         null=True,
         blank=True,
     )
