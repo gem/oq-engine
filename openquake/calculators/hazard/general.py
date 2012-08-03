@@ -583,6 +583,34 @@ def exchange_and_conn_args():
     return exchange, conn_args
 
 
+def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
+                width_of_mfd_bin, area_source_discretization):
+    """
+    Nhlib source objects generator for a given set of sources.
+
+    Performs lazy loading, converting and processing of sources.
+
+    :param src_ids:
+        A list of IDs for :class:`openquake.db.models.ParsedSource` records.
+    :param apply_uncertainties:
+        A function to be called on each generated source. See
+        :meth:`openquake.input.logictree.LogicTreeProcessor.\
+parse_source_model_logictree_path`
+
+    For information about the other parameters, see
+    :func:`openquake.input.source.nrml_to_nhlib`.
+    """
+    for src_id in src_ids:
+        parsed_source = models.ParsedSource.objects.get(id=src_id)
+
+        nhlib_source = source.nrml_to_nhlib(
+            parsed_source.nrml, rupture_mesh_spacing, width_of_mfd_bin,
+            area_source_discretization)
+
+        apply_uncertainties(nhlib_source)
+        yield nhlib_source
+
+
 class BaseHazardCalculatorNext(base.CalculatorNext):
 
     #: In subclasses, this would be a reference to the task function
@@ -952,4 +980,3 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
-
