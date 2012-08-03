@@ -14,7 +14,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from nhlib import correlation
+from nhlib.calc import stochastic
 
+from openquake import logs
 from openquake.calculators.hazard import general as haz_general
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
@@ -49,6 +51,33 @@ def stochastic_event_sets(job_id, lt_rlz_id, src_ids):
         List of ids of parsed source models from which we will generate
         stochastic event sets/ruptures.
     """
+    import nose; nose.tools.set_trace()
+    logs.LOG.info(('> starting `stochastic_event_sets` task: job_id=%s, '
+                   'lt_realization_id=%s') % (job_id, lt_rlz_id))
+
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
+    ltp = logictree.LogicTreeProcessor(hc.id)
+
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+    sources = general.gen_sources(
+        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+        hc.width_of_mfd_bin, hc.area_source_discretization)
+
+    # TODO: Load the site collection? We only need it for computing GMFs
+
+    import nose; nose.tools.set_trace()
+    logs.LOG.info('> creating stochastic event set generator')
+    ses_poissonian = stochastic.stochastic_event_set_poissonian(
+        sources, hc.investigation_time)
+    logs.LOG.info('< done creating stochastic event set generator')
+
+    for rupture in ses_poissonian:
+        import nose; nose.tools.set_trace()
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
