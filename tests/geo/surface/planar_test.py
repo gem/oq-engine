@@ -19,6 +19,7 @@ import numpy
 
 from nhlib.geo import Point
 from nhlib.geo.mesh import Mesh
+from nhlib.geo import utils as geo_utils
 from nhlib.geo.surface.planar import PlanarSurface
 
 from tests.geo.surface import _planar_test_data as test_data
@@ -50,21 +51,28 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel'
+            'corners are in the wrong order'
         )
 
-    def test_edges_not_parallel(self):
+    def test_corners_not_on_the_same_plane(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel'
+            'corner points do not lie on the same plane'
         )
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must have the same length'
+            'top and bottom edges have different lengths'
+        )
+
+    def test_non_right_angles(self):
+        corners = [Point(0, 0, 1), Point(1, 0, 1),
+                   Point(1.045, 0, 2), Point(0.045, 0, 2)]
+        self.assert_failed_creation(1, 0, 90, corners, ValueError,
+            "surface's angles are not right"
         )
 
     def test_non_positive_mesh_spacing(self):
@@ -91,18 +99,22 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
 
     def assert_successfull_creation(self, mesh_spacing, strike, dip,
                                     tl, tr, br, bl):
-        surface = PlanarSurface(mesh_spacing, strike, dip, tl, tr, br, bl)
-        self.assertEqual(surface.top_left, tl)
-        self.assertEqual(surface.top_right, tr)
-        self.assertEqual(surface.bottom_left, bl)
-        self.assertEqual(surface.bottom_right, br)
-        self.assertEqual(surface.mesh_spacing, mesh_spacing)
-        self.assertEqual(surface.strike, strike)
-        self.assertEqual(surface.get_strike(), strike)
-        self.assertEqual(surface.dip, dip)
-        self.assertEqual(surface.get_dip(), dip)
-        self.assertAlmostEqual(surface.length, tl.distance(tr))
-        self.assertAlmostEqual(surface.width, tl.distance(bl))
+        surface1 = PlanarSurface(mesh_spacing, strike, dip, tl, tr, br, bl)
+        translated = surface1.translate(tl, tr).translate(tr, tl)
+        for surface in [surface1, translated]:
+            self.assertIsInstance(surface, PlanarSurface)
+            self.assertEqual(surface.top_left, tl)
+            self.assertEqual(surface.top_right, tr)
+            self.assertEqual(surface.bottom_left, bl)
+            self.assertEqual(surface.bottom_right, br)
+            self.assertEqual(surface.mesh_spacing, mesh_spacing)
+            self.assertEqual(surface.strike, strike)
+            self.assertEqual(surface.get_strike(), strike)
+            self.assertEqual(surface.dip, dip)
+            self.assertEqual(surface.get_dip(), dip)
+            self.assertIsNone(surface._mesh)
+            self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
+            self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
@@ -131,6 +143,45 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         )
 
 
+class PlanarSurfaceProjectTestCase(unittest.TestCase):
+    def test1(self):
+        lons, lats, depths = geo_utils.cartesian_to_spherical(
+            numpy.array([[60, -10, -10], [60, -10, 10],
+                         [60, 10, 10], [60, 10, -10]], float)
+        )
+        surface = PlanarSurface(10, 20, 30, *Mesh(lons, lats, depths))
+        aaae = numpy.testing.assert_array_almost_equal
+
+        plons, plats, pdepths = geo_utils.cartesian_to_spherical(
+            numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]], float)
+        )
+
+        dists, xx, yy =  surface._project(plons, plats, pdepths)
+        aaae(xx, [0, 10, 0])
+        aaae(yy, [0, 10, -1])
+        aaae(dists, [0, 1, -10])
+
+        lons, lats, depths = surface._project_back(dists, xx, yy)
+        aaae(lons, plons)
+        aaae(lats, plats)
+        aaae(depths, pdepths)
+
+    def test2(self):
+        surface = PlanarSurface(
+            10, 20, 30,
+            Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
+            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90)
+        )
+        plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
+                                 [11., 12., 13.]]
+        dists, xx, yy =  surface._project(plons, plats, pdepths)
+        lons, lats, depths = surface._project_back(dists, xx, yy)
+        aaae = numpy.testing.assert_array_almost_equal
+        aaae(lons, plons)
+        aaae(lats, plats)
+        aaae(depths, pdepths)
+
+
 class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 
     def _surface(self, corners):
@@ -146,7 +197,7 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 
     def test_4(self):
         self.assert_mesh_is(self._surface(test_data.TEST_4_CORNERS),
-                expected_mesh=test_data.TEST_4_MESH)
+                            expected_mesh=test_data.TEST_4_MESH)
 
     def test_5(self):
         self.assert_mesh_is(self._surface(test_data.TEST_5_CORNERS),
@@ -215,14 +266,46 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
-                               surface.get_min_distance(sites)[0], places=1)
+                               surface.get_min_distance(sites)[0], delta=0.6)
+
+    def test_nine_positions(self):
+        def v2p(*vectors):  # "vectors to points"
+            return [Point(*coords)
+                    for coords in zip(*geo_utils.cartesian_to_spherical(
+                        numpy.array(vectors, dtype=float)
+                    ))]
+
+        corners = v2p([6370, 0, -0.5], [6370, 0, 0.5],
+                      [6369, 2, 0.5], [6369, 2, -0.5])
+        surface = PlanarSurface(1, 2, 3, *corners)
+
+        # first three positions: point projection is above the top edge
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6371, 0, -1.5], [6371, 0, 1.5], [6371, 0, 0.33])
+        ))
+        self.assertTrue(numpy.allclose(dists, [2 ** 0.5, 2 ** 0.5, 1.0],
+                                       atol=1e-4))
+
+        # next three positions: point projection is below the bottom edge
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6368, 2, -1.5], [6368, 2, 1.5], [6368, 2, -0.45])
+        ))
+        self.assertTrue(numpy.allclose(dists, [2 ** 0.5, 2 ** 0.5, 1.0],
+                                       atol=1e-4))
+
+        # next three positions: point projection is left to rectangle,
+        # right to it or lies inside
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6369.5, 1, -1.5], [6369.5, 1, 1.5], [6369.5, 1, -0.1])
+        ))
+        self.assertTrue(numpy.allclose(dists, [1, 1, 0], atol=1e-4))
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
     def test_point_inside(self):
         corners = [Point(-1, -1, 1), Point(1, -1, 1),
                    Point(1, 1, 2), Point(-1, 1, 2)]
-        surface = PlanarSurface(10, 0, 45, *corners)
+        surface = PlanarSurface(10, 90, 45, *corners)
         sites = Mesh.from_points_list([Point(0, 0), Point(0, 0, 20),
                                        Point(0.1, 0.3)])
         dists = surface.get_joyner_boore_distance(sites)
@@ -232,28 +315,95 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
     def test_point_on_the_border(self):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
-        surface = PlanarSurface(1, 0, 45, *corners)
+        surface = PlanarSurface(1, 270, 45, *corners)
         sites = Mesh.from_points_list([Point(-0.1, 0.04), Point(0.1, 0.03)])
         dists = surface.get_joyner_boore_distance(sites)
         expected_dists = [0] * 2
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.3))
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test_point_outside(self):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
-        surface = PlanarSurface(1, 0, 45, *corners)
-        sites = Mesh.from_points_list([Point(-0.2, -0.2), Point(1, 1, 1),
-                                       Point(4, 5), Point(8, 10.4),
-                                       Point(0.05, 0.15, 10)])
+        surface = PlanarSurface(1, 270, 45, *corners)
+        sites = Mesh.from_points_list([
+            Point(-0.2, -0.2), Point(1, 1, 1), Point(4, 5),
+            Point(0.8, 0.01), Point(0.2, -0.15), Point(0.02, -0.12),
+            Point(-0.14, 0), Point(-3, 3), Point(0.05, 0.15, 10)
+        ])
         dists = surface.get_joyner_boore_distance(sites)
         expected_dists = [
             Point(-0.2, -0.2).distance(Point(-0.1, -0.1)),
             Point(1, 1).distance(Point(0.1, 0.1)),
             Point(4, 5).distance(Point(0.1, 0.1)),
-            Point(8, 10.4).distance(Point(0.1, 0.1)),
+            Point(0.8, 0.01).distance(Point(0.1, 0.01)),
+            Point(0.2, -0.15).distance(Point(0.1, -0.1)),
+            Point(0.02, -0.12).distance(Point(0.02, -0.1)),
+            Point(-0.14, 0).distance(Point(-0.1, 0)),
+            Point(-3, 3).distance(Point(-0.1, 0.1)),
             Point(0.05, 0.15).distance(Point(0.05, 0.1))
         ]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.4))
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.05))
+
+
+class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
+    corners = [Point(-0.1, -0.1, 0), Point(0.1, -0.1, 0),
+               Point(0.1, 0.1, 2), Point(-0.1, 0.1, 2)]
+    surface = PlanarSurface(10, 90, 45, *corners)
+
+    def test_point_above_surface(self):
+        sites = Mesh.from_points_list([Point(0, 0), Point(-0.03, 0.05, 0.5)])
+        res = self.surface.get_closest_points(sites)
+        self.assertIsInstance(res, Mesh)
+        aae = numpy.testing.assert_almost_equal
+        aae(res.lons, [0, -0.03], decimal=4)
+        aae(res.lats, [-0.00081824,  0.04919223])
+        aae(res.depths, [1.0113781, 1.50822185])
+
+    def test_corner_is_closest(self):
+        sites = Mesh.from_points_list(
+            [Point(-0.11, 0.11), Point(0.14, -0.12, 10),
+             Point(0.3, 0.2, 0.5), Point(-0.6, -0.6, 0.3)]
+        )
+        res = self.surface.get_closest_points(sites)
+        aae = numpy.testing.assert_almost_equal
+        aae(res.lons, [-0.1, 0.1, 0.1, -0.1], decimal=4)
+        aae(res.lats, [0.1, -0.1, 0.1, -0.1])
+        aae(res.depths, [2, 0, 2, 0], decimal=5)
+
+    def test_top_or_bottom_edge_is_closest(self):
+        sites = Mesh.from_points_list([Point(-0.04, -0.28, 0),
+                                       Point(0.033, 0.15, 0)])
+        res = self.surface.get_closest_points(sites)
+        aae = numpy.testing.assert_almost_equal
+        aae(res.lons, [-0.04, 0.033], decimal=5)
+        aae(res.lats, [-0.1, 0.1], decimal=5)
+        aae(res.depths, [0, 2], decimal=2)
+
+    def test_left_or_right_edge_is_closest(self):
+        sites = Mesh.from_points_list([Point(-0.24, -0.08, 0.55),
+                                       Point(0.17, 0.07, 0)])
+        res = self.surface.get_closest_points(sites)
+        aae = numpy.testing.assert_almost_equal
+        aae(res.lons, [-0.1, 0.1], decimal=5)
+        aae(res.lats, [-0.08, 0.07], decimal=3)
+        aae(res.depths, [0.20679306, 1.69185737])
+
+    def test_against_mesh_to_mesh(self):
+        corners = [Point(2.6, 3.7, 20), Point(2.90102155, 3.99961567, 20),
+                   Point(3.2, 3.7, 75), Point(2.89905849, 3.40038407, 75)]
+        surface = PlanarSurface(0.5, 45, 70, *corners)
+        lons, lats = numpy.meshgrid(numpy.linspace(2.2, 3.6, 7),
+                                    numpy.linspace(3.4, 4.2, 7))
+        sites = Mesh(lons, lats, depths=None)
+
+        res1 = surface.get_closest_points(sites)
+        res2 = super(PlanarSurface, surface).get_closest_points(sites)
+
+        aae = numpy.testing.assert_almost_equal
+        # precision up to ~1 km
+        aae(res1.lons, res2.lons, decimal=2)
+        aae(res1.lats, res2.lats, decimal=2)
+        aae(res1.depths, res2.depths, decimal=0)
 
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
@@ -319,3 +469,11 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0.05, 0)])
         self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
                                3.9313415355436705, places=4)
+
+
+class PlanarSurfaceGetTopEdgeDepthTestCase(unittest.TestCase):
+    def test(self):
+        corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
+                   Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
+        surface = PlanarSurface(1, 45, 60, *corners)
+        self.assertEqual(surface.get_top_edge_depth(), 8)

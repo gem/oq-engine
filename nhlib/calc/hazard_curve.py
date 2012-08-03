@@ -14,21 +14,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves`.
+:mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves_poissonian`.
 """
 import numpy
 
 from nhlib.tom import PoissonTOM
+from nhlib.calc import filters
 
 
-def hazard_curves_poissonian(sources, sites, imts, time_span,
-                             gsims, component_type, truncation_level):
+def hazard_curves_poissonian(
+        sources, sites, imts, time_span, gsims, truncation_level,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter
+    ):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
     considered in the seismic sources).
 
-    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonianTOM>`
+    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonTOM>`
     temporal occurrence model.
 
     The calculator computes probability of ground motion exceedance according
@@ -41,8 +45,8 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
         An iterator of seismic sources objects (instances of subclasses
         of :class:`~nhlib.source.base.SeismicSource`).
     :param sites:
-        List of :class:`~nhlib.site.Site` objects, representing sites
-        of interest.
+        Instance of :class:`~nhlib.site.SiteCollection` object, representing
+        sites of interest.
     :param imts:
         Dictionary mapping intensity measure type objects (see
         :mod:`nhlib.imt`) to lists of intensity measure levels.
@@ -53,13 +57,13 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
         Dictionary mapping tectonic region types (members
         of :class:`nhlib.const.TRT`) to :class:`~nhlib.gsim.base.GMPE`
         or :class:`~nhlib.gsim.base.IPE` objects.
-    :param component_type:
-        Component of ground shaking intensity to consider. Must be one
-        of constants in :class:`nhlib.const.IMC`. That component must
-        be supported by all the GSIMs in ``gsims`` dict.
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
+    :param source_site_filter:
+        Optional source-site filter function. See :mod:`nhlib.calc.filters`.
+    :param rupture_site_filter:
+        Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
     :returns:
         Dictionary mapping intensity measure type objects (same keys
@@ -73,15 +77,21 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
                   for imt in imts)
     tom = PoissonTOM(time_span)
 
-    for source in sources:
-        for rupture in source.iter_ruptures(tom):
-            prob = rupture.get_probability()
+    total_sites = len(sites)
+    sources_sites = ((source, sites) for source in sources)
+    for source, s_sites in source_site_filter(sources_sites):
+        ruptures_sites = ((rupture, s_sites)
+                          for rupture in source.iter_ruptures(tom))
+        for rupture, r_sites in rupture_site_filter(ruptures_sites):
+            prob = rupture.get_probability_one_or_more_occurrences()
             gsim = gsims[rupture.tectonic_region_type]
-
-            ctxs = gsim.make_contexts(sites, rupture)
-            poes = gsim.get_poes(ctxs, imts, component_type, truncation_level)
+            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
             for imt in imts:
-                curves[imt] *= (1 - prob) ** poes[imt]
+                poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                     truncation_level)
+                curves[imt] *= r_sites.expand(
+                    (1 - prob) ** poes, total_sites, placeholder=1
+                )
 
     for imt in imts:
         curves[imt] = 1 - curves[imt]

@@ -17,7 +17,6 @@
 Module :mod:`nhlib.source.rupture` defines classes :class:`Rupture`
 and its subclass :class:`ProbabilisticRupture`.
 """
-from nhlib import const
 from nhlib.geo.nodalplane import NodalPlane
 
 
@@ -39,25 +38,28 @@ class Rupture(object):
         An instance of subclass of
         :class:`~nhlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
+    :param source_typology:
+        Subclass of :class:`~nhlib.source.base.SeismicSource`
+        (class object, not an instance) referencing the typology
+        of the source that produced this rupture.
 
     :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
     """
-    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface):
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter,
+                 surface, source_typology):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
             raise ValueError('rupture hypocenter must have positive depth')
-        if not const.TRT.is_valid(tectonic_region_type):
-            raise ValueError('unknown tectonic region type %r' %
-                             tectonic_region_type)
         NodalPlane.check_rake(rake)
         self.tectonic_region_type = tectonic_region_type
         self.rake = rake
         self.mag = mag
         self.hypocenter = hypocenter
         self.surface = surface
+        self.source_typology = source_typology
 
 
 class ProbabilisticRupture(Rupture):
@@ -75,22 +77,49 @@ class ProbabilisticRupture(Rupture):
         If occurrence rate is not positive.
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
+                 source_typology,
                  occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
         super(ProbabilisticRupture, self).__init__(
-            mag, rake, tectonic_region_type, hypocenter, surface
+            mag, rake, tectonic_region_type, hypocenter, surface,
+            source_typology
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
 
-    def get_probability(self):
+    def get_probability_one_or_more_occurrences(self):
         """
-        Return the probability of this rupture to occur.
+        Return the probability of this rupture to occur one or more times.
 
-        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability` of an assigned
-        temporal occurrence model.
+        Uses
+        :meth:`~nhlib.tom.PoissonTOM.get_probability_one_or_more_occurrences`
+        of an assigned temporal occurrence model.
         """
-        return self.temporal_occurrence_model.get_probability(
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_one_or_more_occurrences(rate)
+
+    def get_probability_one_occurrence(self):
+        """
+        Return the probability of this rupture to occur exactly one time.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability_one_occurrence`
+        of an assigned temporal occurrence model.
+        """
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_one_occurrence(rate)
+
+
+    def sample_number_of_occurrences(self):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.sample_number_of_occurrences`
+        of an assigned temporal occurrence model.
+        """
+        return self.temporal_occurrence_model.sample_number_of_occurrences(
             self.occurrence_rate
         )

@@ -34,11 +34,11 @@ class PointSource(SeismicSource):
     :param lower_seismogenic_depth:
         Maximum depth an earthquake rupture can reach, in km.
     :param location:
-        :class:`~nhlib.geo.Point` object representing the location
+        :class:`~nhlib.geo.point.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
         :class:`~nhlib.pmf.PMF` object with values that are instances
-        of :class:`nhlib.source.nodalplane.NodalPlane`. Shows the distribution
+        of :class:`nhlib.geo.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
         :class:`~nhlib.pmf.PMF` with values being float numbers in km
@@ -82,6 +82,69 @@ class PointSource(SeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
+    def _get_max_rupture_projection_radius(self):
+        """
+        Find a maximum radius of a circle on Earth surface enveloping a rupture
+        produced by this source.
+
+        :returns:
+            Half of maximum rupture's diagonal surface projection.
+        """
+        # extract maximum magnitude
+        max_mag, _rate = self.get_annual_occurrence_rates()[-1]
+        max_radius = 0.0
+        for (np_prob, np) in self.nodal_plane_distribution.data:
+            # compute rupture dimensions
+            rup_length, rup_width = self._get_rupture_dimensions(max_mag, np)
+            # compute rupture width surface projection
+            rup_width = rup_width * math.cos(math.radians(np.dip))
+            # the projection radius is half of the rupture diagonal
+            radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+            if radius > max_radius:
+                max_radius = radius
+        return max_radius
+
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Returns a circle-shaped polygon with radius equal to ``dilation`` plus
+        :meth:`_get_max_rupture_projection_radius`.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        max_rup_radius = self._get_max_rupture_projection_radius()
+        return self.location.to_polygon(max_rup_radius + dilation)
+
+    def filter_sites_by_distance_to_source(self, integration_distance, sites):
+        """
+        Filter sites that are closer than maximum rupture projection radius
+        plus integration distance along the great circle arc from source's
+        epicenter location. Overrides :meth:`base class' method
+        <nhlib.source.base.SeismicSource.filter_sites_by_distance_to_source>`
+        in order to avoid using polygon.
+        """
+        radius = self._get_max_rupture_projection_radius()
+        radius += integration_distance
+        return sites.filter(self.location.closer_than(sites.mesh, radius))
+
+    @classmethod
+    def filter_sites_by_distance_to_rupture(cls, rupture, integration_distance,
+                                            sites):
+        """
+        Filter sites that are closer than rupture's projection radius
+        plus integration distance along the great circle arc from rupture's
+        epicenter location. Overrides the :meth:`base class' method
+        <nhlib.source.base.SeismicSource.filter_sites_by_distance_to_rupture>`.
+        """
+        rup_length, rup_width = rupture.surface.length, rupture.surface.width
+        rup_width = rup_width * math.cos(math.radians(rupture.surface.dip))
+        radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+        radius += integration_distance
+        epicenter = Point(rupture.hypocenter.longitude,
+                          rupture.hypocenter.latitude)
+        return sites.filter(epicenter.closer_than(sites.mesh, radius))
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
@@ -112,7 +175,7 @@ class PointSource(SeismicSource):
             (``rate_scaling_factor = 1``).
         """
         assert 0 < rate_scaling_factor
-        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
                     hypocenter = Point(latitude=location.latitude,
@@ -124,7 +187,8 @@ class PointSource(SeismicSource):
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
-                        surface, occurrence_rate, temporal_occurrence_model
+                        surface, type(self),
+                        occurrence_rate, temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
@@ -133,12 +197,12 @@ class PointSource(SeismicSource):
         for given magnitude ``mag`` and nodal plane.
 
         :param nodal_plane:
-            Instance of :class:`nhlib.source.nodalplane.NodalPlane`.
+            Instance of :class:`nhlib.geo.nodalplane.NodalPlane`.
         :returns:
             Tuple of two items: rupture length in width in km.
 
         The rupture area is calculated using method
-        :meth:`~nhlib.msr.base.BaseMSR.get_median_area` of source's
+        :meth:`~nhlib.scalerel.base.BaseMSR.get_median_area` of source's
         magnitude-scaling relationship. In any case the returned
         dimensions multiplication is equal to that value. Than
         the area is decomposed to length and width with respect
@@ -172,7 +236,7 @@ class PointSource(SeismicSource):
             Magnitude value, used to calculate rupture dimensions,
             see :meth:`_get_rupture_dimensions`.
         :param nodal_plane:
-            Instance of :class:`nhlib.source.nodalplane.NodalPlane`
+            Instance of :class:`nhlib.geo.nodalplane.NodalPlane`
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.

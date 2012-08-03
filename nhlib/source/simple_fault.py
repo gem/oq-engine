@@ -45,9 +45,9 @@ class SimpleFaultSource(SeismicSource):
     parameters.
 
     :raises ValueError:
-        If :meth:`SimpleFaultSurface.check_fault_data` fails, if rake value
-        is invalid and if rupture mesh spacing is too low for the lowest
-        magnitude value.
+        If :meth:`~nhlib.geo.surface.simple_fault.SimpleFaultSurface.check_fault_data`
+        fails, if rake value is invalid and if rupture mesh spacing is too high
+        for the lowest magnitude value.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -79,6 +79,26 @@ class SimpleFaultSource(SeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Uses :meth:`nhlib.geo.surface.simple_fault.SimpleFaultSurface.surface_projection_from_fault_data`
+        for getting the fault's surface projection and then calls
+        its :meth:`~nhlib.geo.polygon.Polygon.dilate` method passing
+        in ``dilation`` parameter.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip
+        )
+        if dilation:
+            return polygon.dilate(dilation)
+        else:
+            return polygon
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
@@ -99,7 +119,7 @@ class SimpleFaultSource(SeismicSource):
         fault_length = (mesh_cols - 1) * self.rupture_mesh_spacing
         fault_width = (mesh_rows - 1) * self.rupture_mesh_spacing
 
-        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag
             )
@@ -117,7 +137,8 @@ class SimpleFaultSource(SeismicSource):
                     surface = SimpleFaultSurface(mesh)
                     yield ProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
-                        surface, occurrence_rate, temporal_occurrence_model
+                        surface, type(self),
+                        occurrence_rate, temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):

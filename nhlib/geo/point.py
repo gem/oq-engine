@@ -16,8 +16,10 @@
 """
 Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
-from nhlib.geo._utils import EARTH_RADIUS, ensure, cartesian_to_spherical
+import shapely.geometry
+
 from nhlib.geo import geodetic
+from nhlib.geo import utils as geo_utils
 
 
 class Point(object):
@@ -44,19 +46,27 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
+        if not depth < geo_utils.EARTH_RADIUS:
+            raise ValueError("The depth must be less than "
+                             "the earth radius (6371.0 km)")
 
-        ensure(depth < EARTH_RADIUS,
-                "The depth must be < than the earth radius (6371.0 km)!")
+        if not -180.0 <= longitude <= 180.0:
+            raise ValueError("longitude %.6f outside range" % longitude)
 
-        ensure(-180.0 <= longitude <= 180.0,
-                "Longitude %.6f outside range!" % longitude)
-
-        ensure(-90.0 <= latitude <= 90.0,
-                "Latitude %.6f outside range!" % latitude)
+        if not -90.0 <= latitude <= 90.0:
+            raise ValueError("latitude %.6f outside range" % latitude)
 
         self.depth = depth
         self.latitude = latitude
         self.longitude = longitude
+
+    @property
+    def wkt2d(self):
+        """
+        Generate WKT (Well-Known Text) to represent this point in 2 dimensions
+        (ignoring depth).
+        """
+        return 'POINT(%s %s)' % (self.longitude, self.latitude)
 
     def point_at(self, horizontal_distance, vertical_increment, azimuth):
         """
@@ -197,6 +207,52 @@ class Point(object):
         )
         return [Point(lons[i], lats[i], depths[i]) for i in xrange(len(lons))]
 
+    def to_polygon(self, radius):
+        """
+        Create a circular polygon with specified radius centered in the point.
+
+        :param radius:
+            Required radius of a new polygon, in km.
+        :returns:
+            Instance of :class:`~nhlib.geo.polygon.Polygon` that approximates
+            a circle around the point with specified radius.
+        """
+        assert radius > 0
+        # avoid circular imports
+        from nhlib.geo.polygon import Polygon
+        # get a projection that is centered in the point
+        proj = geo_utils.get_orthographic_projection(
+            self.longitude, self.longitude, self.latitude, self.latitude
+        )
+        # create a shapely object from a projected point coordinates,
+        # which are supposedly (0, 0)
+        point = shapely.geometry.Point(*proj(self.longitude, self.latitude))
+        # extend the point to a shapely polygon using buffer()
+        # and create nhlib.geo.polygon.Polygon object from it
+        return Polygon._from_2d(point.buffer(radius), proj)
+
+    def closer_than(self, mesh, radius):
+        """
+        Check for proximity of points in the ``mesh``.
+
+        :param mesh:
+            :class:`nhlib.geo.mesh.Mesh` instance.
+        :param radius:
+            Proximity measure in km.
+        :returns:
+            Numpy array of boolean values in the same shape as the mesh
+            coordinate arrays with ``True`` on indexes of points that
+            are not further than ``radius`` km from this point. Function
+            :func:`~nhlib.geo.geodetic.distance` is used to calculate
+            distances to points of the mesh. Points of the mesh that
+            lie exactly ``radius`` km away from this point also have
+            ``True`` in their indices.
+        """
+        dists = geodetic.distance(self.longitude, self.latitude, self.depth,
+                                  mesh.lons, mesh.lats,
+                                  0 if mesh.depths is None else mesh.depths)
+        return dists <= radius
+
     @classmethod
     def from_vector(cls, vector):
         """
@@ -208,4 +264,4 @@ class Point(object):
         :returns:
             A :class:`Point` object created from those coordinates.
         """
-        return cls(*cartesian_to_spherical(vector))
+        return cls(*geo_utils.cartesian_to_spherical(vector))

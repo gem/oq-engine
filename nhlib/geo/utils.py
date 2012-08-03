@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package-private module :mod:`nhlib.geo._utils` contains functions that are
-common to several geographical primitives.
+Module :mod:`nhlib.geo.utils` contains functions that are common to several
+geographical primitives and some other low-level spatial operations.
 """
 import numpy
 import shapely.geometry
@@ -49,11 +49,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     longitudes and latitudes (depth is not taken into account).
 
     :param closed_shape:
-        If ``True`` the line will be checked twice: first time with its
-        original shape and second time with the points sequence being
-        shifted by one point (the last point becomes first, the first
-        turns second and so on). This is useful for checking that
-        the sequence of points defines a valid :class:`Polygon`.
+        If ``True`` the line will be checked twice: first time with
+        its original shape and second time with the points sequence
+        being shifted by one point (the last point becomes first,
+        the first turns second and so on). This is useful for
+        checking that the sequence of points defines a valid
+        :class:`~nhlib.geo.polygon.Polygon`.
     """
     assert len(lons) == len(lats)
 
@@ -88,12 +89,7 @@ def get_longitudinal_extent(lon1, lon2):
         otherwise. Absolute value of the result doesn't exceed 180 for
         valid parameters values.
     """
-    extent = lon2 - lon1
-    if extent > 180:
-        extent = -360 + extent
-    elif extent < -180:
-        extent = 360 + extent
-    return extent
+    return (lon2 - lon1 + 180) % 360 - 180
 
 
 def get_spherical_bounding_box(lons, lats):
@@ -135,9 +131,21 @@ def get_orthographic_projection(west, east, north, south):
     Create and return a projection object for a given bounding box.
 
     :returns:
-        Function that takes two arguments: (longitudes and latitudes
-        as a form of scalars or numpy arrays) and returns a tuple
-        of two items: x and y coordinates of projected points.
+        Function that can perform both forward and reverse projection
+        (converting from longitudes and latitudes to x and y values
+        on 2d-space and vice versa). Function takes three arguments:
+        first two are numpy arrays of longitudes and latitudes *or*
+        abscissae and ordinates of points to project and the third one
+        is a boolean that allows to choose what operation is requested --
+        is it forward or reverse one. ``True`` value given to third
+        positional argument (or keyword argument "reverse") indicates
+        that the projection of points in 2d space back to earth surface
+        is needed. The default value for "reverse" argument is ``False``,
+        which means forward projection (degrees to kilometers).
+
+        Resulting function raises ``ValueError`` in forward projection
+        mode if any of the target points is further than 90 degree
+        (along the great circle arc) from the projection center.
 
     Parameters are given as floats, representing decimal degrees (first two
     are longitudes and last two are latitudes). They define a bounding box
@@ -153,18 +161,42 @@ def get_orthographic_projection(west, east, north, south):
     This projection is prone to distance, area and angle distortions
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
-    :func:`_line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`Polygon.discretize`). It can be also used for measuring
-    distance to an extent of around 700 kilometers (error doesn't exceed
-    1 km up until then).
+    :func:`line_intersects_itself`) or if point is inside of a polygon
+    (like in :meth:`nhlib.geo.polygon.Polygon.discretize`). It can be also
+    used for measuring distance to an extent of around 700 kilometers (error
+    doesn't exceed 1 km up until then).
     """
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
-    def proj(lons, lats):
-        lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-        xx = numpy.cos(phis) * numpy.sin(lambdas - lambda0)
-        yy = numpy.cos(phi0) * numpy.sin(phis) \
-             - numpy.sin(phi0) * numpy.cos(phis) * numpy.cos(lambdas - lambda0)
-        return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+    cos_phi0 = numpy.cos(phi0)
+    sin_phi0 = numpy.sin(phi0)
+    sin_pi_over_4 = (2 ** 0.5) / 2
+    def proj(lons, lats, reverse=False):
+        if not reverse:
+            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+            cos_phis = numpy.cos(phis)
+            lambdas -= lambda0
+            # calculate the sine of the distance between projection center
+            # and each of the points to project
+            sin_dist = numpy.sqrt(
+                numpy.sin((phi0 - phis) / 2.0) ** 2.0
+                + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
+            )
+            if (sin_dist > sin_pi_over_4).any():
+                raise ValueError('some points are too far from the projection '
+                                 'center lon=%s lat=%s' %
+                                 (numpy.degrees(lambda0), numpy.degrees(phi0)))
+            xx = numpy.cos(phis) * numpy.sin(lambdas)
+            yy = cos_phi0 * numpy.sin(phis) \
+                 - sin_phi0 * cos_phis * numpy.cos(lambdas)
+            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+        else:
+            # "reverse" mode, arguments are actually abscissae
+            # and ordinates in 2d space
+            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
+            phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
+            lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
+            return numpy.degrees(lambda0 + lambdas), numpy.degrees(phis)
     return proj
 
 
@@ -244,16 +276,6 @@ def cartesian_to_spherical(vectors):
     return lons, lats, depths
 
 
-def ensure(expr, msg):
-    """
-    Utility method that raises an error if the
-    given condition is not true.
-    """
-
-    if not expr:
-        raise ValueError(msg)
-
-
 def triangle_area(e1, e2, e3):
     """
     Get the area of triangle formed by three vectors.
@@ -265,7 +287,7 @@ def triangle_area(e1, e2, e3):
         Float number, the area of the triangle in squared units of coordinates,
         or numpy array of shape of edges with one dimension less.
 
-    Uses Heron formula, see `http://mathworld.wolfram.com/HeronsFormula.html`_.
+    Uses Heron formula, see http://mathworld.wolfram.com/HeronsFormula.html.
     """
     # calculating edges length
     e1_length = numpy.sqrt(numpy.sum(e1 * e1, axis=-1))

@@ -21,8 +21,7 @@ import numpy
 
 from nhlib.geo.line import Line
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import ensure
+from nhlib.geo.mesh import Mesh, RectangularMesh
 
 
 class ComplexFaultSurface(BaseSurface):
@@ -89,11 +88,13 @@ class ComplexFaultSurface(BaseSurface):
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        ensure(len(edges) >= 2, "at least two edges are required")
-        ensure(all(len(edge) >= 2 for edge in edges),
-               "at least two points must be defined in each edge")
-        ensure(mesh_spacing > 0.0, "mesh spacing must be positive")
-        # TODO: more strict/sophisticated checks for edges?
+        if not len(edges) >= 2:
+            raise ValueError("at least two edges are required")
+        if not all(len(edge) >= 2 for edge in edges):
+            raise ValueError("at least two points must be defined "
+                             "in each edge")
+        if not mesh_spacing > 0.0:
+            raise ValueError("mesh spacing must be positive")
 
     @classmethod
     def from_fault_data(cls, edges, mesh_spacing):
@@ -143,3 +144,22 @@ class ComplexFaultSurface(BaseSurface):
         mesh = RectangularMesh.from_points_list(points)
         assert 1 not in mesh.shape
         return cls(mesh)
+
+    @classmethod
+    def surface_projection_from_fault_data(cls, edges):
+        """
+        Get a surface projection of the complex fault surface.
+
+        :param edges:
+            A list of horizontal edges of the surface as instances
+            of :class:`nhlib.geo.line.Line`.
+        :returns:
+            Instance of :class:`~nhlib.geo.polygon.Polygon` describing
+            the surface projection of the complex fault.
+        """
+        # collect lons and lats of all the vertices of all the edges
+        lons, lats = numpy.array(
+            [[[point.longitude, point.latitude] for point in edge]
+             for edge in edges], dtype=float
+        ).reshape((-1, 2)).transpose()
+        return Mesh(lons, lats, depths=None).get_convex_hull()

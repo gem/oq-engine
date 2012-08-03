@@ -21,7 +21,12 @@ import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
+
+
+#: Polygon upsampling step for long edges, in kilometers.
+#: See :func:`get_resampled_coordinates`.
+UPSAMPLING_STEP_KM = 100
 
 
 class Polygon(object):
@@ -29,17 +34,14 @@ class Polygon(object):
     Polygon objects represent an area on the Earth surface.
 
     :param points:
-        The list of :class:`Point` objects defining the polygon vertices.
-        The points are connected by great circle arcs in order of appearance.
-        Polygon segment should not cross another polygon segment. At least
-        three points must be defined.
+        The list of :class:`~nhlib.geo.point.Point` objects defining the
+        polygon vertices. The points are connected by great circle arcs
+        in order of appearance. Polygon segment should not cross another
+        polygon segment. At least three points must be defined.
     :raises ValueError:
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
-    #: The angular measure of longitudinally-extended lines resampling
-    #: in decimal degrees. See :meth:`_get_resampled_coordinates`.
-    LONGITUDINAL_DISCRETIZATION = 1
 
     def __init__(self, points):
         points = utils.clean_points(points)
@@ -49,55 +51,129 @@ class Polygon(object):
 
         self.lons = numpy.array([float(point.longitude) for point in points])
         self.lats = numpy.array([float(point.latitude) for point in points])
-        self.num_points = len(points)
 
         if utils.line_intersects_itself(self.lons, self.lats,
                                         closed_shape=True):
             raise ValueError('polygon perimeter intersects itself')
 
-    def _get_resampled_coordinates(self):
+        self._bbox = None
+        self._projection = None
+        self._polygon2d = None
+
+    @property
+    def wkt(self):
         """
-        Resample segments the polygon consists of and return new vertices
-        coordinates.
-
-        :return:
-            A tuple of two numpy arrays: longitudes and latitudes
-            of resampled vertices. The last point repeats the first one.
-
-        In order to find the higher and lower latitudes that the polygon
-        touches we need to connect vertices by great circle arcs. If two
-        points lie on the same parallel, the points in between that are
-        forming the great circle arc deviate in latitude and are closer
-        to pole than parallel corner points lie on (except the special
-        case of equator). We need to break all longitudinally extended
-        line to smaller pieces so we would not miss the area in between
-        the great circle arc that connects two points and a parallel
-        they share.
-
-        We don't need to resample latitudinally-extended lines because
-        all meridians are great circles.
+        Generate WKT (Well-Known Text) to represent this polygon.
         """
-        resampled_lons = [self.lons[0]]
-        resampled_lats = [self.lats[0]]
-        for i in xrange(self.num_points):
-            next_point = (i + 1) % self.num_points
-            lon1, lat1 = self.lons[i], self.lats[i]
-            lon2, lat2 = self.lons[next_point], self.lats[next_point]
-            lon_extent = abs(utils.get_longitudinal_extent(lon1, lon2))
-            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) + 1
-            if num_points >= 2:
-                lons, lats, _ = geodetic.npoints_between(
-                    lon1, lat1, 0, lon2, lat2, 0, num_points
-                )
-                resampled_lons.extend(lons[1:])
-                resampled_lats.extend(lats[1:])
-            else:
-                resampled_lons.append(lon2)
-                resampled_lats.append(lat2)
-        # we don't cut off the last point so it repeats the first one.
-        # shapely polygon is ok with that (we even save it from extra
-        # work of copying the last point for us).
-        return numpy.array(resampled_lons), numpy.array(resampled_lats)
+        pairs = []
+        for i, lon in enumerate(self.lons):
+            lat = self.lats[i]
+            pairs.append('%s %s' % (lon, lat))
+
+        # The polygon must form a closed loop; first and last coord pairs are
+        # the same.
+        pairs.append(pairs[0])
+
+        return 'POLYGON((%s))' % ', '.join(pairs)
+
+    @classmethod
+    def _from_2d(cls, polygon2d, proj):
+        """
+        Create a polygon object from a 2d polygon and a projection.
+
+        :param polygon2d:
+            Instance of ``shapely.geometry.Polygon``.
+        :param proj:
+            Projection object created
+            by :func:`~nhlib.geo._utils.get_orthographic_projection`
+            that was used to project ``polygon2d``. That projection
+            will be used for projecting it back to get spherical
+            coordinates from Cartesian ones.
+        :returns:
+            New :class:`Polygon` object. Note that spherical coordinates
+            of that polygon do not get upsampled even for longer edges.
+        """
+        # avoid calling class' constructor
+        polygon = object.__new__(cls)
+        # project polygon2d back on the sphere
+        xx, yy = numpy.transpose(polygon2d.boundary.coords)
+        # need to cut off the last point -- it repeats the first one
+        polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
+        # initialize the instance (as constructor would do)
+        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
+                                                         polygon.lats)
+        polygon._polygon2d = polygon2d
+        polygon._projection = proj
+        return polygon
+
+    def _init_polygon2d(self):
+        """
+        Spherical bounding box, projection, and Cartesian polygon are all
+        cached to prevent redundant computations.
+
+        If any of them are `None`, recalculate all of them.
+        """
+        if (self._polygon2d is None or self._projection is None
+            or self._bbox is None):
+            # resample polygon line segments:
+            lons, lats = get_resampled_coordinates(self.lons, self.lats)
+
+            # find the bounding box of a polygon in spherical coordinates:
+            self._bbox = utils.get_spherical_bounding_box(lons, lats)
+
+            # create a projection that is centered in a polygon center:
+            self._projection = \
+                utils.get_orthographic_projection(*self._bbox)
+
+            # project polygon vertices to the Cartesian space and create
+            # a shapely polygon object:
+            xx, yy = self._projection(lons, lats)
+            self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
+
+    def dilate(self, dilation):
+        """
+        Extend the polygon to a specified buffer distance.
+
+        :param dilation:
+            Distance in km to extend polygon borders to.
+        :returns:
+            New :class:`Polygon` object with (in general) more vertices
+            and border that is approximately ``dilation`` km far
+            (measured perpendicularly to edges and circularly to vertices)
+            from the border of original polygon.
+        """
+        assert dilation > 0
+        self._init_polygon2d()
+        # use shapely buffer() method
+        new_2d_polygon = self._polygon2d.buffer(dilation)
+        return type(self)._from_2d(new_2d_polygon, self._projection)
+
+    def intersects(self, mesh):
+        """
+        Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
+
+        Mesh coordinate values are in decimal degrees.
+
+        :param mesh:
+            :class:`nhlib.geo.mesh.Mesh` instance.
+        :returns:
+            Numpy array of `bool` values in the same shapes in the input
+            coordinate arrays with ``True`` on indexes of points that
+            lie inside the polygon or on one of its edges and ``False``
+            for points that neither lie inside nor touch the boundary.
+        """
+        self._init_polygon2d()
+        xx, yy = self._projection(mesh.lons, mesh.lats)
+
+        result = numpy.empty(mesh.lons.shape, dtype=bool)
+
+        for i in xrange(mesh.lons.size):
+            intersects = self._polygon2d.intersects(
+                shapely.geometry.Point(xx.item(i), yy.item(i))
+            )
+            result.itemset(i, intersects)
+
+        return result
 
     def discretize(self, mesh_spacing):
         """
@@ -109,19 +185,9 @@ class Polygon(object):
             the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """
-        # resample longitudinally-extended lines:
-        lons, lats = self._get_resampled_coordinates()
+        self._init_polygon2d()
 
-        # find the bounding box of a polygon in a spherical coordinates:
-        west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
-
-        # create a projection that is centered in a polygon center:
-        proj = utils.get_orthographic_projection(west, east, north, south)
-
-        # project polygon vertices to the Cartesian space and create
-        # a shapely polygon object:
-        xx, yy = proj(lons, lats)
-        polygon2d = shapely.geometry.Polygon(zip(xx, yy))
+        west, east, north, south = self._bbox
 
         lons = []
         lats = []
@@ -138,8 +204,8 @@ class Polygon(object):
             while utils.get_longitudinal_extent(longitude, east) > 0:
                 # we use Cartesian space just for checking if a point
                 # is inside of the polygon.
-                x, y = proj(longitude, latitude)
-                if polygon2d.contains(shapely.geometry.Point(x, y)):
+                x, y = self._projection(longitude, latitude)
+                if self._polygon2d.contains(shapely.geometry.Point(x, y)):
                     lons.append(longitude)
                     lats.append(latitude)
 
@@ -153,3 +219,49 @@ class Polygon(object):
         lats = numpy.array(lats)
 
         return Mesh(lons, lats, depths=None)
+
+
+def get_resampled_coordinates(lons, lats):
+    """
+    Resample polygon line segments and return the coordinates of the new
+    vertices. This limits distortions when projecting a polygon onto a
+    spherical surface.
+
+    Parameters define longitudes and latitudes of a point collection in the
+    form of lists or numpy arrays.
+
+    :return:
+        A tuple of two numpy arrays: longitudes and latitudes
+        of resampled vertices.
+    """
+    num_coords = len(lons)
+    assert num_coords == len(lats)
+
+    lons1 = numpy.array(lons)
+    lats1 = numpy.array(lats)
+    lons2 = numpy.concatenate((lons1[1:], lons1[0:1]))
+    lats2 = numpy.concatenate((lats1[1:], lats1[0:1]))
+    distances = geodetic.geodetic_distance(lons1, lats1, lons2, lats2)
+
+    resampled_lons = [lons[0]]
+    resampled_lats = [lats[0]]
+    for i in xrange(num_coords):
+        next_point = (i + 1) % num_coords
+        lon1, lat1 = lons[i], lats[i]
+        lon2, lat2 = lons[next_point], lats[next_point]
+
+        distance = distances[i]
+        num_points = int(distance / UPSAMPLING_STEP_KM) + 1
+        if num_points >= 2:
+            # We need to increase the resolution of this arc by adding new
+            # points.
+            new_lons, new_lats, _ = geodetic.npoints_between(
+                lon1, lat1, 0, lon2, lat2, 0, num_points
+            )
+            resampled_lons.extend(new_lons[1:])
+            resampled_lats.extend(new_lats[1:])
+        else:
+            resampled_lons.append(lon2)
+            resampled_lats.append(lat2)
+    # we cut off the last point because it repeats the first one.
+    return numpy.array(resampled_lons[:-1]), numpy.array(resampled_lats[:-1])

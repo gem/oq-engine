@@ -19,7 +19,7 @@ Module :mod:`nhlib.geo.line` defines :class:`Line`.
 import numpy
 
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
 
 
 class Line(object):
@@ -85,7 +85,7 @@ class Line(object):
         in decimal degrees.
 
         Uses formula from
-        `http://en.wikipedia.org/wiki/Mean_of_circular_quantities`_.
+        http://en.wikipedia.org/wiki/Mean_of_circular_quantities
 
         >>> from nhlib.geo.point import Point as P
         >>> str(Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth())

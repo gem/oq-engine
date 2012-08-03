@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import numpy
+
 from nhlib.tom import PoissonTOM
 
 
@@ -23,15 +25,32 @@ class PoissonTOMTestCase(unittest.TestCase):
         self.assertRaises(ValueError, PoissonTOM, -1)
         self.assertRaises(ValueError, PoissonTOM, 0)
 
-    def test_get_probability(self):
+    def test_get_probability_one_or_more_occurrences(self):
         pdf = PoissonTOM(time_span=50)
-        self.assertEqual(pdf.get_probability(occurrence_rate=10), 1)
+        self.assertEqual(pdf.get_probability_one_or_more_occurrences(10), 1)
         aae = self.assertAlmostEqual
-        aae(pdf.get_probability(occurrence_rate=0.1), 0.9932621)
-        aae(pdf.get_probability(occurrence_rate=0.01), 0.39346934)
+        aae(pdf.get_probability_one_or_more_occurrences(0.1), 0.9932621)
+        aae(pdf.get_probability_one_or_more_occurrences(0.01), 0.39346934)
 
         pdf = PoissonTOM(time_span=5)
-        self.assertEqual(pdf.get_probability(occurrence_rate=8), 1)
+        self.assertEqual(pdf.get_probability_one_or_more_occurrences(8), 1)
         aae = self.assertAlmostEqual
-        aae(pdf.get_probability(occurrence_rate=0.1), 0.3934693)
-        aae(pdf.get_probability(occurrence_rate=0.01), 0.0487706)
+        aae(pdf.get_probability_one_or_more_occurrences(0.1), 0.3934693)
+        aae(pdf.get_probability_one_or_more_occurrences(0.01), 0.0487706)
+
+    def test_get_probability_one_occurrence(self):
+        pdf = PoissonTOM(time_span=30)
+        aae = self.assertAlmostEqual
+        aae(pdf.get_probability_one_occurrence(10), 0)
+        aae(pdf.get_probability_one_occurrence(0.1), 0.1493612)
+        aae(pdf.get_probability_one_occurrence(0.01), 0.2222455)
+
+    def test_sample_number_of_occurrences(self):
+        time_span = 40
+        rate = 0.05
+        num_samples = 8000
+        tom = PoissonTOM(time_span)
+        numpy.random.seed(31)
+        mean = sum(tom.sample_number_of_occurrences(rate)
+                   for i in xrange(num_samples)) / float(num_samples)
+        self.assertAlmostEqual(mean, rate * time_span, delta=1e-3)

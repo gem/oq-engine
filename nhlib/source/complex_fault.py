@@ -40,8 +40,8 @@ class ComplexFaultSource(SeismicSource):
     parameters.
 
     :raises ValueError:
-        If :meth:`ComplexFaultSurface.check_fault_data` fails or if rake value
-        is invalid.
+        If :meth:`~nhlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
+        fails or if rake value is invalid.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -58,6 +58,25 @@ class ComplexFaultSource(SeismicSource):
         self.edges = edges
         self.rake = rake
 
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Uses :meth:`nhlib.geo.surface.complex_fault.ComplexFaultSurface.surface_projection_from_fault_data`
+        for getting the fault's surface projection and then calls
+        its :meth:`~nhlib.geo.polygon.Polygon.dilate` method passing
+        in ``dilation`` parameter.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(
+            self.edges
+        )
+        if dilation:
+            return polygon.dilate(dilation)
+        else:
+            return polygon
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
@@ -73,7 +92,7 @@ class ComplexFaultSource(SeismicSource):
             whole_fault_mesh.get_cell_dimensions()
         )
 
-        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake
             )
@@ -91,7 +110,8 @@ class ComplexFaultSource(SeismicSource):
                 surface = ComplexFaultSurface(mesh)
                 yield ProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
-                    surface, occurrence_rate, temporal_occurrence_model
+                    surface, type(self),
+                    occurrence_rate, temporal_occurrence_model
                 )
 
 

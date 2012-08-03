@@ -18,11 +18,12 @@ Module :mod:`nhlib.geo.surface.simple_fault` defines
 :class:`SimpleFaultSurface`.
 """
 import math
+
 import numpy
 
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import ensure, line_intersects_itself
+from nhlib.geo.mesh import Mesh, RectangularMesh
+from nhlib.geo import utils as geo_utils
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -91,20 +92,23 @@ class SimpleFaultSurface(BaseSurface):
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        ensure(len(fault_trace) >= 2,
-               "The fault trace must have at least two points!")
-        ensure(fault_trace.on_surface(),
-               "The fault trace must be defined on the surface!")
+        if not len(fault_trace) >= 2:
+            raise ValueError("the fault trace must have at least two points")
+        if not fault_trace.on_surface():
+            raise ValueError("the fault trace must be defined on the surface")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
-        ensure(not line_intersects_itself(tlons, tlats),
-               "fault trace intersects itself")
-        ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
-        ensure(lower_seismogenic_depth > upper_seismogenic_depth,
-               "Lower seismo depth must be > than upper seismo dept!")
-        ensure(upper_seismogenic_depth >= 0.0,
-               "Upper seismo depth must be >= 0.0!")
-        ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
+        if geo_utils.line_intersects_itself(tlons, tlats):
+            raise ValueError("fault trace intersects itself")
+        if not 0.0 < dip <= 90.0:
+            raise ValueError("dip must be between 0.0 and 90.0")
+        if not lower_seismogenic_depth > upper_seismogenic_depth:
+            raise ValueError("lower seismogenic depth must be greater than "
+                             "upper seismogenic depth")
+        if not upper_seismogenic_depth >= 0.0:
+            raise ValueError("upper seismo depth must be non-negative")
+        if not mesh_spacing > 0.0:
+            raise ValueError("mesh spacing must be positive")
 
     @classmethod
     def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
@@ -112,10 +116,9 @@ class SimpleFaultSurface(BaseSurface):
         """
         Create and return a fault surface using fault source data.
 
-        :param fault_trace:
+        :param nhlib.geo.line.Line fault_trace:
             Geographical line representing the intersection between
-            the fault surface and the earth surface, an instance
-            of :class:`nhlib.Line`.
+            the fault surface and the earth surface.
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -159,3 +162,41 @@ class SimpleFaultSurface(BaseSurface):
         mesh = RectangularMesh.from_points_list(surface_points)
         assert 1 not in mesh.shape
         return cls(mesh)
+
+    @classmethod
+    def surface_projection_from_fault_data(cls, fault_trace,
+                                           upper_seismogenic_depth,
+                                           lower_seismogenic_depth, dip):
+        """
+        Get a surface projection of the simple fault surface.
+
+        Parameters are the same as for :meth:`from_fault_data`, excluding
+        mesh spacing.
+
+        :returns:
+            Instance of :class:`~nhlib.geo.polygon.Polygon` describing
+            the surface projection of the simple fault with specified
+            parameters.
+        """
+        # similar to :meth:`from_fault_data`, we just don't resample edges
+        dip_tan = math.tan(math.radians(dip))
+        hdist_top = upper_seismogenic_depth / dip_tan
+        hdist_bottom = lower_seismogenic_depth / dip_tan
+
+        strike = fault_trace[0].azimuth(fault_trace[-1])
+        azimuth = (strike + 90.0) % 360
+
+        # collect coordinates of vertices in both top and bottom edges
+        lons = []
+        lats = []
+        for point in fault_trace.points:
+            top_edge_point = point.point_at(hdist_top, 0, azimuth)
+            bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
+            lons.append(top_edge_point.longitude)
+            lats.append(top_edge_point.latitude)
+            lons.append(bottom_edge_point.longitude)
+            lats.append(bottom_edge_point.latitude)
+
+        lons = numpy.array(lons, float)
+        lats = numpy.array(lats, float)
+        return Mesh(lons, lats, depths=None).get_convex_hull()

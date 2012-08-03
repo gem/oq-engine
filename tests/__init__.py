@@ -13,3 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+def assert_angles_equal(testcase, angle1, angle2, delta):
+    if abs(angle1 - angle2) > 180:
+        angle1, angle2 = 360 - max((angle1, angle2)), min((angle1, angle2))
+    testcase.assertAlmostEqual(angle1, angle2, delta=delta)
