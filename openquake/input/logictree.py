@@ -176,6 +176,49 @@ class BranchSet(object):
                 return branch
         raise AssertionError('do weights really sum up to 1.0?')
 
+    def enumerate_paths(self):
+        """
+        Generate all possible paths starting from this branch set.
+
+        :returns:
+            Generator of two-item tuples. Each tuple contains weight
+            of the path (calculated as a product of the weights of all path's
+            branches) and list of path's :class:`Branch` objects. Total sum
+            of all paths' weights is 1.0
+        """
+        for path in self._enumerate_paths([]):
+            flat_path = []
+            weight = Decimal('1.0')
+            while path:
+                path, branch = path
+                weight *= branch.weight
+                flat_path.append(branch)
+            yield weight, flat_path[::-1]
+
+    def _enumerate_paths(self, prefix_path):
+        """
+        Recursive (private) part of :func:`enumerate_paths`. Returns generator
+        of recursive lists of two items, where second item is the branch object
+        and first one is itself list of two items.
+        """
+        for branch in self.branches:
+            path = [prefix_path, branch]
+            if branch.child_branchset is not None:
+                for subpath in branch.child_branchset._enumerate_paths(path):
+                    yield subpath
+            else:
+                yield path
+
+    def get_branch_by_id(self, branch_id):
+        """
+        Return :class:`Branch` object belonging to this branch set with id
+        equal to ``branch_id``.
+        """
+        for branch in self.branches:
+            if branch.branch_id == branch_id:
+                return branch
+        raise AssertionError("couldn't find branch %r" % branch_id)
+
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
         """
@@ -1033,61 +1076,111 @@ class LogicTreeProcessor(object):
             An integer random seed value to initialize random generator
             before doing random sampling.
         :return:
-            Tuple of three items: first is the name of the source model
+            Tuple of two items: first is the name of the source model
             to load (as it appears in the source model logic tree)
-            and second is the function to be applied to all the sources
-            as they get read from the database and converted to nhlib
-            representation. Function takes one argument, that is the nhlib
-            source object, and apply uncertainties to it in-place. The third
-            item is a list of the branchIDs (strings) which indicate the
-            complete path taken through the logic tree for this sample.
+            and second is a list of the branchIDs (strings) which indicate
+            the complete path taken through the logic tree for this sample.
+        """
+        path = self._sample_path(random_seed, self.source_model_lt)
+        sm_b = self.source_model_lt.root_branchset.get_branch_by_id(path[0])
+        return sm_b.value, path
+
+    def sample_gmpe_logictree(self, random_seed):
+        """
+        Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree
+        and returns only path (list of branch ids).
+        """
+        return self._sample_path(random_seed, self.gmpe_lt)
+
+    def _sample_path(self, random_seed, tree):
+        """
+        Common part of :func:`sample_source_model_logictree` and
+        :func:`sample_gmpe_logictree`.
         """
         branch_ids = []
-
         rnd = random.Random(random_seed)
-
-        branch = self.source_model_lt.root_branchset.sample(rnd)
-        branch_ids.append(branch.branch_id)
-
-        sm_name = branch.value
-        branchsets_and_uncertainties = []
-        while True:
-            branchset = branch.child_branchset
-            if branchset is None:
-                break
-
+        branchset = tree.root_branchset
+        while branchset is not None:
             branch = branchset.sample(rnd)
             branch_ids.append(branch.branch_id)
+            branchset = branch.child_branchset
+        return branch_ids
 
-            branchsets_and_uncertainties.append((branchset, branch.value))
+    def enumerate_paths(self):
+        """
+        Generate all the possible paths through both logic trees.
+
+        :returns:
+            Generator of four items:
+
+            #. Source model file name, as a string.
+            #. Path's weight (decimal between 0 and 1). Sum of all paths'
+               weights is equal to 1.
+            #. List of source-model logic tree branch ids.
+            #. List of GMPE logic tree branch ids.
+        """
+        smlt_paths_gen = self.source_model_lt.root_branchset.enumerate_paths
+        gmpelt_paths_gen = self.gmpe_lt.root_branchset.enumerate_paths
+
+        for smlt_path_weight, smlt_path in smlt_paths_gen():
+            for gmpelt_path_weight, gmpelt_path in gmpelt_paths_gen():
+                weight = smlt_path_weight * gmpelt_path_weight
+                sm_name = smlt_path[0].value
+
+                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+                gmpelt_branch_ids = [branch.branch_id for branch in gmpelt_path]
+
+                yield sm_name, weight, smlt_branch_ids, gmpelt_branch_ids
+
+    def parse_source_model_logictree_path(self, branch_ids):
+        """
+        Parse the path through the source model logic tree and return
+        "apply uncertainties" function.
+
+        :param branch_ids:
+            List of string identifiers of branches, representing the path
+            through source model logic tree.
+        :return:
+            Function to be applied to all the sources as they get read from
+            the database and converted to nhlib representation. Function
+            takes one argument, that is the nhlib source object, and applies
+            uncertainties to it in-place.
+        """
+        branchset = self.source_model_lt.root_branchset
+        branchsets_and_uncertainties = []
+        branch_ids = branch_ids[::-1]
+
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            if not branchset.uncertainty_type == 'sourceModel':
+                branchsets_and_uncertainties.append((branchset, branch.value))
+            branchset = branch.child_branchset
 
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
 
-        return sm_name, apply_uncertainties, branch_ids
+        return apply_uncertainties
 
-    def sample_gmpe_logictree(self, random_seed):
+    def parse_gmpe_logictree_path(self, branch_ids):
         """
-        Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree.
+        Same as :meth:`parse_source_model_logictree_path`, but for GMPE logic
+        tree.
 
         :return:
-            Tuple of two items: The first item is a dictionary mapping tectonic
-            region type names to instances of GSIM objects. The second item is
-            a list of the branchIDs (strings) which indicate the complete path
-            taken through the logic tree for this sample.
+            Dictionary mapping tectonic region type names to instances
+            of nhlib GSIM objects.
         """
-        branch_ids = []
-
-        rnd = random.Random(random_seed)
-        trt_to_gsim = {}
         branchset = self.gmpe_lt.root_branchset
-        while branchset:
-            branch = branchset.sample(rnd)
-            branch_ids.append(branch.branch_id)
+        trt_to_gsim = {}
+        branch_ids = branch_ids[::-1]
 
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
             trt = branchset.filters['applyToTectonicRegionType']
+
             assert trt not in trt_to_gsim
             trt_to_gsim[trt] = branch.value
             branchset = branch.child_branchset
-        return trt_to_gsim, branch_ids
+
+        return trt_to_gsim

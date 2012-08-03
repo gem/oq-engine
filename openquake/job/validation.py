@@ -100,8 +100,8 @@ def random_seed_is_valid(mdl):
 
 
 def number_of_logic_tree_samples_is_valid(mdl):
-    if not mdl.number_of_logic_tree_samples > 0:
-        return False, ['Number of logic tree samples must be > 0']
+    if not mdl.number_of_logic_tree_samples >= 0:
+        return False, ['Number of logic tree samples must be >= 0']
     return True, []
 
 

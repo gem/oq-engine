@@ -36,10 +36,8 @@ from nhlib.gsim.sadigh_1997 import SadighEtAl1997
 from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from nrml.parsers import SourceModelParser
 
-from openquake.db import models
 from openquake.input import logictree
 from openquake.input.source import nrml_to_nhlib
-from openquake.engine import _insert_input_files
 
 from tests.utils import helpers
 
@@ -1663,6 +1661,62 @@ class BranchSetSampleTestCase(unittest.TestCase):
             self.assertEqual(bs.sample().branch_id, 0)
 
 
+class BranchSetEnumerateTestCase(unittest.TestCase):
+    def test_enumerate(self):
+        b0 = logictree.Branch('0', Decimal('0.64'), '0')
+        b1 = logictree.Branch('1', Decimal('0.36'), '1')
+        b00 = logictree.Branch('0.0', Decimal('0.33'), '0.0')
+        b01 = logictree.Branch('0.1', Decimal('0.27'), '0.1')
+        b02 = logictree.Branch('0.2', Decimal('0.4'), '0.2')
+        b10 = logictree.Branch('1.0', Decimal('1.0'), '1.0')
+        b100 = logictree.Branch('1.0.0', Decimal('0.1'), '1.0.0')
+        b101 = logictree.Branch('1.0.1', Decimal('0.9'), '1.0.1')
+        bs_root = logictree.BranchSet(None, None)
+        bs_root.branches = [b0, b1]
+        bs0 = logictree.BranchSet(None, None)
+        bs0.branches = [b00, b01, b02]
+        bs1 = logictree.BranchSet(None, None)
+        bs1.branches = [b10]
+        b0.child_branchset = bs0
+        b1.child_branchset = bs1
+        bs10 = logictree.BranchSet(None, None)
+        bs10.branches = [b100, b101]
+        b10.child_branchset = bs10
+
+        ae = self.assertEqual
+
+        paths = bs_root.enumerate_paths()
+        ae(paths.next(), (Decimal('0.2112'), [b0, b00]))
+        ae(paths.next(), (Decimal('0.1728'), [b0, b01]))
+        ae(paths.next(), (Decimal('0.256'), [b0, b02]))
+        ae(paths.next(), (Decimal('0.036'), [b1, b10, b100]))
+        ae(paths.next(), (Decimal('0.32400'), [b1, b10, b101]))
+        self.assertRaises(StopIteration, paths.next)
+
+        paths = bs1.enumerate_paths()
+        ae(paths.next(), (Decimal('0.1'), [b10, b100]))
+        ae(paths.next(), (Decimal('0.9'), [b10, b101]))
+        self.assertRaises(StopIteration, paths.next)
+
+
+class BranchSetGetBranchByIdTestCase(unittest.TestCase):
+    def test(self):
+        bs = logictree.BranchSet(None, None)
+        b1 = logictree.Branch('1', Decimal('0.33'), None)
+        b2 = logictree.Branch('2', Decimal('0.33'), None)
+        bbzz = logictree.Branch('bzz', Decimal('0.34'), None)
+        bs.branches = [b1, b2, bbzz]
+        self.assertIs(bs.get_branch_by_id('1'), b1)
+        self.assertIs(bs.get_branch_by_id('2'), b2)
+        self.assertIs(bs.get_branch_by_id('bzz'), bbzz)
+
+    def test_nonexistent_branch(self):
+        bs = logictree.BranchSet(None, None)
+        br = logictree.Branch('br', Decimal('1.0'), None)
+        bs.branches.append(br)
+        self.assertRaises(AssertionError, bs.get_branch_by_id, 'bz')
+
+
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_ab_absolute(self):
         mfd = Mock()
@@ -1891,9 +1945,6 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
-    SOURCE_MODEL_LT = 'example-source-model-logictree.xml'
-    GMPE_LT = 'example-gmpe-logictree.xml'
-
     def setUp(self):
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_hazard_job(cfg)
@@ -1901,27 +1952,100 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
 
     def test_sample_source_model(self):
-        sm_name, modify, branch_ids = \
-            self.proc.sample_source_model_logictree(42)
+        sm_name, branch_ids = self.proc.sample_source_model_logictree(42)
         self.assertEqual(['b1', 'b3', 'b7'], branch_ids)
         self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
-        trt_to_gsim, branch_ids = \
-            self.proc.sample_gmpe_logictree(random_seed=124)
+        branch_ids = self.proc.sample_gmpe_logictree(random_seed=124)
         self.assertEqual(['b2', 'b3'], branch_ids)
-        self.assertEqual(set(trt_to_gsim.keys()), set(['Active Shallow Crust',
-                                                  'Subduction Interface']))
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
-                              ChiouYoungs2008)
-        self.assertIsInstance(trt_to_gsim['Subduction Interface'],
-                              SadighEtAl1997)
-        trt_to_gsim, branch_ids = \
-            self.proc.sample_gmpe_logictree(random_seed=123)
+        branch_ids = self.proc.sample_gmpe_logictree(random_seed=123)
         self.assertEqual(['b1', 'b3'], branch_ids)
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
+
+    def test_enumerate_paths(self):
+        paths = self.proc.enumerate_paths()
+        ae = self.assertEqual
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b3', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b3', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b3', 'b8'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+                          ['b1', 'b4', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+                          ['b1', 'b4', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b4', 'b8'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b6'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b6'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b5', 'b7'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+                          ['b1', 'b5', 'b7'], ['b2', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b8'], ['b1', 'b3']))
+        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+                          ['b1', 'b5', 'b8'], ['b2', 'b3']))
+        self.assertRaises(StopIteration, paths.next)
+
+
+class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
+    def setUp(self):
+        cfg = helpers.get_data_path('classical_job.ini')
+        job = helpers.get_hazard_job(cfg)
+        self.uncertainties_applied = []
+        def apply_uncertainty(branchset, value, source):
+            fingerprint = (branchset.uncertainty_type, value)
+            self.uncertainties_applied.append(fingerprint)
+        self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
+        logictree.BranchSet.apply_uncertainty = apply_uncertainty
+        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+
+    def tearDown(self):
+        logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
+
+    def test_parse_source_model_logictree_path(self):
+        self.proc.parse_source_model_logictree_path(['b1', 'b5', 'b8'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('maxMagGRRelative', -0.2),
+                          ('bGRRelative', -0.1)])
+        del self.uncertainties_applied[:]
+        self.proc.parse_source_model_logictree_path(['b1', 'b3', 'b6'])(None)
+        self.assertEqual(self.uncertainties_applied,
+                         [('maxMagGRRelative', 0.2),
+                          ('bGRRelative', 0.1)])
+
+    def test_parse_gmpe_model_logictree_path(self):
+        from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+        from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+        gmpes = self.proc.parse_gmpe_logictree_path(['b2', 'b3'])
+        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
+                              ChiouYoungs2008)
+        self.assertIsInstance(gmpes.pop('Subduction Interface'),
                               SadighEtAl1997)
+        self.assertEqual(gmpes, {})
+
+        gmpes = self.proc.parse_gmpe_logictree_path(['b1', 'b3'])
+        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
+                              SadighEtAl1997)
+        self.assertIsInstance(gmpes.pop('Subduction Interface'),
+                              SadighEtAl1997)
+        self.assertEqual(gmpes, {})
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
@@ -1949,9 +2073,9 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        sm_path, modify_source, branch_ids = \
-            proc.sample_source_model_logictree(0)
+        sm_path, branch_ids = proc.sample_source_model_logictree(0)
         self.assertEqual(expected_branch_ids, branch_ids)
+        modify_source = proc.parse_source_model_logictree_path(branch_ids)
 
         expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
