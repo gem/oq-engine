@@ -16,6 +16,8 @@
 from nhlib import correlation
 
 from openquake.calculators.hazard import general as haz_general
+from openquake.utils import stats
+from openquake.utils import tasks as utils_tasks
 
 #: Ground motion correlation model map
 GM_CORRELATION_MODEL_MAP = {
@@ -23,9 +25,39 @@ GM_CORRELATION_MODEL_MAP = {
 }
 
 
+@utils_tasks.oqtask
+@stats.progress_indicator('h')
+def stochastic_event_sets(job_id, lt_rlz_id, src_ids):
+    """
+    Celery task for the stochastic event set calculator.
+
+    Samples logic trees and calls the stochastic event set calculator.
+
+    Once stochastic event sets are calculated, results will be saved to the
+    database. See :class:`openquake.db.models.SESCollection`.
+
+    Once all of this work is complete, a signal will be sent via AMQP to let
+    the control noe know that the work is complete. (If there is any work left
+    to be dispatched, this signal will indicate to the control node that more
+    work can be enqueued.)
+
+    :param int job_id:
+        ID of the currently running job.
+    :param lt_rlz_id:
+        Id of logic tree realization model to calculate for.
+    :param src_ids:
+        List of ids of parsed source models from which we will generate
+        stochastic event sets/ruptures.
+    """
+
+
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
-    # TODO: Just a skeleton of the new calculator to get the engine bits and
-    # param validation wired up
+    """
+    Probabilistic Event-Based hazard calculator. Computes stochastic event sets
+    and (optionally) ground motion fields.
+    """
+
+    core_calc_task = stochastic_event_sets
 
     def pre_execute(self):
         """
