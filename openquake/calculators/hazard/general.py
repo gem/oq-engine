@@ -24,9 +24,10 @@ import json
 import math
 import numpy
 import os
+import random
 import StringIO
 
-from django.db import transaction
+from django.db import transaction, connections
 from nhlib import geo as nhlib_geo
 from nrml import parsers as nrml_parsers
 from scipy.interpolate import interp1d
@@ -43,6 +44,8 @@ from openquake.input import logictree
 from openquake.input import source
 from openquake.java import list_to_jdouble_array
 from openquake.job import params as job_params
+from openquake.job.validation import MAX_SINT_32
+from openquake.job.validation import MIN_SINT_32
 from openquake.logs import LOG
 from openquake.utils import config
 
@@ -641,3 +644,174 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             validate_site_model(site_model_data, mesh)
 
             store_site_data(hc_id, site_model_inp, mesh)
+
+    # Silencing 'Too many local variables'
+    # pylint: disable=R0914
+    @transaction.commit_on_success(using='reslt_writer')
+    def initialize_realizations(self, rlz_callback=None):
+        """
+        Create records for the `hzrdr.lt_realization` and
+        `htemp.source_progress` records.
+
+        This function works either in random sampling mode (when lt_realization
+        models get the random seed value) or in enumeration mode (when weight
+        values are populated). In both cases we record the logic tree paths
+        for both trees in the `lt_realization` record, as well as ordinal
+        number of the realization (zero-based).
+
+        Then we create `htemp.source_progress` records for each source
+        in the source model chosen for each realization,
+        see :meth:`initialize_source_progress`.
+
+        :param rlz_callback:
+            Optionally, you can specify a callback for each realization.
+            In the case of the classical hazard calculator, for example, we
+            would call a function to create initial records for temporary
+            hazard curve result data.
+
+            Callbacks should accept a single argument:
+            A :class:`~openquake.db.models.LtRealization` object.
+        """
+        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
+            # random sampling of paths
+            self._initialize_realizations_montecarlo(rlz_callback=rlz_callback)
+        else:
+            # full paths enumeration
+            self._initialize_realizations_enumeration(
+                rlz_callback=rlz_callback)
+
+    def _initialize_realizations_enumeration(self, rlz_callback=None):
+        """
+        Perform full paths enumeration of logic trees and populate
+        lt_realization table.
+
+        :param rlz_callback:
+            See :meth:`initialize_realizations` for more info.
+        """
+        hc = self.job.hazard_calculation
+        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        ltp = logictree.LogicTreeProcessor(hc.id)
+        hzrd_src_cache = {}
+
+        for i, path_info in enumerate(ltp.enumerate_paths()):
+            sm_name, weight, sm_lt_path, gsim_lt_path = path_info
+
+            lt_rlz = models.LtRealization(
+                hazard_calculation=hc,
+                ordinal=i,
+                seed=None,
+                weight=weight,
+                sm_lt_path=sm_lt_path,
+                gsim_lt_path=gsim_lt_path,
+                # we will update total_sources in initialize_source_progress()
+                total_sources=-1)
+            lt_rlz.save()
+
+            if not sm_name in hzrd_src_cache:
+                # Get the source model for this sample:
+                hzrd_src = models.Src2ltsrc.objects.get(
+                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                # and cache it
+                hzrd_src_cache[sm_name] = hzrd_src
+            else:
+                hzrd_src = hzrd_src_cache[sm_name]
+
+            # Create source_progress objects
+            self.initialize_source_progress(lt_rlz, hzrd_src)
+
+            # Run realization callback (if any) to do additional initialization
+            # for each realization:
+            rlz_callback(lt_rlz)
+
+    def _initialize_realizations_montecarlo(self, rlz_callback=None):
+        """
+        Perform random sampling of both logic trees and populate lt_realization
+        table.
+
+        :param rlz_callback:
+            See :meth:`initialize_realizations` for more info.
+        """
+        hc = self.job.hazard_calculation
+
+        # Each realization will have two seeds:
+        # One for source model logic tree, one for GSIM logic tree.
+        rnd = random.Random()
+        seed = hc.random_seed
+        rnd.seed(seed)
+
+        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+
+        ltp = logictree.LogicTreeProcessor(hc.id)
+
+        hzrd_src_cache = {}
+
+        # The first realization gets the seed we specified in the config file.
+        for i in xrange(hc.number_of_logic_tree_samples):
+            # Sample source model logic tree branch paths:
+            sm_name, sm_lt_path = ltp.sample_source_model_logictree(
+                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
+
+            # Sample GSIM logic tree branch paths:
+            gsim_lt_path = ltp.sample_gmpe_logictree(
+                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
+
+            lt_rlz = models.LtRealization(
+                hazard_calculation=hc,
+                ordinal=i,
+                seed=seed,
+                weight=None,
+                sm_lt_path=sm_lt_path,
+                gsim_lt_path=gsim_lt_path,
+                # we will update total_sources in initialize_source_progress()
+                total_sources=-1
+            )
+            lt_rlz.save()
+
+            if not sm_name in hzrd_src_cache:
+                # Get the source model for this sample:
+                hzrd_src = models.Src2ltsrc.objects.get(
+                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                # and cache it
+                hzrd_src_cache[sm_name] = hzrd_src
+            else:
+                hzrd_src = hzrd_src_cache[sm_name]
+
+            # Create source_progress objects
+            self.initialize_source_progress(lt_rlz, hzrd_src)
+
+            # Run realization callback (if any) to do additional initialization
+            # for each realization:
+            rlz_callback(lt_rlz)
+
+            # update the seed for the next realization
+            seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
+            rnd.seed(seed)
+
+    def initialize_source_progress(self, lt_rlz, hzrd_src):
+        """
+        Create ``source_progress`` models for given logic tree realization
+        and set total sources of realization.
+
+        :param lt_rlz:
+            :class:`openquake.db.models.LtRealization` object to initialize
+            source progress for.
+        :param hztd_src:
+            :class:`openquake.db.models.Input` object that needed parsed
+            sources are referencing.
+        """
+        cursor = connections['reslt_writer'].cursor()
+        src_progress_tbl = models.SourceProgress._meta.db_table
+        parsed_src_tbl = models.ParsedSource._meta.db_table
+        lt_rlz_tbl = models.LtRealization._meta.db_table
+        cursor.execute("""
+            INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
+            SELECT %%s, id, FALSE
+            FROM "%s" WHERE input_id = %%s
+            """ % (src_progress_tbl, parsed_src_tbl),
+            [lt_rlz.id, hzrd_src.id])
+        cursor.execute("""
+            UPDATE "%s" SET total_sources = (
+                SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
+            )""" % (lt_rlz_tbl, src_progress_tbl),
+            [lt_rlz.id])
+        transaction.commit_unless_managed()
