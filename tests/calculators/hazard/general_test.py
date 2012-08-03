@@ -343,3 +343,19 @@ class SetJavaSiteParamsTestCase(unittest.TestCase):
         self.assertEqual(
             15.0, jsite.getParameter('Depth 2.5 km/sec').getValue().value
         )
+
+
+class ExchangeConnArgsTestCase(unittest.TestCase):
+
+    def test_exchange_and_conn_args(self):
+        expected_conn_args = {
+            'password': 'guest', 'hostname': 'localhost', 'userid': 'guest',
+            'virtual_host': '/',
+        }
+
+        exchange, conn_args = general.exchange_and_conn_args()
+
+        self.assertEqual('oq.htasks', exchange.name)
+        self.assertEqual('direct', exchange.type)
+
+        self.assertEqual(expected_conn_args, conn_args)
