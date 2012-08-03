@@ -121,7 +121,28 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             # We should never try to store a site model in this case.
             self.assertEqual(0, store_sm_patch.call_count)
 
-    def test_initialize_realizations(self):
+    def _check_logic_tree_realization_source_progress(self, ltr):
+        # Since the logic for his sample calculation only contains a single
+        # source model, both samples will have the number of
+        # source_progress records (that is, 1 record per source).
+        src_prog = models.SourceProgress.objects.filter(
+            lt_realization=ltr.id)
+        self.assertEqual(118, len(src_prog))
+        self.assertFalse(any([x.is_complete for x in src_prog]))
+
+        # Check that hazard curve progress records were properly
+        # initialized:
+        [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
+            lt_realization=ltr.id, imt="PGA")
+        self.assertEqual((120, 19), hc_prog_pga.result_matrix.shape)
+        self.assertTrue((hc_prog_pga.result_matrix == 0).all())
+
+        [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
+            lt_realization=ltr.id, imt="SA(0.025)")
+        self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
+        self.assertTrue((hc_prog_sa.result_matrix == 0).all())
+
+    def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
         # etc.)
         self.calc.initialize_sources()
@@ -157,25 +178,27 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         for ltr in (ltr1, ltr2):
             # Now check that we have source_progress records for each
             # realization.
-            # Since the logic for his sample calculation only contains a single
-            # source model, both samples will have the number of
-            # source_progress records (that is, 1 record per source).
-            src_prog = models.SourceProgress.objects.filter(
-                lt_realization=ltr.id)
-            self.assertEqual(118, len(src_prog))
-            self.assertFalse(any([x.is_complete for x in src_prog]))
+            self._check_logic_tree_realization_source_progress(ltr)
 
-            # Check that hazard curve progress records were properly
-            # initialized:
-            [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
-                lt_realization=ltr.id, imt="PGA")
-            self.assertEqual((120, 19), hc_prog_pga.result_matrix.shape)
-            self.assertTrue((hc_prog_pga.result_matrix == 0).all())
+    def test_initialize_realizations_enumeration(self):
+        self.calc.initialize_sources()
+        # enumeration is triggered by zero value used as number of realizations
+        self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
+        self.calc.initialize_realizations()
 
-            [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
-                lt_realization=ltr.id, imt="SA(0.025)")
-            self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
-            self.assertTrue((hc_prog_sa.result_matrix == 0).all())
+        [ltr] = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation.id)
+
+        # Check each ltr contents, just to be thorough.
+        self.assertEqual(0, ltr.ordinal)
+        self.assertEqual(None, ltr.seed)
+        self.assertFalse(ltr.is_complete)
+        self.assertEqual(['b1'], ltr.sm_lt_path)
+        self.assertEqual(['b1'], ltr.gsim_lt_path)
+        self.assertEqual(118, ltr.total_sources)
+        self.assertEqual(0, ltr.completed_sources)
+
+        self._check_logic_tree_realization_source_progress(ltr)
 
     @attr('slow')
     def test_execute_and_post_execute(self):
