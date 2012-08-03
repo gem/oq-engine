@@ -23,24 +23,27 @@ import hashlib
 import json
 import math
 import numpy
+import os
 import StringIO
 
 from django.db import transaction
 from nhlib import geo as nhlib_geo
+from nrml import parsers as nrml_parsers
 from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 from shapely import geometry
 
+from openquake import engine2
 from openquake import java
 from openquake import kvs
 from openquake import writer
 from openquake.calculators import base
 from openquake.db import models
 from openquake.input import logictree
+from openquake.input import source
 from openquake.java import list_to_jdouble_array
 from openquake.job import params as job_params
 from openquake.logs import LOG
-from openquake.nrml import parsers as nrml_parsers
 from openquake.utils import config
 
 
@@ -558,4 +561,83 @@ class BaseHazardCalculator(base.Calculator):
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
-    pass
+
+    def initialize_sources(self):
+        """
+        Parse and validation logic trees (source and gsim). Then get all
+        sources referenced in the the source model logic tree, create
+        :class:`~openquake.db.models.Input` records for all of them, parse
+        then, and save the parsed sources to the `parsed_source` table
+        (see :class:`openquake.db.models.ParsedSource`).
+        """
+        hc = self.job.hazard_calculation
+
+        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        [gsimlt] = models.inputs4hcalc(hc.id, input_type='lt_gsim')
+        source_paths = logictree.read_logic_trees(
+            hc.base_path, smlt.path, gsimlt.path)
+
+        src_inputs = []
+        for src_path in source_paths:
+            full_path = os.path.join(hc.base_path, src_path)
+
+            # Get or reuse the 'source' Input:
+            inp = engine2.get_input(
+                full_path, 'source', hc.owner, hc.force_inputs)
+            src_inputs.append(inp)
+
+            # Associate the source input to the calculation:
+            models.Input2hcalc.objects.get_or_create(
+                input=inp, hazard_calculation=hc)
+
+            # Associate the source input to the source model logic tree input:
+            models.Src2ltsrc.objects.get_or_create(
+                hzrd_src=inp, lt_src=smlt, filename=src_path)
+
+        # Now parse the source models and store `pared_source` records:
+        for src_inp in src_inputs:
+            src_content = StringIO.StringIO(src_inp.model_content.raw_content)
+            sm_parser = nrml_parsers.SourceModelParser(src_content)
+            src_db_writer = source.SourceDBWriter(
+                src_inp, sm_parser.parse(), hc.rupture_mesh_spacing,
+                hc.width_of_mfd_bin, hc.area_source_discretization)
+            src_db_writer.serialize()
+
+    def initialize_site_model(self):
+        """
+        If a site model is specified in the calculation configuration. parse
+        it and load it into the `hzrdi.site_model` table. This includes a
+        validation step to ensure that the area covered by the site model
+        completely envelops the calculation geometry. (If this requirement is
+        not satisfied, an exception will be raised. See
+        :func:`openquake.calculators.hazard.general.validate_site_model`.)
+
+        Then, take all of the points/locations of interest defined by the
+        calculation geometry. For each point, do distance queries on the site
+        model and get the site parameters which are closest to the point of
+        interest. This aggregation of points to the closest site parameters
+        is what we store in `htemp.site_data`. (Computing this once prior to
+        starting the calculation is optimal, since each task will need to
+        consider all sites.)
+        """
+        hc_id = self.job.hazard_calculation.id
+
+        site_model_inp = get_site_model(hc_id)
+        if site_model_inp is not None:
+            # Explicit cast to `str` here because the XML parser doesn't like
+            # unicode. (More specifically, lxml doesn't like unicode.)
+            site_model_content = str(site_model_inp.model_content.raw_content)
+
+            # Store `site_model` records:
+            store_site_model(
+                site_model_inp, StringIO.StringIO(site_model_content))
+
+            mesh = self.job.hazard_calculation.points_to_compute()
+
+            # Get the site model records we stored:
+            site_model_data = models.SiteModel.objects.filter(
+                input=site_model_inp)
+
+            validate_site_model(site_model_data, mesh)
+
+            store_site_data(hc_id, site_model_inp, mesh)
