@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
     <siteModel>
         <site lon="-122.5" lat="37.5" vs30="800.0" vs30Type="measured" z1pt0="100.0" z2pt5="5.0" />
         <site lon="-122.6" lat="37.6" vs30="801.0" vs30Type="measured" z1pt0="101.0" z2pt5="5.1" />
