@@ -283,7 +283,7 @@ CREATE TABLE uiapi.hazard_calculation (
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
-        CHECK(calculation_mode IN ('classical')),
+        CHECK(calculation_mode IN ('classical', 'event_based')),
     region_grid_spacing float,
     -- logic tree parameters:
     random_seed INTEGER,
@@ -302,13 +302,22 @@ CREATE TABLE uiapi.hazard_calculation (
     reference_depth_to_1pt0km_per_sec float,
     -- calculation parameters:
     investigation_time float NOT NULL,
-    intensity_measure_types_and_levels bytea NOT NULL,  -- stored as a pickled `dict`
+    intensity_measure_types_and_levels bytea NOT NULL,  -- stored as a pickled Python `dict`
     truncation_level float NOT NULL,
     maximum_distance float NOT NULL,
+    -- event-based calculator parameters:
+    intensity_measure_types VARCHAR[],
+    ses_per_sample INTEGER,
+    ground_motion_correlation_model VARCHAR,
+    ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
     -- output/post-processing parameters:
+    -- classical:
     mean_hazard_curves boolean DEFAULT false,
     quantile_hazard_curves float[],
-    poes_hazard_maps float[]
+    poes_hazard_maps float[],
+    -- event-based:
+    complete_logic_tree_ses BOOLEAN,
+    ground_motion_fields BOOLEAN
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'sites', 4326, 'MULTIPOINT', 2);

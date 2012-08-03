@@ -329,12 +329,12 @@ def _do_run_hazard(job):
     :returns:
         The input job object when the calculation completes.
     """
-    # TODO: support calculator selection based on calc mode
-    from openquake.calculators.hazard.classical.core_next import (
-        ClassicalHazardCalculator)
+    from openquake.calculators.hazard import CALCULATORS_NEXT
+
+    calc_mode = job.hazard_calculation.calculation_mode
 
     # - Instantiate the calculator class
-    calc = ClassicalHazardCalculator(job)
+    calc = CALCULATORS_NEXT[calc_mode](job)
 
     # - Run the calculation
     calc.pre_execute()
