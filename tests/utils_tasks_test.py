@@ -292,11 +292,11 @@ class CalculatorForTaskTestCase(unittest.TestCase):
         """Load up a sample calculation (into the db and cache) and make sure
         we can instantiate the correct calculator for a given calculation id.
         """
-        from openquake.calculators.hazard.classical.core import (
-            ClassicalHazardCalculator)
+        from openquake.calculators.hazard.scenario.core import (
+            ScenarioHazardCalculator)
         job = engine.prepare_job()
         job_profile, params, sections = engine.import_job_profile(demo_file(
-            'simple_fault_demo_hazard/config.gem'), job)
+            'scenario_risk/config.gem'), job)
 
         job_ctxt = engine.JobContext(params, job.id,
                                              oq_job_profile=job_profile,
@@ -313,5 +313,5 @@ class CalculatorForTaskTestCase(unittest.TestCase):
 
             calculator = tasks.calculator_for_task(job.id, 'hazard')
 
-            self.assertTrue(isinstance(calculator, ClassicalHazardCalculator))
+            self.assertTrue(isinstance(calculator, ScenarioHazardCalculator))
             self.assertEqual(1, grc_mock.call_count)

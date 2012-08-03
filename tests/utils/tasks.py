@@ -31,58 +31,6 @@ from tests.utils import helpers
 
 
 @task
-def test_data_reflector(job_id, *args, **kwargs):
-    """Throw back the data stored in the KVS for the given `job_id`.
-
-    This should be used for testing purposes only. The idea is to store the
-    data expected in test setup and then use this task to play that data back
-    to the test.
-
-    See :py:class:`DoCurvesTestCase` for an example of how this task should be
-    used.
-    """
-    return helpers.TestStore.lookup(job_id)
-
-
-@task(ignore_result=True)
-def test_async_data_reflector(job_id, *args, **kwargs):
-    """Throw back the data stored in the KVS for the given `job_id`.
-
-    This should be used for testing purposes only. The idea is to store the
-    data expected in test setup and then use this task to play that data back
-    to the test.
-
-    See :py:class:`DoCurvesTestCase` for an example of how this task should be
-    used.
-    """
-    return helpers.TestStore.lookup(job_id)
-
-
-@task(ignore_result=True)
-def test_compute_hazard_curve(job_id, sites, realization):
-    """This task will be used to test
-    :class`openquake.calculators.hazard.classical.core
-    .ClassicalHazardCalculator` code.
-
-    The test setup code will prepare a result set for each `realization`.
-    This task will fetch these canned result sets and throw them back
-    simulating the real hazard curve calculator.
-
-    See also :py:meth:`DoCurvesTestCase.do_curves`.
-    """
-    key = "%s/%s" % (job_id, realization + 1)
-    return helpers.TestStore.lookup(key)
-
-
-@task(ignore_result=True)
-@java.unpack_exception
-@stats.progress_indicator("h")
-def fake_compute_hazard_curve(job_id, sites, realization):
-    """Fake hazard curve computation function."""
-    raise NotImplementedError("Fake and failing hazard curve computation!")
-
-
-@task
 def reflect_args(*args, **kwargs):
     """Merely returns the parameters received."""
     return (args, kwargs)
