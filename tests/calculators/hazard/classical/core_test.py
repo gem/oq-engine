@@ -23,6 +23,7 @@ import numpy
 
 from nose.plugins.attrib import attr
 
+from openquake.calculators.hazard import general
 from openquake.calculators.hazard.classical import core
 from openquake.db import models
 from tests.utils import helpers
@@ -278,9 +279,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         src_id = src_prog.parsed_source.id
         lt_rlz = src_prog.lt_realization
 
-        exchange, conn_args = core._exchange_and_conn_args()
+        exchange, conn_args = general.exchange_and_conn_args()
 
-        routing_key = core._ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        routing_key = general.ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
@@ -347,19 +348,6 @@ class HelpersTestCase(unittest.TestCase):
     """
     Tests for helper functions in the classical hazard calculator core module.
     """
-
-    def test__exchange_and_conn_args(self):
-        expected_conn_args = {
-            'password': 'guest', 'hostname': 'localhost', 'userid': 'guest',
-            'virtual_host': '/',
-        }
-
-        exchange, conn_args = core._exchange_and_conn_args()
-
-        self.assertEqual('oq.htasks', exchange.name)
-        self.assertEqual('direct', exchange.type)
-
-        self.assertEqual(expected_conn_args, conn_args)
 
     @attr('slow')
     def test_get_site_collection_with_site_model(self):
@@ -438,8 +426,8 @@ class SignalTestCase(unittest.TestCase):
                              body)
             message.ack()
 
-        exchange, conn_args = core._exchange_and_conn_args()
-        routing_key = core._ROUTING_KEY_FMT % dict(job_id=job_id)
+        exchange, conn_args = general.exchange_and_conn_args()
+        routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % job_id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
