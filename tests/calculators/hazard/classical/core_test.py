@@ -152,7 +152,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             hazard_calculation=self.job.hazard_calculation.id)
         self.assertEqual(0, len(ltrs))
 
-        self.calc.initialize_realizations()
+        self.calc.initialize_realizations(
+            rlz_callback=self.calc.initialize_hazard_curve_progress)
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
@@ -184,7 +185,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
-        self.calc.initialize_realizations()
+        self.calc.initialize_realizations(
+            rlz_callback=self.calc.initialize_hazard_curve_progress)
 
         [ltr] = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation.id)
