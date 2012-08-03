@@ -18,10 +18,12 @@
 
 """Common code for the hazard calculators."""
 
-import numpy
 import os
 import random
 import StringIO
+
+import kombu
+import numpy
 
 from django.db import transaction, connections
 from nhlib import geo as nhlib_geo
@@ -41,6 +43,7 @@ from openquake.job import params as job_params
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake.logs import LOG
+from openquake.utils import config
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -59,6 +62,10 @@ IML_SCALING = {
     'IA': numpy.log,
     'RSD': numpy.log,
 }
+
+# Routing key format string for communication between tasks and the control
+# node.
+ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
 
 
 def get_iml_list(imls, intensity_measure_type):
@@ -556,7 +563,30 @@ class BaseHazardCalculator(base.Calculator):
         return jsite_list
 
 
+def exchange_and_conn_args():
+    """
+    Helper method to setup an exchange for task communication and the args
+    needed to create a broker connection.
+    """
+
+    exchange = kombu.Exchange(
+        config.get_section('hazard')['task_exchange'], type='direct')
+
+    amqp_cfg = config.get_section('amqp')
+    conn_args = {
+        'hostname': amqp_cfg['host'],
+        'userid': amqp_cfg['user'],
+        'password': amqp_cfg['password'],
+        'virtual_host': amqp_cfg['vhost'],
+    }
+
+    return exchange, conn_args
+
+
 class BaseHazardCalculatorNext(base.CalculatorNext):
+
+    #: In subclasses, this would be a reference to the task function
+    core_calc_task = None
 
     def initialize_sources(self):
         """
@@ -810,3 +840,116 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             )""" % (lt_rlz_tbl, src_progress_tbl),
             [lt_rlz.id])
         transaction.commit_unless_managed()
+
+    def execute(self):
+        """
+        Calculation work is parallelized over sources, which means that each
+        task will compute hazard for all sites but only with a subset of the
+        seismic sources defined in the input model.
+
+        The general workflow is as follows:
+
+        1. Fill the queue with an initial set of tasks. The number of initial
+        tasks is configurable using the `concurrent_tasks` parameter in the
+        `[hazard]` section of the OpenQuake config file.
+
+        2. Wait for tasks to signal completion (via AMQP message) and enqueue a
+        new task each time another completes. Once all of the job work is
+        enqueued, we just wait until all of the tasks conclude.
+        """
+        job = self.job
+        hc = job.hazard_calculation
+        sources_per_task = int(config.get('hazard', 'block_size'))
+        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
+
+        progress = dict(total=0, computed=0)
+        # The following two counters are in a dict so that we can use them in
+        # the closures below.
+        # When `progress['compute']` becomes equal to `progress['total']`,
+        # `execute` can conclude.
+
+        def task_arg_gen():
+            """
+            Loop through realizations and sources to generate a sequence of
+            task arg tuples. Each tuple of args applies to a single task.
+
+            Yielded results are triples of (job_id, realization_id,
+            source_id_list).
+            """
+            realizations = models.LtRealization.objects.filter(
+                    hazard_calculation=hc, is_complete=False)
+
+            for lt_rlz in realizations:
+                source_progress = models.SourceProgress.objects.filter(
+                        is_complete=False, lt_realization=lt_rlz)
+                source_ids = source_progress.values_list('parsed_source_id',
+                                                         flat=True)
+                progress['total'] += len(source_ids)
+
+                for offset in xrange(0, len(source_ids), sources_per_task):
+                    task_args = (job.id, lt_rlz.id,
+                                 source_ids[offset:offset + sources_per_task])
+                    yield task_args
+
+        task_gen = task_arg_gen()
+
+        def task_complete_callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_sources = body['num_sources']
+
+            assert job_id == job.id
+            progress['computed'] += num_sources
+
+            # Once we receive a completion signal, enqueue the next
+            # piece of work (if there's anything left to be done).
+            try:
+                self.core_calc_task.apply_async(task_gen.next())
+            except StopIteration:
+                # There are no more tasks to dispatch; now we just need
+                # to wait until all tasks signal completion.
+                pass
+
+            message.ack()
+
+        exchange, conn_args = exchange_and_conn_args()
+
+        routing_key = ROUTING_KEY_FMT % dict(job_id=job.id)
+        task_signal_queue = kombu.Queue(
+            'htasks.job.%s' % job.id, exchange=exchange,
+            routing_key=routing_key, durable=False, auto_delete=True)
+
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue,
+                               callbacks=[task_complete_callback]):
+                # First: Queue up the initial tasks.
+                for _ in xrange(concurrent_tasks):
+                    try:
+                        self.core_calc_task.apply_async(task_gen.next())
+                    except StopIteration:
+                        # If we get a `StopIteration` here, that means we have
+                        # a number of tasks < concurrent_tasks.
+                        # This basically just means that we could be
+                        # under-utilizing worker node resources.
+                        break
+
+                while (progress['computed'] < progress['total']):
+                    # This blocks until a message is received.
+                    # Once we receive a completion signal, enqueue the next
+                    # piece of work (if there's anything left to be done).
+                    # (The `task_complete_callback` will handle additional
+                    # queuing.)
+                    conn.drain_events()
+
