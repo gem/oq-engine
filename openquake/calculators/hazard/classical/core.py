@@ -18,10 +18,7 @@ Core functionality for the classical PSHA hazard calculator.
 """
 
 import numpy
-import os
-import random
 import re
-import StringIO
 
 import kombu
 import nhlib
@@ -30,12 +27,9 @@ import nhlib.imt
 import nhlib.site
 
 from django.db import transaction
-from nrml import parsers as nrml_parsers
 
-from openquake import engine2
 from openquake import logs
 from openquake import writer
-from openquake.calculators import base
 from openquake.calculators.hazard import general
 from openquake.db import models
 from openquake.export import hazard as hexp
