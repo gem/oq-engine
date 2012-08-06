@@ -40,6 +40,9 @@ url = "http://github.com/gem/nhlib"
 utils_speedups = Extension('nhlib.geo._utils_speedups',
                            sources=['speedups/utilsmodule.c'],
                            extra_compile_args=['-ggdb'])
+geodetic_speedups = Extension('nhlib.geo._geodetic_speedups',
+                              sources=['speedups/geodeticmodule.c'],
+                              extra_compile_args=['-ggdb', '-Wall', '-O2'])
 
 include_dirs = [numpy.get_include()]
 
@@ -56,7 +59,7 @@ setup(
         'scipy',
         'shapely'
     ],
-    ext_modules=[utils_speedups],
+    ext_modules=[utils_speedups, geodetic_speedups],
     include_dirs=include_dirs,
     scripts=['tests/gsim/check_gsim.py'],
     maintainer='Anton Gritsay',

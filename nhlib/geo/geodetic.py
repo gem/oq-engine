@@ -139,6 +139,10 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
     else:
         return result.reshape(orig_shape)
 
+from nhlib.geo._geodetic_speedups import min_geodetic_distance
+
+
+
 def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     """
     Calculate the minimum distance between a collection of points and a point.
