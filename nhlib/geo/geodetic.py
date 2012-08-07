@@ -51,6 +51,8 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     ).clip(-1., 1.))
     return (2.0 * EARTH_RADIUS) * distance
 
+from nhlib.geo._geodetic_speedups import geodetic_distance
+
 
 def azimuth(lons1, lats1, lons2, lats2):
     """
