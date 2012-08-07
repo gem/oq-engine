@@ -220,6 +220,8 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     else:
         return result.reshape(orig_shape)
 
+from nhlib.geo._geodetic_speedups import min_distance
+
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     """
