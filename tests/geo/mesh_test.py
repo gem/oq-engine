@@ -345,9 +345,9 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
               delta=0.04)
 
     def test_vertical_mesh(self):
-        lons = numpy.array([[0, 0.5, 1, 2], [0, 0.5, 1, 2]])
-        lats = numpy.array([[0, 0, 0, 0], [0, 0, 0, 0]])
-        depths = numpy.array([[1, 1, 1, 1], [2, 2, 2, 2]])
+        lons = numpy.array([[0, 0.5, 1, 2], [0, 0.5, 1, 2]], float)
+        lats = numpy.array([[0, 0, 0, 0], [0, 0, 0, 0]], float)
+        depths = numpy.array([[1, 1, 1, 1], [2, 2, 2, 2]], float)
         mesh = RectangularMesh(lons, lats, depths)
         target_mesh = Mesh.from_points_list([Point(0.5, 0), Point(0.5, 1),
                                              Point(0.5, 5)])
@@ -359,9 +359,9 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(dists, expected_dists)
 
     def test_mesh_of_two_points(self):
-        lons = numpy.array([[0, 0.5, 1]])
-        lats = numpy.array([[0, 0, 0]])
-        depths = numpy.array([[1, 0, 1]])
+        lons = numpy.array([[0, 0.5, 1]], float)
+        lats = numpy.array([[0, 0, 0]], float)
+        depths = numpy.array([[1, 0, 1]], float)
         mesh = RectangularMesh(lons, lats, depths)
         target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
@@ -369,9 +369,9 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(dists, expected_dists)
 
     def test_mesh_of_one_point(self):
-        lons = numpy.array([[1]])
-        lats = numpy.array([[0]])
-        depths = numpy.array([[1]])
+        lons = numpy.array([[1.]])
+        lats = numpy.array([[0.]])
+        depths = numpy.array([[1.]])
         mesh = RectangularMesh(lons, lats, depths)
         target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
