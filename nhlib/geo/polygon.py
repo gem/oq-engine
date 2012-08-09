@@ -163,6 +163,13 @@ class Polygon(object):
             for points that neither lie inside nor touch the boundary.
         """
         self._init_polygon2d()
+        pxx, pyy = self._projection(mesh.lons, mesh.lats)
+        cxx, cyy = numpy.array(self._polygon2d.exterior).transpose()
+        from nhlib.geo._geodetic_speedups import convex_to_point_distance
+        return convex_to_point_distance(cxx, cyy, pxx, pyy) == 0
+
+
+
         xx, yy = self._projection(mesh.lons, mesh.lats)
 
         result = numpy.empty(mesh.lons.shape, dtype=bool)

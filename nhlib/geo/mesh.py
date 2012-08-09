@@ -191,6 +191,15 @@ class Mesh(object):
             # no point is close enough, return distances as they are
             return distances
 
+        proj, polygon = self._get_shapely_convex_hull()
+        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
+        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
+        cxx, cyy = numpy.array(polygon.exterior).transpose()
+        from nhlib.geo._geodetic_speedups import convex_to_point_distance
+        distances_2d = convex_to_point_distance(cxx, cyy, mesh_xx, mesh_yy)
+        distances.put(idxs, distances_2d)
+        return distances
+
         # for all the points that are closer than the threshold we need
         # to recalculate the distance and set it to zero, if point falls
         # inside the convex hull polygon of the mesh. for doing that
