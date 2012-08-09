@@ -53,7 +53,7 @@ class SpeedupsRegistry(object):
 speedups = SpeedupsRegistry()
 
 register = speedups.register
-enable = speedups.register
-disable = speedups.register
+enable = speedups.enable
+disable = speedups.disable
 
 del speedups
