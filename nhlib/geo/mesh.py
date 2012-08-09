@@ -191,32 +191,20 @@ class Mesh(object):
             # no point is close enough, return distances as they are
             return distances
 
-        proj, polygon = self._get_shapely_convex_hull()
-        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
-        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        cxx, cyy = numpy.array(polygon.exterior).transpose()
-        from nhlib.geo._geodetic_speedups import convex_to_point_distance
-        distances_2d = convex_to_point_distance(cxx, cyy, mesh_xx, mesh_yy)
-        distances.put(idxs, distances_2d)
-        return distances
-
         # for all the points that are closer than the threshold we need
         # to recalculate the distance and set it to zero, if point falls
         # inside the convex hull polygon of the mesh. for doing that
         # we project both this mesh and selected by distance threshold
         # points of the second one on the same Cartesian space, define
-        # shapely polygon representing a convex hull and call shapely's
-        # polygon geometry "distance()" method, which gives the most
-        # accurate value of distance in km (and that value is zero
-        # for points inside the polygon).
+        # shapely polygon representing a convex hull and calculate
+        # convex to point distance, which gives the most accurate value
+        # of distance in km (and that value is zero for points inside
+        # the polygon).
         proj, polygon = self._get_shapely_convex_hull()
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        distances_2d = numpy.fromiter(
-            (polygon.distance(shapely.geometry.Point(mesh_xx[i], mesh_yy[i]))
-             for i in xrange(len(idxs))),
-            dtype=float, count=len(idxs)
-        )
+        distances_2d = geo_utils.convex_to_point_distance(polygon,
+                                                          mesh_xx, mesh_yy)
 
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
