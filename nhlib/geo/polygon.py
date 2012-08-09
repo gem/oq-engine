@@ -150,7 +150,7 @@ class Polygon(object):
 
     def intersects(self, mesh):
         """
-        Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
+        Check for intersection with each point of the ``mesh``.
 
         Mesh coordinate values are in decimal degrees.
 
@@ -164,23 +164,7 @@ class Polygon(object):
         """
         self._init_polygon2d()
         pxx, pyy = self._projection(mesh.lons, mesh.lats)
-        cxx, cyy = numpy.array(self._polygon2d.exterior).transpose()
-        from nhlib.geo._geodetic_speedups import convex_to_point_distance
-        return convex_to_point_distance(cxx, cyy, pxx, pyy) == 0
-
-
-
-        xx, yy = self._projection(mesh.lons, mesh.lats)
-
-        result = numpy.empty(mesh.lons.shape, dtype=bool)
-
-        for i in xrange(mesh.lons.size):
-            intersects = self._polygon2d.intersects(
-                shapely.geometry.Point(xx.item(i), yy.item(i))
-            )
-            result.itemset(i, intersects)
-
-        return result
+        return utils.convex_to_point_distance(self._polygon2d, pxx, pyy) == 0
 
     def discretize(self, mesh_spacing):
         """
