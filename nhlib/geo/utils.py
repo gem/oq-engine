@@ -314,4 +314,45 @@ def normalized(vector):
     length = numpy.sqrt(length.reshape(length.shape + (1, )))
     return vector / length
 
-#from nhlib.geo._utils_speedups import normalized, spherical_to_cartesian
+
+def convex_to_point_distance(polygon, pxx, pyy):
+    """
+    Calculate the distance to polygon for each point of the collection
+    on the 2d Cartesian plane.
+
+    :param polygon:
+        Shapely "Polygon" geometry object. Has to be convex.
+    :param pxx:
+        List or numpy array of abscissae values of points to calculate
+        the distance from.
+    :param pyy:
+        Same structure as ``pxx``, but with ordinate values.
+    :returns:
+        Numpy array of distances in units of coordinate system. Points
+        that lie inside the polygon have zero distance.
+    """
+    # TODO: unittest
+    return numpy.array([
+        polygon.distance(shapely.geometry.Point(pxx[i], pyy[i]))
+        for i in xrange(len(pxx))
+    ])
+
+
+try:
+    from nhlib.geo import _geodetic_speedups
+except ImportError:
+    # speedups extension is not available
+    pass
+else:
+    from nhlib import speedups
+
+    def _c_convex_to_point_distance(polygon, pxx, pyy):
+        pxx = numpy.array(pxx, float)
+        pyy = numpy.array(pyy, float)
+        cxx, cyy = numpy.array(polygon.exterior).transpose()
+        return _geodetic_speedups.convex_to_point_distance(
+            cxx, cyy, pxx, pyy
+        )
+
+    speedups.register(convex_to_point_distance, _c_convex_to_point_distance)
+    del _c_convex_to_point_distance
