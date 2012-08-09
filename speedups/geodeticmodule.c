@@ -335,29 +335,26 @@ geodetic_convex_to_point_distance(
 
     PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
 
-    PyArrayObject *op_c[7];
-    npy_uint32 op_flags_c[7];
+    PyArrayObject *op_c[5];
+    npy_uint32 op_flags_c[5];
     npy_uint32 flags_c;
     NpyIter_IterNextFunc *iternext_c;
     PyArray_Descr *op_dtypes_c[] = {double_dtype, double_dtype, double_dtype,
-                                    double_dtype, double_dtype, double_dtype,
-                                    double_dtype};
+                                    double_dtype, double_dtype};
     char **dataptrarray_c;
 
     flags_c = 0;
-    op_c[0] = NULL; // length
-    op_c[1] = NULL; // move_x
-    op_c[2] = NULL; // move_y
+    op_c[0] = cxx;
+    op_c[1] = cyy;
+    op_c[2] = NULL; // length
     op_c[3] = NULL; // cos_theta
     op_c[4] = NULL; // sin_theta
-    op_c[5] = cxx;
-    op_c[6] = cyy;
 
-    op_flags_c[0] = op_flags_c[1] = op_flags_c[2] = op_flags_c[3] \
-            = op_flags_c[4] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
-    op_flags_c[5] = op_flags_c[6] = NPY_ITER_READONLY;
+    op_flags_c[0] = op_flags_c[1] = NPY_ITER_READONLY;
+    op_flags_c[2] = op_flags_c[3] = op_flags_c[4] \
+            = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
     NpyIter *iter_c = NpyIter_MultiNew(
-            7, op_c, flags_c, NPY_KEEPORDER, NPY_NO_CASTING,
+            5, op_c, flags_c, NPY_KEEPORDER, NPY_NO_CASTING,
             op_flags_c, op_dtypes_c);
     if (iter_c == NULL) {
         Py_DECREF(double_dtype);
@@ -366,26 +363,21 @@ geodetic_convex_to_point_distance(
     iternext_c = NpyIter_GetIterNext(iter_c, NULL);
     dataptrarray_c = NpyIter_GetDataPtrArray(iter_c);
 
-    double register prev_cx, prev_cy, length, cos_theta, sin_theta;
-    double register move_x, move_y;
-    prev_cx = *(double *) dataptrarray_c[5];
-    prev_cy = *(double *) dataptrarray_c[6];
+    double register cx, cy, prev_cx, prev_cy, length, cos_theta, sin_theta;
+    prev_cx = *(double *) dataptrarray_c[0];
+    prev_cy = *(double *) dataptrarray_c[1];
 
     while (iternext_c(iter_c))
     {
-        double register cx = *(double *) dataptrarray_c[5];
-        double register cy = *(double *) dataptrarray_c[6];
-        move_x = - prev_cx;
-        move_y = - prev_cy;
-        double register vx = cx - prev_cx;
-        double register vy = cy - prev_cy;
+        cx = *(double *) dataptrarray_c[0];
+        cy = *(double *) dataptrarray_c[1];
+        double register vx = prev_cx - cx;
+        double register vy = prev_cy - cy;
         length = sqrt(vx * vx + vy * vy);
         cos_theta = vx / length;
         sin_theta = vy / length;
 
-        *(double *) dataptrarray_c[0] = length;
-        *(double *) dataptrarray_c[1] = move_x;
-        *(double *) dataptrarray_c[2] = move_y;
+        *(double *) dataptrarray_c[2] = length;
         *(double *) dataptrarray_c[3] = cos_theta;
         *(double *) dataptrarray_c[4] = sin_theta;
 
@@ -393,8 +385,8 @@ geodetic_convex_to_point_distance(
         prev_cy = cy;
     };
 
-    PyArrayObject *op_p[5];
-    npy_uint32 op_flags_p[5];
+    PyArrayObject *op_p[3];
+    npy_uint32 op_flags_p[3];
     npy_uint32 flags_p;
     NpyIter_IterNextFunc *iternext_p;
     PyArray_Descr *op_dtypes_p[] = {double_dtype, double_dtype, double_dtype};
@@ -430,14 +422,14 @@ geodetic_convex_to_point_distance(
         NpyIter_Reset(iter_c, NULL);
         while (iternext_c(iter_c))
         {
-            length = *(double *) dataptrarray_c[0];
-            move_x = *(double *) dataptrarray_c[1];
-            move_y = *(double *) dataptrarray_c[2];
+            cx = *(double *) dataptrarray_c[0];
+            cy = *(double *) dataptrarray_c[1];
+            length = *(double *) dataptrarray_c[2];
             cos_theta = *(double *) dataptrarray_c[3];
             sin_theta = *(double *) dataptrarray_c[4];
 
-            double register px2 = px + move_x;
-            double register py2 = py + move_y;
+            double register px2 = px - cx;
+            double register py2 = py - cy;
             double register dist_x = px2 * cos_theta + py2 * sin_theta;
             double register dist_y = - px2 * sin_theta + py2 * cos_theta;
             double register dist;
