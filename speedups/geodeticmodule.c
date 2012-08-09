@@ -3,8 +3,7 @@
 #include <numpy/npy_math.h>
 #include <math.h>
 
-#define RAD(x) ((x) * M_PI / 180)
-#define EARTH_RADIUS 6371
+#define EARTH_RADIUS 6371.0
 
 
 static PyObject *
@@ -15,29 +14,18 @@ geodetic_geodetic_distance(
 {
     static char *kwlist[] = {"lons1", "lats1", "lons2", "lats2", NULL};
 
-    PyObject *plons1, *plats1, *plons2, *plats2;
-    PyArray_Descr *double_dtype = NULL;
-    NpyIter *iter = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOOO", kwlist,
-                &plons1, &plats1, &plons2, &plats2))
-        return NULL;
-
     PyArrayObject *lons1, *lats1, *lons2, *lats2;
-    lons1 = (PyArrayObject *) PyArray_FromObject(plons1, NPY_DOUBLE, 0, 0);
-    lats1 = (PyArrayObject *) PyArray_FromObject(plats1, NPY_DOUBLE, 0, 0);
-    lons2 = (PyArrayObject *) PyArray_FromObject(plons2, NPY_DOUBLE, 0, 0);
-    lats2 = (PyArrayObject *) PyArray_FromObject(plats2, NPY_DOUBLE, 0, 0);
 
-    if (lons1 == NULL || lats1 == NULL || lons2 == NULL || lats2 == NULL)
-        goto fail;
-
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "O!O!O!O!", kwlist,
+                &PyArray_Type, &lons1, &PyArray_Type, &lats1,
+                &PyArray_Type, &lons2, &PyArray_Type, &lats2))
+        return NULL;
 
     PyArrayObject *op[5];
     npy_uint32 flags;
     npy_uint32 op_flags[5];
     NpyIter_IterNextFunc *iternext;
-    double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
+    PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
     PyArray_Descr *op_dtypes[] = {
             double_dtype, double_dtype,
             double_dtype, double_dtype,
@@ -52,23 +40,22 @@ geodetic_geodetic_distance(
     op[4] = NULL;
     op_flags[0] = op_flags[1] = op_flags[2] = op_flags[3] = NPY_ITER_READONLY;
     op_flags[4] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
-    iter = NpyIter_MultiNew(
+    NpyIter *iter = NpyIter_MultiNew(
             5, op, flags, NPY_KEEPORDER, NPY_NO_CASTING,
             op_flags, op_dtypes);
     Py_DECREF(double_dtype);
 
     if (iter == NULL)
-        goto fail;
+        return NULL;
 
     iternext = NpyIter_GetIterNext(iter, NULL);
     dataptrarray = NpyIter_GetDataPtrArray(iter);
-
     do
     {
-        double register lon1 = RAD(*(double *) dataptrarray[0]);
-        double register lat1 = RAD(*(double *) dataptrarray[1]);
-        double register lon2 = RAD(*(double *) dataptrarray[2]);
-        double register lat2 = RAD(*(double *) dataptrarray[3]);
+        double register lon1 = *(double *) dataptrarray[0];
+        double register lat1 = *(double *) dataptrarray[1];
+        double register lon2 = *(double *) dataptrarray[2];
+        double register lat2 = *(double *) dataptrarray[3];
         double *res = (double *) dataptrarray[4];
 
         *res = 2 * EARTH_RADIUS * asin(sqrt(
@@ -81,22 +68,10 @@ geodetic_geodetic_distance(
     Py_INCREF(result);
     if (NpyIter_Deallocate(iter) != NPY_SUCCEED) {
         Py_DECREF(result);
-        goto fail;
+        return NULL;
     }
 
-    Py_DECREF(lons1);
-    Py_DECREF(lats1);
-    Py_DECREF(lons2);
-    Py_DECREF(lats2);
-
     return (PyObject *) result;
-
-fail:
-    Py_XDECREF(lons1);
-    Py_XDECREF(lats1);
-    Py_XDECREF(lons2);
-    Py_XDECREF(lats2);
-    return NULL;
 }
 
 static PyObject *
@@ -158,16 +133,16 @@ geodetic_min_geodetic_distance(
 
     do
     {
-        double register slon = RAD(*(double *) dataptrarray_s[0]);
-        double register slat = RAD(*(double *) dataptrarray_s[1]);
+        double register slon = *(double *) dataptrarray_s[0];
+        double register slat = *(double *) dataptrarray_s[1];
         double *res = (double *) dataptrarray_s[2];
         double register min_dist = INFINITY;
 
         do
         {
-            // TODO: precompute mlons/mlats in radians, precompute cos(mlat)
-            double register mlon = RAD(*(double *) dataptrarray_m[0]);
-            double register mlat = RAD(*(double *) dataptrarray_m[1]);
+            // TODO: precompute cos(mlat)
+            double register mlon = *(double *) dataptrarray_m[0];
+            double register mlat = *(double *) dataptrarray_m[1];
 
             double register dist = asin(sqrt(
                 pow(sin((mlat - slat) / 2.0), 2.0)
@@ -223,15 +198,10 @@ geodetic_min_distance(
     npy_uint32 op_flags_s[4], op_flags_m[3];
     NpyIter_IterNextFunc *iternext_s, *iternext_m;
     PyArray_Descr *op_dtypes_s[] = {double_dtype, double_dtype, double_dtype,
-                                    NULL /* result array */};
-    if (indices)
-        op_dtypes_s[3] = int_dtype;
-    else
-        op_dtypes_s[3] = double_dtype;
+                                    indices ? int_dtype : double_dtype};
 
     PyArray_Descr *op_dtypes_m[] = {double_dtype, double_dtype, double_dtype};
     char **dataptrarray_s, **dataptrarray_m;
-
 
     flags_s = 0;
     op_s[0] = slons;
@@ -270,17 +240,17 @@ geodetic_min_distance(
 
     do
     {
-        double register slon = RAD(*(double *) dataptrarray_s[0]);
-        double register slat = RAD(*(double *) dataptrarray_s[1]);
+        double register slon = *(double *) dataptrarray_s[0];
+        double register slat = *(double *) dataptrarray_s[1];
         double register sdepth = *(double *) dataptrarray_s[2];
         double register min_dist = INFINITY;
         int min_dist_idx = -1;
 
         do
         {
-            // TODO: precompute mlons/mlats in radians, precompute cos(mlat)
-            double register mlon = RAD(*(double *) dataptrarray_m[0]);
-            double register mlat = RAD(*(double *) dataptrarray_m[1]);
+            // TODO: precompute cos(mlat)
+            double register mlon = *(double *) dataptrarray_m[0];
+            double register mlat = *(double *) dataptrarray_m[1];
             double register mdepth = *(double *) dataptrarray_m[2];
 
             double register geodetic_dist = asin(sqrt(
