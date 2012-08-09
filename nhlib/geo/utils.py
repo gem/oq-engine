@@ -331,11 +331,17 @@ def convex_to_point_distance(polygon, pxx, pyy):
         Numpy array of distances in units of coordinate system. Points
         that lie inside the polygon have zero distance.
     """
-    # TODO: unittest
-    return numpy.array([
-        polygon.distance(shapely.geometry.Point(pxx[i], pyy[i]))
-        for i in xrange(len(pxx))
+    pxx = numpy.array(pxx)
+    pyy = numpy.array(pyy)
+    assert pxx.shape == pyy.shape
+    if pxx.ndim == 0:
+        pxx = pxx.reshape((1, ))
+        pyy = pyy.reshape((1, ))
+    result = numpy.array([
+        polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
+        for i in xrange(pxx.size)
     ])
+    return result.reshape(pxx.shape)
 
 
 try:

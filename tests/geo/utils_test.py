@@ -16,9 +16,12 @@
 import unittest
 
 import numpy
+import shapely.geometry
 
 from nhlib import geo
 from nhlib.geo import utils
+
+from tests import SpeedupsTestCase
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -294,3 +297,28 @@ class NormalizedTestCase(unittest.TestCase):
         vv = numpy.array([vv])
         nn = numpy.array([nn])
         self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+
+
+class ConvexToPointDistanceTestCase(SpeedupsTestCase):
+    polygon = shapely.geometry.Polygon([
+        (0, 0), (1, 0), (1, 1), (0, 1)
+    ])
+
+    def test_one_point(self):
+        dist = utils.convex_to_point_distance(self.polygon, 0.5, 0.5)
+        self.assertEqual(dist, 0)
+        dist = utils.convex_to_point_distance(self.polygon, 0.5, 1.5)
+        self.assertAlmostEqual(dist, 0.5)
+
+    def test_list_of_points(self):
+        pxx = [-1., 0.3, -0.25]
+        pyy = [2., 1.1, 3.9]
+        dist = utils.convex_to_point_distance(self.polygon, pxx, pyy)
+        numpy.testing.assert_almost_equal(dist, [1.4142135, 0.1, 2.9107559])
+
+    def test_2d_array_of_points(self):
+        pxx = [[-1., 0.3], [-0.25, 0.5]]
+        pyy = [[2., 1.1], [3.9, -0.3]]
+        dist = utils.convex_to_point_distance(self.polygon, pxx, pyy)
+        numpy.testing.assert_almost_equal(dist, [[1.4142135, 0.1],
+                                                 [2.9107559, 0.3]])
