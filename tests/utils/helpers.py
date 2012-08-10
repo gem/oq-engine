@@ -38,7 +38,9 @@ import textwrap
 import time
 
 from django.core import exceptions
+from lxml import etree
 
+from openquake import xml
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
@@ -857,3 +859,33 @@ def mean_stddev_from_result_line(result):
     actual_stddev = float(result[1].split()[-1])
     return actual_mean, actual_stddev
 
+def loss_map_result_from_file(path):
+    namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
+    root = etree.parse(path)
+
+    lm_data = []
+    lm_nodes = root.xpath('.//nrml:LMNode', namespaces=namespaces)
+
+    for node in lm_nodes:
+        node_data = dict()
+
+        [pos] = node.xpath('.//gml:pos', namespaces=namespaces)
+        node_data['pos'] = pos.text
+
+        [loss] = node.xpath('./nrml:loss', namespaces=namespaces)
+        node_data['asset'] = loss.get('assetRef')
+
+        [mean] = loss.xpath('./nrml:mean', namespaces=namespaces)
+        [stddev] = loss.xpath('./nrml:stdDev', namespaces=namespaces)
+        node_data['mean'] = float(mean.text)
+        node_data['stddev'] = float(stddev.text)
+
+        lm_data.append(node_data)
+
+    return lm_data
+
+def verify_loss_map(test_case, path, lm_data, loss_map_precision):
+    expected_data = loss_map_result_from_file(path)
+
+    assertDeepAlmostEqual(test_case, sorted(expected_data), sorted(lm_data),
+        places=loss_map_precision)
