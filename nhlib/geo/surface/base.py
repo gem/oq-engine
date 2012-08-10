@@ -86,7 +86,7 @@ class BaseSurface(object):
             and each point of the ``mesh`` to the earth surface.
 
         Base class calls surface mesh's method
-        :meth:`~nhlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
+        :meth:`~nhlib.geo.mesh.Mesh.get_joyner_boore_distance`.
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
