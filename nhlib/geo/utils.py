@@ -348,7 +348,8 @@ try:
     from nhlib.geo import _geodetic_speedups
 except ImportError:
     # speedups extension is not available
-    pass
+    import warnings
+    warnings.warn("geodetic speedups are not available", RuntimeWarning)
 else:
     from nhlib import speedups
 
