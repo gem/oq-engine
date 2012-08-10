@@ -27,6 +27,8 @@ static const char geoutils_convex_to_point_distance__doc__[] = "\n\
     polygon, treating points lying inside the polygon as having zero\n\
     distance.\n\
     \n\
+    convex_to_point_distance(cxx, cyy, pxx, pyy) -> dists\n\
+    \n\
     Parameters cxx and cyy represent coordinates of convex polygon vertices\n\
     in either clockwise or counterclockwise order. The last point must\n\
     repeat the first one.\n\
