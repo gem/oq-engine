@@ -71,18 +71,6 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         return lm_data
 
-    def _mean_stddev_from_result_line(self, result):
-        result = [line for line in result.split('\n') if len(line) > 0]
-        # We expected the shell output to look something like the following
-        # two lines:
-        # Mean region loss value: XXX.XXX
-        # Standard deviation region loss value: XXX.XXX
-        self.assertEqual(2, len(result))
-
-        actual_mean = float(result[0].split()[-1])
-        actual_stddev = float(result[1].split()[-1])
-        return actual_mean, actual_stddev
-
     def _verify_loss_map(self, path, lm_data):
         expected_data = self._loss_map_result_from_file(path)
 
@@ -131,7 +119,7 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self._verify_loss_map(expected_loss_map_file, expected_loss_map)
 
-        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
@@ -191,7 +179,7 @@ class ScenarioRiskQATest(unittest.TestCase):
         self._verify_loss_map_within_range(sorted(mb_loss_map),
             sorted(loss_map), 0.05)
 
-        exp_mean_loss, exp_stddev_loss = self._mean_stddev_from_result_line(
+        exp_mean_loss, exp_stddev_loss = helpers.mean_stddev_from_result_line(
             result)
         self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
             delta=mb_mean_loss * 0.05)
@@ -228,7 +216,7 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self._verify_loss_map(expected_loss_map_file, expected_loss_map)
 
-        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)

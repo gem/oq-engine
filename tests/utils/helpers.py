@@ -844,3 +844,16 @@ def prepare_job_context(path_to_cfg):
         oq_job=job)
 
     return job_ctxt
+
+def mean_stddev_from_result_line(result):
+    result = [line for line in result.split('\n') if len(line) > 0]
+    # We expected the shell output to look something like the following
+    # two lines:
+    # Mean region loss value: XXX.XXX
+    # Standard deviation region loss value: XXX.XXX
+    assert(2 == len(result))
+
+    actual_mean = float(result[0].split()[-1])
+    actual_stddev = float(result[1].split()[-1])
+    return actual_mean, actual_stddev
+
