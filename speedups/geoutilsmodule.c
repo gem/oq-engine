@@ -18,8 +18,6 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
-#include <numpy/npy_math.h>
-#include <math.h>
 
 
 static const char geoutils_convex_to_point_distance__doc__[] = "\n\
