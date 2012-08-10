@@ -201,6 +201,11 @@ class Mesh(object):
         # of distance in km (and that value is zero for points inside
         # the polygon).
         proj, polygon = self._get_shapely_convex_hull()
+        if not isinstance(polygon, shapely.geometry.Polygon):
+            # either line or point is our convex hull. draw a square
+            # with side of 1 cm around in order to have a proper
+            # polygon instead.
+            polygon = polygon.buffer(1e-5, 1)
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
         distances_2d = geo_utils.convex_to_point_distance(polygon,
@@ -284,6 +289,8 @@ class Mesh(object):
 
         :returns:
             Tuple of two items: projection function and shapely 2d polygon.
+            Note that the result geometry can be line or point depending
+            on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
         proj = geo_utils.get_orthographic_projection(
@@ -295,8 +302,6 @@ class Mesh(object):
                                       self.lats.flatten())).copy()
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint.
-        # note that it can be point or line depending on number of points
-        # in the mesh and their arrangement.
         polygon2d = multipoint.convex_hull
 
         return proj, polygon2d
