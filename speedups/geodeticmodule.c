@@ -18,8 +18,6 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
-#include <numpy/npy_math.h>
-#include <math.h>
 
 #define EARTH_RADIUS 6371.0
 
