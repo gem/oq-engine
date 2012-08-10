@@ -98,8 +98,11 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
     for calculating the minimum distance between first mesh and each point
     of the second mesh when both are defined on the earth surface.
     """
-    orig_shape = slons.shape
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
+    orig_shape = slons.shape
+    if slons.ndim == 0:
+        slons = slons.reshape((1, ))
+        slats = slats.reshape((1, ))
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
 
