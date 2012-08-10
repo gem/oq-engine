@@ -38,73 +38,6 @@ geodetic__geodetic_distance(double lon1, double lat1, double lon2, double lat2)
 }
 
 
-static const char geodetic_geodetic_distance__doc__[] = "\n\
-    Calculate the geodetic distance between two collections of points,\n\
-    following the numpy broadcasting rules.\n\
-    \n\
-    geodetic_distance(lons1, lats1, lons2, lats2) -> dists\n\
-    \n\
-    Parameters must be numpy arrays of double, representing spherical\n\
-    coordinates in radians.\n\
-";
-static PyObject *
-geodetic_geodetic_distance(
-        PyObject *self,
-        PyObject *args,
-        PyObject *keywds)
-{
-    static char *kwlist[] = {"lons1", "lats1", "lons2", "lats2", NULL};
-
-    PyArrayObject *lons1, *lats1, *lons2, *lats2;
-
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "O!O!O!O!", kwlist,
-                &PyArray_Type, &lons1, &PyArray_Type, &lats1,
-                &PyArray_Type, &lons2, &PyArray_Type, &lats2))
-        return NULL;
-
-    PyArrayObject *op[5] = {lons1, lats1, lons2, lats2, NULL /* distance */};
-    npy_uint32 flags = 0;
-    npy_uint32 op_flags[5];
-    NpyIter_IterNextFunc *iternext;
-    PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
-    PyArray_Descr *op_dtypes[] = {double_dtype, double_dtype,
-                                  double_dtype, double_dtype,
-                                  double_dtype};
-    char **dataptrarray;
-
-    op_flags[0] = op_flags[1] = op_flags[2] = op_flags[3] = NPY_ITER_READONLY;
-    op_flags[4] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
-
-    NpyIter *iter = NpyIter_MultiNew(
-            5, op, flags, NPY_KEEPORDER, NPY_NO_CASTING,
-            op_flags, op_dtypes);
-    Py_DECREF(double_dtype);
-    if (iter == NULL)
-        return NULL;
-
-    iternext = NpyIter_GetIterNext(iter, NULL);
-    dataptrarray = NpyIter_GetDataPtrArray(iter);
-    do
-    {
-        double lon1 = *(double *) dataptrarray[0];
-        double lat1 = *(double *) dataptrarray[1];
-        double lon2 = *(double *) dataptrarray[2];
-        double lat2 = *(double *) dataptrarray[3];
-        *(double *) dataptrarray[4] = geodetic__geodetic_distance(
-                lon1, lat1, lon2, lat2);
-    } while (iternext(iter));
-
-    PyArrayObject *result = NpyIter_GetOperandArray(iter)[4];
-    Py_INCREF(result);
-    if (NpyIter_Deallocate(iter) != NPY_SUCCEED) {
-        Py_DECREF(result);
-        return NULL;
-    }
-
-    return (PyObject *) result;
-}
-
-
 static const char geodetic_min_distance__doc__[] = "\n\
     Calculate the minimum distance between two collections of points.\n\
     \n\
@@ -238,10 +171,6 @@ geodetic_min_distance(
 
 
 static PyMethodDef GeodeticSpeedupsMethods[] = {
-    {"geodetic_distance",
-            (PyCFunction)geodetic_geodetic_distance,
-            METH_VARARGS | METH_KEYWORDS,
-            geodetic_geodetic_distance__doc__},
     {"min_distance",
             (PyCFunction)geodetic_min_distance,
             METH_VARARGS | METH_KEYWORDS,

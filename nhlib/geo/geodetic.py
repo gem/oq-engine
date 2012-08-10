@@ -439,20 +439,10 @@ except ImportError:
 else:
     from nhlib import speedups
 
-    def _c_geodetic_distance(lons1, lats1, lons2, lats2):
-        lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1,
-                                                     lons2, lats2)
-        return _geodetic_speedups.geodetic_distance(lons1, lats1, lons2, lats2)
-
-    speedups.register(geodetic_distance, _c_geodetic_distance)
-    del _c_geodetic_distance
-
-
     def _c_min_geodetic_distance(mlons, mlats, slons, slats):
         mlons, mlats, slons, slats = _prepare_coords(mlons, mlats,
                                                      slons, slats)
-        mdepths = numpy.array(0.0)
-        sdepths = numpy.array(0.0)
+        mdepths = sdepths = numpy.array(0.0)
         return _geodetic_speedups.min_distance(mlons, mlats, mdepths,
                                                slons, slats, sdepths,
                                                indices=False)
