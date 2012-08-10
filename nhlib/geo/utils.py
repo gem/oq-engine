@@ -345,11 +345,11 @@ def convex_to_point_distance(polygon, pxx, pyy):
 
 
 try:
-    from nhlib.geo import _geodetic_speedups
+    from nhlib.geo import _utils_speedups
 except ImportError:
     # speedups extension is not available
     import warnings
-    warnings.warn("geodetic speedups are not available", RuntimeWarning)
+    warnings.warn("geoutils speedups are not available", RuntimeWarning)
 else:
     from nhlib import speedups
 
@@ -357,7 +357,7 @@ else:
         pxx = numpy.array(pxx, float)
         pyy = numpy.array(pyy, float)
         cxx, cyy = numpy.array(polygon.exterior).transpose()
-        return _geodetic_speedups.convex_to_point_distance(
+        return _utils_speedups.convex_to_point_distance(
             cxx, cyy, pxx, pyy
         )
 
