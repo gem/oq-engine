@@ -18,6 +18,8 @@
 import getpass
 import unittest
 
+import nhlib
+
 from nhlib import geo as nhlib_geo
 from nose.plugins.attrib import attr
 
@@ -407,3 +409,40 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+
+class ImtsToNhlibTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.calculators.hazard.general.im_dict_to_nhlib`.
+    """
+
+    def test_im_dict_to_nhlib(self):
+        imts_in = {
+            'PGA': [1, 2],
+            'PGV': [2, 3],
+            'PGD': [3, 4],
+            'SA(0.1)': [0.1, 0.2],
+            'SA(0.025)': [0.2, 0.3],
+            'IA': [0.3, 0.4],
+            'RSD': [0.4, 0.5],
+            'MMI': [0.5, 0.6],
+        }
+
+        expected = {
+            nhlib.imt.PGA(): [1, 2],
+            nhlib.imt.PGV(): [2, 3],
+            nhlib.imt.PGD(): [3, 4],
+            nhlib.imt.SA(0.1, general.DEFAULT_SA_DAMPING): [0.1, 0.2],
+            nhlib.imt.SA(0.025, general.DEFAULT_SA_DAMPING): [0.2, 0.3],
+            nhlib.imt.IA(): [0.3, 0.4],
+            nhlib.imt.RSD(): [0.4, 0.5],
+            nhlib.imt.MMI(): [0.5, 0.6],
+        }
+
+        actual = general.im_dict_to_nhlib(imts_in)
+        self.assertEqual(len(expected), len(actual))
+
+        for exp_imt, exp_imls in expected.items():
+            act_imls = actual[exp_imt]
+            self.assertEqual(exp_imls, act_imls)
