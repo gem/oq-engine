@@ -23,6 +23,8 @@ import random
 import StringIO
 
 import kombu
+import nhlib
+import nhlib.site
 import numpy
 
 from django.db import transaction, connections
@@ -609,6 +611,41 @@ parse_source_model_logictree_path`
 
         apply_uncertainties(nhlib_source)
         yield nhlib_source
+
+
+def get_site_collection(hc):
+    """
+    Create a `SiteCollection`, which is needed by nhlib to perform various
+    calculation tasks (such computing hazard curves and GMFs).
+
+    :param hc:
+        Instance of a :class:`~openquake.db.models.HazardCalculation`. We need
+        this in order to get the points of interest for a calculation as well
+        as load pre-computed site data or access reference site parameters.
+
+    :returns:
+        :class:`nhlib.site.SiteCollection` instance.
+    """
+    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
+    if len(site_data) > 0:
+        site_data = site_data[0]
+        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
+                    site_data.vs30_measured, site_data.z1pt0s,
+                    site_data.z2pt5s)
+        sites = [nhlib.site.Site(
+            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
+            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
+    else:
+        # Use the calculation reference parameters to make a site collection.
+        points = hc.points_to_compute()
+        measured = hc.reference_vs30_type == 'measured'
+        sites = [
+            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
+                            hc.reference_depth_to_2pt5km_per_sec,
+                            hc.reference_depth_to_1pt0km_per_sec)
+            for pt in points]
+
+    return nhlib.site.SiteCollection(sites)
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
