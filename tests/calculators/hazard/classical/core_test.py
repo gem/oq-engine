@@ -307,43 +307,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # take much more time to execute).
 
 
-class ImtsToNhlibTestCase(unittest.TestCase):
-    """
-    Tests for
-    :func:`openquake.calculators.hazard.classical.core.im_dict_to_nhlib`.
-    """
-
-    def test_im_dict_to_nhlib(self):
-        imts_in = {
-            'PGA': [1, 2],
-            'PGV': [2, 3],
-            'PGD': [3, 4],
-            'SA(0.1)': [0.1, 0.2],
-            'SA(0.025)': [0.2, 0.3],
-            'IA': [0.3, 0.4],
-            'RSD': [0.4, 0.5],
-            'MMI': [0.5, 0.6],
-        }
-
-        expected = {
-            nhlib.imt.PGA(): [1, 2],
-            nhlib.imt.PGV(): [2, 3],
-            nhlib.imt.PGD(): [3, 4],
-            nhlib.imt.SA(0.1, core.DEFAULT_SA_DAMPING): [0.1, 0.2],
-            nhlib.imt.SA(0.025, core.DEFAULT_SA_DAMPING): [0.2, 0.3],
-            nhlib.imt.IA(): [0.3, 0.4],
-            nhlib.imt.RSD(): [0.4, 0.5],
-            nhlib.imt.MMI(): [0.5, 0.6],
-        }
-
-        actual = core.im_dict_to_nhlib(imts_in)
-        self.assertEqual(len(expected), len(actual))
-
-        for exp_imt, exp_imls in expected.items():
-            act_imls = actual[exp_imt]
-            self.assertEqual(exp_imls, act_imls)
-
-
 class HelpersTestCase(unittest.TestCase):
     """
     Tests for helper functions in the classical hazard calculator core module.
