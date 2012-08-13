@@ -367,6 +367,14 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.surface.get_joyner_boore_distance(
                     site_collection.mesh
                 )
+            elif param == 'rhypo':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh
+                )
+            elif param == 'repi':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh, with_depths=False
+                )
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -391,6 +399,8 @@ class GroundShakingIntensityModel(object):
                 value = rupture.rake
             elif param == 'ztor':
                 value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_depth':
+                value = rupture.hypocenter.depth
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -479,7 +489,7 @@ class DistancesContext(object):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi')
 
 
 class RuptureContext(object):
@@ -494,7 +504,7 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'dip', 'rake', 'ztor')
+    __slots__ = ('mag', 'dip', 'rake', 'ztor', 'hypo_depth')
 
 
 class CoeffsTable(object):
