@@ -229,8 +229,6 @@ def classical_task_arg_gen(hc, job, sources_per_task, progress):
             yield task_args
 
 
-
-
 class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
@@ -427,7 +425,6 @@ def get_site_collection(hc):
             for pt in points]
 
     return nhlib.site.SiteCollection(sites)
-
 
 
 def signal_task_complete(job_id, num_sources):
