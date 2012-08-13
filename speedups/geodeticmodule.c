@@ -24,7 +24,10 @@
 
 /*
  * Calculate the distance between two points along the geodetic.
- * Parameters are two pairs of spherical coordinates in radians.
+ * Parameters are two pairs of spherical coordinates in radians
+ * and return value is distance in km.
+ *
+ * Implements http://williams.best.vwh.net/avform.htm#Dist
  */
 static inline double
 geodetic__geodetic_distance(double lon1, double lat1, double lon2, double lat2)
@@ -59,23 +62,31 @@ geodetic_min_distance(
         PyObject *args,
         PyObject *keywds)
 {
-    static char *kwlist[] = {"mlons", "mlats", "mdepths",
-                             "slons", "slats", "sdepths",
-                             "indices", NULL};
+    static char *kwlist[] = {"mlons", "mlats", "mdepths", /* mesh coords */
+                             "slons", "slats", "sdepths", /* site coords */
+                             "indices", /* min distance / closest points */
+                             NULL}; /* sentinel */
 
     PyArrayObject *mlons, *mlats, *mdepths, *slons, *slats, *sdepths;
     unsigned char indices = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "O!O!O!O!O!O!b", kwlist,
+                // mesh coords
                 &PyArray_Type, &mlons, &PyArray_Type, &mlats,
                 &PyArray_Type, &mdepths,
+                // site coords
                 &PyArray_Type, &slons, &PyArray_Type, &slats,
                 &PyArray_Type, &sdepths,
+                // min distance / closest points switch
                 &indices))
         return NULL;
 
     PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
     PyArray_Descr *int_dtype = PyArray_DescrFromType(NPY_INT);
+
+    /* we need to iterators: one for mesh points (will run it as inner loop)
+     * and one for site points (for outer one).
+     */
 
     PyArrayObject *op_s[4] = {slons, slats, sdepths, NULL /* min distance */};
     PyArrayObject *op_m[3] = {mlons, mlats, mdepths};
@@ -118,14 +129,19 @@ geodetic_min_distance(
 
     do
     {
+        // iterate sites in the outer loop
         double slon = *(double *) dataptrarray_s[0];
         double slat = *(double *) dataptrarray_s[1];
         double sdepth = *(double *) dataptrarray_s[2];
+
+        // initialize the minimum distance with inf
         double min_dist = INFINITY;
         int min_dist_idx = -1;
 
         do
         {
+            // iterate points of the mesh in the inner one.
+            // this loop is executed for each site
             double mlon = *(double *) dataptrarray_m[0];
             double mlat = *(double *) dataptrarray_m[1];
             double mdepth = *(double *) dataptrarray_m[2];
@@ -136,20 +152,28 @@ geodetic_min_distance(
             double vertical_dist = sdepth - mdepth;
             double dist;
             if (vertical_dist == 0)
+                // total distance is the geodetic one
                 dist = geodetic_dist;
             else
+                // total distance is hypotenuse of geodetic
+                // and vertical distance
                 dist = sqrt(geodetic_dist * geodetic_dist
                             + vertical_dist * vertical_dist);
 
             if (dist < min_dist) {
+                // distance that we just found is the smallest so far
                 min_dist = dist;
                 if (indices)
+                    // if we are finding indices of closest points --
+                    // remember that index
                     min_dist_idx = NpyIter_GetIterIndex(iter_m);
             }
 
         } while (iternext_m(iter_m));
         NpyIter_Reset(iter_m, NULL);
 
+        // save the result for the current site: either index
+        // of the closest point or actual minimum distance
         if (indices)
             *(int *) dataptrarray_s[3] = min_dist_idx;
         else
@@ -167,7 +191,9 @@ geodetic_min_distance(
     return (PyObject *) result;
 }
 
-
+/*
+ * Module method reference table
+ */
 static PyMethodDef GeodeticSpeedupsMethods[] = {
     {"min_distance",
             (PyCFunction)geodetic_min_distance,
@@ -178,6 +204,9 @@ static PyMethodDef GeodeticSpeedupsMethods[] = {
 };
 
 
+/*
+ * Module initialization function
+ */
 PyMODINIT_FUNC
 init_geodetic_speedups(void)
 {
