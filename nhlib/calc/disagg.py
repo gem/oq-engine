@@ -201,29 +201,28 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     """
     mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
 
-    mag_bins = numpy.arange(
-        numpy.floor(mags.min() / mag_bin_width) * mag_bin_width,
-        (numpy.ceil(mags.max() / mag_bin_width) + 1) * mag_bin_width,
-        mag_bin_width
+    mag_bins = mag_bin_width * numpy.arange(
+        int(numpy.floor(mags.min() / mag_bin_width)),
+        int(numpy.ceil(mags.max() / mag_bin_width) + 1)
     )
 
-    dist_bins = numpy.arange(
-        numpy.floor(dists.min() / dist_bin_width) * dist_bin_width,
-        (numpy.ceil(dists.max() / dist_bin_width) + 1) * dist_bin_width,
-        dist_bin_width
+    dist_bins = dist_bin_width * numpy.arange(
+        int(numpy.floor(dists.min() / dist_bin_width)),
+        int(numpy.ceil(dists.max() / dist_bin_width) + 1)
     )
 
     west, east, north, south = get_spherical_bounding_box(lons, lats)
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
-    lon_bins, _, _ = npoints_between(west, 0, 0, east, 0, 0,
-                                     numpy.round(lon_extent / coord_bin_width))
+    lon_bins, _, _ = npoints_between(
+        west, 0, 0, east, 0, 0,
+        numpy.round(lon_extent / coord_bin_width) + 1
+    )
 
-    lat_bins = numpy.arange(
-        numpy.floor(south / coord_bin_width) * coord_bin_width,
-        (numpy.ceil(north / coord_bin_width) + 1) * coord_bin_width,
-        coord_bin_width
+    lat_bins = coord_bin_width * numpy.arange(
+        int(numpy.floor(south / coord_bin_width)),
+        int(numpy.ceil(north / coord_bin_width) + 1)
     )
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
