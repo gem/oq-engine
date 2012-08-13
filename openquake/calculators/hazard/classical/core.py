@@ -193,6 +193,44 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     signal_task_complete(job_id, len(src_ids))
 
 
+@staticmethod
+def classical_task_arg_gen(hc, job, sources_per_task, progress):
+    """
+    Loop through realizations and sources to generate a sequence of
+    task arg tuples. Each tuple of args applies to a single task.
+
+    Yielded results are triples of (job_id, realization_id,
+    source_id_list).
+
+    :param hc:
+        :class:`openquake.db.models.HazardCalculation` instance.
+    :param job:
+        :class:`openquake.db.models.OqJob` instance.
+    :param int sources_per_task:
+        The (max) number of sources to consider for each task.
+    :param dict progress:
+        A dict containing two integer values: 'total' and 'computed'. The task
+        arg generator will update the 'total' count as the generator creates
+        arguments.
+    """
+    realizations = models.LtRealization.objects.filter(
+            hazard_calculation=hc, is_complete=False)
+
+    for lt_rlz in realizations:
+        source_progress = models.SourceProgress.objects.filter(
+                is_complete=False, lt_realization=lt_rlz)
+        source_ids = source_progress.values_list('parsed_source_id',
+                                                 flat=True)
+        progress['total'] += len(source_ids)
+
+        for offset in xrange(0, len(source_ids), sources_per_task):
+            task_args = (job.id, lt_rlz.id,
+                         source_ids[offset:offset + sources_per_task])
+            yield task_args
+
+
+
+
 class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
@@ -203,6 +241,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
     """
 
     core_calc_task = hazard_curves
+    task_arg_gen = classical_task_arg_gen
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """
