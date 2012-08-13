@@ -207,7 +207,6 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         return result.reshape(orig_shape)
 
 
-
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     """
     Find a list of points between two given ones that lie on the same
