@@ -26,6 +26,13 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 
 class SpeedupsTestCase(unittest.TestCase):
+    """
+    Base test case class for functions with alternative implementations.
+
+    For all the test case methods in the class creates a copy with
+    "_no_speedups" suffix in the name, where runs the same test case
+    but with speedups disabled.
+    """
     class __metaclass__(type):
         def __new__(mcs, name, bases, dct):
             cls = type.__new__(mcs, name, bases, dct)
