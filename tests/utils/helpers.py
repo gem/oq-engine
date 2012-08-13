@@ -207,8 +207,7 @@ def run_job(config_file, params=None, check_output=False):
 
 def store_hazard_logic_trees(a_job):
     """Helper function to store the source model and GMPE logic trees in the
-    KVS so that it can be read by the Java code. This is basically what the
-    @preload decorator does.
+    KVS so that it can be read by the Java code.
 
     :param a_job:
         :class:`openquake.engine.JobContext` instance.
