@@ -38,19 +38,6 @@ from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
-#: Default Spectral Acceleration damping. At the moment, this is not
-#: configurable.
-DEFAULT_SA_DAMPING = 5.0
-
-    def export(self, *args, **kwargs):
-        """Export to NRML"""
-        logs.LOG.debug('> starting exports')
-
-        if "exports" in kwargs and "xml" in kwargs["exports"]:
-            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
-
-        logs.LOG.debug('< done with exports')
-
 
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
@@ -95,7 +82,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization)
 
-    imts = im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
+    imts = haz_general.im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
 
     # Now initialize the site collection for use in the calculation.
     # If there is no site model defined, we will use the same reference
@@ -136,7 +123,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
         for imt in hc.intensity_measure_types_and_levels.keys():
             logs.LOG.debug('> updating hazard for IMT=%s' % imt)
-            nhlib_imt = _imt_to_nhlib(imt)
+            nhlib_imt = haz_general.imt_to_nhlib(imt)
             query = """
             SELECT * FROM htemp.hazard_curve_progress
             WHERE lt_realization_id = %s
@@ -324,7 +311,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 if 'SA' in imt:
                     match = re.match(r'^SA\(([^)]+?)\)$', imt)
                     sa_period = float(match.group(1))
-                    sa_damping = DEFAULT_SA_DAMPING
+                    sa_damping = haz_general.DEFAULT_SA_DAMPING
                     hc_im_type = 'SA'  # don't include the period
                 else:
                     hc_im_type = imt
@@ -367,6 +354,15 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+
+    def export(self, *args, **kwargs):
+        """Export to NRML"""
+        logs.LOG.debug('> starting exports')
+
+        if "exports" in kwargs and "xml" in kwargs["exports"]:
+            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
+
+        logs.LOG.debug('< done with exports')
 
 
 def update_result_matrix(current, new):
@@ -417,41 +413,3 @@ def signal_task_complete(job_id, num_sources):
         with conn.Producer(exchange=exchange,
                            routing_key=routing_key) as producer:
             producer.publish(msg)
-
-
-def im_dict_to_nhlib(im_dict):
-    """
-    Given the dict of intensity measure types and levels, convert them to a
-    dict with the same values, except create :mod:`mhlib.imt` objects for the
-    new keys.
-
-    :returns:
-        A dict of intensity measure level lists, keyed by an IMT object. See
-        :mod:`nhlib.imt` for more information.
-    """
-    # TODO: file a bug about  SA periods in nhlib imts.
-    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
-    # there must be a reason why we can't do this.
-    nhlib_im = {}
-
-    for imt, imls in im_dict.items():
-        nhlib_imt = _imt_to_nhlib(imt)
-        nhlib_im[nhlib_imt] = imls
-
-    return nhlib_im
-
-
-def _imt_to_nhlib(imt):
-    """Covert an IMT string to an nhlib object.
-
-    :param str imt:
-        Given the IMT string (defined in the job config file), convert it to
-        equivlent nhlib object. See :mod:`nhlib.imt`.
-    """
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        period = float(match.group(1))
-        return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
-    else:
-        imt_class = getattr(nhlib.imt, imt)
-        return imt_class()
