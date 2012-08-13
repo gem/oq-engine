@@ -15,6 +15,7 @@
 
 """Core functionality for Event-Based hazard calculations."""
 
+import functools
 import math
 import os
 import random
@@ -32,6 +33,29 @@ from openquake.calculators.hazard import general
 
 LOG = logs.LOG
 
+# Module-private kvs connection cache, to be used by create_java_cache().
+__KVS_CONN_CACHE = {}
+
+
+def create_java_cache(fn):
+    """A decorator for creating java cache object"""
+
+    @functools.wraps(fn)
+    def decorated(self, *args, **kwargs):  # pylint: disable=C0111
+        kvs_data = (config.get("kvs", "host"), int(config.get("kvs", "port")))
+
+        if kvs.cache_connections():
+            key = hashlib.md5(repr(kvs_data)).hexdigest()
+            if key not in __KVS_CONN_CACHE:
+                __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
+            self.cache = __KVS_CONN_CACHE[key]
+        else:
+            self.cache = java.jclass("KVS")(*kvs_data)
+
+        return fn(self, *args, **kwargs)
+
+    return decorated
+
 
 @task
 @java.unpack_exception
@@ -48,7 +72,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """Probabilistic Event Based method for performing Hazard calculations."""
 
     @java.unpack_exception
-    @general.create_java_cache
+    @create_java_cache
     def execute(self):
         """Main hazard processing block.
 
@@ -130,7 +154,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 files.append(nrml_path)
         return files
 
-    @general.create_java_cache
+    @create_java_cache
     def compute_ground_motion_fields(self, site_list, history, realization,
                                      seed):
         """Ground motion field calculation, runs on the workers."""
