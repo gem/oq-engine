@@ -23,14 +23,13 @@ import kombu
 import nhlib
 import nhlib.calc
 import nhlib.imt
-import nhlib.site
 import numpy
 
 from django.db import transaction
 
 from openquake import logs
 from openquake import writer
-from openquake.calculators.hazard import general
+from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.export import hazard as hexp
 from openquake.input import logictree
@@ -92,7 +91,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    sources = general.gen_sources(
+    sources = haz_general.gen_sources(
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization)
 
@@ -107,7 +106,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # expensive operation (at least for small calculations), but this is
     # wasted work.
     logs.LOG.debug('> creating site collection')
-    site_coll = get_site_collection(hc)
+    site_coll = haz_general.get_site_collection(hc)
     logs.LOG.debug('< done creating site collection')
 
     # Prepare args for the calculator.
@@ -229,7 +228,7 @@ def classical_task_arg_gen(hc, job, sources_per_task, progress):
             yield task_args
 
 
-class ClassicalHazardCalculator(general.BaseHazardCalculatorNext):
+class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
     points.
@@ -392,41 +391,6 @@ def update_result_matrix(current, new):
     return 1 - (1 - current) * (1 - new)
 
 
-def get_site_collection(hc):
-    """
-    Create a `SiteCollection`, which is needed by nhlib to compute hazard
-    curves.
-
-    :param hc:
-        Instance of a :class:`~openquake.db.models.HazardCalculation`. We need
-        this in order to get the points of interest for a calculation as well
-        as load pre-computed site data or access reference site parameters.
-
-    :returns:
-        :class:`nhlib.site.SiteCollection` instance.
-    """
-    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [nhlib.site.Site(
-            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-
-    return nhlib.site.SiteCollection(sites)
-
-
 def signal_task_complete(job_id, num_sources):
     """
     Send a signal back through a dedicated queue to the 'control node' to
@@ -445,9 +409,9 @@ def signal_task_complete(job_id, num_sources):
     # Maybe we can remove this
     msg = dict(job_id=job_id, num_sources=num_sources)
 
-    exchange, conn_args = general.exchange_and_conn_args()
+    exchange, conn_args = haz_general.exchange_and_conn_args()
 
-    routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
+    routing_key = haz_general.ROUTING_KEY_FMT % dict(job_id=job_id)
 
     with kombu.BrokerConnection(**conn_args) as conn:
         with conn.Producer(exchange=exchange,
