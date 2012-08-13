@@ -889,3 +889,14 @@ def verify_loss_map(test_case, path, lm_data, loss_map_precision):
 
     assertDeepAlmostEqual(test_case, sorted(expected_data), sorted(lm_data),
         places=loss_map_precision)
+
+
+class EpsilonProvider(object):
+
+    def __init__(self, asset, epsilons):
+        self.asset = asset
+        self.epsilons = epsilons
+
+    def epsilon(self, asset):
+        assert self.asset is asset
+        return self.epsilons.pop(0)

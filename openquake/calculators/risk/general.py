@@ -1223,3 +1223,78 @@ def hazard_input_site(job_ctxt, site):
         return site
     else:
         return job_ctxt.region.grid.point_at(site).site
+
+
+def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
+    """
+    Compute losses for the given asset using the related set of ground
+    motion values and vulnerability function.
+
+    :param vuln_function: the vulnerability function used to compute the loss
+        ratios.
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param gmvs: the set of ground motion values used to compute the loss
+        ratios.
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
+        of ground motion values (float).
+    :param epsilon_provider: service used to get the epsilon when using the
+        sampled based algorithm.
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
+    :param asset: the asset used to compute the loss ratios and losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    """
+
+    loss_ratios = compute_loss_ratios(
+        vuln_function, gmvs, epsilon_provider, asset)
+
+    losses = loss_ratios * asset.value
+
+    return losses
+
+
+def insurance_boundaries_defind(asset):
+    """
+    Check if limit and deductibles values have been defined for the asset.
+
+    :param asset: the asset used to compute the losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    """
+
+    if (asset.ins_limit >= 0 and asset.deductible >= 0):
+        return True
+    else:
+        raise RuntimeError('Insurance boundaries for asset %s are not defined'
+        % asset.asset_ref)
+
+
+def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
+    """
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
+
+    :param vuln_function: the vulnerability function used to compute the loss
+        ratios.
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param gmvs: the set of ground motion values used to compute the loss
+        ratios.
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
+        of ground motion values (float).
+    :param epsilon_provider: service used to get the epsilon when using the
+        sampled based algorithm.
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
+    :param asset: the asset used to compute the loss ratios and losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    """
+
+    losses = compute_uninsured_losses(vuln_function, gmvs,
+        epsilon_provider, asset)
+
+    if insurance_boundaries_defind(asset):
+        for i, value in enumerate(losses):
+            if value < asset.deductible:
+                losses[i] = 0
+            else:
+                if value > asset.ins_limit:
+                    losses[i] = asset.ins_limit
+    return losses
+
