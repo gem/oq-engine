@@ -20,6 +20,7 @@
 
 import os
 import random
+import re
 import StringIO
 
 import kombu
@@ -51,6 +52,9 @@ from openquake.utils import config
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
 
+#: Default Spectral Acceleration damping. At the moment, this is not
+#: configurable.
+DEFAULT_SA_DAMPING = 5.0
 
 # NOTE: this refers to how the values are stored in KVS. In the config
 # file, values are stored untransformed (i.e., the list of IMLs is
@@ -646,6 +650,44 @@ def get_site_collection(hc):
             for pt in points]
 
     return nhlib.site.SiteCollection(sites)
+
+
+def im_dict_to_nhlib(im_dict):
+    """
+    Given the dict of intensity measure types and levels, convert them to a
+    dict with the same values, except create :mod:`mhlib.imt` objects for the
+    new keys.
+
+    :returns:
+        A dict of intensity measure level lists, keyed by an IMT object. See
+        :mod:`nhlib.imt` for more information.
+    """
+    # TODO: file a bug about  SA periods in nhlib imts.
+    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
+    # there must be a reason why we can't do this.
+    nhlib_im = {}
+
+    for imt, imls in im_dict.items():
+        nhlib_imt = imt_to_nhlib(imt)
+        nhlib_im[nhlib_imt] = imls
+
+    return nhlib_im
+
+
+def imt_to_nhlib(imt):
+    """Covert an IMT string to an nhlib object.
+
+    :param str imt:
+        Given the IMT string (defined in the job config file), convert it to
+        equivlent nhlib object. See :mod:`nhlib.imt`.
+    """
+    if 'SA' in imt:
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
+        period = float(match.group(1))
+        return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
+    else:
+        imt_class = getattr(nhlib.imt, imt)
+        return imt_class()
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
