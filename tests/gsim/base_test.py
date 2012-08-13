@@ -335,8 +335,8 @@ class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
 class MakeContextsTestCase(_FakeGSIMTestCase):
     def setUp(self):
         super(MakeContextsTestCase, self).setUp()
-        self.site1_location = Point(10, 20)
-        self.site2_location = Point(-20, -30)
+        self.site1_location = Point(1, 2)
+        self.site2_location = Point(-2, -3)
         self.site1 = Site(vs30=456, vs30measured=False,
                           z1pt0=12.1, z2pt5=15.1,
                           location=self.site1_location)
@@ -383,7 +383,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                 fake_surface.call_counts['get_top_edge_depth'] += 1
                 return top_edge_depth
 
-        self.rupture_hypocenter = Point(20, 30, 40)
+        self.rupture_hypocenter = Point(2, 3, 40)
         self.rupture = Rupture(
             mag=123.45, rake=123.56,
             tectonic_region_type=const.TRT.VOLCANIC,
@@ -415,9 +415,11 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                                  site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
-        self.gsim_class.REQUIRES_DISTANCES = set('rjb rx rrup'.split())
+        self.gsim_class.REQUIRES_DISTANCES = set(
+            'rjb rx rrup repi rhypo'.split()
+        )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor'.split()
+            'mag rake dip ztor hypo_depth'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -431,6 +433,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
+        self.assertEqual(rctx.hypo_depth, 40)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
@@ -438,6 +441,10 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
+        numpy.testing.assert_almost_equal(dctx.rhypo,
+                                          [162.18749272, 802.72247682])
+        numpy.testing.assert_almost_equal(dctx.repi,
+                                          [157.17755181, 801.72524895])
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
