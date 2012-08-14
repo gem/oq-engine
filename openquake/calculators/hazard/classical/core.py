@@ -281,7 +281,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # result curves for just a subset of the overall sources) when some
         # work is complete.
         self.initialize_realizations(
-            rlz_callback=self.initialize_hazard_curve_progress)
+            rlz_callbacks=[self.initialize_hazard_curve_progress])
 
     def post_execute(self):
         """
