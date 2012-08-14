@@ -322,3 +322,17 @@ class ConvexToPointDistanceTestCase(SpeedupsTestCase):
         dist = utils.convex_to_point_distance(self.polygon, pxx, pyy)
         numpy.testing.assert_almost_equal(dist, [[1.4142135, 0.1],
                                                  [2.9107559, 0.3]])
+
+    def test_nonconvex_polygon(self):
+        coords = [(0, 0), (0, 3), (2, 2), (1, 2), (1, 1), (1, 0), (0, 0)]
+        for polygon_coords in (coords, list(reversed(coords))):
+            polygon = shapely.geometry.Polygon(polygon_coords)
+            pxx = numpy.array([0.5, 0.5, 0.5, 0.5, 0.5])
+            pyy = numpy.array([0.0, 0.5, 1.0, 2.0, 2.5])
+            dist = utils.convex_to_point_distance(polygon, pxx, pyy)
+            numpy.testing.assert_equal(dist, 0)
+
+            pxx = numpy.array([1.5, 3.0, -2.0])
+            pyy = numpy.array([1.5, 2.0, 2.0])
+            dist = utils.convex_to_point_distance(polygon, pxx, pyy)
+            numpy.testing.assert_almost_equal(dist, [0.5, 1, 2])

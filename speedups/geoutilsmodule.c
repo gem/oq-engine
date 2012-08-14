@@ -89,22 +89,22 @@ geoutils_convex_to_point_distance(
     iternext_c = NpyIter_GetIterNext(iter_c, NULL);
     dataptrarray_c = NpyIter_GetDataPtrArray(iter_c);
 
-    double cx, cy, prev_cx, prev_cy, length, cos_theta, sin_theta;
+    double bcx, bcy, ecx, ecy, length, cos_theta, sin_theta;
     // remember the "end point" of the first segment
-    prev_cx = *(double *) dataptrarray_c[0];
-    prev_cy = *(double *) dataptrarray_c[1];
+    ecx = *(double *) dataptrarray_c[0];
+    ecy = *(double *) dataptrarray_c[1];
 
     // here we ignore the first iteration, this is intensional: we need
     // to iterate over edges, not points
     while (iternext_c(iter_c))
     {
-        // cx and cy are coordinates of the "base point" of the current edge
-        // vector, prev_cx and prev_cy are ones of the "end point" of it
-        cx = *(double *) dataptrarray_c[0];
-        cy = *(double *) dataptrarray_c[1];
+        // bcx and bcy are coordinates of the "base point" of the current edge
+        // vector, ecx and ecy are ones of the "end point" of it
+        bcx = *(double *) dataptrarray_c[0];
+        bcy = *(double *) dataptrarray_c[1];
         // get the free vector coordinates from the bound one
-        double vx = prev_cx - cx;
-        double vy = prev_cy - cy;
+        double vx = ecx - bcx;
+        double vy = ecy - bcy;
         // calculate the length of the edge
         length = sqrt(vx * vx + vy * vy);
         // calculate cosine and sine of the angle between x-axis
@@ -118,8 +118,8 @@ geoutils_convex_to_point_distance(
 
         // the "base point" of the current vector is in turn the "end point"
         // of the next one
-        prev_cx = cx;
-        prev_cy = cy;
+        ecx = bcx;
+        ecy = bcy;
     };
 
     // second iterator is over the target points.
@@ -150,33 +150,92 @@ geoutils_convex_to_point_distance(
     {
         // loop over points
 
-        // point lies on left hand side from some edges of the polygon
-        char has_lefts = 0;
-        // same for right hand side
-        char has_rights = 0;
         // minimum distance found
         double min_distance = INFINITY;
 
+        // point coordinates
         double px = *(double *) dataptrarray_p[0];
         double py = *(double *) dataptrarray_p[1];
 
+        // number of intersections between the ray, starting from the point
+        // and running along x-axis, with polygon edges. we use that to find
+        // out whether the point is lying inside the polygon or outside:
+        // zero or even number of intersections means that point is outside
+        int intersections = 0;
+
         NpyIter_Reset(iter_c, NULL);
+
+        ecx = *(double *) dataptrarray_c[0];
+        ecy = *(double *) dataptrarray_c[1];
         while (iternext_c(iter_c))
         {
             // loop over edges: again ignore the first iteration
-            cx = *(double *) dataptrarray_c[0];
-            cy = *(double *) dataptrarray_c[1];
+            bcx = *(double *) dataptrarray_c[0];
+            bcy = *(double *) dataptrarray_c[1];
             length = *(double *) dataptrarray_c[2];
             cos_theta = *(double *) dataptrarray_c[3];
             sin_theta = *(double *) dataptrarray_c[4];
+
+            if ((px == bcx) && (py == bcy)) {
+                // point is equal to edge's beginning point, set number
+                // of intersections to "1", which means "point is inside"
+                // and quit the loop
+                intersections = 1;
+                break;
+            }
+
+            // here we want to check if the ray from the point rightwards
+            // intersects the current edge. this is only true if one of the
+            // points of the edge has ordinate equal to or greater than the
+            // current point's ordinate and another point has smaller one.
+            // note that we use non-strict equation for only one point: this
+            // way we don't count intersections for edges that lie on the
+            // ray and we don't count intersection twice if ray crosses one
+            // of polygon's vertices.
+            if (((bcy >= py) && (ecy < py)) || ((ecy >= py) && (bcy < py))) {
+                // checking for intersection is simple: we solve two line
+                // equations, where first one represents the edge and second
+                // one the ray. then we find the abscissa of intersection
+                // point and compare it to point's abscissa: if it is greater,
+                // than the edge crosses the ray.
+                double x_int;
+
+                if (cos_theta == 0) {
+                    // edge is purely vertical, intersection point is equal
+                    // to abscissa of any point belonging to it
+                    x_int = bcx;
+                } else {
+                    // edge's line equation is "y(x) = k*x + b". here "k"
+                    // is the tangent of edge's inclination angle.
+                    double k = sin_theta / cos_theta;
+                    // find the "b" coefficient putting beginning point of the edge
+                    // to the equation with known "k"
+                    double b = bcy - k * bcx;
+                    // find the abscissa of the intersection point between lines
+                    x_int = (py - b) / k;
+                }
+
+                if (x_int > px)
+                    // ray intersects the edge
+                    intersections += 1;
+                else if (x_int == px) {
+                    // point is lying on the edge, distance is zero, no need
+                    // to continue the loop
+                    intersections = 1;
+                    break;
+                }
+            }
+
+            ecx = bcx;
+            ecy = bcy;
 
             // now move the point to the coordinate space of the edge (where
             // "base point" of the edge has coordinates (0, 0) and the edge
             // itself goes along x axis) using affine transformations
 
             // first translate the coordinates
-            double px2 = px - cx;
-            double py2 = py - cy;
+            double px2 = px - bcx;
+            double py2 = py - bcy;
             // then rotate them
             double dist_x = px2 * cos_theta + py2 * sin_theta;
             double dist_y = - px2 * sin_theta + py2 * cos_theta;
@@ -189,12 +248,6 @@ geoutils_convex_to_point_distance(
             // to its "base point"
 
             double dist;
-
-            // if point lies on the left hand side of the vector,
-            // set has_lefts to true
-            has_lefts |= dist_y > 0;
-            // same for right hand side and has_rights
-            has_rights |= dist_y < 0;
 
             if ((0 <= dist_x) && (dist_x <= length)) {
                 // if point projection falls inside the vector itself,
@@ -216,13 +269,12 @@ geoutils_convex_to_point_distance(
                 min_distance = dist;
         }
 
-        if ((has_lefts == 0) || (has_rights == 0))
-            // point lies inside the polygon if it is either on the right
-            // hand side or on the left hand side of all its edges. note
-            // that it is only true for convex polygons.
-            min_distance = 0;
-
-        *(double *) dataptrarray_p[2] = min_distance;
+        if (intersections & 0x01)
+            // odd number of intersections between the ray from the point
+            // and all the edges means that the point is inside the polygon
+            *(double *) dataptrarray_p[2] = 0;
+        else
+            *(double *) dataptrarray_p[2] = min_distance;
 
     } while (iternext_p(iter_p));
 
