@@ -176,11 +176,13 @@ class SeismicSource(object):
         distance from the rupture's surface projection along the great
         circle arc (this is known as :meth:`Joyner-Boore distance
         <nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`).
-        Since general-purpose Joyner-Boore distance calculator takes
-        significant time, the base class implementation performs no filtering
-        and just returns ``sites`` parameter unchanged.
+
+        Base class implementation performs Joyner-Boore distance calculation
+        (:meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`)
+        and filters out sites that are farther than ``integration_distance``.
         """
-        return sites
+        jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
+        return sites.filter(jb_dist <= integration_distance)
 
     def get_annual_occurrence_rates(self, min_rate=0):
         """

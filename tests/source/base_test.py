@@ -21,11 +21,28 @@ from nhlib import const
 from nhlib.mfd import EvenlyDiscretizedMFD
 from nhlib.scalerel.peer import PeerMSR
 from nhlib.source.base import SeismicSource
-from nhlib.geo import Polygon, Point
+from nhlib.geo import Polygon, Point, RectangularMesh
 from nhlib.site import Site, SiteCollection
 
 
 class _BaseSeismicSourceTestCase(unittest.TestCase):
+    POLYGON = Polygon([Point(0, 0), Point(0, 0.001),
+                       Point(0.001, 0.001), Point(0.001, 0)])
+    SITES = [
+        Site(Point(0.0005, 0.0005), 0.1, True, 3, 4),  # inside, middle
+        Site(Point(0.0015, 0.0005), 1, True, 3, 4),  # outside, middle-east
+        Site(Point(-0.0005, 0.0005), 2, True, 3, 4),  # outside, middle-west
+        Site(Point(0.0005, 0.0015), 3, True, 3, 4),  # outside, north-middle
+        Site(Point(0.0005, -0.0005), 4, True, 3, 4),  # outside, south-middle
+        Site(Point(0., 0.), 5, True, 3, 4),  # south-west corner
+        Site(Point(0., 0.001), 6, True, 3, 4),  # north-west corner
+        Site(Point(0.001, 0.001), 7, True, 3, 4),  # north-east corner
+        Site(Point(0.001, 0.), 8, True, 3, 4),  # south-east corner
+        Site(Point(0., -0.01), 9, True, 3, 4),  # 1.1 km away
+        Site(Point(0.3, 0.3), 10, True, 3, 4),  # 47 km away
+        Site(Point(0., -1), 11, True, 3, 4),  # 111.2 km away
+    ]
+
     def setUp(self):
         class FakeSource(SeismicSource):
             iter_ruptures = None
@@ -37,6 +54,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
                                  mfd=mfd, rupture_mesh_spacing=2,
                                  magnitude_scaling_relationship=PeerMSR(),
                                  rupture_aspect_ratio=1)
+        self.sitecol = SiteCollection(self.SITES)
 
 
 class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
@@ -59,23 +77,6 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
 
 
 class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
-    SITES = [
-        Site(Point(0.0005, 0.0005), 0.1, True, 3, 4),  # inside, middle
-        Site(Point(0.0015, 0.0005), 1, True, 3, 4),  # outside, middle-east
-        Site(Point(-0.0005, 0.0005), 2, True, 3, 4),  # outside, middle-west
-        Site(Point(0.0005, 0.0015), 3, True, 3, 4),  # outside, north-middle
-        Site(Point(0.0005, -0.0005), 4, True, 3, 4),  # outside, south-middle
-        Site(Point(0., 0.), 5, True, 3, 4),  # south-west corner
-        Site(Point(0., 0.001), 6, True, 3, 4),  # north-west corner
-        Site(Point(0.001, 0.001), 7, True, 3, 4),  # north-east corner
-        Site(Point(0.001, 0.), 8, True, 3, 4),  # south-east corner
-        Site(Point(0., -0.01), 9, True, 3, 4),  # 1.1 km away
-        Site(Point(0.3, 0.3), 10, True, 3, 4),  # 47 km away
-        Site(Point(0., -1), 11, True, 3, 4),  # 111.2 km away
-    ]
-    POLYGON = Polygon([Point(0, 0), Point(0, 0.001),
-                       Point(0.001, 0.001), Point(0.001, 0)])
-
     def setUp(self):
         super(SeismicSourceFilterSitesTestCase, self).setUp()
         def get_rup_encl_poly(dilation=0):
@@ -84,7 +85,6 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
             else:
                 return self.POLYGON
         self.source.get_rupture_enclosing_polygon = get_rup_encl_poly
-        self.sitecol = SiteCollection(self.SITES)
 
     def test_source_filter_zero_integration_distance(self):
         filtered = self.source.filter_sites_by_distance_to_source(
@@ -126,8 +126,20 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
             )
             self.assertIs(filtered, None)
 
-    def test_rupture_filter(self):
+
+class SeismicSourceFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
+    def test(self):
+        surface_mesh = RectangularMesh(self.POLYGON.lons.reshape((2, 2)),
+                                       self.POLYGON.lats.reshape((2, 2)),
+                                       depths=None)
+        class rupture(object):
+            class surface(object):
+                @classmethod
+                def get_joyner_boore_distance(cls, mesh):
+                    return surface_mesh.get_joyner_boore_distance(mesh)
+
         filtered = self.source_class.filter_sites_by_distance_to_rupture(
-            rupture=None, integration_distance=12, sites=self.sitecol
+            rupture=rupture, integration_distance=1.01, sites=self.sitecol
         )
-        self.assertIs(filtered, self.sitecol)
+        numpy.testing.assert_array_equal(filtered.indices,
+                                         [0, 1, 2, 3, 4, 5, 6, 7, 8])
