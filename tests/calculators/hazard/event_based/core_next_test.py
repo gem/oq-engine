@@ -33,7 +33,56 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.EventBasedHazardCalculator(self.job)
 
+    def test_initialize_ses_db_records(self):
+        hc = self.job.hazard_calculation
+
+        # Initialize sources as a setup for the test:
+        self.calc.initialize_sources()
+
+        self.calc.initialize_realizations(
+            rlz_callbacks=[self.calc.initialize_ses_db_records])
+
+        outputs = models.Output.objects.filter(
+            oq_job=self.job, output_type='ses')
+        self.assertEqual(2, len(outputs))
+
+        # With this job configuration, we have 2 logic tree realizations.
+        lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+        self.assertEqual(2, len(lt_rlzs))
+
+        for rlz in lt_rlzs:
+            [ses] = models.SES.objects.filter(
+                ses_collection__lt_realization=rlz)
+
+            # The only metadata in in the SES is investigation time.
+            self.assertEqual(hc.investigation_time, ses.investigation_time)
+
+    def test_initialize_gmf_db_records(self):
+        hc = self.job.hazard_calculation
+
+        # Initialize sources as a setup for the test:
+        self.calc.initialize_sources()
+
+        self.calc.initialize_realizations(
+            rlz_callbacks=[self.calc.initialize_gmf_db_records])
+
+        outputs = models.Output.objects.filter(
+            oq_job=self.job, output_type='gmf')
+        self.assertEqual(2, len(outputs))
+
+        lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+        self.assertEqual(2, len(lt_rlzs))
+
+        for rlz in lt_rlzs:
+            [gmf_set] = models.GmfSet.objects.filter(
+                gmf_collection__lt_realization=rlz)
+
+            # The only metadata in a GmfSet is investigation time.
+            self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
+
+    @unittest.skip
     def test_stochastic_event_sets_task(self):
+        # Execute the the `stochastic_event_sets` task as a normal function.
         self.calc.pre_execute()
         self.job.is_running = True
         self.job.status = 'executing'
@@ -47,5 +96,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         rlz1_src_prog = models.SourceProgress.objects.filter(
             lt_realization=rlz1.id)
         rlz1_src_ids = [src.parsed_source.id for src in rlz1_src_prog]
-        core_next.stochastic_event_sets(self.job.id, rlz1.id, rlz1_src_ids)
-        self.assertTrue(False)
+
+        progress = dict(total=0, computed=0)
+        task_arg_gen = self.calc.task_arg_gen(hc, self.job, 5, progress)
+        for args in task_arg_gen:
+            core_next.ses_and_gmfs(*args)
+        self.assertFalse(True)
