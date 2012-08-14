@@ -99,7 +99,7 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
-def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
+def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     """
     Calculate the minimum distance between a collection of points and a point.
 
@@ -120,11 +120,20 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
         Scalars, python lists or tuples or numpy arrays of the same shape,
         representing a second collection: a list of points to find a minimum
         distance from for.
+    :param indices:
+        If ``True`` -- return indices of closest points from first triple
+        of coordinates instead of the actual distances. Indices are always
+        scalar integers -- they represent indices of a point from flattened
+        form of ``mlons``, ``mlats`` and ``mdepths`` that is closest to a
+        point from ``slons``, ``slats`` and ``sdepths``. There is one integer
+        index per point in second triple of coordinates.
     :returns:
-        Minimum distance in km, a scalar if ``slons``, ``slats``
+        Minimum distance in km or indices of closest points, depending on
+        ``indices`` parameter. Result value is a scalar if ``slons``, ``slats``
         and ``sdepths`` are scalars and numpy array of the same shape
         of those three otherwise.
     """
+    assert not indices or mlons.ndim > 0
     assert mlons.shape == mlats.shape == mdepths.shape
     slons, slats = numpy.array(slons), numpy.array(slats)
     sdepths = numpy.array(sdepths)
@@ -138,24 +147,32 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     sdepths = sdepths.reshape(-1)
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-    distance = numpy.array([
-        numpy.sqrt(numpy.min(
-            # next five lines are the same as in geodetic_distance()
-            (numpy.arcsin(numpy.sqrt(
-                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-                + cos_mlats * cos_slats[i]
-                  * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-            ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
-            + (mdepths - sdepths[i]) ** 2
-        ))
+
+    dist_squares = (
+        # next five lines are the same as in geodetic_distance()
+        (numpy.arcsin(numpy.sqrt(
+            numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
+            + cos_mlats * cos_slats[i]
+              * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+        ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
+        + (mdepths - sdepths[i]) ** 2
         for i in xrange(len(slats))
-    ])
+    )
+    if not indices:
+        result = numpy.fromiter((numpy.sqrt(numpy.min(dist_sq))
+                                 for dist_sq in dist_squares),
+                                dtype=float, count=len(slats))
+    else:
+        result = numpy.fromiter((numpy.argmin(dsq, axis=-1)
+                                 for dsq in dist_squares),
+                                dtype=int, count=len(slats))
+
     if not orig_shape:
         # original target point was a scalar, so return scalar as well
-        [distance] = distance
-        return distance
+        [result] = result
+        return result
     else:
-        return distance.reshape(orig_shape)
+        return result.reshape(orig_shape)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):

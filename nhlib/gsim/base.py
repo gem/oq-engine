@@ -216,11 +216,7 @@ class GroundShakingIntensityModel(object):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if not issubclass(type(imt), imt_module._IMT):
-            raise ValueError('imt must be an instance of IMT subclass')
-        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            raise ValueError('imt %s is not supported by %s' %
-                             (type(imt).__name__, type(self).__name__))
+        self._check_imt(imt)
 
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
@@ -243,6 +239,79 @@ class GroundShakingIntensityModel(object):
             mean = mean.reshape(mean.shape + (1, ))
             stddev = stddev.reshape(stddev.shape + (1, ))
             return distribution.sf((imls - mean) / stddev)
+
+    def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
+                         truncation_level, n_epsilons):
+        """
+        Disaggregate (separate) PoE of ``iml`` in different contributions
+        each coming from ``n_epsilons`` distribution bins.
+
+        If ``truncation_level = 3``, ``n_epsilons = 3``, bin edges are
+        ``-3 .. -1``, ``-1 .. +1`` and ``+1 .. +3``.
+
+        :param n_epsilons:
+            Integer number of bins to split truncated Gaussian distribution to.
+
+        Other parameters are the same as for :meth:`get_poes`, with
+        differences that ``iml`` is only one single intensity level
+        and ``truncation_level`` is required to be positive.
+
+        :returns:
+            Contribution to probability of exceedance of ``iml`` coming
+            from different sigma bands in a form of 1d numpy array with
+            ``n_epsilons`` floats between 0 and 1.
+        """
+        if not truncation_level > 0:
+            raise ValueError('truncation level must be positive')
+        self._check_imt(imt)
+
+        # compute mean and standard deviations
+        mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                   [const.StdDev.TOTAL])
+
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        iml = self.to_distribution_values(iml)
+        standard_imls = (iml - mean) / stddev
+
+        distribution = scipy.stats.truncnorm(- truncation_level,
+                                             truncation_level)
+        epsilons = numpy.linspace(- truncation_level, truncation_level,
+                                  n_epsilons + 1)
+        # compute epsilon bins contributions
+        contribution_by_bands = distribution.cdf(epsilons[1:]) \
+                                - distribution.cdf(epsilons[:-1])
+
+        # take the minimum epsilon larger than standard_iml
+        iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
+
+        return numpy.array([
+            # take full disaggregated distribution for the case of
+            # ``iml <= mean - truncation_level * stddev``
+            contribution_by_bands
+            if idx <= 0 else
+
+            # take zeros if ``iml >= mean + truncation_level * stddev``
+            numpy.zeros(n_epsilons)
+            if idx >= n_epsilons else
+
+            # for other cases (when ``iml`` falls somewhere in the
+            # histogram):
+            numpy.concatenate((
+                # take zeros for bins that are on the left hand side
+                # from the bin ``iml`` falls into,
+                numpy.zeros(idx - 1),
+                # ... area of the portion of the bin containing ``iml``
+                # (the portion is limited on the left hand side by
+                # ``iml`` and on the right hand side by the bin edge),
+                [distribution.sf(standard_imls[i])
+                 - contribution_by_bands[idx:].sum()],
+                # ... and all bins on the right go unchanged.
+                contribution_by_bands[idx:]
+            ))
+
+            for i, idx in enumerate(iml_bin_indices)
+        ])
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
@@ -338,6 +407,16 @@ class GroundShakingIntensityModel(object):
             setattr(rctx, param, value)
 
         return sctx, rctx, dctx
+
+    def _check_imt(self, imt):
+        """
+        Make sure that ``imt`` is valid and is supported by this GSIM.
+        """
+        if not issubclass(type(imt), imt_module._IMT):
+            raise ValueError('imt must be an instance of IMT subclass')
+        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            raise ValueError('imt %s is not supported by %s' %
+                             (type(imt).__name__, type(self).__name__))
 
 
 class GMPE(GroundShakingIntensityModel):

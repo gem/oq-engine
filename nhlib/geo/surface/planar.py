@@ -21,10 +21,10 @@ import numpy
 
 from nhlib.geo import Point
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo import geodetic
 from nhlib.geo.nodalplane import NodalPlane
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class PlanarSurface(BaseSurface):
@@ -160,6 +160,8 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
+        # but do call BaseSurface's one
+        BaseSurface.__init__(nsurf)
         nsurf.mesh_spacing = self.mesh_spacing
         nsurf.dip = self.dip
         nsurf.strike = self.strike
@@ -259,6 +261,23 @@ class PlanarSurface(BaseSurface):
         yy = (vectors2d * self.uv2).sum(axis=-1)
         return dists, xx, yy
 
+    def _project_back(self, dists, xx, yy):
+        """
+        Convert coordinates in plane's Cartesian space back to spherical
+        coordinates.
+
+        Parameters are numpy arrays, as returned from :meth:`_project`, which
+        this method does the opposite to.
+
+        :return:
+            Tuple of longitudes, latitudes and depths numpy arrays.
+        """
+        vectors = self.zero_zero \
+                  + self.uv1 * xx.reshape(xx.shape + (1, )) \
+                  + self.uv2 * yy.reshape(yy.shape + (1, )) \
+                  + self.normal * dists.reshape(dists.shape + (1, ))
+        return geo_utils.cartesian_to_spherical(vectors)
+
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
@@ -343,6 +362,21 @@ class PlanarSurface(BaseSurface):
         # finding a resulting distance combining a distance on a plane
         # with a distance to a plane
         return numpy.sqrt(dists ** 2 + dists2d_squares)
+
+    def get_closest_points(self, mesh):
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.BaseSurface.get_closest_points>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
+        mxx = xx.clip(0, self.length)
+        myy = yy.clip(0, self.width)
+        dists.fill(0)
+        lons, lats, depths = self._project_back(dists, mxx, myy)
+        return Mesh(lons, lats, depths)
 
     def _get_top_edge_centroid(self):
         """

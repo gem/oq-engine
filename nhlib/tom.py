@@ -20,6 +20,7 @@ density functions for earthquake temporal occurrence modeling.
 import math
 
 import numpy
+import scipy.stats
 
 
 class PoissonTOM(object):
@@ -36,7 +37,7 @@ class PoissonTOM(object):
             raise ValueError('time_span must be positive')
         self.time_span = time_span
 
-    def get_probability(self, occurrence_rate):
+    def get_probability_one_or_more_occurrences(self, occurrence_rate):
         """
         Calculate and return the probability of event to happen one or more
         times within the time range defined by constructor's ``time_span``
@@ -50,6 +51,14 @@ class PoissonTOM(object):
             Float value between 0 and 1 inclusive.
         """
         return 1 - math.exp(- occurrence_rate * self.time_span)
+
+    def get_probability_one_occurrence(self, occurrence_rate):
+        """
+        Calculate and return the probability of event to occur once
+        within the time range defined by the constructor's ``time_span``
+        parameter value.
+        """
+        return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
 
     def sample_number_of_occurrences(self, occurrence_rate):
         """

@@ -21,7 +21,7 @@ import numpy
 from nhlib.geo.point import Point
 from nhlib.geo.polygon import Polygon
 from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 from tests import assert_angles_equal
 from tests.geo import _mesh_test_data
@@ -175,32 +175,61 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
 
 class MeshGetMinDistanceTestCase(unittest.TestCase):
     # test case depends on Point.distance() working right
-    def _test(self, mesh_points, target_points, expected_distance_indexes):
-        mesh = Mesh.from_points_list(mesh_points)
-        target_mesh = Mesh.from_points_list(target_points)
+    def _test(self, mesh, target_mesh, expected_distance_indices):
+        mesh_points = list(mesh)
+        target_points = list(target_mesh)
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
-                          for ti, mi in enumerate(expected_distance_indexes)]
-        self.assertEqual(list(dists), expected_dists)
+                          for ti, mi in enumerate(expected_distance_indices)]
+        self.assertEqual(list(dists.flat), expected_dists)
+        closest_points_mesh = mesh.get_closest_points(target_mesh)
+        numpy.testing.assert_equal(closest_points_mesh.lons.flat,
+                                   mesh.lons.take(expected_distance_indices))
+        numpy.testing.assert_equal(closest_points_mesh.lats.flat,
+                                   mesh.lats.take(expected_distance_indices))
+        if mesh.depths is None:
+            self.assertIsNone(closest_points_mesh.depths)
+        else:
+            numpy.testing.assert_equal(
+                closest_points_mesh.depths.flat,
+                mesh.depths.take(expected_distance_indices)
+            )
+        self.assertEqual(closest_points_mesh.lats.shape, target_mesh.shape)
 
     def test_mesh_and_point_on_surface(self):
-        self._test([Point(0, 0), Point(0, 1), Point(0, 2)],
-                   [Point(1, 1), Point(-1, 0)],
-                   expected_distance_indexes=[1, 0])
+        self._test(Mesh.from_points_list([Point(0, 0), Point(0, 1),
+                                          Point(0, 2)]),
+                   Mesh.from_points_list([Point(1, 1), Point(-1, 0)]),
+                   expected_distance_indices=[1, 0])
 
     def test_mesh_on_surface(self):
-        self._test([Point(0, 0), Point(0, 1), Point(0, 2)],
-                   [Point(-1, -1, 3.4), Point(2, 5)],
-                   expected_distance_indexes=[0, 2])
+        self._test(Mesh.from_points_list([Point(0, 0), Point(0, 1),
+                                          Point(0, 2)]),
+                   Mesh.from_points_list([Point(-1, -1, 3.4), Point(2, 5)]),
+                   expected_distance_indices=[0, 2])
 
     def test_point_on_surface(self):
-        self._test([Point(0, 0, 1), Point(0, 1, 2), Point(0, 2, 3)],
-                   [Point(0.5, 1.5)], expected_distance_indexes=[1])
+        self._test(Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
+                                          Point(0, 2, 3)]),
+                   Mesh.from_points_list([Point(0.5, 1.5)]),
+                   expected_distance_indices=[1])
 
     def test_mesh_and_point_not_on_surface(self):
-        self._test([Point(0, 0, 1), Point(0, 1, 2), Point(0, 2, 3)],
-                   [Point(0, 1.5, 3), Point(0, 1.5, 0.9)],
-                   expected_distance_indexes=[2, 1])
+        self._test(Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
+                                          Point(0, 2, 3)]),
+                   Mesh.from_points_list([Point(0, 1.5, 3),
+                                          Point(0, 1.5, 0.9)]),
+                   expected_distance_indices=[2, 1])
+
+    def test_2d_mesh(self):
+        mesh = Mesh(numpy.array([[0., 1.], [2., 3.]]),
+                    numpy.array([[0., 0.], [0., 0.]]), None)
+        target_mesh = Mesh(
+            numpy.array([[3., 4., 5.], [-6., -7., 8.], [9., 10., 11.]]),
+            numpy.array([[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]), None
+        )
+        self._test(mesh, target_mesh,
+                   expected_distance_indices=[3, 3, 3, 0, 0, 3, 3, 3, 3])
 
 
 class MeshGetDistanceMatrixTestCase(unittest.TestCase):

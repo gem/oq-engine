@@ -57,6 +57,22 @@ class BaseSurface(object):
         """
         return self.get_mesh().get_min_distance(mesh)
 
+    def get_closest_points(self, mesh):
+        """
+        For each point from ``mesh`` find a closest point belonging to surface.
+
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to find closest points to.
+        :returns:
+            :class:`~nhlib.geo.mesh.Mesh` of the same shape as ``mesh`` with
+            closest surface's points on respective indices.
+
+        Base class implementation calls the :meth:`corresponding
+        <nhlib.geo.mesh.Mesh.get_closest_points>` method of the
+        surface's :meth:`mesh <get_mesh>`.
+        """
+        return self.get_mesh().get_closest_points(mesh)
+
     def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore (also known as ``Rjb``) distance

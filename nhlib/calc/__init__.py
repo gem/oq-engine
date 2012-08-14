@@ -20,4 +20,7 @@ and utilities for them, such as :mod:`~nhlib.calc.filters`.
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
 from nhlib.calc.gmf import ground_motion_fields
 from nhlib.calc.stochastic import stochastic_event_set_poissonian
+# from disagg we want to import main calc function
+# as well as all the pmf extractors
+from nhlib.calc.disagg import *
 from nhlib.calc import filters

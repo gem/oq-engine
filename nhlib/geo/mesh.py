@@ -23,7 +23,7 @@ import shapely.geometry
 
 from nhlib.geo.point import Point
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class Mesh(object):
@@ -153,6 +153,30 @@ class Mesh(object):
 
         Uses :func:`nhlib.geo.geodetic.min_distance`.
         """
+        return self._geodetic_min_distance(mesh, indices=False)
+
+    def get_closest_points(self, mesh):
+        """
+        Find closest point of this mesh for each one in ``mesh``.
+
+        :returns:
+            :class:`Mesh` object of the same shape as ``mesh`` with closest
+            points from this one at respective indices.
+
+        This method is in general very similar to :meth:`get_min_distance`
+        and uses the same :func:`nhlib.geo.geodetic.min_distance` internally.
+        """
+        idxs = self._geodetic_min_distance(mesh, indices=True)
+        lons = self.lons.take(idxs)
+        lats = self.lats.take(idxs)
+        depths = None if self.depths is None else self.depths.take(idxs)
+        return Mesh(lons, lats, depths)
+
+    def _geodetic_min_distance(self, mesh, indices):
+        """
+        Wrapper around :func:`nhlib.geo.geodetic.min_distance` for two meshes:
+        either (or both, or neither) can have empty depths.
+        """
         if self.depths is None:
             depths1 = numpy.zeros_like(self.lons)
         else:
@@ -162,7 +186,7 @@ class Mesh(object):
         else:
             depths2 = mesh.depths
         return geodetic.min_distance(self.lons, self.lats, depths1,
-                                     mesh.lons, mesh.lats, depths2)
+                                     mesh.lons, mesh.lats, depths2, indices)
 
     def get_distance_matrix(self):
         """

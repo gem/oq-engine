@@ -18,7 +18,7 @@ import unittest
 import numpy
 
 from nhlib import geo
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
 
 
 class CleanPointTestCase(unittest.TestCase):

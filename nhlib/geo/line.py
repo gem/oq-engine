@@ -19,7 +19,7 @@ Module :mod:`nhlib.geo.line` defines :class:`Line`.
 import numpy
 
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
 
 
 class Line(object):

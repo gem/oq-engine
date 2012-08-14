@@ -18,7 +18,7 @@ import unittest
 import numpy
 
 from nhlib import geo
-from nhlib.geo._utils import EARTH_RADIUS, spherical_to_cartesian
+from nhlib.geo.utils import EARTH_RADIUS, spherical_to_cartesian
 
 
 class PointPointAtTestCase(unittest.TestCase):
