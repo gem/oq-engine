@@ -780,7 +780,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
     @transaction.commit_on_success(using='reslt_writer')
-    def initialize_realizations(self, rlz_callback=None):
+    def initialize_realizations(self, rlz_callbacks=None):
         """
         Create records for the `hzrdr.lt_realization` and
         `htemp.source_progress` records.
@@ -795,29 +795,30 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         in the source model chosen for each realization,
         see :meth:`initialize_source_progress`.
 
-        :param rlz_callback:
-            Optionally, you can specify a callback for each realization.
-            In the case of the classical hazard calculator, for example, we
-            would call a function to create initial records for temporary
-            hazard curve result data.
+        :param rlz_callbacks:
+            Optionally, you can specify a list of callbacks for each
+            realization.  In the case of the classical hazard calculator, for
+            example, we would include a callback function to create initial
+            records for temporary hazard curve result data.
 
             Callbacks should accept a single argument:
             A :class:`~openquake.db.models.LtRealization` object.
         """
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
-            self._initialize_realizations_montecarlo(rlz_callback=rlz_callback)
+            self._initialize_realizations_montecarlo(
+                rlz_callbacks=rlz_callbacks)
         else:
             # full paths enumeration
             self._initialize_realizations_enumeration(
-                rlz_callback=rlz_callback)
+                rlz_callbacks=rlz_callbacks)
 
-    def _initialize_realizations_enumeration(self, rlz_callback=None):
+    def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
 
-        :param rlz_callback:
+        :param rlz_callbacks:
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
@@ -853,15 +854,16 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
-            if rlz_callback is not None:
-                rlz_callback(lt_rlz)
+            if rlz_callbacks is not None:
+                for cb in rlz_callbacks:
+                    cb(lt_rlz)
 
-    def _initialize_realizations_montecarlo(self, rlz_callback=None):
+    def _initialize_realizations_montecarlo(self, rlz_callbacks=None):
         """
         Perform random sampling of both logic trees and populate lt_realization
         table.
 
-        :param rlz_callback:
+        :param rlz_callbacks:
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
@@ -914,8 +916,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
-            if rlz_callback is not None:
-                rlz_callback(lt_rlz)
+            if rlz_callbacks is not None:
+                for cb in rlz_callbacks:
+                    cb(lt_rlz)
 
             # update the seed for the next realization
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
