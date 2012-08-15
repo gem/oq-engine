@@ -29,7 +29,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        cfg = helpers.demo_file('event_based_hazard/job.ini')
+        cfg = helpers.get_data_path('event_based_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.EventBasedHazardCalculator(self.job)
 
