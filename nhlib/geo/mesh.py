@@ -20,6 +20,7 @@ Module :mod:`nhlib.geo.mesh` defines classes :class:`Mesh` and its subclass
 """
 import numpy
 import shapely.geometry
+from shapely.ops import cascaded_union
 
 from nhlib.geo.point import Point
 from nhlib.geo import geodetic
@@ -174,8 +175,8 @@ class Mesh(object):
         # and distance on the projection plane for close points). first,
         # we find the closest geodetic distance for each point of target
         # mesh to this one. in general that distance is greater than
-        # the exact distance to convex hull polygon of this mesh and
-        # it depends on mesh spacing. but the difference can be neglected
+        # the exact distance to enclosing polygon of this mesh and it
+        # depends on mesh spacing. but the difference can be neglected
         # if calculated geodetic distance is over some threshold.
         distances = geodetic.min_geodetic_distance(self.lons, self.lats,
                                                    mesh.lons, mesh.lats)
@@ -193,18 +194,18 @@ class Mesh(object):
 
         # for all the points that are closer than the threshold we need
         # to recalculate the distance and set it to zero, if point falls
-        # inside the convex hull polygon of the mesh. for doing that
-        # we project both this mesh and selected by distance threshold
+        # inside the enclosing polygon of the mesh. for doing that we
+        # project both this mesh and selected by distance threshold
         # points of the second one on the same Cartesian space, define
-        # shapely polygon representing a convex hull and calculate
-        # convex to point distance, which gives the most accurate value
+        # minimum shapely polygon enclosing the mesh and calculate point
+        # to polygon distance, which gives the most accurate value
         # of distance in km (and that value is zero for points inside
         # the polygon).
-        proj, polygon = self._get_shapely_convex_hull()
+        proj, polygon = self._get_proj_enclosing_polygon()
         if not isinstance(polygon, shapely.geometry.Polygon):
-            # either line or point is our convex hull. draw a square
-            # with side of 1 cm around in order to have a proper
-            # polygon instead.
+            # either line or point is our enclosing polygon. draw
+            # a square with side of 1 cm around in order to have
+            # a proper polygon instead.
             polygon = polygon.buffer(1e-5, 1)
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
@@ -282,10 +283,11 @@ class Mesh(object):
         )
         return numpy.matrix(distances, copy=False)
 
-    def _get_shapely_convex_hull(self):
+    def _get_proj_convex_hull(self):
         """
-        Create a projection centered in the center of this mesh and find
-        a polygon in that projection, enveloping all the points of the mesh.
+        Create a projection centered in the center of this mesh and define
+        a convex polygon in that projection, enveloping all the points
+        of the mesh.
 
         :returns:
             Tuple of two items: projection function and shapely 2d polygon.
@@ -306,6 +308,16 @@ class Mesh(object):
 
         return proj, polygon2d
 
+    def _get_proj_enclosing_polygon(self):
+        """
+        Create a projection centered in the center of this mesh and define
+        a minimum polygon in that projection, enveloping all the points
+        of the mesh.
+
+        In :class:`Mesh` this is equivalent to :meth:`_get_proj_convex_hull`.
+        """
+        return self._get_proj_convex_hull()
+
     def get_convex_hull(self):
         """
         Get a convex polygon object that contains projections of all the points
@@ -318,7 +330,7 @@ class Mesh(object):
             with a side length of 10 meters. If there were only two points,
             resulting polygon is a stripe 10 meters wide.
         """
-        proj, polygon2d = self._get_shapely_convex_hull()
+        proj, polygon2d = self._get_proj_convex_hull()
         # if mesh had only one point, the convex hull is a point. if there
         # were two, it is a line string. we need to return a convex polygon
         # object, so extend that area-less geometries by some arbitrarily
@@ -370,6 +382,50 @@ class RectangularMesh(Mesh):
         if not depths.any():
             depths = None
         return cls(lons, lats, depths)
+
+    def _get_proj_enclosing_polygon(self):
+        """
+        See :meth:`Mesh._get_proj_enclosing_polygon`.
+
+        :class:`RectangularMesh` contains an information about relative
+        positions of points, so it allows to define the minimum polygon,
+        containing the projection of the mesh, which doesn't necessarily
+        have to be convex (in contrast to :class:`Mesh` implementation).
+
+        :returns:
+            Same structure as :meth:`Mesh._get_proj_convex_hull`.
+        """
+        # TODO: unittest
+        if self.lons.size < 4:
+            # the mesh doesn't contain even a single cell, use :class:`Mesh`
+            # method implementation (which would dilate the point or the line)
+            return super(RectangularMesh, self)._get_proj_enclosing_polygon()
+
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+        )
+        mesh2d = numpy.array(proj(self.lons, self.lats)).transpose()
+        lines = iter(mesh2d)
+        # we iterate over vertical stripes, keeping the "previous"
+        # line of points. we keep it reversed, such that together
+        # with the current line they define the sequence of points
+        # around the stripe.
+        prev_line = lines.next()[::-1]
+        polygons = []
+        for line in lines:
+            coords = numpy.concatenate((prev_line, line))
+            # create the shapely polygon object from the stripe
+            # coordinates and simplify it (remove redundant points,
+            # if there are any lying on the straight line).
+            # simplification tolerance is 10 meters (set arbitrarily)
+            polygon = shapely.geometry.Polygon(coords).simplify(0.01)
+            # accumulate all the polygons in a list
+            polygons.append(polygon)
+            prev_line = line[::-1]
+        # create a final polygon as the union of all the stripe ones
+        polygon = cascaded_union(polygons).simplify(0.01)
+
+        return proj, polygon
 
     def get_middle_point(self):
         """
