@@ -258,7 +258,7 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
             'truncation_level',
             'maximum_distance',
             'intensity_measure_types',
-            'ses_per_sample',
+            'ses_per_logic_tree_path',
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
             'complete_logic_tree_ses',
@@ -524,12 +524,12 @@ def poes_hazard_maps_is_valid(mdl):
     return True, []
 
 
-def ses_per_sample_is_valid(mdl):
-    sps = mdl.ses_per_sample
+def ses_per_logic_tree_path_is_valid(mdl):
+    sps = mdl.ses_per_logic_tree_path
 
     if not sps > 0:
-        return False, ['`Stochastic Event Sets Per Sample` (ses_per_sample) '
-                       'must be > 0']
+        return False, ['`Stochastic Event Sets Per Sample` '
+                       '(ses_per_logic_tree_path) must be > 0']
     return True, []
 
 

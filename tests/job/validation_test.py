@@ -544,10 +544,11 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
 
 class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
 
-    def test_ses_per_sample_is_not_valid(self):
+    def test_ses_per_logic_tree_path_is_not_valid(self):
         expected_errors = {
-            'ses_per_sample': ['`Stochastic Event Sets Per Sample` '
-                               '(ses_per_sample) must be > 0'],
+            'ses_per_logic_tree_path': [
+                '`Stochastic Event Sets Per Sample` (ses_per_logic_tree_path) '
+                'must be > 0'],
         }
 
         hc = models.HazardCalculation(
@@ -603,7 +604,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             intensity_measure_types=VALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
-            ses_per_sample=5,
+            ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,
@@ -648,7 +649,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             intensity_measure_types=INVALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
-            ses_per_sample=5,
+            ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,
