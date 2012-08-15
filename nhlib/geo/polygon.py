@@ -164,7 +164,7 @@ class Polygon(object):
         """
         self._init_polygon2d()
         pxx, pyy = self._projection(mesh.lons, mesh.lats)
-        return utils.convex_to_point_distance(self._polygon2d, pxx, pyy) == 0
+        return utils.point_to_polygon_distance(self._polygon2d, pxx, pyy) == 0
 
     def discretize(self, mesh_spacing):
         """

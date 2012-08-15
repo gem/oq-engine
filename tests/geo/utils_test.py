@@ -305,21 +305,21 @@ class ConvexToPointDistanceTestCase(SpeedupsTestCase):
     ])
 
     def test_one_point(self):
-        dist = utils.convex_to_point_distance(self.polygon, 0.5, 0.5)
+        dist = utils.point_to_polygon_distance(self.polygon, 0.5, 0.5)
         self.assertEqual(dist, 0)
-        dist = utils.convex_to_point_distance(self.polygon, 0.5, 1.5)
+        dist = utils.point_to_polygon_distance(self.polygon, 0.5, 1.5)
         self.assertAlmostEqual(dist, 0.5)
 
     def test_list_of_points(self):
         pxx = [-1., 0.3, -0.25]
         pyy = [2., 1.1, 3.9]
-        dist = utils.convex_to_point_distance(self.polygon, pxx, pyy)
+        dist = utils.point_to_polygon_distance(self.polygon, pxx, pyy)
         numpy.testing.assert_almost_equal(dist, [1.4142135, 0.1, 2.9107559])
 
     def test_2d_array_of_points(self):
         pxx = [[-1., 0.3], [-0.25, 0.5]]
         pyy = [[2., 1.1], [3.9, -0.3]]
-        dist = utils.convex_to_point_distance(self.polygon, pxx, pyy)
+        dist = utils.point_to_polygon_distance(self.polygon, pxx, pyy)
         numpy.testing.assert_almost_equal(dist, [[1.4142135, 0.1],
                                                  [2.9107559, 0.3]])
 
@@ -329,10 +329,10 @@ class ConvexToPointDistanceTestCase(SpeedupsTestCase):
             polygon = shapely.geometry.Polygon(polygon_coords)
             pxx = numpy.array([0.5, 0.5, 0.5, 0.5, 0.5])
             pyy = numpy.array([0.0, 0.5, 1.0, 2.0, 2.5])
-            dist = utils.convex_to_point_distance(polygon, pxx, pyy)
+            dist = utils.point_to_polygon_distance(polygon, pxx, pyy)
             numpy.testing.assert_equal(dist, 0)
 
             pxx = numpy.array([1.5, 3.0, -2.0])
             pyy = numpy.array([1.5, 2.0, 2.0])
-            dist = utils.convex_to_point_distance(polygon, pxx, pyy)
+            dist = utils.point_to_polygon_distance(polygon, pxx, pyy)
             numpy.testing.assert_almost_equal(dist, [0.5, 1, 2])

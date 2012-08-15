@@ -208,8 +208,8 @@ class Mesh(object):
             polygon = polygon.buffer(1e-5, 1)
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        distances_2d = geo_utils.convex_to_point_distance(polygon,
-                                                          mesh_xx, mesh_yy)
+        distances_2d = geo_utils.point_to_polygon_distance(polygon,
+                                                           mesh_xx, mesh_yy)
 
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.

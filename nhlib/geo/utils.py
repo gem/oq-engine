@@ -315,13 +315,13 @@ def normalized(vector):
     return vector / length
 
 
-def convex_to_point_distance(polygon, pxx, pyy):
+def point_to_polygon_distance(polygon, pxx, pyy):
     """
     Calculate the distance to polygon for each point of the collection
     on the 2d Cartesian plane.
 
     :param polygon:
-        Shapely "Polygon" geometry object. Has to be convex.
+        Shapely "Polygon" geometry object.
     :param pxx:
         List or numpy array of abscissae values of points to calculate
         the distance from.
@@ -353,13 +353,13 @@ except ImportError:
 else:
     from nhlib import speedups
 
-    def _c_convex_to_point_distance(polygon, pxx, pyy):
+    def _c_point_to_polygon_distance(polygon, pxx, pyy):
         pxx = numpy.array(pxx, float)
         pyy = numpy.array(pyy, float)
         cxx, cyy = numpy.array(polygon.exterior).transpose()
-        return _utils_speedups.convex_to_point_distance(
+        return _utils_speedups.point_to_polygon_distance(
             cxx, cyy, pxx, pyy
         )
 
-    speedups.register(convex_to_point_distance, _c_convex_to_point_distance)
-    del _c_convex_to_point_distance
+    speedups.register(point_to_polygon_distance, _c_point_to_polygon_distance)
+    del _c_point_to_polygon_distance

@@ -20,38 +20,37 @@
 #include <numpy/arrayobject.h>
 
 
-static const char geoutils_convex_to_point_distance__doc__[] = "\n\
-    For each point of the collection calculate the distance to the convex\n\
-    polygon, treating points lying inside the polygon as having zero\n\
-    distance.\n\
+static const char geoutils_point_to_polygon_distance__doc__[] = "\n\
+    For each point of the collection calculate the distance to polygon\n\
+    treating points lying inside the polygon as having zero distance.\n\
     \n\
-    convex_to_point_distance(cxx, cyy, pxx, pyy) -> dists\n\
+    point_to_polygon_distance(cxx, cyy, pxx, pyy) -> dists\n\
     \n\
-    Parameters cxx and cyy represent coordinates of convex polygon vertices\n\
+    Parameters cxx and cyy represent coordinates of polygon vertices\n\
     in either clockwise or counterclockwise order. The last point must\n\
-    repeat the first one.\n\
+    repeat the first one. The polygon doesn't have to be convex.\n\
     \n\
     Parameters pxx, pyy represent coordinates of the point collection.\n\
-    Both pairs of coordinates must be numpy arrays of double. They are \n\
+    Both pairs of coordinates must be numpy arrays of double. They are\n\
     treated as the ones in 2d Cartesian space.\n\
     \n\
     Result is numpy array of doubles -- distance in units of coordinate\n\
     system.\n\
 ";
 static PyObject *
-geoutils_convex_to_point_distance(
+geoutils_point_to_polygon_distance(
         PyObject *self,
         PyObject *args,
         PyObject *keywds)
 {
-    static char *kwlist[] = {"cxx", "cyy", /* convex coords */
+    static char *kwlist[] = {"cxx", "cyy", /* polygon coords */
                              "pxx", "pyy", /* points coords */
                              NULL}; /* sentinel */
 
     PyArrayObject *cxx, *cyy, *pxx, *pyy;
 
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "O!O!O!O!", kwlist,
-                // convex coords
+                // polygon coords
                 &PyArray_Type, &cxx, &PyArray_Type, &cyy,
                 // points coords
                 &PyArray_Type, &pxx, &PyArray_Type, &pyy))
@@ -59,8 +58,7 @@ geoutils_convex_to_point_distance(
 
     PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
 
-    // we use the first iterator ("*_c", for "convex") for iterating over
-    // edges of the convex.
+    // we use the first iterator for iterating over edges of the polygon
     PyArrayObject *op_c[5];
     npy_uint32 op_flags_c[5];
     npy_uint32 flags_c = 0;
@@ -294,10 +292,10 @@ geoutils_convex_to_point_distance(
  * Module method reference table
  */
 static PyMethodDef GeoutilsSpeedupsMethods[] = {
-    {"convex_to_point_distance",
-            (PyCFunction)geoutils_convex_to_point_distance,
+    {"point_to_polygon_distance",
+            (PyCFunction)geoutils_point_to_polygon_distance,
             METH_VARARGS | METH_KEYWORDS,
-            geoutils_convex_to_point_distance__doc__},
+            geoutils_point_to_polygon_distance__doc__},
 
     {NULL, NULL, 0, NULL} /* Sentinel */
 };
