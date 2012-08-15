@@ -80,9 +80,13 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # The only metadata in a GmfSet is investigation time.
             self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
 
-    @unittest.skip
     def test_stochastic_event_sets_task(self):
         # Execute the the `stochastic_event_sets` task as a normal function.
+
+        # There 4 sources in the test input model; we can test them all with 1
+        # task.
+        sources_per_task = 4
+
         self.calc.pre_execute()
         self.job.is_running = True
         self.job.status = 'executing'
@@ -98,7 +102,28 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         rlz1_src_ids = [src.parsed_source.id for src in rlz1_src_prog]
 
         progress = dict(total=0, computed=0)
-        task_arg_gen = self.calc.task_arg_gen(hc, self.job, 5, progress)
-        for args in task_arg_gen:
+
+        task_arg_gen = self.calc.task_arg_gen(
+            hc, self.job, sources_per_task, progress)
+        task_arg_list = list(task_arg_gen)
+
+        self.assertEqual(2, len(task_arg_list))
+        for args in task_arg_list:
             core_next.ses_and_gmfs(*args)
-        self.assertFalse(True)
+
+        # Check the progress counters:
+        # 2 realizations * 4 sources = 8 total
+        self.assertEqual(8, progress['total'])
+        self.assertEqual(8, progress['computed'])
+
+        # Now check that we saved the right number of ruptures to the DB.
+        ruptures1 = models.SESRupture.objects.filter(
+            ses__ses_collection__lt_realization=rlz1)
+        self.assertEqual(22, len(ruptures1))
+
+        ruptures2 = models.SESRupture.objects.filter(
+            ses__ses_collection__lt_realization=rlz2)
+        self.assertEqual(17, len(ruptures2))
+
+        # TODO: At some point, we'll need to test the actual values of these
+        # ruptures. We'll need to collect QA test data for this.
