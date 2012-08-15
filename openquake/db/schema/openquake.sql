@@ -324,7 +324,7 @@ CREATE TABLE uiapi.hazard_calculation (
     maximum_distance float NOT NULL,
     -- event-based calculator parameters:
     intensity_measure_types VARCHAR[],
-    ses_per_sample INTEGER,
+    ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
     -- output/post-processing parameters:

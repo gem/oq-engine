@@ -96,7 +96,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
 
-    for _ in xrange(hc.ses_per_sample):
+    for _ in xrange(hc.ses_per_logic_tree_path):
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             sources, hc.investigation_time)
 
