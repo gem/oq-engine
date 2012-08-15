@@ -89,37 +89,53 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization)
 
-    if hc.ground_motion_fields:
-        # The site collection is only needed for GMF calculation
-        # (not for SES calculation).
-        site_coll = haz_general.get_site_collection(hc)
+    site_coll = haz_general.get_site_collection(hc)
 
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
 
     for _ in xrange(hc.ses_per_logic_tree_path):
+        sources_sites = ((src, site_coll) for src in sources)
+        ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
+        # Get the filtered sources, ignore the site collection:
+        sources = (src for src, _ in ssd_filter(sources_sites))
+        # Calculate stochastic event sets:
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             sources, hc.investigation_time)
 
         for rupture in ses_poissonian:
             # Save SES ruptures to the db:
             # TODO: bulk insertion of ruptures?
+
+            ########## Prepare and save ruptures ##########
             is_from_fault_source = rupture.source_typology in (
                 nhlib.source.ComplexFaultSource,
                 nhlib.source.SimpleFaultSource)
 
-            lons = None
-            lats = None
-            depths = None
-
             if is_from_fault_source:
-                # simple or complex fault:
-                # geometry represented by a mesh
-                lons = rupture.surface.lons
-                lats = rupture.surface.lats
-                depths = rupture.surface.depths
+                # for simple and complex fault sources,
+                # rupture surface geometry is represented by a mesh
+                surf_mesh = rupture.surface.get_mesh()
+                lons = surf_mesh.lons
+                lats = surf_mesh.lats
+                depths = surf_mesh.depths
             else:
-                pass
-                # TODO: Deal with all of the source types
+                # For area or point source,
+                # rupture geometry is represented by a planar surface,
+                # defined by 3D corner points
+                surface = rupture.surface
+                lons = numpy.zeros((4))
+                lats = numpy.zeros((4))
+                depths = numpy.zeros((4))
+
+                # NOTE: It is important to maintain the order of these corner
+                # points.
+                for i, corner in enumerate((surface.top_left,
+                                            surface.top_right,
+                                            surface.bottom_right,
+                                            surface.bottom_left)):
+                    lons[i] = corner.longitude
+                    lats[i] = corner.latitude
+                    depths[i] = corner.depth
 
             models.SESRupture.objects.create(
                 ses=ses,
@@ -133,7 +149,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                 lats=lats,
                 depths=depths,
             )
-
+            ##########
 
             if hc.ground_motion_fields:
                 # Compute and save ground motion fields
@@ -173,7 +189,6 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                             hc.maximum_distance),
                 }
                 gmfs = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
-                print gmfs
                 # TODO: save gmfs to db
 
     # TODO: signal task completed
@@ -292,11 +307,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.initialize_sources()
 
         # Deal with the site model and compute site data for the calculation
-        # (if a site model was specified, that is).
-        # This is only necessary if the user has chosen to compute GMFs
-        # (in addition to stochastic event sets).
-        if self.job.hazard_calculation.ground_motion_fields:
-            self.initialize_site_model()
+        # If no site model file was specified, reference parameters are used
+        # for all sites.
+        self.initialize_site_model()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
