@@ -18,10 +18,14 @@ import os
 
 from nrml import writers as nrml_writers
 
+from openquake import logs
 from openquake.db import models
 from openquake.export import core
 from openquake.export import uhs
 from openquake.export.core import makedirs
+
+
+LOG = logs.LOG
 
 
 def export(output_id, target_dir):
@@ -105,6 +109,7 @@ def export_hazard_curves(output, target_dir):
         gsimlt_path = None
 
     metadata = {
+        'quantile_value': hc.quantile,
         'statistics': hc.statistics,
         'smlt_path': smlt_path,
         'gsimlt_path': gsimlt_path,
@@ -116,3 +121,18 @@ def export_hazard_curves(output, target_dir):
     writer.serialize(hcd)
 
     return [path]
+
+
+def curves2nrml(target_dir, job):
+    """Write hazard curves to NRML files.
+
+    :param str target_dir: where should the output files go?
+    :param int job_id: the database key of the job at hand.
+    """
+    LOG.debug("> curves2nrml")
+    hc_outputs = models.Output.objects.filter(oq_job=job,
+                                              output_type="hazard_curve")
+
+    for hc_output in hc_outputs:
+        export_hazard_curves(hc_output, target_dir)
+    LOG.debug("< curves2nrml")
