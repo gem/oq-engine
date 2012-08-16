@@ -145,22 +145,22 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # Now check that we saved the right number of ruptures to the DB.
         ruptures1 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz1)
-        self.assertEqual(17, len(ruptures1))
+        self.assertEqual(22, len(ruptures1))
 
         ruptures2 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz2)
-        self.assertEqual(18, len(ruptures2))
+        self.assertEqual(17, len(ruptures2))
 
         # Check that we saved the right number of GMFs to the DB.
         # The correct number of GMFs for each realization is
         # num_ruptures * num_sites * num_imts
 
-        expected_gmfs1 = 17 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
+        expected_gmfs1 = 22 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
         gmfs1 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz1)
         self.assertEqual(expected_gmfs1, len(gmfs1))
 
-        expected_gmfs2 = 18 * num_sites * 2
+        expected_gmfs2 = 17 * num_sites * 2
         gmfs2 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz2)
         self.assertEqual(expected_gmfs2, len(gmfs2))

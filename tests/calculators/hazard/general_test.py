@@ -18,6 +18,7 @@
 import getpass
 import unittest
 
+import kombu
 import nhlib
 
 from nhlib import geo as nhlib_geo
@@ -471,5 +472,5 @@ class SignalTestCase(unittest.TestCase):
                                callbacks=[test_callback]):
 
                 # send the signal:
-                core.signal_task_complete(job_id, num_sources)
+                general.signal_task_complete(job_id, num_sources)
                 conn.drain_events()
