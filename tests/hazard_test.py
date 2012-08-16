@@ -24,7 +24,6 @@ Includes:
 - hazard maps (only mean and quantile)
 """
 
-import json
 import numpy
 import os
 import unittest
@@ -32,13 +31,11 @@ import unittest
 from openquake import engine
 from openquake import kvs
 from openquake import logs
-from openquake import shapes
 from openquake import xml
 from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
 from openquake.calculators.hazard.scenario import core as scenario
 from openquake.engine import JobContext
-from openquake.export import psha
 from openquake.job import params as job_params
 from openquake.kvs import tokens
 from openquake.nrml.utils import nrml_schema_file

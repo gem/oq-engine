@@ -179,8 +179,9 @@ class Inputs4JobTestCase(unittest.TestCase):
                             input_type="exposure", size=self.sizes.next())
         inp3.save()
         models.Input2job(oq_job=self.job, input=inp3).save()
-        self.assertEqual([inp1, inp3],
-                         models.inputs4job(self.job.id, input_type="exposure"))
+        actual = sorted(models.inputs4job(self.job.id, input_type="exposure"),
+                        key=lambda input: input.id)
+        self.assertEqual([inp1, inp3], actual)
 
     def test_inputs4job_with_wrong_path(self):
         # No input is returned.

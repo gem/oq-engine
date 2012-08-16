@@ -137,11 +137,14 @@ def set_up_arg_parser():
         help=('(DEPRECATED) Export the desired output to the specified '
               'directory'),
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    export_grp.add_argument(
+        '--exports', choices=['xml'],  default=[], action="append",
+        help='Post-calculation exports, if any. Only "xml" is supported')
 
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, force_inputs):
+def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
     """
     Run a hazard calculation using the specified config file and other options.
 
@@ -154,6 +157,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs):
     :param bool force_inputs:
         If `True`, don't attempt to reuse existing identical inputs; instead,
         import fresh copies.
+    :param list exports:
+        A list of export types requested by the user, currently only 'xml'
+        is supported
     """
     from openquake import engine2
     from openquake.job import validation
@@ -181,7 +187,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs):
             print 'Calculation mode "%s" not supported' % calc_mode
             sys.exit(1)
 
-        form = form_class(instance=calculation, files=files)
+        form = form_class(instance=calculation, files=files, exports=exports)
         # For now, just print whether or not the job is valid
         # (and any errors if it isn't valid)
         if not form.is_valid():
@@ -191,7 +197,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs):
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_hazard(job, log_level, log_file)
+        completed_job = engine2.run_hazard(job, log_level, log_file, exports)
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -339,7 +345,7 @@ if __name__ == '__main__':
         export_hazard(output_id, target_dir)
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
-                   args.force_inputs)
+                   args.force_inputs, args.exports)
     elif args.config_file is not None:
         from openquake import job
         from openquake import engine
