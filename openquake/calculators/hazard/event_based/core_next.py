@@ -15,6 +15,7 @@
 
 import random
 
+import nhlib.imt
 import nhlib.source
 import numpy.random
 
@@ -24,6 +25,7 @@ from nhlib.calc import gmf as gmf_calc
 from nhlib.calc import filters
 
 from openquake import logs
+from openquake import writer
 from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.input import logictree
@@ -72,11 +74,17 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
     """
+    # TODO: better logging in the task
     logs.LOG.info(('> starting `stochastic_event_sets` task: job_id=%s, '
                    'lt_realization_id=%s') % (job_id, lt_rlz_id))
     numpy.random.seed(task_seed)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+    if hc.ground_motion_fields:
+        # For ground motion field calculation, we need the points of interest
+        # for the calculation.
+        points_to_compute = hc.points_to_compute()
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
@@ -91,7 +99,15 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
     site_coll = haz_general.get_site_collection(hc)
 
+    # This will be the "container" for all compute stochastic event set
+    # rupture results for this task.
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
+
+    if hc.ground_motion_fields:
+        # This will be the "container" for all computed ground motion field
+        # results for this task.
+        gmf_set = models.GmfSet.objects.get(
+            gmf_collection__lt_realization=lt_rlz)
 
     for _ in xrange(hc.ses_per_logic_tree_path):
         sources_sites = ((src, site_coll) for src in sources)
@@ -103,10 +119,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
             sources, hc.investigation_time)
 
         for rupture in ses_poissonian:
-            # Save SES ruptures to the db:
-            # TODO: bulk insertion of ruptures?
-
-            ########## Prepare and save ruptures ##########
+            # Prepare and save SES ruptures to the db:
             is_from_fault_source = rupture.source_typology in (
                 nhlib.source.ComplexFaultSource,
                 nhlib.source.SimpleFaultSource)
@@ -137,6 +150,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                     lats[i] = corner.latitude
                     depths[i] = corner.depth
 
+            # TODO: Possible optimiztion: bulk insertion of ruptures
             models.SESRupture.objects.create(
                 ses=ses,
                 magnitude=rupture.mag,
@@ -149,8 +163,8 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                 lats=lats,
                 depths=depths,
             )
-            ##########
 
+            # Compute ground motion fields (if requested)
             if hc.ground_motion_fields:
                 # Compute and save ground motion fields
                 imts = [haz_general.imt_to_nhlib(x) for x in
@@ -188,10 +202,53 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                         filters.rupture_site_distance_filter(
                             hc.maximum_distance),
                 }
-                gmfs = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
-                # TODO: save gmfs to db
+                gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
 
-    # TODO: signal task completed
+                _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute)
+
+    haz_general.signal_task_complete(job_id, len(src_ids))
+
+
+def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
+    """
+    Helper function for saving ground motion field results to the database.
+
+    :param gmf_set:
+        :class:`openquake.db.models.GmfSet` record with which the input ground
+        motion field data will be associated.
+    :param dict gmf_dict:
+        The result of the GMF calculation, performed by nhlib. For more info,
+        view the documentation for :func:`nhlib.calc.gmf.ground_motion_fields`.
+    :param points_to_compute:
+        A :class:`nhlib.geo.mesh.Mesh` object representing all of the points of
+        interest.
+
+        The indices of this mesh are used in relation to the indices of results
+        in the GMF matrices to determine where the GMFs are located.
+    """
+    for imt, gmf_matrix in gmf_dict.iteritems():
+        gmf = models.Gmf(
+            gmf_set=gmf_set, imt=imt.__class__.__name__)
+
+        if isinstance(imt, nhlib.imt.SA):
+            gmf.sa_period = imt.period
+            gmf.sa_damping = imt.damping
+
+        gmf.save()
+
+        gmf_bulk_inserter = writer.BulkInserter(models.GmfNode)
+
+        for i, location in enumerate(points_to_compute):
+            gmf_bulk_inserter.add_entry(
+                gmf_id=gmf.id,
+                # GMF results are a 2D array; in the case of the
+                # event-based calculator, we only compute 1
+                # realization (in the scenario calculator it can be
+                # many). Thus, we take the one and only value for
+                # the point of interest (`i`).
+                iml=gmf_matrix[i][0],
+                location=location.wkt2d)
+        gmf_bulk_inserter.flush()
 
 
 @staticmethod
