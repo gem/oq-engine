@@ -334,30 +334,3 @@ class HelpersTestCase(unittest.TestCase):
 
         expected = numpy.array([0.44] * 16).reshape((4, 4))
         numpy.testing.assert_allclose(expected, result)
-
-
-class SignalTestCase(unittest.TestCase):
-
-    def test_signal_task_complete(self):
-        job_id = 7
-        num_sources = 10
-
-        def test_callback(body, message):
-            self.assertEqual(dict(job_id=job_id, num_sources=num_sources),
-                             body)
-            message.ack()
-
-        exchange, conn_args = general.exchange_and_conn_args()
-        routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
-        task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job_id, exchange=exchange,
-            routing_key=routing_key, durable=False, auto_delete=True)
-
-        with kombu.BrokerConnection(**conn_args) as conn:
-            task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[test_callback]):
-
-                # send the signal:
-                core.signal_task_complete(job_id, num_sources)
-                conn.drain_events()
