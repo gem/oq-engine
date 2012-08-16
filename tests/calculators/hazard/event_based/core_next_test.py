@@ -17,8 +17,13 @@
 import getpass
 import unittest
 
+import kombu
+
+from nose.plugins.attrib import attr
+
 from openquake.db import models
 from openquake.calculators.hazard.event_based import core_next
+from openquake.calculators.hazard import general as haz_general
 
 from tests.utils import helpers
 
@@ -80,6 +85,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # The only metadata in a GmfSet is investigation time.
             self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
 
+    @attr('slow')
     def test_stochastic_event_sets_task(self):
         # Execute the the `stochastic_event_sets` task as a normal function.
 
@@ -93,6 +99,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
 
         hc = self.job.hazard_calculation
+        num_sites = len(hc.points_to_compute())
 
         rlz1, rlz2 = models.LtRealization.objects.filter(
             hazard_calculation=hc.id)
@@ -108,22 +115,55 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         task_arg_list = list(task_arg_gen)
 
         self.assertEqual(2, len(task_arg_list))
-        for args in task_arg_list:
-            core_next.ses_and_gmfs(*args)
+        # Now test the completion signal messaging of the task:
+        def test_callback(body, message):
+            self.assertEqual(
+                dict(job_id=self.job.id, num_sources=sources_per_task), body)
+            message.ack()
 
-        # Check the progress counters:
+        exchange, conn_args = haz_general.exchange_and_conn_args()
+
+        routing_key = haz_general.ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        task_signal_queue = kombu.Queue(
+            'htasks.job.%s' % self.job.id, exchange=exchange,
+            routing_key=routing_key, durable=False, auto_delete=True)
+
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
+                # call the task as a normal function
+                for args in task_arg_list:
+                    core_next.ses_and_gmfs(*args)
+
+                    # wait for the completion signal
+                    conn.drain_events()
+
+        # Check the 'total' counter (computed by the task arg generator):
         # 2 realizations * 4 sources = 8 total
         self.assertEqual(8, progress['total'])
-        self.assertEqual(8, progress['computed'])
 
         # Now check that we saved the right number of ruptures to the DB.
         ruptures1 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz1)
-        self.assertEqual(22, len(ruptures1))
+        self.assertEqual(17, len(ruptures1))
 
         ruptures2 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz2)
-        self.assertEqual(17, len(ruptures2))
+        self.assertEqual(18, len(ruptures2))
+
+        # Check that we saved the right number of GMFs to the DB.
+        # The correct number of GMFs for each realization is
+        # num_ruptures * num_sites * num_imts
+
+        expected_gmfs1 = 17 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
+        gmfs1 = models.GmfNode.objects.filter(
+            gmf__gmf_set__gmf_collection__lt_realization=rlz1)
+        self.assertEqual(expected_gmfs1, len(gmfs1))
+
+        expected_gmfs2 = 18 * num_sites * 2
+        gmfs2 = models.GmfNode.objects.filter(
+            gmf__gmf_set__gmf_collection__lt_realization=rlz2)
+        self.assertEqual(expected_gmfs2, len(gmfs2))
 
         # TODO: At some point, we'll need to test the actual values of these
         # ruptures. We'll need to collect QA test data for this.
