@@ -53,16 +53,15 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         # loss of each asset
         self._loss_map_data = None
 
-        # algorithm used to compute the losses
-        # (standard or insured)
-        self._loss_ratios_calculator = general.compute_uninsured_losses
+        # compute insured losses
+        self._insured_losses = False
 
     def pre_execute(self):
         super(ScenarioRiskCalculator, self).pre_execute()
 
         if self.job_ctxt.params.get("INSURED_LOSSES"):
             self._output_filename = "insured-loss-map%s.xml"
-            self._loss_ratios_calculator = general.compute_insured_losses
+            self._insured_losses = True
 
     def post_execute(self):
         loss_map_path = os.path.join(
@@ -109,7 +108,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         region_data = distribute(
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
             tf_args=dict(job_id=self.job_ctxt.job_id,
-            vuln_model=vuln_model, calculator=self._loss_ratios_calculator))
+            vuln_model=vuln_model, insured_losses=self._insured_losses))
 
         for block_data in region_data:
             region_losses.append(block_data[0])
@@ -182,7 +181,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         """
 
         vuln_model = kwargs["vuln_model"]
-        compute_losses = kwargs["calculator"]
+        insured_losses = kwargs["insured_losses"]
         epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
@@ -200,8 +199,12 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 
-                losses = compute_losses(
-                        vuln_function, gmvs, epsilon_provider, asset)
+                loss_ratios = general.compute_loss_ratios(
+                    vuln_function, gmvs, epsilon_provider, asset)
+                losses = loss_ratios * asset.value
+
+                if insured_losses:
+                    losses = general.compute_insured_losses(asset, losses)
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 

@@ -30,7 +30,6 @@ from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
 from openquake.calculators.risk.general import hazard_input_site
 from openquake.calculators.risk.general import (compute_insured_losses,
-                                                compute_uninsured_losses,
                                                 insurance_boundaries_defind)
 from openquake.job import config
 from openquake.db import models
@@ -466,15 +465,10 @@ class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
         self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
         self.eps_provider = helpers.EpsilonProvider(self.asset, self.epsilons)
 
-    def test_compute_uninsured_losses(self):
-        expected = numpy.array([72.23120833, 410.55950159, 180.02423357,
-                                171.02684563, 250.77079384, 39.45861103,
-                                114.54372035, 288.28653452, 473.38307021,
-                                488.47447798])
-
-        self.assertTrue(numpy.allclose(expected,
-            compute_uninsured_losses(self.vuln_function, self.gmvs,
-            self.eps_provider, self.asset)))
+        self.losses = numpy.array([72.23120833, 410.55950159, 180.02423357,
+                                   171.02684563, 250.77079384, 39.45861103,
+                                   114.54372035, 288.28653452, 473.38307021,
+                                   488.47447798])
 
     def test_insurance_boundaries_defined(self):
         self.asset.ref = 'a14'
@@ -498,5 +492,4 @@ class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
                                 250.77079384, 0, 0, 288.28653452, 300, 300])
 
         self.assertTrue(numpy.allclose(expected,
-                compute_insured_losses(self.vuln_function,
-                self.gmvs, self.eps_provider, self.asset)))
+                compute_insured_losses(self.asset, self.losses)))
