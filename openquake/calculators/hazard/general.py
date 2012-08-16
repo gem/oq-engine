@@ -690,6 +690,34 @@ def imt_to_nhlib(imt):
         return imt_class()
 
 
+def signal_task_complete(job_id, num_sources):
+    """
+    Send a signal back through a dedicated queue to the 'control node' to
+    notify of task completion and the number of sources computed.
+
+    Signalling back this metric is needed to tell the control node when it can
+    conclude its `execute` phase.
+
+    :param int job_id:
+        ID of a currently running :class:`~openquake.db.models.OqJob`.
+    :param int num_sources:
+        Number of sources computed in the completed task.
+    """
+    # The job ID may be redundant (since it's in the routing key), but
+    # we can put this here for a sanity check on the receiver side.
+    # Maybe we can remove this
+    msg = dict(job_id=job_id, num_sources=num_sources)
+
+    exchange, conn_args = exchange_and_conn_args()
+
+    routing_key = ROUTING_KEY_FMT % dict(job_id=job_id)
+
+    with kombu.BrokerConnection(**conn_args) as conn:
+        with conn.Producer(exchange=exchange,
+                           routing_key=routing_key) as producer:
+            producer.publish(msg)
+
+
 class BaseHazardCalculatorNext(base.CalculatorNext):
 
     #: In subclasses, this would be a reference to the task function
