@@ -719,6 +719,11 @@ def signal_task_complete(job_id, num_sources):
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
+    """
+    Abstract base class for hazard calculators. Contains a bunch of common
+    functionality, including initialization procedures and the core
+    distribution/execution logic.
+    """
 
     #: In subclasses, this would be a reference to the task function
     core_calc_task = None
@@ -952,7 +957,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
             rnd.seed(seed)
 
-    def initialize_source_progress(self, lt_rlz, hzrd_src):
+    @staticmethod
+    def initialize_source_progress(lt_rlz, hzrd_src):
         """
         Create ``source_progress`` models for given logic tree realization
         and set total sources of realization.
