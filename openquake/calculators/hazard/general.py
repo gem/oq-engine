@@ -978,6 +978,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
             SELECT %%s, id, FALSE
             FROM "%s" WHERE input_id = %%s
+            ORDER BY id
             """ % (src_progress_tbl, parsed_src_tbl),
             [lt_rlz.id, hzrd_src.id])
         cursor.execute("""

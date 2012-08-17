@@ -299,7 +299,7 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
 
     for lt_rlz in realizations:
         source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz)
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
         source_ids = source_progress.values_list('parsed_source_id',
                                                  flat=True)
         progress['total'] += len(source_ids)
