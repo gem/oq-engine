@@ -93,7 +93,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
         sets and ground motion fields.
     """
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
-                   'lt_realization_id=%s') % (job_id, lt_rlz_id))
+                    'lt_realization_id=%s') % (job_id, lt_rlz_id))
     numpy.random.seed(task_seed)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
@@ -130,7 +130,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
     for _ in xrange(hc.ses_per_logic_tree_path):
         logs.LOG.debug('> computing stochastic event set %s of %s'
-                      % (_, hc.ses_per_logic_tree_path))
+                       % (_, hc.ses_per_logic_tree_path))
         sources_sites = ((src, site_coll) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
@@ -230,7 +230,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
                 _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute)
         logs.LOG.debug('< done computing stochastic event set %s of %s'
-                      % (_, hc.ses_per_logic_tree_path))
+                       % (_, hc.ses_per_logic_tree_path))
 
 
     logs.LOG.debug('< task complete, signalling completion')
