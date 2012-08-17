@@ -13,6 +13,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Core calculator functionality for computing stochastic event sets and ground
+motion fields using the 'event-based' method.
+
+Stochastic events sets (which can be thought of as collections of ruptures) are
+computed iven a set of seismic sources and investigation time span (in years).
+
+For more information on computing stochastic event sets, see
+:mod:`nhlib.calc.stochastic`.
+
+One can optionally compute a ground motion field (GMF) given a rupture, a site
+collection (which is a collection of geographical points with associated soil
+parameters), and a ground shaking intensity model (GSIM).
+
+For more information on computing ground motion fields, see
+:mod:`nhlib.calc.gmf`.
+"""
+
 import random
 
 import nhlib.imt
@@ -185,7 +203,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
                     correl_model = correl_model_cls(
                         **hc.ground_motion_correlation_params)
-                    correl_matrices= dict(
+                    correl_matrices = dict(
                         (imt,
                          correl_model.get_correlation_matrix(site_coll, imt))
                         for imt in imts)
@@ -326,7 +344,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        ses = models.SES.objects.create(
+        models.SES.objects.create(
             ses_collection=ses_coll, investigation_time=hc.investigation_time)
 
     def initialize_gmf_db_records(self, lt_rlz):
@@ -349,7 +367,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        gmf_set = models.GmfSet.objects.create(
+        models.GmfSet.objects.create(
             gmf_collection=gmf_coll, investigation_time=hc.investigation_time)
 
     def pre_execute(self):
