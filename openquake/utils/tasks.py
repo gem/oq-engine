@@ -205,5 +205,6 @@ def oqtask(task_func):
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
             logs.LOG.exception(err)
+            raise
 
     return task(wrapped, ignore_result=True)
