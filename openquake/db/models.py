@@ -1250,7 +1250,7 @@ class GmfNode(djm.Model):
     iml = djm.FloatField()
 
     class Meta:
-        db_table = 'hzrdr\".\"gmf'
+        db_table = 'hzrdr\".\"gmf_node'
 
 
 class GmfData(djm.Model):
