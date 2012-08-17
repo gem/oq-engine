@@ -36,6 +36,7 @@ from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
 from openquake.calculators.hazard.scenario import core as scenario
 from openquake.engine import JobContext
+from openquake.export import psha
 from openquake.job import params as job_params
 from openquake.kvs import tokens
 from openquake.nrml.utils import nrml_schema_file
