@@ -383,3 +383,89 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
 
         numpy.testing.assert_array_equal(lons, mesh.lons)
         numpy.testing.assert_array_equal(lats, mesh.lats)
+
+
+class SESRuptureTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg)
+
+        lt_rlz = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
+            sm_lt_path='foo', gsim_lt_path='bar', total_sources=0)
+        output = models.Output.objects.create(
+            oq_job=job, owner=job.owner, display_name='test',
+            output_type='ses')
+        ses_coll = models.SESCollection.objects.create(
+            output=output, lt_realization=lt_rlz)
+        ses = models.SES.objects.create(
+            ses_collection=ses_coll, investigation_time=50.0)
+
+        self.mesh_lons = numpy.array(
+            [0.1 * x for x in range(16)]).reshape((4, 4))
+        self.mesh_lats = numpy.array(
+            [0.2 * x for x in range(16)]).reshape((4, 4))
+        self.mesh_depths = numpy.array(
+            [0.3 * x for x in range(16)]).reshape((4, 4))
+
+        # planar surface coords
+        self.ps_lons = [1, 3, 5, 7]
+        self.ps_lats = [2, 4, 6, 8]
+        self.ps_depths = [0.1, 0.2, 0.3, 0.4]
+
+        self.fault_rupture = models.SESRupture.objects.create(
+            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=True, lons=self.mesh_lons,
+            lats=self.mesh_lats, depths=self.mesh_depths)
+        self.source_rupture = models.SESRupture.objects.create(
+            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=False, lons=self.ps_lons, lats=self.ps_lats,
+            depths=self.ps_depths)
+
+    def test_fault_rupture(self):
+        # Test loading a fault rupture from the DB, just to illustrate a use
+        # case.
+        # Also, we should that planar surface corner points are not valid and
+        # are more or less disregarded for this type of rupture.
+        fault_rupture = models.SESRupture.objects.get(id=self.fault_rupture.id)
+        self.assertIs(None, fault_rupture.top_left_corner)
+        self.assertIs(None, fault_rupture.top_right_corner)
+        self.assertIs(None, fault_rupture.bottom_right_corner)
+        self.assertIs(None, fault_rupture.bottom_left_corner)
+
+    def test_source_rupture(self):
+        source_rupture = models.SESRupture.objects.get(
+            id=self.source_rupture.id)
+        self.assertEqual((1, 2, 0.1), source_rupture.top_left_corner)
+        self.assertEqual((3, 4, 0.2), source_rupture.top_right_corner)
+        self.assertEqual((5, 6, 0.3), source_rupture.bottom_right_corner)
+        self.assertEqual((7, 8, 0.4), source_rupture.bottom_left_corner)
+
+    def test__validate_planar_surface(self):
+        source_rupture = models.SESRupture.objects.get(
+            id=self.source_rupture.id)
+        lons = source_rupture.lons
+        lats = source_rupture.lats
+        depths = source_rupture.depths
+
+        # Should initially be valid
+        source_rupture._validate_planar_surface()
+
+        # If any of the coord attributes are a len != 4,
+        # we should get an exception
+
+        source_rupture.lons = [1,2,3]
+        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
+        source_rupture.lons = lons
+
+        source_rupture.lats = [1,2,3]
+        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
+        source_rupture.lats = lats
+
+        source_rupture.depths = [1,2,3]
+        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
+        source_rupture.depths = depths
