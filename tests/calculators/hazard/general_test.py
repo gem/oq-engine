@@ -214,13 +214,12 @@ class GetSiteModelTestCase(unittest.TestCase):
             'truncation_level': 0,
             'maximum_distance': 200,
             'number_of_logic_tree_samples': 1,
-            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'intensity_measure_types_and_levels': dict(PGA=[1, 2, 3, 4]),
             'random_seed': 37,
         }
         owner = helpers.default_user()
         hc = engine2.create_hazard_calculation(owner, params, [])
         return hc
-
 
     def test_get_site_model(self):
         haz_calc = self._create_haz_calc()
