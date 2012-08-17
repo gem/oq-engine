@@ -349,47 +349,6 @@ class ParameterizeSitesTestCase(unittest.TestCase):
                 exp_sadigh, jsite.getParameter('Sadigh Site Type').getValue()
             )
 
-    @helpers.skipit
-    def test_parameterize_sites_with_site_model(self):
-        job_ctxt = helpers.prepare_job_context(
-            helpers.demo_file(
-                'simple_fault_demo_hazard/config_with_site_model.gem'
-            )
-        )
-
-        calc = classical.ClassicalHazardCalculator(job_ctxt)
-        calc.initialize()
-
-        # This tests to ensure that the `initialize` implementation for this
-        # calculator properly stores the site model in the DB.
-
-        # NOTE: If this test ever breaks, it's probably because the
-        # ClassicalHazardCalculator is no longer calling the `initalize` code
-        # in its super class (BaseHazardCalculator).
-        site_model = hazard_general.get_site_model(job_ctxt.oq_job.id)
-        self.assertIsNotNone(site_model)
-
-        set_params_patch = helpers.patch(
-            'openquake.calculators.hazard.general.set_java_site_parameters'
-        )
-        closest_data_patch = helpers.patch(
-            'openquake.calculators.hazard.general.get_closest_site_model_data'
-        )
-        sp_mock = set_params_patch.start()
-        cd_mock = closest_data_patch.start()
-
-        try:
-            calc.parameterize_sites(job_ctxt.sites_to_compute())
-
-            exp_call_count = len(job_ctxt.sites_to_compute())
-            self.assertEqual(exp_call_count, sp_mock.call_count)
-            self.assertEqual(exp_call_count, cd_mock.call_count)
-
-        finally:
-            # tear down the patches
-            set_params_patch.stop()
-            closest_data_patch.stop()
-
 
 class IMLTestCase(unittest.TestCase):
     """
