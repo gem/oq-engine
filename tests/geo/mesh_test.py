@@ -673,3 +673,81 @@ class RectangularMeshTriangulateTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(diag, [
             [(2, 1, 0)]
         ]))
+
+
+class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
+    def _test(self, lons, lats, depths, expected_coords):
+        mesh = RectangularMesh(lons, lats, depths)
+        proj, polygon = mesh._get_proj_enclosing_polygon()
+        self.assertTrue(polygon.is_valid)
+        self.assertEqual(list(polygon.interiors), [])
+        coords = numpy.array(proj(*numpy.array(polygon.exterior).transpose(),
+                                  reverse=True)).transpose()
+        numpy.testing.assert_almost_equal(coords, expected_coords, decimal=4)
+        return polygon
+
+    def test_simple(self):
+        lons = numpy.array([[-0.1, 0.1],
+                            [-0.1, 0.1]])
+        lats = numpy.array([[-0.1, -0.1],
+                            [0.1, 0.1]])
+        depths = numpy.array([[2., 3.],
+                              [8., 9.]])
+        expected_coords = [(-0.1, -0.1), (-0.1, 0.1), (0.1, 0.1), (0.1, -0.1),
+                           (-0.1, -0.1)]
+        polygon = self._test(lons, lats, depths, expected_coords)
+
+        coords2d = numpy.array(polygon.exterior.coords)
+        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
+                             (11.12, -11.12), (-11.12, -11.12)]
+        numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
+                                          decimal=2)
+
+    def test_4_cells_by_4_cells(self):
+        lons, lats = numpy.meshgrid(numpy.arange(-2, 3) / 10.,
+                                    numpy.arange(-2, 3) / 10.)
+        depths = None
+        expected_coords = [(-0.2, -0.2), (-0.2, 0.2), (0.2, 0.2),
+                           (0.2, -0.2), (-0.2, -0.2)]
+        self._test(lons, lats, depths, expected_coords)
+
+    def test_vertical_mesh(self):
+        lons = numpy.array([[-0.2, -0.1, 0., 0.1, 0.2]] * 5)
+        depths = numpy.array([[9] * 5, [11] * 5, [12] * 5, [13] * 5, [14] * 5])
+        lats = numpy.zeros_like(lons)
+        expected_coords = [(-0.2, 0), (0.2, 0), (0.2, 0), (-0.2, 0),
+                           (-0.2, 0)]
+        self._test(lons, lats, depths, expected_coords)
+
+    def test_halfvertical_mesh(self):
+        lons = numpy.array([[22.3, 22.3, 22.3], [22.3, 22.3, 22.4]])
+        lats = numpy.array([[0.2, 0.3, 0.4]] * 2)
+        depths = numpy.array([[1., 1., 1.], [2., 2., 2.]])
+        expected_coords = [(22.3, 0.2), (22.3, 0.4), (22.4, 0.4), (22.3, 0.3),
+                           (22.3, 0.2), (22.3, 0.2)]
+        self._test(lons, lats, depths, expected_coords)
+
+    def test_bowtie_mesh(self):
+        lons = numpy.array([[0., 0., 0.1], [0.1, 0.1, 0.]])
+        lats = numpy.array([[0., 0.1, 0.2]] * 2)
+        depths = numpy.array([[1., 1., 1.], [2., 2., 2.]])
+        expected_coords = [(0.05, 0.15), (-0, 0.2), (0.1, 0.2), (0.05, 0.15),
+                           (0.1, 0.1), (0.1, -0), (-0, -0), (-0, 0.1),
+                           (0.05, 0.15)]
+        self._test(lons, lats, depths, expected_coords)
+
+    def test_bowtie_mesh2(self):
+        lons = numpy.array([[0., 0.05, 0.], [0.1, 0.05, 0.1]])
+        lats = numpy.array([[0., 0.1, 0.2]] * 2)
+        depths = numpy.array([[1., 1., 1.], [2., 2., 2.]])
+        expected_coords = [(-0, 0.2), (0.1, 0.2), (0.05, 0.1), (0.1, -0),
+                           (-0, -0), (0.05, 0.1), (-0, 0.2)]
+        self._test(lons, lats, depths, expected_coords)
+
+    def test_reversing_dip(self):
+        lons = numpy.array([[0., 0., 0.], [0.1, 0.1, 0.1], [0., 0., 0.]])
+        lats = numpy.array([[0., 0.1, 0.2]] * 3)
+        depths = numpy.array([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.]])
+        expected_coords = [(-0, 0.2), (0.1, 0.2), (0.1, -0), (-0, -0),
+                           (-0, 0.2)]
+        self._test(lons, lats, depths, expected_coords)

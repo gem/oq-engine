@@ -20,7 +20,7 @@ Module :mod:`nhlib.geo.mesh` defines classes :class:`Mesh` and its subclass
 """
 import numpy
 import shapely.geometry
-from shapely.ops import cascaded_union
+import shapely.ops
 
 from nhlib.geo.point import Point
 from nhlib.geo import geodetic
@@ -46,6 +46,10 @@ class Mesh(object):
     Mesh object can also be created from a collection of points, see
     :meth:`from_points_list`.
     """
+    #: Tolerance level to be used in various spatial operations when
+    #: approximation is required -- set to 5 meters.
+    DIST_TOLERANCE = 0.005
+
     def __init__(self, lons, lats, depths):
         assert (isinstance(lons, numpy.ndarray)
                 and isinstance(lats, numpy.ndarray)
@@ -204,9 +208,9 @@ class Mesh(object):
         proj, polygon = self._get_proj_enclosing_polygon()
         if not isinstance(polygon, shapely.geometry.Polygon):
             # either line or point is our enclosing polygon. draw
-            # a square with side of 1 cm around in order to have
+            # a square with side of 10 m around in order to have
             # a proper polygon instead.
-            polygon = polygon.buffer(1e-5, 1)
+            polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
         distances_2d = geo_utils.point_to_polygon_distance(polygon,
@@ -334,10 +338,10 @@ class Mesh(object):
         # if mesh had only one point, the convex hull is a point. if there
         # were two, it is a line string. we need to return a convex polygon
         # object, so extend that area-less geometries by some arbitrarily
-        # small distance, like five meters.
+        # small distance.
         if isinstance(polygon2d, (shapely.geometry.LineString,
                                   shapely.geometry.Point)):
-            polygon2d = polygon2d.buffer(0.005, 1)
+            polygon2d = polygon2d.buffer(self.DIST_TOLERANCE, 1)
 
         # avoid circular imports
         from nhlib.geo.polygon import Polygon
@@ -395,7 +399,6 @@ class RectangularMesh(Mesh):
         :returns:
             Same structure as :meth:`Mesh._get_proj_convex_hull`.
         """
-        # TODO: unittest
         if self.lons.size < 4:
             # the mesh doesn't contain even a single cell, use :class:`Mesh`
             # method implementation (which would dilate the point or the line)
@@ -404,27 +407,28 @@ class RectangularMesh(Mesh):
         proj = geo_utils.get_orthographic_projection(
             *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
         )
-        mesh2d = numpy.array(proj(self.lons, self.lats)).transpose()
+        mesh2d = numpy.array(proj(self.lons.transpose(),
+                                  self.lats.transpose())).transpose()
         lines = iter(mesh2d)
-        # we iterate over vertical stripes, keeping the "previous"
+        # we iterate over horizontal stripes, keeping the "previous"
         # line of points. we keep it reversed, such that together
         # with the current line they define the sequence of points
         # around the stripe.
         prev_line = lines.next()[::-1]
         polygons = []
-        for line in lines:
-            coords = numpy.concatenate((prev_line, line))
+        for i, line in enumerate(lines):
+            coords = numpy.concatenate((prev_line, line, prev_line[0:1]))
             # create the shapely polygon object from the stripe
             # coordinates and simplify it (remove redundant points,
             # if there are any lying on the straight line).
-            # simplification tolerance is 10 meters (set arbitrarily)
-            polygon = shapely.geometry.Polygon(coords).simplify(0.01)
-            # accumulate all the polygons in a list
-            polygons.append(polygon)
+            stripe = shapely.geometry.LineString(coords) \
+                                     .simplify(self.DIST_TOLERANCE) \
+                                     .buffer(self.DIST_TOLERANCE, 2)
+            polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
         # create a final polygon as the union of all the stripe ones
-        polygon = cascaded_union(polygons).simplify(0.01)
-
+        polygon = shapely.ops.cascaded_union(polygons) \
+                             .simplify(self.DIST_TOLERANCE)
         return proj, polygon
 
     def get_middle_point(self):
