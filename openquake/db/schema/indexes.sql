@@ -44,10 +44,20 @@ CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
 -- gmf
 CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
+
+CREATE INDEX hzrdr_gmf_collection_output_id_idx on hzrdr.gmf_collection(output_id);
+CREATE INDEX hzrdr_gmf_collection_lt_realization_idx on hzrdr.gmf_collection(lt_realization_id);
+CREATE INDEX hzrdr_gmf_set_gmf_collection_idx on hzrdr.gmf_set(gmf_collection_id);
+CREATE INDEX hzrdr_gmf_gmf_set_idx on hzrdr.gmf(gmf_set_id);
+CREATE INDEX hzrdr_gmf_node_gmf_idx on hzrdr.gmf_node(gmf_id);
 -- uhs
 CREATE INDEX hzrdr_uh_spectra_output_id_idx on hzrdr.uh_spectra(output_id);
 CREATE INDEX hzrdr_uh_spectrum_uh_spectra_id_idx on hzrdr.uh_spectrum(uh_spectra_id);
 CREATE INDEX hzrdr_uh_spectrum_data_uh_spectrum_id_idx on hzrdr.uh_spectrum_data(uh_spectrum_id);
+-- ses
+CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
+CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
+CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
