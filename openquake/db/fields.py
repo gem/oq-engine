@@ -45,6 +45,8 @@ class StringArrayFormField(forms.Field):
     cast = str
     value_type = 'str'
 
+    # Disable pylint for 'Method could be a function'
+    # pylint: disable=R0201
     def clean(self, value):
         """Try to coerce either a string list of values (separated by
         whitespace and/or commas or a list/tuple of values to a list of
