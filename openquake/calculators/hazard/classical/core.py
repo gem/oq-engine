@@ -19,7 +19,6 @@ Core functionality for the classical PSHA hazard calculator.
 
 import re
 
-import kombu
 import nhlib
 import nhlib.calc
 import nhlib.imt
@@ -33,8 +32,6 @@ from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.export import hazard as hexp
 from openquake.input import logictree
-from openquake.input import source
-from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
