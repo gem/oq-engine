@@ -46,6 +46,16 @@ VS30_TYPE_CHOICES = (
    (u"inferred", u"Estimated value"),
 )
 
+IMT_CHOICES = (
+    (u'PGA', u'Peak Ground Acceleration'),
+    (u'PGV', u'Peak Ground Velocity'),
+    (u'PGD', u'Peak Ground Displacement'),
+    (u'SA', u'Spectral Acceleration'),
+    (u'IA', u'Arias Intensity'),
+    (u'RSD', u'Relative Significant Duration'),
+    (u'MMI', u'Modified Mercalli Intensity'),
+)
+
 
 def profile4job(job_id):
     """Return the job profile for the given job.
@@ -999,6 +1009,7 @@ class Output(djm.Model):
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'gmf', u'Ground Motion Field'),
+        (u'ses', u'Stochastic Event Set'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
@@ -1072,7 +1083,7 @@ class HazardCurve(djm.Model):
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
-    imt = djm.TextField()
+    imt = djm.TextField(choices=IMT_CHOICES)
     imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -1102,9 +1113,167 @@ class HazardCurveData(djm.Model):
         db_table = 'hzrdr\".\"hazard_curve_data'
 
 
+class SESCollection(djm.Model):
+    """
+    Stochastic Event Set Collection: A container for 1 or more Stochastic Event
+    Sets for a given logic tree realization.
+
+    See also :class:`SES` and :class:`SESRupture`.
+    """
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_collection'
+
+
+class SES(djm.Model):
+    """
+    Stochastic Event Set: A container for 1 or more ruptures associated with a
+    specific investigation time span.
+
+    See also :class:`SESRupture`.
+    """
+    ses_collection = djm.ForeignKey('SESCollection')
+    investigation_time = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses'
+
+
+class SESRupture(djm.Model):
+    """
+    A rupture as part of a Stochastic Event Set.
+
+    Ruptures will have different geometrical definitions, depending on whether
+    the event was generated from a point/area source or a simple/complex fault
+    source.
+    """
+    ses = djm.ForeignKey('SES')
+    magnitude = djm.FloatField()
+    strike = djm.FloatField()
+    dip = djm.FloatField()
+    rake = djm.FloatField()
+    tectonic_region_type = djm.TextField()
+    # If True, this rupture was generated from a simple/complex fault
+    # source. If False, this rupture was generated from a point/area source.
+    is_from_fault_source = djm.BooleanField()
+    # The following fields can be interpreted different ways, depending on the
+    # value of `is_from_fault_source`.
+    # If `is_from_fault_source` is True, each of these fields should contain a
+    # 2D numpy array (all of the same shape). Each triple of (lon, lat, depth)
+    # for a given index represents the node of a rectangular mesh.
+    # If `is_from_fault_source` is False, each of these fields should contain
+    # a sequence (tuple, list, or numpy array, for example) of 4 values. In
+    # order, the triples of (lon, lat, depth) represent top left, top right,
+    # bottom right, and bottom left corners of the the rupture's planar
+    # surface.
+    lons = fields.PickleField()
+    lats = fields.PickleField()
+    depths = fields.PickleField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_rupture'
+
+    def _validate_planar_surface(self):
+        """
+        A rupture's planar surface (existing only in the case of ruptures from
+        area/point sources) may only consist of 4 points (top left, top right,
+        bottom right, and bottom left corners, in that order).
+
+        If the surface is not valid, a :exc:`ValueError` is raised.
+
+        This should only be used if `is_from_fault_source` is `False`.
+        """
+        if not (4 == len(self.lons) == len(self.lats) == len(self.depths)):
+            raise ValueError(
+                "Incorrect number of points; there should be exactly 4")
+
+    @property
+    def top_left_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[0], self.lats[0], self.depths[0]
+        return None
+
+    @property
+    def top_right_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[1], self.lats[1], self.depths[1]
+        return None
+
+    @property
+    def bottom_right_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[2], self.lats[2], self.depths[2]
+        return None
+
+    @property
+    def bottom_left_corner(self):
+        if not self.is_from_fault_source:
+            self._validate_planar_surface()
+            return self.lons[3], self.lats[3], self.depths[3]
+        return None
+
+
+class GmfCollection(djm.Model):
+    """
+    A collection of ground motion field (GMF) sets for a given logic tree
+    realization.
+    """
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_collection'
+
+
+class GmfSet(djm.Model):
+    """
+    A set of ground motion fields for a given investigation time (in years).
+    """
+    gmf_collection = djm.ForeignKey('GmfCollection')
+    investigation_time = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_set'
+
+
+class Gmf(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    gmf_set = djm.ForeignKey('GmfSet')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf'
+
+
+class GmfNode(djm.Model):
+    """
+    An indiviual node of a ground motion field, consisting of a ground motion
+    value/intensity measure level and a point geometry.
+    """
+    gmf = djm.ForeignKey('Gmf')
+    location = djm.PointField(srid=4326)
+    iml = djm.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_node'
+
+
 class GmfData(djm.Model):
     '''
     Ground Motion Field data
+
+    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
+    :class:`Gmf`, and :class:`GmfNode`.
     '''
     output = djm.ForeignKey('Output')
     ground_motion = djm.FloatField()
