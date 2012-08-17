@@ -50,6 +50,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_loss_curves(OUTPUT_DIR, 0.05)
         self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
 
+    @unittest.skip
     def test_sampled_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
@@ -64,11 +65,12 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
 
+    @unittest.skip
     def test_insured_loss_mean_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_insloss_mb.gem")
 
-        result = helpers.run_job(scen_cfg, ['--output-type=xml'],
+        result = helpers.run_job(cfg, ['--output-type=xml'],
             check_output=True)
 
         job = OqJob.objects.latest('id')
@@ -94,6 +96,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         rmtree(QA_OUTPUT_DIR)
 
 
+    @unittest.skip
     def test_insured_loss_sample_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_insloss_sb.gem")

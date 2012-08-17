@@ -27,6 +27,7 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
+from openquake.shapes import Curve
 
 LOGGER = logs.LOG
 
@@ -41,6 +42,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         super(EventBasedRiskCalculator, self).__init__(job_ctxt)
         self.vuln_curves = None
         self.agg_curve = None
+        self._insured_losses = False
 
     def execute(self):
         """Execute the job."""
@@ -149,6 +151,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         * (partial) aggregate loss curve
         """
 
+
         self.vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
@@ -156,6 +159,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
+
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
@@ -169,19 +173,32 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
                 loss_ratios = self.compute_loss_ratios(asset, gmf)
+                losses = loss_ratios * asset.value
 
-                loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point.column, point.row, asset, gmf, loss_ratios)
+                if self.job_ctxt.params.get("INSURED_LOSSES"):
+                    insured_losses = general.compute_insured_losses(asset,
+                        losses)
+                    loss_ratio_curve = self.compute_loss_ratio_curve(
+                        point.column, point.row, asset, gmf, insured_losses)
+                    aggregate_curve.append(insured_losses)
 
-                aggregate_curve.append(loss_ratios * asset.value)
+                else:
+                    loss_ratio_curve = self.compute_loss_ratio_curve(
+                        point.column, point.row, asset, gmf, loss_ratios)
+                    aggregate_curve.append(losses)
 
                 if loss_ratio_curve:
-                    loss_curve = self.compute_loss_curve(
-                        point.column, point.row, loss_ratio_curve, asset)
+                    if self.job_ctxt.params.get("INSURED_LOSSES"):
+                        loss_curve = Curve(())
+                        loss_curve.x_values = insured_losses
+                        loss_curve.y_values = loss_ratio_curve.y_values
+
+                    else:
+                        loss_curve = self.compute_loss_curve(
+                            point.column, point.row, loss_ratio_curve, asset)
 
                     for loss_poe in general.conditional_loss_poes(
                         self.job_ctxt.params):

@@ -283,15 +283,27 @@ class BaseRiskCalculator(Calculator):
         """
 
         if kwargs['curve_mode'] == 'loss_ratio':
-            serialize_filename = "%s-block-#%s-block#%s.xml" % (
-                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                self.job_ctxt.job_id,
-                block_id)
+                if self.job_ctxt.params.get("INSURED_LOSSES"):
+                    serialize_filename = "insured-losses-%s-block-#%s-block#%s.xml" % (
+                                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                                self.job_ctxt.job_id, block_id)
+                else:
+                    serialize_filename = "%s-block-#%s-block#%s.xml" % (
+                        self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                        self.job_ctxt.job_id,
+                        block_id)
         elif kwargs['curve_mode'] == 'loss':
-            serialize_filename = "%s-loss-block-#%s-block#%s.xml" % (
-                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                self.job_ctxt.job_id,
-                block_id)
+                if self.job_ctxt.params.get("INSURED_LOSSES"):
+                    serialize_filename = \
+                    "insured-losses-%s-loss-block-#%s-block#%s.xml" % (
+                    self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                    self.job_ctxt.job_id,
+                    block_id)
+                else:
+                    serialize_filename = "%s-loss-block-#%s-block#%s.xml" % (
+                        self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                        self.job_ctxt.job_id,
+                        block_id)
 
         serialize_path = os.path.join(self.job_ctxt.base_path,
                                       self.job_ctxt.params['OUTPUT_DIR'],
@@ -422,6 +434,7 @@ class BaseRiskCalculator(Calculator):
 class ProbabilisticRiskCalculator(BaseRiskCalculator):
     """Common base class for the Classical and Event-Based risk calculators."""
 
+
     def compute_risk(self, block_id):
         """Perform calculation and store the result in the kvs.
 
@@ -454,11 +467,11 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
 
         for loss_poe in conditional_loss_poes(job_ctxt.params):
             path = os.path.join(job_ctxt.base_path,
-                                job_ctxt.params['OUTPUT_DIR'],
-                                "losses_at-%s.xml" % loss_poe)
+                job_ctxt.params['OUTPUT_DIR'],
+                "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
-                job_ctxt.job_id, job_ctxt.serialize_results_to, path,
-                False)
+                job_ctxt.job_id, job_ctxt.serialize_results_to,
+                path, False)
 
             if writer:
                 metadata = {
