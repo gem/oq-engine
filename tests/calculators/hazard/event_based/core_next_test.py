@@ -115,6 +115,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         task_arg_list = list(task_arg_gen)
 
         self.assertEqual(2, len(task_arg_list))
+
         # Now test the completion signal messaging of the task:
         def test_callback(body, message):
             self.assertEqual(

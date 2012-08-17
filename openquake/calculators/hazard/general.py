@@ -192,7 +192,7 @@ def set_gmpe_params(gmpe_map, params):
 
 
 @transaction.commit_on_success(using='job_init')
-def store_site_model(input_mdl, source):
+def store_site_model(input_mdl, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
 
@@ -200,13 +200,13 @@ def store_site_model(input_mdl, source):
         The `uiapi.input` record which the new `hzrdi.site_model` records
         reference. This `input` record acts as a container for the site model
         data.
-    :param source:
+    :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
         `list` of :class:`openquake.db.models.SiteModel` objects. These
         represent to newly-inserted `hzrdi.site_model` records.
     """
-    parser = nrml_parsers.SiteModelParser(source)
+    parser = nrml_parsers.SiteModelParser(site_model_source)
 
     sm_data = []
 

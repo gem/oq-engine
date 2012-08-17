@@ -19,8 +19,7 @@
 # Disable:
 # - 'Maximum number of public methods for a class'
 # - 'Missing docstring' (because of all of the model Meta)
-# - 'Too many lines in module'
-# pylint: disable=R0904,C0111,C0302
+# pylint: disable=R0904,C0111
 
 '''
 Model representations of the OpenQuake DB tables.
