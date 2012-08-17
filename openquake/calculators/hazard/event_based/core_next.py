@@ -92,8 +92,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
     """
-    # TODO: better logging in the task
-    logs.LOG.info(('> starting `stochastic_event_sets` task: job_id=%s, '
+    logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                    'lt_realization_id=%s') % (job_id, lt_rlz_id))
     numpy.random.seed(task_seed)
 
@@ -115,7 +114,9 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization)
 
+    logs.LOG.debug('> creating site collection')
     site_coll = haz_general.get_site_collection(hc)
+    logs.LOG.debug('< done creating site collection')
 
     # This will be the "container" for all compute stochastic event set
     # rupture results for this task.
@@ -128,11 +129,16 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
             gmf_collection__lt_realization=lt_rlz)
 
     for _ in xrange(hc.ses_per_logic_tree_path):
+        logs.LOG.debug('> computing stochastic event set %s of %s'
+                      % (_, hc.ses_per_logic_tree_path))
         sources_sites = ((src, site_coll) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
         sources = (src for src, _ in ssd_filter(sources_sites))
         # Calculate stochastic event sets:
+        logs.LOG.debug('> computing stochastic event sets')
+        if hc.ground_motion_fields:
+            logs.LOG.debug('> computing also ground motion fields')
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             sources, hc.investigation_time)
 
@@ -223,7 +229,11 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                 gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
 
                 _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute)
+        logs.LOG.debug('< done computing stochastic event set %s of %s'
+                      % (_, hc.ses_per_logic_tree_path))
 
+
+    logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id, len(src_ids))
 
 
@@ -394,11 +404,3 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             rlz_callbacks.append(self.initialize_gmf_db_records)
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
-
-    def post_execute(self):
-        # TODO: implement me
-        print "post_execute"
-
-    def post_process(self):
-        # TODO: implement me
-        print "post_process"
