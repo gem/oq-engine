@@ -61,6 +61,10 @@ GM_CORRELATION_MODEL_MAP = {
 DEFAULT_GMF_REALIZATIONS = 1
 
 
+# Disabling pylint for:
+#  * 'Too many local variables' (R0914)
+#  * 'Too many statements' (R0915)
+# pylint: disable=R0914,R0915
 @utils_tasks.oqtask
 @stats.progress_indicator('h')
 def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
