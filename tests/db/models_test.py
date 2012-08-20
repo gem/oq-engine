@@ -21,7 +21,6 @@ import unittest
 import numpy
 
 from django.contrib.gis.geos.geometry import GEOSGeometry
-from nhlib import geo as nhlib_geo
 
 from openquake import engine
 from openquake import engine2
@@ -179,8 +178,9 @@ class Inputs4JobTestCase(unittest.TestCase):
                             input_type="exposure", size=self.sizes.next())
         inp3.save()
         models.Input2job(oq_job=self.job, input=inp3).save()
-        self.assertEqual([inp1, inp3],
-                         models.inputs4job(self.job.id, input_type="exposure"))
+        actual = sorted(models.inputs4job(self.job.id, input_type="exposure"),
+                        key=lambda input: input.id)
+        self.assertEqual([inp1, inp3], actual)
 
     def test_inputs4job_with_wrong_path(self):
         # No input is returned.
@@ -458,14 +458,14 @@ class SESRuptureTestCase(unittest.TestCase):
         # If any of the coord attributes are a len != 4,
         # we should get an exception
 
-        source_rupture.lons = [1,2,3]
+        source_rupture.lons = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
         source_rupture.lons = lons
 
-        source_rupture.lats = [1,2,3]
+        source_rupture.lats = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
         source_rupture.lats = lats
 
-        source_rupture.depths = [1,2,3]
+        source_rupture.depths = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
         source_rupture.depths = depths
