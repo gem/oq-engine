@@ -200,6 +200,10 @@ def key_name(job_id, area, key_fragment, counter_type):
     return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
+# al-maisan, Mon, 20 Aug 2012 15:43:11 +0200
+# PLEASE NOTE: the decorator below is deprecated and should not be used for
+# new code in the nhlib-integration branch. Please use the '' decorator
+# instead.
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
@@ -234,6 +238,51 @@ class progress_indicator(object):   # pylint: disable=C0103
                 key = key_name(
                     job_id, self.area, func.__name__ + "-failures", "i")
                 conn.incr(key)
+                raise
+
+        return wrapper
+
+
+class count_progress(object):   # pylint: disable=C0103
+    """Count successful/failed invocations of the wrapped function.
+
+    Please note: for this to work the wrapped function must have the `job_id`
+    and the collection with the work items passed via the first and the second
+    parameter respectively.
+    This is a simple convention that saves us from sifting through all the
+    called function's parameters and finding the desired data (which would be
+    unnecessarily complex *and* error-prone).
+    """
+
+    def __init__(self, area):
+        """Captures the computation area parameter."""
+        self.area = area
+        self.__name__ = "count_progress"
+
+    @staticmethod
+    def get_task_data(*args, **kwargs):
+        """Return the job_id and the number of work items."""
+        return args[0], len(args[1])
+
+    def __call__(self, func):
+        """The actual decorator."""
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """Call the wrapped function and step the done/failed counters in
+               case of success/failure."""
+            job_id, num_items = self.get_task_data(*args, **kwargs)
+            conn = _redis()
+            try:
+                result = func(*args, **kwargs)
+                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incrby(key, num_items)
+                return result
+            except:
+                # Count failure
+                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incrby(key, num_items)
                 raise
 
         return wrapper
@@ -301,40 +350,3 @@ def delete_job_counters(job_id):
 def debug_stats_enabled():
     """True if debug statistics counters are enabled."""
     return config.flag_set("statistics", "debug")
-
-
-class count_progress(object):   # pylint: disable=C0103
-    """Count successful/failed invocations of the wrapped function."""
-
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
-        self.__name__ = "count_progress"
-
-    @staticmethod
-    def get_task_data(*args, **kwargs):
-        """Return the job_id and the number of work items."""
-        return args[0], len(args[1])
-
-    def __call__(self, func):
-        """The actual decorator."""
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            """Call the wrapped function and step the done/failed counters in
-               case of success/failure."""
-            job_id, num_items = self.get_task_data(*args, **kwargs)
-            conn = _redis()
-            try:
-                result = func(*args, **kwargs)
-                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incrby(key, num_items)
-                return result
-            except:
-                # Count failure
-                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incrby(key, num_items)
-                raise
-
-        return wrapper
