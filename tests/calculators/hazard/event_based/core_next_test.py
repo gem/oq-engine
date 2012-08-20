@@ -106,7 +106,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         rlz1_src_prog = models.SourceProgress.objects.filter(
             lt_realization=rlz1.id)
-        rlz1_src_ids = [src.parsed_source.id for src in rlz1_src_prog]
 
         progress = dict(total=0, computed=0)
 
