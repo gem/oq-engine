@@ -1,30 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.3"
-      xmlns:gml="http://www.opengis.net/gml"
-      gml:id="n1">
-  <sourceModel gml:id="sm1">
-    <config/>
-    <simpleFaultSource gml:id="ITCS069">
-      <gml:name>Southern Calabria</gml:name>
-      <tectonicRegion>Active Shallow Crust</tectonicRegion>
-      <rake>90.0</rake>
-      <truncatedGutenbergRichter>
-        <aValueCumulative>4.616788516552253</aValueCumulative>
-        <bValue>1.0</bValue>
-        <minMagnitude>5.0</minMagnitude>
-        <maxMagnitude>7.1000000000000005</maxMagnitude>
-      </truncatedGutenbergRichter>
-      <simpleFaultGeometry gml:id="sfg_92">
-        <faultTrace>
-          <gml:LineString>
-            <gml:posList>17.3906 39.0407 11.0 17.3555 38.8986 11.0 17.3204 38.7564 11.0 17.2523 38.5891 11.0 17.1842 38.4217 11.0 17.0899 38.2873 11.0 16.9956 38.1529 11.0 16.9014 38.0185 11.0 16.7833 37.9155 11.0 16.6653 37.8126 11.0 16.5472 37.7096 11.0 16.4228 37.6337 11.0 16.2983 37.5578 11.0 16.1739 37.4818 11.0 16.0226 37.4146 11.0 15.8714 37.34740000000001 11.0 15.7201 37.2801 11.0</gml:posList>
-          </gml:LineString>
-        </faultTrace>
-        <dip>30.0</dip>
-        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
-        <lowerSeismogenicDepth>50.0</lowerSeismogenicDepth>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel>
+    <simpleFaultSource id="ALCS001" name="Southern Albania offshore" tectonicRegion="Active Shallow Crust">
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>19.5284 40.0866 19.4521 40.1437 19.3758 40.2008 19.2839 40.2774 19.1919 40.3540 19.1166 40.4384 19.0412 40.5227 18.9787 40.6231 18.9162 40.7234 18.8706 40.8210 18.8251 40.9186 18.7899 41.0045 18.7546 41.0903</gml:posList>
+        </gml:LineString>
+        <dip>37.5</dip>
+        <upperSeismoDepth>1.0</upperSeismoDepth>
+        <lowerSeismoDepth>12.0</lowerSeismoDepth>
       </simpleFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3.6786" bValue="1.0000" minMag="5.0000" maxMag="7.0000"/>
+      <rake>90.0</rake>
     </simpleFaultSource>
   </sourceModel>
 </nrml>
