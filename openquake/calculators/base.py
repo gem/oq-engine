@@ -76,7 +76,7 @@ class CalculatorNext(object):
     def post_execute(self):
         """
         Override this method in subclasses to any necessary post-execution
-        actions, such as garbage collection.
+        actions, such as the consolidation of partial results.
         """
 
     def post_process(self):
@@ -84,3 +84,11 @@ class CalculatorNext(object):
         Override this method in subclasses to perform post processing steps,
         such as computing mean results from a set of curves or plotting maps.
         """
+
+    def export(self, *args, **kwargs):
+        """Implement this method in subclasses to write results
+           to places other than the database."""
+
+    def clean_up(self, *args, **kwargs):
+        """Implement this method in subclasses to perform clean-up actions
+           like garbage collection, etc."""

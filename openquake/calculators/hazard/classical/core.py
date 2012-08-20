@@ -38,6 +38,7 @@ from openquake import writer
 from openquake.calculators import base
 from openquake.calculators.hazard import general
 from openquake.db import models
+from openquake.export import hazard as hexp
 from openquake.input import logictree
 from openquake.input import source
 from openquake.job.validation import MAX_SINT_32
@@ -533,6 +534,15 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+
+    def export(self, *args, **kwargs):
+        """Export to NRML"""
+        logs.LOG.debug('> starting exports')
+
+        if "exports" in kwargs and "xml" in kwargs["exports"]:
+            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
+
+        logs.LOG.debug('< done with exports')
 
 
 # Silencing 'Too many local variables'
