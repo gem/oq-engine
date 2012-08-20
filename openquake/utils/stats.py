@@ -64,11 +64,20 @@ STATS_KEYS = {
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
+
     # The total amount of work for a nhlib-based hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
-    # The finished amount of work for a nhlib-based classical hazard
-    # calculation.
+    # The number of completed hazard work items
     "nhzrd_done": ("h", "nhzrd:done", "i"),
+    # The number of failed hazard work items
+    "nhzrd_failed": ("h", "nhzrd:failed", "i"),
+
+    # The total amount of work for a nhlib-based risk calculation
+    "nrisk_total": ("r", "nrisk:total", "t"),
+    # The number of completed risk work items
+    "nrisk_done": ("r", "nrisk:done", "i"),
+    # The number of failed risk work items
+    "nrisk_failed": ("r", "nrisk:failed", "i"),
 }
 
 
@@ -294,42 +303,38 @@ def debug_stats_enabled():
     return config.flag_set("statistics", "debug")
 
 
-class npi(object):   # pylint: disable=C0103
+class count_progress(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
     def __init__(self, area):
         """Captures the computation area parameter."""
         self.area = area
-        self.__name__ = "npi"
+        self.__name__ = "count_progress"
 
     @staticmethod
-    def find_job_id(*args, **kwargs):
-        """Return the job_id."""
-        return args[0]
-
-    @staticmethod
-    def find_work_coll(*args, **kwargs):
-        """Return the collection with the work items (e.g. sites, sources)."""
-        return args[1]
+    def get_task_data(*args, **kwargs):
+        """Return the job_id and the number of work items."""
+        return args[0], len(args[1])
 
     def __call__(self, func):
         """The actual decorator."""
         @wraps(func)
         def wrapper(*args, **kwargs):
-            """The actual decorator."""
-            # The first argument is always the job_id
-            job_id = self.find_job_id(*args, **kwargs)
+            """Call the wrapped function and step the done/failed counters in
+               case of success/failure."""
+            job_id, num_items = self.get_task_data(*args, **kwargs)
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = key_name(job_id, self.area, func.__name__, "i")
-                conn.incr(key)
+                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incrby(key, num_items)
                 return result
             except:
                 # Count failure
-                key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
-                conn.incr(key)
+                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incrby(key, num_items)
                 raise
 
         return wrapper
