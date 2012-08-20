@@ -139,4 +139,13 @@ def curves2nrml(target_dir, job):
 
     for hc_output in hc_outputs:
         export_hazard_curves(hc_output, target_dir)
+
+    hco_count = len(hc_outputs)
+    if hco_count > 1:
+        print "%s hazard curves exported to %s" % (hco_count, target_dir)
+    elif hco_count == 1:
+        print "One hazard curve exported to %s" % target_dir
+    else:
+        print "No hazard curves found for export"
+
     LOG.debug("< curves2nrml")
