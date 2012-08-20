@@ -34,7 +34,7 @@ from openquake.utils import config
 #   https://bugs.launchpad.net/openquake/+bug/907703
 
 # Please note: counters apply to certain computation areas. At this point
-# there are as follows.
+# these are as follows.
 #   "g" : general
 #   "h" : hazard
 #   "r" : risk
@@ -46,7 +46,9 @@ from openquake.utils import config
 
 # Last but not least: some counters are only used by specific calculators,
 # e.g.
-#   "hcls": classical PSHA
+#   "hcls": classical hazard (openshalite based)
+#   "nhzrd": nhlib-based hazard
+#   "nrisk": nhlib-based risk
 
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
@@ -62,6 +64,11 @@ STATS_KEYS = {
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
+    # The total amount of work for a nhlib-based hazard calculation
+    "nhzrd_total": ("h", "nhzrd:total", "t"),
+    # The finished amount of work for a nhlib-based classical hazard
+    # calculation.
+    "nhzrd_done": ("h", "nhzrd:done", "i"),
 }
 
 
