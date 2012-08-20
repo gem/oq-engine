@@ -18,7 +18,6 @@ import getpass
 import unittest
 
 import kombu
-import nhlib.imt
 import numpy
 
 from nose.plugins.attrib import attr
