@@ -19,8 +19,7 @@
 # Disable:
 # - 'Maximum number of public methods for a class'
 # - 'Missing docstring' (because of all of the model Meta)
-# - 'Too many lines in module'
-# pylint: disable=R0904,C0111,C0302
+# pylint: disable=R0904,C0111
 
 '''
 Model representations of the OpenQuake DB tables.
@@ -677,9 +676,9 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    ses_per_sample = djm.IntegerField(
+    ses_per_logic_tree_path = djm.IntegerField(
         help_text=('Number of Stochastic Event Sets to compute per logic tree'
-                   ' sample/realization'),
+                   ' branch (enumerated or randomly sampled'),
         null=True,
         blank=True,
     )

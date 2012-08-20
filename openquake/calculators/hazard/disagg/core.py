@@ -27,14 +27,15 @@ from celery.task import task
 
 from openquake import java
 from openquake import logs
+from openquake.calculators.hazard import general
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
+from openquake.calculators.hazard.disagg import subsets
+from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 from openquake.utils.tasks import get_running_job
-from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
-from openquake.calculators.hazard.disagg import subsets
-from openquake.calculators.hazard import general
 
 
 LOG = logs.LOG
