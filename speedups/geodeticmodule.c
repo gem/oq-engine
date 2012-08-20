@@ -84,7 +84,7 @@ geodetic_min_distance(
     PyArray_Descr *double_dtype = PyArray_DescrFromType(NPY_DOUBLE);
     PyArray_Descr *int_dtype = PyArray_DescrFromType(NPY_INT);
 
-    /* we need to iterators: one for mesh points (will run it as inner loop)
+    /* we need two iterators: one for mesh points (will run it as inner loop)
      * and one for site points (for outer one).
      */
 
