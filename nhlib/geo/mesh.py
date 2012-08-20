@@ -199,8 +199,8 @@ class Mesh(object):
         # for all the points that are closer than the threshold we need
         # to recalculate the distance and set it to zero, if point falls
         # inside the enclosing polygon of the mesh. for doing that we
-        # project both this mesh and selected by distance threshold
-        # points of the second one on the same Cartesian space, define
+        # project both this mesh and the points of the second mesh--selected
+        # by distance threshold--to the same Cartesian space, define
         # minimum shapely polygon enclosing the mesh and calculate point
         # to polygon distance, which gives the most accurate value
         # of distance in km (and that value is zero for points inside
