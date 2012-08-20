@@ -336,7 +336,7 @@ def _switch_to_job_phase(job, status):
     job.status = status
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status)
-    logs.LOG.debug("*> %s" % status)
+    logs.LOG.info("** %s" % status)
 
 
 def _do_run_hazard(job, exports):
