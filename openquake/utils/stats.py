@@ -292,3 +292,44 @@ def delete_job_counters(job_id):
 def debug_stats_enabled():
     """True if debug statistics counters are enabled."""
     return config.flag_set("statistics", "debug")
+
+
+class npi(object):   # pylint: disable=C0103
+    """Count successful/failed invocations of the wrapped function."""
+
+    def __init__(self, area):
+        """Captures the computation area parameter."""
+        self.area = area
+        self.__name__ = "npi"
+
+    @staticmethod
+    def find_job_id(*args, **kwargs):
+        """Return the job_id."""
+        return args[0]
+
+    @staticmethod
+    def find_work_coll(*args, **kwargs):
+        """Return the collection with the work items (e.g. sites, sources)."""
+        return args[1]
+
+    def __call__(self, func):
+        """The actual decorator."""
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """The actual decorator."""
+            # The first argument is always the job_id
+            job_id = self.find_job_id(*args, **kwargs)
+            conn = _redis()
+            try:
+                result = func(*args, **kwargs)
+                key = key_name(job_id, self.area, func.__name__, "i")
+                conn.incr(key)
+                return result
+            except:
+                # Count failure
+                key = key_name(
+                    job_id, self.area, func.__name__ + "-failures", "i")
+                conn.incr(key)
+                raise
+
+        return wrapper
