@@ -202,8 +202,8 @@ def key_name(job_id, area, key_fragment, counter_type):
 
 # al-maisan, Mon, 20 Aug 2012 15:43:11 +0200
 # PLEASE NOTE: the decorator below is deprecated and should not be used for
-# new code in the nhlib-integration branch. Please use the '' decorator
-# instead.
+# new code in the nhlib-integration branch. Please use the 'count_progress'
+# decorator instead.
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
