@@ -193,9 +193,10 @@ class PerSiteResultCalculator(object):
 
     def locations(self):
         """
-        A generator of locations considered by the computation
+        A generator of locations in wkb format considered by the
+        computation
         """
-        locations = self._chunk_of_curves('location')
+        locations = self._chunk_of_curves('wkb')
         distinct_locations = locations[::self._curves_per_location]
         for location in distinct_locations:
             yield location

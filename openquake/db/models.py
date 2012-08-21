@@ -36,7 +36,7 @@ import numpy
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
-from shapely import wkt
+from shapely import wkt, wkb
 
 from openquake.db import fields
 
@@ -1229,12 +1229,23 @@ class HazardCurveDataManager(djm.Manager):
         chunk of curves (with values restricted on `field`). E.g.
 
         all_the_poes = self.individual_curves_chunks().next()('poes')
+
+        Allowed values for `field` are ['poes', 'wkb', 'weight']
         """
         curve_nr = self.individual_curves_nr(imt)
         ranges = xrange(0, curve_nr, block_size)
 
-        chunk_getter = (lambda offset, field: self.individual_curves_ordered(
-            imt).values_list(field, flat=True)[offset: block_size + offset])
+        def chunk_getter(offset, field):
+            assert field in ['poes', 'wkb', 'weight']
+
+            base_queryset = self.individual_curves_ordered(
+                imt)
+            base_queryset.extra({
+                'wkb': 'asBinary(location)',
+                'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
+                })
+            return base_queryset.values_list(
+                field, flat=True)[offset: block_size + offset]
 
         for offset in ranges:
             yield (lambda field: chunk_getter(offset, field))
@@ -1279,28 +1290,40 @@ class AggregateResultWriter(object):
         Create a mean curve (both Output, HazardCurve and
         HazardCurveData)
         :param location
-          a Point object
+          a buffer object pointing to wkb data
         :param poes
           a list of poe
         """
-        print location
+
+        location_wkt = wkb.loads(str(location)).wkt
         output = Output.objects.create_output(
             job=self.current_job,
-            display_name="mean curve at %s" % (location,))
+            display_name="mean curve at %s" % location_wkt)
         curve = HazardCurve.objects.create_aggregate_curve(
             imt=self.imt,
             output=output)
         curvedata = HazardCurveData.objects.create(
             hazard_curve=curve,
             poes=poes,
-            location="GeomFromText(%s, %d)" % (location, DEFAULT_SRID))
+            location=location_wkt)
         return curvedata, curve, output
 
     def create_quantile_curve(self, location, quantile, poes):
+        """
+        Create a quantile curve (both Output, HazardCurve and
+        HazardCurveData)
+        :param location
+          a buffer object pointing to wkb data
+        :param quantile
+          the quantile probability
+        :param poes
+          a list of poe
+        """
+        location_wkt = wkb.loads(str(location)).wkt
         output = Output.objects.create_output(
             job=self.current_job,
             display_name="quantile (poe >= %s) curve at %s" % (
-                quantile, (location,)))
+                quantile, location_wkt))
         curve = HazardCurve.objects.create_aggregate_curve(
             imt=self.imt,
             output=output,
@@ -1309,7 +1332,7 @@ class AggregateResultWriter(object):
         curvedata = HazardCurveData.objects.create(
             hazard_curve=curve,
             poes=poes,
-            location="GeomFromText(%s, %d)" % (location, DEFAULT_SRID))
+            location=location_wkt)
         return curvedata, curve, output
 
 
