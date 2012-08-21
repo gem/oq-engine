@@ -21,8 +21,6 @@ import getpass
 import md5
 import os
 
-from datetime import datetime
-
 from django.core import exceptions
 from django.db import close_connection
 
@@ -248,6 +246,9 @@ def create_hazard_calculation(owner, params, files):
         :class:`openquake.db.model.HazardCalculation` object. A corresponding
         record will obviously be saved to the database.
     """
+    if "export_dir" in params:
+        params["export_dir"] = os.path.abspath(params["export_dir"])
+
     hc = models.HazardCalculation(**params)
     hc.owner = owner
     hc.full_clean()
@@ -259,12 +260,15 @@ def create_hazard_calculation(owner, params, files):
     return hc
 
 
-def run_hazard(job, log_level, log_file):
+def run_hazard(job, log_level, log_file, exports):
     """Run a hazard job.
 
     :param job:
         :class:`openquake.db.models.OqJob` instance which references a valid
         :class:`openquake.db.models.HazardCalculation`.
+    :param list exports:
+        a (potentially empty) list of export targets, currently only "xml" is
+        supported
     """
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
@@ -280,14 +284,13 @@ def run_hazard(job, log_level, log_file):
             # record initial job stats
             hc = job.hazard_calculation
             models.JobStats.objects.create(
-                oq_job=job, start_time=datetime.utcnow(),
-                num_sites=len(hc.points_to_compute()),
+                oq_job=job, num_sites=len(hc.points_to_compute()),
                 realizations=hc.number_of_logic_tree_samples)
             # run the job
             job.is_running = True
             job.save()
             kvs.mark_job_as_current(job.id)
-            _do_run_hazard(job)
+            _do_run_hazard(job, exports)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -319,13 +322,33 @@ def run_hazard(job, log_level, log_file):
     return models.OqJob.objects.get(id=job.id)
 
 
-def _do_run_hazard(job):
+def _switch_to_job_phase(job, status):
+    """Switch to a particular phase of execution.
+
+    This involves setting the job's status as well as creating a
+    `job_phase_stats` record.
+
+    :param job:
+        An :class:`~openquake.db.models.OqJob` instance.
+    :param str status: one of the following: pre_executing, executing,
+        post_executing, post_processing, export, clean_up, complete
+    """
+    job.status = status
+    job.save()
+    models.JobPhaseStats.objects.create(oq_job=job, job_status=status)
+    logs.LOG.info("** %s" % status)
+
+
+def _do_run_hazard(job, exports):
     """
     Step through all of the phases of a hazard calculation, updating the job
     status at each phase.
 
     :param job:
         An :class:`~openquake.db.models.OqJob` instance.
+    :param list exports:
+        a (potentially empty) list of export targets, currently only "xml" is
+        supported
     :returns:
         The input job object when the calculation completes.
     """
@@ -337,22 +360,25 @@ def _do_run_hazard(job):
     calc = CALCULATORS_NEXT[calc_mode](job)
 
     # - Run the calculation
+    _switch_to_job_phase(job, "pre_executing")
     calc.pre_execute()
 
-    job.status = 'executing'
-    job.save()
+    _switch_to_job_phase(job, "executing")
     calc.execute()
 
-    job.status = 'post_executing'
-    job.save()
+    _switch_to_job_phase(job, "post_executing")
     calc.post_execute()
 
-    job.status = 'post_processing'
-    job.save()
+    _switch_to_job_phase(job, "post_processing")
     calc.post_process()
 
-    job.status = 'complete'
-    job.is_running = False
-    job.save()
+    _switch_to_job_phase(job, "export")
+    calc.export(exports=exports)
+
+    _switch_to_job_phase(job, "clean_up")
+    calc.clean_up()
+
+    _switch_to_job_phase(job, "complete")
+    logs.LOG.debug("*> complete")
 
     return job

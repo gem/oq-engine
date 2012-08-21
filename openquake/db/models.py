@@ -19,8 +19,7 @@
 # Disable:
 # - 'Maximum number of public methods for a class'
 # - 'Missing docstring' (because of all of the model Meta)
-# - 'Too many lines in module'
-# pylint: disable=R0904,C0111,C0302
+# pylint: disable=R0904,C0111
 
 '''
 Model representations of the OpenQuake DB tables.
@@ -501,6 +500,8 @@ class OqJob(djm.Model):
         (u'executing', u'Executing'),
         (u'post_executing', u'Post-Executing'),
         (u'post_processing', u'Post-Processing'),
+        (u'export', u'Exporting results'),
+        (u'clean_up', u'Cleaning up'),
         (u'complete', u'Complete'),
     )
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
@@ -522,7 +523,7 @@ class JobStats(djm.Model):
     Capture various statistics about a job.
     '''
     oq_job = djm.ForeignKey('OqJob')
-    start_time = djm.DateTimeField(editable=False)
+    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = djm.IntegerField()
@@ -532,6 +533,18 @@ class JobStats(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
+
+
+class JobPhaseStats(djm.Model):
+    '''
+    Capture when the various job phases started.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    job_status = djm.TextField()
+    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"job_phase_stats'
 
 
 class Job2profile(djm.Model):
@@ -553,6 +566,7 @@ class HazardCalculation(djm.Model):
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
+    export_dir = djm.TextField(null=True, blank=True)
     force_inputs = djm.BooleanField()
 
     #####################
@@ -662,9 +676,9 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    ses_per_sample = djm.IntegerField(
+    ses_per_logic_tree_path = djm.IntegerField(
         help_text=('Number of Stochastic Event Sets to compute per logic tree'
-                   ' sample/realization'),
+                   ' branch (enumerated or randomly sampled'),
         null=True,
         blank=True,
     )

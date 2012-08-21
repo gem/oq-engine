@@ -364,7 +364,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'truncation_level': 0,
             'maximum_distance': 200,
             'number_of_logic_tree_samples': 1,
-            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'intensity_measure_types_and_levels': dict(PGA=[1, 2, 3, 4]),
             'random_seed': 37,
         }
 
