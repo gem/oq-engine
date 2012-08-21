@@ -81,9 +81,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources+ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
     def test_initialize_gmf_db_records(self):
         hc = self.job.hazard_calculation
@@ -126,9 +126,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources+ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
     @attr('slow')
     def test_stochastic_event_sets_task(self):
@@ -148,9 +148,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         rlz1, rlz2 = models.LtRealization.objects.filter(
             hazard_calculation=hc.id)
-
-        rlz1_src_prog = models.SourceProgress.objects.filter(
-            lt_realization=rlz1.id)
 
         progress = dict(total=0, computed=0)
 
