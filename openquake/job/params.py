@@ -331,11 +331,9 @@ define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
              modes=('classical', 'classical_bcr'), to_job=str2bool)
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
 define_param('DAMPING', 'damping', default=0.0, to_job=float)
+define_param('DEFAULT_POPULATION_CATEGORY', 'default_pop_cat')
 define_param('EPSILON_RANDOM_SEED', None, modes='scenario',
              to_job=int)
-define_param('SAVE_GMFS', None,
-             modes=('event_based', 'scenario', 'scenario_damage'),
-             to_job=str2bool)
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'scenario', 'scenario_damage'), to_job=int)
 define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
@@ -346,6 +344,8 @@ define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('scenario', 'scenario_damage', 'event_based',
              'event_based_bcr'), to_job=str2bool)
+define_param('INSURED_LOSSES', 'insured_losses',
+             modes='scenario', to_job=str2bool)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
@@ -393,6 +393,9 @@ define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30",
 define_param('RUPTURE_SURFACE_DISCRETIZATION',
              'rupture_surface_discretization',
              modes=('scenario', 'scenario_damage'), to_job=float)
+define_param('SAVE_GMFS', None,
+             modes=('event_based', 'scenario', 'scenario_damage'),
+             to_job=str2bool)
 define_param("SADIGH_SITE_TYPE", "sadigh_site_type", to_db=map_enum,
              java_name="Sadigh Site Type")
 define_param('SOURCE_MODEL_LT_RANDOM_SEED', 'source_model_lt_random_seed',
@@ -409,3 +412,5 @@ define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
              to_job=float)
 define_param('INSURED_LOSSES', 'insured_losses',
              modes=('scenario', 'event_based'), to_job=str2bool)
+# TODO: remove me when nhlib integration is complete
+define_param('WORKAROUND_1027041', 'workaround_1027041', to_job=str2bool)

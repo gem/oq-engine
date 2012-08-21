@@ -42,7 +42,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         super(EventBasedRiskCalculator, self).__init__(job_ctxt)
         self.vuln_curves = None
         self.agg_curve = None
-        self._insured_losses = False
 
     def execute(self):
         """Execute the job."""

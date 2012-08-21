@@ -1124,6 +1124,16 @@ CREATE TABLE uiapi.oq_job_profile (
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
     reference_depth_to_2pt5km_per_sec_param float,
+    -- In the absence of an average population datum for exposure the user may
+    -- want to specify that a day/night/transit population value should be used
+    -- instead.
+    default_pop_cat VARCHAR CONSTRAINT default_pop_cat_value
+        CHECK(default_pop_cat IS NULL OR
+              default_pop_cat IN ('day', 'night', 'in_transit')),
+    -- Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041
+    -- TODO: remove me when nhlib integration is complete
+    workaround_1027041 BOOLEAN DEFAULT FALSE,
+
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1619,6 +1629,15 @@ CREATE TABLE oqmif.occupancy (
 ) TABLESPACE oqmif_ts;
 
 
+CREATE TABLE oqmif.population (
+    id SERIAL PRIMARY KEY,
+    exposure_data_id INTEGER NOT NULL,
+    category VARCHAR NOT NULL CONSTRAINT category_value
+        CHECK(category IN ('day', 'night', 'transit')),
+    occupants INTEGER NOT NULL
+) TABLESPACE oqmif_ts;
+
+
 -- Vulnerability model
 CREATE TABLE riski.vulnerability_model (
     id SERIAL PRIMARY KEY,
@@ -2024,6 +2043,10 @@ REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.occupancy ADD CONSTRAINT
 oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE oqmif.population ADD CONSTRAINT
+oqmif_population_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
 
 ALTER TABLE riski.vulnerability_function ADD CONSTRAINT

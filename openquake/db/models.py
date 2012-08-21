@@ -93,10 +93,13 @@ def per_asset_value(exd):
         - area
         - area_type
         - number_of_units
+        - unit_type
     :returns: the per-asset value as a `float`
     :raises: `ValueError` in case of a malformed (risk exposure data) input
     """
     if exd.category is not None and exd.category == "population":
+        return exd.number_of_units
+    if exd.unit_type is not None and exd.unit_type == "count":
         return exd.number_of_units
     if exd.cost_type == "aggregated":
         return exd.cost
@@ -946,6 +949,20 @@ class OqJobProfile(djm.Model):
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
 
+    DEFAULT_POP_CAT_CHOICES = (
+        (u'day', u'Population during the day'),
+        (u'night', u'Population during the night'),
+        (u'in_transit', u'Population in transit'))
+    default_pop_cat = djm.TextField(
+        null=True, choices=DEFAULT_POP_CAT_CHOICES,
+        help_text="In the absence of an average population datum "
+        "for exposure the user may want to specify that a day/night/transit "
+        "population value should be used instead.")
+    #: Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041
+    # TODO: This is purely a temporary workaround and will be removed and will
+    # be removed when nhlib integration is complete.
+    workaround_1027041 = djm.NullBooleanField(null=True, default=False)
+
     class Meta:
         db_table = 'uiapi\".\"oq_job_profile'
 
@@ -1405,13 +1422,31 @@ class Occupancy(djm.Model):
         db_table = 'oqmif\".\"occupancy'
 
 
+class Population(djm.Model):
+    '''
+    Asset population data
+    '''
+
+    exposure_data = djm.ForeignKey("ExposureData")
+    CATEGORY_CHOICES = (
+        (u'day', u'Population value during the day'),
+        (u'night', u'Population value during the night'),
+        (u'transit', u'Population value of people in transit'),
+    )
+    category = djm.TextField(choices=CATEGORY_CHOICES)
+    occupants = djm.IntegerField()
+
+    class Meta:
+        db_table = 'oqmif\".\"population'
+
+
 class ExposureData(djm.Model):
     '''
     Per-asset risk exposure data
     '''
 
-    REXD = namedtuple(
-        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
+    REXD = namedtuple("REXD", "category, cost, cost_type, area, area_type, "
+                              "number_of_units, unit_type")
 
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
@@ -1443,7 +1478,8 @@ class ExposureData(djm.Model):
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+            category=self.exposure_model.category,
+            unit_type=self.exposure_model.unit_type)
         return per_asset_value(exd)
 
     @property
@@ -1453,7 +1489,8 @@ class ExposureData(djm.Model):
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+            category=self.exposure_model.category,
+            unit_type=self.exposure_model.unit_type)
         return per_asset_value(exd)
 
     class Meta:

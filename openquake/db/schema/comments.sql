@@ -256,6 +256,12 @@ COMMENT ON COLUMN oqmif.occupancy.category IS 'occupancy data category, may be o
 COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
 
+COMMENT ON TABLE oqmif.population IS 'Occupancy for a given exposure data set';
+COMMENT ON COLUMN oqmif.population.exposure_data_id IS 'Foreign key to the exposure data set to which the population data applies.';
+COMMENT ON COLUMN oqmif.population.category IS 'population data category, may be one of: day, night, transit';
+COMMENT ON COLUMN oqmif.population.occupants IS 'number of occupants';
+
+
 -- riski schema tables ------------------------------------------
 COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
 COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';
@@ -402,6 +408,7 @@ COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samp
 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
 COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
+COMMENT ON COLUMN uiapi.oq_job_profile.default_pop_cat IS 'In the absence of an average population datum for exposure the user may want to specify that a day/night/transit population value should be used instead.';
 COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_job_profile.force_inputs IS 'If true: parse model inputs and write them to the database no matter what';
 COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
@@ -419,6 +426,8 @@ COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
 COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
+-- TODO: remove me when nhlib integration is complete
+COMMENT ON COLUMN uiapi.oq_job_profile.workaround_1027041 IS 'Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
