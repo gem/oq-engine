@@ -52,9 +52,6 @@ from openquake.utils import config
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
 
-#: Default Spectral Acceleration damping. At the moment, this is not
-#: configurable.
-DEFAULT_SA_DAMPING = 5.0
 
 # NOTE: this refers to how the values are stored in KVS. In the config
 # file, values are stored untransformed (i.e., the list of IMLs is
@@ -684,7 +681,7 @@ def imt_to_nhlib(imt):
     if 'SA' in imt:
         match = re.match(r'^SA\(([^)]+?)\)$', imt)
         period = float(match.group(1))
-        return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
+        return nhlib.imt.SA(period, models.DEFAULT_SA_DAMPING)
     else:
         imt_class = getattr(nhlib.imt, imt)
         return imt_class()
