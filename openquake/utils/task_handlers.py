@@ -18,7 +18,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-OO Interface to manage task queueing.
+This module contains an abstract Bridge to manage task queueing and
+its concrete implementations.
 """
 
 from celery.task import task
@@ -26,9 +27,10 @@ from openquake import logs
 from celery.task.sets import TaskSet
 import traceback
 
+
 class SimpleTaskHandler(object):
     """
-    A task queue handler that never consumes its tasks asynchronously
+    A task queue handler that does not distribute task
     """
     def __init__(self):
         self._ret = None
