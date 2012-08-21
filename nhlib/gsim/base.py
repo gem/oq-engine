@@ -430,8 +430,8 @@ def _truncnorm_sf(truncation_level, values):
         Positive float number representing the truncation on both sides
         around the mean, in units of sigma.
     :param values:
-        Numpy array of values to calculate the survival function for this
-        given distribution for.
+        Numpy array of values as input to a survival function for the given
+        distribution.
     :returns:
         Numpy array of survival function results in a range between 0 and 1.
     """
