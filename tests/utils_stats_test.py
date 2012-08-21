@@ -255,15 +255,6 @@ class PkIncTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
 
-    def test_pk_inc_with_non_existent_debug_key(self):
-        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
-        job_id = 86
-        pkey = "How hard can it be!?"
-        stats.delete_job_counters(job_id)
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = False
-            self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
-
 
 class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_get()."""
@@ -298,14 +289,6 @@ class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
         pkey = "This is unlikely to exist"
         stats.delete_job_counters(job_id)
         self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
-
-    def test_pk_get_with_non_existent_debug_key(self):
-        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
-        job_id = 96
-        pkey = "Not a key!?"
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = False
-            self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
 
 
 class KvsOpTestCase(helpers.RedisTestCase, unittest.TestCase):
