@@ -849,6 +849,19 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
 
+    def initialize_pr_data(self):
+        """Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        rs = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation)
+        total = rs.aggregate(Sum("total_sources"))
+        done = rs.aggregate(Sum("completed_sources"))
+        stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
+        if done > 0:
+            stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
+
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
         Perform full paths enumeration of logic trees and populate
@@ -1079,17 +1092,3 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
-
-
-def initialize_pr_data(calc):
-    """Record the total/completed number of work items.
-
-    This is needed for the purpose of providing an indication of progress
-    to the end user."""
-    rs = models.LtRealization.objects.filter(
-        hazard_calculation=calc.job.hazard_calculation)
-    total = rs.aggregate(Sum("total_sources"))
-    done = rs.aggregate(Sum("completed_sources"))
-    stats.pk_set(calc.job.id, "nhzrd_total", total.values().pop())
-    if done > 0:
-        stats.pk_set(calc.job.id, "nhzrd_done", done.values().pop())

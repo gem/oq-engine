@@ -279,7 +279,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-        self.initialize_pr_data(self)
+        self.initialize_pr_data()
 
     def post_execute(self):
         """

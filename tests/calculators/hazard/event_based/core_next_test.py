@@ -24,6 +24,7 @@ from nose.plugins.attrib import attr
 from openquake.db import models
 from openquake.calculators.hazard.event_based import core_next
 from openquake.calculators.hazard import general as haz_general
+from openquake.utils import stats
 
 from tests.utils import helpers
 
@@ -62,6 +63,28 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # The only metadata in in the SES is investigation time.
             self.assertEqual(hc.investigation_time, ses.investigation_time)
 
+    def test_initialize_pr_data_with_ses(self):
+        hc = self.job.hazard_calculation
+
+        # Initialize sources as a setup for the test:
+        self.calc.initialize_sources()
+
+        self.calc.initialize_realizations(
+            rlz_callbacks=[self.calc.initialize_ses_db_records])
+
+        ltr1, ltr2 = models.LtRealization.objects.filter(
+            hazard_calculation=hc).order_by("id")
+
+        ltr1.completed_sources = 12
+        ltr1.save()
+
+        self.calc.initialize_pr_data()
+
+        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
+        self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
+        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
+        self.assertEqual(ltr1.completed_sources+ltr2.completed_sources, done)
+
     def test_initialize_gmf_db_records(self):
         hc = self.job.hazard_calculation
 
@@ -84,6 +107,28 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
             # The only metadata in a GmfSet is investigation time.
             self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
+
+    def test_initialize_pr_data_with_gmf(self):
+        hc = self.job.hazard_calculation
+
+        # Initialize sources as a setup for the test:
+        self.calc.initialize_sources()
+
+        self.calc.initialize_realizations(
+            rlz_callbacks=[self.calc.initialize_gmf_db_records])
+
+        ltr1, ltr2 = models.LtRealization.objects.filter(
+            hazard_calculation=hc).order_by("id")
+
+        ltr1.completed_sources = 13
+        ltr1.save()
+
+        self.calc.initialize_pr_data()
+
+        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
+        self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
+        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
+        self.assertEqual(ltr1.completed_sources+ltr2.completed_sources, done)
 
     @attr('slow')
     def test_stochastic_event_sets_task(self):
