@@ -45,6 +45,10 @@ from openquake.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
+#: System Reference ID used for geometry objects
+DEFAULT_SRID = 4326
+
+
 VS30_TYPE_CHOICES = (
    (u"measured", u"Value obtained from on-site measurements"),
    (u"inferred", u"Estimated value"),
@@ -271,7 +275,7 @@ class Catalog(djm.Model):
     magnitude = djm.ForeignKey('Magnitude')
     surface = djm.ForeignKey('Surface')
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=4326)
+    point = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'eqcat\".\"catalog'
@@ -324,7 +328,7 @@ class ParsedSource(djm.Model):
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
     nrml = fields.PickleField(help_text="NRML object representing the source")
     polygon = djm.PolygonField(
-        srid=4326, dim=2,
+        srid=DEFAULT_SRID, dim=2,
         help_text=('The surface projection (2D) of the "rupture enclosing" '
                    'polygon for each source. This is relevant to all source '
                    'types, including point sources. When considering a '
@@ -353,7 +357,7 @@ class SiteModel(djm.Model):
     z1pt0 = djm.FloatField()
     # Depth to shear wave velocity of 2.5 km/s. Units km.
     z2pt5 = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     def __repr__(self):
         return (
@@ -591,11 +595,11 @@ class HazardCalculation(djm.Model):
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
     # `region_grid_spacing`) or `sites`.
-    region = djm.PolygonField(srid=4326, null=True, blank=True)
+    region = djm.PolygonField(srid=DEFAULT_SRID, null=True, blank=True)
     # Discretization parameter for a `region`. Units in degrees.
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
-    sites = djm.MultiPointField(srid=4326, null=True, blank=True)
+    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -783,6 +787,16 @@ class HazardCalculation(djm.Model):
                             kwargs[field] = wkt_fmt % ', '.join(points)
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
+    def individual_curves_per_location(self):
+        """
+        Returns the number of individual curves per location, that are
+        expected after a full computation of the hazard calculation
+        has been performed
+        """
+        realizations_nr = self.ltrealization_set.count()
+        imt_nr = len(self.intensity_measure_types_and_levels)
+        return realizations_nr * imt_nr
+
     def points_to_compute(self):
         """
         Generate a :class:`~nhlib.geo.mesh.Mesh` of points. These points
@@ -883,9 +897,9 @@ class OqJobProfile(djm.Model):
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     # We can specify a (region and region_grid_spacing) or sites, but not both.
-    region = djm.PolygonField(srid=4326, null=True)
+    region = djm.PolygonField(srid=DEFAULT_SRID, null=True)
     region_grid_spacing = djm.FloatField(null=True)
-    sites = djm.MultiPointField(srid=4326, null=True)
+    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True)
 
     area_source_discretization = djm.FloatField(null=True)
     area_source_magnitude_scaling_relationship = djm.TextField(null=True)
@@ -1089,7 +1103,7 @@ class HazardMapData(djm.Model):
     '''
     hazard_map = djm.ForeignKey('HazardMap')
     value = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map_data'
@@ -1235,7 +1249,7 @@ class HazardCurveData(djm.Model):
     '''
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     objects = HazardCurveDataManager()
 
@@ -1265,10 +1279,11 @@ class AggregateResultWriter(object):
         Create a mean curve (both Output, HazardCurve and
         HazardCurveData)
         :param location
-          a tuple with lon, lat
+          a Point object
         :param poes
           a list of poe
         """
+        print location
         output = Output.objects.create_output(
             job=self.current_job,
             display_name="mean curve at %s" % (location,))
@@ -1278,7 +1293,7 @@ class AggregateResultWriter(object):
         curvedata = HazardCurveData.objects.create(
             hazard_curve=curve,
             poes=poes,
-            location="POINT(%s %s)" % location)
+            location="GeomFromText(%s, %d)" % (location, DEFAULT_SRID))
         return curvedata, curve, output
 
     def create_quantile_curve(self, location, quantile, poes):
@@ -1294,7 +1309,7 @@ class AggregateResultWriter(object):
         curvedata = HazardCurveData.objects.create(
             hazard_curve=curve,
             poes=poes,
-            location="POINT(%s %s)" % location)
+            location="GeomFromText(%s, %d)" % (location, DEFAULT_SRID))
         return curvedata, curve, output
 
 
@@ -1446,7 +1461,7 @@ class GmfNode(djm.Model):
     value/intensity measure level and a point geometry.
     """
     gmf = djm.ForeignKey('Gmf')
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
     iml = djm.FloatField()
 
     class Meta:
@@ -1462,7 +1477,7 @@ class GmfData(djm.Model):
     '''
     output = djm.ForeignKey('Output')
     ground_motion = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_data'
@@ -1508,7 +1523,7 @@ class UhSpectrumData(djm.Model):
     uh_spectrum = djm.ForeignKey('UhSpectrum')
     realization = djm.IntegerField()
     sa_values = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"uh_spectrum_data'
@@ -1568,7 +1583,7 @@ class LossMapData(djm.Model):
     asset_ref = djm.TextField()
     value = djm.FloatField()
     std_dev = djm.FloatField(default=0.0)
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_map_data'
@@ -1598,7 +1613,7 @@ class LossCurveData(djm.Model):
     asset_ref = djm.TextField()
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -1638,7 +1653,7 @@ class CollapseMapData(djm.Model):
     asset_ref = djm.TextField()
     value = djm.FloatField()
     std_dev = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"collapse_map_data'
@@ -1664,7 +1679,7 @@ class BCRDistributionData(djm.Model):
     bcr_distribution = djm.ForeignKey("BCRDistribution")
     asset_ref = djm.TextField()
     bcr = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution_data'
@@ -1690,7 +1705,7 @@ class DmgDistPerAssetData(djm.Model):
     mean = djm.FloatField()
     stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset_data'
@@ -1812,7 +1827,7 @@ class ExposureData(djm.Model):
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
     taxonomy = djm.TextField()
-    site = djm.PointField(srid=4326)
+    site = djm.PointField(srid=DEFAULT_SRID)
     # Override the default manager with a GeoManager instance in order to
     # enable spatial queries.
     objects = djm.GeoManager()

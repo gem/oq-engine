@@ -245,7 +245,7 @@ def list_hazard_outputs(hc_id):
     if len(outputs) > 0:
         print 'ID\tOuput Type'
         for o in outputs:
-            print '%s\t%s' % (o.id, o.output_type)
+            print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
 
 
 def export_hazard(haz_output_id, target_dir):
