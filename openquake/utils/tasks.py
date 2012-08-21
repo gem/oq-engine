@@ -21,6 +21,8 @@
 
 import itertools
 
+from functools import wraps
+
 from celery.task.sets import TaskSet
 from celery.task import task
 
@@ -177,6 +179,7 @@ def oqtask(task_func):
     executed, so we don't do useless computation.)
     """
 
+    @wraps(task_func)
     def wrapped(*args, **kwargs):
         """
         Initialize logs, make sure the job is still running, and run the task
@@ -202,5 +205,6 @@ def oqtask(task_func):
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
             logs.LOG.exception(err)
+            raise
 
     return task(wrapped, ignore_result=True)

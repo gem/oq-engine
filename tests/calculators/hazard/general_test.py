@@ -15,14 +15,20 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import getpass
 import unittest
 
+import kombu
+import nhlib
+
 from nhlib import geo as nhlib_geo
+from nose.plugins.attrib import attr
 
 from openquake import engine
 from openquake import engine2
 from openquake import shapes
 from openquake.calculators.hazard import general
+from openquake.calculators.hazard.classical import core as cls_core
 from openquake.db import models
 
 from tests.utils import helpers
@@ -208,13 +214,12 @@ class GetSiteModelTestCase(unittest.TestCase):
             'truncation_level': 0,
             'maximum_distance': 200,
             'number_of_logic_tree_samples': 1,
-            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'intensity_measure_types_and_levels': dict(PGA=[1, 2, 3, 4]),
             'random_seed': 37,
         }
         owner = helpers.default_user()
         hc = engine2.create_hazard_calculation(owner, params, [])
         return hc
-
 
     def test_get_site_model(self):
         haz_calc = self._create_haz_calc()
@@ -343,3 +348,128 @@ class SetJavaSiteParamsTestCase(unittest.TestCase):
         self.assertEqual(
             15.0, jsite.getParameter('Depth 2.5 km/sec').getValue().value
         )
+
+
+class ExchangeConnArgsTestCase(unittest.TestCase):
+
+    def test_exchange_and_conn_args(self):
+        expected_conn_args = {
+            'password': 'guest', 'hostname': 'localhost', 'userid': 'guest',
+            'virtual_host': '/',
+        }
+
+        exchange, conn_args = general.exchange_and_conn_args()
+
+        self.assertEqual('oq.htasks', exchange.name)
+        self.assertEqual('direct', exchange.type)
+
+        self.assertEqual(expected_conn_args, conn_args)
+
+
+class GetSiteCollectionTestCase(unittest.TestCase):
+
+    @attr('slow')
+    def test_get_site_collection_with_site_model(self):
+        cfg = helpers.demo_file(
+            'simple_fault_demo_hazard/job_with_site_model.ini')
+        job = helpers.get_hazard_job(cfg)
+        calc = cls_core.ClassicalHazardCalculator(job)
+
+        # Bootstrap the `site_data` table:
+        calc.initialize_sources()
+        calc.initialize_site_model()
+
+        site_coll = general.get_site_collection(job.hazard_calculation)
+        # Since we're using a pretty big site model, it's a bit excessive to
+        # check each and every value.
+        # Instead, we'll just test that the lenth of each site collection attr
+        # is equal to the number of points of interest in the calculation.
+        expected_len = len(job.hazard_calculation.points_to_compute())
+
+        self.assertEqual(expected_len, len(site_coll))
+        self.assertEqual(expected_len, len(site_coll.vs30))
+        self.assertEqual(expected_len, len(site_coll.vs30measured))
+        self.assertEqual(expected_len, len(site_coll.z1pt0))
+        self.assertEqual(expected_len, len(site_coll.z2pt5))
+
+    def test_get_site_collection_with_reference_parameters(self):
+        cfg = helpers.demo_file(
+            'simple_fault_demo_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+
+        site_coll = general.get_site_collection(job.hazard_calculation)
+
+        # all of the parameters should be the same:
+        self.assertTrue((site_coll.vs30 == 760).all())
+        self.assertTrue((site_coll.vs30measured).all())
+        self.assertTrue((site_coll.z1pt0 == 5).all())
+        self.assertTrue((site_coll.z2pt5 == 100).all())
+
+        # just for sanity, make sure the meshes are correct (the locations)
+        job_mesh = job.hazard_calculation.points_to_compute()
+        self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
+        self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+
+class ImtsToNhlibTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.calculators.hazard.general.im_dict_to_nhlib`.
+    """
+
+    def test_im_dict_to_nhlib(self):
+        imts_in = {
+            'PGA': [1, 2],
+            'PGV': [2, 3],
+            'PGD': [3, 4],
+            'SA(0.1)': [0.1, 0.2],
+            'SA(0.025)': [0.2, 0.3],
+            'IA': [0.3, 0.4],
+            'RSD': [0.4, 0.5],
+            'MMI': [0.5, 0.6],
+        }
+
+        expected = {
+            nhlib.imt.PGA(): [1, 2],
+            nhlib.imt.PGV(): [2, 3],
+            nhlib.imt.PGD(): [3, 4],
+            nhlib.imt.SA(0.1, general.DEFAULT_SA_DAMPING): [0.1, 0.2],
+            nhlib.imt.SA(0.025, general.DEFAULT_SA_DAMPING): [0.2, 0.3],
+            nhlib.imt.IA(): [0.3, 0.4],
+            nhlib.imt.RSD(): [0.4, 0.5],
+            nhlib.imt.MMI(): [0.5, 0.6],
+        }
+
+        actual = general.im_dict_to_nhlib(imts_in)
+        self.assertEqual(len(expected), len(actual))
+
+        for exp_imt, exp_imls in expected.items():
+            act_imls = actual[exp_imt]
+            self.assertEqual(exp_imls, act_imls)
+
+
+class SignalTestCase(unittest.TestCase):
+
+    def test_signal_task_complete(self):
+        job_id = 7
+        num_sources = 10
+
+        def test_callback(body, message):
+            self.assertEqual(dict(job_id=job_id, num_sources=num_sources),
+                             body)
+            message.ack()
+
+        exchange, conn_args = general.exchange_and_conn_args()
+        routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
+        task_signal_queue = kombu.Queue(
+            'htasks.job.%s' % job_id, exchange=exchange,
+            routing_key=routing_key, durable=False, auto_delete=True)
+
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue,
+                               callbacks=[test_callback]):
+
+                # send the signal:
+                general.signal_task_complete(job_id, num_sources)
+                conn.drain_events()

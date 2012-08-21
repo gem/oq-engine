@@ -168,7 +168,7 @@ def cache_gc(job_id):
 
         msg = 'KVS garbage collection removed %s keys for job %s'
         msg %= (len(keys), job_id)
-        LOG.info(msg)
+        LOG.debug(msg)
 
         return len(keys)
     else:

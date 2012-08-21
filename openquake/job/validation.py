@@ -69,9 +69,11 @@ class BaseOQModelForm(ModelForm):
         'reference_vs30_type',
         'reference_depth_to_2pt5km_per_sec',
         'reference_depth_to_1pt0km_per_sec',
+        'export_dir',
     )
 
     def __init__(self, *args, **kwargs):
+        self.exports = kwargs.get('exports')
         if not 'data' in kwargs:
             # Because we're not using ModelForms in exactly the
             # originally-intended modus operandi, we need to pass all of the
@@ -86,6 +88,8 @@ class BaseOQModelForm(ModelForm):
             instance = kwargs.get('instance')
             if instance is not None:
                 kwargs['data'] = instance.__dict__
+        if "exports" in kwargs:
+            del kwargs['exports']
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
 
     def _add_error(self, field_name, error_msg):
@@ -187,6 +191,15 @@ class BaseOQModelForm(ModelForm):
                 all_valid &= valid
                 self._add_error(field, errs)
 
+        if self.exports:
+            # The user has requested that exports be performed after the
+            # calculation i.e. an 'export_dir' parameter must be present.
+            if not hjp.export_dir:
+                all_valid = False
+                err = ('--export specified on the command line but the '
+                       '"export_dir" parameter is missing in the .ini file')
+                self._add_error('export_dir', err)
+
         return all_valid
 
 
@@ -217,6 +230,7 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
             'mean_hazard_curves',
             'quantile_hazard_curves',
             'poes_hazard_maps',
+            'export_dir',
         )
 
 
@@ -244,11 +258,12 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
             'truncation_level',
             'maximum_distance',
             'intensity_measure_types',
-            'ses_per_sample',
+            'ses_per_logic_tree_path',
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
             'complete_logic_tree_ses',
             'ground_motion_fields',
+            'export_dir',
         )
 
 #: Maps calculation_mode to the appropriate validator class
@@ -509,14 +524,12 @@ def poes_hazard_maps_is_valid(mdl):
     return True, []
 
 
-
-
-def ses_per_sample_is_valid(mdl):
-    sps = mdl.ses_per_sample
+def ses_per_logic_tree_path_is_valid(mdl):
+    sps = mdl.ses_per_logic_tree_path
 
     if not sps > 0:
-        return False, ['`Stochastic Event Sets Per Sample` (ses_per_sample) '
-                       'must be > 0']
+        return False, ['`Stochastic Event Sets Per Sample` '
+                       '(ses_per_logic_tree_path) must be > 0']
     return True, []
 
 
