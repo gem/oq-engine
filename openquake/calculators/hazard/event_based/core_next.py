@@ -236,7 +236,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         logs.LOG.debug('< done computing stochastic event set %s of %s'
                        % (_, hc.ses_per_logic_tree_path))
 
-
     logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id, len(src_ids))
 
