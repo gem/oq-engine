@@ -151,7 +151,6 @@ class GetCounterTestCase(helpers.RedisTestCase, unittest.TestCase):
         self.assertEqual(int(value), stats.get_counter(*args))
 
 
-
 class DeleteJobCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
 
