@@ -241,14 +241,18 @@ class progress_indicator(object):   # pylint: disable=C0103
 
 
 class count_progress(object):   # pylint: disable=C0103
-    """Count successful/failed invocations of the wrapped function.
+    """Count successful/failed invocations of wrapped celery task functions.
 
-    Please note: for this to work the wrapped function must have the `job_id`
-    and the collection with the work items passed via the first and the second
-    parameter respectively.
-    This is a simple convention that saves us from sifting through all the
-    called function's parameters and finding the desired data (which would be
-    unnecessarily complex *and* error-prone).
+    Restrictions: for this to work
+
+        - the task parameters must be passed to apply_async() in positional
+          fashion (i.e. *not* as kwargs)
+        - the `job_id` and the collection with the work items must be passed
+          via the first and the second parameter respectively
+
+    These restrictions save us from sifting through all the task function's
+    parameters and finding the desired data (which would be unnecessarily
+    complex *and* error-prone).
 
     ALSO: this decorator presently only supports hazard and risk tasks!
     """
