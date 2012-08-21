@@ -19,7 +19,6 @@
 Logic tree parser, verifier and processor. See specs
 at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 """
-# pylint: disable=C0302
 
 import os
 import re

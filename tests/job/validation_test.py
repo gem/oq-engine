@@ -463,13 +463,92 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
+    def test_hazard_calculation_is_not_valid_missing_export_dir(self):
+        # When the user specifies '--exports' on the command line the
+        # 'export_dir' parameter must be present in the .ini file.
+        err = ('--export specified on the command line but the '
+               '"export_dir" parameter is missing in the .ini file')
+        expected_errors = {
+            'export_dir': [err],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes_hazard_maps=[1.0, 0.5, 0.0],
+        )
+
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None, exports=['xml']
+        )
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+    def test_hazard_calculation_is_valid_with_no_exports(self):
+        # When the user does not specify '--exports' on the command line the
+        # 'export_dir' parameter needs not be present in the .ini file.
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes_hazard_maps=[1.0, 0.5, 0.0],
+        )
+
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertTrue(form.is_valid())
+
 
 class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
 
-    def test_ses_per_sample_is_not_valid(self):
+    def test_ses_per_logic_tree_path_is_not_valid(self):
         expected_errors = {
-            'ses_per_sample': ['`Stochastic Event Sets Per Sample` '
-                               '(ses_per_sample) must be > 0'],
+            'ses_per_logic_tree_path': [
+                '`Stochastic Event Sets Per Sample` (ses_per_logic_tree_path) '
+                'must be > 0'],
         }
 
         hc = models.HazardCalculation(
@@ -525,7 +604,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             intensity_measure_types=VALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
-            ses_per_sample=5,
+            ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,
@@ -570,7 +649,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             intensity_measure_types=INVALID_IML_IMT.keys(),
             truncation_level=0.0,
             maximum_distance=100.0,
-            ses_per_sample=5,
+            ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,

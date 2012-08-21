@@ -17,44 +17,202 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
-import numpy
-import os
-import random
 import re
-import StringIO
 
-import kombu
 import nhlib
 import nhlib.calc
 import nhlib.imt
-import nhlib.site
+import numpy
 
-from django.db import transaction, connections
-from nrml import parsers as nrml_parsers
+from django.db import transaction
 
-from openquake import engine2
 from openquake import logs
 from openquake import writer
-from openquake.calculators import base
-from openquake.calculators.hazard import general
+from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
+from openquake.export import hazard as hexp
 from openquake.input import logictree
-from openquake.input import source
-from openquake.job.validation import MAX_SINT_32
-from openquake.job.validation import MIN_SINT_32
-from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
-#: Default Spectral Acceleration damping. At the moment, this is not
-#: configurable.
-DEFAULT_SA_DAMPING = 5.0
-# Routing key format string for communication between tasks and the control
-# node.
-_ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
+
+# Silencing 'Too many local variables'
+# pylint: disable=R0914
+@utils_tasks.oqtask
+@stats.progress_indicator('h')
+def hazard_curves(job_id, lt_rlz_id, src_ids):
+    """
+    Celery task for hazard curve calculator.
+
+    Samples logic trees, gathers site parameters, and calls the hazard curve
+    calculator.
+
+    Once hazard curve data is computed, result progress updated (within a
+    transaction, to prevent race conditions) in the
+    `htemp.hazard_curve_progress` table.
+
+    Once all of this work is complete, a signal will be sent via AMQP to let
+    the control node know that the work is complete. (If there is any work left
+    to be dispatched, this signal will indicate to the control node that more
+    work can be enqueued.)
+
+    :param int job_id:
+        ID of the currently running job.
+    :param lt_rlz_id:
+        Id of logic tree realization model to calculate for.
+    :param src_ids:
+        List of ids of parsed source models to take into account.
+    """
+    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
+                   % (job_id, lt_rlz_id))
+
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
+    ltp = logictree.LogicTreeProcessor(hc.id)
+
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+    sources = haz_general.gen_sources(
+        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+        hc.width_of_mfd_bin, hc.area_source_discretization)
+
+    imts = haz_general.im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
+
+    # Now initialize the site collection for use in the calculation.
+    # If there is no site model defined, we will use the same reference
+    # parameters (defined in the HazardCalculation) for every site.
+
+    # TODO: We could just create the SiteCollection once, pickle it, and store
+    # it in the DB (in SiteData). Creating the SiteCollection isn't an
+    # expensive operation (at least for small calculations), but this is
+    # wasted work.
+    logs.LOG.debug('> creating site collection')
+    site_coll = haz_general.get_site_collection(hc)
+    logs.LOG.debug('< done creating site collection')
+
+    # Prepare args for the calculator.
+    calc_kwargs = {'gsims': gsims,
+                   'truncation_level': hc.truncation_level,
+                   'time_span': hc.investigation_time,
+                   'sources': sources,
+                   'imts': imts,
+                   'sites': site_coll}
+
+    if hc.maximum_distance:
+        dist = hc.maximum_distance
+        calc_kwargs['source_site_filter'] = (
+                nhlib.calc.filters.source_site_distance_filter(dist))
+        calc_kwargs['rupture_site_filter'] = (
+                nhlib.calc.filters.rupture_site_distance_filter(dist))
+
+    # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
+    # second -- IMLs
+    logs.LOG.debug('> computing hazard matrices')
+    matrices = nhlib.calc.hazard_curve.hazard_curves_poissonian(**calc_kwargs)
+    logs.LOG.debug('< done computing hazard matrices')
+
+    logs.LOG.debug('> starting transaction')
+    with transaction.commit_on_success():
+        logs.LOG.debug('looping over IMTs')
+
+        for imt in hc.intensity_measure_types_and_levels.keys():
+            logs.LOG.debug('> updating hazard for IMT=%s' % imt)
+            nhlib_imt = haz_general.imt_to_nhlib(imt)
+            query = """
+            SELECT * FROM htemp.hazard_curve_progress
+            WHERE lt_realization_id = %s
+            AND imt = %s
+            FOR UPDATE"""
+            [hc_progress] = models.HazardCurveProgress.objects.raw(
+                query, [lt_rlz.id, imt])
+
+            hc_progress.result_matrix = update_result_matrix(
+                hc_progress.result_matrix, matrices[nhlib_imt])
+            hc_progress.save()
+
+            logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
+
+        # Before the transaction completes:
+
+        # Check here if any of records in source progress model
+        # with parsed_source_id from src_ids are marked as complete,
+        # and rollback and abort if there is at least one
+        src_prog = models.SourceProgress.objects.filter(
+            lt_realization=lt_rlz, parsed_source__in=src_ids)
+
+        if any(x.is_complete for x in src_prog):
+            msg = (
+                'One or more `source_progress` records were marked as '
+                'complete. This was unexpected and probably means that the'
+                ' calculation workload was not distributed properly.'
+            )
+            logs.LOG.critical(msg)
+            transaction.rollback()
+            raise RuntimeError(msg)
+
+        # Mark source_progress records as complete
+        src_prog.update(is_complete=True)
+
+        # Update realiation progress,
+        # mark realization as complete if it is done
+        # First, refresh the logic tree realization record:
+        lt_rlz = models.LtRealization.objects.get(id=lt_rlz.id)
+
+        lt_rlz.completed_sources += len(src_ids)
+        if lt_rlz.completed_sources == lt_rlz.total_sources:
+            lt_rlz.is_complete = True
+
+        lt_rlz.save()
+
+    logs.LOG.debug('< transaction complete')
+
+    # Last thing, signal back the control node to indicate the completion of
+    # task. The control node needs this to manage the task distribution and
+    # keep track of progress.
+    logs.LOG.debug('< task complete, signalling completion')
+    haz_general.signal_task_complete(job_id, len(src_ids))
 
 
-class ClassicalHazardCalculator(base.CalculatorNext):
+@staticmethod
+def classical_task_arg_gen(hc, job, sources_per_task, progress):
+    """
+    Loop through realizations and sources to generate a sequence of
+    task arg tuples. Each tuple of args applies to a single task.
+
+    Yielded results are triples of (job_id, realization_id,
+    source_id_list).
+
+    :param hc:
+        :class:`openquake.db.models.HazardCalculation` instance.
+    :param job:
+        :class:`openquake.db.models.OqJob` instance.
+    :param int sources_per_task:
+        The (max) number of sources to consider for each task.
+    :param dict progress:
+        A dict containing two integer values: 'total' and 'computed'. The task
+        arg generator will update the 'total' count as the generator creates
+        arguments.
+    """
+    realizations = models.LtRealization.objects.filter(
+            hazard_calculation=hc, is_complete=False)
+
+    for lt_rlz in realizations:
+        source_progress = models.SourceProgress.objects.filter(
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
+        source_ids = source_progress.values_list('parsed_source_id',
+                                                 flat=True)
+        progress['total'] += len(source_ids)
+
+        for offset in xrange(0, len(source_ids), sources_per_task):
+            task_args = (job.id, lt_rlz.id,
+                         source_ids[offset:offset + sources_per_task])
+            yield task_args
+
+
+class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
     points.
@@ -63,237 +221,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
     and GMPEs (Ground Motion Prediction Equations) from logic trees.
     """
 
-    def initialize_site_model(self):
-        """
-        If a site model is specified in the calculation configuration. parse
-        it and load it into the `hzrdi.site_model` table. This includes a
-        validation step to ensure that the area covered by the site model
-        completely envelops the calculation geometry. (If this requirement is
-        not satisfied, an exception will be raised. See
-        :func:`openquake.calculators.hazard.general.validate_site_model`.)
-
-        Then, take all of the points/locations of interest defined by the
-        calculation geometry. For each point, do distance queries on the site
-        model and get the site parameters which are closest to the point of
-        interest. This aggregation of points to the closest site parameters
-        is what we store in `htemp.site_data`. (Computing this once prior to
-        starting the calculation is optimal, since each task will need to
-        consider all sites.)
-        """
-        hc_id = self.job.hazard_calculation.id
-
-        site_model_inp = general.get_site_model(hc_id)
-        if site_model_inp is not None:
-            # Explicit cast to `str` here because the XML parser doesn't like
-            # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = str(site_model_inp.model_content.raw_content)
-
-            # Store `site_model` records:
-            general.store_site_model(
-                site_model_inp, StringIO.StringIO(site_model_content))
-
-            mesh = self.job.hazard_calculation.points_to_compute()
-
-            # Get the site model records we stored:
-            site_model_data = models.SiteModel.objects.filter(
-                input=site_model_inp)
-
-            general.validate_site_model(site_model_data, mesh)
-
-            general.store_site_data(hc_id, site_model_inp, mesh)
-
-    def initialize_sources(self):
-        """
-        Parse and validation logic trees (source and gsim). Then get all
-        sources referenced in the the source model logic tree, create
-        :class:`~openquake.db.models.Input` records for all of them, parse
-        then, and save the parsed sources to the `parsed_source` table
-        (see :class:`openquake.db.models.ParsedSource`).
-        """
-        hc = self.job.hazard_calculation
-
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
-        [gsimlt] = models.inputs4hcalc(hc.id, input_type='lt_gsim')
-        source_paths = logictree.read_logic_trees(
-            hc.base_path, smlt.path, gsimlt.path)
-
-        src_inputs = []
-        for src_path in source_paths:
-            full_path = os.path.join(hc.base_path, src_path)
-
-            # Get or reuse the 'source' Input:
-            inp = engine2.get_input(
-                full_path, 'source', hc.owner, hc.force_inputs)
-            src_inputs.append(inp)
-
-            # Associate the source input to the calculation:
-            models.Input2hcalc.objects.get_or_create(
-                input=inp, hazard_calculation=hc)
-
-            # Associate the source input to the source model logic tree input:
-            models.Src2ltsrc.objects.get_or_create(
-                hzrd_src=inp, lt_src=smlt, filename=src_path)
-
-        # Now parse the source models and store `pared_source` records:
-        for src_inp in src_inputs:
-            src_content = StringIO.StringIO(src_inp.model_content.raw_content)
-            sm_parser = nrml_parsers.SourceModelParser(src_content)
-            src_db_writer = source.SourceDBWriter(
-                src_inp, sm_parser.parse(), hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
-            src_db_writer.serialize()
-
-    # Silencing 'Too many local variables'
-    # pylint: disable=R0914
-    @transaction.commit_on_success(using='reslt_writer')
-    def initialize_realizations(self):
-        """
-        Create records for the `hzrdr.lt_realization` and
-        `htemp.source_progress` records.
-
-        This function works either in random sampling mode (when lt_realization
-        models get the random seed value) or in enumeration mode (when weight
-        values are populated). In both cases we record the logic tree paths
-        for both trees in the `lt_realization` record, as well as ordinal
-        number of the realization (zero-based).
-
-        Then we create `htemp.source_progress` records for each source
-        in the source model chosen for each realization,
-        see :meth:`initialize_source_progress`.
-        """
-        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
-            # random sampling of paths
-            self._initialize_realizations_montecarlo()
-        else:
-            # full paths enumeration
-            self._initialize_realizations_enumeration()
-
-    def _initialize_realizations_enumeration(self):
-        """
-        Perform full paths enumeration of logic trees and populate
-        lt_realization table.
-        """
-        hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
-        ltp = logictree.LogicTreeProcessor(hc.id)
-        hzrd_src_cache = {}
-
-        for i, path_info in enumerate(ltp.enumerate_paths()):
-            sm_name, weight, sm_lt_path, gsim_lt_path = path_info
-
-            lt_rlz = models.LtRealization(
-                hazard_calculation=hc,
-                ordinal=i,
-                seed=None,
-                weight=weight,
-                sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1)
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
-
-            # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
-            # Now stub out the curve result records for this realization
-            self.initialize_hazard_curve_progress(lt_rlz)
-
-    def _initialize_realizations_montecarlo(self):
-        """
-        Perform random sampling of both logic trees and populate lt_realization
-        table.
-        """
-        hc = self.job.hazard_calculation
-
-        # Each realization will have two seeds:
-        # One for source model logic tree, one for GSIM logic tree.
-        rnd = random.Random()
-        seed = hc.random_seed
-        rnd.seed(seed)
-
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
-
-        ltp = logictree.LogicTreeProcessor(hc.id)
-
-        hzrd_src_cache = {}
-
-        # The first realization gets the seed we specified in the config file.
-        for i in xrange(hc.number_of_logic_tree_samples):
-            # Sample source model logic tree branch paths:
-            sm_name, sm_lt_path = ltp.sample_source_model_logictree(
-                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
-
-            # Sample GSIM logic tree branch paths:
-            gsim_lt_path = ltp.sample_gmpe_logictree(
-                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
-
-            lt_rlz = models.LtRealization(
-                hazard_calculation=hc,
-                ordinal=i,
-                seed=seed,
-                weight=None,
-                sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1
-            )
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
-
-            # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
-            # Now stub out the curve result records for this realization:
-            self.initialize_hazard_curve_progress(lt_rlz)
-
-            # update the seed for the next realization
-            seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
-            rnd.seed(seed)
-
-    @staticmethod
-    def initialize_source_progress(lt_rlz, hzrd_src):
-        """
-        Create ``source_progress`` models for given logic tree realization
-        and set total sources of realization.
-
-        :param lt_rlz:
-            :class:`openquake.db.models.LtRealization` object to initialize
-            source progress for.
-        :param hztd_src:
-            :class:`openquake.db.models.Input` object that needed parsed
-            sources are referencing.
-        """
-        cursor = connections['reslt_writer'].cursor()
-        src_progress_tbl = models.SourceProgress._meta.db_table
-        parsed_src_tbl = models.ParsedSource._meta.db_table
-        lt_rlz_tbl = models.LtRealization._meta.db_table
-        cursor.execute("""
-            INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
-            SELECT %%s, id, FALSE
-            FROM "%s" WHERE input_id = %%s
-            """ % (src_progress_tbl, parsed_src_tbl),
-            [lt_rlz.id, hzrd_src.id])
-        cursor.execute("""
-            UPDATE "%s" SET total_sources = (
-                SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
-            )""" % (lt_rlz_tbl, src_progress_tbl),
-            [lt_rlz.id])
-        transaction.commit_unless_managed()
+    core_calc_task = hazard_curves
+    task_arg_gen = classical_task_arg_gen
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """
@@ -348,119 +277,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # update these periodically with partial results (partial meaning,
         # result curves for just a subset of the overall sources) when some
         # work is complete.
-        self.initialize_realizations()
-
-    def execute(self):
-        """
-        Calculation work is parallelized over sources, which means that each
-        task will compute hazard for all sites but only with a subset of the
-        seismic sources defined in the input model.
-
-        The general workflow is as follows:
-
-        1. Fill the queue with an initial set of tasks. The number of initial
-        tasks is configurable using the `concurrent_tasks` parameter in the
-        `[hazard]` section of the OpenQuake config file.
-
-        2. Wait for tasks to signal completion (via AMQP message) and enqueue a
-        new task each time another completes. Once all of the job work is
-        enqueued, we just wait until all of the tasks conclude.
-        """
-        job = self.job
-        hc = job.hazard_calculation
-        sources_per_task = int(config.get('hazard', 'block_size'))
-        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
-
-        progress = dict(total=0, computed=0)
-        # The following two counters are in a dict so that we can use them in
-        # the closures below.
-        # When `progress['compute']` becomes equal to `progress['total']`,
-        # `execute` can conclude.
-
-        def task_arg_gen():
-            """
-            Loop through realizations and sources to generate a sequence of
-            task arg tuples. Each tuple of args applies to a single task.
-
-            Yielded results are triples of (job_id, realization_id,
-            source_id_list).
-            """
-            realizations = models.LtRealization.objects.filter(
-                    hazard_calculation=hc, is_complete=False)
-
-            for lt_rlz in realizations:
-                source_progress = models.SourceProgress.objects.filter(
-                        is_complete=False, lt_realization=lt_rlz)
-                source_ids = source_progress.values_list('parsed_source_id',
-                                                         flat=True)
-                progress['total'] += len(source_ids)
-
-                for offset in xrange(0, len(source_ids), sources_per_task):
-                    task_args = (job.id, lt_rlz.id,
-                                 source_ids[offset:offset + sources_per_task])
-                    yield task_args
-
-        task_gen = task_arg_gen()
-
-        def task_complete_callback(body, message):
-            """
-            :param dict body:
-                ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
-                number of sources computed).
-
-                Both values are `int`.
-            :param message:
-                A :class:`kombu.transport.pyamqplib.Message`, which contains
-                metadata about the message (including content type, channel,
-                etc.). See kombu docs for more details.
-            """
-            job_id = body['job_id']
-            num_sources = body['num_sources']
-
-            assert job_id == job.id
-            progress['computed'] += num_sources
-
-            # Once we receive a completion signal, enqueue the next
-            # piece of work (if there's anything left to be done).
-            try:
-                hazard_curves.apply_async(task_gen.next())
-            except StopIteration:
-                # There are no more tasks to dispatch; now we just need
-                # to wait until all tasks signal completion.
-                pass
-
-            message.ack()
-
-        exchange, conn_args = _exchange_and_conn_args()
-
-        routing_key = _ROUTING_KEY_FMT % dict(job_id=job.id)
-        task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job.id, exchange=exchange,
-            routing_key=routing_key, durable=False, auto_delete=True)
-
-        with kombu.BrokerConnection(**conn_args) as conn:
-            task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[task_complete_callback]):
-                # First: Queue up the initial tasks.
-                for _ in xrange(concurrent_tasks):
-                    try:
-                        hazard_curves.apply_async(task_gen.next())
-                    except StopIteration:
-                        # If we get a `StopIteration` here, that means we have
-                        # a number of tasks < concurrent_tasks.
-                        # This basically just means that we could be
-                        # under-utilizing worker node resources.
-                        break
-
-                while (progress['computed'] < progress['total']):
-                    # This blocks until a message is received.
-                    # Once we receive a completion signal, enqueue the next
-                    # piece of work (if there's anything left to be done).
-                    # (The `task_complete_callback` will handle additional
-                    # queuing.)
-                    conn.drain_events()
+        self.initialize_realizations(
+            rlz_callbacks=[self.initialize_hazard_curve_progress])
 
     def post_execute(self):
         """
@@ -490,7 +308,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                 if 'SA' in imt:
                     match = re.match(r'^SA\(([^)]+?)\)$', imt)
                     sa_period = float(match.group(1))
-                    sa_damping = DEFAULT_SA_DAMPING
+                    sa_damping = haz_general.DEFAULT_SA_DAMPING
                     hc_im_type = 'SA'  # don't include the period
                 else:
                     hc_im_type = imt
@@ -534,157 +352,14 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
 
+    def export(self, *args, **kwargs):
+        """Export to NRML"""
+        logs.LOG.debug('> starting exports')
 
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
-@utils_tasks.oqtask
-@stats.progress_indicator('h')
-def hazard_curves(job_id, lt_rlz_id, src_ids):
-    """
-    Celery task for hazard curve calculator.
+        if "exports" in kwargs and "xml" in kwargs["exports"]:
+            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
 
-    Samples logic trees, gathers site parameters, and calls the hazard curve
-    calculator.
-
-    Once hazard curve data is computed, result progress updated (within a
-    transaction, to prevent race conditions) in the
-    `htemp.hazard_curve_progress` table.
-
-    Once all of this work is complete, a signal will be sent via AMQP to let
-    the control node know that the work is complete. (If there is any work left
-    to be dispatched, this signal will indicate to the control node that more
-    work can be enqueued.)
-
-    :param int job_id:
-        ID of the currently running job.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
-    :param src_ids:
-        List of ids of parsed source models to take into account.
-    """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
-
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    ltp = logictree.LogicTreeProcessor(hc.id)
-
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
-    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    def gen_sources():
-        """
-        Nhlib source objects generator for a given set of sources.
-
-        Performs lazy loading, converting and processing of sources.
-        """
-        for src_id in src_ids:
-            parsed_source = models.ParsedSource.objects.get(id=src_id)
-
-            nhlib_source = source.nrml_to_nhlib(
-                parsed_source.nrml, hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
-
-            apply_uncertainties(nhlib_source)
-            yield nhlib_source
-
-    imts = im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
-
-    # Now initialize the site collection for use in the calculation.
-    # If there is no site model defined, we will use the same reference
-    # parameters (defined in the HazardCalculation) for every site.
-
-    # TODO: We could just create the SiteCollection once, pickle it, and store
-    # it in the DB (in SiteData). Creating the SiteCollection isn't an
-    # expensive operation (at least for small calculations), but this is
-    # wasted work.
-    logs.LOG.debug('> creating site collection')
-    site_coll = get_site_collection(hc)
-    logs.LOG.debug('< done creating site collection')
-
-    # Prepare args for the calculator.
-    calc_kwargs = {'gsims': gsims,
-                   'truncation_level': hc.truncation_level,
-                   'time_span': hc.investigation_time,
-                   'sources': gen_sources(),
-                   'imts': imts,
-                   'sites': site_coll}
-
-    if hc.maximum_distance:
-        dist = hc.maximum_distance
-        calc_kwargs['source_site_filter'] = (
-                nhlib.calc.filters.source_site_distance_filter(dist))
-        calc_kwargs['rupture_site_filter'] = (
-                nhlib.calc.filters.rupture_site_distance_filter(dist))
-
-    # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
-    # second -- IMLs
-    logs.LOG.debug('> computing hazard matrices')
-    matrices = nhlib.calc.hazard_curve.hazard_curves_poissonian(**calc_kwargs)
-    logs.LOG.debug('< done computing hazard matrices')
-
-    logs.LOG.debug('> starting transaction')
-    with transaction.commit_on_success():
-        logs.LOG.debug('looping over IMTs')
-
-        for imt in hc.intensity_measure_types_and_levels.keys():
-            logs.LOG.debug('> updating hazard for IMT=%s' % imt)
-            nhlib_imt = _imt_to_nhlib(imt)
-            query = """
-            SELECT * FROM htemp.hazard_curve_progress
-            WHERE lt_realization_id = %s
-            AND imt = %s
-            FOR UPDATE"""
-            [hc_progress] = models.HazardCurveProgress.objects.raw(
-                query, [lt_rlz.id, imt])
-
-            hc_progress.result_matrix = update_result_matrix(
-                hc_progress.result_matrix, matrices[nhlib_imt])
-            hc_progress.save()
-
-            logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
-
-        # Before the transaction completes:
-
-        # Check here if any of records in source progress model
-        # with parsed_source_id from src_ids are marked as complete,
-        # and rollback and abort if there is at least one
-        src_prog = models.SourceProgress.objects.filter(
-            lt_realization=lt_rlz, parsed_source__in=src_ids)
-
-        if any(x.is_complete for x in src_prog):
-            msg = (
-                'One or more `source_progress` records were marked as '
-                'complete. This was unexpected and probably means that the'
-                ' calculation workload was not distributed properly.'
-            )
-            logs.LOG.critical(msg)
-            transaction.rollback()
-            raise RuntimeError(msg)
-
-        # Mark source_progress records as complete
-        src_prog.update(is_complete=True)
-
-        # Update realiation progress,
-        # mark realization as complete if it is done
-        # First, refresh the logic tree realization record:
-        lt_rlz = models.LtRealization.objects.get(id=lt_rlz.id)
-
-        lt_rlz.completed_sources += len(src_ids)
-        if lt_rlz.completed_sources == lt_rlz.total_sources:
-            lt_rlz.is_complete = True
-
-        lt_rlz.save()
-
-    logs.LOG.debug('< transaction complete')
-
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-    signal_task_complete(job_id, len(src_ids))
+        logs.LOG.debug('< done with exports')
 
 
 def update_result_matrix(current, new):
@@ -707,124 +382,3 @@ def update_result_matrix(current, new):
         the current value. This should be the same shape as `current`.
     """
     return 1 - (1 - current) * (1 - new)
-
-
-def get_site_collection(hc):
-    """
-    Create a `SiteCollection`, which is needed by nhlib to compute hazard
-    curves.
-
-    :param hc:
-        Instance of a :class:`~openquake.db.models.HazardCalculation`. We need
-        this in order to get the points of interest for a calculation as well
-        as load pre-computed site data or access reference site parameters.
-
-    :returns:
-        :class:`nhlib.site.SiteCollection` instance.
-    """
-    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [nhlib.site.Site(
-            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-
-    return nhlib.site.SiteCollection(sites)
-
-
-def _exchange_and_conn_args():
-    """
-    Helper method to setup an exchange for task communication and the args
-    needed to create a broker connection.
-    """
-
-    exchange = kombu.Exchange(
-        config.get_section('hazard')['task_exchange'], type='direct')
-
-    amqp_cfg = config.get_section('amqp')
-    conn_args = {
-        'hostname': amqp_cfg['host'],
-        'userid': amqp_cfg['user'],
-        'password': amqp_cfg['password'],
-        'virtual_host': amqp_cfg['vhost'],
-    }
-
-    return exchange, conn_args
-
-
-def signal_task_complete(job_id, num_sources):
-    """
-    Send a signal back through a dedicated queue to the 'control node' to
-    notify of task completion and the number of sources computed.
-
-    Signalling back this metric is needed to tell the control node when it can
-    conclude its `execute` phase.
-
-    :param int job_id:
-        ID of a currently running :class:`~openquake.db.models.OqJob`.
-    :param int num_sources:
-        Number of sources computed in the completed task.
-    """
-    # The job ID may be redundant (since it's in the routing key), but
-    # we can put this here for a sanity check on the receiver side.
-    # Maybe we can remove this
-    msg = dict(job_id=job_id, num_sources=num_sources)
-
-    exchange, conn_args = _exchange_and_conn_args()
-
-    routing_key = _ROUTING_KEY_FMT % dict(job_id=job_id)
-
-    with kombu.BrokerConnection(**conn_args) as conn:
-        with conn.Producer(exchange=exchange,
-                           routing_key=routing_key) as producer:
-            producer.publish(msg)
-
-
-def im_dict_to_nhlib(im_dict):
-    """
-    Given the dict of intensity measure types and levels, convert them to a
-    dict with the same values, except create :mod:`mhlib.imt` objects for the
-    new keys.
-
-    :returns:
-        A dict of intensity measure level lists, keyed by an IMT object. See
-        :mod:`nhlib.imt` for more information.
-    """
-    # TODO: file a bug about  SA periods in nhlib imts.
-    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
-    # there must be a reason why we can't do this.
-    nhlib_im = {}
-
-    for imt, imls in im_dict.items():
-        nhlib_imt = _imt_to_nhlib(imt)
-        nhlib_im[nhlib_imt] = imls
-
-    return nhlib_im
-
-
-def _imt_to_nhlib(imt):
-    """Covert an IMT string to an nhlib object.
-
-    :param str imt:
-        Given the IMT string (defined in the job config file), convert it to
-        equivlent nhlib object. See :mod:`nhlib.imt`.
-    """
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        period = float(match.group(1))
-        return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
-    else:
-        imt_class = getattr(nhlib.imt, imt)
-        return imt_class()
