@@ -26,8 +26,11 @@ import random
 import numpy
 import unittest
 import itertools
+import shapely
 import math
 import mock
+
+from tests.utils.helpers import random_location_generator
 
 from openquake.calculators.hazard.classical.post_processing import (
     PostProcessor, PerSiteResultCalculator,
@@ -70,7 +73,7 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
             curve_writer=self.curve_writer)
 
         locations = list(mean_calculator.locations())
-        numpy.testing.assert_allclose(self.location_db, locations)
+        self.assertEqual(self.location_db, locations)
 
     def test_fetch_curves(self):
         getter = curve_chunks_getter(self.curve_db)
@@ -106,17 +109,17 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
         mean_calculator.run()
 
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
-        locations = [v['location'] for v in self.curve_writer.curves]
+        locations = [v['wkb'] for v in self.curve_writer.curves]
 
         expected_mean_curves = [
-            dict(location=locations[i],
+            dict(wkb=locations[i],
                  poes=[1. / (1 + i + j) for j in range(0, self.level_nr)])
             for i in range(0, self.location_nr)]
 
         for i in range(0, self.location_nr):
-            numpy.testing.assert_allclose(
-                expected_mean_curves[i]['location'],
-                self.curve_writer.curves[i]['location'])
+            self.assertEqual(
+                expected_mean_curves[i]['wkb'],
+                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
                 expected_mean_curves[i]['poes'],
                 self.curve_writer.curves[i]['poes'],
@@ -142,14 +145,14 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
-            dict(location=location,
+            dict(wkb=location,
                  poes=[1. / (1 + i + j) for j in range(0, self.level_nr)])
             for i, location in enumerate(self.location_db)]
 
         for i in range(0, self.location_nr):
-            numpy.testing.assert_allclose(
-                expected_quantile_curves[i]['location'],
-                self.curve_writer.curves[i]['location'])
+            self.assertEqual(
+                expected_quantile_curves[i]['wkb'],
+                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
                 expected_quantile_curves[i]['poes'],
                 self.curve_writer.curves[i]['poes'],
@@ -330,14 +333,14 @@ class SimpleCurveWriter(object):
         """
         Implement the mean curve writer protocol
         """
-        self.curves.append(dict(location=location,
+        self.curves.append(dict(wkb=location,
                                 poes=poes.tolist()))
 
     def create_quantile_curve(self, location, quantile, poes):
         """
         Implement the quantile curve writer protocol
         """
-        self.curves.append(dict(location=location,
+        self.curves.append(dict(wkb=location,
                                 quantile=quantile,
                                 poes=poes.tolist()))
 
@@ -346,17 +349,16 @@ def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
     """
     Create a fake db of curves
     """
-    random_location = lambda: random.random() * 360
     curve_db = []
     location_db = []
 
     for i in range(0, location_nr):
-        location = (random_location(), random_location())
+        location = random_location_generator()
         # let's cheat. mean curve poes set to [1 / (1 + i + j) for j
         # in level_indexes]
-        location_db.append(location)
+        location_db.append(location.wkb)
         curve_db.extend(
-            [dict(location=location,
+            [dict(wkb=location.wkb,
                   poes=[random.gauss(1.0 / (1 + i + j), sigma)
                         for j in range(0, level_nr)])
             for _ in range(0, curves_per_location)])

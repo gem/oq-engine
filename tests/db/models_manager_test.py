@@ -94,11 +94,11 @@ class AggregateResultWriterTestCase(TestCaseWithAJob):
         self.manager = openquake.AggregateResultWriter(self.job, "PGA")
 
     def test_create_mean_curve(self):
-        a_location = (random.random(), random.random())
+        a_location = helpers.random_location_generator()
         poes = [random.random()]
 
         curvedata, curve, output = self.manager.create_mean_curve(
-            location=a_location,
+            location=a_location.wkb,
             poes=poes
             )
         self.assertEqual(1,
@@ -111,11 +111,11 @@ class AggregateResultWriterTestCase(TestCaseWithAJob):
             openquake.HazardCurveData.objects.filter(pk=curvedata.id).count())
 
     def test_create_quantile_curve(self):
-        a_location = (random.random(), random.random())
+        a_location = helpers.random_location_generator()
         poes = [random.random()]
 
         curvedata, curve, output = self.manager.create_quantile_curve(
-            location=a_location,
+            location=a_location.wkb,
             quantile=random.random(),
             poes=poes
             )
@@ -149,16 +149,18 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
             investigation_time=10,
             imt="PGA", imls=[1, 2, 3])
 
-        self.a_location = (random.random(), random.random())
+        self.a_location = helpers.random_location_generator()
         openquake.HazardCurveData.objects.create(
             hazard_curve=curve,
-            location="POINT(%s %s)" % self.a_location,
+            location=self.a_location.wkt,
             poes=[random.random()])
 
-        self.a_bigger_location = (1 + random.random(), random.random())
+        self.a_bigger_location = helpers.random_location_generator(
+            min_x=361,
+            min_y=361)
         openquake.HazardCurveData.objects.create(
             hazard_curve=curve,
-            location="POINT(%s %s)" % self.a_bigger_location,
+            location=self.a_bigger_location.wkt,
             poes=[random.random()])
 
     def test_individual_curves(self):
