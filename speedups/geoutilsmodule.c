@@ -92,7 +92,7 @@ geoutils_point_to_polygon_distance(
     ecx = *(double *) dataptrarray_c[0];
     ecy = *(double *) dataptrarray_c[1];
 
-    // here we ignore the first iteration, this is intensional: we need
+    // here we ignore the first iteration, this is intentional: we need
     // to iterate over edges, not points
     while (iternext_c(iter_c))
     {
@@ -118,7 +118,7 @@ geoutils_point_to_polygon_distance(
         // of the next one
         ecx = bcx;
         ecy = bcy;
-    };
+    }
 
     // second iterator is over the target points.
     // we will collect distance in it as well.
