@@ -29,6 +29,8 @@ import nhlib.site
 import numpy
 
 from django.db import transaction, connections
+from django.db.models import Sum
+
 from nhlib import geo as nhlib_geo
 from nrml import parsers as nrml_parsers
 from shapely import geometry
@@ -47,6 +49,7 @@ from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake.logs import LOG
 from openquake.utils import config
+from openquake.utils import stats
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -1076,3 +1079,17 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
+
+
+def initialize_pr_data(calc):
+    """Record the total/completed number of work items.
+
+    This is needed for the purpose of providing an indication of progress
+    to the end user."""
+    rs = models.LtRealization.objects.filter(
+        hazard_calculation=calc.job.hazard_calculation)
+    total = rs.aggregate(Sum("total_sources"))
+    done = rs.aggregate(Sum("completed_sources"))
+    stats.pk_set(calc.job.id, "nhzrd_total", total.values().pop())
+    if done > 0:
+        stats.pk_set(calc.job.id, "nhzrd_done", done.values().pop())
