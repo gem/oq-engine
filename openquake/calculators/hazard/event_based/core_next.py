@@ -141,6 +141,10 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
         if hc.ground_motion_correlation_model is not None:
             # Compute correlation matrices
+            # TODO: Technically, this could be compute only 1 time per calculation.
+            # This is task-independent. The issue, however, is that the matrix can be very large
+            # (number of sites squared) and to fetch this from the DB could be slower than re-computing it.
+            # We haven't yet profiled this, so there is a possibility for future optimization.
             correl_model_cls = getattr(
                 correlation,
                 '%sCorrelationModel' \
@@ -155,8 +159,8 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
                 **hc.ground_motion_correlation_params)
             correl_matrices = dict(
                 (imt,
-                 correl_model.get_correlation_matrix(site_coll, imt))
-                for imt in imts)
+                 correl_model.get_lower_triangle_correlation_matrix(site_coll, imt))
+                 for imt in imts)
 
     for _ in xrange(hc.ses_per_logic_tree_path):
         logs.LOG.debug('> computing stochastic event set %s of %s'
