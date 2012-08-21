@@ -197,7 +197,7 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         self.assertEqual(2, len(curves))
         self.assertTrue(curves[0].location < curves[1].location)
 
-    def individual_curves_chunks(self):
+    def test_individual_curves_chunks(self):
         """
         Test getting individual curves in chunks
         """
@@ -205,6 +205,6 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         chunks = self.manager.individual_curves_chunks(block_size=block_size)
 
         chunk_getter = chunks.next()
-        chunk = chunk_getter('location')
+        chunk = chunk_getter('wkb')
         self.assertEqual(len(chunk), block_size)
-        self.assertAlmostEqual(chunk[0], self.a_location)
+        self.assertEqual(str(chunk[0]), self.a_location.wkb)
