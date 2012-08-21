@@ -348,6 +348,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
 
     def post_process(self):
+        logs.LOG.debug('> starting post process')
+
         curve_finder = models.HazardCurveData.objects
         curve_finder.current_job = self.job
 
@@ -358,6 +360,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             task_handler=CeleryTaskHandler())
         post_processor.initialize()
         post_processor.run()
+
+        logs.LOG.debug('< done with post process')
 
     def export(self, *args, **kwargs):
         """Export to NRML"""

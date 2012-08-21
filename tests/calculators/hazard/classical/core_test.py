@@ -34,6 +34,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     """
 
     def setUp(self):
+        self._setup_a_new_calculator()
+
+    def _setup_a_new_calculator(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core.ClassicalHazardCalculator(self.job)
@@ -260,6 +263,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_post_process(self):
+        self._setup_a_new_calculator()
+
         self.calc.pre_execute()
         self.job.is_running = True
 
@@ -271,16 +276,30 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.post_execute()
 
+        models.HazardCurveData.objects.current_job = self.job
+        number_of_curves = (
+            models.HazardCurveData.objects.individual_curves().count())
+
         self.job.status = 'post_processing'
         self.job.save()
         self.calc.post_process()
 
-        expected_number_of_mean_curves = 10
+        curves_per_loc = (
+            self.job.hazard_calculation.individual_curves_per_location())
+
+        expected_number_of_mean_curves = number_of_curves / curves_per_loc
         self.assertEqual(expected_number_of_mean_curves,
                          models.HazardCurve.objects.filter(
                              output__output_type="hazard_curve",
                              output__oq_job=self.job,
                              statistics="mean").count())
+
+        expected_number_of_quantile_curves = 0
+        self.assertEqual(expected_number_of_quantile_curves,
+                         models.HazardCurve.objects.filter(
+                             output__output_type="hazard_curve",
+                             output__oq_job=self.job,
+                             statistics="quantile").count())
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function

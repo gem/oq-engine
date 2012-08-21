@@ -1161,7 +1161,7 @@ class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1195,7 +1195,8 @@ class HazardCurveDataManager(djm.Manager):
     def individual_curves(self, imt=None):
         """
         Returns all the individual hazard curve data objects. If `imt`
-        is given the results are filtered by intensity measure type
+        is given the results are filtered by intensity measure type.
+        Here imt is given in the long format.
         """
         if not self.current_job:
             raise ValueError(
@@ -1204,7 +1205,11 @@ class HazardCurveDataManager(djm.Manager):
                       'hazard_curve__output__oq_job': self.current_job,
                       'hazard_curve__output__output_type': "hazard_curve"}
         if imt:
-            query_args['hazard_curve__imt'] = imt
+            hc_im_type, sa_period, sa_damping = parse_imt(imt)
+            query_args['hazard_curve__imt'] = hc_im_type
+            query_args['hazard_curve__sa_period'] = sa_period
+            query_args['hazard_curve__sa_damping'] = sa_damping
+
         queryset = self.filter(**query_args)
         return queryset
 
