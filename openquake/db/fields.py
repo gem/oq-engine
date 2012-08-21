@@ -114,7 +114,8 @@ class FloatArrayField(djm.Field):
             return None
 
         # Normally, the value passed in here will be a list.
-        # It could also be a string list, each separated by comma/whitespace.
+        # It could also be a string list, each value separated by
+        # comma/whitespace.
         if isinstance(value, str):
             if len(value) == 0:
                 # It's an empty string list
@@ -152,10 +153,20 @@ class CharArrayField(djm.Field):
         >>> caf.get_prep_value(['foo', 'bar', 'baz123'])
         '{"foo", "bar", "baz123"}'
         """
-        if value is not None:
-            return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
-        else:
+        if value is None:
             return None
+
+        # Normally, the value passed in here will be a list.
+        # It could also be a string list, each value separated by
+        # comma/whitespace.
+        if isinstance(value, str):
+            if len(value) == 0:
+                # It's an empty string list
+                value = []
+            else:
+                # try to coerce the string to a list of strings
+                value = list(ARRAY_RE.split(value))
+        return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
 
     def formfield(self, **kwargs):
         """

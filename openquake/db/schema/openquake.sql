@@ -245,7 +245,8 @@ CREATE TABLE uiapi.oq_job (
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
     -- One of: pre_execution, executing, post_execution, post_processing, complete
     status VARCHAR NOT NULL DEFAULT 'pre_executing' CONSTRAINT job_status_value
-        CHECK(status IN ('pre_executing', 'executing', 'post_executing', 'post_processing', 'complete')),
+        CHECK(status IN ('pre_executing', 'executing', 'post_executing',
+                         'post_processing', 'export', 'clean_up', 'complete')),
     oq_version VARCHAR,
     nhlib_version VARCHAR,
     nrml_version VARCHAR,
@@ -262,8 +263,9 @@ CREATE TABLE uiapi.oq_job (
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
-    start_time timestamp with time zone,
-    stop_time timestamp with time zone,
+    start_time timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER NOT NULL,
     -- The number of logic tree samples (for hazard jobs of all types except scenario)
@@ -271,13 +273,28 @@ CREATE TABLE uiapi.job_stats (
 ) TABLESPACE uiapi_ts;
 
 
+-- how long are the various job phases taking?
+CREATE TABLE uiapi.job_phase_stats (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    job_status VARCHAR NOT NULL,
+    start_time timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    UNIQUE (oq_job_id, job_status)
+) TABLESPACE uiapi_ts;
+
+
 CREATE TABLE uiapi.hazard_calculation (
-    -- TODO(larsbutler): At the moment, this model only contains Classical hazard parameters.
-    -- We'll need to update fields and constraints as we add the other calculation modes.
+    -- TODO(larsbutler): At the moment, this model only contains Classical
+    -- hazard parameters.
+    -- We'll need to update fields and constraints as we add the other
+    -- calculation modes.
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    -- Contains the absolute path to the directory containing the job config file
+    -- Contains the absolute path to the directory containing the job config
+    -- file
     base_path VARCHAR NOT NULL,
+    export_dir VARCHAR,
     force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
@@ -307,7 +324,7 @@ CREATE TABLE uiapi.hazard_calculation (
     maximum_distance float NOT NULL,
     -- event-based calculator parameters:
     intensity_measure_types VARCHAR[],
-    ses_per_sample INTEGER,
+    ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
     -- output/post-processing parameters:
@@ -1150,9 +1167,6 @@ ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    -- pre-computed calculation point of interest to site parameters table
-    -- can be null if no site_model was defined for the calculation
-    site_data_id INTEGER,
     ordinal INTEGER NOT NULL,
     -- random seed number, used only for monte-carlo sampling of logic trees
     seed INTEGER,
@@ -1558,6 +1572,7 @@ CREATE TABLE htemp.hazard_curve_progress (
     result_matrix BYTEA NOT NULL
 ) TABLESPACE htemp_ts;
 
+-- pre-computed calculation point of interest to site parameters table
 CREATE TABLE htemp.site_data (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,

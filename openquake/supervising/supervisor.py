@@ -70,7 +70,7 @@ def terminate_job(pid):
     :type pid: int
     """
 
-    logging.info('Terminating job process %s', pid)
+    logging.debug('Terminating job process %s', pid)
 
     os.kill(pid, signal.SIGKILL)
 
@@ -83,7 +83,7 @@ def record_job_stop_time(job_id):
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to job_stats', job_id)
+    logging.debug('Recording stop time for job %s to job_stats', job_id)
 
     job_stats = JobStats.objects.get(oq_job=job_id)
     job_stats.stop_time = datetime.utcnow()
@@ -97,7 +97,7 @@ def cleanup_after_job(job_id):
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Cleaning up after job %s', job_id)
+    logging.debug('Cleaning up after job %s', job_id)
 
     kvs.cache_gc(job_id)
 
@@ -195,7 +195,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
-        self.selflogger.info('Entering supervisor for job %s', job_id)
+        self.selflogger.debug('Entering supervisor for job %s', job_id)
         logger_name = 'oq.job.%s' % job_id
         key = '%s.#' % logger_name
         super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
@@ -219,7 +219,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         self.selflogger.info('Job %s finished in %s',
                              self.job_id, stopped - started)
         self.joblogger.removeHandler(self.jobhandler)
-        self.selflogger.info('Exiting supervisor for job %s', self.job_id)
+        self.selflogger.debug('Exiting supervisor for job %s', self.job_id)
 
     def log_callback(self, record):
         """
@@ -276,7 +276,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             job_status = get_job_status(self.job_id)
             if process_stopped and job_status == 'complete':
                 message = 'job process %s succeeded' % self.job_pid
-                self.selflogger.info(message)
+                self.selflogger.debug(message)
             elif not job_status == 'complete':
                 # The job crashed without having a chance to update the
                 # status in the database, or it has been running even though
