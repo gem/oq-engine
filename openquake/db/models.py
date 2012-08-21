@@ -1235,12 +1235,14 @@ class HazardCurveDataManager(djm.Manager):
         curve_nr = self.individual_curves_nr(imt)
         ranges = xrange(0, curve_nr, block_size)
 
-        def chunk_getter(offset, field):
-            assert field in ['poes', 'wkb', 'weight']
+        finder = self
 
-            base_queryset = self.individual_curves_ordered(
+        def chunk_getter(offset, field):
+            assert (field in ['poes', 'wkb', 'weight'])
+
+            base_queryset = finder.individual_curves_ordered(
                 imt)
-            base_queryset.extra({
+            base_queryset = base_queryset.extra({
                 'wkb': 'asBinary(location)',
                 'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
                 })
