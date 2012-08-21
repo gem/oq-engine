@@ -37,6 +37,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import shapely
 
 from django.core import exceptions
 
@@ -935,3 +936,9 @@ def get_hazard_job(cfg, username=None):
     job.hazard_calculation = haz_calc
     job.save()
     return job
+
+
+def random_location_generator(min_x=0, min_y=0):
+    return shapely.geometry.Point(
+        (min_x + random.random() * 360,
+         min_y + random.random() * 360))
