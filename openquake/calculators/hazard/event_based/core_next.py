@@ -126,11 +126,37 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
     # rupture results for this task.
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
 
+
     if hc.ground_motion_fields:
+
         # This will be the "container" for all computed ground motion field
         # results for this task.
         gmf_set = models.GmfSet.objects.get(
             gmf_collection__lt_realization=lt_rlz)
+
+        imts = [haz_general.imt_to_nhlib(x)
+                for x in hc.intensity_measure_types]
+
+        correl_matrices = None
+
+        if hc.ground_motion_correlation_model is not None:
+            # Compute correlation matrices
+            correl_model_cls = getattr(
+                correlation,
+                '%sCorrelationModel' \
+                    % hc.ground_motion_correlation_model,
+                None)
+            if correl_model_cls is None:
+                raise RuntimeError(
+                    "Unknown correlation model: '%s'"
+                    % hc.ground_motion_correlation_model)
+
+            correl_model = correl_model_cls(
+                **hc.ground_motion_correlation_params)
+            correl_matrices = dict(
+                (imt,
+                 correl_model.get_correlation_matrix(site_coll, imt))
+                for imt in imts)
 
     for _ in xrange(hc.ses_per_logic_tree_path):
         logs.LOG.debug('> computing stochastic event set %s of %s'
@@ -195,28 +221,6 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
             # Compute ground motion fields (if requested)
             if hc.ground_motion_fields:
                 # Compute and save ground motion fields
-                imts = [haz_general.imt_to_nhlib(x) for x in
-                        hc.intensity_measure_types]
-
-                correl_matrices = None
-                if hc.ground_motion_correlation_model is not None:
-                    # Compute correlation matrices
-                    correl_model_cls = getattr(
-                        correlation,
-                        '%sCorrelationModel' \
-                            % hc.ground_motion_correlation_model,
-                        None)
-                    if correl_model_cls is None:
-                        raise RuntimeError(
-                            "Unknown correlation model: '%s'"
-                            % hc.ground_motion_correlation_model)
-
-                    correl_model = correl_model_cls(
-                        **hc.ground_motion_correlation_params)
-                    correl_matrices = dict(
-                        (imt,
-                         correl_model.get_correlation_matrix(site_coll, imt))
-                        for imt in imts)
 
                 gmf_calc_kwargs = {
                     'rupture': rupture,
