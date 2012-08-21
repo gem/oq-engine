@@ -25,6 +25,7 @@ import nhlib.imt
 import numpy
 
 from django.db import transaction
+from django.db.models import Sum
 
 from openquake import logs
 from openquake import writer
@@ -279,6 +280,19 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
+
+    def initialize_pr_data(self):
+        """Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        rs = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation)
+        total = rs.aggregate(Sum("total_sources"))
+        done = rs.aggregate(Sum("completed_sources"))
+        stats.pk_set(self.job.id, "nhzrd_total", total)
+        if done > 0:
+            stats.pk_set(self.job.id, "nhzrd_done", done)
 
     def post_execute(self):
         """
