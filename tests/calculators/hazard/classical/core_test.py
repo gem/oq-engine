@@ -258,6 +258,30 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         sd = models.SiteData.objects.filter(hazard_calculation=hc.id)
         self.assertEqual(0, len(sd))
 
+    @attr('slow')
+    def test_post_process(self):
+        self.calc.pre_execute()
+        self.job.is_running = True
+
+        self.job.status = 'executing'
+        self.job.save()
+        self.calc.execute()
+
+        self.job.status = 'post_executing'
+        self.job.save()
+        self.calc.post_execute()
+
+        self.job.status = 'post_processing'
+        self.job.save()
+        self.calc.post_process()
+
+        expected_number_of_mean_curves = 10
+        self.assertEqual(expected_number_of_mean_curves,
+                         models.HazardCurve.objects.filter(
+                             output__output_type="hazard_curve",
+                             output__oq_job=self.job,
+                             statistics="mean").count())
+
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function
         # (for purposes of test coverage).
