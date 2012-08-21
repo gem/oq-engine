@@ -66,8 +66,8 @@ DEFAULT_GMF_REALIZATIONS = 1
 #  * 'Too many statements' (R0915)
 # pylint: disable=R0914,R0915
 @utils_tasks.oqtask
-@stats.progress_indicator('h')
-def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
+@stats.count_progress('h')
+def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     """
     Celery task for the stochastic event set calculator.
 
@@ -87,11 +87,11 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
     :param int job_id:
         ID of the currently running job.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
     :param src_ids:
         List of ids of parsed source models from which we will generate
         stochastic event sets/ruptures.
+    :param lt_rlz_id:
+        Id of logic tree realization model to calculate for.
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
@@ -322,9 +322,8 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
             # Since this seed will used for numpy random seeding, it needs to
             # positive (since numpy will convert it to a unsigned long).
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (job.id, lt_rlz.id,
-                         source_ids[offset:offset + sources_per_task],
-                         task_seed)
+            task_args = (job.id, source_ids[offset:offset + sources_per_task],
+                         lt_rlz.id, task_seed)
             yield task_args
 
 
