@@ -197,9 +197,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources+ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_sources()
