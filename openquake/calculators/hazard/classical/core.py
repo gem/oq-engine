@@ -303,15 +303,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
-                sa_period = None
-                sa_damping = None
-                if 'SA' in imt:
-                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
-                    sa_period = float(match.group(1))
-                    sa_damping = haz_general.DEFAULT_SA_DAMPING
-                    hc_im_type = 'SA'  # don't include the period
-                else:
-                    hc_im_type = imt
+                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
                 hco = models.Output(
                     owner=hc.owner,
