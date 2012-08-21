@@ -194,7 +194,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         ltr1.completed_sources = 11
         ltr1.save()
 
-        general.initialize_pr_data(self.calc)
+        self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
         self.assertEqual(ltr1.total_sources+ltr2.total_sources, total)
