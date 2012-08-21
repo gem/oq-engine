@@ -276,13 +276,13 @@ class count_progress(object):   # pylint: disable=C0103
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
                 key = key_name(job_id, self.area, key, "i")
-                conn.incrby(key, num_items)
+                conn.incr(key, num_items)
                 return result
             except:
                 # Count failure
                 key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
                 key = key_name(job_id, self.area, key, "i")
-                conn.incrby(key, num_items)
+                conn.incr(key, num_items)
                 raise
 
         return wrapper
@@ -345,8 +345,3 @@ def delete_job_counters(job_id):
     keys = conn.keys("oqs/%s*" % job_id)
     if keys:
         conn.delete(*keys)
-
-
-def debug_stats_enabled():
-    """True if debug statistics counters are enabled."""
-    return config.flag_set("statistics", "debug")
