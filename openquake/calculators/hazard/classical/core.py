@@ -280,6 +280,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
+        self.initialize_pr_data()
 
     def initialize_pr_data(self):
         """Record the total/completed number of work items.
@@ -290,9 +291,9 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hazard_calculation=self.job.hazard_calculation)
         total = rs.aggregate(Sum("total_sources"))
         done = rs.aggregate(Sum("completed_sources"))
-        stats.pk_set(self.job.id, "nhzrd_total", total)
+        stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
         if done > 0:
-            stats.pk_set(self.job.id, "nhzrd_done", done)
+            stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
 
     def post_execute(self):
         """
