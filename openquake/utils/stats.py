@@ -190,13 +190,10 @@ def key_name(job_id, area, key_fragment, counter_type):
         "r" : risk
     :param string key_fragment: a part of the predefined statistics key
     :param str counter_type: counter type, one of:
-        "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
         "t" : counts totals
     :returns: `None` or the full predefined statistics key
     """
-    if counter_type == "d" and not debug_stats_enabled():
-        return None
     return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
@@ -252,6 +249,8 @@ class count_progress(object):   # pylint: disable=C0103
     This is a simple convention that saves us from sifting through all the
     called function's parameters and finding the desired data (which would be
     unnecessarily complex *and* error-prone).
+
+    ALSO: this decorator presently only supports hazard and risk tasks!
     """
 
     def __init__(self, area):
