@@ -224,3 +224,62 @@ class EventBasedGMFXMLWriter(object):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class SESXMLWriter(object):
+    """
+    :param str path:
+        File path (including filename) for XML results to be saved to.
+    :param str sm_lt_path:
+        Source model logic tree branch identifier of the logic tree realization
+        which produced this collection of stochastic event sets.
+    :param gsim_lt_path:
+        GSIM logic tree branch identifier of the logic tree realization which
+        produced this collection of stochastic event sets.
+    """
+
+    def __init__(self, path, sm_lt_path, gsim_lt_path):
+        self.path = path
+        self.sm_lt_path = sm_lt_path
+        self.gsim_lt_path = gsim_lt_path
+
+    def serialize(self, data):
+        """
+        Serialize a collection of stochastic event sets to XML.
+
+        :param data:
+            An iterable of "SES" ("Stochastic Event Set") objects.
+            Each "SES" object should:
+
+            * have an `investigation_time` attribute
+            * be iterable, yielding a sequence of "rupture" objects
+
+            Each "rupture" should have the following attributes:
+            * `magnitude`
+            * `strike`
+            * `dip`
+            * `rake`
+            * `tectonic_region_type`
+            * `is_from_fault_source` (a `bool`)
+            * `lons`
+            * `lats`
+            * `depths`
+
+            If `is_from_fault_source` is `True`, the rupture originated from a
+            simple or complex fault sources. In this case, `lons`, `lats`, and
+            `depths` should all be 2D arrays (of uniform shape). These
+            coordinate triples represent nodes of the rupture mesh.
+
+            If `is_from_fault_source` is `False`, the rupture originated from a
+            point or area source. In this case, the rupture is represented by a
+            quadrilateral planar surface. This planar surface is defined by 3D
+            vertices. In this case, the rupture should have the following
+            attributes:
+
+            * `top_left`
+            * `top_right`
+            * `bottom_right`
+            * `bottom_left`
+
+            Each of these should be a triple of `lon`, `lat`, `depth`.
+        """
