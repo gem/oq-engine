@@ -153,3 +153,74 @@ class HazardCurveXMLWriter(object):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class EventBasedGMFXMLWriter(object):
+    """
+    :param str path:
+        File path (including filename) for XML results to be saved to.
+    :param str sm_lt_path:
+        Source model logic tree branch identifier of the logic tree realization
+        which produced this collection of ground motion fields.
+    :param gsim_lt_path:
+        GSIM logic tree branch identifier of the logic tree realization which
+        produced this collection of ground motion fields.
+    """
+
+    def __init__(self, path, sm_lt_path, gsim_lt_path):
+        self.path = path
+        self.sm_lt_path = sm_lt_path
+        self.gsim_lt_path = gsim_lt_path
+
+    def serialize(self, data):
+        """
+        Serialize a collection of ground motion fields to XML.
+
+        :param data:
+            An iterable of "GMF set" objects.
+            Each "GMF set" object should:
+
+            * have an `investigation_time` attribute
+            * be iterable, yielding a sequence of "GMF" objects
+
+            Each "GMF" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * an `iml` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+
+            gmf_coll_elem = etree.SubElement(root, 'gmfCollection')
+            gmf_coll_elem.set('sourceModelTreePath', self.sm_lt_path)
+            gmf_coll_elem.set('gsimTreePath', self.gsim_lt_path)
+
+            for gmf_set in data:
+                gmf_set_elem = etree.SubElement(gmf_coll_elem, 'gmfSet')
+                gmf_set_elem.set(
+                    'investigationTime', str(gmf_set.investigation_time))
+
+                for gmf in gmf_set:
+                    gmf_elem = etree.SubElement(gmf_set_elem, 'gmf')
+                    gmf_elem.set('IMT', gmf.imt)
+                    if gmf.imt == 'SA':
+                        gmf_elem.set('saPeriod', str(gmf.sa_period))
+                        gmf_elem.set('saDamping', str(gmf.sa_damping))
+
+                    for gmf_node in gmf:
+                        node_elem = etree.SubElement(gmf_elem, 'node')
+                        node_elem.set('iml', str(gmf_node.iml))
+                        node_elem.set('lon', str(gmf_node.location.x))
+                        node_elem.set('lat', str(gmf_node.location.y))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
