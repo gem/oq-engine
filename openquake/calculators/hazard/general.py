@@ -47,7 +47,7 @@ from openquake.java import list_to_jdouble_array
 from openquake.job import params as job_params
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
-from openquake.logs import LOG
+from openquake import logs
 from openquake.utils import config
 from openquake.utils import stats
 
@@ -134,7 +134,7 @@ def store_source_model(job_id, seed, params, calc):
     :param calc: logic tree processor
     :type calc: :class:`openquake.input.logictree.LogicTreeProcessor` instance
     """
-    LOG.info("Storing source model from job config")
+    logs.LOG.info("Storing source model from job config")
     key = kvs.tokens.source_model_key(job_id)
     mfd_bin_width = float(params.get('WIDTH_OF_MFD_BIN'))
     calc.sample_and_save_source_model_logictree(
@@ -150,7 +150,7 @@ def store_gmpe_map(job_id, seed, calc):
     :param calc: logic tree processor
     :type calc: :class:`openquake.input.logictree.LogicTreeProcessor` instance
     """
-    LOG.info("Storing GMPE map from job config")
+    logs.LOG.info("Storing GMPE map from job config")
     key = kvs.tokens.gmpe_key(job_id)
     calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
 
@@ -741,6 +741,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         then, and save the parsed sources to the `parsed_source` table
         (see :class:`openquake.db.models.ParsedSource`).
         """
+        logs.log_progress("**  > initializing sources")
         hc = self.job.hazard_calculation
 
         [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
@@ -791,6 +792,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         starting the calculation is optimal, since each task will need to
         consider all sites.)
         """
+        logs.log_progress("**  > initializing site model")
         hc_id = self.job.hazard_calculation.id
 
         site_model_inp = get_site_model(hc_id)
@@ -840,6 +842,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             Callbacks should accept a single argument:
             A :class:`~openquake.db.models.LtRealization` object.
         """
+        logs.log_progress("**  > initializing realizations")
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
             self._initialize_realizations_montecarlo(
@@ -1051,6 +1054,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             assert job_id == job.id
             progress['computed'] += num_sources
+
+            logs.log_percent_complete(job_id, "hazard")
 
             # Once we receive a completion signal, enqueue the next
             # piece of work (if there's anything left to be done).
