@@ -30,14 +30,23 @@ import kombu
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
 
+# Place the new level between info and warning
+logging.PROGRESS = 25
+logging.addLevelName(logging.PROGRESS, "PROGRESS")
+
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
+          'progress': logging.PROGRESS,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
 LOG = logging.getLogger()
 HAZARD_LOG = logging.getLogger('hazard')
+
+
+def log_progress(msg, *args, **kwargs):
+    LOG._log(logging.PROGRESS, msg, args, **kwargs)
 
 
 def init_logs_amqp_send(level, job_id):
