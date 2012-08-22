@@ -174,12 +174,18 @@ class PerSiteResultCalculator(object):
     :attribute _result_writer
       an object that can save the result.
       See `PostProcessor` for more details
+
+    :attribute _use_weights
+      a boolean that indicates if the aggregate values should be
+      computed by weighting the individual contributes
     """
     def __init__(self, curves_per_location, chunk_of_curves,
-                 curve_writer):
+                 curve_writer, use_weights=False):
         self._chunk_of_curves = chunk_of_curves
         self._curves_per_location = curves_per_location
         self._result_writer = curve_writer
+        self._use_weights = use_weights
+        self._level_nr = None
 
     def run(self):
         """
@@ -187,18 +193,26 @@ class PerSiteResultCalculator(object):
         """
         poe_matrix = self.fetch_curves()
 
-        results = self.compute_results(poe_matrix)
+        if self._use_weights:
+            weights = self.fetch_weights()
+        else:
+            weights = None
+
+        results = self.compute_results(poe_matrix, weights)
 
         with self._result_writer as writer:
             for i, location in enumerate(self.locations()):
                 result = results[i]
                 writer.add_data(location, result.tolist())
 
-    def compute_results(self, poe_matrix):
+    def compute_results(self, poe_matrix, weights=None):
         """
         Abstract method. Given a 3d matrix with shape
         (curves_per_location x number of locations x levels))
-        compute a result for each location
+        compute a result for each location.
+
+        If `weigths` are given, the computation have to consider the
+        weights for the individual contribution
         """
         raise NotImplementedError
 
@@ -215,8 +229,18 @@ class PerSiteResultCalculator(object):
         """
         locations = self._chunk_of_curves('wkb')
         distinct_locations = locations[::self._curves_per_location]
+
         for location in distinct_locations:
             yield location
+
+    def fetch_weights(self):
+        """
+        Return a vector of weights of dimension equal to the number of
+        curves per location
+        """
+        weights = self._chunk_of_curves('weight')
+
+        return numpy.array(weights[0:self._curves_per_location])
 
 
 class PerSiteCurveCalculator(PerSiteResultCalculator):
@@ -228,7 +252,7 @@ class PerSiteCurveCalculator(PerSiteResultCalculator):
     def flush_results(self):
         self._result_writer.flush_curve_data()
 
-    def compute_results(self, poe_matrix):
+    def compute_results(self, poe_matrix, weights=None):
         raise NotImplementedError
 
     def fetch_curves(self):
@@ -238,6 +262,7 @@ class PerSiteCurveCalculator(PerSiteResultCalculator):
         """
         curves = self._chunk_of_curves('poes')
         level_nr = len(curves[0])
+        self._level_nr = level_nr
         loc_nr = len(curves) / self._curves_per_location
         return numpy.reshape(curves,
                              (self._curves_per_location, loc_nr, level_nr),
@@ -254,17 +279,18 @@ class MeanCurveCalculator(PerSiteCurveCalculator):
     See the base class doc for other attributes
     """
     def __init__(self, curves_per_location, chunk_of_curves,
-                 curve_writer):
+                 curve_writer, use_weights=False):
         super(MeanCurveCalculator, self).__init__(
             curves_per_location,
             chunk_of_curves,
-            curve_writer)
+            curve_writer,
+            use_weights=use_weights)
 
-    def compute_results(self, poe_matrix):
+    def compute_results(self, poe_matrix, weights=None):
         """
         Calculate all the mean curves in one shot
         """
-        return numpy.mean(poe_matrix, axis=0)
+        return numpy.average(poe_matrix, weights=weights, axis=0)
 
 
 class QuantileCurveCalculator(PerSiteCurveCalculator):
@@ -272,15 +298,16 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
     Compute quantile curves for a block of locations
     """
     def __init__(self, curves_per_location, chunk_of_curves, curve_writer,
-                 quantile):
+                 quantile, use_weights=None):
         super(QuantileCurveCalculator, self).__init__(
             curves_per_location,
             chunk_of_curves,
-            curve_writer)
+            curve_writer,
+            use_weights=use_weights)
 
         self._quantile = quantile
 
-    def compute_results(self, poe_matrix):
+    def compute_results(self, poe_matrix, weights=None):
         """
         Compute all the quantile function (for quantiles given by the
         attribute `quantile`) for each location in one shot
@@ -290,6 +317,15 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
         # location axis as first dimension, then we iterate on each
         # locations
         poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
-        return [mquantiles(curves, self._quantile, axis=0)[0]
+        if not self._use_weights:
+            return [mquantiles(curves, self._quantile, axis=0)[0]
+                    for curves in poe_matrixes]
+        else:
+            # scipy does not support quantile calculation with weights, so
+            # we need to first apply weights to the curves
+            den = numpy.sum(weights)
+            return [mquantiles(
+                (curves.transpose() * weights / den).transpose(),
+                self._quantile, axis=0)[0]
                 for curves in poe_matrixes]
 

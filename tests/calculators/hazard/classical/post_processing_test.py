@@ -124,6 +124,34 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
                 self.curve_writer.curves[i]['poes'],
                 atol=self.__class__.SIGMA * 10)
 
+    def test_run_with_weights(self):
+        getter = curve_chunks_getter(self.curve_db)
+
+        mean_calculator = MeanCurveCalculator(
+            curves_per_location=self.curves_per_location,
+            chunk_of_curves=getter,
+            curve_writer=self.curve_writer,
+            use_weights=True)
+
+        mean_calculator.run()
+
+        locations = [v['wkb'] for v in self.curve_writer.curves]
+
+        # for each location the expected mean curve should be exactly
+        # the first curve (as it is the only with a positive weight)
+        expected_mean_curves = [
+            dict(wkb=locations[i],
+                 poes=self.curve_db[i * self.curves_per_location]['poes'])
+            for i in range(0, self.location_nr)]
+
+        for i in range(0, self.location_nr):
+            self.assertEqual(
+                expected_mean_curves[i]['wkb'],
+                self.curve_writer.curves[i]['wkb'])
+            numpy.testing.assert_allclose(
+                expected_mean_curves[i]['poes'],
+                self.curve_writer.curves[i]['poes'])
+
 
 class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
     """
@@ -156,6 +184,35 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
                 expected_quantile_curves[i]['poes'],
                 self.curve_writer.curves[i]['poes'],
                 atol=self.__class__.SIGMA * 10)
+
+    def test_run_with_weights(self):
+        getter = curve_chunks_getter(self.curve_db)
+
+        quantile_calculator = QuantileCurveCalculator(
+            curves_per_location=self.curves_per_location,
+            chunk_of_curves=getter,
+            curve_writer=self.curve_writer,
+            use_weights=True,
+            quantile=0.5)
+
+        quantile_calculator.run()
+
+        locations = [v['wkb'] for v in self.curve_writer.curves]
+
+        # for each location the expected median is equal to a zero curve
+        # as there is only realization with positive weigth
+        expected_quantile_curves = [
+            dict(wkb=locations[i],
+                 poes=[0 for j in range(0, self.level_nr)])
+            for i in range(0, self.location_nr)]
+
+        for i in range(0, self.location_nr):
+            self.assertEqual(
+                expected_quantile_curves[i]['wkb'],
+                self.curve_writer.curves[i]['wkb'])
+            numpy.testing.assert_allclose(
+                expected_quantile_curves[i]['poes'],
+                self.curve_writer.curves[i]['poes'])
 
     def test_base_classes(self):
         """Test the base classes are abstract classes"""
@@ -353,19 +410,30 @@ class SimpleCurveWriter(object):
 
 def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
     """
-    Create a fake db of curves
+    Create a random db of curves stored in a list of dictionaries
     """
     curve_db = []
     location_db = []
 
+    def weight_for(k):
+        if k == 0:
+            return 1
+        else:
+            return 0
+
     for i in range(0, location_nr):
         location = random_location_generator()
-        # let's cheat. mean curve poes set to [1 / (1 + i + j) for j
-        # in level_indexes]
+        # individual curve poes set with a gauss distribution with
+        # mean set to [1 / (1 + i + j) for j in level_indexes].
+        # Weights (when considered) are set to 1 for the first
+        # realization, 0 otherwise.
+        # So we can easily calculate mean, 0.5 quantile and their
+        # weighted version
         location_db.append(location.wkb)
         curve_db.extend(
             [dict(wkb=location.wkb,
+                  weight=weight_for(k),
                   poes=numpy.array([random.gauss(1.0 / (1 + i + j), sigma)
                         for j in range(0, level_nr)]))
-            for _ in range(0, curves_per_location)])
+            for k in range(0, curves_per_location)])
     return curve_db, location_db
