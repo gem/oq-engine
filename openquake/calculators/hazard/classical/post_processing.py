@@ -119,7 +119,9 @@ class PostProcessor(object):
 
     def run(self):
         """
-        Execute the calculation using the task queue handler
+        Execute the calculation using the task queue handler. If the
+        taskset is too big, it distributes the computation, otherwise
+        it is performed locally
         """
         if self.should_be_distributed():
             self._task_handler.apply_async()
@@ -216,12 +218,6 @@ class PerSiteResultCalculator(object):
         """
         raise NotImplementedError
 
-    def flush_results(self):
-        """
-        Abstract method. Flush the results
-        """
-        raise NotImplementedError
-
     def locations(self):
         """
         A generator of locations in wkb format considered by the
@@ -248,9 +244,6 @@ class PerSiteCurveCalculator(PerSiteResultCalculator):
     Abstract class that defines methods to get and store per site
     curve aggregate data
     """
-
-    def flush_results(self):
-        self._result_writer.flush_curve_data()
 
     def compute_results(self, poe_matrix, weights=None):
         raise NotImplementedError
@@ -328,4 +321,3 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
                 (curves.transpose() * weights / den).transpose(),
                 self._quantile, axis=0)[0]
                 for curves in poe_matrixes]
-
