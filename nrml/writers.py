@@ -156,6 +156,16 @@ class HazardCurveXMLWriter(object):
 
 
 class EventBasedGMFXMLWriter(object):
+    """
+    :param str path:
+        File path (including filename) for XML results to be saved to.
+    :param str sm_lt_path:
+        Source model logic tree branch identifier of the logic tree realization
+        which produced this collection of ground motion fields.
+    :param gsim_lt_path:
+        GSIM logic tree branch identifier of the logic tree realization which
+        produced this collection of ground motion fields.
+    """
 
     def __init__(self, path, sm_lt_path, gsim_lt_path):
         self.path = path
@@ -164,10 +174,27 @@ class EventBasedGMFXMLWriter(object):
 
     def serialize(self, data):
         """
-        TODO: better doc
+        Serialize a collection of ground motion fields to XML.
+
         :param data:
-            A sequence of "GMF set" objects, each containing many GMFs,
-            each of which contains many gmf "nodes".
+            An iterable of "GMF set" objects.
+            Each "GMF set" object should:
+
+            * have an `investigation_time` attribute
+            * be iterable, yielding a sequence of "GMF" objects
+
+            Each "GMF" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * an `iml` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field
         """
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
