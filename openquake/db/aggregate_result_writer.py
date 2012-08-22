@@ -30,7 +30,7 @@ from django.db import transaction
 
 class AggregateResultWriterFactory(object):
     """
-    A factory of aggregate result writers.
+    A factory of aggregate result db writers.
 
     :attribute _job
       the current job
@@ -40,15 +40,34 @@ class AggregateResultWriterFactory(object):
         self._job = job
 
     def create_mean_curve_writer(self, imt):
+        """
+        Create a writer of mean curves
+
+        :param imt
+          the intensity measure type in long form. E.g. SA(0.001)
+        """
         return MeanCurveWriter(self._job, imt)
 
     def create_quantile_curve_writer(self, imt, quantile):
+        """
+        Create a writer of quantile curves
+
+        :param imt
+          the intensity measure type in long form. E.g. SA(0.001)
+
+        :param quantile
+          the quantile being serialized
+        """
         return QuantileCurveWriter(self._job, imt, quantile)
 
 
 class AggregateResultWriter(object):
     """
-    Manager to create Aggregate objects.
+    Manager to serialize to db Aggregate results (Mean curves,
+    Quantile Curves, Maps, etc.).
+
+    It implements the context manager pattern to take care of the
+    transaction management
 
     :attribute _job
       The current job
@@ -66,6 +85,9 @@ class AggregateResultWriter(object):
             using='reslt_writer')
 
     def _create_output(self):
+        """
+        Create an Output object related to the aggregate result
+        """
         output = models.Output.objects.create_output(
             job=self._job,
             output_type=self.__class__.output_type,
@@ -73,17 +95,33 @@ class AggregateResultWriter(object):
         return output
 
     def display_name(self):
+        """
+        The display name of the output being created (used for the
+        Output object)
+        """
         raise NotImplementedError
 
     def create_aggregate_result(self):
+        """
+        Create an Aggregate result (both the Output object and the
+        corresponding curve/map/etc. object
+        """
         output = self._create_output()
-        self._aggregate_result = self._create_aggregate_result(output)
+        self._aggregate_result = self._create_aggregate_result_item(output)
         return self._aggregate_result, output
 
-    def _create_aggregate_result(self, output):
+    def _create_aggregate_result_item(self, output):
+        """
+        Create an aggregate result item (only the HazardCurve /
+        HazardMap). Abstract method
+        """
         raise NotImplementedError
 
     def add_data(self, location, _):
+        """
+        Add a aggregate result data (to be serialized when flush is
+        called). Abstract method
+        """
         raise NotImplementedError
 
     def __enter__(self):
@@ -96,17 +134,23 @@ class AggregateResultWriter(object):
         self._transaction_handler.__exit__(exc_type, exc_val, exc_tb)
 
     def _flush_data(self):
+        """
+        Flush the data to the db
+        """
         self._inserter.flush()
 
 
 class AggregateCurveWriter(AggregateResultWriter):
+    """
+    Manager to serialize to db Aggregate curves (Mean and quantile
+    curves).
+
+    See base class for details
+    """
     model = models.HazardCurveData
     output_type = "hazard_curve"
 
-    def display_name(self):
-        raise NotImplementedError
-
-    def _create_aggregate_result(self, output):
+    def _create_aggregate_result_item(self, output):
         raise NotImplementedError
 
     def add_data(self, location, poes):
@@ -126,12 +170,15 @@ class AggregateCurveWriter(AggregateResultWriter):
 
 
 class MeanCurveWriter(AggregateCurveWriter):
+    """
+    Serialize mean curves to the db
+    """
     statistics = "mean"
 
     def display_name(self):
         return "mean curve for %s" % self._imt
 
-    def _create_aggregate_result(self, output):
+    def _create_aggregate_result_item(self, output):
         return models.HazardCurve.objects.create_aggregate_curve(
             imt=self._imt,
             output=output,
@@ -139,6 +186,9 @@ class MeanCurveWriter(AggregateCurveWriter):
 
 
 class QuantileCurveWriter(AggregateCurveWriter):
+    """
+    Serialize quantile curves to the db
+    """
     statistics = "quantile"
 
     def __init__(self, job, imt, quantile):
@@ -149,7 +199,7 @@ class QuantileCurveWriter(AggregateCurveWriter):
         return "quantile curve (poe >= %s) for imt %s" % (
             self._quantile, self._imt)
 
-    def _create_aggregate_result(self, output):
+    def _create_aggregate_result_item(self, output):
         return models.HazardCurve.objects.create_aggregate_curve(
             imt=self._imt,
             output=output,

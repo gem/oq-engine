@@ -2,6 +2,7 @@
 # unittest.TestCase base class does not honor the following coding
 # convention
 # pylint: disable=C0103,R0904
+# pylint: enable=W0511,W0142,I0011,E1101,E0611,F0401,E1103,R0801,W0232
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
@@ -32,7 +33,7 @@ import mock
 from tests.utils.helpers import random_location_generator
 
 from openquake.calculators.hazard.classical.post_processing import (
-    PostProcessor, PerSiteResultCalculator,
+    PostProcessor, PerSiteResultCalculator, PerSiteCurveCalculator,
     MeanCurveCalculator, QuantileCurveCalculator)
 
 
@@ -203,7 +204,7 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
         # as there is only realization with positive weigth
         expected_quantile_curves = [
             dict(wkb=locations[i],
-                 poes=[0 for j in range(0, self.level_nr)])
+                 poes=[0 for _ in range(0, self.level_nr)])
             for i in range(0, self.location_nr)]
 
         for i in range(0, self.location_nr):
@@ -217,6 +218,12 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
     def test_base_classes(self):
         """Test the base classes are abstract classes"""
         a_calculator = PerSiteResultCalculator(
+            curves_per_location=mock.Mock(),
+            chunk_of_curves=mock.Mock(),
+            curve_writer=mock.Mock())
+        self.assertRaises(NotImplementedError, a_calculator.compute_results,
+                         mock.Mock())
+        a_calculator = PerSiteCurveCalculator(
             curves_per_location=mock.Mock(),
             chunk_of_curves=mock.Mock(),
             curve_writer=mock.Mock())
@@ -239,7 +246,6 @@ class PostProcessorTestCase(unittest.TestCase):
         self.curve_writer = mock.Mock()
         self.curve_writer_factory.create_mean_curve_writer = mock.Mock(
             return_value=self.curve_writer)
-        self.task_handler = mock.Mock()
 
         curve_db = _populate_curve_db(location_nr, 1,
                                       self.curves_per_location, 0)
@@ -274,17 +280,18 @@ class PostProcessorTestCase(unittest.TestCase):
         calculation.mean_hazard_curves = True
         calculation.quantile_hazard_curves = [0.5, 0.3]
 
+        task_handler = mock.Mock()
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
                                          mock.Mock(),
-                                         self.task_handler)
+                                         task_handler)
         # Act
         a_post_processor.initialize()
 
         # Assert
         expected_task_nr = 2 * (1 + 2) * self.task_nr
         self.assertEqual(expected_task_nr,
-                         self.task_handler.enqueue.call_count)
+                         task_handler.enqueue.call_count)
 
     def test_initialize_one_calculation_with_1imt(self):
         """
@@ -303,15 +310,16 @@ class PostProcessorTestCase(unittest.TestCase):
         calculation.mean_hazard_curves = True
         calculation.quantile_hazard_curves = None
 
+        task_handler = mock.Mock()
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
                                          self.curve_writer_factory,
-                                         self.task_handler)
+                                         task_handler)
         # Act
         a_post_processor.initialize()
 
         # Assert
-        self.task_handler.enqueue.assert_called_with(
+        task_handler.enqueue.assert_called_with(
             MeanCurveCalculator,
             curves_per_location=self.curves_per_location,
             chunk_of_curves=self.a_chunk_getter,
@@ -319,7 +327,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         expected_task_nr = self.task_nr
         self.assertEqual(expected_task_nr,
-                         self.task_handler.enqueue.call_count)
+                         task_handler.enqueue.call_count)
 
     def test_run(self):
         """
@@ -327,32 +335,33 @@ class PostProcessorTestCase(unittest.TestCase):
         handler methods
         """
         calculation = mock.Mock()
-
+        task_handler = mock.Mock()
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
                                          mock.Mock(),
-                                         self.task_handler)
+                                         task_handler)
         a_post_processor.should_be_distributed = mock.MagicMock(
             return_value=True, name="should_be_distributed")
         a_post_processor.run()
-        self.assertEqual(self.task_handler.apply_async.call_count, 1)
-        self.assertEqual(self.task_handler.wait_for_results.call_count, 1)
+        self.assertEqual(task_handler.apply_async.call_count, 1)
+        self.assertEqual(task_handler.wait_for_results.call_count, 1)
 
         a_post_processor.should_be_distributed.return_value = False
         a_post_processor.run()
-        self.assertEqual(self.task_handler.apply_async.call_count, 1)
-        self.assertEqual(self.task_handler.wait_for_results.call_count, 1)
-        self.assertEqual(self.task_handler.apply.call_count, 1)
+        self.assertEqual(task_handler.apply_async.call_count, 1)
+        self.assertEqual(task_handler.wait_for_results.call_count, 1)
+        self.assertEqual(task_handler.apply.call_count, 1)
 
     def test_should_be_distributed(self):
         calculation = mock.Mock()
         self.curve_finder.individual_curves_nr = mock.Mock(
             return_value=1)
 
+        task_handler = mock.Mock()
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
                                          mock.Mock(),
-                                         self.task_handler)
+                                         task_handler)
 
         # with a very small number of curves we expect False
         self.assertFalse(a_post_processor.should_be_distributed())
@@ -363,7 +372,7 @@ class PostProcessorTestCase(unittest.TestCase):
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
                                          mock.Mock(),
-                                         self.task_handler)
+                                         task_handler)
 
         # with a very big number of curves we expect True
         self.assertTrue(a_post_processor.should_be_distributed())
@@ -415,12 +424,6 @@ def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
     curve_db = []
     location_db = []
 
-    def weight_for(k):
-        if k == 0:
-            return 1
-        else:
-            return 0
-
     for i in range(0, location_nr):
         location = random_location_generator()
         # individual curve poes set with a gauss distribution with
@@ -432,7 +435,7 @@ def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
         location_db.append(location.wkb)
         curve_db.extend(
             [dict(wkb=location.wkb,
-                  weight=weight_for(k),
+                  weight=int(not k),
                   poes=numpy.array([random.gauss(1.0 / (1 + i + j), sigma)
                         for j in range(0, level_nr)]))
             for k in range(0, curves_per_location)])
