@@ -1097,3 +1097,4 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
+        logs.log_progress("**  > hazard calculation 100% complete")
