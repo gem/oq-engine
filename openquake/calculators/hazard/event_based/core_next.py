@@ -37,10 +37,11 @@ import nhlib.imt
 import nhlib.source
 import numpy.random
 
+from django.db import transaction
 from nhlib import correlation
-from nhlib.calc import stochastic
-from nhlib.calc import gmf as gmf_calc
 from nhlib.calc import filters
+from nhlib.calc import gmf as gmf_calc
+from nhlib.calc import stochastic
 
 from openquake import logs
 from openquake import writer
@@ -112,9 +113,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
             lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    sources = haz_general.gen_sources(
+    sources = list(haz_general.gen_sources(
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-        hc.width_of_mfd_bin, hc.area_source_discretization)
+        hc.width_of_mfd_bin, hc.area_source_discretization))
 
     logs.LOG.debug('> creating site collection')
     site_coll = haz_general.get_site_collection(hc)
@@ -125,11 +126,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
 
     if hc.ground_motion_fields:
-        # This will be the "container" for all computed ground motion field
-        # results for this task.
-        gmf_set = models.GmfSet.objects.get(
-            gmf_collection__lt_realization=lt_rlz)
-
         imts = [haz_general.imt_to_nhlib(x)
                 for x in hc.intensity_measure_types]
 
@@ -148,25 +144,36 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
 
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-    for _ in xrange(hc.ses_per_logic_tree_path):
+    for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
         logs.LOG.debug('> computing stochastic event set %s of %s'
-                       % (_, hc.ses_per_logic_tree_path))
+                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
         sources_sites = ((src, site_coll) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
-        sources = (src for src, _ in ssd_filter(sources_sites))
+        filtered_sources = (src for src, _ in ssd_filter(sources_sites))
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
         if hc.ground_motion_fields:
             logs.LOG.debug('> computing also ground motion fields')
-        ses_poissonian = stochastic.stochastic_event_set_poissonian(
-            sources, hc.investigation_time)
+            # This will be the "container" for all computed ground motion field
+            # results for this stochastic event set.
+            gmf_set = models.GmfSet.objects.get(
+                gmf_collection__lt_realization=lt_rlz)
 
+        ses_poissonian = stochastic.stochastic_event_set_poissonian(
+            filtered_sources, hc.investigation_time)
+
+        logs.LOG.debug('> looping over ruptures')
+        rupture_ctr = 0
         for rupture in ses_poissonian:
             # Prepare and save SES ruptures to the db:
+            logs.LOG.debug('> saving SES rupture to DB')
             _save_ses_rupture(ses, rupture)
+            logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
+            logs.LOG.debug('compute ground motion fields?  %s'
+                           % hc.ground_motion_fields)
             if hc.ground_motion_fields:
                 # Compute and save ground motion fields
 
@@ -182,11 +189,20 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
                         filters.rupture_site_distance_filter(
                             hc.maximum_distance),
                 }
+                logs.LOG.debug('> computing ground motion fields')
                 gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
+                logs.LOG.debug('< done computing ground motion fields')
 
+                logs.LOG.debug('> saving GMF results to DB')
                 _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute)
+                logs.LOG.debug('< done saving GMF results to DB')
+            rupture_ctr += 1
+
+        logs.LOG.debug('< Done looping over ruptures')
+        logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
+                       % (rupture_ctr, ses_rlz_n, hc.ses_per_logic_tree_path))
         logs.LOG.debug('< done computing stochastic event set %s of %s'
-                       % (_, hc.ses_per_logic_tree_path))
+                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
     logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id, len(src_ids))
