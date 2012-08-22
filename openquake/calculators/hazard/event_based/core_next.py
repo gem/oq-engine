@@ -158,7 +158,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
             # This will be the "container" for all computed ground motion field
             # results for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization=lt_rlz)
+                gmf_collection__lt_realization=lt_rlz, ses_number=ses_rlz_n)
 
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time)
@@ -435,8 +435,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        models.GmfSet.objects.create(
-            gmf_collection=gmf_coll, investigation_time=hc.investigation_time)
+        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+            models.GmfSet.objects.create(
+                gmf_collection=gmf_coll,
+                investigation_time=hc.investigation_time,
+                ses_number=i)
 
     def pre_execute(self):
         """

@@ -1235,6 +1235,9 @@ class GmfSet(djm.Model):
     """
     gmf_collection = djm.ForeignKey('GmfCollection')
     investigation_time = djm.FloatField()
+    # Keep track of the stochastic event set which this GMF set is associated
+    # with.
+    ses_number = djm.TextField()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
