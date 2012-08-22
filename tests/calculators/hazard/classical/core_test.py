@@ -157,7 +157,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+            hazard_calculation=self.job.hazard_calculation.id).order_by("id")
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
@@ -294,7 +294,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
-                core.hazard_curves(self.job.id, lt_rlz.id, [src_id])
+                core.hazard_curves(self.job.id, [src_id], lt_rlz.id)
                 # wait for the completion signal
                 conn.drain_events()
 
