@@ -100,7 +100,8 @@ class PostProcessor(object):
                         MeanCurveCalculator,
                         curves_per_location=self._curves_per_location,
                         chunk_of_curves=chunk_of_curves,
-                        curve_writer=writer)
+                        curve_writer=writer,
+                        use_weights=self.should_consider_weights())
 
             if self.should_compute_quantile_functions():
                 for quantile in self._calculation.quantile_hazard_curves:
@@ -115,7 +116,8 @@ class PostProcessor(object):
                             curves_per_location=self._curves_per_location,
                             chunk_of_curves=chunk_of_curves,
                             curve_writer=writer,
-                            quantile=quantile)
+                            quantile=quantile,
+                            use_weights=self.should_consider_weights())
 
     def run(self):
         """
@@ -129,21 +131,28 @@ class PostProcessor(object):
         else:
             self._task_handler.apply()
 
+    def should_consider_weights(self):
+        """
+        Return True if the calculation of aggregate result should
+        consider the weight of the individual curves
+        """
+        return not (self._calculation.number_of_logic_tree_samples > 0)
+
     def should_compute_mean_curves(self):
         """
-        Returns None if no mean curve calculation has been requested
+        Return None if no mean curve calculation has been requested
         """
         return self._calculation.mean_hazard_curves
 
     def should_compute_quantile_functions(self):
         """
-        Returns None if no quantile curve calculation has been requested
+        Return None if no quantile curve calculation has been requested
         """
         return self._calculation.quantile_hazard_curves
 
     def should_be_distributed(self):
         """
-        Returns True if the calculation should be distributed
+        Return True if the calculation should be distributed
         """
         curve_nr = self._curve_finder.individual_curves_nr()
         return curve_nr > self.__class__.DISTRIBUTION_THRESHOLD

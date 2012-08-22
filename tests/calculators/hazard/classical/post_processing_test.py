@@ -323,7 +323,8 @@ class PostProcessorTestCase(unittest.TestCase):
             MeanCurveCalculator,
             curves_per_location=self.curves_per_location,
             chunk_of_curves=self.a_chunk_getter,
-            curve_writer=self.curve_writer)
+            curve_writer=self.curve_writer,
+            use_weights=False)
 
         expected_task_nr = self.task_nr
         self.assertEqual(expected_task_nr,
