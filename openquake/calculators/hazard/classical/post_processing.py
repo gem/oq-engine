@@ -44,10 +44,13 @@ class PostProcessor(object):
       It should implement the methods #individual_curve_nr and
       #individual_curve_chunks
 
-    :attribute _result_writer
-      An object used to save aggregate results.
-      It should implement the methods #create_mean_curve and
-      #create_quantile_curves
+    :attribute _result_writer_factory
+      An object used to create ResultWriters.
+      It should implement #create_mean_curve_writer and
+      #create_quantile_curve_writer and #create_output_item
+
+      A ResultWriter should implement the methods #add_curve_data,
+      #flush_curve_data
 
     :attribute _task_handler
       An object used to distribute the post process in subtasks.
@@ -62,10 +65,10 @@ class PostProcessor(object):
     DISTRIBUTION_THRESHOLD = 1000
 
     def __init__(self, hc,
-                 curve_finder=None, curve_writer=None, task_handler=None):
+                 curve_finder, result_writer_factory, task_handler):
         self._calculation = hc
         self._curve_finder = curve_finder
-        self._result_writer = curve_writer
+        self._result_writer_factory = result_writer_factory
         self._task_handler = task_handler
         self._curves_per_location = hc.individual_curves_per_location()
 
@@ -80,28 +83,36 @@ class PostProcessor(object):
 
         curves_per_task = self.curves_per_task()
 
-        for imt in self._calculation.intensity_measure_types_and_levels:
-            self._result_writer.imt = imt
+        writer_factory = self._result_writer_factory
 
-            chunks_of_curves = self._curve_finder.individual_curves_chunks(
-                imt, curves_per_task)
+        for imt in self._calculation.intensity_measure_types_and_levels:
+
+            chunks_generator = self._curve_finder.individual_curves_chunks
 
             if self.should_compute_mean_curves():
-                for chunk_of_curves in chunks_of_curves:
+                writer = writer_factory.create_mean_curve_writer(imt)
+                writer.create_output_item()
+
+                for chunk_of_curves in chunks_generator(imt, curves_per_task):
                     self._task_handler.enqueue(
                         MeanCurveCalculator,
                         curves_per_location=self._curves_per_location,
                         chunk_of_curves=chunk_of_curves,
-                        curve_writer=self._result_writer)
+                        curve_writer=writer)
 
             if self.should_compute_quantile_functions():
-                for chunk_of_curves in chunks_of_curves:
-                    for quantile in self._calculation.quantile_hazard_curves:
+                for quantile in self._calculation.quantile_hazard_curves:
+                    writer = writer_factory.create_quantile_curve_writer(
+                        imt, quantile)
+                    writer.create_output_item()
+
+                    for chunk_of_curves in chunks_generator(imt,
+                                                            curves_per_task):
                         self._task_handler.enqueue(
                             QuantileCurveCalculator,
                             curves_per_location=self._curves_per_location,
                             chunk_of_curves=chunk_of_curves,
-                            curve_writer=self._result_writer,
+                            curve_writer=writer,
                             quantile=quantile)
 
     def run(self):
@@ -153,11 +164,14 @@ class PerSiteResultCalculator(object):
     :attribute _chunk_of_curves a list of individual curve chunks
       (usually spanning more locations). Each chunk is a function that
       actually fetches the curves when it is invoked. This function
-      accept a parameter `field` that can be "poes" to fetch the y
-      values and "location" the fetch the x values.
+      accept a parameter `field` that can be:
+
+      "poes" to fetch the y values
+      "wkb" to fetch the locations.
 
     :attribute _result_writer
-      an object that can save the result
+      an object that can save the result.
+      See `PostProcessor` for more details
     """
     def __init__(self, curves_per_location, chunk_of_curves,
                  curve_writer):
@@ -176,6 +190,7 @@ class PerSiteResultCalculator(object):
         for i, location in enumerate(self.locations()):
             result = results[i]
             self.save_result(location, result)
+        self.flush_results()
 
     def compute_results(self, poe_matrix):
         """
@@ -187,7 +202,14 @@ class PerSiteResultCalculator(object):
 
     def save_result(self, location, result):
         """
-        Abstract method. Given a `result` at `location` it saves the result
+        Abstract method. Given a `result` at `location` it saves the result.
+        Method are not really stored until the #flush_results is called
+        """
+        raise NotImplementedError
+
+    def flush_results(self):
+        """
+        Abstract method. Flush the results
         """
         raise NotImplementedError
 
@@ -200,6 +222,19 @@ class PerSiteResultCalculator(object):
         distinct_locations = locations[::self._curves_per_location]
         for location in distinct_locations:
             yield location
+
+
+class PerSiteCurveCalculator(PerSiteResultCalculator):
+    """
+    Abstract class that defines methods to get and store per site
+    curve aggregate data
+    """
+
+    def flush_results(self):
+        self._result_writer.flush_curve_data()
+
+    def compute_results(self, poe_matrix):
+        raise NotImplementedError
 
     def fetch_curves(self):
         """
@@ -214,7 +249,7 @@ class PerSiteResultCalculator(object):
                              'F')
 
 
-class MeanCurveCalculator(PerSiteResultCalculator):
+class MeanCurveCalculator(PerSiteCurveCalculator):
     """
     Calculate mean curves.
 
@@ -243,7 +278,7 @@ class MeanCurveCalculator(PerSiteResultCalculator):
         self._result_writer.create_mean_curve(location, mean_curve)
 
 
-class QuantileCurveCalculator(PerSiteResultCalculator):
+class QuantileCurveCalculator(PerSiteCurveCalculator):
     """
     Compute quantile curves for a block of locations
     """

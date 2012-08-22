@@ -85,50 +85,6 @@ class HazardCurveManagerTestCase(TestCaseWithAJob):
                           self.output, "SA(10)", quantile=0.5)
 
 
-class AggregateResultWriterTestCase(TestCaseWithAJob):
-    """
-    Test the manager to create aggregate result writer
-    """
-    def setUp(self):
-        super(AggregateResultWriterTestCase, self).setUp()
-        self.manager = openquake.AggregateResultWriter(self.job, "PGA")
-
-    def test_create_mean_curve(self):
-        a_location = helpers.random_location_generator()
-        poes = [random.random()]
-
-        curvedata, curve, output = self.manager.create_mean_curve(
-            location=a_location.wkb,
-            poes=poes
-            )
-        self.assertEqual(1,
-                         openquake.Output.objects.filter(pk=output.id).count())
-        self.assertEqual(
-            1,
-            openquake.HazardCurve.objects.filter(pk=curve.id).count())
-        self.assertEqual(
-            1,
-            openquake.HazardCurveData.objects.filter(pk=curvedata.id).count())
-
-    def test_create_quantile_curve(self):
-        a_location = helpers.random_location_generator()
-        poes = [random.random()]
-
-        curvedata, curve, output = self.manager.create_quantile_curve(
-            location=a_location.wkb,
-            quantile=random.random(),
-            poes=poes
-            )
-        self.assertEqual(1,
-                         openquake.Output.objects.filter(pk=output.id).count())
-        self.assertEqual(
-            1,
-            openquake.HazardCurve.objects.filter(pk=curve.id).count())
-        self.assertEqual(
-            1,
-            openquake.HazardCurveData.objects.filter(pk=curvedata.id).count())
-
-
 class HazardCurveDataManagerTestCase(TestCaseWithAJob):
     """
     Test the manager of HazardCurveData objects
