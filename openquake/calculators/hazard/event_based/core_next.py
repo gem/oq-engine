@@ -61,10 +61,8 @@ GM_CORRELATION_MODEL_MAP = {
 DEFAULT_GMF_REALIZATIONS = 1
 
 
-# Disabling pylint for:
-#  * 'Too many local variables' (R0914)
-#  * 'Too many statements' (R0915)
-# pylint: disable=R0914,R0915
+# Disabling pylint for 'Too many local variables'
+# pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.progress_indicator('h')
 def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
@@ -126,9 +124,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
     # rupture results for this task.
     ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
 
-
     if hc.ground_motion_fields:
-
         # This will be the "container" for all computed ground motion field
         # results for this task.
         gmf_set = models.GmfSet.objects.get(
@@ -141,27 +137,17 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
         if hc.ground_motion_correlation_model is not None:
             # Compute correlation matrices
-            # TODO: Technically, this could be compute only 1 time per calculation.
-            # This is task-independent. The issue, however, is that the matrix can be very large
-            # (number of sites squared) and to fetch this from the DB could be slower than re-computing it.
-            # We haven't yet profiled this, so there is a possibility for future optimization.
-            correl_model_cls = getattr(
-                correlation,
-                '%sCorrelationModel' \
-                    % hc.ground_motion_correlation_model,
-                None)
-            if correl_model_cls is None:
-                raise RuntimeError(
-                    "Unknown correlation model: '%s'"
-                    % hc.ground_motion_correlation_model)
+            # TODO: Technically, this could be computed only 1 time per
+            # calculation.
+            # This is task-independent. The issue, however, is that the matrix
+            # can be very large (number of sites squared) and to fetch this
+            # from the DB could be slower than re-computing it.
+            # We haven't yet profiled this, so there is a possibility for
+            # future optimization.
+            correl_matrices = _compute_gm_correl_matrices(hc, imts, site_coll)
 
-            correl_model = correl_model_cls(
-                **hc.ground_motion_correlation_params)
-            correl_matrices = dict(
-                (imt,
-                 correl_model.get_lower_triangle_correlation_matrix(site_coll, imt))
-                 for imt in imts)
-
+    # Compute stochastic event sets
+    # For each rupture generated, we can optionally calculate a GMF
     for _ in xrange(hc.ses_per_logic_tree_path):
         logs.LOG.debug('> computing stochastic event set %s of %s'
                        % (_, hc.ses_per_logic_tree_path))
@@ -178,49 +164,7 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
         for rupture in ses_poissonian:
             # Prepare and save SES ruptures to the db:
-            is_from_fault_source = rupture.source_typology in (
-                nhlib.source.ComplexFaultSource,
-                nhlib.source.SimpleFaultSource)
-
-            if is_from_fault_source:
-                # for simple and complex fault sources,
-                # rupture surface geometry is represented by a mesh
-                surf_mesh = rupture.surface.get_mesh()
-                lons = surf_mesh.lons
-                lats = surf_mesh.lats
-                depths = surf_mesh.depths
-            else:
-                # For area or point source,
-                # rupture geometry is represented by a planar surface,
-                # defined by 3D corner points
-                surface = rupture.surface
-                lons = numpy.zeros((4))
-                lats = numpy.zeros((4))
-                depths = numpy.zeros((4))
-
-                # NOTE: It is important to maintain the order of these corner
-                # points.
-                for i, corner in enumerate((surface.top_left,
-                                            surface.top_right,
-                                            surface.bottom_right,
-                                            surface.bottom_left)):
-                    lons[i] = corner.longitude
-                    lats[i] = corner.latitude
-                    depths[i] = corner.depth
-
-            # TODO: Possible optimiztion: bulk insertion of ruptures
-            models.SESRupture.objects.create(
-                ses=ses,
-                magnitude=rupture.mag,
-                strike=rupture.surface.get_strike(),
-                dip=rupture.surface.get_dip(),
-                rake=rupture.rake,
-                tectonic_region_type=rupture.tectonic_region_type,
-                is_from_fault_source=is_from_fault_source,
-                lons=lons,
-                lats=lats,
-                depths=depths,
-            )
+            _save_ses_rupture(ses, rupture)
 
             # Compute ground motion fields (if requested)
             if hc.ground_motion_fields:
@@ -247,6 +191,93 @@ def ses_and_gmfs(job_id, lt_rlz_id, src_ids, task_seed):
 
     logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id, len(src_ids))
+
+
+def _compute_gm_correl_matrices(hc, imts, site_coll):
+    """
+    Helper function for computing ground motion correlation matrices.
+
+    :param hc:
+        A :class:`openquake.db.models.HazardCalculation` instance.
+    :param imts:
+        A `list` of nhlib IMT objects. See :mod:`nhlib.imt` for more info.
+    :param site_coll:
+        A :class:`nhlib.site.SiteCollection` instance.
+
+    :returns:
+        See the `get_lower_triangle_correlation_matrix` of the relevant
+        correlation model in :mod:`nhlib.correlation` for more info.
+    """
+    correl_model_cls = getattr(
+        correlation,
+        '%sCorrelationModel' % hc.ground_motion_correlation_model,
+        None)
+    if correl_model_cls is None:
+        raise RuntimeError("Unknown correlation model: '%s'"
+                           % hc.ground_motion_correlation_model)
+
+    cm = correl_model_cls(**hc.ground_motion_correlation_params)
+    correl_matrices = dict(
+        (imt, cm.get_lower_triangle_correlation_matrix(site_coll, imt))
+        for imt in imts)
+
+    return correl_matrices
+
+
+def _save_ses_rupture(ses, rupture):
+    """
+    Helper function for saving stochastic event set ruptures to the database.
+
+    :param ses:
+        A :class:`openquake.db.models.SES` instance. This will be DB
+        'container' for the new rupture record.
+    :param rupture:
+        A :class:`nhlib.source.rupture.Rupture` instance.
+    """
+    is_from_fault_source = rupture.source_typology in (
+        nhlib.source.ComplexFaultSource,
+        nhlib.source.SimpleFaultSource)
+
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = rupture.surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        # For area or point source,
+        # rupture geometry is represented by a planar surface,
+        # defined by 3D corner points
+        surface = rupture.surface
+        lons = numpy.zeros((4))
+        lats = numpy.zeros((4))
+        depths = numpy.zeros((4))
+
+        # NOTE: It is important to maintain the order of these corner
+        # points.
+        for i, corner in enumerate((surface.top_left,
+                                    surface.top_right,
+                                    surface.bottom_right,
+                                    surface.bottom_left)):
+            lons[i] = corner.longitude
+            lats[i] = corner.latitude
+            depths[i] = corner.depth
+
+    # TODO: Possible future optimiztion:
+    # Refactor this to do bulk insertion of ruptures
+    models.SESRupture.objects.create(
+        ses=ses,
+        magnitude=rupture.mag,
+        strike=rupture.surface.get_strike(),
+        dip=rupture.surface.get_dip(),
+        rake=rupture.rake,
+        tectonic_region_type=rupture.tectonic_region_type,
+        is_from_fault_source=is_from_fault_source,
+        lons=lons,
+        lats=lats,
+        depths=depths,
+    )
 
 
 def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
