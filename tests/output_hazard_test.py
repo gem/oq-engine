@@ -459,7 +459,9 @@ class GmfDBWriterTestCase(GmfDBBaseTestCase):
 
         # After calling the function under test we see the expected map data.
         output = self.job.output_set.get()
-        self.assertFalse(output.hazardcurve_id)
+        self.assertEqual(
+            0,
+            models.HazardCurve.objects.filter(output=output).count())
         self.assertEqual(0, len(output.lossmap_set.all()))
         self.assertEqual(4, len(output.gmfdata_set.all()))
 

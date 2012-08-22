@@ -36,7 +36,7 @@ import numpy
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
-from shapely import wkt, wkb
+from shapely import wkt
 
 from openquake.db import fields
 
@@ -1161,7 +1161,7 @@ class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', null=True)
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
