@@ -72,6 +72,7 @@ def _export_fn_map():
     fn_map = {
         'uh_spectra': uhs.export_uhs,
         'hazard_curve': export_hazard_curves,
+        'gmf': export_gmf,
     }
     return fn_map
 
@@ -87,9 +88,10 @@ def export_hazard_curves(output, target_dir):
     Export the specified hazard curve ``output`` to the ``target_dir``.
 
     :param output:
-        :class:`openquake.db.models.Output` of type `hazard_curve`.
+        :class:`openquake.db.models.Output` with an `output_type` of
+        `hazard_curve`.
     :param str target_dir:
-        Destination directory location of exported files.
+        Destination directory location for exported files.
 
     :returns:
         A list of exported file names (including the absolute path to each
@@ -125,6 +127,24 @@ def export_hazard_curves(output, target_dir):
     writer.serialize(hcd)
 
     return [path]
+
+
+@makedirs
+def export_gmf(output, target_dir):
+    """
+    Export the GMF Collection specified by ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` with an `output_type` of `gmf`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file names (including the absolute path to each
+        file).
+    """
+    return []
+
 
 
 def curves2nrml(target_dir, job):
