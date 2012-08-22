@@ -277,13 +277,13 @@ class count_progress(object):   # pylint: disable=C0103
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = "nhzrd:done" if self.area == "h" else "nrisk:done"
                 key = key_name(job_id, self.area, key, "i")
                 conn.incr(key, num_items)
                 return result
             except:
                 # Count failure
-                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = "nhzrd:failed" if self.area == "h" else "nrisk:failed"
                 key = key_name(job_id, self.area, key, "i")
                 conn.incr(key, num_items)
                 raise
