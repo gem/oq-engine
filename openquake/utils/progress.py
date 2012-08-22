@@ -25,12 +25,12 @@ import logging
 
 
 # Place the new level between info and warning
-logging.STATUS = 25
-logging.addLevelName(logging.STATUS, "STATUS")
+logging.PROGRESS = 25
+logging.addLevelName(logging.PROGRESS, "PROGRESS")
 
 
 LOG = logging.getLogger(__name__)
 
 
-def report_status(msg, *args, **kwargs):
-    LOG._log(logging.STATUS, msg, *args, **kwargs)
+def log_status(msg, *args, **kwargs):
+    LOG._log(logging.PROGRESS, msg, args, **kwargs)
