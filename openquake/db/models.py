@@ -1232,8 +1232,7 @@ class GmfCollection(djm.Model):
         """
         Iterator for walking through all child :class:`GmfSet` objects.
         """
-        for gmf_set in GmfSet.objects.filter(gmf_collection=self.id):
-            yield gmf_set
+        return GmfSet.objects.filter(gmf_collection=self.id).iterator()
 
 
 class GmfSet(djm.Model):
@@ -1253,8 +1252,7 @@ class GmfSet(djm.Model):
         """
         Returns a generator for walking through all child :class:`Gmf` objects.
         """
-        for gmf in Gmf.objects.filter(gmf_set=self.id):
-            yield gmf
+        return Gmf.objects.filter(gmf_set=self.id).iterator()
 
 
 class Gmf(djm.Model):
@@ -1274,8 +1272,7 @@ class Gmf(djm.Model):
         """
         Returns a generator for walking through all child :class:`Gmf` objects.
         """
-        for gmf_node in GmfNode.objects.filter(gmf=self.id):
-            yield gmf_node
+        return GmfNode.objects.filter(gmf=self.id).iterator()
 
 
 class GmfNode(djm.Model):
