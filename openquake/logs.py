@@ -64,10 +64,6 @@ def log_percent_complete(job_id, area):
     if done <= 0:
         return
 
-    if done == total:
-        log_progress("**  > %s calculation 100%% complete" % area)
-        return
-
     percent = total / 100.0
     if percent < 1.0:
         percent = 1.0
