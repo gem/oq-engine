@@ -295,6 +295,7 @@ def _save_ses_rupture(ses, rupture):
     )
 
 
+@transaction.commit_on_success(using='reslt_writer')
 def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
     """
     Helper function for saving ground motion field results to the database.
