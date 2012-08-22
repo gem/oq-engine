@@ -52,7 +52,8 @@ class HazardCurveExportTestCase(unittest.TestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            self.assertEqual(4, len(outputs))
+            expected_outputs = 6
+            self.assertEqual(expected_outputs, len(outputs))
 
             # Just to be thorough, let's make sure we can export everything:
             exported_files = []
@@ -60,7 +61,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
                 files = hazard.export(o.id, target_dir)
                 exported_files.extend(files)
 
-            self.assertEqual(4, len(exported_files))
+            self.assertEqual(expected_outputs, len(exported_files))
             for f in exported_files:
                 self.assertTrue(os.path.exists(f))
                 self.assertTrue(os.path.isabs(f))

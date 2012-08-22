@@ -2,6 +2,7 @@
 # unittest.TestCase base class does not honor the following coding
 # convention
 # pylint: disable=C0103,R0904
+# pylint: enable=W0511,W0142,I0011,E1101,E0611,F0401,E1103,R0801,W0232
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
