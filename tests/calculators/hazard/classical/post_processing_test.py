@@ -26,7 +26,6 @@ import random
 import numpy
 import unittest
 import itertools
-import shapely
 import math
 import mock
 
@@ -159,7 +158,7 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
                 atol=self.__class__.SIGMA * 10)
 
     def test_base_classes(self):
-        """Test the base class is abstract"""
+        """Test the base classes are abstract classes"""
         a_calculator = PerSiteResultCalculator(
             curves_per_location=mock.Mock(),
             chunk_of_curves=mock.Mock(),
@@ -219,7 +218,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         self.curve_writer,
+                                         mock.Mock(),
                                          self.task_handler)
         # Act
         a_post_processor.initialize()
@@ -248,7 +247,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         self.curve_writer,
+                                         mock.Mock(),
                                          self.task_handler)
         # Act
         a_post_processor.initialize()
@@ -273,7 +272,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         self.curve_writer,
+                                         mock.Mock(),
                                          self.task_handler)
         a_post_processor.should_be_distributed = mock.MagicMock(
             return_value=True, name="should_be_distributed")
@@ -294,7 +293,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         self.curve_writer,
+                                         mock.Mock(),
                                          self.task_handler)
 
         # with a very small number of curves we expect False
@@ -305,7 +304,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         self.curve_writer,
+                                         mock.Mock(),
                                          self.task_handler)
 
         # with a very big number of curves we expect True
@@ -329,16 +328,37 @@ class SimpleCurveWriter(object):
         self.curves = []
         self.imt = None
 
+    def create_quantile_output(self, quantile, imt):
+        """
+        No action taken. Needed to just implement the aggregate result
+        writer protocol
+        """
+        pass
+
+    def flush_curve_data(self):
+        """
+        No action taken. Needed to just implement the aggregate result
+        writer protocol
+        """
+        pass
+
+    def create_mean_output(self, imt):
+        """
+        No action taken. Needed to just implement the aggregate result
+        writer protocol
+        """
+        pass
+
     def create_mean_curve(self, location, poes):
         """
-        Implement the mean curve writer protocol
+        Save a mean curve
         """
         self.curves.append(dict(wkb=location,
                                 poes=poes.tolist()))
 
     def create_quantile_curve(self, location, quantile, poes):
         """
-        Implement the quantile curve writer protocol
+        Save a quantile curve
         """
         self.curves.append(dict(wkb=location,
                                 quantile=quantile,
