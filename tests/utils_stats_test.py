@@ -150,41 +150,6 @@ class GetCounterTestCase(helpers.RedisTestCase, unittest.TestCase):
         kvs.set(key, value)
         self.assertEqual(int(value), stats.get_counter(*args))
 
-    def test_get_value_with_debug_stats_disabled(self):
-        """`None` is returned for a debug counter if debug stats are off."""
-        args = (59, "h", "d/e/z", "d")
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = False
-            self.assertIs(None, stats.get_counter(*args))
-
-    def test_get_value_with_debug_stats_enabled(self):
-        """
-        The correct value is returned for a debug counter if debug stats are
-        enabled.
-        """
-        value = "603"
-        args = (60, "h", "d/f/z", "d")
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = True
-            key = stats.key_name(*args)
-            kvs = self.connect()
-            kvs.set(key, value)
-            self.assertEqual(int(value), stats.get_counter(*args))
-
-    def test_get_value_with_debug_stats_enabled_but_no_value(self):
-        """
-        `None` is returned for a debug counter if debug stats are enabled
-        but the counter has no value.
-        """
-        args = (61, "h", "d/g/z", "d")
-        stats.delete_job_counters(args[0])
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = True
-            key = stats.key_name(*args)
-            kvs = self.connect()
-            self.assertIs(None, kvs.get(key))
-            self.assertIs(None, stats.get_counter(*args))
-
 
 class DeleteJobCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
@@ -290,15 +255,6 @@ class PkIncTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
 
-    def test_pk_inc_with_non_existent_debug_key(self):
-        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
-        job_id = 86
-        pkey = "How hard can it be!?"
-        stats.delete_job_counters(job_id)
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = False
-            self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
-
 
 class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_get()."""
@@ -333,14 +289,6 @@ class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
         pkey = "This is unlikely to exist"
         stats.delete_job_counters(job_id)
         self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
-
-    def test_pk_get_with_non_existent_debug_key(self):
-        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
-        job_id = 96
-        pkey = "Not a key!?"
-        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
-            dse.return_value = False
-            self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
 
 
 class KvsOpTestCase(helpers.RedisTestCase, unittest.TestCase):
@@ -397,3 +345,51 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         # An empty list is returned in the absence of any failure counters
         stats.delete_job_counters(123)
         self.assertEqual([], stats.failure_counters(123))
+
+
+class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
+    """Tests the behaviour of utils.stats.count_progress()."""
+
+    def test_success_stats(self):
+        """
+        The success counter is incremented when the wrapped function
+        terminates without raising an exception.
+        """
+        area = "h"
+
+        @stats.count_progress(area)
+        def no_exception(job_id, items):
+            return 999
+
+        kvs = self.connect()
+        key = stats.key_name(11, area, "nhzrd_done", "i")
+        previous_value = kvs.get(key)
+        previous_value = int(previous_value) if previous_value else 0
+
+        # Call the wrapped function.
+        self.assertEqual(999, no_exception(11, range(5)))
+
+        value = int(kvs.get(key))
+        self.assertEqual(5, (value - previous_value))
+
+    def test_failure_stats(self):
+        """
+        The failure counter is incremented when the wrapped function
+        terminates raises an exception.
+        """
+        area = "r"
+
+        @stats.count_progress(area)
+        def raise_exception(job_id, items):
+            raise NotImplementedError
+
+        kvs = self.connect()
+        key = stats.key_name(22, area, "nrisk_failed", "i")
+        previous_value = kvs.get(key)
+        previous_value = int(previous_value) if previous_value else 0
+
+        # Call the wrapped function.
+        self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
+
+        value = int(kvs.get(key))
+        self.assertEqual(6, (value - previous_value))

@@ -43,8 +43,8 @@ from .post_processing import PostProcessor
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
 @utils_tasks.oqtask
-@stats.progress_indicator('h')
-def hazard_curves(job_id, lt_rlz_id, src_ids):
+@stats.count_progress('h')
+def hazard_curves(job_id, src_ids, lt_rlz_id):
     """
     Celery task for hazard curve calculator.
 
@@ -62,10 +62,10 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
     :param int job_id:
         ID of the currently running job.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
     :param src_ids:
         List of ids of parsed source models to take into account.
+    :param lt_rlz_id:
+        Id of logic tree realization model to calculate for.
     """
     logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
                    % (job_id, lt_rlz_id))
@@ -211,8 +211,8 @@ def classical_task_arg_gen(hc, job, sources_per_task, progress):
         progress['total'] += len(source_ids)
 
         for offset in xrange(0, len(source_ids), sources_per_task):
-            task_args = (job.id, lt_rlz.id,
-                         source_ids[offset:offset + sources_per_task])
+            task_args = (job.id, source_ids[offset:offset + sources_per_task],
+                         lt_rlz.id)
             yield task_args
 
 
@@ -283,6 +283,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
+        self.initialize_pr_data()
 
     def post_execute(self):
         """
