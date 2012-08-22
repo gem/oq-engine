@@ -36,6 +36,7 @@ from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
 from openquake.utils.task_handlers import CeleryTaskHandler
+from openquake.db.aggregate_result_writer import AggregateResultWriterFactory
 from .post_processing import PostProcessor
 
 
@@ -353,10 +354,12 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         curve_finder = models.HazardCurveData.objects
         curve_finder.current_job = self.job
 
+        writer_factory = AggregateResultWriterFactory(self.job)
+
         post_processor = PostProcessor(
             self.job.hazard_calculation,
             curve_finder=curve_finder,
-            curve_writer=models.AggregateResultWriter(self.job),
+            result_writer_factory=writer_factory,
             task_handler=CeleryTaskHandler())
         post_processor.initialize()
         post_processor.run()
