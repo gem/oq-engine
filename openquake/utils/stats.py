@@ -34,7 +34,7 @@ from openquake.utils import config
 #   https://bugs.launchpad.net/openquake/+bug/907703
 
 # Please note: counters apply to certain computation areas. At this point
-# there are as follows.
+# these are as follows.
 #   "g" : general
 #   "h" : hazard
 #   "r" : risk
@@ -46,7 +46,9 @@ from openquake.utils import config
 
 # Last but not least: some counters are only used by specific calculators,
 # e.g.
-#   "hcls": classical PSHA
+#   "hcls": classical hazard (openshalite based)
+#   "nhzrd": nhlib-based hazard
+#   "nrisk": nhlib-based risk
 
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
@@ -62,6 +64,20 @@ STATS_KEYS = {
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
+
+    # The total amount of work for a nhlib-based hazard calculation
+    "nhzrd_total": ("h", "nhzrd:total", "t"),
+    # The number of completed hazard work items
+    "nhzrd_done": ("h", "nhzrd:done", "i"),
+    # The number of failed hazard work items
+    "nhzrd_failed": ("h", "nhzrd:failed", "i"),
+
+    # The total amount of work for a nhlib-based risk calculation
+    "nrisk_total": ("r", "nrisk:total", "t"),
+    # The number of completed risk work items
+    "nrisk_done": ("r", "nrisk:done", "i"),
+    # The number of failed risk work items
+    "nrisk_failed": ("r", "nrisk:failed", "i"),
 }
 
 
@@ -174,16 +190,17 @@ def key_name(job_id, area, key_fragment, counter_type):
         "r" : risk
     :param string key_fragment: a part of the predefined statistics key
     :param str counter_type: counter type, one of:
-        "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
         "t" : counts totals
     :returns: `None` or the full predefined statistics key
     """
-    if counter_type == "d" and not debug_stats_enabled():
-        return None
     return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
+# al-maisan, Mon, 20 Aug 2012 15:43:11 +0200
+# PLEASE NOTE: the decorator below is deprecated and should not be used for
+# new code in the nhlib-integration branch. Please use the 'count_progress'
+# decorator instead.
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
@@ -218,6 +235,57 @@ class progress_indicator(object):   # pylint: disable=C0103
                 key = key_name(
                     job_id, self.area, func.__name__ + "-failures", "i")
                 conn.incr(key)
+                raise
+
+        return wrapper
+
+
+class count_progress(object):   # pylint: disable=C0103
+    """Count successful/failed invocations of wrapped celery task functions.
+
+    Restrictions: for this to work
+
+        - the task parameters must be passed to apply_async() in positional
+          fashion (i.e. *not* as kwargs)
+        - the `job_id` and the collection with the work items must be passed
+          via the first and the second parameter respectively
+
+    These restrictions save us from sifting through all the task function's
+    parameters and finding the desired data (which would be unnecessarily
+    complex *and* error-prone).
+
+    ALSO: this decorator presently only supports hazard and risk tasks!
+    """
+
+    def __init__(self, area):
+        """Captures the computation area parameter."""
+        self.area = area
+        self.__name__ = "count_progress"
+
+    @staticmethod
+    def get_task_data(*args):
+        """Return the job_id and the number of work items."""
+        return args[0], len(args[1])
+
+    def __call__(self, func):
+        """The actual decorator."""
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """Call the wrapped function and step the done/failed counters in
+               case of success/failure."""
+            job_id, num_items = self.get_task_data(*args, **kwargs)
+            conn = _redis()
+            try:
+                result = func(*args, **kwargs)
+                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incr(key, num_items)
+                return result
+            except:
+                # Count failure
+                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = key_name(job_id, self.area, key, "i")
+                conn.incr(key, num_items)
                 raise
 
         return wrapper
@@ -280,8 +348,3 @@ def delete_job_counters(job_id):
     keys = conn.keys("oqs/%s*" % job_id)
     if keys:
         conn.delete(*keys)
-
-
-def debug_stats_enabled():
-    """True if debug statistics counters are enabled."""
-    return config.flag_set("statistics", "debug")

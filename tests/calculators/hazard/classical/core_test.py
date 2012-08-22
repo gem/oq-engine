@@ -25,6 +25,7 @@ from nose.plugins.attrib import attr
 from openquake.calculators.hazard import general
 from openquake.calculators.hazard.classical import core
 from openquake.db import models
+from openquake.utils import stats
 from tests.utils import helpers
 
 
@@ -160,7 +161,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+            hazard_calculation=self.job.hazard_calculation.id).order_by("id")
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
@@ -183,6 +184,25 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             # Now check that we have source_progress records for each
             # realization.
             self._check_logic_tree_realization_source_progress(ltr)
+
+    def test_initialize_pr_data(self):
+        # The total/done counters for progress reporting are initialized
+        # correctly.
+        self.calc.initialize_sources()
+        self.calc.initialize_realizations(
+            rlz_callbacks=[self.calc.initialize_hazard_curve_progress])
+        ltr1, ltr2 = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation.id).order_by("id")
+
+        ltr1.completed_sources = 11
+        ltr1.save()
+
+        self.calc.initialize_pr_data()
+
+        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
+        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
+        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
+        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_sources()
@@ -368,7 +388,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
-                core.hazard_curves(self.job.id, lt_rlz.id, [src_id])
+                core.hazard_curves(self.job.id, [src_id], lt_rlz.id)
                 # wait for the completion signal
                 conn.drain_events()
 
