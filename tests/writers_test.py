@@ -21,8 +21,12 @@ import unittest
 
 from collections import namedtuple
 
+from nrml import writers
+
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 Location = namedtuple('Location', 'x, y')
+GmfNode = namedtuple('GmfNode', 'iml, location')
+
 
 class GmfCollection(object):
 
@@ -54,9 +58,36 @@ class Gmf(object):
     def __iter__(self):
         return iter(self.gmf_nodes)
 
-GmfNode = namedtuple('GmfNode', 'iml, location')
 
-from nrml import writers
+class SES(object):
+
+    def __init__(self, investigation_time, ruptures):
+        self.investigation_time = investigation_time
+        self.ruptures = ruptures
+
+    def __init__(self):
+        return iter(self.ruptures)
+
+
+class SESRupture(object):
+
+    def __init__(self, magnitude, strike, dip, rake, tectonic_region_type,
+                 is_from_fault_source, lons=None, lats=None, depths=None,
+                 top_left=None, top_right=None, bottom_right=None,
+                 bottom_left=None):
+        self.magnitude = magnitude
+        self.strike = strike
+        self.dip = dip
+        self.rake = rake
+        self.tectonic_region_type = tectonic_region_type
+        self.is_from_fault_source = is_from_fault_source
+        self.lons = lons
+        self.lats = lats
+        self.depths = depths
+        self.top_left = top_left
+        self.top_right = top_right
+        self.bottom_right = bottom_right
+        self.bottom_left = bottom_left
 
 
 class HazardCurveXMLWriterTestCase(unittest.TestCase):
@@ -260,7 +291,8 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
         try:
             # Make a temp file to save the results to:
             _, path = tempfile.mkstemp()
-            writer = writers.EventBasedGMFXMLWriter(path, sm_lt_path, gsim_lt_path)
+            writer = writers.EventBasedGMFXMLWriter(
+                path, sm_lt_path, gsim_lt_path)
             writer.serialize(gmf_collection)
 
             expected_text = expected.readlines()
