@@ -102,11 +102,14 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(2, len(lt_rlzs))
 
         for rlz in lt_rlzs:
-            [gmf_set] = models.GmfSet.objects.filter(
+            gmf_sets = models.GmfSet.objects.filter(
                 gmf_collection__lt_realization=rlz)
+            self.assertEqual(hc.ses_per_logic_tree_path, len(gmf_sets))
 
-            # The only metadata in a GmfSet is investigation time.
-            self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
+            for gmf_set in gmf_sets:
+                # The only metadata in a GmfSet is investigation time.
+                self.assertEqual(
+                    hc.investigation_time, gmf_set.investigation_time)
 
     def test_initialize_pr_data_with_gmf(self):
         hc = self.job.hazard_calculation
