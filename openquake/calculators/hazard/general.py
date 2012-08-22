@@ -29,6 +29,8 @@ import nhlib.site
 import numpy
 
 from django.db import transaction, connections
+from django.db.models import Sum
+
 from nhlib import geo as nhlib_geo
 from nrml import parsers as nrml_parsers
 from shapely import geometry
@@ -47,6 +49,7 @@ from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake.logs import LOG
 from openquake.utils import config
+from openquake.utils import stats
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -842,6 +845,19 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             # full paths enumeration
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
+
+    def initialize_pr_data(self):
+        """Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        rs = models.LtRealization.objects.filter(
+            hazard_calculation=self.job.hazard_calculation)
+        total = rs.aggregate(Sum("total_sources"))
+        done = rs.aggregate(Sum("completed_sources"))
+        stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
+        if done > 0:
+            stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
 
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
