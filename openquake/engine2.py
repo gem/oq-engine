@@ -28,6 +28,7 @@ from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.supervising import supervisor
+from openquake.utils import progress
 
 
 def prepare_job(user_name="openquake"):
@@ -336,7 +337,7 @@ def _switch_to_job_phase(job, status):
     job.status = status
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status)
-    logs.LOG.info("** %s" % status)
+    progress.log_status("** %s" % status)
 
 
 def _do_run_hazard(job, exports):
