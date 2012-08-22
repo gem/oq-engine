@@ -1228,6 +1228,13 @@ class GmfCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
 
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`GmfSet` objects.
+        """
+        for gmf_set in GmfSet.objects.filter(gmf_collection=self.id):
+            yield gmf_set
+
 
 class GmfSet(djm.Model):
     """
@@ -1238,6 +1245,13 @@ class GmfSet(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
+
+    def __iter__(self):
+        """
+        Returns a generator for walking through all child :class:`Gmf` objects.
+        """
+        for gmf in Gmf.objects.filter(gmf_set=self.id):
+            yield gmf
 
 
 class Gmf(djm.Model):
@@ -1252,6 +1266,13 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+    def __iter__(self):
+        """
+        Returns a generator for walking through all child :class:`Gmf` objects.
+        """
+        for gmf_node in GmfNode.objects.filter(gmf=self.id):
+            yield gmf_node
 
 
 class GmfNode(djm.Model):
