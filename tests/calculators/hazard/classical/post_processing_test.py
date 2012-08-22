@@ -165,8 +165,6 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
             curve_writer=mock.Mock())
         self.assertRaises(NotImplementedError, a_calculator.compute_results,
                          mock.Mock())
-        self.assertRaises(NotImplementedError, a_calculator.save_result,
-                         mock.Mock(), mock.Mock())
 
 
 class PostProcessorTestCase(unittest.TestCase):
@@ -180,7 +178,10 @@ class PostProcessorTestCase(unittest.TestCase):
         curve_nr = 100
         chunk_size = 1 + curve_nr / 5
 
+        self.curve_writer_factory = mock.Mock()
         self.curve_writer = mock.Mock()
+        self.curve_writer_factory.create_mean_curve_writer = mock.Mock(
+            return_value=self.curve_writer)
         self.task_handler = mock.Mock()
 
         curve_db = _populate_curve_db(location_nr, 1,
@@ -247,7 +248,7 @@ class PostProcessorTestCase(unittest.TestCase):
 
         a_post_processor = PostProcessor(calculation,
                                          self.curve_finder,
-                                         mock.Mock(),
+                                         self.curve_writer_factory,
                                          self.task_handler)
         # Act
         a_post_processor.initialize()
@@ -328,41 +329,26 @@ class SimpleCurveWriter(object):
         self.curves = []
         self.imt = None
 
-    def create_quantile_output(self, quantile, imt):
+    def __exit__(self, *args, **kwargs):
         """
         No action taken. Needed to just implement the aggregate result
         writer protocol
         """
         pass
 
-    def flush_curve_data(self):
+    def __enter__(self):
         """
         No action taken. Needed to just implement the aggregate result
         writer protocol
         """
-        pass
+        return self
 
-    def create_mean_output(self, imt):
+    def add_data(self, location, poes):
         """
-        No action taken. Needed to just implement the aggregate result
-        writer protocol
-        """
-        pass
-
-    def create_mean_curve(self, location, poes):
-        """
-        Save a mean curve
+        Save a mean/quantile curve
         """
         self.curves.append(dict(wkb=location,
-                                poes=poes.tolist()))
-
-    def create_quantile_curve(self, location, quantile, poes):
-        """
-        Save a quantile curve
-        """
-        self.curves.append(dict(wkb=location,
-                                quantile=quantile,
-                                poes=poes.tolist()))
+                                poes=poes))
 
 
 def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
@@ -379,7 +365,7 @@ def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
         location_db.append(location.wkb)
         curve_db.extend(
             [dict(wkb=location.wkb,
-                  poes=[random.gauss(1.0 / (1 + i + j), sigma)
-                        for j in range(0, level_nr)])
+                  poes=numpy.array([random.gauss(1.0 / (1 + i + j), sigma)
+                        for j in range(0, level_nr)]))
             for _ in range(0, curves_per_location)])
     return curve_db, location_db

@@ -276,30 +276,61 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.post_execute()
 
-        models.HazardCurveData.objects.current_job = self.job
-        number_of_curves = (
-            models.HazardCurveData.objects.individual_curves().count())
-
         self.job.status = 'post_processing'
         self.job.save()
         self.calc.post_process()
 
+        models.HazardCurveData.objects.current_job = self.job
+        number_of_curves = (
+            models.HazardCurveData.objects.individual_curves().count())
+
         curves_per_loc = (
             self.job.hazard_calculation.individual_curves_per_location())
 
-        expected_number_of_mean_curves = number_of_curves / curves_per_loc
+        imts_nr = len(
+            self.job.hazard_calculation.intensity_measure_types_and_levels)
+        expected_number_of_mean_curve_data = number_of_curves / curves_per_loc
+        expected_number_of_mean_curves = imts_nr
+        expected_number_of_mean_curve_outputs = expected_number_of_mean_curves
+
+        self.assertEqual(expected_number_of_mean_curve_outputs,
+                         models.Output.objects.filter(
+                             output_type="hazard_curve",
+                             oq_job=self.job,
+                             hazardcurve__statistics="mean").count())
         self.assertEqual(expected_number_of_mean_curves,
                          models.HazardCurve.objects.filter(
                              output__output_type="hazard_curve",
                              output__oq_job=self.job,
                              statistics="mean").count())
+        self.assertEqual(expected_number_of_mean_curve_data,
+                         models.HazardCurveData.objects.filter(
+                             hazard_curve__output__output_type="hazard_curve",
+                             hazard_curve__output__oq_job=self.job,
+                             hazard_curve__statistics="mean").count())
 
-        expected_number_of_quantile_curves = 0
+        quantiles = len(self.job.hazard_calculation.quantile_hazard_curves)
+        expected_number_of_quantile_curve_outputs = imts_nr * quantiles
+        expected_number_of_quantile_curves = (
+            expected_number_of_quantile_curve_outputs)
+        expected_number_of_quantile_curve_data = (
+            expected_number_of_mean_curve_data * quantiles)
+
+        self.assertEqual(expected_number_of_quantile_curve_outputs,
+                         models.Output.objects.filter(
+                             output_type="hazard_curve",
+                             oq_job=self.job,
+                             hazardcurve__statistics="quantile").count())
         self.assertEqual(expected_number_of_quantile_curves,
                          models.HazardCurve.objects.filter(
                              output__output_type="hazard_curve",
                              output__oq_job=self.job,
                              statistics="quantile").count())
+        self.assertEqual(expected_number_of_quantile_curve_data,
+                         models.HazardCurveData.objects.filter(
+                             hazard_curve__output__output_type="hazard_curve",
+                             hazard_curve__output__oq_job=self.job,
+                             hazard_curve__statistics="quantile").count())
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function

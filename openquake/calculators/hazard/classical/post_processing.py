@@ -47,10 +47,11 @@ class PostProcessor(object):
     :attribute _result_writer_factory
       An object used to create ResultWriters.
       It should implement #create_mean_curve_writer and
-      #create_quantile_curve_writer and #create_output_item
+      #create_quantile_curve_writer
 
-      A ResultWriter should implement the methods #add_curve_data,
-      #flush_curve_data
+      A ResultWriter is a context manager that implement the method
+      #add_data and #create_aggregate_result. It could flush the
+      results when it exits from the generated context
 
     :attribute _task_handler
       An object used to distribute the post process in subtasks.
@@ -91,9 +92,10 @@ class PostProcessor(object):
 
             if self.should_compute_mean_curves():
                 writer = writer_factory.create_mean_curve_writer(imt)
-                writer.create_output_item()
+                writer.create_aggregate_result()
 
-                for chunk_of_curves in chunks_generator(imt, curves_per_task):
+                for chunk_of_curves in chunks_generator(
+                        imt, curves_per_task):
                     self._task_handler.enqueue(
                         MeanCurveCalculator,
                         curves_per_location=self._curves_per_location,
@@ -104,7 +106,7 @@ class PostProcessor(object):
                 for quantile in self._calculation.quantile_hazard_curves:
                     writer = writer_factory.create_quantile_curve_writer(
                         imt, quantile)
-                    writer.create_output_item()
+                    writer.create_aggregate_result()
 
                     for chunk_of_curves in chunks_generator(imt,
                                                             curves_per_task):
@@ -187,23 +189,16 @@ class PerSiteResultCalculator(object):
 
         results = self.compute_results(poe_matrix)
 
-        for i, location in enumerate(self.locations()):
-            result = results[i]
-            self.save_result(location, result)
-        self.flush_results()
+        with self._result_writer as writer:
+            for i, location in enumerate(self.locations()):
+                result = results[i]
+                writer.add_data(location, result.tolist())
 
     def compute_results(self, poe_matrix):
         """
         Abstract method. Given a 3d matrix with shape
         (curves_per_location x number of locations x levels))
         compute a result for each location
-        """
-        raise NotImplementedError
-
-    def save_result(self, location, result):
-        """
-        Abstract method. Given a `result` at `location` it saves the result.
-        Method are not really stored until the #flush_results is called
         """
         raise NotImplementedError
 
@@ -271,12 +266,6 @@ class MeanCurveCalculator(PerSiteCurveCalculator):
         """
         return numpy.mean(poe_matrix, axis=0)
 
-    def save_result(self, location, mean_curve):
-        """
-        Save the mean curve.
-        """
-        self._result_writer.create_mean_curve(location, mean_curve)
-
 
 class QuantileCurveCalculator(PerSiteCurveCalculator):
     """
@@ -304,10 +293,3 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
         return [mquantiles(curves, self._quantile, axis=0)[0]
                 for curves in poe_matrixes]
 
-    def save_result(self, location, quantile_curve):
-        """
-        Save a quantile curve
-        """
-        self._result_writer.create_quantile_curve(location,
-                                                 self._quantile,
-                                                 quantile_curve)
