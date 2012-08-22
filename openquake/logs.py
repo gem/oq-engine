@@ -27,7 +27,9 @@ import socket
 import threading
 
 import kombu
+
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
+from openquake.utils import stats
 
 
 # Place the new level between info and warning
@@ -46,7 +48,33 @@ HAZARD_LOG = logging.getLogger('hazard')
 
 
 def log_progress(msg, *args, **kwargs):
+    """Log the message using the progress reporting logging level."""
     LOG._log(logging.PROGRESS, msg, args, **kwargs)
+
+
+def log_percent_complete(job_id, area):
+    """Log a message for each completed percent of a hazard/risk calculation.
+
+    """
+    key = "nhzrd_total" if area == "hazard" else "nrisk_total"
+    total = stats.pk_get(job_id, key)
+    key = "nhzrd_done" if area == "hazard" else "nrisk_done"
+    done = stats.pk_get(job_id, key)
+
+    if done <= 0:
+        return
+
+    if done == total:
+        log_progress("**  > %s calculation 100%% complete" % area)
+        return
+
+    percent = total / 100.0
+    if percent < 1.0:
+        percent = 1.0
+
+    if done % percent < 1.0:
+        log_progress("**  > %s calculation %3d%% complete" %
+                     (area, done/percent))
 
 
 def init_logs_amqp_send(level, job_id):
