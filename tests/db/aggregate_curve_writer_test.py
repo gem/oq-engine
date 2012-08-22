@@ -33,8 +33,6 @@ from openquake.db.aggregate_result_writer import (
 from .models_manager_test import TestCaseWithAJob
 from ..utils import helpers
 
-from django.db import transaction
-
 
 class AggregateResultWriterFactoryTestCase(TestCaseWithAJob):
     """
