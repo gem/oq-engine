@@ -461,7 +461,8 @@ class GmfDBWriterTestCase(GmfDBBaseTestCase):
         output = self.job.output_set.get()
         self.assertEqual(
             0,
-            models.HazardCurve.objects.filter(output=output).count())
+            models.HazardCurve.objects.filter(
+                output=output).count())
         self.assertEqual(0, len(output.lossmap_set.all()))
         self.assertEqual(4, len(output.gmfdata_set.all()))
 
