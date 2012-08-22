@@ -1076,7 +1076,9 @@ CREATE TABLE hzrdr.gmf_collection (
 CREATE TABLE hzrdr.gmf_set (
     id SERIAL PRIMARY KEY,
     gmf_collection_id INTEGER NOT NULL,  -- FK to gmf_collection.id
-    investigation_time float NOT NULL
+    investigation_time float NOT NULL,
+    -- Keep track of the stochastic event set which this GMF set is associated with
+    ses_number INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf (
