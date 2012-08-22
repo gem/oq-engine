@@ -445,3 +445,4 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             rlz_callbacks.append(self.initialize_gmf_db_records)
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
+        self.initialize_pr_data()
