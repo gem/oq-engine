@@ -102,11 +102,14 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(2, len(lt_rlzs))
 
         for rlz in lt_rlzs:
-            [gmf_set] = models.GmfSet.objects.filter(
+            gmf_sets = models.GmfSet.objects.filter(
                 gmf_collection__lt_realization=rlz)
+            self.assertEqual(hc.ses_per_logic_tree_path, len(gmf_sets))
 
-            # The only metadata in a GmfSet is investigation time.
-            self.assertEqual(hc.investigation_time, gmf_set.investigation_time)
+            for gmf_set in gmf_sets:
+                # The only metadata in a GmfSet is investigation time.
+                self.assertEqual(
+                    hc.investigation_time, gmf_set.investigation_time)
 
     def test_initialize_pr_data_with_gmf(self):
         hc = self.job.hazard_calculation
@@ -187,22 +190,22 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # Now check that we saved the right number of ruptures to the DB.
         ruptures1 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz1)
-        self.assertEqual(22, len(ruptures1))
+        self.assertEqual(118, len(ruptures1))
 
         ruptures2 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz2)
-        self.assertEqual(17, len(ruptures2))
+        self.assertEqual(92, len(ruptures2))
 
         # Check that we saved the right number of GMFs to the DB.
         # The correct number of GMFs for each realization is
         # num_ruptures * num_sites * num_imts
 
-        expected_gmfs1 = 22 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
+        expected_gmfs1 = 118 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
         gmfs1 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz1)
         self.assertEqual(expected_gmfs1, len(gmfs1))
 
-        expected_gmfs2 = 17 * num_sites * 2
+        expected_gmfs2 = 92 * num_sites * 2
         gmfs2 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz2)
         self.assertEqual(expected_gmfs2, len(gmfs2))
