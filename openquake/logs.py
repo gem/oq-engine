@@ -68,6 +68,7 @@ def log_progress(msg, ilvl=1):
         ilvl -= 1
     _log_progress("%s %s" % (PR_PREFIXES[ilvl], msg))
 
+
 def log_percent_complete(job_id, ctype):
     """Log a message when the percentage completed changed for a calculation.
 
