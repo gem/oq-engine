@@ -65,6 +65,9 @@ STATS_KEYS = {
     "cblock": ("g", "gen:cblock", "i"),
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
 
+    # The last percent complete figure that was reported to the end user
+    "lfr": ("g", "gen:lfr", "t"),
+
     # The total amount of work for a nhlib-based hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
     # The number of completed hazard work items
