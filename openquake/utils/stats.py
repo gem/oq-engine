@@ -277,7 +277,6 @@ class count_progress(object):   # pylint: disable=C0103
             """Call the wrapped function and step the done/failed counters in
                case of success/failure."""
             job_id, num_items = self.get_task_data(*args, **kwargs)
-            conn = _redis()
             try:
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
