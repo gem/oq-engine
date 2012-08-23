@@ -425,5 +425,5 @@ class LogPercentCompleteTestCase(unittest.TestCase):
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(20, rv)
             self.assertEqual(1, lpm.call_count)
-            self.assertEqual("hazard calculation  20% complete",
+            self.assertEqual("hazard  20% complete",
                              lpm.call_args_list[0][0][0])
