@@ -60,7 +60,7 @@ def log_percent_complete(job_id, area):
     """
     if area not in ("hazard", "risk"):
         LOG.warn("Unknown calculation type: '%s'" % area)
-        return
+        return -1
 
     key = "nhzrd_total" if area == "hazard" else "nrisk_total"
     total = stats.pk_get(job_id, key)
@@ -68,7 +68,7 @@ def log_percent_complete(job_id, area):
     done = stats.pk_get(job_id, key)
 
     if done <= 0:
-        return
+        return 0
 
     percent = total / 100.0
     percent_complete = done/percent
@@ -81,6 +81,8 @@ def log_percent_complete(job_id, area):
         log_progress("**  > %s calculation %3d%% complete" %
                      (area, percent_complete))
         stats.pk_set(job_id, "lvr", percent_complete)
+
+    return percent_complete
 
 
 def init_logs_amqp_send(level, job_id):
