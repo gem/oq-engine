@@ -133,7 +133,7 @@ def export_hazard_curves(output, target_dir):
 # TODO(LB): We may need to differentiate between GMFs calculated by the
 # Event-Based calculator and the Scenario calculator. At the moment, this
 # exporter is intended for Event-Based GMF results. The structures for the two
-# different result types are slightly different.
+# result types are slightly different.
 @makedirs
 def export_gmf(output, target_dir):
     """
