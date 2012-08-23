@@ -139,7 +139,7 @@ def pk_set(job_id, skey, value):
     kvs_op("set", key, value)
 
 
-def pk_inc(job_id, skey):
+def pk_inc(job_id, skey, items=1):
     """Increment the value for a predefined statistics key.
 
     :param int job_id: identifier of the job in question
@@ -148,7 +148,7 @@ def pk_inc(job_id, skey):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    kvs_op("incr", key)
+    kvs_op("incr", key, items)
 
 
 def pk_get(job_id, skey, cast2int=True):
@@ -280,15 +280,13 @@ class count_progress(object):   # pylint: disable=C0103
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = "nhzrd:done" if self.area == "h" else "nrisk:done"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incr(key, num_items)
+                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                pk_inc(job_id, key, num_items)
                 return result
             except:
                 # Count failure
-                key = "nhzrd:failed" if self.area == "h" else "nrisk:failed"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incr(key, num_items)
+                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                pk_inc(job_id, key, num_items)
                 raise
 
         return wrapper
