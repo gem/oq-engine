@@ -52,19 +52,19 @@ def log_progress(msg, *args, **kwargs):
     LOG._log(logging.PROGRESS, msg, args, **kwargs)
 
 
-def log_percent_complete(job_id, area):
-    """Log a message for each completed percent of a hazard/risk calculation.
+def log_percent_complete(job_id, ctype):
+    """Log a message when the percentage completed changed for a calculation.
 
     :param int job_id: identifier of the job in question
-    :param str area: calculation type, one of: hazard, risk
+    :param str ctype: calculation type, one of: hazard, risk
     """
-    if area not in ("hazard", "risk"):
-        LOG.warn("Unknown calculation type: '%s'" % area)
+    if ctype not in ("hazard", "risk"):
+        LOG.warn("Unknown calculation type: '%s'" % ctype)
         return -1
 
-    key = "nhzrd_total" if area == "hazard" else "nrisk_total"
+    key = "nhzrd_total" if ctype == "hazard" else "nrisk_total"
     total = stats.pk_get(job_id, key)
-    key = "nhzrd_done" if area == "hazard" else "nrisk_done"
+    key = "nhzrd_done" if ctype == "hazard" else "nrisk_done"
     done = stats.pk_get(job_id, key)
 
     if done <= 0:
@@ -79,7 +79,7 @@ def log_percent_complete(job_id, area):
     # Only report the percentage completed if it is above the last value shown
     if percent_complete > lvr:
         log_progress("**  > %s calculation %3d%% complete" %
-                     (area, percent_complete))
+                     (ctype, percent_complete))
         stats.pk_set(job_id, "lvr", percent_complete)
 
     return percent_complete
