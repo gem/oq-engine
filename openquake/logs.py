@@ -55,7 +55,13 @@ def log_progress(msg, *args, **kwargs):
 def log_percent_complete(job_id, area):
     """Log a message for each completed percent of a hazard/risk calculation.
 
+    :param int job_id: identifier of the job in question
+    :param str area: calculation type, one of: hazard, risk
     """
+    if area not in ("hazard", "risk"):
+        LOG.warn("Unknown calculation type: '%s'" % area)
+        return
+
     key = "nhzrd_total" if area == "hazard" else "nrisk_total"
     total = stats.pk_get(job_id, key)
     key = "nhzrd_done" if area == "hazard" else "nrisk_done"
@@ -65,17 +71,16 @@ def log_percent_complete(job_id, area):
         return
 
     percent = total / 100.0
-    if percent < 1.0:
-        percent = 1.0
-
     percent_complete = done/percent
-    lfr = stats.pk_get(job_id, "lfr", cast2int=False)
-    lfr = float(lfr) if lfr else 0.0
+    # Get the last value reported
+    lvr = stats.pk_get(job_id, "lvr", cast2int=False)
+    lvr = float(lvr) if lvr else 0.0
 
-    if percent_complete > lfr:
+    # Only report the percentage completed if it is above the last value shown
+    if percent_complete > lvr:
         log_progress("**  > %s calculation %3d%% complete" %
                      (area, percent_complete))
-        stats.pk_set(job_id, "lfr", percent_complete)
+        stats.pk_set(job_id, "lvr", percent_complete)
 
 
 def init_logs_amqp_send(level, job_id):
