@@ -21,6 +21,8 @@ import unittest
 
 from collections import namedtuple
 
+from lxml import etree
+
 from nrml import writers
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
@@ -65,7 +67,7 @@ class SES(object):
         self.investigation_time = investigation_time
         self.ruptures = ruptures
 
-    def __init__(self):
+    def __iter__(self):
         return iter(self.ruptures)
 
 
@@ -301,3 +303,130 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             self.assertEqual(expected_text, text)
         finally:
             os.unlink(path)
+
+
+class SESXMLWriterTestCase(unittest.TestCase):
+
+    def test_serialize(self):
+        ruptures1 = [
+            SESRupture(
+                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust', False,
+                top_left=(1.1, 1.01, 10.0),
+                top_right=(2.1, 2.01, 20.0),
+                bottom_right=(3.1, 3.01, 30.0),
+                bottom_left=(4.1, 4.01, 40.0)),
+            SESRupture(
+                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
+                lons=[
+                    [5.1, 6.1],
+                    [7.1, 8.1],
+                ],
+                lats=[
+                    [5.01, 6.01],
+                    [7.01, 8.01],
+                ],
+                depths=[
+                    [10.5, 10.6],
+                    [10.7, 10.8],
+                ]),
+        ]
+        ses1 = SES(50.0, ruptures1)
+
+        ruptures2 = [
+            SESRupture(
+                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust', False,
+                top_left=(1.1, 1.01, 10.0),
+                top_right=(2.1, 2.01, 20.0),
+                bottom_right=(3.1, 3.01, 30.0),
+                bottom_left=(4.1, 4.01, 40.0)),
+            SESRupture(
+                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust', True,
+                lons=[
+                    [5.2, 6.2],
+                    [7.2, 8.2],
+                ],
+                lats=[
+                    [5.02, 6.02],
+                    [7.02, 8.02],
+                ],
+                depths=[
+                    [10.1, 10.2],
+                    [10.3, 10.4],
+                ]),
+        ]
+        ses2 = SES(40.0, ruptures2)
+
+        sm_lt_path = 'b8_b9_b10'
+        gsim_lt_path = 'b1_b2_b3'
+
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <stochasticEventSetCollection sourceModelTreePath="b8_b9_b10" gsimTreePath="b1_b2_b3">
+    <stochasticEventSet investigationTime="50.0">
+      <rupture magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
+        <planarSurface>
+          <topLeft lon="1.1" lat="1.01" depths="10.0"/>
+          <topRight lon="2.1" lat="2.01" depths="20.0"/>
+          <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
+          <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
+        </planarSurface>
+      </rupture>
+      <rupture magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+        <mesh rows="2" cols="2">
+          <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
+          <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
+          <node row="1" col="0" lon="7.1" lat="7.01" depth="10.7"/>
+          <node row="1" col="1" lon="8.1" lat="8.01" depth="10.8"/>
+        </mesh>
+      </rupture>
+    </stochasticEventSet>
+    <stochasticEventSet investigationTime="40.0">
+      <rupture magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
+        <planarSurface>
+          <topLeft lon="1.1" lat="1.01" depths="10.0"/>
+          <topRight lon="2.1" lat="2.01" depths="20.0"/>
+          <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
+          <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
+        </planarSurface>
+      </rupture>
+      <rupture magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
+        <mesh rows="2" cols="2">
+          <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
+          <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
+          <node row="1" col="0" lon="7.2" lat="7.02" depth="10.3"/>
+          <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
+        </mesh>
+      </rupture>
+    </stochasticEventSet>
+  </stochasticEventSetCollection>
+</nrml>
+""")
+
+        try:
+            _, path = tempfile.mkstemp()
+            writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
+            writer.serialize([ses1, ses2])
+
+            expected_text = expected.readlines()
+            fh = open(path, 'r')
+            text = fh.readlines()
+            self.assertEqual(expected_text, text)
+        finally:
+            os.unlink(path)
+
+    def test__create_rupture_mesh_raises_on_empty_mesh(self):
+        # When creating the mesh, we should raise a `ValueError` if the mesh is
+        # empty.
+        rup_elem = etree.Element('test_rup_elem')
+        rupture = SESRupture(
+            6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
+            lons=[[], []],
+            lats=[[5.01, 6.01],
+                  [7.01, 8.01]],
+            depths=[[10.5, 10.6],
+                    [10.7, 10.8]])
+
+        self.assertRaises(
+            ValueError, writers.SESXMLWriter._create_rupture_mesh,
+            rupture, rup_elem)
