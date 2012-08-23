@@ -375,3 +375,14 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
 
             logs.init_logs_amqp_send("error", 324)
             self.assertEqual(logging.root.level, logging.ERROR)
+
+
+class LogPercentCompleteTestCase(unittest.TestCase):
+    """Exercises the log_percent_complete() function."""
+
+    def test_log_percent_complete_with_invalid_area(self):
+        # nothing is reported, -1 is returned
+        with mock.patch("openquake.logs.log_progress") as lpm:
+            rv = logs.log_percent_complete(11, "the-future")
+            self.assertEqual(-1, rv)
+            self.assertEqual(0, lpm.call_count)
