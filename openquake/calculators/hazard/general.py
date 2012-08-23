@@ -857,6 +857,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        stats.pk_set(self.job.id, "lvr", 0)
         rs = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation)
         total = rs.aggregate(Sum("total_sources"))
