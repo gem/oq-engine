@@ -22,9 +22,8 @@ import json
 from django.contrib.gis import geos
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.classical.core import _generate_loss_ratios
+from openquake.calculators.risk.classical.core import _compute_lrem
 from openquake.calculators.risk.general import BaseRiskCalculator
-from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
@@ -174,9 +173,9 @@ class BetaDistributionTestCase(unittest.TestCase):
                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
 
-    def test_compute_beta_dist(self):
+    def test_compute_lrem_using_beta_distribution(self):
+        # expected lrem provided by Vitor
 
-        # expected beta distributions provided by Vitor
         expected_beta_distributions = [
             [1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000],
             [0.9895151, 0.9999409, 1.0000000, 1.0000000, 1.0000000],
@@ -210,21 +209,13 @@ class BetaDistributionTestCase(unittest.TestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0027925],
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
-        vuln_function = shapes.VulnerabilityFunction(self.imls,
-                            self.mean_loss_ratios, self.covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            self.imls, self.mean_loss_ratios, self.covs, "BT")
 
-        # steps = 5
-        loss_ratios = _generate_loss_ratios(vuln_function, 5)
+        lrem = _compute_lrem(vuln_function, 5)
 
-        lrem = numpy.empty((len(loss_ratios), vuln_function.imls.size), float)
-
-        for col, _ in enumerate(vuln_function):
-            for row, loss_ratio in enumerate(loss_ratios):
-                lrem[row][col] = BetaDistribution.survival_function(loss_ratio,
-                    col=col, vf=vuln_function)
-
-        helpers.assertDeepAlmostEqual(self, expected_beta_distributions,
-                                      lrem, delta=0.0005)
+        helpers.assertDeepAlmostEqual(
+            self, expected_beta_distributions, lrem, delta=0.0005)
 
 
 RISK_DEMO_CONFIG_FILE = helpers.demo_file(

@@ -30,65 +30,46 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
-
+from openquake.utils.tasks import distribute
 
 LOGGER = logs.LOG
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
-    """Scenario method for performing risk calculations."""
+    """
+    Scenario method for performing risk calculations.
+    """
 
-    # pylint: disable=R0914
-    def execute(self):
-        """Entry point for triggering the computation."""
-        LOGGER.debug("Executing scenario risk computation.")
-        LOGGER.debug("This will calculate mean and standard deviation loss"
-            "values for the region defined in the job config.")
+    def __init__(self, job_ctxt):
+        general.BaseRiskCalculator.__init__(self, job_ctxt)
 
-        tasks = []
+        self._output_filename = "loss-map-%s.xml"
 
-        vuln_model = vulnerability.load_vuln_model_from_kvs(
-            self.job_ctxt.job_id)
+        # sum of the assets losses of the
+        # whole computation
+        self._sum_region_losses = None
 
-        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
+        # mean and standard deviation
+        # loss of each asset
+        self._loss_map_data = None
 
-        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
+        # algorithm used to compute the losses
+        # (standard or insured)
+        self._loss_ratios_calculator = compute_uninsured_losses
 
-        region_loss_map_data = {}
+    def pre_execute(self):
+        super(ScenarioRiskCalculator, self).pre_execute()
 
-        for block_id in self.job_ctxt.blocks_keys:
-            LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.job_ctxt.blocks_keys)))
-            a_task = general.compute_risk.delay(
-                self.job_ctxt.job_id, block_id, vuln_model=vuln_model)
-            tasks.append(a_task)
+        if self.job_ctxt.params.get("INSURED_LOSSES"):
+            self._output_filename = "insured-loss-map%s.xml"
+            self._loss_ratios_calculator = compute_insured_losses
 
-        for task in tasks:
-            task.wait()
-            if not task.successful():
-                raise Exception(task.result)
-
-            block_loss, block_loss_map_data = task.result
-
-            # do some basic validation on our results
-            assert block_loss is not None, "Expected a result != None"
-            assert isinstance(block_loss, numpy.ndarray), \
-                "Expected a numpy array"
-
-            # our result should be a 1-dimensional numpy.array of loss values
-            sum_per_gmf.sum_losses(block_loss)
-
-            collect_region_data(
-                block_loss_map_data, region_loss_map_data)
-
-        loss_map_data = [(site, data)
-                for site, data in region_loss_map_data.iteritems()]
-
-        # serialize the loss map data to XML
+    def post_execute(self):
         loss_map_path = os.path.join(
-            self.job_ctxt['BASE_PATH'],
-            self.job_ctxt['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.job_ctxt.job_id)
+            self.job_ctxt["BASE_PATH"],
+            self.job_ctxt["OUTPUT_DIR"],
+            self._output_filename % self.job_ctxt.job_id)
+
         loss_map_writer = risk_output.create_loss_map_writer(
             self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             loss_map_path, True)
@@ -98,14 +79,46 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
             # Add a metadata dict in the first list position
             # Note: the metadata is still incomplete (see bug 809410)
-            loss_map_metadata = {'scenario': True}
-            loss_map_data.insert(0, loss_map_metadata)
-            loss_map_writer.serialize(loss_map_data)
+            loss_map_metadata = {"scenario": True}
+            self._loss_map_data.insert(0, loss_map_metadata)
+            loss_map_writer.serialize(self._loss_map_data)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Mean region loss value: %s" % sum_per_gmf.mean
-        print "Standard deviation region loss value: %s" % sum_per_gmf.stddev
+        print "Mean region loss value: %s" % numpy.mean(
+            self._sum_region_losses)
+
+        print "Standard deviation region loss value: %s" % numpy.std(
+            self._sum_region_losses, ddof=1)
+
+    def execute(self):
+        """
+        Entry point for triggering the computation.
+        """
+
+        LOGGER.debug("Executing scenario risk computation.")
+        LOGGER.debug("This will calculate mean and standard deviation loss"
+            "values for the region defined in the job config.")
+
+        vuln_model = vulnerability.load_vuln_model_from_kvs(
+            self.job_ctxt.job_id)
+
+        region_losses = []
+        region_loss_map_data = {}
+
+        region_data = distribute(
+            general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
+            tf_args=dict(job_id=self.job_ctxt.job_id,
+            vuln_model=vuln_model, calculator=self._loss_ratios_calculator))
+
+        for block_data in region_data:
+            region_losses.append(block_data[0])
+            collect_region_data(block_data[1], region_loss_map_data)
+
+        self._sum_region_losses = reduce(lambda x, y: x + y, region_losses)
+
+        self._loss_map_data = [(site, data)
+                for site, data in region_loss_map_data.iteritems()]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -168,19 +181,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                     ])]
         """
 
-        vuln_model = kwargs['vuln_model']
+        vuln_model = kwargs["vuln_model"]
+        compute_losses = kwargs["calculator"]
         epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        loss_data = {}
-
-        # used to sum the losses for the whole block
-        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
+        block_losses = []
+        loss_map_data = {}
 
         for site in block.sites:
-            # the scientific functions used below
-            # require the gmvs to be wrapped in a dict with a single key, IMLs
-            gmvs = {'IMLs': general.load_gmvs_at(
+            gmvs = {"IMLs": general.load_gmvs_at(
                     self.job_ctxt.job_id, general.hazard_input_site(
                     self.job_ctxt, site))}
 
@@ -190,28 +200,29 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 
-                asset_mean_loss = compute_mean_loss(
-                    vuln_function, gmvs, epsilon_provider, asset)
-
-                asset_stddev_loss = compute_stddev_loss(
-                    vuln_function, gmvs, epsilon_provider, asset)
+                losses = compute_losses(
+                        vuln_function, gmvs, epsilon_provider, asset)
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 
                 loss = ({
-                    'mean_loss': asset_mean_loss,
-                    'stddev_loss': asset_stddev_loss}, {
-                    'assetID': asset.asset_ref
+                    "mean_loss": numpy.mean(losses),
+                    "stddev_loss": numpy.std(losses, ddof=1)}, {
+                    "assetID": asset.asset_ref
                 })
 
-                sum_per_gmf.add(gmvs, asset)
-                collect_block_data(loss_data, asset_site, loss)
+                block_losses.append(losses)
+                collect_block_data(loss_map_data, asset_site, loss)
 
-        return sum_per_gmf.losses, loss_data
+        sum_block_losses = reduce(lambda x, y: x + y, block_losses)
+        return sum_block_losses, loss_map_data
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
-    """Collect the loss map data for all the region."""
+    """
+    Collect the loss map data for all the region.
+    """
+
     for site, data in block_loss_map_data.iteritems():
         if site in region_loss_map_data:
             region_loss_map_data[site].extend(data)
@@ -220,179 +231,84 @@ def collect_region_data(block_loss_map_data, region_loss_map_data):
 
 
 def collect_block_data(loss_data, asset_site, asset_data):
-    """Collect the loss map map for a single block."""
+    """
+    Collect the loss map map for a single block.
+    """
+
     data = loss_data.get(asset_site, [])
     data.append(asset_data)
     loss_data[asset_site] = data
 
 
-def _mean_loss_from_loss_ratios(loss_ratios, asset):
-    """Compute the mean loss using the set of loss ratios given.
-
-    :param loss_ratios: the set of loss ratios used.
-    :type loss_ratios: numpy.ndarray
-    :param asset: the asset used to compute the losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
     """
+    Compute losses for the given asset using the related set of ground
+    motion values and vulnerability function.
 
-    losses = loss_ratios * asset.value
-    return numpy.mean(losses)
-
-
-def _stddev_loss_from_loss_ratios(loss_ratios, asset):
-    """Compute the standard deviation of the losses
-    using the set of loss ratios given.
-
-    :param loss_ratios: the set of loss ratios used.
-    :type loss_ratios: numpy.ndarray
-    :param asset: the asset used to compute the losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    losses = loss_ratios * asset.value
-    return numpy.std(losses, ddof=1)
-
-
-def compute_mean_loss(vuln_function, gmf_set,
-                      epsilon_provider, asset):
-    """Compute the mean loss for the given asset using the
-    related ground motion field set and vulnerability function.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
+    :param vuln_function: the vulnerability function used to compute the loss
+        ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
+    :param gmvs: the set of ground motion values used to compute the loss
+        ratios.
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
+        of ground motion values (float).
+    :param epsilon_provider: service used to get the epsilon when using the
+        sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
     loss_ratios = general.compute_loss_ratios(
-        vuln_function, gmf_set, epsilon_provider, asset)
+        vuln_function, gmvs, epsilon_provider, asset)
 
-    return _mean_loss_from_loss_ratios(loss_ratios, asset)
+    losses = loss_ratios * asset.value
+
+    return losses
 
 
-def compute_stddev_loss(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the standard deviation of the losses for the given asset
-    using the related ground motion field set and vulnerability function.
+def insurance_boundaries_defind(asset):
+    """
+    Check if limit and deductibles values have been defined for the asset.
 
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
+    :param asset: the asset used to compute the losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    """
+
+    if (asset.ins_limit >= 0 and asset.deductible >= 0):
+        return True
+    else:
+        raise RuntimeError('Insurance boundaries for asset %s are not defined'
+            % asset.asset_ref)
+
+
+def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
+    """
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
+
+    :param vuln_function: the vulnerability function used to compute the loss
+        ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
+    :param gmvs: the set of ground motion values used to compute the loss
+        ratios.
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
+        of ground motion values (float).
+    :param epsilon_provider: service used to get the epsilon when using the
+        sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
-    loss_ratios = general.compute_loss_ratios(
-        vuln_function, gmf_set, epsilon_provider, asset)
+    losses = compute_uninsured_losses(vuln_function, gmvs,
+                epsilon_provider, asset)
 
-    return _stddev_loss_from_loss_ratios(loss_ratios, asset)
-
-
-class SumPerGroundMotionField(object):
-    """This class computes the mean and the standard deviation of
-    the sum of the losses per ground motion field set."""
-
-    def __init__(self, vuln_model, epsilon_provider, lr_calculator=None):
-        """Initialize an instance of this class.
-
-        :param vuln_model: the vulnerability model used to lookup the
-            functions referenced by each asset.
-        :type vuln_model: :py:class:`dict` where each key is the id
-            of the function and the value is an instance of
-            `openquake.shapes.VulnerabilityFunction`
-        :param epsilon_provider: service used to get the epsilon when
-            using the sampled based algorithm.
-        :type epsilon_provider: object that defines
-            an :py:method:`epsilon` method
-        :param lr_calculator: service used to compute the loss ratios.
-            For the list of parameters, see
-    :py:function:`openquake.calculators.risk.general.compute_loss_ratios`
-        :type lr_calculator: object that defines an :py:meth:`epsilon` method
-        """
-        self.vuln_model = vuln_model
-        self.lr_calculator = lr_calculator
-        self.epsilon_provider = epsilon_provider
-
-        self.losses = numpy.array([])
-
-        if lr_calculator is None:
-            self.lr_calculator = general.compute_loss_ratios
-
-    def add(self, gmf_set, asset):
-        """Compute the losses for the given ground motion field set, and
-        sum those to the current sum of the losses.
-
-        If the asset refers to a vulnerability function that is not
-        supported by the vulnerability model, the distribution
-        of the losses is discarded.
-
-        :param gmf_set: ground motion fields used to compute the loss ratios
-        :type gmf_set: :py:class:`dict` with the following
-            keys:
-            **IMLs** - tuple of ground motion fields (float)
-        :param asset: the asset used to compute the loss ratios and losses.
-        :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-        """
-
-        if asset.taxonomy not in self.vuln_model:
-            LOGGER.debug("Unknown vulnerability function %s, asset %s will "
-                         "not be included in the aggregate computation"
-                         % (asset.taxonomy, asset.asset_ref))
-            return
-
-        vuln_function = self.vuln_model[asset.taxonomy]
-
-        loss_ratios = self.lr_calculator(vuln_function, gmf_set,
-                                         self.epsilon_provider, asset)
-
-        losses = numpy.array(loss_ratios) * asset.value
-
-        self.sum_losses(losses)
-
-    def sum_losses(self, losses):
-        """
-        Accumulate losses into a single sum.
-
-        :param losses: an array of loss values (1 per realization)
-        :type losses: 1-dimensional :py:class:`numpy.ndarray`
-
-        The `losses` arrays passed to this function must be empty or
-        all the same lenght.
-        """
-        if len(self.losses) == 0:
-            self.losses = losses
-        elif len(losses) > 0:
-            self.losses = self.losses + losses
-
-    @property
-    def mean(self):
-        """Return the mean of the current sum of the losses.
-
-        :returns: the mean of the current sum of the losses
-        :rtype: numpy.float64
-        """
-        return numpy.mean(self.losses)
-
-    @property
-    def stddev(self):
-        """Return the standard deviation of the sum of the losses.
-
-        :returns: the standard deviation of the current sum of the losses
-        :rtype: numpy.float64
-        """
-        return numpy.std(self.losses, ddof=1)
+    if insurance_boundaries_defind(asset):
+        for i, value in enumerate(losses):
+            if value < asset.deductible:
+                losses[i] = 0
+            else:
+                if value > asset.ins_limit:
+                    losses[i] = asset.ins_limit
+    return losses

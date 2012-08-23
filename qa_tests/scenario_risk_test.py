@@ -17,12 +17,16 @@ import os
 import unittest
 
 from lxml import etree
+from shutil import rmtree
 from nose.plugins.attrib import attr
 
 from openquake.db.models import OqJob
 from openquake import xml
 
 from tests.utils import helpers
+
+QA_OUTPUT_DIR = helpers.qa_file(
+    "scenario_risk_insured_losses/computed_output")
 
 
 class ScenarioRiskQATest(unittest.TestCase):
@@ -42,15 +46,12 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self.assertEqual("succeeded", OqJob.objects.latest("id").status)
 
-    def _verify_loss_map(self, path, expected_data):
+    def _loss_map_result_from_file(self, path):
         namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
         root = etree.parse(path)
 
-        actual_lm_data = []
+        lm_data = []
         lm_nodes = root.xpath('.//nrml:LMNode', namespaces=namespaces)
-
-        # sanity check: there should be only 3 loss map nodes:
-        self.assertEqual(3, len(lm_nodes))
 
         for node in lm_nodes:
             node_data = dict()
@@ -66,11 +67,39 @@ class ScenarioRiskQATest(unittest.TestCase):
             node_data['mean'] = float(mean.text)
             node_data['stddev'] = float(stddev.text)
 
-            actual_lm_data.append(node_data)
+            lm_data.append(node_data)
+
+        return lm_data
+
+    def _mean_stddev_from_result_line(self, result):
+        result = [line for line in result.split('\n') if len(line) > 0]
+        # We expected the shell output to look something like the following
+        # two lines:
+        # Mean region loss value: XXX.XXX
+        # Standard deviation region loss value: XXX.XXX
+        self.assertEqual(2, len(result))
+
+        actual_mean = float(result[0].split()[-1])
+        actual_stddev = float(result[1].split()[-1])
+        return actual_mean, actual_stddev
+
+    def _verify_loss_map(self, path, lm_data):
+        expected_data = self._loss_map_result_from_file(path)
 
         helpers.assertDeepAlmostEqual(
-            self, sorted(expected_data), sorted(actual_lm_data),
+            self, sorted(expected_data), sorted(lm_data),
             places=self.LOSSMAP_PRECISION)
+
+    def _verify_loss_map_within_range(self, mb_loss_map,
+                                      expected_loss_map, range):
+        for i, lm_node in enumerate(mb_loss_map):
+            exp_lm_node = expected_loss_map[i]
+
+            delta = lm_node['mean'] * range
+            self.assertAlmostEqual(
+                lm_node['mean'], exp_lm_node['mean'], delta=delta)
+
+            self.assertTrue(exp_lm_node['stddev'] > lm_node['stddev'])
 
     def test_scenario_risk(self):
         # This test exercises the 'mean-based' path through the Scenario Risk
@@ -102,19 +131,7 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self._verify_loss_map(expected_loss_map_file, expected_loss_map)
 
-        # We expected the shell output to look something like the following
-        # two lines:
-        # Mean region loss value: 1053.09
-        # Standard deviation region loss value: 246.62
-
-        # split on newline and filter out empty lines
-        result = [line for line in result.split('\n') if len(line) > 0]
-
-        # we expect 2 lines; 1 for mean, 1 for stddev
-        self.assertEqual(2, len(result))
-
-        actual_mean = float(result[0].split()[-1])
-        actual_stddev = float(result[1].split()[-1])
+        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
@@ -150,65 +167,73 @@ class ScenarioRiskQATest(unittest.TestCase):
         # Loss map for the mean-based approach:
         mb_loss_map = [
             dict(asset='a3', pos='15.48 38.25', mean=200.54874638,
-                 stddev=94.2302991022),
+                stddev=94.2302991022),
             dict(asset='a2', pos='15.56 38.17', mean=510.821363253,
-                 stddev=259.964152622),
+                stddev=259.964152622),
             dict(asset='a1', pos='15.48 38.09', mean=521.885458891,
-                 stddev=244.825980356),
+                stddev=244.825980356),
         ]
-
-        # Given the random seed in this config file, here's what we expect to
-        # get for the region:
-        exp_mean_loss = 1255.09
-        exp_stddev_loss = 530.00
-        # Expected loss map for the sample-based approach:
-        expected_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=201.976066147,
-                 stddev=95.1493297113),
-            dict(asset='a2', pos='15.56 38.17', mean=516.750292227,
-                 stddev=379.617139967),
-            dict(asset='a1', pos='15.48 38.09', mean=522.856225188,
-                 stddev=248.025575687),
-        ]
-
-        # Sanity check on the test data defined above, because humans suck at
-        # math:
-        self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
-                               delta=mb_mean_loss * 0.05)
-        self.assertTrue(exp_stddev_loss > mb_stddev_loss)
-        # ... and the loss map:
-        for i, lm_node in enumerate(mb_loss_map):
-            exp_lm_node = expected_loss_map[i]
-
-            delta = lm_node['mean'] * 0.05
-            self.assertAlmostEqual(
-                lm_node['mean'], exp_lm_node['mean'], delta=delta)
-            self.assertTrue(exp_lm_node['stddev'] > lm_node['stddev'])
 
         # Sanity checks are done. Let's do this.
         scen_cfg = helpers.demo_file(
             'scenario_risk/config_sample-based_qa.gem')
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
-                                 check_output=True)
+            check_output=True)
 
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
 
         expected_loss_map_file = helpers.demo_file(
             'scenario_risk/computed_output/loss-map-%s.xml' % job.id)
+        self.assertTrue(os.path.exists(expected_loss_map_file))
+
+        loss_map = self._loss_map_result_from_file(expected_loss_map_file)
+        self._verify_loss_map_within_range(sorted(mb_loss_map),
+            sorted(loss_map), 0.05)
+
+        exp_mean_loss, exp_stddev_loss = self._mean_stddev_from_result_line(
+            result)
+        self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
+            delta=mb_mean_loss * 0.05)
+        self.assertTrue(exp_stddev_loss > mb_stddev_loss)
+
+    def test_scenario_risk_insured_losses(self):
+        # This test exercises the 'mean-based' path through the Scenario Risk
+        # calculator. There is no random sampling done here so the results are
+        # 100% predictable.
+        scen_cfg = helpers.qa_file('scenario_risk_insured_losses/config.gem')
+
+        exp_mean_loss = 799.102578
+        exp_stddev_loss = 382.148808
+        expected_loss_map = [
+            dict(asset='a3', pos='15.48 38.25', mean=156.750910806,
+                stddev=100.422061776),
+            dict(asset='a2', pos='15.56 38.17', mean=314.859579324,
+                stddev=293.976254984),
+            dict(asset='a1', pos='15.48 38.09', mean=327.492087529,
+                stddev=288.47906994),
+            ]
+
+        result = helpers.run_job(scen_cfg, ['--output-type=xml'],
+            check_output=True)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
+
+        expected_loss_map_file = helpers.qa_file(
+            'scenario_risk_insured_losses/computed_output/insured-loss-map%s'
+            '.xml' % job.id)
 
         self.assertTrue(os.path.exists(expected_loss_map_file))
 
         self._verify_loss_map(expected_loss_map_file, expected_loss_map)
 
-        result = [line for line in result.split('\n') if len(line) > 0]
-
-        self.assertEqual(2, len(result))
-
-        actual_mean = float(result[0].split()[-1])
-        actual_stddev = float(result[1].split()[-1])
+        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
         self.assertAlmostEqual(
             exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)

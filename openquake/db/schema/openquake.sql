@@ -630,6 +630,7 @@ CREATE TABLE uiapi.oq_job_profile (
         CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
                             'disaggregation', 'uhs', 'scenario_damage',
                             'classical_bcr', 'event_based_bcr')),
+    insured_losses BOOLEAN,
     -- Job type: hazard and/or risk.
     job_type VARCHAR[] CONSTRAINT job_type_value
         CHECK(((job_type IS NOT NULL)
@@ -1123,6 +1124,12 @@ CREATE TABLE uiapi.oq_job_profile (
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
     reference_depth_to_2pt5km_per_sec_param float,
+    -- In the absence of an average population datum for exposure the user may
+    -- want to specify that a day/night/transit population value should be used
+    -- instead.
+    default_pop_cat VARCHAR CONSTRAINT default_pop_cat_value
+        CHECK(default_pop_cat IS NULL OR
+              default_pop_cat IN ('day', 'night', 'in_transit')),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1540,32 +1547,34 @@ CREATE TABLE oqmif.exposure_model (
 
     -- area type
     area_type VARCHAR CONSTRAINT area_type_value
-        CHECK(area_type IS NULL OR area_type = 'per_asset'
-              OR area_type = 'aggregated'),
-
+        CHECK(area_type IS NULL OR area_type IN ('per_asset', 'aggregated')),
     -- area unit
     area_unit VARCHAR,
 
     -- contents cost type
     coco_type VARCHAR CONSTRAINT coco_type_value
-        CHECK(coco_type IS NULL OR coco_type = 'per_asset'
-              OR coco_type = 'per_area' OR coco_type = 'aggregated'),
+        CHECK(coco_type IS NULL OR
+              coco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- contents cost unit
     coco_unit VARCHAR,
 
     -- retrofitting cost type
     reco_type VARCHAR CONSTRAINT reco_type_value
-        CHECK(reco_type IS NULL OR reco_type = 'per_asset'
-              OR reco_type = 'per_area' OR reco_type = 'aggregated'),
+        CHECK(reco_type IS NULL OR
+              reco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- retrofitting cost unit
     reco_unit VARCHAR,
 
     -- structural cost type
     stco_type VARCHAR CONSTRAINT stco_type_value
-        CHECK(stco_type IS NULL OR stco_type = 'per_asset'
-              OR stco_type = 'per_area' OR stco_type = 'aggregated'),
+        CHECK(stco_type IS NULL OR
+              stco_type IN ('per_asset', 'per_area', 'aggregated')),
     -- structural cost unit
     stco_unit VARCHAR,
+
+    unit_type VARCHAR CONSTRAINT unit_type_value
+        CHECK(unit_type IS NULL OR
+              unit_type IN ('count', 'economic_value', 'both')),
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1610,7 +1619,17 @@ ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 CREATE TABLE oqmif.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL,
+    category VARCHAR NOT NULL CONSTRAINT category_value
+        CHECK(category IN ('average', 'day', 'night', 'transit')),
+    occupants INTEGER NOT NULL
+) TABLESPACE oqmif_ts;
+
+
+CREATE TABLE oqmif.population (
+    id SERIAL PRIMARY KEY,
+    exposure_data_id INTEGER NOT NULL,
+    category VARCHAR NOT NULL CONSTRAINT category_value
+        CHECK(category IN ('day', 'night', 'transit')),
     occupants INTEGER NOT NULL
 ) TABLESPACE oqmif_ts;
 
@@ -2020,6 +2039,10 @@ REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.occupancy ADD CONSTRAINT
 oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE oqmif.population ADD CONSTRAINT
+oqmif_population_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
 
 ALTER TABLE riski.vulnerability_function ADD CONSTRAINT

@@ -24,7 +24,6 @@ import math
 import numpy
 
 from itertools import izip
-from numpy import zeros
 from numpy import empty
 from numpy import allclose
 from numpy import sin, cos, arctan2, sqrt, radians
@@ -388,72 +387,6 @@ class Site(nhlib_geo.Point):
         return self.hash() == other.hash()
 
 
-class Field(object):
-    """Uses a 2 dimensional numpy array to store a field of values."""
-
-    def __init__(self, field=None, rows=1, cols=1):
-        if field is not None:
-            self.field = field
-        else:
-            self.field = zeros((rows, cols))
-
-    def get(self, row, col):
-        """ Return the value at self.field[row][col]
-            :param row
-            :param col
-        """
-        try:
-            return self.field[row][col]
-        except IndexError:
-            print "Field with shape [%s] doesn't have value at [%s][%s]" % (
-                self.field.shape, row, col)
-
-    @classmethod
-    def from_json(cls, json_str, grid=None):
-        """Construct a field from a serialized version in
-        json format."""
-        assert grid
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls.from_dict(as_dict, grid=grid)
-
-    @classmethod
-    def from_dict(cls, values, transform=math.exp, grid=None):
-        """Construct a field from a dictionary.
-        """
-        assert grid
-        assert grid.cell_size
-        field = zeros((grid.rows, grid.columns))
-
-        for _key, field_site in values.items():
-            point = grid.point_at(
-                Site(field_site['lon'], field_site['lat']))
-            field[point.row][point.column] = transform(
-                    float(field_site['mag']))
-
-        return cls(field)
-
-
-class FieldSet(object):
-    """ An iterator for a set of fields """
-
-    def __init__(self, as_dict, grid):
-        assert grid
-        self.grid = grid
-        self.fields = as_dict.values()[0]  # NOTE: There's a junk wrapper
-
-    @classmethod
-    def from_json(cls, json_str, grid=None):
-        """ Construct a field set from a serialized version in json format """
-        assert grid
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls(as_dict, grid=grid)
-
-    def __iter__(self):
-        """Pop off the fields sequentially"""
-        for field in self.fields.values():
-            yield Field.from_dict(field, grid=self.grid)
-
-
 def range_clip(val, val_range):
     """
     'Clip' a value (or sequence of values) to the
@@ -658,7 +591,7 @@ class VulnerabilityFunction(object):
     as Y values.
     """
 
-    def __init__(self, imls, loss_ratios, covs):
+    def __init__(self, imls, loss_ratios, covs, distribution):
         """
         :param imls: Intensity Measure Levels for the vulnerability function.
             All values must be >= 0.0.
@@ -668,10 +601,14 @@ class VulnerabilityFunction(object):
         :type loss_ratios: list of floats, equal in length to imls
         :param covs: Coefficients of Variation. All values must be >= 0.0.
         :type covs: list of floats, equal in length to imls
+        :param distribution: The probabilistic distribution related to this
+            function.
+        :type distribution: string
         """
         self._imls = imls
         self._loss_ratios = loss_ratios
         self._covs = covs
+        self._distribution = distribution
 
         # Check for proper IML ordering:
         assert self._imls == sorted(set(self._imls)), \
@@ -703,7 +640,15 @@ class VulnerabilityFunction(object):
             return False
         return allclose(self.imls, other.imls) \
             and allclose(self.loss_ratios, other.loss_ratios) \
-            and allclose(self.covs, other.covs)
+            and allclose(self.covs, other.covs) and \
+            self.distribution == other.distribution
+
+    @property
+    def distribution(self):
+        """
+        The probabilistic distribution related to this function.
+        """
+        return self._distribution
 
     @property
     def imls(self):
@@ -792,10 +737,11 @@ class VulnerabilityFunction(object):
             imls = [0.005, 0.007]
             loss_ratios = [0.1, 0.3]
             covs = [0.2, 0.4]
+            distribution = 'BT'
 
         the output will be a JSON string structured like so::
-            {'0.005': [0.1, 0.2],
-             '0.007': [0.3, 0.4]}
+            ('BT', {'0.005': [0.1, 0.2],
+             '0.007': [0.3, 0.4]})
         """
         as_dict = {}
 
@@ -803,12 +749,17 @@ class VulnerabilityFunction(object):
                 self.covs):
             as_dict[str(iml)] = [loss_ratio, cov]
 
-        return json.JSONEncoder().encode(as_dict)
+        return json.JSONEncoder().encode((self.distribution, as_dict))
 
     @classmethod
-    def from_dict(cls, vuln_func_dict):
+    def from_tuple(cls, vuln_func):
         """
-        Construct a VulnerabiltyFunction from a dictionary.
+        Construct a VulnerabiltyFunction from a tuple.
+
+        The first element of the tuple is the probabilistic
+        distribution related to this function.
+
+        The second element is a dictionary of values.
 
         The dictionary keys can be unordered and of
         whatever type can be converted to float with float().
@@ -821,12 +772,16 @@ class VulnerabilityFunction(object):
                  '0.007': [0.3, 0.4],
                  0.0098: [0.5, 0.6]}
 
-        :type vuln_func_dict: dict
+        :type vuln_func: tuple
 
         :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
         """
+
+        distribution = vuln_func[0]
+        values = vuln_func[1]
+
         # flatten out the dict and convert keys to floats:
-        data = [(float(iml), lr_cov) for iml, lr_cov in vuln_func_dict.items()]
+        data = [(float(iml), lr_cov) for iml, lr_cov in values.items()]
         # sort the data (by iml) in ascending order:
         data = sorted(data, key=lambda x: x[0])
 
@@ -839,7 +794,7 @@ class VulnerabilityFunction(object):
             loss_ratios.append(lr)
             covs.append(cov)
 
-        return cls(imls, loss_ratios, covs)
+        return cls(imls, loss_ratios, covs, distribution)
 
     @classmethod
     def from_json(cls, json_str):
@@ -849,11 +804,11 @@ class VulnerabilityFunction(object):
         :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
         """
         as_dict = json.JSONDecoder().decode(json_str)
-        return cls.from_dict(as_dict)
+        return cls.from_tuple(as_dict)
 
 
 EMPTY_CURVE = Curve(())
-EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [])
+EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [], "LN")
 
 
 def multipoint_ewkt_from_coords(coords):

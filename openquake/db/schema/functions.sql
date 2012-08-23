@@ -254,6 +254,21 @@ AS $$
             raise Exception(fmt("%s (%s) and %s (%s) must both be either "
                                 "defined or undefined" %
                                 (a, NEW[a], b, NEW[b])))
+    def check_nor(keys):
+        """Raise exception if any one of the items is defined."""
+        defined = []
+        for key in keys:
+            if NEW[key] is not None:
+                defined.append(key)
+        if defined:
+            raise Exception(fmt("We are in counting mode: neither of these "
+                                "must be set %s" % defined))
+
+    if NEW["unit_type"] == "count":
+        check_xor("coco_unit", "coco_type")
+        check_nor(["area_unit", "area_type", "reco_unit", "reco_type",
+                   "stco_unit", "stco_type"])
+        return "OK"
 
     if NEW["area_type"] is None:
         violations = []
@@ -290,15 +305,36 @@ COMMENT ON FUNCTION pcheck_exposure_model() IS
 CREATE OR REPLACE FUNCTION pcheck_exposure_data()
   RETURNS TRIGGER
 AS $$
+    NEW = TD["new"] # new data resulting from insert or update
+
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
 
-    NEW = TD["new"] # new data resulting from insert or update
+    def check_nor(keys):
+        """Raise exception if any one of the items is defined."""
+        defined = []
+        for key in keys:
+            if NEW[key] is not None:
+                defined.append(key)
+        if defined:
+            raise Exception(fmt("We are in counting mode: neither of these "
+                                "must be set %s" % defined))
 
     # get the associated exposure model record
     q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
+
+    if emdl["unit_type"] == "count":
+        if NEW["number_of_units"] is not None:
+            check_nor(["area", "stco", "reco"])
+            if NEW["coco"] is None and emdl["coco_type"] is not None:
+                raise Exception(fmt("contents cost is mandatory for "
+                                    "<coco_type=%s>" % emdl["coco_type"]))
+            return "OK"
+        else:
+            raise Exception(fmt("number of units is mandatory for models "
+                                "with unit type <count>"))
 
     if NEW["stco"] is None and emdl["category"] != "population":
         raise Exception(fmt("structural cost is mandatory for category <%s>" %
@@ -343,6 +379,7 @@ $$ LANGUAGE plpythonu;
 
 COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
+
 
 -- Damage Distribution, Per Asset
 CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
@@ -612,11 +649,11 @@ CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
-CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
+CREATE TRIGGER oqmif_exposure_model_before_insert_trig
 BEFORE INSERT ON oqmif.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
-CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
+CREATE TRIGGER oqmif_exposure_data_before_insert_trig
 BEFORE INSERT ON oqmif.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 

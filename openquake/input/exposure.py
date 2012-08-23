@@ -39,7 +39,8 @@ class ExposureDBWriter(object):
         ("area_type", "areaType"), ("area_unit", "areaUnit"),
         ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
         ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
-        ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]
+        ("stco_type", "stcoType"), ("stco_unit", "stcoUnit"),
+        ("unit_type", "unitType")]
 
     def __init__(self, smi, owner=None):
         """Create a new serializer for the specified user"""
@@ -102,7 +103,7 @@ class ExposureDBWriter(object):
         for odata in occupancy:
             oobj = models.Occupancy(exposure_data=data,
                                     occupants=odata.occupants,
-                                    description=odata.description)
+                                    category=odata.description)
             oobj.save()
 
 

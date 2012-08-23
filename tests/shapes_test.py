@@ -27,8 +27,6 @@ from numpy import allclose
 from openquake import shapes
 from openquake.utils import round_float
 
-from tests.utils import helpers
-
 
 def coord_list_from_wkt(wkt):
     """
@@ -350,7 +348,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_func = shapes.VulnerabilityFunction(cls.IMLS_GOOD,
-            cls.LOSS_RATIOS_GOOD, cls.COVS_GOOD)
+            cls.LOSS_RATIOS_GOOD, cls.COVS_GOOD, "LN")
 
     def test_vuln_func_constructor_with_good_input(self):
         """
@@ -358,7 +356,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         known-good input.
         """
         shapes.VulnerabilityFunction(self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
-            self.COVS_GOOD)
+            self.COVS_GOOD, "LN")
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
         """
@@ -369,13 +367,13 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             - IML list ordered improperly
         """
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_BAD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+            self.IMLS_BAD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_DUPE, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+            self.IMLS_DUPE, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+            self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
 
     def test_vuln_func_constructor_raises_on_bad_cov(self):
         """
@@ -386,13 +384,13 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             - CoV list which is longer than the IML list
         """
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_BAD)
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_BAD, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_SHORT)
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_SHORT, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_LONG)
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_LONG, "LN")
 
     def test_vuln_func_constructor_raises_on_bad_loss_ratios(self):
         """
@@ -403,29 +401,30 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             - loss ratio list which is longer than the IML list
         """
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_BAD, self.COVS_GOOD)
+            self.IMLS_GOOD, self.LOSS_RATIOS_BAD, self.COVS_GOOD, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_SHORT, self.COVS_GOOD)
+            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_SHORT, self.COVS_GOOD, "LN")
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD)
+            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD, "LN")
 
-    def test_from_dict(self):
+    def test_from_tuple(self):
         """
-        Test that a VulnerabilityFunction can be created from dictionary of
-        IML, Loss Ratio, and CoV values.
+        Test that a VulnerabilityFunction can be created from a tuple
+        of values
         """
-        test_dict = {
+        data_dict = {
             '0.005': [0.1, 0.2],
             '0.007': [0.3, 0.4],
             0.0098: [0.5, 0.6]}
 
-        vuln_curve = shapes.VulnerabilityFunction.from_dict(test_dict)
+        vuln_curve = shapes.VulnerabilityFunction.from_tuple(("BT", data_dict))
 
         self.assertEqual([0.005, 0.007, 0.0098], vuln_curve._imls)
         self.assertEqual([0.1, 0.3, 0.5], vuln_curve._loss_ratios)
         self.assertEqual([0.2, 0.4, 0.6], vuln_curve._covs)
+        self.assertEqual("BT", vuln_curve.distribution)
 
     def test_from_json(self):
         """
@@ -433,13 +432,14 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         properly formatted JSON string.
         """
         vuln_func_json = \
-            '{"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}'
+    '["BT", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
 
         vuln_curve = shapes.VulnerabilityFunction.from_json(vuln_func_json)
 
         self.assertEqual([0.005, 0.007, 0.0098], vuln_curve._imls)
         self.assertEqual([0.1, 0.3, 0.5], vuln_curve._loss_ratios)
         self.assertEqual([0.2, 0.4, 0.6], vuln_curve._covs)
+        self.assertEqual("BT", vuln_curve.distribution)
 
     def test_to_json(self):
         """
@@ -450,10 +450,10 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         loss_ratios = [0.1, 0.3, 0.5]
         covs = [0.2, 0.4, 0.6]
 
-        vuln_func = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_func = shapes.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
 
         expected_json = \
-            '{"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}'
+    '["LN", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
 
         # The JSON data (which is essentially a dict) may not come out with the
         # data ordered in a predictable way. So, we'll decode the expected and
@@ -475,8 +475,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         loss_ratios = [0.0, 1.0]
         covs = [0.05, 0.05]
 
-        func1 = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
-        func2 = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        func1 = shapes.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
+        func2 = shapes.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
 
         self.assertEqual(func1, func2)
 
@@ -588,7 +588,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         """
         Test the 'is_empty' property of a vulnerability function.
         """
-        empty_func = shapes.VulnerabilityFunction([], [], [])
+        empty_func = shapes.VulnerabilityFunction([], [], [], "LN")
 
         # Test empty function:
         self.assertTrue(empty_func.is_empty)
@@ -783,8 +783,7 @@ class ShapesUtilsTestCase(unittest.TestCase):
         test = lambda result, site1, site2: self.assertAlmostEqual(
             result, shapes.hdistance(site1.latitude, site1.longitude,
                                      site2.latitude, site2.longitude),
-            places=6
-        )
+            places=6)
         test(6382.5960025, site1, site2)
         test(6404.835013, site3, site1)
         test(13565.796382, site5, site4)
@@ -795,24 +794,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
         test(60.6198752, site3, site6)
         test(48.2952067, site5, site3)
         test(43.7518411, site5, site6)
-
-
-class FieldTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.gmf_string = open(helpers.get_data_path("gmfs.json")).readline()
-        region = shapes.Region.from_coordinates(
-                 [(-118.30, 34.12), (-118.18, 34.12),
-                 (-118.18, 34.00), (-118.30, 34.00)])
-        region.cell_size = 0.02
-        self.grid = region.grid
-
-    def test_can_serialize_field(self):
-        field_set = shapes.FieldSet.from_json(self.gmf_string, grid=self.grid)
-        for field in field_set:
-            print field.field
-            self.assertTrue(field)
-            print field.get(5, 5)
 
 
 class GridTestCase(unittest.TestCase):
