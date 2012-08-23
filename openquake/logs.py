@@ -47,10 +47,26 @@ LOG = logging.getLogger()
 HAZARD_LOG = logging.getLogger('hazard')
 
 
-def log_progress(msg, *args, **kwargs):
+# Progress report message prefixes
+PR_PREFIXES = ["**", "**  >"]
+
+
+def _log_progress(msg, *args, **kwargs):
     """Log the message using the progress reporting logging level."""
     LOG._log(logging.PROGRESS, msg, args, **kwargs)
 
+
+def log_progress(msg, ilvl=1):
+    """Log the progress message observing the indentation level.
+
+    :param str msg: the progress report message to log
+    :param int ilvl: indentation level
+    """
+    if ilvl < 1 or ilvl > len(PR_PREFIXES):
+        ilvl = 0
+    else:
+        ilvl -= 1
+    _log_progress("%s %s" % (PR_PREFIXES[ilvl], msg))
 
 def log_percent_complete(job_id, ctype):
     """Log a message when the percentage completed changed for a calculation.
@@ -78,8 +94,7 @@ def log_percent_complete(job_id, ctype):
 
     # Only report the percentage completed if it is above the last value shown
     if percent_complete > lvr:
-        log_progress("**  > %s calculation %3d%% complete" %
-                     (ctype, percent_complete))
+        log_progress("%s %3d%% complete" % (ctype, percent_complete), 2)
         stats.pk_set(job_id, "lvr", percent_complete)
 
     return percent_complete
