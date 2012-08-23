@@ -1250,7 +1250,7 @@ class GmfSet(djm.Model):
 
     def __iter__(self):
         """
-        Returns a generator for walking through all child :class:`Gmf` objects.
+        Iterator for walking through all child :class:`Gmf` objects.
         """
         return Gmf.objects.filter(gmf_set=self.id).iterator()
 
@@ -1270,7 +1270,7 @@ class Gmf(djm.Model):
 
     def __iter__(self):
         """
-        Returns a generator for walking through all child :class:`Gmf` objects.
+        Iterator for walking through all child :class:`Gmf` objects.
         """
         return GmfNode.objects.filter(gmf=self.id).iterator()
 
