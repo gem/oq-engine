@@ -252,7 +252,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 215)
+        self.assertEqual(info['lineno'], 216)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
@@ -425,5 +425,5 @@ class LogPercentCompleteTestCase(unittest.TestCase):
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(20, rv)
             self.assertEqual(1, lpm.call_count)
-            self.assertEqual("**  > hazard calculation  20% complete",
+            self.assertEqual("hazard calculation  20% complete",
                              lpm.call_args_list[0][0][0])
