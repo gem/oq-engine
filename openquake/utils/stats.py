@@ -66,7 +66,7 @@ STATS_KEYS = {
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
 
     # The last percent complete figure that was reported to the end user
-    "lfr": ("g", "gen:lfr", "t"),
+    "lvr": ("g", "gen:lvr", "t"),
 
     # The total amount of work for a nhlib-based hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
