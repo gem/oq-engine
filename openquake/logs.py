@@ -71,7 +71,7 @@ def log_percent_complete(job_id, ctype):
         return 0
 
     percent = total / 100.0
-    percent_complete = done/percent
+    percent_complete = done / percent
     # Get the last value reported
     lvr = stats.pk_get(job_id, "lvr", cast2int=False)
     lvr = float(lvr) if lvr else 0.0
