@@ -68,9 +68,14 @@ def log_percent_complete(job_id, area):
     if percent < 1.0:
         percent = 1.0
 
-    if done % percent < 1.5:
+    percent_complete = done/percent
+    lfr = stats.pk_get(job_id, "lfr", cast2int=False)
+    lfr = float(lfr) if lfr else 0.0
+
+    if percent_complete > lfr:
         log_progress("**  > %s calculation %3d%% complete" %
-                     (area, done/percent))
+                     (area, percent_complete))
+        stats.pk_set(job_id, "lfr", percent_complete)
 
 
 def init_logs_amqp_send(level, job_id):
