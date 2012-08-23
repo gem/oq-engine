@@ -84,7 +84,7 @@ def log_percent_complete(job_id, ctype):
     key = "nhzrd_done" if ctype == "hazard" else "nrisk_done"
     done = stats.pk_get(job_id, key)
 
-    if done <= 0:
+    if done <= 0 or total <= 0:
         return 0
 
     percent = total / 100.0
