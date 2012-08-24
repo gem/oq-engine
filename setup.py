@@ -21,7 +21,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
     ],
-    packages = find_packages(exclude=['bin', 'bin.*', 'qa_tests', 'tools', "tests", "tests.*", ".*oqpath.*" ]),
+    packages = find_packages(exclude=['bin', 'bin.*', 'qa_tests', 'tools', "tests", "tests.*", ".*oqpath.*", "openquake.nrml.tests", "openquake.nrml.tests.*" ]),
     include_package_data=True,
     package_data={'openquake': ['db/schema/*',
                                 'nrml/schema/hazard/*', 'nrml/schema/risk/*', 'nrml/schema/gml/*',
