@@ -1,0 +1,7 @@
+--- a/openquake/nrml/run_tests
++++ b/openquake/nrml/run_tests
+@@ -0,0 +1,3 @@
++#!/bin/bash
++
++xmllint --noout --schema schema/nrml.xsd schema/examples/*.xml
+
