@@ -19,7 +19,7 @@
 
 import unittest
 
-from bin import cache_gc
+from openquake.bin import cache_gc
 from openquake import kvs
 from tests.utils.helpers import patch
 
