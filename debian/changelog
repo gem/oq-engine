@@ -1,8 +1,21 @@
+python-oq (0.8.1-6+mop01) precise; urgency=low
+
+  * Updated branch with 0.8.1-5 version.
+  * Removed /usr/share/pyshared/bin directory with its content, no reason for it.
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 24 Aug 2012 11:01:29 +0200
+
+python-oq (0.8.1-1) precise; urgency=low
+
+  * new upstream release (LP: #1027030)
+
+ -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 20 Jul 2012 15:06:18 +0200
+
 python-oq (0.7.1-2+mop01) precise; urgency=low
 
   * first version with debian-packaging-related files.
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 May 2012 19:44:47 +0200
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 May 2012 19:46:47 +0200
 
 python-oq (0.7.1-1) precise; urgency=low
 
