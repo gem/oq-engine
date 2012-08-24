@@ -5,7 +5,25 @@
  
  # Openquake version
 -oq_version="0.5.0"
-+oq_version="0.7.0"
++oq_version="0.8.1"
  
  # Stop at the first error in a batch to give a chance to see the error message
  psql_batch_options='--set ON_ERROR_STOP=1'
+--- a/openquake/__init__.py
++++ b/openquake/__init__.py
+@@ -48,8 +48,6 @@
+ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+ """
+ 
+-import os
+-
+ # Please note: the release date should always have a value of 0 (zero) in the
+ # master branch. It will only be set to a meaningful value in *packaged* and
+ # released OpenQuake code.
+@@ -58,6 +56,3 @@
+     8,  # minor
+     1,  # sprint number
+     0)  # release date (seconds since the "Epoch"), do *not* set in master!
+-
+-# The path to the OpenQuake root directory
+-OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

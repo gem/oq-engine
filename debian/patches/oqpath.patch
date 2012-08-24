@@ -12,16 +12,25 @@
  
 --- a/bin/openquake
 +++ b/bin/openquake
-@@ -65,9 +65,6 @@
+@@ -52,7 +52,6 @@
+ 
+ import argparse
+ import getpass
+-import logging
+ import os
+ import sys
+ 
+@@ -65,8 +64,8 @@
  except ImportError:
      sys.path.append('/usr/openquake')
  
 -import oqpath
 -oqpath.set_oq_path()
--
++if not os.environ.get("DJANGO_SETTINGS_MODULE"):
++    os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
+ 
  from openquake import __version__
  from openquake.export import core as export
- from openquake.utils import version as utils_version
 --- a/bin/openquake_supervisor
 +++ b/bin/openquake_supervisor
 @@ -25,9 +25,6 @@
