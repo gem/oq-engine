@@ -61,7 +61,7 @@ class ExportUHSTestCase(unittest.TestCase):
             # Split into a list, 1 result for each row in the output.
             # The first row of output (the table header) is discarded.
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
-                ['bin/openquake', '--list-calculations']))
+                ['openquake/bin/openquake', '--list-calculations']))
 
             check_list_calcs(self, listed_calcs, job.id)
 

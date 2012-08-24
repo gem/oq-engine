@@ -100,7 +100,7 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
                 oq_job=job.id, output_type="collapse_map")
 
             calcs = helpers.prepare_cli_output(subprocess.check_output(
-                ["bin/openquake", "--list-calculations"]))
+                ["openquake/bin/openquake", "--list-calculations"]))
 
             # we have the calculation...
             check_list_calcs(self, calcs, job.id)
@@ -148,7 +148,7 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             # and collapse map
             exports = helpers.prepare_cli_output(
-                subprocess.check_output(["bin/openquake", "--export",
+                subprocess.check_output(["openquake/bin/openquake", "--export",
                 str(omap.id), export_target_dir]))
 
             expected_file = os.path.join(export_target_dir,
