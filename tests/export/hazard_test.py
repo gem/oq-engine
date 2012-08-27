@@ -70,11 +70,13 @@ class HazardCurveExportTestCase(unittest.TestCase):
 class EventBasedGMFExportTestCase(unittest.TestCase):
 
     @attr('slow')
-    def test_export_gmf(self):
-        # Run an event-based hazard calculation to compute GMFs
-        # Call the exporter and verify that files were created
-        # Since the GMF XML writer (in `nrml.writers`) is concerned with
-        # correctly generating the XML, we don't test that here.
+    def test_export_ses_and_gmf(self):
+        # Run an event-based hazard calculation to compute SESs and GMFs
+        # Call the exporters for both SES and GMF results  and verify that
+        # files were created
+        # Since the XML writers (in `nrml.writers`) are concerned with
+        # correctly generating the XML, we don't test that here...
+        # but we should still have an end-to-end QA test.
         target_dir = tempfile.mkdtemp()
 
         try:
@@ -91,6 +93,25 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             # 2 GMFs, 2 SESs
             self.assertEqual(4, len(outputs))
 
+            #######
+            # SESs:
+            ses_outputs = outputs.filter(output_type='ses')
+            self.assertEqual(2, len(ses_outputs))
+
+            exported_files = []
+            for ses_output in ses_outputs:
+                files = hazard.export(ses_output.id, target_dir)
+                exported_files.extend(files)
+
+            self.assertEqual(2, len(exported_files))
+
+            for f in exported_files:
+                self.assertTrue(os.path.exists(f))
+                self.assertTrue(os.path.isabs(f))
+                self.assertTrue(os.path.getsize(f) > 0)
+
+            #######
+            # GMFs:
             gmf_outputs = outputs.filter(output_type='gmf')
             self.assertEqual(2, len(gmf_outputs))
 
