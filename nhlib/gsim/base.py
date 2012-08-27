@@ -434,7 +434,17 @@ def _truncnorm_sf(truncation_level, values):
         distribution.
     :returns:
         Numpy array of survival function results in a range between 0 and 1.
+
+    >>> from scipy.stats import truncnorm
+    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
+    True
     """
+    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
+    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
+
+    # "CDF" in comments refers to cumulative distribution function
+    # of non-truncated distribution with that mu and sigma values.
+
     # assume symmetric truncation, that is ``a = - truncation_level``
     # and ``b = + truncation_level``.
 
@@ -442,12 +452,17 @@ def _truncnorm_sf(truncation_level, values):
     phi_b = ndtr(truncation_level)
 
     # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
-    # ``CDF(a) == ndtr(a) == 1 - ndtr(b)``
+    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
     z = phi_b * 2 - 1
 
-    # calculate the probabilities of exceeding, that is result
-    # of survival function of ``values`` and restrict it to the
-    # interval where probability is defined -- 0..1
+    # calculate the result of survival function of ``values``,
+    # and restrict it to the interval where probability is defined --
+    # 0..1. here we use some transformations of the original formula
+    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
+    # number of arithmetic operations and function calls:
+    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
@@ -459,7 +474,17 @@ def _norm_sf(values):
 
     ``values`` parameter and the return value are the same
     as in :func:`_truncnorm_sf`.
+
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _norm_sf(0.12345)
+    True
     """
+    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
+    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
+    # that the normal distribution is symmetric with respect to 0)
+    # the integral between ``[x, +infinity]`` (that is the survival
+    # function) is equal to the integral between ``[-infinity, -x]``
+    # (that is the CDF at ``- x``).
     return ndtr(- values)
 
 
