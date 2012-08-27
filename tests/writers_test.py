@@ -75,8 +75,8 @@ class SESRupture(object):
 
     def __init__(self, magnitude, strike, dip, rake, tectonic_region_type,
                  is_from_fault_source, lons=None, lats=None, depths=None,
-                 top_left=None, top_right=None, bottom_right=None,
-                 bottom_left=None):
+                 top_left_corner=None, top_right_corner=None,
+                 bottom_right_corner=None, bottom_left_corner=None):
         self.magnitude = magnitude
         self.strike = strike
         self.dip = dip
@@ -86,10 +86,10 @@ class SESRupture(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
-        self.top_left = top_left
-        self.top_right = top_right
-        self.bottom_right = bottom_right
-        self.bottom_left = bottom_left
+        self.top_left_corner = top_left_corner
+        self.top_right_corner = top_right_corner
+        self.bottom_right_corner = bottom_right_corner
+        self.bottom_left_corner = bottom_left_corner
 
 
 class HazardCurveXMLWriterTestCase(unittest.TestCase):
@@ -311,10 +311,10 @@ class SESXMLWriterTestCase(unittest.TestCase):
         ruptures1 = [
             SESRupture(
                 5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust', False,
-                top_left=(1.1, 1.01, 10.0),
-                top_right=(2.1, 2.01, 20.0),
-                bottom_right=(3.1, 3.01, 30.0),
-                bottom_left=(4.1, 4.01, 40.0)),
+                top_left_corner=(1.1, 1.01, 10.0),
+                top_right_corner=(2.1, 2.01, 20.0),
+                bottom_right_corner=(3.1, 3.01, 30.0),
+                bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(
                 6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
                 lons=[
@@ -335,10 +335,10 @@ class SESXMLWriterTestCase(unittest.TestCase):
         ruptures2 = [
             SESRupture(
                 5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust', False,
-                top_left=(1.1, 1.01, 10.0),
-                top_right=(2.1, 2.01, 20.0),
-                bottom_right=(3.1, 3.01, 30.0),
-                bottom_left=(4.1, 4.01, 40.0)),
+                top_left_corner=(1.1, 1.01, 10.0),
+                top_right_corner=(2.1, 2.01, 20.0),
+                bottom_right_corner=(3.1, 3.01, 30.0),
+                bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(
                 6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust', True,
                 lons=[

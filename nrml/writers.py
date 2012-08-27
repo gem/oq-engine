@@ -279,10 +279,10 @@ class SESXMLWriter(object):
             vertices. In this case, the rupture should have the following
             attributes:
 
-            * `top_left`
-            * `top_right`
-            * `bottom_right`
-            * `bottom_left`
+            * `top_left_corner`
+            * `top_right_corner`
+            * `bottom_right_corner`
+            * `bottom_left_corner`
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
@@ -370,10 +370,10 @@ class SESXMLWriter(object):
         # * bottom right
         # * bottom left
         for el_name, corner in (
-            ('topLeft', rupture.top_left),
-            ('topRight', rupture.top_right),
-            ('bottomRight', rupture.bottom_right),
-            ('bottomLeft', rupture.bottom_left)):
+            ('topLeft', rupture.top_left_corner),
+            ('topRight', rupture.top_right_corner),
+            ('bottomRight', rupture.bottom_right_corner),
+            ('bottomLeft', rupture.bottom_left_corner)):
 
             corner_elem = etree.SubElement(ps_elem, el_name)
             corner_elem.set('lon', str(corner[0]))
