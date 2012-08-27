@@ -187,10 +187,28 @@ class Mesh(object):
 
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
-        # value of 40 km gives maximum error of 310 meters for meshes
-        # with spacing of 10 km and 5.4 km for meshes with spacing
-        # of 40 km and it wouldn't work right for meshes with more
-        # than 56 km between points.
+        # lower values increase the maximum possible error, higher
+        # values reduce the efficiency of that filtering. the maximum
+        # error is equal to the maximum difference between a distance
+        # from site to two adjacent points of the mesh and distance
+        # from site to the line connecting them. thus the error is
+        # a function of distance threshold and mesh spacing. the error
+        # is maximum when the site lies on a perpendicular to the line
+        # connecting points of the mesh and that passes the middle
+        # point between them. the error then can be calculated as
+        # ``err = trsh - d = trsh - \sqrt(trsh^2 - (ms/2)^2)``, where
+        # ``trsh`` and ``d`` are distance to mesh points (the one
+        # we found on the previous step) and distance to the line
+        # connecting them (the actual distance) and ``ms`` is mesh
+        # spacing. the threshold of 40 km gives maximum error of 314
+        # meters for meshes with spacing of 10 km and 5.36 km for
+        # meshes with spacing of 40 km. if mesh spacing is over
+        # ``(trsh / \sqrt(2)) * 2`` then points lying in the middle
+        # of mesh cells (that is inside the polygon) will be filtered
+        # out by the threshold and have positive distance instead of 0.
+        # so for threshold of 40 km mesh spacing should not be more
+        # than 56 km (typical values are 5 to 10 km).
+
         [idxs] = (distances < 40).nonzero()
         if not len(idxs):
             # no point is close enough, return distances as they are
