@@ -27,17 +27,79 @@ import socket
 import threading
 
 import kombu
-from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
+from openquake.signalling import AMQPMessageConsumer, amqp_connect
+from openquake.utils import stats
+
+
+# Place the new level between info and warning
+logging.PROGRESS = 25
+logging.addLevelName(logging.PROGRESS, "PROGRESS")
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
+          'progress': logging.PROGRESS,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
 LOG = logging.getLogger()
 HAZARD_LOG = logging.getLogger('hazard')
+
+
+# Progress report message prefixes
+PR_PREFIXES = ["**", "**  >"]
+
+
+def _log_progress(msg, *args, **kwargs):
+    """Log the message using the progress reporting logging level."""
+    LOG._log(logging.PROGRESS, msg, args, **kwargs)
+
+
+def log_progress(msg, ilvl=1):
+    """Log the progress message observing the indentation level.
+
+    :param str msg: the progress report message to log
+    :param int ilvl: indentation level
+    """
+    if ilvl < 1 or ilvl > len(PR_PREFIXES):
+        ilvl = 0
+    else:
+        ilvl -= 1
+    _log_progress("%s %s" % (PR_PREFIXES[ilvl], msg))
+
+
+def log_percent_complete(job_id, ctype):
+    """Log a message when the percentage completed changed for a calculation.
+
+    :param int job_id: identifier of the job in question
+    :param str ctype: calculation type, one of: hazard, risk
+    """
+    if ctype not in ("hazard", "risk"):
+        LOG.warn("Unknown calculation type: '%s'" % ctype)
+        return -1
+
+    key = "nhzrd_total" if ctype == "hazard" else "nrisk_total"
+    total = stats.pk_get(job_id, key)
+    key = "nhzrd_done" if ctype == "hazard" else "nrisk_done"
+    done = stats.pk_get(job_id, key)
+
+    if done <= 0 or total <= 0:
+        return 0
+
+    percent = total / 100.0
+    # Store percentage complete as well as the last value reported as integers
+    # in order to avoid reporting the same percentage more than once.
+    percent_complete = int(done / percent)
+    # Get the last value reported
+    lvr = stats.pk_get(job_id, "lvr")
+
+    # Only report the percentage completed if it is above the last value shown
+    if percent_complete > lvr:
+        log_progress("%s %3d%% complete" % (ctype, percent_complete), 2)
+        stats.pk_set(job_id, "lvr", percent_complete)
+
+    return percent_complete
 
 
 def init_logs_amqp_send(level, job_id):
