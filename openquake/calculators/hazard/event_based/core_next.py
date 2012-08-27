@@ -145,8 +145,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         logs.LOG.debug('> computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
-        # This will be the "container" for all compute stochastic event set
-        # rupture results for this task.
+        # This is the container for all ruptures for this stochastic event set
+        # (specified by `ordinal` and the logic tree realization).
+        # NOTE: Many tasks can contribute ruptures to this SES.
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
