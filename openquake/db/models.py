@@ -1125,6 +1125,12 @@ class SESCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
 
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`SES` objects.
+        """
+        return SES.objects.filter(ses_collection=self.id).iterator()
+
 
 class SES(djm.Model):
     """
@@ -1141,6 +1147,12 @@ class SES(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
+
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`SESRupture` objects.
+        """
+        return SESRupture.objects.filter(ses=self.id).iterator()
 
 
 class SESRupture(djm.Model):
