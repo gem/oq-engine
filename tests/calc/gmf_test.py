@@ -266,7 +266,7 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
 
         numpy.random.seed(23)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
+        corma = cormo._get_correlation_matrix(self.sites, self.imt1)
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1], self.gsim,
             truncation_level=None, realizations=6000,
