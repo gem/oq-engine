@@ -29,11 +29,23 @@ suggestions and criticisms from the community are always very welcome.
 
 Copyright (C) 2012 GEM Foundation.
 """
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
+
+import numpy
 
 
 version = "0.01"
 url = "http://github.com/gem/nhlib"
+
+geoutils_speedups = Extension('nhlib.geo._utils_speedups',
+                              sources=['speedups/geoutilsmodule.c'],
+                              extra_compile_args=['-Wall', '-O2'])
+geodetic_speedups = Extension('nhlib.geo._geodetic_speedups',
+                              sources=['speedups/geodeticmodule.c'],
+                              extra_compile_args=['-Wall', '-O2'])
+
+include_dirs = [numpy.get_include()]
+
 
 setup(
     name='nhlib',
@@ -47,6 +59,8 @@ setup(
         'scipy',
         'shapely'
     ],
+    ext_modules=[geodetic_speedups, geoutils_speedups],
+    include_dirs=include_dirs,
     scripts=['tests/gsim/check_gsim.py'],
     maintainer='Anton Gritsay',
     maintainer_email='anton@openquake.org',
