@@ -44,9 +44,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
             calc_args = ['bin/openquake', '--run-hazard', cfg]
 
             # run the calculation to create something to export
-            with open(os.devnull, 'wb') as silence:
-                retcode = subprocess.check_call(
-                    calc_args, stdout=silence, stderr=silence)
+            retcode = helpers.run_hazard_job(cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -61,6 +59,49 @@ class HazardCurveExportTestCase(unittest.TestCase):
                 exported_files.extend(files)
 
             self.assertEqual(4, len(exported_files))
+            for f in exported_files:
+                self.assertTrue(os.path.exists(f))
+                self.assertTrue(os.path.isabs(f))
+                self.assertTrue(os.path.getsize(f) > 0)
+        finally:
+            shutil.rmtree(target_dir)
+
+
+class EventBasedGMFExportTestCase(unittest.TestCase):
+
+    @attr('slow')
+    def test_export_gmf(self):
+        # Run an event-based hazard calculation to compute GMFs
+        # Call the exporter and verify that files were created
+        # Since the GMF XML writer (in `nrml.writers`) is concerned with
+        # correctly generating the XML, we don't test that here.
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('event_based_hazard/job.ini')
+            calc_args = ['bin/openquake', '--run-hazard', cfg]
+
+            # run the calculation to create something to export
+            retcode = helpers.run_hazard_job(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+            # 2 GMFs, 2 SESs
+            self.assertEqual(4, len(outputs))
+
+            gmf_outputs = outputs.filter(output_type='gmf')
+            self.assertEqual(2, len(gmf_outputs))
+
+            exported_files = []
+            for gmf_output in gmf_outputs:
+                files = hazard.export(gmf_output.id, target_dir)
+                exported_files.extend(files)
+
+            self.assertEqual(2, len(exported_files))
+            # Check the file paths exist, are absolute, and the files aren't
+            # empty.
             for f in exported_files:
                 self.assertTrue(os.path.exists(f))
                 self.assertTrue(os.path.isabs(f))
