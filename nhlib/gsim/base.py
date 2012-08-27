@@ -23,6 +23,7 @@ import abc
 import math
 
 import scipy.stats
+from scipy.special import ndtr
 import numpy
 
 from nhlib import const
@@ -228,17 +229,16 @@ class GroundShakingIntensityModel(object):
             # use real normal distribution
             assert (const.StdDev.TOTAL
                     in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            if truncation_level is None:
-                distribution = scipy.stats.norm()
-            else:
-                distribution = scipy.stats.truncnorm(- truncation_level,
-                                                     truncation_level)
             imls = self.to_distribution_values(imls)
             mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
             stddev = stddev.reshape(stddev.shape + (1, ))
-            return distribution.sf((imls - mean) / stddev)
+            values = (imls - mean) / stddev
+            if truncation_level is None:
+                return _norm_sf(values)
+            else:
+                return _truncnorm_sf(truncation_level, values)
 
     def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                          truncation_level, n_epsilons):
@@ -417,6 +417,75 @@ class GroundShakingIntensityModel(object):
         if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
             raise ValueError('imt %s is not supported by %s' %
                              (type(imt).__name__, type(self).__name__))
+
+
+def _truncnorm_sf(truncation_level, values):
+    """
+    Survival function for truncated normal distribution.
+
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation.
+
+    :param truncation_level:
+        Positive float number representing the truncation on both sides
+        around the mean, in units of sigma.
+    :param values:
+        Numpy array of values as input to a survival function for the given
+        distribution.
+    :returns:
+        Numpy array of survival function results in a range between 0 and 1.
+
+    >>> from scipy.stats import truncnorm
+    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
+    True
+    """
+    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
+    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
+
+    # "CDF" in comments refers to cumulative distribution function
+    # of non-truncated distribution with that mu and sigma values.
+
+    # assume symmetric truncation, that is ``a = - truncation_level``
+    # and ``b = + truncation_level``.
+
+    # calculate CDF of b
+    phi_b = ndtr(truncation_level)
+
+    # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
+    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
+    z = phi_b * 2 - 1
+
+    # calculate the result of survival function of ``values``,
+    # and restrict it to the interval where probability is defined --
+    # 0..1. here we use some transformations of the original formula
+    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
+    # number of arithmetic operations and function calls:
+    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
+    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
+
+
+def _norm_sf(values):
+    """
+    Survival function for normal distribution.
+
+    Assumes zero mean and standard deviation equal to one.
+
+    ``values`` parameter and the return value are the same
+    as in :func:`_truncnorm_sf`.
+
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _norm_sf(0.12345)
+    True
+    """
+    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
+    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
+    # that the normal distribution is symmetric with respect to 0)
+    # the integral between ``[x, +infinity]`` (that is the survival
+    # function) is equal to the integral between ``[-infinity, -x]``
+    # (that is the CDF at ``- x``).
+    return ndtr(- values)
 
 
 class GMPE(GroundShakingIntensityModel):
