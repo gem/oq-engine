@@ -1135,6 +1135,9 @@ class SES(djm.Model):
     """
     ses_collection = djm.ForeignKey('SESCollection')
     investigation_time = djm.FloatField()
+    # Order number of this Stochastic Event Set in a series of SESs
+    # (for a given logic tree realization).
+    ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
