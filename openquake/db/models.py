@@ -1243,7 +1243,7 @@ class GmfSet(djm.Model):
     investigation_time = djm.FloatField()
     # Keep track of the stochastic event set which this GMF set is associated
     # with.
-    ses_number = djm.IntegerField()
+    ses_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
