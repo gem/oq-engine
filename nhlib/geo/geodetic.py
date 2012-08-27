@@ -38,12 +38,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     :returns:
         Distance in km, floating point scalar or numpy array of such.
     """
-    lons1 = numpy.radians(lons1)
-    lats1 = numpy.radians(lats1)
-    assert lons1.shape == lats1.shape
-    lons2 = numpy.radians(lons2)
-    lats2 = numpy.radians(lats2)
-    assert lons2.shape == lats2.shape
+    lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
     distance = numpy.arcsin(numpy.sqrt(
         numpy.sin((lats1 - lats2) / 2.0) ** 2.0
         + numpy.cos(lats1) * numpy.cos(lats2)
@@ -65,12 +60,7 @@ def azimuth(lons1, lats1, lons2, lats2):
         Azimuth as an angle between direction to north from first point and
         direction to the second point measured clockwise in decimal degrees.
     """
-    lons1 = numpy.radians(lons1)
-    lats1 = numpy.radians(lats1)
-    assert lons1.shape == lats1.shape
-    lons2 = numpy.radians(lons2)
-    lats2 = numpy.radians(lats2)
-    assert lons2.shape == lats2.shape
+    lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
     cos_lat2 = numpy.cos(lats2)
     true_course = numpy.degrees(numpy.arctan2(
         numpy.sin(lons1 - lons2) * cos_lat2,
@@ -97,6 +87,44 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     hdist = geodetic_distance(lons1, lats1, lons2, lats2)
     vdist = depths1 - depths2
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
+
+
+def min_geodetic_distance(mlons, mlats, slons, slats):
+    """
+    Same as :func:`min_distance`, but calculates only minimum geodetic distance
+    (doesn't accept depth values) and doesn't support ``indices=True`` mode.
+
+    This is an optimized version of :meth:`min_distance` that is suitable
+    for calculating the minimum distance between first mesh and each point
+    of the second mesh when both are defined on the earth surface.
+    """
+    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
+    orig_shape = slons.shape
+    if slons.ndim == 0:
+        slons = slons.reshape((1, ))
+        slats = slats.reshape((1, ))
+    cos_mlats = numpy.cos(mlats)
+    cos_slats = numpy.cos(slats)
+
+    result = numpy.fromiter(
+        (
+            # next five lines are the same as in geodetic_distance()
+            numpy.arcsin(numpy.sqrt(
+                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
+                + cos_mlats * cos_slats[i]
+                  * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+            ).clip(-1., 1.)).min()
+            for i in xrange(len(slats))
+        ),
+        dtype=float, count=len(slats)
+    ) * (2 * EARTH_RADIUS)
+
+    if not orig_shape:
+        # original target point was a scalar, so return scalar as well
+        [result] = result
+        return result
+    else:
+        return result.reshape(orig_shape)
 
 
 def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
@@ -134,17 +162,21 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         of those three otherwise.
     """
     assert not indices or mlons.ndim > 0
-    assert mlons.shape == mlats.shape == mdepths.shape
-    slons, slats = numpy.array(slons), numpy.array(slats)
-    sdepths = numpy.array(sdepths)
-    assert slons.shape == slats.shape == sdepths.shape
+    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
+    mdepths = numpy.array(mdepths, float)
+    sdepths = numpy.array(sdepths, float)
+    assert mlons.shape == mdepths.shape
+    assert slons.shape == sdepths.shape
+
     orig_shape = slons.shape
-    mlons = numpy.radians(mlons.flat)
-    mlats = numpy.radians(mlats.flat)
+
+    mlons = mlons.reshape(-1)
+    mlats = mlats.reshape(-1)
     mdepths = mdepths.reshape(-1)
-    slons = numpy.radians(slons.flat)
-    slats = numpy.radians(slats.flat)
+    slons = slons.reshape(-1)
+    slats = slats.reshape(-1)
     sdepths = sdepths.reshape(-1)
+
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
 
@@ -154,7 +186,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
             numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
             + cos_mlats * cos_slats[i]
               * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
+        ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
         + (mdepths - sdepths[i]) ** 2
         for i in xrange(len(slats))
     )
@@ -380,3 +412,55 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
          * numpy.sin(distance_to_target / EARTH_RADIUS)).clip(-1, 1)
     )
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
+
+
+def _prepare_coords(lons1, lats1, lons2, lats2):
+    """
+    Convert two pairs of spherical coordinates in decimal degrees
+    to numpy arrays of radians. Makes sure that respective coordinates
+    in pairs have the same shape.
+    """
+    lons1 = numpy.array(numpy.radians(lons1))
+    lats1 = numpy.array(numpy.radians(lats1))
+    assert lons1.shape == lats1.shape
+    lons2 = numpy.array(numpy.radians(lons2))
+    lats2 = numpy.array(numpy.radians(lats2))
+    assert lons2.shape == lats2.shape
+    return lons1, lats1, lons2, lats2
+
+
+try:
+    from nhlib.geo import _geodetic_speedups
+except ImportError:
+    # speedups extension is not available
+    import warnings
+    warnings.warn("geodetic speedups are not available", RuntimeWarning)
+else:
+    from nhlib import speedups
+
+    def _c_min_geodetic_distance(mlons, mlats, slons, slats):
+        mlons, mlats, slons, slats = _prepare_coords(mlons, mlats,
+                                                     slons, slats)
+        mdepths = sdepths = numpy.array(0.0)
+        return _geodetic_speedups.min_distance(mlons, mlats, mdepths,
+                                               slons, slats, sdepths,
+                                               indices=False)
+
+    speedups.register(min_geodetic_distance, _c_min_geodetic_distance)
+    del _c_min_geodetic_distance
+
+
+    def _c_min_distance(mlons, mlats, mdepths,
+                        slons, slats, sdepths, indices=False):
+        assert not indices or mlons.ndim > 0
+        mlons, mlats, slons, slats = _prepare_coords(mlons, mlats,
+                                                     slons, slats)
+        mdepths = numpy.array(mdepths, float)
+        sdepths = numpy.array(sdepths, float)
+        assert mlons.shape == mdepths.shape
+        assert slons.shape == sdepths.shape
+        return _geodetic_speedups.min_distance(mlons, mlats, mdepths,
+                                               slons, slats, sdepths, indices)
+
+    speedups.register(min_distance, _c_min_distance)
+    del _c_min_distance

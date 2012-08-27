@@ -8,3 +8,4 @@ Other utility and private classes and module
     imt
     pmf
     geo/index
+    speedups
