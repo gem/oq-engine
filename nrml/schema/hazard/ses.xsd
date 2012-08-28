@@ -16,12 +16,40 @@
         <xs:attribute name="gsimTreePath" type="xs:string" use="required" />
     </xs:complexType>
 
+    <!--
+        Similar to `StochasticEventSetCollection`. The main difference is that this one
+        giant collection with a single `stochasticEventSet` element.
+
+        The tree paths here are also not relevant, in the case of a "complete logic tree"
+        Stochastic Event Set. A "complete logic tree" SES is made up of the following:
+
+        A single stochasticEventSetCollection, containing a single stochasticEventSet.
+        This SES contains all ruptures from all stochastic event sets from all logic tree
+        realizations.
+        The `investigationTime` for the stochasticEventSet is computed in the following way:
+
+        investigationTime = ses_investigation_time * N * M
+
+            where the `ses_investigation_time` is assumed to be the same for all SESs
+                (50.0 years, for example)
+            where N is the number of SESs computed per logic tree realization
+            where M is the number of total logic tree realizations
+    -->
+    <xs:complexType name="CompleteLogicTreeSESCollection">
+        <xs:sequence>
+            <xs:element name="stochasticEventSet" type="StochasticEventSet"
+                        minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+
+
     <xs:complexType name="StochasticEventSet">
         <xs:sequence>
             <xs:element name="rupture" type="SESRupture" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
         <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
     </xs:complexType>
+
 
     <xs:complexType name="SESRupture">
         <xs:choice>

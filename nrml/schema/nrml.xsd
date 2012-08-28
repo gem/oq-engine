@@ -71,6 +71,7 @@
             <!-- For Scenario GMFs -->
             <xs:element name="gmfSet" type="ScenarioGMFSet" />
             <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
+            <xs:element name="completeLogicTreeStochasticEventSetCollection" type="CompleteLogicTreeSESCollection" />
         </xs:choice>
     </xs:complexType>
 </xs:schema>
