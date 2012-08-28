@@ -88,10 +88,11 @@ def log_percent_complete(job_id, ctype):
         return 0
 
     percent = total / 100.0
-    percent_complete = done / percent
+    # Store percentage complete as well as the last value reported as integers
+    # in order to avoid reporting the same percentage more than once.
+    percent_complete = int(done / percent)
     # Get the last value reported
-    lvr = stats.pk_get(job_id, "lvr", cast2int=False)
-    lvr = float(lvr) if lvr else 0.0
+    lvr = stats.pk_get(job_id, "lvr")
 
     # Only report the percentage completed if it is above the last value shown
     if percent_complete > lvr:
