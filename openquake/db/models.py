@@ -1009,6 +1009,7 @@ class Output(djm.Model):
         (u'hazard_map', u'Hazard Map'),
         (u'gmf', u'Ground Motion Field'),
         (u'ses', u'Stochastic Event Set'),
+        (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
