@@ -106,15 +106,15 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
             investigation_time=10,
             imt="PGA", imls=[1, 2, 3])
 
-        self.a_location = helpers.random_location_generator()
+        self.a_location = helpers.random_location_generator(max_x=50, max_y=50)
         openquake.HazardCurveData.objects.create(
             hazard_curve=curve,
             location=self.a_location.wkt,
             poes=[random.random()])
 
         self.a_bigger_location = helpers.random_location_generator(
-            min_x=361,
-            min_y=361)
+            min_x=50,
+            min_y=50)
         openquake.HazardCurveData.objects.create(
             hazard_curve=curve,
             location=self.a_bigger_location.wkt,
