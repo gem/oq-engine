@@ -74,6 +74,7 @@ def _export_fn_map():
         'hazard_curve': export_hazard_curves,
         'gmf': export_gmf,
         'ses': export_ses,
+        'complete_lt_ses': export_ses,
     }
     return fn_map
 
@@ -182,8 +183,12 @@ def export_ses(output, target_dir):
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
     lt_rlz = ses_coll.lt_realization
-    sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-    gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    # The tree paths can be `None`, in the case of `complete logic tree` SES
+    sm_lt_path = None
+    gsim_lt_path = None
+    if lt_rlz is not None:
+        sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     filename = SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
     path = os.path.abspath(os.path.join(target_dir, filename))
