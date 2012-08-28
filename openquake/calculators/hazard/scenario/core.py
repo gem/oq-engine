@@ -30,10 +30,21 @@ from openquake import kvs
 from openquake import shapes
 from openquake.calculators.hazard.general import BaseHazardCalculator
 from openquake.output import hazard as hazard_output
+from openquake.utils import stats
 
 
 class ScenarioHazardCalculator(BaseHazardCalculator):
     """Scenario Event Based method for performing hazard calculations."""
+
+    def initialize_pr_data(self, num_calculations):
+        """
+        Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
+        stats.pk_set(self.job.id, "nhzrd_total", num_calculations)
+        stats.pk_set(self.job.id, "nhzrd_done", 0)
 
     @java.unpack_exception
     def execute(self):
@@ -45,7 +56,10 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client()
 
-        for cnum in xrange(self._number_of_calculations()):
+        num_calculations = self._number_of_calculations()
+        self.initialize_pr_data(num_calculations)
+
+        for cnum in xrange(num_calculations):
             gmf = self.compute_ground_motion_field(random_generator)
             imt = self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]
             self._serialize_gmf(gmf, imt, cnum)

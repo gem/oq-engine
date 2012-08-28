@@ -47,6 +47,16 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """Probabilistic Event Based method for performing Hazard calculations."""
 
+    def initialize_pr_data(self, num_calculations):
+        """
+        Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
+        stats.pk_set(self.job.id, "nhzrd_total", num_calculations)
+        stats.pk_set(self.job.id, "nhzrd_done", 0)
+
     @java.unpack_exception
     @general.create_java_cache
     def execute(self):
@@ -66,6 +76,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         histories = self.job_ctxt['NUMBER_OF_SEISMICITY_HISTORIES']
         realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        self.initialize_pr_data(histories * realization)
+
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
             % (histories, realizations))
