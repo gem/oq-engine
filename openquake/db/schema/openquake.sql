@@ -891,6 +891,7 @@ CREATE TABLE uiapi.output (
     --      hazard_map
     --      gmf
     --      ses
+    --      complete_lt_ses (complete logic tree SES)
     --      loss_curve
     --      loss_map
     --      collapse_map
@@ -901,7 +902,7 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'ses', 'loss_curve', 'loss_map', 'collapse_map',
+            'gmf', 'ses', 'complete_lt_ses', 'loss_curve', 'loss_map', 'collapse_map',
             'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
             'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
     last_update timestamp without time zone
