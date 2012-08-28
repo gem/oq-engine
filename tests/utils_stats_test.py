@@ -397,3 +397,45 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         # An empty list is returned in the absence of any failure counters
         stats.delete_job_counters(123)
         self.assertEqual([], stats.failure_counters(123))
+
+
+class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
+    """Tests the behaviour of utils.stats.count_progress()."""
+
+    def test_success_stats(self):
+        """
+        The success counter is incremented when the wrapped function
+        terminates without raising an exception.
+        """
+        area = "h"
+
+        @stats.count_progress(area)
+        def no_exception(job_id, items):
+            return 999
+
+        previous_value = stats.pk_get(11, "nhzrd_done")
+
+        # Call the wrapped function.
+        self.assertEqual(999, no_exception(11, range(5)))
+
+        value = stats.pk_get(11, "nhzrd_done")
+        self.assertEqual(5, (value - previous_value))
+
+    def test_failure_stats(self):
+        """
+        The failure counter is incremented when the wrapped function
+        terminates raises an exception.
+        """
+        area = "r"
+
+        @stats.count_progress(area)
+        def raise_exception(job_id, items):
+            raise NotImplementedError
+
+        previous_value = stats.pk_get(22, "nrisk_failed")
+
+        # Call the wrapped function.
+        self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
+
+        value = stats.pk_get(22, "nrisk_failed")
+        self.assertEqual(6, (value - previous_value))
