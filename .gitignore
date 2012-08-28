@@ -2,3 +2,5 @@
 .ropeproject
 *.*.swp
 doc/build
+build
+*.so
