@@ -938,7 +938,7 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def random_location_generator(min_x=0, max_x=180, min_y=0, max_y=180):
+def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
     return shapely.geometry.Point(
         (min_x + random.random() * (max_x - min_x),
          min_y + random.random() * (max_y - min_y)))

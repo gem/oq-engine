@@ -21,7 +21,7 @@ Post processing functionality for the classical PSHA hazard calculator.
 """
 
 import numpy
-from scipy.stats.mstats import mquantiles
+from scipy.stats import mstats, rv_discrete
 
 
 class PostProcessor(object):
@@ -188,7 +188,8 @@ class PerSiteResultCalculator(object):
 
     :attribute _use_weights
       a boolean that indicates if the aggregate values should be
-      computed by weighting the individual contributes
+      computed by weighting the individual contributes.
+      We remark that weight values are required to sum to 1
     """
     def __init__(self, curves_per_location, chunk_of_curves,
                  curve_writer, use_weights=False):
@@ -318,15 +319,21 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
         # mquantiles can not work on 3d matrixes, so we roll back the
         # location axis as first dimension, then we iterate on each
         # locations
-        poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
         if not self._use_weights:
-            return [mquantiles(curves, self._quantile, axis=0)[0]
+            poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
+            return [mstats.mquantiles(curves, self._quantile, axis=0)[0]
                     for curves in poe_matrixes]
         else:
-            # scipy does not support quantile calculation with weights, so
-            # we need to first apply weights to the curves
-            den = numpy.sum(weights)
-            return [mquantiles(
-                (curves.transpose() * weights / den).transpose(),
-                self._quantile, axis=0)[0]
-                for curves in poe_matrixes]
+            # Here, we expect that weight values sum to 1. A weight
+            # describes the probability that a realization is expected
+            # to occur.
+            poe_matrixes = poe_matrix.transpose()
+            ret = []
+            for curves in poe_matrixes:  # iterate on locations
+                quantile_curve = []
+                for poes in curves:  # iterate on levels
+                    vals = (poes, weights)
+                    dist = rv_discrete(values=vals, name="dist")
+                    quantile_curve.append(dist.ppf(self._quantile))
+                ret.append(numpy.array(quantile_curve))
+            return numpy.array(ret).transpose()
