@@ -101,6 +101,12 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
+    cmplt_lt_ses = None
+    if hc.complete_logic_tree_ses:
+        cmplt_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=job_id,
+            complete_logic_tree_ses=True)
+
     if hc.ground_motion_fields:
         # For ground motion field calculation, we need the points of interest
         # for the calculation.
@@ -163,7 +169,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         for rupture in ses_poissonian:
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
-            _save_ses_rupture(ses, rupture)
+            _save_ses_rupture(ses, rupture, cmplt_lt_ses)
             logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
@@ -224,7 +230,7 @@ def _get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def _save_ses_rupture(ses, rupture):
+def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -233,6 +239,10 @@ def _save_ses_rupture(ses, rupture):
         'container' for the new rupture record.
     :param rupture:
         A :class:`nhlib.source.rupture.Rupture` instance.
+    :param complete_logic_tree_ses:
+        :class:`openquake.db.models.SES` representing the `complete logic tree`
+        stochastic event set.
+        If not None, save a copy of the input `rupture` to this SES.
     """
     is_from_fault_source = rupture.source_typology in (
         nhlib.source.ComplexFaultSource,
@@ -278,6 +288,19 @@ def _save_ses_rupture(ses, rupture):
         lats=lats,
         depths=depths,
     )
+    if complete_logic_tree_ses is not None:
+        models.SESRupture.objects.create(
+            ses=complete_logic_tree_ses,
+            magnitude=rupture.mag,
+            strike=rupture.surface.get_strike(),
+            dip=rupture.surface.get_dip(),
+            rake=rupture.rake,
+            tectonic_region_type=rupture.tectonic_region_type,
+            is_from_fault_source=is_from_fault_source,
+            lons=lons,
+            lats=lats,
+            depths=depths,
+        )
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -407,6 +430,50 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 investigation_time=hc.investigation_time,
                 ordinal=i)
 
+    def initialize_complete_lt_ses_db_records(self):
+        """
+        Optional; if the user has request to collect `complete logic tree`
+        stochastic event set (containing all ruptures from all realizations),
+        initialize DB records for those results here.
+
+        Throughout the course of the calculation, computed ruptures will be
+        copied into this collection. See :func:`_save_ses_rupture` for more
+        info.
+        """
+        hc = self.job.hazard_calculation
+
+        # `complete logic tree` SES
+        clt_ses_output = models.Output.objects.create(
+            owner=self.job.owner,
+            oq_job=self.job,
+            display_name='complete logic tree SES',
+            output_type='complete_lt_ses')
+
+        clt_ses_coll = models.SESCollection.objects.create(
+            output=clt_ses_output, complete_logic_tree_ses=True)
+
+        if hc.number_of_logic_tree_samples > 0:
+            # The calculation is set to do Monte-Carlo sampling of logic trees
+            # The number of logic tree realizations is specified explicitly in
+            # job configuration.
+            n_lt_realizations = hc.number_of_logic_tree_samples
+        else:
+            # The calculation is set do end-branch enumeration of all logic
+            # tree paths
+            # We can get the number of logic tree realizations by counting
+            # initialized lt_realization records.
+            n_lt_realizations = models.LtRealization.objects.filter(
+                hazard_calculation=hc.id).count()
+
+        investigation_time = (hc.investigation_time
+                              * hc.ses_per_logic_tree_path
+                              * n_lt_realizations)
+
+        models.SES.objects.create(
+            ses_collection=clt_ses_coll,
+            investigation_time=investigation_time,
+            complete_logic_tree_ses=True)
+
     def initialize_gmf_db_records(self, lt_rlz):
         """
         Create :class:`~openquake.db.models.Output`,
@@ -457,4 +524,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             rlz_callbacks.append(self.initialize_gmf_db_records)
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
+
+        if self.job.hazard_calculation.complete_logic_tree_ses:
+            self.initialize_complete_lt_ses_db_records()
+
         self.initialize_pr_data()
