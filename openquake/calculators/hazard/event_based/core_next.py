@@ -295,6 +295,10 @@ def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
         in the GMF matrices to determine where the GMFs are located.
     """
     for imt, gmf_matrix in gmf_dict.iteritems():
+        # NOTE: The values of each `gmf_matrix` are numpy.matrix types.
+        # We need to convert them to numpy.array types before saving.
+        # (The ORM doesn't like numpy.matrix types.)
+        gmf_matrix = numpy.array(gmf_matrix)
         gmf = models.Gmf(
             gmf_set=gmf_set, imt=imt.__class__.__name__)
 
