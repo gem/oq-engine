@@ -427,3 +427,16 @@ class LogPercentCompleteTestCase(unittest.TestCase):
             self.assertEqual(1, lpm.call_count)
             self.assertEqual("hazard  20% complete",
                              lpm.call_args_list[0][0][0])
+
+    def test_log_percent_complete_with_almost_same_percentage_value(self):
+        # only 1 value is reported when the percentage complete value is
+        # almost the same (12.6 versus 12).
+        job_id = 12
+        stats.pk_set(job_id, "nhzrd_total", 366)
+        stats.pk_set(job_id, "nhzrd_done", 46)
+        stats.pk_set(job_id, "lvr", 12)
+
+        with mock.patch("openquake.logs.log_progress") as lpm:
+            rv = logs.log_percent_complete(job_id, "hazard")
+            self.assertEqual(12, rv)
+            self.assertEqual(0, lpm.call_count)
