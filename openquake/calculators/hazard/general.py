@@ -42,6 +42,7 @@ from openquake.job.config import ValidationException
 from openquake.logs import LOG
 from openquake.nrml import parsers as nrml_parsers
 from openquake.utils import config
+from openquake.utils import stats
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -533,6 +534,17 @@ class BaseHazardCalculator(Calculator):
                 jsite_list.add(jsite)
 
         return jsite_list
+
+    def initialize_pr_data(self, sites, realizations):
+        """
+        Record the total/completed number of work items for the classical,
+        event-based and uhs calculators.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
+        stats.pk_set(self.job.id, "nhzrd_total", len(sites) * realizations)
+        stats.pk_set(self.job.id, "nhzrd_done", 0)
 
 
 def mget_decoded(keys):

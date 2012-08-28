@@ -350,6 +350,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         sites = self.job_ctxt.sites_to_compute()
         realizations = self.job_ctxt["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
+        self.initialize_pr_data(sites, realizations)
+
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
