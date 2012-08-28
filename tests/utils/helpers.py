@@ -203,7 +203,8 @@ def run_job(config_file, params=None, check_output=False):
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--force-inputs", "--config-file=" + config_file]
+    args = ["openquake/bin/openquake", "--force-inputs",
+            "--config-file=" + config_file]
     if not params is None:
         args.extend(params)
     if check_output:
