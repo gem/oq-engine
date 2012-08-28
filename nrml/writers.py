@@ -291,8 +291,13 @@ class SESXMLWriter(object):
 
             ses_coll_elem = etree.SubElement(
                 root, 'stochasticEventSetCollection')
-            ses_coll_elem.set(SM_TREE_PATH, self.sm_lt_path)
-            ses_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
+
+            # Allow the tree paths to be null, in the case of `complete logic
+            # tree` SESs.
+            if self.sm_lt_path is not None:
+                ses_coll_elem.set(SM_TREE_PATH, self.sm_lt_path)
+            if self.gsim_lt_path is not None:
+                ses_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
 
             for ses in data:
                 ses_elem = etree.SubElement(
