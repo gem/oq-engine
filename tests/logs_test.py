@@ -252,7 +252,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 215)
+        self.assertEqual(info['lineno'], 216)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
