@@ -66,13 +66,13 @@ class ExportUHSTestCase(unittest.TestCase):
             check_list_calcs(self, listed_calcs, job.id)
 
             listed_outputs = helpers.prepare_cli_output(
-                subprocess.check_output(['bin/openquake', '--list-outputs',
-                                         str(job.id)]))
+                subprocess.check_output(
+                    ['openquake/bin/openquake', '--list-outputs', str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id, 'uh_spectra')
 
             listed_exports = helpers.prepare_cli_output(
-                subprocess.check_output(['bin/openquake', '--export',
+                subprocess.check_output(['openquake/bin/openquake', '--export',
                                          str(output.id), export_target_dir]))
 
             self.assertEqual(expected_export_files, listed_exports)
