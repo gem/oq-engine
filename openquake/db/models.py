@@ -1120,7 +1120,14 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.ForeignKey('Output')
-    lt_realization = djm.ForeignKey('LtRealization')
+    # If `lt_realization` is None, this is a `complete logic tree`
+    # Stochastic Event Set Collection, containing a single stochastic
+    # event set containing all of the ruptures from the entire
+    # calculation.
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` SES collection.
+    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
@@ -1143,7 +1150,11 @@ class SES(djm.Model):
     investigation_time = djm.FloatField()
     # Order number of this Stochastic Event Set in a series of SESs
     # (for a given logic tree realization).
-    ordinal = djm.IntegerField()
+    # For `complete logic tree` SESs, this should be None/NULL.
+    ordinal = djm.IntegerField(null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` SES.
+    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
