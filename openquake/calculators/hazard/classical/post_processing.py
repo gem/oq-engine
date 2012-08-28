@@ -330,10 +330,14 @@ class QuantileCurveCalculator(PerSiteCurveCalculator):
             poe_matrixes = poe_matrix.transpose()
             ret = []
             for curves in poe_matrixes:  # iterate on locations
-                quantile_curve = []
-                for poes in curves:  # iterate on levels
-                    vals = (poes, weights)
-                    dist = rv_discrete(values=vals, name="dist")
-                    quantile_curve.append(dist.ppf(self._quantile))
-                ret.append(numpy.array(quantile_curve))
+                result_curve = []
+                for poes in curves:
+                    sorted_poe_idxs = numpy.argsort(poes)
+                    sorted_weights = weights[sorted_poe_idxs]
+                    sorted_poes = poes[sorted_poe_idxs]
+
+                    cum_weights = numpy.cumsum(sorted_weights)
+                    result_curve.append(
+                        numpy.interp(self._quantile, cum_weights, sorted_poes))
+                ret.append(result_curve)
             return numpy.array(ret).transpose()
