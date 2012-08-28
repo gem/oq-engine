@@ -43,7 +43,7 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
     """
 
     MAX_LOCATION_NR = 50
-    MAX_CURVES_PER_LOCATION = 50
+    MAX_CURVES_PER_LOCATION = 10
     MAX_LEVEL_NR = 10
     SIGMA = 0.001
 
@@ -57,11 +57,12 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
         # poes curves with median == mean
         if not self.level_nr % 2:
             self.level_nr += 1
-        self.curve_db, self.location_db = _populate_curve_db(
+        self.curve_db, self.location_db = _curve_db(
             self.location_nr,
             self.level_nr,
             self.curves_per_location,
             self.__class__.SIGMA)
+
         self.curve_writer = SimpleCurveWriter()
 
     def test_locations(self):
@@ -113,7 +114,8 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
 
         expected_mean_curves = [
             dict(wkb=locations[i],
-                 poes=[1. / (1 + i + j) for j in range(0, self.level_nr)])
+                 poes=[1. / (1 + i + j)
+                       for j in range(0, self.level_nr)])
             for i in range(0, self.location_nr)]
 
         for i in range(0, self.location_nr):
@@ -126,6 +128,7 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
                 atol=self.__class__.SIGMA * 10)
 
     def test_run_with_weights(self):
+        self._setup_with_presets()
         getter = curve_chunks_getter(self.curve_db)
 
         mean_calculator = MeanCurveCalculator(
@@ -136,22 +139,44 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
 
         mean_calculator.run()
 
-        locations = [v['wkb'] for v in self.curve_writer.curves]
-
-        # for each location the expected mean curve should be exactly
-        # the first curve (as it is the only with a positive weight)
         expected_mean_curves = [
-            dict(wkb=locations[i],
-                 poes=self.curve_db[i * self.curves_per_location]['poes'])
-            for i in range(0, self.location_nr)]
+            numpy.array([0.909707, 0.882379, 0.849248]),
+            numpy.array([0.912911, 0.85602, 0.771468])
+            ]
 
         for i in range(0, self.location_nr):
-            self.assertEqual(
-                expected_mean_curves[i]['wkb'],
-                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
-                expected_mean_curves[i]['poes'],
+                expected_mean_curves[i],
                 self.curve_writer.curves[i]['poes'])
+
+    def _setup_with_presets(self):
+        """
+        Setup a curve database with "real" data
+        """
+        self.location_nr = 2
+        self.curves_per_location = 3
+        self.level_nr = 3
+        self.location_db = [random_location_generator(),
+                            random_location_generator()]
+        self.curve_db = [
+            dict(wkb=self.location_db[0],
+                 weight=0.5,
+                 poes=numpy.array([9.9996e-01, 9.9962e-01, 9.9674e-01])),
+            dict(wkb=self.location_db[0],
+                 weight=0.3,
+                 poes=numpy.array([6.9909e-01, 6.0859e-01, 5.0328e-01])),
+            dict(wkb=self.location_db[0],
+                 weight=0.2,
+                 poes=numpy.array([1.0000e+00, 9.9996e-01, 9.9947e-01])),
+            dict(wkb=self.location_db[1],
+                 weight=0.5,
+                 poes=numpy.array([9.1873e-01, 8.6697e-01, 7.8992e-01])),
+            dict(wkb=self.location_db[1],
+                 weight=0.3,
+                 poes=numpy.array([8.9556e-01, 8.3045e-01, 7.3646e-01])),
+            dict(wkb=self.location_db[1],
+                 weight=0.2,
+                 poes=numpy.array([9.2439e-01, 8.6700e-01, 7.7785e-01]))]
 
 
 class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
@@ -187,6 +212,7 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
                 atol=self.__class__.SIGMA * 10)
 
     def test_run_with_weights(self):
+        self._setup_with_presets()
         getter = curve_chunks_getter(self.curve_db)
 
         quantile_calculator = QuantileCurveCalculator(
@@ -194,25 +220,18 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
             chunk_of_curves=getter,
             curve_writer=self.curve_writer,
             use_weights=True,
-            quantile=0.5)
+            quantile=0.3)
 
         quantile_calculator.run()
 
-        locations = [v['wkb'] for v in self.curve_writer.curves]
-
-        # for each location the expected median is equal to a zero curve
-        # as there is only realization with positive weigth
         expected_quantile_curves = [
-            dict(wkb=locations[i],
-                 poes=[0 for _ in range(0, self.level_nr)])
-            for i in range(0, self.location_nr)]
+            numpy.array([0.69909, 0.60859, 0.50328]),
+            numpy.array([0.89556, 0.83045, 0.73646])
+            ]
 
         for i in range(0, self.location_nr):
-            self.assertEqual(
-                expected_quantile_curves[i]['wkb'],
-                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
-                expected_quantile_curves[i]['poes'],
+                expected_quantile_curves[i],
                 self.curve_writer.curves[i]['poes'])
 
     def test_base_classes(self):
@@ -247,7 +266,7 @@ class PostProcessorTestCase(unittest.TestCase):
         self.curve_writer_factory.create_mean_curve_writer = mock.Mock(
             return_value=self.curve_writer)
 
-        curve_db = _populate_curve_db(location_nr, 1,
+        curve_db = _curve_db(location_nr, 1,
                                       self.curves_per_location, 0)
 
         self.a_chunk_getter = curve_chunks_getter(curve_db[0: chunk_size])
@@ -418,26 +437,54 @@ class SimpleCurveWriter(object):
                                 poes=poes))
 
 
-def _populate_curve_db(location_nr, level_nr, curves_per_location, sigma):
+def _curve_db(location_nr, level_nr, curves_per_location, sigma):
     """
     Create a random db of curves stored in a list of dictionaries
     """
     curve_db = []
     location_db = []
 
+    weights = [1.0 for _ in range(0, curves_per_location)]
+    weights = [w / sum(weights) for w in weights]
+
     for i in range(0, location_nr):
         location = random_location_generator()
         # individual curve poes set with a gauss distribution with
         # mean set to [1 / (1 + i + j) for j in level_indexes].
-        # Weights (when considered) are set to 1 for the first
-        # realization, 0 otherwise.
-        # So we can easily calculate mean, 0.5 quantile and their
-        # weighted version
+        # So we can easily calculate mean and 0.5 quantile
         location_db.append(location.wkb)
-        curve_db.extend(
-            [dict(wkb=location.wkb,
-                  weight=int(not k),
-                  poes=numpy.array([random.gauss(1.0 / (1 + i + j), sigma)
-                        for j in range(0, level_nr)]))
-            for k in range(0, curves_per_location)])
+        for j in range(0, curves_per_location):
+            poes = []
+            for k in range(0, level_nr):
+                poe = random.gauss(1.0 / (1 + i + k), sigma)
+                poes.append(min(1, poe))
+            curve_db.append(
+                dict(wkb=location.wkb,
+                     weight=weights[j],
+                     poes=numpy.array(poes)))
     return curve_db, location_db
+
+
+def _curve_db_with_weights(location_nr, level_nr,
+                                    curves_per_location):
+    """
+    Setup a curve db with random weights
+    """
+    curve_db = []
+    location_db = []
+
+    weights = [random.random() for _ in range(0, curves_per_location)]
+    weights = [w / sum(weights) for w in weights]
+
+    for _ in range(0, location_nr):
+        location = random_location_generator()
+        location_db.append(location.wkb)
+        for j in range(0, curves_per_location):
+            poes = []
+            for k in range(0, level_nr):
+                poes.append(min(1, 1.0 / (1 + k)))
+            curve_db.append(
+                dict(wkb=location.wkb,
+                     weight=weights[j],
+                     poes=numpy.array(poes)))
+    return curve_db, location_db, weights
