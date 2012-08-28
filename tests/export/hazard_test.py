@@ -121,7 +121,6 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             self.assertTrue(os.path.isabs(exported_file))
             self.assertTrue(os.path.getsize(exported_file) > 0)
 
-
             #######
             # GMFs:
             gmf_outputs = outputs.filter(output_type='gmf')
