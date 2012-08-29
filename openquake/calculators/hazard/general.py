@@ -543,8 +543,9 @@ class BaseHazardCalculator(Calculator):
         This is needed for the purpose of providing an indication of progress
         to the end user."""
         stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
-        stats.pk_set(self.job.id, "nhzrd_total", len(sites) * realizations)
-        stats.pk_set(self.job.id, "nhzrd_done", 0)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_total",
+                     len(sites) * realizations)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_done", 0)
 
 
 def mget_decoded(keys):

@@ -43,8 +43,8 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         This is needed for the purpose of providing an indication of progress
         to the end user."""
         stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
-        stats.pk_set(self.job.id, "nhzrd_total", num_calculations)
-        stats.pk_set(self.job.id, "nhzrd_done", 0)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_total", num_calculations)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_done", 0)
 
     @java.unpack_exception
     def execute(self):

@@ -44,6 +44,7 @@ from openquake.db.models import Input
 from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
+from openquake.db.models import JobPhaseStats
 from openquake.db.models import JobStats
 from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
@@ -894,8 +895,8 @@ def _switch_to_job_phase(job_ctxt, status):
     :param str status: one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
     """
-    models.JobPhaseStats.objects.create(
-        oq_job__id=job_ctxt.job_id, job_status=status)
+    job = OqJob.objects.get(id=job_ctxt.job_id)
+    JobPhaseStats.objects.create(oq_job=job, job_status=status)
     logs.log_progress("%s" % status, 1)
 
 
