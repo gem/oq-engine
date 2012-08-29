@@ -401,7 +401,7 @@ class SESRuptureTestCase(unittest.TestCase):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
         ses = models.SES.objects.create(
-            ses_collection=ses_coll, investigation_time=50.0)
+            ses_collection=ses_coll, investigation_time=50.0, ordinal=1)
 
         self.mesh_lons = numpy.array(
             [0.1 * x for x in range(16)]).reshape((4, 4))
