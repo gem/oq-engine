@@ -291,11 +291,11 @@ class SESXMLWriter(object):
 
             if self.sm_lt_path is not None and self.gsim_lt_path is not None:
                 # A normal stochastic event set collection
-                ses_coll_elem = etree.SubElement(
+                ses_container = etree.SubElement(
                     root, 'stochasticEventSetCollection')
 
-                ses_coll_elem.set(SM_TREE_PATH, self.sm_lt_path)
-                ses_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
+                ses_container.set(SM_TREE_PATH, self.sm_lt_path)
+                ses_container.set(GSIM_TREE_PATH, self.gsim_lt_path)
             else:
                 # A stochastic event set collection for the complete logic tree
                 # In this case, we should only have a single stochastic event
@@ -304,12 +304,13 @@ class SESXMLWriter(object):
                 # `stochasticEventSetCollection` tag.
                 # Write the _single_ stochastic event set directly under the
                 # root element.
-                ses_coll_elem = root
-                assert len(data) == 1
+                ses_container = root
+                # NOTE: The code below is written to expect 1 or more SESs in
+                # `data`. Again, there will only be one in this case.
 
             for ses in data:
                 ses_elem = etree.SubElement(
-                    ses_coll_elem, 'stochasticEventSet')
+                    ses_container, 'stochasticEventSet')
                 ses_elem.set('investigationTime', str(ses.investigation_time))
 
                 for rupture in ses:
