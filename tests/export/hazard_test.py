@@ -16,7 +16,6 @@
 
 import os
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -41,7 +40,6 @@ class HazardCurveExportTestCase(unittest.TestCase):
 
         try:
             cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-            calc_args = ['bin/openquake', '--run-hazard', cfg]
 
             # run the calculation to create something to export
             retcode = helpers.run_hazard_job(cfg, silence=True)
@@ -81,7 +79,6 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
 
         try:
             cfg = helpers.demo_file('event_based_hazard/job.ini')
-            calc_args = ['bin/openquake', '--run-hazard', cfg]
 
             # run the calculation to create something to export
             retcode = helpers.run_hazard_job(cfg, silence=True)
