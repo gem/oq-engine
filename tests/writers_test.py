@@ -464,42 +464,40 @@ class SESXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <completeLogicTreeStochasticEventSetCollection>
-    <stochasticEventSet investigationTime="250.0">
-      <rupture magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
-        <planarSurface>
-          <topLeft lon="1.1" lat="1.01" depths="10.0"/>
-          <topRight lon="2.1" lat="2.01" depths="20.0"/>
-          <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
-          <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
-        </planarSurface>
-      </rupture>
-      <rupture magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
-        <mesh rows="2" cols="2">
-          <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
-          <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
-          <node row="1" col="0" lon="7.1" lat="7.01" depth="10.7"/>
-          <node row="1" col="1" lon="8.1" lat="8.01" depth="10.8"/>
-        </mesh>
-      </rupture>
-      <rupture magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
-        <planarSurface>
-          <topLeft lon="1.1" lat="1.01" depths="10.0"/>
-          <topRight lon="2.1" lat="2.01" depths="20.0"/>
-          <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
-          <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
-        </planarSurface>
-      </rupture>
-      <rupture magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
-        <mesh rows="2" cols="2">
-          <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
-          <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
-          <node row="1" col="0" lon="7.2" lat="7.02" depth="10.3"/>
-          <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
-        </mesh>
-      </rupture>
-    </stochasticEventSet>
-  </completeLogicTreeStochasticEventSetCollection>
+  <stochasticEventSet investigationTime="250.0">
+    <rupture magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
+      <planarSurface>
+        <topLeft lon="1.1" lat="1.01" depths="10.0"/>
+        <topRight lon="2.1" lat="2.01" depths="20.0"/>
+        <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
+        <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
+      </planarSurface>
+    </rupture>
+    <rupture magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+      <mesh rows="2" cols="2">
+        <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
+        <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
+        <node row="1" col="0" lon="7.1" lat="7.01" depth="10.7"/>
+        <node row="1" col="1" lon="8.1" lat="8.01" depth="10.8"/>
+      </mesh>
+    </rupture>
+    <rupture magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
+      <planarSurface>
+        <topLeft lon="1.1" lat="1.01" depths="10.0"/>
+        <topRight lon="2.1" lat="2.01" depths="20.0"/>
+        <bottomRight lon="3.1" lat="3.01" depths="30.0"/>
+        <bottomLeft lon="4.1" lat="4.01" depths="40.0"/>
+      </planarSurface>
+    </rupture>
+    <rupture magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
+      <mesh rows="2" cols="2">
+        <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
+        <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
+        <node row="1" col="0" lon="7.2" lat="7.02" depth="10.3"/>
+        <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
+      </mesh>
+    </rupture>
+  </stochasticEventSet>
 </nrml>
 """)
 

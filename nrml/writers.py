@@ -298,8 +298,14 @@ class SESXMLWriter(object):
                 ses_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
             else:
                 # A stochastic event set collection for the complete logic tree
-                ses_coll_elem = etree.SubElement(
-                    root, 'completeLogicTreeStochasticEventSetCollection')
+                # In this case, we should only have a single stochastic event
+                # set.
+                # NOTE: In this case, there is no need for a
+                # `stochasticEventSetCollection` tag.
+                # Write the _single_ stochastic event set directly under the
+                # root element.
+                ses_coll_elem = root
+                assert len(data) == 1
 
             for ses in data:
                 ses_elem = etree.SubElement(
