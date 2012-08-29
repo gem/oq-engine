@@ -33,10 +33,14 @@ class EvenlyDiscretizedMFD(BaseMFD):
         annual occurrence rates. The resulting histogram has as many bins
         as this list length.
     """
-
-    PARAMETERS = ('min_mag', 'bin_width', 'occurrence_rates')
-
     MODIFICATIONS = set()
+
+    def __init__(self, min_mag, bin_width, occurrence_rates):
+        self.min_mag = min_mag
+        self.bin_width = bin_width
+        self.occurrence_rates = occurrence_rates
+
+        self.check_constraints()
 
     def check_constraints(self):
         """
