@@ -35,7 +35,7 @@ LOG = logs.LOG
 
 @task
 @java.unpack_exception
-@stats.progress_indicator("h")
+@stats.count_progress("h")
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
