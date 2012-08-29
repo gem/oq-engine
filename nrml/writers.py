@@ -289,15 +289,17 @@ class SESXMLWriter(object):
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
 
-            ses_coll_elem = etree.SubElement(
-                root, 'stochasticEventSetCollection')
+            if self.sm_lt_path is not None and self.gsim_lt_path is not None:
+                # A normal stochastic event set collection
+                ses_coll_elem = etree.SubElement(
+                    root, 'stochasticEventSetCollection')
 
-            # Allow the tree paths to be null, in the case of `complete logic
-            # tree` SESs.
-            if self.sm_lt_path is not None:
                 ses_coll_elem.set(SM_TREE_PATH, self.sm_lt_path)
-            if self.gsim_lt_path is not None:
                 ses_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
+            else:
+                # A stochastic event set collection for the complete logic tree
+                ses_coll_elem = etree.SubElement(
+                    root, 'completeLogicTreeStochasticEventSetCollection')
 
             for ses in data:
                 ses_elem = etree.SubElement(

@@ -464,7 +464,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <stochasticEventSetCollection>
+  <completeLogicTreeStochasticEventSetCollection>
     <stochasticEventSet investigationTime="250.0">
       <rupture magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
         <planarSurface>
@@ -499,7 +499,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
         </mesh>
       </rupture>
     </stochasticEventSet>
-  </stochasticEventSetCollection>
+  </completeLogicTreeStochasticEventSetCollection>
 </nrml>
 """)
 
