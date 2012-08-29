@@ -21,7 +21,7 @@ Post processing functionality for the classical PSHA hazard calculator.
 """
 
 import numpy
-from scipy.stats import mstats, rv_discrete
+from scipy.stats import mstats
 
 
 class PostProcessor(object):
