@@ -53,10 +53,6 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
             1,
             self.__class__.MAX_CURVES_PER_LOCATION)
         self.level_nr = random.randint(1, self.__class__.MAX_LEVEL_NR)
-        # set level_nr to an odd value, such that we easily create
-        # poes curves with median == mean
-        if not self.level_nr % 2:
-            self.level_nr += 1
         self.curve_db, self.location_db = _curve_db(
             self.location_nr,
             self.level_nr,
