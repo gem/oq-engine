@@ -883,6 +883,22 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
     return job
 
 
+def _switch_to_job_phase(job_ctxt, status):
+    """Switch to a particular phase of execution.
+
+    This involves creating a `job_phase_stats` record and logging the new
+    status.
+
+    :param job_ctxt:
+        An :class:`~openquake.engine.JobContext` instance.
+    :param str status: one of the following: pre_executing, executing,
+        post_executing, post_processing, export, clean_up, complete
+    """
+    models.JobPhaseStats.objects.create(
+        oq_job__id=job_ctxt.job_id, job_status=status)
+    logs.log_progress("%s" % status, 1)
+
+
 def _launch_job(job_ctxt, sections):
     """Instantiate calculator(s) and actually run the job.
 
@@ -919,10 +935,19 @@ def _launch_job(job_ctxt, sections):
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
                        % (job_ctxt.job_id, job_type))
 
+        _switch_to_job_phase(job_ctxt, "initializing")
         calculator.initialize()
+
+        _switch_to_job_phase(job_ctxt, "pre_executing")
         calculator.pre_execute()
+
+        _switch_to_job_phase(job_ctxt, "executing")
         calculator.execute()
+
+        _switch_to_job_phase(job_ctxt, "post_executing")
         calculator.post_execute()
+
+        _switch_to_job_phase(job_ctxt, "clean_up")
         calculator.clean_up()
 
 
