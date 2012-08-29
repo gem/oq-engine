@@ -65,6 +65,9 @@ class BaseCorrelationModel(object):
             2d numpy array of sampled intra-event residuals, where first
             dimension represents sites (the length as ``sites`` parameter)
             and second one represents different realizations (samples).
+        :returns:
+            Array of the same structure and semantics as ``intra_residuals``
+            but with correlations applied.
         """
         # intra-event residual for a single relization is a product
         # of lower-triangle decomposed correlation matrix and vector
