@@ -1135,6 +1135,9 @@ class SES(djm.Model):
     """
     ses_collection = djm.ForeignKey('SESCollection')
     investigation_time = djm.FloatField()
+    # Order number of this Stochastic Event Set in a series of SESs
+    # (for a given logic tree realization).
+    ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
@@ -1243,7 +1246,7 @@ class GmfSet(djm.Model):
     investigation_time = djm.FloatField()
     # Keep track of the stochastic event set which this GMF set is associated
     # with.
-    ses_number = djm.IntegerField()
+    ses_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
