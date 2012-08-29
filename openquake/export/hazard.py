@@ -82,6 +82,7 @@ def _export_fn_map():
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
 GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
+COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '|'
 
@@ -182,15 +183,22 @@ def export_ses(output, target_dir):
         file).
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
+    # lt_rlz can be `None` in the case of a `complete logic tree` SES
     lt_rlz = ses_coll.lt_realization
-    # The tree paths can be `None`, in the case of `complete logic tree` SES
-    sm_lt_path = None
-    gsim_lt_path = None
-    if lt_rlz is not None:
+
+    if output.output_type == 'complete_lt_ses':
+        filename = COMPLETE_LT_SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
+
+        # For the `complete logic tree` SES, the LT paths are not relevant.
+        sm_lt_path = None
+        gsim_lt_path = None
+    else:
+        # output_type should be `ses`
+        filename = SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
+
         sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    filename = SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
     path = os.path.abspath(os.path.join(target_dir, filename))
 
     writer = nrml_writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
