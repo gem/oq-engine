@@ -760,6 +760,18 @@ class JobStats(djm.Model):
         db_table = 'uiapi\".\"job_stats'
 
 
+class JobPhaseStats(djm.Model):
+    '''
+    Capture when the various job phases started.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    job_status = djm.TextField()
+    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"job_phase_stats'
+
+
 class Job2profile(djm.Model):
     '''
     Associates jobs with their profiles.
