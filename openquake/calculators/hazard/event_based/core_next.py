@@ -121,7 +121,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     site_coll = haz_general.get_site_collection(hc)
     logs.LOG.debug('< done creating site collection')
 
-
     if hc.ground_motion_fields:
         imts = [haz_general.imt_to_nhlib(x)
                 for x in hc.intensity_measure_types]
