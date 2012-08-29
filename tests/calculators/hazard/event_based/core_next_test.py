@@ -57,11 +57,13 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(2, len(lt_rlzs))
 
         for rlz in lt_rlzs:
-            [ses] = models.SES.objects.filter(
+            sess = models.SES.objects.filter(
                 ses_collection__lt_realization=rlz)
+            self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
 
-            # The only metadata in in the SES is investigation time.
-            self.assertEqual(hc.investigation_time, ses.investigation_time)
+            for ses in sess:
+                # The only metadata in in the SES is investigation time.
+                self.assertEqual(hc.investigation_time, ses.investigation_time)
 
     def test_initialize_pr_data_with_ses(self):
         hc = self.job.hazard_calculation
@@ -134,7 +136,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
     @attr('slow')
-    def test_stochastic_event_sets_task(self):
+    def test_ses_and_gmfs_task(self):
         # Execute the the `stochastic_event_sets` task as a normal function.
 
         # There 4 sources in the test input model; we can test them all with 1
