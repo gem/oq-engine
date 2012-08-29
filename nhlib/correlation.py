@@ -53,20 +53,20 @@ class BaseCorrelationModel(object):
             Intensity measure type object, see :mod:`nhlib.imt`.
         """
 
-    def apply_correlation(self, sites, imt, intra_residuals):
+    def apply_correlation(self, sites, imt, residuals):
         """
-        Apply correlation to sampled intra-event residuals.
+        Apply correlation to randomly sampled residuals.
 
         :param sites:
             :class:`~nhlib.site.SiteCollection` residuals were sampled for.
         :param imt:
             Intensity measure type object, see :mod:`nhlib.imt`.
-        :param intra_residuals:
-            2d numpy array of sampled intra-event residuals, where first
-            dimension represents sites (the length as ``sites`` parameter)
-            and second one represents different realizations (samples).
+        :param residuals:
+            2d numpy array of sampled residuals, where first dimension
+            represents sites (the length as ``sites`` parameter) and
+            second one represents different realizations (samples).
         :returns:
-            Array of the same structure and semantics as ``intra_residuals``
+            Array of the same structure and semantics as ``residuals``
             but with correlations applied.
         """
         # intra-event residual for a single relization is a product
@@ -75,7 +75,7 @@ class BaseCorrelationModel(object):
         # we need to do that multiplication once per realization
         # with the same matrix and different vectors.
         corma = self.get_lower_triangle_correlation_matrix(sites, imt)
-        return numpy.dot(corma, intra_residuals)
+        return numpy.dot(corma, residuals)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
