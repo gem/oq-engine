@@ -152,16 +152,11 @@ do
             exit 4
         fi
 
-        user_branch=`grep css-truncate-target $pullreq_file | head -n 2 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
-        other_remote=`dirname $user_branch`
-        other_reference=`basename $user_branch`
-
-        user_branch=`grep css-truncate-target $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
-        github_user=`dirname $user_branch`
-        branch_reference=`basename $user_branch`
-
-        branch="$user_branch"
-        branch_name="$user_branch"
+        # Find the branch author's github user name and the branch name.
+        github_user=`cat $pullreq_file | perl -wane 'if ($_ =~ /<title>.+\s+by\s+(\S+)\s+.+$/) { print $1; }'`
+        branch_reference=`grep class=.pull-branch. $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /title="([^"]+)"/) { print $1; }'`
+        branch="$github_user/$branch_reference"
+        branch_name="$branch"
 
         # Map the author's github user name to a "git remote" name in our
         # local repository.
