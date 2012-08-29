@@ -24,7 +24,7 @@ from nhlib.calc import filters
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, lt_correlation_matrices=None,
+                         realizations, correlation_model=None,
                          rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Given an earthquake rupture, the ground motion field calculator computes
@@ -51,10 +51,11 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         distribution, or ``None``.
     :param realizations:
         Integer number of GMF realizations to compute.
-    :param lt_correlation_matrices:
-        Optional dictionary mapping IMT objects (the same ones as in ``imts``)
-        to lower-triangular matrix, taken from Cholesky-decomposition
-        of sites correlation matrix. See :mod:`nhlib.correlation`.
+    :param correlation_model:
+        Instance of correlation model object. See :mod:`nhlib.correlation`.
+        Can be ``None``, in which case non-correlated ground motion fields
+        are calculated. Correlation model is not used if ``truncation_level``
+        is zero.
     :param rupture_site_filter:
         Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
@@ -77,7 +78,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     result = {}
 
     if truncation_level == 0:
-        assert lt_correlation_matrices is None
+        assert correlation_model is None
         for imt in imts:
             mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        stddev_types=[])
@@ -104,7 +105,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
 
         intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
                                                                realizations))
-        if lt_correlation_matrices is not None:
+        if correlation_model is not None:
+            cormo = correlation_model
+            corma = cormo.get_lower_triangle_correlation_matrix(sites, imt)
             # intra-event residual for a single relization is a product
             # of lower-triangle decomposed correlation matrix and vector
             # of N random numbers (where N is equal to number of sites).
@@ -114,10 +117,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             # of vectors by matrix instead of matrix by array (note
             # that matrix multiplication is not commutative). so we use
             # formula ``A B = (B^T A^T)^T`` to change an operands order.
-            intra_residual = numpy.dot(
-                intra_residual.transpose(),
-                numpy.array(lt_correlation_matrices[imt]).transpose()
-            ).transpose()
+            intra_residual = numpy.dot(intra_residual.transpose(),
+                                       corma.transpose()).transpose()
 
         inter_residual = stddev_inter * distribution.rvs(size=realizations)
         gmf = gsim.to_imt_unit_values(mean + intra_residual + inter_residual)
