@@ -121,10 +121,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     site_coll = haz_general.get_site_collection(hc)
     logs.LOG.debug('< done creating site collection')
 
-    # This will be the "container" for all compute stochastic event set
-    # rupture results for this task.
-    ses = models.SES.objects.get(ses_collection__lt_realization=lt_rlz)
-
     if hc.ground_motion_fields:
         imts = [haz_general.imt_to_nhlib(x)
                 for x in hc.intensity_measure_types]
@@ -147,6 +143,13 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
         logs.LOG.debug('> computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
+
+        # This is the container for all ruptures for this stochastic event set
+        # (specified by `ordinal` and the logic tree realization).
+        # NOTE: Many tasks can contribute ruptures to this SES.
+        ses = models.SES.objects.get(
+            ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
+
         sources_sites = ((src, site_coll) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
@@ -158,7 +161,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
             # This will be the "container" for all computed ground motion field
             # results for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization=lt_rlz, ses_number=ses_rlz_n)
+                gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
 
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time)
@@ -412,8 +415,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        models.SES.objects.create(
-            ses_collection=ses_coll, investigation_time=hc.investigation_time)
+        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+            models.SES.objects.create(
+                ses_collection=ses_coll,
+                investigation_time=hc.investigation_time,
+                ordinal=i)
 
     def initialize_gmf_db_records(self, lt_rlz):
         """
@@ -439,7 +445,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             models.GmfSet.objects.create(
                 gmf_collection=gmf_coll,
                 investigation_time=hc.investigation_time,
-                ses_number=i)
+                ses_ordinal=i)
 
     def pre_execute(self):
         """
