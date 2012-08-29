@@ -16,4 +16,5 @@
 """
 nhlib stands for New Hazard Library.
 """
-from nhlib import geo, mfd, scalerel, source, const, pmf, tom
+from nhlib import (calc, geo, gsim, mfd, scalerel, source, const,
+                   correlation, imt, pmf, site, tom)
