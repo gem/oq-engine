@@ -23,6 +23,7 @@
         <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
     </xs:complexType>
 
+
     <xs:complexType name="SESRupture">
         <xs:choice>
             <xs:element name="planarSurface" type="SESPlanarSurface" />
