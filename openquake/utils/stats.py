@@ -65,6 +65,9 @@ STATS_KEYS = {
     "cblock": ("g", "gen:cblock", "i"),
     "compute_uhs_task": ("h", "compute_uhs_task", "i"),
 
+    # The last "percent complete" figure that was reported to the end user
+    "lvr": ("g", "gen:lvr", "t"),
+
     # The total amount of work for a nhlib-based hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
     # The number of completed hazard work items
@@ -136,7 +139,7 @@ def pk_set(job_id, skey, value):
     kvs_op("set", key, value)
 
 
-def pk_inc(job_id, skey):
+def pk_inc(job_id, skey, items=1):
     """Increment the value for a predefined statistics key.
 
     :param int job_id: identifier of the job in question
@@ -145,7 +148,7 @@ def pk_inc(job_id, skey):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    kvs_op("incr", key)
+    kvs_op("incr", key, items)
 
 
 def pk_get(job_id, skey, cast2int=True):
@@ -274,18 +277,15 @@ class count_progress(object):   # pylint: disable=C0103
             """Call the wrapped function and step the done/failed counters in
                case of success/failure."""
             job_id, num_items = self.get_task_data(*args, **kwargs)
-            conn = _redis()
             try:
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incr(key, num_items)
+                pk_inc(job_id, key, num_items)
                 return result
             except:
                 # Count failure
                 key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
-                key = key_name(job_id, self.area, key, "i")
-                conn.incr(key, num_items)
+                pk_inc(job_id, key, num_items)
                 raise
 
         return wrapper

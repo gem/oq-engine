@@ -361,15 +361,12 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
         def no_exception(job_id, items):
             return 999
 
-        kvs = self.connect()
-        key = stats.key_name(11, area, "nhzrd_done", "i")
-        previous_value = kvs.get(key)
-        previous_value = int(previous_value) if previous_value else 0
+        previous_value = stats.pk_get(11, "nhzrd_done")
 
         # Call the wrapped function.
         self.assertEqual(999, no_exception(11, range(5)))
 
-        value = int(kvs.get(key))
+        value = stats.pk_get(11, "nhzrd_done")
         self.assertEqual(5, (value - previous_value))
 
     def test_failure_stats(self):
@@ -383,13 +380,10 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
         def raise_exception(job_id, items):
             raise NotImplementedError
 
-        kvs = self.connect()
-        key = stats.key_name(22, area, "nrisk_failed", "i")
-        previous_value = kvs.get(key)
-        previous_value = int(previous_value) if previous_value else 0
+        previous_value = stats.pk_get(22, "nrisk_failed")
 
         # Call the wrapped function.
         self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
 
-        value = int(kvs.get(key))
+        value = stats.pk_get(22, "nrisk_failed")
         self.assertEqual(6, (value - previous_value))

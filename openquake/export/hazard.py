@@ -72,11 +72,13 @@ def _export_fn_map():
     fn_map = {
         'uh_spectra': uhs.export_uhs,
         'hazard_curve': export_hazard_curves,
+        'gmf': export_gmf,
     }
     return fn_map
 
 
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
+GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '|'
 
@@ -87,9 +89,10 @@ def export_hazard_curves(output, target_dir):
     Export the specified hazard curve ``output`` to the ``target_dir``.
 
     :param output:
-        :class:`openquake.db.models.Output` of type `hazard_curve`.
+        :class:`openquake.db.models.Output` with an `output_type` of
+        `hazard_curve`.
     :param str target_dir:
-        Destination directory location of exported files.
+        Destination directory location for exported files.
 
     :returns:
         A list of exported file names (including the absolute path to each
@@ -127,6 +130,40 @@ def export_hazard_curves(output, target_dir):
     return [path]
 
 
+# TODO(LB): We may need to differentiate between GMFs calculated by the
+# Event-Based calculator and the Scenario calculator. At the moment, this
+# exporter is intended for Event-Based GMF results. The structures for the two
+# result types are slightly different.
+@makedirs
+def export_gmf(output, target_dir):
+    """
+    Export the GMF Collection specified by ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` with an `output_type` of `gmf`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file names (including the absolute path to each
+        file).
+    """
+    gmf_coll = models.GmfCollection.objects.get(output=output.id)
+    lt_rlz = gmf_coll.lt_realization
+    sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+    gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+
+    filename = GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
+    path = os.path.abspath(os.path.join(target_dir, filename))
+
+    writer = nrml_writers.EventBasedGMFXMLWriter(
+        path, sm_lt_path, gsim_lt_path)
+    writer.serialize(gmf_coll)
+
+    return [path]
+
+
+
 def curves2nrml(target_dir, job):
     """Write hazard curves to NRML files.
 
@@ -142,10 +179,11 @@ def curves2nrml(target_dir, job):
 
     hco_count = len(hc_outputs)
     if hco_count > 1:
-        print "%s hazard curves exported to %s" % (hco_count, target_dir)
+        logs.log_progress(
+            "%s hazard curves exported to %s" % (hco_count, target_dir), 2)
     elif hco_count == 1:
-        print "One hazard curve exported to %s" % target_dir
+        logs.log_progress("One hazard curve exported to %s" % target_dir, 2)
     else:
-        print "No hazard curves found for export"
+        logs.log_progress("No hazard curves found for export", 2)
 
     LOG.debug("< curves2nrml")
