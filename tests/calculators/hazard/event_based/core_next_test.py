@@ -135,9 +135,36 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
         self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
 
+    def test_initialize_complete_lt_ses_db_records_branch_enum(self):
+        # Set hazard_calculation.number_of_logic_tree_samples = 0
+        # This indicates that the `end-branch enumeration` method should be
+        # used to carry out the calculation.
+
+        # This test was added primarily for branch coverage (in the case of end
+        # branch enum) for the method `initialize_complete_lt_ses_db_records`.
+        hc = self.job.hazard_calculation
+        hc.number_of_logic_tree_samples = 0
+
+        self.calc.initialize_sources()
+        self.calc.initialize_realizations()
+
+        self.calc.initialize_complete_lt_ses_db_records()
+
+        complete_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=self.job.id,
+            ses_collection__output__output_type='complete_lt_ses',
+            complete_logic_tree_ses=True)
+
+        self.assertEqual(250.0, complete_lt_ses.investigation_time)
+        self.assertIsNone(complete_lt_ses.ordinal)
+
     @attr('slow')
-    def test_ses_and_gmfs_task(self):
-        # Execute the the `stochastic_event_sets` task as a normal function.
+    def test_complete_event_based_calculation_cycle(self):
+        # * Run `pre_execute()`.
+        # * Execute the the `stochastic_event_sets` task as a normal function.
+        # * Check that the proper results (GMF, SES) were computed.
+        # * Finally, call `post_execute()` and verify that `complete logic
+        #   tree` artifacts were created.
 
         # There 4 sources in the test input model; we can test them all with 1
         # task.
@@ -192,11 +219,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # Now check that we saved the right number of ruptures to the DB.
         ruptures1 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz1)
-        self.assertEqual(118, len(ruptures1))
+        self.assertEqual(118, ruptures1.count())
 
         ruptures2 = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=rlz2)
-        self.assertEqual(92, len(ruptures2))
+        self.assertEqual(92, ruptures2.count())
 
         # Check that we saved the right number of GMFs to the DB.
         # The correct number of GMFs for each realization is
@@ -205,12 +232,30 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         expected_gmfs1 = 118 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
         gmfs1 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz1)
-        self.assertEqual(expected_gmfs1, len(gmfs1))
+        self.assertEqual(expected_gmfs1, gmfs1.count())
 
         expected_gmfs2 = 92 * num_sites * 2
         gmfs2 = models.GmfNode.objects.filter(
             gmf__gmf_set__gmf_collection__lt_realization=rlz2)
-        self.assertEqual(expected_gmfs2, len(gmfs2))
+        self.assertEqual(expected_gmfs2, gmfs2.count())
 
         # TODO: At some point, we'll need to test the actual values of these
         # ruptures. We'll need to collect QA test data for this.
+
+        # Finally, check the complete logic tree SES and make sure it contains
+        # all of the ruptures.
+        complete_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=self.job.id,
+            ses_collection__output__output_type='complete_lt_ses',
+            complete_logic_tree_ses=True)
+
+        # Test the computed `investigation_time`
+        # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
+        self.assertEqual(500.0, complete_lt_ses.investigation_time)
+
+        self.assertIsNone(complete_lt_ses.ordinal)
+
+        clt_ses_ruptures = models.SESRupture.objects.filter(
+            ses=complete_lt_ses.id)
+
+        self.assertEqual(210, clt_ses_ruptures.count())
