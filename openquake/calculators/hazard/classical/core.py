@@ -534,6 +534,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 curve_writer.serialize(hc_data)
                 pause *= 0.8
                 pause = min_pause if pause < min_pause else pause
+            logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
         return nrml_path
 
