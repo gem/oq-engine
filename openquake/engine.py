@@ -898,7 +898,7 @@ def _switch_to_job_phase(job_ctxt, ctype, status):
     """
     job = OqJob.objects.get(id=job_ctxt.job_id)
     JobPhaseStats.objects.create(oq_job=job, ctype=ctype, job_status=status)
-    logs.log_progress("%s" % status, 1)
+    logs.log_progress("%s (%s)" % (status, ctype), 1)
 
 
 def _launch_job(job_ctxt, sections):
