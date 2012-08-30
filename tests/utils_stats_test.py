@@ -488,7 +488,7 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
         # Call the wrapped function.
         self.assertEqual(
             result, no_exception(job_id=job_id, items=range(result)))
-        
+
         value = stats.pk_get(job_id, _COUNTER[ctype])
         self.assertEqual(result, (value - previous_value))
 
