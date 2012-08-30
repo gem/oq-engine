@@ -730,6 +730,13 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    complete_logic_tree_gmf = fields.OqNullBooleanField(
+        help_text=(
+            'If true, generate a collection of all of the GMFs for all'
+            ' logic tree branches with an adjusted investigation time.'),
+        null=True,
+        blank=True,
+    )
     ground_motion_fields = fields.OqNullBooleanField(
         help_text=('If true, ground motion fields will be computed (in '
                    'addition to stochastic event sets)'),
