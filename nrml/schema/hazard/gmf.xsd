@@ -9,25 +9,21 @@
     <xs:element name="gmfCollection" type="GMFCollection" />
     <xs:complexType name="GMFCollection">
         <xs:sequence>
-            <xs:element name="gmfSet" type="EventBasedGMFSet" minOccurs="1" maxOccurs="unbounded" />
+            <xs:element name="gmfSet" type="GMFSet" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
         <xs:attribute name="sourceModelTreePath" type="xs:string" use="required" />
         <xs:attribute name="gsimTreePath" type="xs:string" use="required" />
     </xs:complexType>
 
-    <!-- <gmfSet> for event-based calculator results -->
-    <xs:complexType name="EventBasedGMFSet">
+    <xs:complexType name="GMFSet">
         <xs:sequence>
             <xs:element ref="gmf" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
-    </xs:complexType>
-
-    <!-- <gmfSet> for scenario calculator results -->
-    <xs:complexType name="ScenarioGMFSet">
-        <xs:sequence>
-            <xs:element ref="gmf" minOccurs="1" maxOccurs="unbounded" />
-        </xs:sequence>
+        <!--
+            Optional; used only for 'Event-Based' calculations.
+            Not used for 'Scenario' calculations.
+        -->
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="optional" />
     </xs:complexType>
 
     <xs:element name="gmf" type="GMF" />
