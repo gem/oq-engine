@@ -27,6 +27,7 @@ import json
 
 from openquake import java
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
 from openquake.calculators.hazard.general import BaseHazardCalculator
 from openquake.output import hazard as hazard_output
@@ -60,7 +61,14 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         self.initialize_pr_data(num_calculations)
 
         for cnum in xrange(num_calculations):
-            gmf = self.compute_ground_motion_field(random_generator)
+            try:
+                gmf = self.compute_ground_motion_field(random_generator)
+                stats.pk_inc(self.job_ctxt.job_id, "nhzrd_done", 1)
+            except:
+                # Count failure
+                stats.pk_inc(self.job_ctxt.job_id, "nhzrd_failed", 1)
+                raise
+            logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
             imt = self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]
             self._serialize_gmf(gmf, imt, cnum)
 
