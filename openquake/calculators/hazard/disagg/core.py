@@ -179,7 +179,7 @@ def save_5d_matrix_to_h5(directory, matrix):
 
 @task
 @java.unpack_exception
-@stats.count_progress("h")
+@stats.count_progress("h", data_arg="site")
 def compute_disagg_matrix_task(job_id, site, realization, poe,
                                result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily

@@ -271,6 +271,7 @@ class count_progress(object):   # pylint: disable=C0103
         """Return the job_id and the number of work items."""
         job_id = None
         data = None
+        data_len = None
 
         if len(args) > 0:
             job_id = args[0]
@@ -282,15 +283,18 @@ class count_progress(object):   # pylint: disable=C0103
         if not data:
             assert self.data_arg, "Internal error: no name for data parameter"
             data = kwargs.get(self.data_arg)
-            assert data, "Internal error: invalid data parameter"
-            try:
-                assert len(data), "Internal error: empty data parameter"
-            except TypeError:
-                raise AssertionError("data parameter must be a collection")
+
+        assert data, "Internal error: invalid data parameter"
+        try:
+            data_len = len(data)
+            assert data_len, "Internal error: empty data parameter"
+        except TypeError:
+            # The data parameter is not a sequence or collection, length = 1
+            data_len = 1
 
         assert job_id is not None, "job ID not found"
         assert job_id > 0, "Invalid job ID"
-        return job_id, len(data)
+        return job_id, data_len
 
     def __call__(self, func):
         """The actual decorator."""

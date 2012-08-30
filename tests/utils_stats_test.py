@@ -456,19 +456,20 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
     def test_data_in_kwargs_and_not_sequence(self):
         # The data parameter is passed via kwargs and its name is specified
         # as a decorator argument but the argument is not a sequence
+        #   we assume data length = 1
         ctype = "h"
 
-        @stats.count_progress(ctype, data_arg="sites")
-        def no_exception(job_id, sites):
+        @stats.count_progress(ctype, data_arg="site")
+        def no_exception(job_id, site):
             return 998
 
+        previous_value = stats.pk_get(35, "nhzrd_done")
+
         # Call the wrapped function.
-        try:
-            no_exception(35, sites=8)
-        except AssertionError, e:
-            self.assertEqual("data parameter must be a collection", e.args[0])
-        else:
-            self.fail("AssertionError not raised")
+        self.assertEqual(998, no_exception(35, site=11))
+
+        value = stats.pk_get(35, "nhzrd_done")
+        self.assertEqual(1, (value - previous_value))
 
     def test_data_in_kwargs_and_no_data_arg_name(self):
         # The data parameter is passed via kwargs but its name is *not*
