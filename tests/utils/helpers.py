@@ -206,6 +206,52 @@ def run_job(config_file, params=None, check_output=False):
         return subprocess.check_call(args)
 
 
+def run_hazard_job(config_file, params=None, check_output=False,
+                   silence=False):
+    """
+    Given a path to a config file, run an openquake hazard job as a separate
+    process using `subprocess`.
+
+    :param str config_file:
+        Path to the calculation config file.
+    :param list params:
+        List of additional command line params to bin/openquake. Optional.
+    :param bool check_output:
+        If `True`, use :func:`subprocess.check_output` instead of
+        :func:`subprocess.check_call`.
+    :param bool silence:
+        If `True`, silence all stdout and stderr messages.
+
+    :returns:
+        With the default input, return the return code of the subprocess.
+
+        If ``check_output`` is set to True, return the output of the subprocess
+        call to bin/openquake as a `str`. See
+        http://docs.python.org/library/subprocess.html#subprocess.check_output
+        for more details.
+    :raises:
+        If the return code of the subprocess call is not 0, a
+        :exception:`subprocess.CalledProcessError` is raised.
+    """
+    args = ["bin/openquake", "--force-inputs", "--run-hazard=%s" % config_file]
+    if params is not None:
+        args.extend(params)
+
+    devnull = None
+    if silence:
+        devnull = open(os.devnull, 'wb')
+
+    try:
+        if check_output:
+            return subprocess.check_output(args, stdout=devnull,
+                                           stderr=devnull)
+        else:
+            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
+    finally:
+        if devnull is not None:
+            devnull.close()
+
+
 def store_hazard_logic_trees(a_job):
     """Helper function to store the source model and GMPE logic trees in the
     KVS so that it can be read by the Java code.

@@ -1298,6 +1298,9 @@ class SES(djm.Model):
     """
     ses_collection = djm.ForeignKey('SESCollection')
     investigation_time = djm.FloatField()
+    # Order number of this Stochastic Event Set in a series of SESs
+    # (for a given logic tree realization).
+    ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
@@ -1391,6 +1394,12 @@ class GmfCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
 
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`GmfSet` objects.
+        """
+        return GmfSet.objects.filter(gmf_collection=self.id).iterator()
+
 
 class GmfSet(djm.Model):
     """
@@ -1398,9 +1407,18 @@ class GmfSet(djm.Model):
     """
     gmf_collection = djm.ForeignKey('GmfCollection')
     investigation_time = djm.FloatField()
+    # Keep track of the stochastic event set which this GMF set is associated
+    # with.
+    ses_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
+
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`Gmf` objects.
+        """
+        return Gmf.objects.filter(gmf_set=self.id).iterator()
 
 
 class Gmf(djm.Model):
@@ -1415,6 +1433,12 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`Gmf` objects.
+        """
+        return GmfNode.objects.filter(gmf=self.id).iterator()
 
 
 class GmfNode(djm.Model):
