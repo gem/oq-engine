@@ -125,18 +125,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         imts = [haz_general.imt_to_nhlib(x)
                 for x in hc.intensity_measure_types]
 
-        correl_matrices = None
-
+        correl_model = None
         if hc.ground_motion_correlation_model is not None:
-            # Compute correlation matrices
-            # TODO: Technically, this could be computed only 1 time per
-            # calculation.
-            # This is task-independent. The issue, however, is that the matrix
-            # can be very large (number of sites squared) and to fetch this
-            # from the DB could be slower than re-computing it.
-            # We haven't yet profiled this, so there is a possibility for
-            # future optimization.
-            correl_matrices = _compute_gm_correl_matrices(hc, imts, site_coll)
+            correl_model = _get_correl_model(hc)
 
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -187,7 +178,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
                     'gsim': gsims[rupture.tectonic_region_type],
                     'truncation_level': hc.truncation_level,
                     'realizations': DEFAULT_GMF_REALIZATIONS,
-                    'lt_correlation_matrices': correl_matrices,
+                    'correlation_model': correl_model,
                     'rupture_site_filter':
                         filters.rupture_site_distance_filter(
                             hc.maximum_distance),
@@ -211,20 +202,15 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     haz_general.signal_task_complete(job_id, len(src_ids))
 
 
-def _compute_gm_correl_matrices(hc, imts, site_coll):
+def _get_correl_model(hc):
     """
-    Helper function for computing ground motion correlation matrices.
+    Helper function for constructing the appropriate correlation model.
 
     :param hc:
         A :class:`openquake.db.models.HazardCalculation` instance.
-    :param imts:
-        A `list` of nhlib IMT objects. See :mod:`nhlib.imt` for more info.
-    :param site_coll:
-        A :class:`nhlib.site.SiteCollection` instance.
 
     :returns:
-        See the `get_lower_triangle_correlation_matrix` of the relevant
-        correlation model in :mod:`nhlib.correlation` for more info.
+        A correlation object. See :mod:`nhlib.correlation` for more info.
     """
     correl_model_cls = getattr(
         correlation,
@@ -234,12 +220,7 @@ def _compute_gm_correl_matrices(hc, imts, site_coll):
         raise RuntimeError("Unknown correlation model: '%s'"
                            % hc.ground_motion_correlation_model)
 
-    cm = correl_model_cls(**hc.ground_motion_correlation_params)
-    correl_matrices = dict(
-        (imt, cm.get_lower_triangle_correlation_matrix(site_coll, imt))
-        for imt in imts)
-
-    return correl_matrices
+    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
 def _save_ses_rupture(ses, rupture):
@@ -317,6 +298,10 @@ def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
         in the GMF matrices to determine where the GMFs are located.
     """
     for imt, gmf_matrix in gmf_dict.iteritems():
+        # NOTE: The values of each `gmf_matrix` are numpy.matrix types.
+        # We need to convert them to numpy.array types before saving.
+        # (The ORM doesn't like numpy.matrix types.)
+        gmf_matrix = numpy.array(gmf_matrix)
         gmf = models.Gmf(
             gmf_set=gmf_set, imt=imt.__class__.__name__)
 
