@@ -1,6 +1,6 @@
 .. module:: nhlib
 
-.. include:: ../README
+.. include:: ../README.rst
 
 ==================
 Internal structure
