@@ -349,7 +349,6 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
-
             general.store_source_model(self.job_ctxt.job_id,
                                        src_model_rnd.getrandbits(32),
                                        self.job_ctxt.params, self.calc)
@@ -367,7 +366,6 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
                 task_data.append((rlz, poe, task_site_pairs))
 
         for rlz, poe, task_site_pairs in task_data:
-
             # accumulates all data for a given (realization, poe) pair
             rlz_poe_data = []
             for a_task, site in task_site_pairs:
@@ -385,6 +383,7 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
                 else:
                     gmv, matrix_path = a_task.result
                     rlz_poe_data.append((site, gmv, matrix_path))
+                logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
             full_da_results.append((rlz, poe, rlz_poe_data))
 
