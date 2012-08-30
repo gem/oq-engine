@@ -91,7 +91,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     compute_ground_motion_fields.delay(
                         self.job_ctxt.job_id,
                         self.job_ctxt.sites_to_compute(),
-                        i, j, gmf_generator.getrandbits(32)))
+                        i, realization=j, seed=gmf_generator.getrandbits(32)))
 
             for each_task in pending_tasks:
                 each_task.wait()
