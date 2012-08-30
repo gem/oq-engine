@@ -111,3 +111,26 @@ class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
         aaae(lt, [[1.0,            0.0,            0.0],
                   [1.97514806e-02, 9.99804920e-01, 0.0],
                   [1.97514806e-02, 5.42206860e-20, 9.99804920e-01]])
+
+
+class JB2009ApplyCorrelationTestCase(unittest.TestCase):
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
+                              Site(Point(2, -40.1), 1, True, 1, 1),
+                              Site(Point(2, -39.9), 1, True, 1, 1)])
+
+    def test(self):
+        numpy.random.seed(13)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        intra_residuals_sampled = numpy.random.normal(size=(3, 100000))
+        intra_residuals_correlated = cormo.apply_correlation(
+            self.SITECOL, PGA(), intra_residuals_sampled
+        )
+        inferred_corrcoef = numpy.corrcoef(intra_residuals_correlated)
+        mean = intra_residuals_correlated.mean()
+        std = intra_residuals_correlated.std()
+        self.assertAlmostEqual(mean, 0, delta=0.002)
+        self.assertAlmostEqual(std, 1, delta=0.002)
+
+        actual_corrcoef = cormo._get_correlation_matrix(self.SITECOL, PGA())
+        numpy.testing.assert_almost_equal(inferred_corrcoef, actual_corrcoef,
+                                          decimal=2)

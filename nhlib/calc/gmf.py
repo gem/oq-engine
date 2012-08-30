@@ -106,19 +106,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
                                                                realizations))
         if correlation_model is not None:
-            cormo = correlation_model
-            corma = cormo.get_lower_triangle_correlation_matrix(sites, imt)
-            # intra-event residual for a single relization is a product
-            # of lower-triangle decomposed correlation matrix and vector
-            # of N random numbers (where N is equal to number of sites).
-            # we need to do that multiplication once per realization
-            # with the same matrix and different vectors. the only way
-            # to do it in a vectorized fashion is to multiply array
-            # of vectors by matrix instead of matrix by array (note
-            # that matrix multiplication is not commutative). so we use
-            # formula ``A B = (B^T A^T)^T`` to change an operands order.
-            intra_residual = numpy.dot(intra_residual.transpose(),
-                                       corma.transpose()).transpose()
+            intra_residual = correlation_model.apply_correlation(
+                sites, imt, intra_residual
+            )
 
         inter_residual = stddev_inter * distribution.rvs(size=realizations)
         gmf = gsim.to_imt_unit_values(mean + intra_residual + inter_residual)
