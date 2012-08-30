@@ -140,29 +140,14 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     along great circle arc and the same approach as in :func:`distance`
     for combining it with depth distance.
 
-    :param mlons:
-        Numpy array representing the longitudes of a first collection of
-        points. Values are in decimal degrees. ``mlons``, ``mlats``, and
-        ``mdepths`` should all be of a uniform size and shape.
-    :param mlats:
-        Numpy array representing the latitudes of a first collection of points.
-        Values are in decimal degrees.
-    :param mdepths:
-        Numpy array representing the latitudes of a first collection of points.
-        Values are in km.
-    :param slons:
-        Scalar, list, tuple, or numpy array representing the longitudes for a
-        second collection of point, for which we want to find the minimum
-        distance. Values are in decimal degrees.
-
-        ``slons``, ``slats``, and ``sdepths`` should all be of a uniform size
-        shape.
-    :param slats:
-        The same as ``slons``, but for latitude values. Values are in decimal
-        degrees.
-    :param sdepths:
-        The same as ``slons`` and ``slats``, but for depth values. Values are
-        in km.
+    :param array mlons, mlats, mdepths:
+        Numpy arrays of the same shape representing a first collection
+        of points, the one distance to which is of interest -- longitudes,
+        latitudes (both in decimal degrees) and depths (in km).
+    :param array slons, slats, sdepths:
+        Scalars, python lists or tuples or numpy arrays of the same shape,
+        representing a second collection: a list of points to find a minimum
+        distance from for.
     :param indices:
         If ``True`` -- return indices of closest points from first triple
         of coordinates instead of the actual distances. Indices are always
@@ -227,24 +212,15 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     Find a list of points between two given ones that lie on the same
     great circle arc and are equally spaced by ``length`` km.
 
-    :param lon1:
-        Longitude component of a point to start placing intervals from. The
-        first point in the result list includes the point composed of ``lon1``,
-        ``lat1``, and ``depth1``.
-    :param lat1:
-        The latitude component of the starting point.
-    :param depth1:
-        The depth component of the starting point.
-    :param lon2:
-        Longitude component of the other end of the great circle arc segement
-        to put intervals on. The last resulting point might be closer to the
-        first reference point that the second one, or further, since the number
-        of segements is taken as a rounded division of the length between two
-        reference points and ``length``.
-    :param lat2:
-        The latitude component of the end point.
-    :param depth2:
-        The depth component of the end point.
+    :param float lon1, lat1, depth1:
+        Coordinates of a point to start placing intervals from. The first
+        point in the resulting list has these coordinates.
+    :param float lon2, lat2, depth2:
+        Coordinates of the other end of the great circle arc segment
+        to put intervals on. The last resulting point might be closer
+        to the first reference point than the second one or further,
+        since the number of segments is taken as rounded division of
+        length between two reference points and ``length``.
     :param length:
         Required distance between two subsequent resulting points, in km.
     :returns:
@@ -273,21 +249,12 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     Find a list of specified number of points between two given ones that are
     equally spaced along the great circle arc connecting given points.
 
-    :param lon1:
-        Longitude component of a point to start placing intervals from. The
-        first point in the result list includes the point composed of ``lon1``,
-        ``lat1``, and ``depth1``.
-    :param lat1:
-        Latitude component of the starting point.
-    :param depth1:
-        Depth component of the starting point.
-    :param lon2:
-        Longitude component of the end point. The last point in the resulting
-        list includes the point composed of ``lon2``, ``lat2``, and ``depth2``.
-    :param lat2:
-        Latitude component of the end point.
-    :param depth2:
-        Depth component of the end point.
+    :param float lon1, lat1, depth1:
+        Coordinates of a point to start from. The first point in a resulting
+        list has these coordinates.
+    :param float lon2, lat2, depth2:
+        Coordinates of a point to finish at. The last point in a resulting
+        list has these coordinates.
     :param npoints:
         Integer number of points to return. First and last points count,
         so if there have to be two intervals, ``npoints`` should be 3.
@@ -316,14 +283,9 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     Find a list of specified number of points starting from a given one
     along a great circle arc with a given azimuth measured in a given point.
 
-    :param lon1:
-        Longitude component of a point to start placing intervals from. The
-        first point in the result list includes the point composed of ``lon1``,
-        ``lat1``, and ``depth1``.
-    :param lat1:
-        The latitude component of the starting point.
-    :param depth1:
-        The depth component of the starting point.
+    :param float lon, lat, depth:
+        Coordinates of a point to start from. The first point in a resulting
+        list has these coordinates.
     :param azimuth:
         A direction representing a great circle arc together with a reference
         point.
@@ -379,10 +341,8 @@ def point_at(lon, lat, azimuth, distance):
     Perform a forward geodetic transformation: find a point lying at a given
     distance from a given one on a great circle arc defined by azimuth.
 
-    :param lon:
-        Longitude of a reference point, in decimal degrees.
-    :param lat:
-        Latitude of a reference point, in decimal degrees.
+    :param float lon, lat:
+        Coordinates of a reference point, in decimal degrees.
     :param azimuth:
         An azimuth of a great circle arc of interest measured in a reference
         point in decimal degrees.
@@ -420,19 +380,14 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     Calculate a closest distance between a great circle arc and a point
     (or a collection of points).
 
-    :param alon:
-        Arc reference point longitude, `float` value in decimal degrees.
-    :param alat:
-        Arc reference point latitude, `float` value in decimal degrees.
+    :param float alon, alat:
+        Arc reference point longitude and latitude, in decimal degrees.
     :param azimuth:
         Arc azimuth (an angle between direction to a north and arc in clockwise
         direction), measured in a reference point, in decimal degrees.
-    :param plons:
-        Longitudes of points to measure distance. Either scalar values or numpy
-        arrays of decimal degrees.
-    :param plats:
-        Latitudes of points to measure distance. Either scalar values or numpy
-        arrays of decimal degrees.
+    :param float plons, plats:
+        Longitudes and latitudes of points to measure distance. Either scalar
+        values or numpy arrays of decimal degrees.
     :returns:
         Distance in km, a scalar value or numpy array depending on ``plons``
         and ``plats``. A distance is negative if the target point lies on the
