@@ -76,7 +76,7 @@ def test_compute_hazard_curve(job_id, sites, realization):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator("h")
+@stats.count_progress("h", data_arg="sites")
 def fake_compute_hazard_curve(job_id, sites, realization):
     """Fake hazard curve computation function."""
     raise NotImplementedError("Fake and failing hazard curve computation!")

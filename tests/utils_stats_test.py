@@ -360,17 +360,17 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1)],
             sorted(stats.failure_counters(123, "g")))
-        self.assertEqual([('oqs/123/h/c-failures/i', 1)],
+        self.assertEqual([('oqs/123/h/c:failed/i', 1)],
                          sorted(stats.failure_counters(123, "h")))
         self.assertEqual(
-            [('oqs/123/r/d-failures/i', 1), ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/r/d:failed/i', 1), ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123, "r")))
 
     def test_failure_counters_with_invalid_area(self):
@@ -383,14 +383,14 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1),
-             ('oqs/123/h/c-failures/i', 1), ('oqs/123/r/d-failures/i', 1),
-             ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1),
+             ('oqs/123/h/c:failed/i', 1), ('oqs/123/r/d:failed/i', 1),
+             ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123)))
 
     def test_failure_counters_with_no_failures(self):
