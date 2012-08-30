@@ -334,6 +334,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes_hazard_maps float[],
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
+    complete_logic_tree_gmf BOOLEAN,
     ground_motion_fields BOOLEAN
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON', 2);
