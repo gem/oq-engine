@@ -261,15 +261,36 @@ class count_progress(object):   # pylint: disable=C0103
     ALSO: this decorator presently only supports hazard and risk tasks!
     """
 
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
+    def __init__(self, ctype, data_arg=None):
+        """Captures the calculation type and the name of the data parameter."""
+        self.ctype = ctype
+        self.data_arg = data_arg
         self.__name__ = "count_progress"
 
-    @staticmethod
-    def get_task_data(*args):
+    def get_task_data(self, *args, **kwargs):
         """Return the job_id and the number of work items."""
-        return args[0], len(args[1])
+        job_id = None
+        data = None
+
+        if len(args) > 0:
+            job_id = args[0]
+        if len(args) > 1:
+            data = args[1]
+            assert data and len(data), "Internal error: invalid data parameter"
+        if job_id < 0:
+            job_id = kwargs.get("job_id")
+        if not data:
+            assert self.data_arg, "Internal error: no name for data parameter"
+            data = kwargs.get(self.data_arg)
+            assert data, "Internal error: invalid data parameter"
+            try:
+                assert len(data), "Internal error: empty data parameter"
+            except TypeError:
+                raise AssertionError("data parameter must be a collection")
+
+        assert job_id is not None, "job ID not found"
+        assert job_id > 0, "Invalid job ID"
+        return job_id, len(data)
 
     def __call__(self, func):
         """The actual decorator."""
@@ -280,12 +301,12 @@ class count_progress(object):   # pylint: disable=C0103
             job_id, num_items = self.get_task_data(*args, **kwargs)
             try:
                 result = func(*args, **kwargs)
-                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = "nhzrd_done" if self.ctype == "h" else "nrisk_done"
                 pk_inc(job_id, key, num_items)
                 return result
             except:
                 # Count failure
-                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
                 pk_inc(job_id, key, num_items)
                 raise
 

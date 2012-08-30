@@ -403,13 +403,11 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.count_progress()."""
 
     def test_success_stats(self):
-        """
-        The success counter is incremented when the wrapped function
-        terminates without raising an exception.
-        """
-        area = "h"
+        # The success counter is incremented when the wrapped function
+        # terminates without raising an exception.
+        ctype = "h"
 
-        @stats.count_progress(area)
+        @stats.count_progress(ctype)
         def no_exception(job_id, items):
             return 999
 
@@ -422,13 +420,11 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
         self.assertEqual(5, (value - previous_value))
 
     def test_failure_stats(self):
-        """
-        The failure counter is incremented when the wrapped function
-        terminates raises an exception.
-        """
-        area = "r"
+        # The failure counter is incremented when the wrapped function
+        # terminates raises an exception.
+        ctype = "r"
 
-        @stats.count_progress(area)
+        @stats.count_progress(ctype)
         def raise_exception(job_id, items):
             raise NotImplementedError
 
@@ -439,3 +435,105 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         value = stats.pk_get(22, "nrisk_failed")
         self.assertEqual(6, (value - previous_value))
+
+    def test_data_in_kwargs(self):
+        # The data parameter is passed via kwargs and its name is specified
+        # as a decorator argument
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="sites")
+        def no_exception(job_id, sites):
+            return 998
+
+        previous_value = stats.pk_get(33, "nhzrd_done")
+
+        # Call the wrapped function.
+        self.assertEqual(998, no_exception(33, sites=range(7)))
+
+        value = stats.pk_get(33, "nhzrd_done")
+        self.assertEqual(7, (value - previous_value))
+
+    def test_data_in_kwargs_and_not_sequence(self):
+        # The data parameter is passed via kwargs and its name is specified
+        # as a decorator argument but the argument is not a sequence
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="sites")
+        def no_exception(job_id, sites):
+            return 998
+
+        # Call the wrapped function.
+        try:
+            no_exception(35, sites=8)
+        except AssertionError, e:
+            self.assertEqual("data parameter must be a collection", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_data_in_kwargs_and_no_data_arg_name(self):
+        # The data parameter is passed via kwargs but its name is *not*
+        # specified as a decorator argument
+        ctype = "h"
+
+        @stats.count_progress(ctype)
+        def no_exception(job_id, sites):
+            return 998
+
+        # Call the wrapped function.
+        try:
+            no_exception(40, sites=8)
+        except AssertionError, e:
+            self.assertEqual(
+                "Internal error: no name for data parameter", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_data_in_kwargs_and_data_is_empty(self):
+        # The data parameter is passed via kwargs but it's empty
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="sites")
+        def no_exception(job_id, sites):
+            return 998
+
+        # Call the wrapped function.
+        try:
+            no_exception(45, sites=[])
+        except AssertionError, e:
+            self.assertEqual(
+                "Internal error: invalid data parameter", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_wrong_job_id_param_name(self):
+        # The 'job_id' parameter is passed via kwargs but called some other
+        # name
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="sites")
+        def no_exception(job_id, sites):
+            return 998
+
+        # Call the wrapped function.
+        try:
+            no_exception(this_job_id_is_not_found=50, sites=range(9))
+        except AssertionError, e:
+            self.assertEqual("job ID not found", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_invalid_job_id_value(self):
+        # The 'job_id' parameter is passed via kwargs but has an invalid value
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="sites")
+        def no_exception(job_id, sites):
+            return 998
+
+        # Call the wrapped function.
+        try:
+            no_exception(job_id=-55, sites=range(9))
+        except AssertionError, e:
+            self.assertEqual("Invalid job ID", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
