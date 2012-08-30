@@ -1009,7 +1009,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "module 'nhlib.gsim' does not contain name 'GMPE'"
+        error = "module 'nhlib.gsim' does not contain name 'FakeGMPE'"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
