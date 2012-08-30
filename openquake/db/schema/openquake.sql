@@ -614,10 +614,12 @@ CREATE TABLE uiapi.job_stats (
 CREATE TABLE uiapi.job_phase_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
+    -- calculation type (hazard|risk)
+    ctype VARCHAR NOT NULL,
     job_status VARCHAR NOT NULL,
     start_time timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    UNIQUE (oq_job_id, job_status)
+    UNIQUE (oq_job_id, ctype, job_status)
 ) TABLESPACE uiapi_ts;
 
 
