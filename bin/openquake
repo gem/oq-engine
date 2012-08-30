@@ -95,7 +95,8 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--log-level', '-l',
         help='Defaults to "warn"', required=False,
-        choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
+        choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
+        default='progress')
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
