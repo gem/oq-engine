@@ -269,22 +269,20 @@ class count_progress(object):   # pylint: disable=C0103
 
     def get_task_data(self, *args, **kwargs):
         """Return the job_id and the number of work items."""
-        job_id = None
+        job_id = kwargs.get("job_id")
+        if job_id is None and len(args) > 0:
+            job_id = args[0]
+        assert job_id is not None, "job ID not found"
+        assert job_id > 0, "Invalid job ID"
+
         data = None
         data_len = None
-
-        if len(args) > 0:
-            job_id = args[0]
-        if len(args) > 1:
-            data = args[1]
-            assert data and len(data), "Internal error: invalid data parameter"
-        if job_id < 0:
-            job_id = kwargs.get("job_id")
-        if not data:
-            assert self.data_arg, "Internal error: no name for data parameter"
+        if self.data_arg:
             data = kwargs.get(self.data_arg)
+        elif len(args) > 1:
+            data = args[1]
+        assert data is not None, "data parameter not found"
 
-        assert data, "Internal error: invalid data parameter"
         try:
             data_len = len(data)
             assert data_len, "Internal error: empty data parameter"
@@ -292,8 +290,6 @@ class count_progress(object):   # pylint: disable=C0103
             # The data parameter is not a sequence or collection, length = 1
             data_len = 1
 
-        assert job_id is not None, "job ID not found"
-        assert job_id > 0, "Invalid job ID"
         return job_id, data_len
 
     def __call__(self, func):

@@ -35,7 +35,7 @@ LOG = logs.LOG
 
 @task
 @java.unpack_exception
-@stats.count_progress("h", data_arg="sites")
+@stats.count_progress("h", data_arg="realization")
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
@@ -76,7 +76,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         histories = self.job_ctxt['NUMBER_OF_SEISMICITY_HISTORIES']
         realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
-        self.initialize_pr_data(histories * realization)
+        self.initialize_pr_data(histories * realizations)
 
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
@@ -97,6 +97,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 each_task.wait()
                 if each_task.status != 'SUCCESS':
                     raise Exception(each_task.result)
+                logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(
