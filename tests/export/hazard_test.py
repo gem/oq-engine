@@ -87,8 +87,8 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 2 SESs, and 1 complete logic tree SES
-            self.assertEqual(5, len(outputs))
+            # 2 GMFs, 2 SESs, 1 complete logic tree SES, and 1 complete LT GMF
+            self.assertEqual(6, len(outputs))
 
             #######
             # SESs:
@@ -135,5 +135,15 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
                 self.assertTrue(os.path.exists(f))
                 self.assertTrue(os.path.isabs(f))
                 self.assertTrue(os.path.getsize(f) > 0)
+
+            ##################
+            # Complete LT GMF:
+            [complete_lt_gmf] = outputs.filter(output_type='complete_lt_gmf')
+
+            [exported_file] = hazard.export(complete_lt_gmf.id, target_dir)
+
+            self.assertTrue(os.path.exists(exported_file))
+            self.assertTrue(os.path.isabs(exported_file))
+            self.assertTrue(os.path.getsize(exported_file) > 0)
         finally:
             shutil.rmtree(target_dir)
