@@ -40,15 +40,18 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
     def test_mean_based(self):
-        cfg = helpers.demo_file(
+        cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
         self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
-        self._verify_loss_maps(OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(OUTPUT_DIR, 0.05)
-        self._verify_loss_curves(OUTPUT_DIR, 0.05)
-        self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
+        self._verify_job_succeeded(QA_OUTPUT_DIR)
+        self._verify_loss_maps(QA_OUTPUT_DIR, 0.05)
+        self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.05)
+        self._verify_loss_curves(QA_OUTPUT_DIR, 0.05)
+        self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.05)
+
+        # Cleaning generated results file.
+        #rmtree(QA_OUTPUT_DIR)
 
     @unittest.skip
     def test_sampled_based(self):
@@ -77,7 +80,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertEqual('succeeded', job.status)
 
         expected_loss_map_file = helpers.qa_file(
-            'scenario_risk_insured_losses/computed_output/insured-loss-map%s'
+            'probabilistic_event_based_risk/computed_output/insured-loss-map%s'
             '.xml' % job.id)
 
         self.assertTrue(os.path.exists(expected_loss_map_file))
@@ -365,7 +368,8 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 losses, expected_losses, atol=0.0, rtol=tol))
 
     def _run_job(self, config):
-        ret_code = helpers.run_job(config, ["--output-type=xml"])
+        ret_code = helpers.run_job(config, ["--output-type=xml",
+                                            '--log-level=debug'])
         self.assertEquals(0, ret_code)
 
     def _root(self, filename):

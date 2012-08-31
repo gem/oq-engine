@@ -30,7 +30,6 @@ from numpy import sin, cos, arctan2, sqrt, radians
 
 from shapely import geometry
 from scipy.interpolate import interp1d
-
 from nhlib import geo as nhlib_geo
 
 from openquake import java
@@ -63,7 +62,6 @@ class Region(object):
 
         :returns: :py:class:`openquake.shapes.Region` instance
         """
-
         # Constrain the precision for the coordinates:
         coordinates = [(round_float(pt[0]), round_float(pt[1]))
                 for pt in coordinates]
@@ -306,7 +304,6 @@ class Grid(object):
         Return the site corresponding to the center of the
         cell identified by the given grid point.
         """
-
         return Site(self._column_to_longitude(point.column),
                 self._row_to_latitude(point.row))
 
@@ -460,11 +457,11 @@ class Curve(object):
     def from_json(cls, json_str):
         """Construct a curve from a serialized version in
         json format."""
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls.from_dict(as_dict)
+        as_list = json.JSONDecoder().decode(json_str)
+        return cls.from_list(as_list)
 
     @classmethod
-    def from_dict(cls, values):
+    def from_list(cls, values):
         """Construct a curve from a dictionary.
 
         The dictionary keys can be unordered and of
@@ -473,8 +470,8 @@ class Curve(object):
 
         data = []
 
-        for key, val in values.items():
-            data.append((float(key), val))
+        for x, y in values:
+            data.append((x, y))
 
         return cls(data)
 
@@ -582,15 +579,15 @@ class Curve(object):
 
     def to_json(self):
         """Serialize this curve in json format."""
-        as_dict = {}
+        curve = []
 
         for index, x_value in enumerate(self.x_values):
             if self.y_values.ndim > 1:
-                as_dict[str(x_value)] = list(self.y_values[index])
+                curve.append([x_value, list(self.y_values[index])])
             else:
-                as_dict[str(x_value)] = self.y_values[index]
+                curve.append([x_value, self.y_values[index]])
 
-        return json.JSONEncoder().encode(as_dict)
+        return json.JSONEncoder().encode(curve)
 
 
 class VulnerabilityFunction(object):
@@ -814,8 +811,8 @@ class VulnerabilityFunction(object):
 
         :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
         """
-        as_dict = json.JSONDecoder().decode(json_str)
-        return cls.from_tuple(as_dict)
+        as_list = json.JSONDecoder().decode(json_str)
+        return cls.from_tuple(as_list)
 
 
 EMPTY_CURVE = Curve(())
