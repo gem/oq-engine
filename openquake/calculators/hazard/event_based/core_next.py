@@ -367,9 +367,6 @@ def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute,
         gmf_bulk_inserter.flush()
 
 
-            # TODO: bulk insert copy of GMFs
-
-
 def _create_gmf_record(gmf_set, imt):
     """
     Helper function to create :class:`openquake.db.models.Gmf` records. The
