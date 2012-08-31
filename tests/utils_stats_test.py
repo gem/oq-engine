@@ -401,7 +401,7 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
 
 _RESULTS = itertools.count(1)
 _JOB_IDS = itertools.count(100)
-_COUNTER = { "h": "nhzrd_done", "r": "nrisk_done" }
+_COUNTER = {"h": "nhzrd_done", "r": "nrisk_done"}
 
 
 class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
@@ -538,7 +538,7 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
         previous_value = stats.pk_get(job_id, _COUNTER[ctype])
 
         # Call the wrapped function.
-        self.assertEqual(result, no_exception(job_id, range(result-1),
+        self.assertEqual(result, no_exception(job_id, range(result - 1),
                          the_data_arg=range(result)))
 
         value = stats.pk_get(job_id, _COUNTER[ctype])

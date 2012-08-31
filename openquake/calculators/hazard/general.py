@@ -535,13 +535,17 @@ class BaseHazardCalculator(Calculator):
 
         return jsite_list
 
-    def initialize_pr_data(self, sites, realizations):
+    def initialize_pr_data(self, **kwargs):
         """
         Record the total/completed number of work items for the classical,
         event-based and uhs calculators.
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        sites = kwargs.get("sites")
+        assert sites, "Invalid 'sites' parameter"
+        realizations = kwargs.get("realizations")
+        assert realizations, "Invalid 'realizations' parameter"
         stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
         stats.pk_set(self.job_ctxt.job_id, "nhzrd_total",
                      len(sites) * realizations)

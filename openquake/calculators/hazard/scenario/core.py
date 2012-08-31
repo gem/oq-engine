@@ -37,12 +37,14 @@ from openquake.utils import stats
 class ScenarioHazardCalculator(BaseHazardCalculator):
     """Scenario Event Based method for performing hazard calculations."""
 
-    def initialize_pr_data(self, num_calculations):
+    def initialize_pr_data(self, **kwargs):
         """
         Record the total/completed number of work items.
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        num_calculations = kwargs.get("num_calculations")
+        assert num_calculations, "Invalid 'num_calculations' parameter"
         stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
         stats.pk_set(self.job_ctxt.job_id, "nhzrd_total", num_calculations)
         stats.pk_set(self.job_ctxt.job_id, "nhzrd_done", 0)
@@ -58,7 +60,7 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         kvs_client = kvs.get_client()
 
         num_calculations = self._number_of_calculations()
-        self.initialize_pr_data(num_calculations)
+        self.initialize_pr_data(num_calculations=num_calculations)
 
         for cnum in xrange(num_calculations):
             try:

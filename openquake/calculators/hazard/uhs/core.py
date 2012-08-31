@@ -281,8 +281,8 @@ class UHSCalculator(general.BaseHazardCalculator):
         site_block_size = config.hazard_block_size()
         job_profile = job_ctxt.oq_job_profile
 
-        self.initialize_pr_data(all_sites,
-                                job_ctxt.oq_job_profile.realizations)
+        self.initialize_pr_data(
+            sites=all_sites, realizations=job_ctxt.oq_job_profile.realizations)
 
         src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
         gmpe_rnd = random.Random(job_profile.gmpe_lt_random_seed)

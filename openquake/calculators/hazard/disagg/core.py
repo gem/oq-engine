@@ -246,7 +246,7 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
         poes = self.job_ctxt['POES']
         sites = self.job_ctxt.sites_to_compute()
 
-        self.initialize_pr_data(sites, realizations)
+        self.initialize_pr_data(stes=sites, realizations=realizations)
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
