@@ -38,6 +38,7 @@ from openquake import kvs
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
+from openquake.shapes import Curve
 
 from tests.utils import helpers
 
@@ -493,3 +494,12 @@ class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.assertTrue(numpy.allclose(expected,
                 compute_insured_losses(self.asset, self.losses)))
+
+    def test_compute_insured_loss_curve(self):
+        self.asset.deductible = 5
+        self.asset.ins_limit = 500
+        loss_curve = Curve(([(10, 0.2), (4, 1.0)]))
+        expected_insured_lc = Curve([(10, 0.2), (0, 1.0)])
+
+        self.assertEqual(expected_insured_lc,
+            general.compute_insured_loss_curve(self.asset,loss_curve))
