@@ -101,6 +101,12 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
+    cmplt_lt_ses = None
+    if hc.complete_logic_tree_ses:
+        cmplt_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=job_id,
+            complete_logic_tree_ses=True)
+
     if hc.ground_motion_fields:
         # For ground motion field calculation, we need the points of interest
         # for the calculation.
@@ -125,18 +131,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         imts = [haz_general.imt_to_nhlib(x)
                 for x in hc.intensity_measure_types]
 
-        correl_matrices = None
-
+        correl_model = None
         if hc.ground_motion_correlation_model is not None:
-            # Compute correlation matrices
-            # TODO: Technically, this could be computed only 1 time per
-            # calculation.
-            # This is task-independent. The issue, however, is that the matrix
-            # can be very large (number of sites squared) and to fetch this
-            # from the DB could be slower than re-computing it.
-            # We haven't yet profiled this, so there is a possibility for
-            # future optimization.
-            correl_matrices = _compute_gm_correl_matrices(hc, imts, site_coll)
+            correl_model = _get_correl_model(hc)
 
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -171,7 +168,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         for rupture in ses_poissonian:
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
-            _save_ses_rupture(ses, rupture)
+            _save_ses_rupture(ses, rupture, cmplt_lt_ses)
             logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
@@ -187,7 +184,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
                     'gsim': gsims[rupture.tectonic_region_type],
                     'truncation_level': hc.truncation_level,
                     'realizations': DEFAULT_GMF_REALIZATIONS,
-                    'lt_correlation_matrices': correl_matrices,
+                    'correlation_model': correl_model,
                     'rupture_site_filter':
                         filters.rupture_site_distance_filter(
                             hc.maximum_distance),
@@ -211,20 +208,15 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
     haz_general.signal_task_complete(job_id, len(src_ids))
 
 
-def _compute_gm_correl_matrices(hc, imts, site_coll):
+def _get_correl_model(hc):
     """
-    Helper function for computing ground motion correlation matrices.
+    Helper function for constructing the appropriate correlation model.
 
     :param hc:
         A :class:`openquake.db.models.HazardCalculation` instance.
-    :param imts:
-        A `list` of nhlib IMT objects. See :mod:`nhlib.imt` for more info.
-    :param site_coll:
-        A :class:`nhlib.site.SiteCollection` instance.
 
     :returns:
-        See the `get_lower_triangle_correlation_matrix` of the relevant
-        correlation model in :mod:`nhlib.correlation` for more info.
+        A correlation object. See :mod:`nhlib.correlation` for more info.
     """
     correl_model_cls = getattr(
         correlation,
@@ -234,15 +226,10 @@ def _compute_gm_correl_matrices(hc, imts, site_coll):
         raise RuntimeError("Unknown correlation model: '%s'"
                            % hc.ground_motion_correlation_model)
 
-    cm = correl_model_cls(**hc.ground_motion_correlation_params)
-    correl_matrices = dict(
-        (imt, cm.get_lower_triangle_correlation_matrix(site_coll, imt))
-        for imt in imts)
-
-    return correl_matrices
+    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def _save_ses_rupture(ses, rupture):
+def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -251,6 +238,10 @@ def _save_ses_rupture(ses, rupture):
         'container' for the new rupture record.
     :param rupture:
         A :class:`nhlib.source.rupture.Rupture` instance.
+    :param complete_logic_tree_ses:
+        :class:`openquake.db.models.SES` representing the `complete logic tree`
+        stochastic event set.
+        If not None, save a copy of the input `rupture` to this SES.
     """
     is_from_fault_source = rupture.source_typology in (
         nhlib.source.ComplexFaultSource,
@@ -296,6 +287,19 @@ def _save_ses_rupture(ses, rupture):
         lats=lats,
         depths=depths,
     )
+    if complete_logic_tree_ses is not None:
+        models.SESRupture.objects.create(
+            ses=complete_logic_tree_ses,
+            magnitude=rupture.mag,
+            strike=rupture.surface.get_strike(),
+            dip=rupture.surface.get_dip(),
+            rake=rupture.rake,
+            tectonic_region_type=rupture.tectonic_region_type,
+            is_from_fault_source=is_from_fault_source,
+            lons=lons,
+            lats=lats,
+            depths=depths,
+        )
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -317,6 +321,10 @@ def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute):
         in the GMF matrices to determine where the GMFs are located.
     """
     for imt, gmf_matrix in gmf_dict.iteritems():
+        # NOTE: The values of each `gmf_matrix` are numpy.matrix types.
+        # We need to convert them to numpy.array types before saving.
+        # (The ORM doesn't like numpy.matrix types.)
+        gmf_matrix = numpy.array(gmf_matrix)
         gmf = models.Gmf(
             gmf_set=gmf_set, imt=imt.__class__.__name__)
 
@@ -421,6 +429,50 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 investigation_time=hc.investigation_time,
                 ordinal=i)
 
+    def initialize_complete_lt_ses_db_records(self):
+        """
+        Optional; if the user has request to collect `complete logic tree`
+        stochastic event set (containing all ruptures from all realizations),
+        initialize DB records for those results here.
+
+        Throughout the course of the calculation, computed ruptures will be
+        copied into this collection. See :func:`_save_ses_rupture` for more
+        info.
+        """
+        hc = self.job.hazard_calculation
+
+        # `complete logic tree` SES
+        clt_ses_output = models.Output.objects.create(
+            owner=self.job.owner,
+            oq_job=self.job,
+            display_name='complete logic tree SES',
+            output_type='complete_lt_ses')
+
+        clt_ses_coll = models.SESCollection.objects.create(
+            output=clt_ses_output, complete_logic_tree_ses=True)
+
+        if hc.number_of_logic_tree_samples > 0:
+            # The calculation is set to do Monte-Carlo sampling of logic trees
+            # The number of logic tree realizations is specified explicitly in
+            # job configuration.
+            n_lt_realizations = hc.number_of_logic_tree_samples
+        else:
+            # The calculation is set do end-branch enumeration of all logic
+            # tree paths
+            # We can get the number of logic tree realizations by counting
+            # initialized lt_realization records.
+            n_lt_realizations = models.LtRealization.objects.filter(
+                hazard_calculation=hc.id).count()
+
+        investigation_time = (hc.investigation_time
+                              * hc.ses_per_logic_tree_path
+                              * n_lt_realizations)
+
+        models.SES.objects.create(
+            ses_collection=clt_ses_coll,
+            investigation_time=investigation_time,
+            complete_logic_tree_ses=True)
+
     def initialize_gmf_db_records(self, lt_rlz):
         """
         Create :class:`~openquake.db.models.Output`,
@@ -471,4 +523,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             rlz_callbacks.append(self.initialize_gmf_db_records)
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
+
+        if self.job.hazard_calculation.complete_logic_tree_ses:
+            self.initialize_complete_lt_ses_db_records()
+
         self.initialize_pr_data()
