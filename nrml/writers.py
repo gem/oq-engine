@@ -202,12 +202,22 @@ class EventBasedGMFXMLWriter(object):
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
 
-            gmf_coll_elem = etree.SubElement(root, 'gmfCollection')
-            gmf_coll_elem.set(SM_TREE_PATH, self.sm_lt_path)
-            gmf_coll_elem.set(GSIM_TREE_PATH, self.gsim_lt_path)
+            if self.sm_lt_path is not None and self.gsim_lt_path is not None:
+                # A normal GMF collection
+                gmf_container = etree.SubElement(root, 'gmfCollection')
+                gmf_container.set(SM_TREE_PATH, self.sm_lt_path)
+                gmf_container.set(GSIM_TREE_PATH, self.gsim_lt_path)
+            else:
+                # A collection of GMFs for a complete logic tree
+                # In this case, we should only have a single <gmfSet>,
+                # containing all ground motion fields.
+                # NOTE: In this case, there is no need for a <gmfCollection>
+                # element; instead, we just write the single <gmfSet>
+                # underneath the root <nrml> element.
+                gmf_container = root
 
             for gmf_set in data:
-                gmf_set_elem = etree.SubElement(gmf_coll_elem, 'gmfSet')
+                gmf_set_elem = etree.SubElement(gmf_container, 'gmfSet')
                 gmf_set_elem.set(
                     'investigationTime', str(gmf_set.investigation_time))
 

@@ -5,9 +5,6 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
     <gmfCollection sourceModelTreePath="b1|b2|b4" gsimTreePath="b1|b7">
         <gmfSet investigationTime="50.0">
-            <!-- It is not typical to have <gmf>s in one result file with different
-                 intensity measure types; this example is meant to illustrate the
-                 association of these attributes with a particular <gmf>. -->
             <gmf IMT="SA" saPeriod="0.025" saDamping="5.0">
                 <node iml="0.2" lon="0.0" lat="0.0" />
                 <node iml="1.4" lon="1.0" lat="0.0" />
@@ -24,11 +21,6 @@
                 <node iml="0.6" lon="0.0" lat="1.0" />
             </gmf>
         </gmfSet>
-        <!-- The same is true for 'investigationTime'. For a given set of
-             calculation results, the 'investigationTime' will be the same
-             in each <gmfSet>. The different values here just indicate that
-             this is the investigation with which the <gmf>s in this set can
-             be interpreted. -->
         <gmfSet investigationTime="40.0">
             <gmf IMT="SA" saPeriod="0.025" saDamping="5.0">
                 <node iml="0.2" lon="0.0" lat="0.0" />

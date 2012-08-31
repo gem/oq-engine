@@ -66,15 +66,14 @@
             <xs:element ref="collapseMap" />
             <xs:element ref="siteModel" />
             <xs:element ref="hazardCurves" />
-            <!-- For Event-Based GMFs -->
+            <!-- For Event-Based GMFs, applies to a specific logic tree branch -->
             <xs:element ref="gmfCollection" />
-            <!-- For Scenario GMFs -->
-            <xs:element name="gmfSet" type="ScenarioGMFSet" />
+            <!-- For Scenario GMFs, or 'complete logic tree' GMF sets for Event-Based calculations -->
+            <!-- In the case of Scenario results, the `investigationTime` is omitted -->
+            <xs:element name="gmfSet" type="GMFSet" />
+            <!-- For Event-Based calculations, applies to a specific logic tree branch -->
             <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
-            <!--
-                For the case of a 'complete logic tree' SES;
-                there is just a single SES in the entire file.
-            -->
+            <!-- For the case of a 'complete logic tree' SES; there is just a single SES in the entire file. -->
             <xs:element name="stochasticEventSet" type="StochasticEventSet" />
         </xs:choice>
     </xs:complexType>
