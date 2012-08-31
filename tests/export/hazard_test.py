@@ -109,7 +109,6 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
 
             ##################
             # Complete LT SES:
-            # TODO:
             [complete_lt_ses] = outputs.filter(output_type='complete_lt_ses')
 
             [exported_file] = hazard.export(complete_lt_ses.id, target_dir)
