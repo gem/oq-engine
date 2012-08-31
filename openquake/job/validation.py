@@ -550,19 +550,19 @@ def ground_motion_correlation_params_is_valid(_mdl):
     return True, []
 
 
-def complete_logic_tree_ses_is_valid(mdl):
+def complete_logic_tree_ses_is_valid(_mdl):
     # This parameter is a simple True or False;
     # field normalization should cover all of validation necessary.
     return True, []
 
 
-def complete_logic_tree_gmf_is_valid(mdl):
+def complete_logic_tree_gmf_is_valid(_mdl):
     # This parameter is a simple True or False;
     # field normalization should cover all of validation necessary.
     return True, []
 
 
-def ground_motion_fields_is_valid(mdl):
+def ground_motion_fields_is_valid(_mdl):
     # This parameter is a simple True or False;
     # field normalization should cover all of validation necessary.
     return True, []
