@@ -353,15 +353,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
 
-    def export(self, *args, **kwargs):
-        """Export to NRML"""
-        logs.LOG.debug('> starting exports')
-
-        if "exports" in kwargs and "xml" in kwargs["exports"]:
-            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
-
-        logs.LOG.debug('< done with exports')
-
 
 def update_result_matrix(current, new):
     """
