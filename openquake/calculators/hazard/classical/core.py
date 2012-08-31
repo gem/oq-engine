@@ -17,7 +17,7 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
-import re
+from __future__ import absolute_import
 
 import nhlib
 import nhlib.calc
@@ -34,6 +34,10 @@ from openquake.export import hazard as hexp
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+
+from openquake.utils.task_handlers import CeleryTaskHandler
+from openquake.db.aggregate_result_writer import AggregateResultWriterFactory
+from .post_processing import PostProcessor
 
 
 # Silencing 'Too many local variables'
@@ -304,15 +308,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
-                sa_period = None
-                sa_damping = None
-                if 'SA' in imt:
-                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
-                    sa_period = float(match.group(1))
-                    sa_damping = haz_general.DEFAULT_SA_DAMPING
-                    hc_im_type = 'SA'  # don't include the period
-                else:
-                    hc_im_type = imt
+                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
                 hco = models.Output(
                     owner=hc.owner,
@@ -352,6 +348,24 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+
+    def post_process(self):
+        logs.LOG.debug('> starting post process')
+
+        curve_finder = models.HazardCurveData.objects
+        curve_finder.current_job = self.job
+
+        writer_factory = AggregateResultWriterFactory(self.job)
+
+        post_processor = PostProcessor(
+            self.job.hazard_calculation,
+            curve_finder=curve_finder,
+            result_writer_factory=writer_factory,
+            task_handler=CeleryTaskHandler())
+        post_processor.initialize()
+        post_processor.run()
+
+        logs.LOG.debug('< done with post process')
 
     def export(self, *args, **kwargs):
         """Export to NRML"""

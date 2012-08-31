@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
+import re
 
 from collections import namedtuple
 from datetime import datetime
@@ -38,6 +39,14 @@ from nhlib import geo as nhlib_geo
 from shapely import wkt
 
 from openquake.db import fields
+
+#: Default Spectral Acceleration damping. At the moment, this is not
+#: configurable.
+DEFAULT_SA_DAMPING = 5.0
+
+
+#: System Reference ID used for geometry objects
+DEFAULT_SRID = 4326
 
 
 VS30_TYPE_CHOICES = (
@@ -266,7 +275,7 @@ class Catalog(djm.Model):
     magnitude = djm.ForeignKey('Magnitude')
     surface = djm.ForeignKey('Surface')
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=4326)
+    point = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'eqcat\".\"catalog'
@@ -319,7 +328,7 @@ class ParsedSource(djm.Model):
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
     nrml = fields.PickleField(help_text="NRML object representing the source")
     polygon = djm.PolygonField(
-        srid=4326, dim=2,
+        srid=DEFAULT_SRID, dim=2,
         help_text=('The surface projection (2D) of the "rupture enclosing" '
                    'polygon for each source. This is relevant to all source '
                    'types, including point sources. When considering a '
@@ -348,7 +357,7 @@ class SiteModel(djm.Model):
     z1pt0 = djm.FloatField()
     # Depth to shear wave velocity of 2.5 km/s. Units km.
     z2pt5 = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     def __repr__(self):
         return (
@@ -586,11 +595,11 @@ class HazardCalculation(djm.Model):
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
     # `region_grid_spacing`) or `sites`.
-    region = djm.PolygonField(srid=4326, null=True, blank=True)
+    region = djm.PolygonField(srid=DEFAULT_SRID, null=True, blank=True)
     # Discretization parameter for a `region`. Units in degrees.
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
-    sites = djm.MultiPointField(srid=4326, null=True, blank=True)
+    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -778,6 +787,16 @@ class HazardCalculation(djm.Model):
                             kwargs[field] = wkt_fmt % ', '.join(points)
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
+    def individual_curves_per_location(self):
+        """
+        Returns the number of individual curves per location, that are
+        expected after a full computation of the hazard calculation
+        has been performed
+        """
+        realizations_nr = self.ltrealization_set.count()
+        imt_nr = len(self.intensity_measure_types_and_levels)
+        return realizations_nr * imt_nr
+
     def points_to_compute(self):
         """
         Generate a :class:`~nhlib.geo.mesh.Mesh` of points. These points
@@ -878,9 +897,9 @@ class OqJobProfile(djm.Model):
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     # We can specify a (region and region_grid_spacing) or sites, but not both.
-    region = djm.PolygonField(srid=4326, null=True)
+    region = djm.PolygonField(srid=DEFAULT_SRID, null=True)
     region_grid_spacing = djm.FloatField(null=True)
-    sites = djm.MultiPointField(srid=4326, null=True)
+    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True)
 
     area_source_discretization = djm.FloatField(null=True)
     area_source_magnitude_scaling_relationship = djm.TextField(null=True)
@@ -995,6 +1014,21 @@ class OqJobProfile(djm.Model):
         db_table = 'uiapi\".\"oq_job_profile'
 
 
+class OutputManager(djm.Manager):
+    """
+    Manager class to filter and create Output objects
+    """
+    def create_output(self, job, display_name, output_type="hazard_curve"):
+        """
+        Create an output for the given `job`, `display_name` and
+        `output_type` (default to hazard_curve)
+        """
+        return self.create(oq_job=job,
+                           owner=job.owner,
+                           display_name=display_name,
+                           output_type=output_type)
+
+
 class Output(djm.Model):
     '''
     A single artifact which is a result of an OpenQuake job.
@@ -1021,6 +1055,8 @@ class Output(djm.Model):
     )
     output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    objects = OutputManager()
 
     def __str__(self):
         return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
@@ -1067,17 +1103,65 @@ class HazardMapData(djm.Model):
     '''
     hazard_map = djm.ForeignKey('HazardMap')
     value = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map_data'
+
+
+def parse_imt(imt):
+    """
+    Given an intensity measure type in long form (with attributes),
+    return the intensity measure type, the sa_period and sa_damping
+    """
+    sa_period = None
+    sa_damping = None
+    if 'SA' in imt:
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
+        sa_period = float(match.group(1))
+        sa_damping = DEFAULT_SA_DAMPING
+        hc_im_type = 'SA'  # don't include the period
+    else:
+        hc_im_type = imt
+    return hc_im_type, sa_period, sa_damping
+
+
+class HazardCurveManager(djm.Manager):
+    """
+    Manager class to filter and create HazardCurve objects
+    """
+
+    def create_aggregate_curve(self, output, imt,
+                               statistics="mean", quantile=None):
+        """
+        Create an aggregate curve with intensity measure type `imt`
+        for the given `statistics` (default to mean) and `quantile`.
+        Here imt is given in long form. e.g. SA(10)
+        """
+        if quantile and not statistics == "quantile":
+            raise ValueError(
+                "A quantile level can be specified only for quantile curves")
+
+        hc = output.oq_job.hazard_calculation
+        hc_im_type, sa_period, sa_damping = parse_imt(imt)
+        levels = hc.intensity_measure_types_and_levels[imt]
+        curve = self.create(output=output,
+                            lt_realization=None,
+                            investigation_time=hc.investigation_time,
+                            imt=hc_im_type,
+                            imls=levels,
+                            statistics=statistics,
+                            quantile=quantile,
+                            sa_period=sa_period,
+                            sa_damping=sa_damping)
+        return curve
 
 
 class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output', null=True)
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1093,8 +1177,85 @@ class HazardCurve(djm.Model):
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
 
+    objects = HazardCurveManager()
+
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
+
+
+class HazardCurveDataManager(djm.Manager):
+    """
+    Manager class to filter and create HazardCurveData objects
+    """
+
+    def __init__(self):
+        super(HazardCurveDataManager, self).__init__()
+        self.current_job = None
+
+    def individual_curves(self, imt=None):
+        """
+        Returns all the individual hazard curve data objects. If `imt`
+        is given the results are filtered by intensity measure type.
+        Here imt is given in the long format.
+        """
+        if not self.current_job:
+            raise ValueError(
+                "Set the current_job attribute to use this method")
+        query_args = {'hazard_curve__statistics__isnull': True,
+                      'hazard_curve__output__oq_job': self.current_job,
+                      'hazard_curve__output__output_type': "hazard_curve"}
+        if imt:
+            hc_im_type, sa_period, sa_damping = parse_imt(imt)
+            query_args['hazard_curve__imt'] = hc_im_type
+            query_args['hazard_curve__sa_period'] = sa_period
+            query_args['hazard_curve__sa_damping'] = sa_damping
+
+        queryset = self.filter(**query_args)
+        return queryset
+
+    def individual_curves_ordered(self, imt=None):
+        """
+        Same as #individual_curves but the results are ordered by location
+        """
+        return self.individual_curves(imt).order_by('location')
+
+    def individual_curves_nr(self, imt=None):
+        """
+        Returns the number of individual curves. If `imt` is given, it
+        returns the number of individual curves with intensity measure
+        type `imt`
+        """
+        return self.individual_curves(imt).count()
+
+    def individual_curves_chunks(self, imt=None, block_size=1):
+        """
+        Return a generator of individual curves in chunks. A chunk is
+        function that when invoked (with a parameter `field`) returns a
+        chunk of curves (with values restricted on `field`). E.g.
+
+        all_the_poes = self.individual_curves_chunks().next()('poes')
+
+        Allowed values for `field` are ['poes', 'wkb', 'weight']
+        """
+        curve_nr = self.individual_curves_nr(imt)
+        ranges = xrange(0, curve_nr, block_size)
+
+        finder = self
+
+        def chunk_getter(offset, field):
+            assert (field in ['poes', 'wkb', 'weight'])
+
+            base_queryset = finder.individual_curves_ordered(
+                imt)
+            base_queryset = base_queryset.extra({
+                'wkb': 'asBinary(location)',
+                'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
+                })
+            return base_queryset.values_list(
+                field, flat=True)[offset: block_size + offset]
+
+        for offset in ranges:
+            yield (lambda field: chunk_getter(offset, field))
 
 
 class HazardCurveData(djm.Model):
@@ -1106,7 +1267,9 @@ class HazardCurveData(djm.Model):
     '''
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
+
+    objects = HazardCurveDataManager()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve_data'
@@ -1296,7 +1459,7 @@ class GmfNode(djm.Model):
     value/intensity measure level and a point geometry.
     """
     gmf = djm.ForeignKey('Gmf')
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
     iml = djm.FloatField()
 
     class Meta:
@@ -1312,7 +1475,7 @@ class GmfData(djm.Model):
     '''
     output = djm.ForeignKey('Output')
     ground_motion = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_data'
@@ -1358,7 +1521,7 @@ class UhSpectrumData(djm.Model):
     uh_spectrum = djm.ForeignKey('UhSpectrum')
     realization = djm.IntegerField()
     sa_values = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'hzrdr\".\"uh_spectrum_data'
@@ -1418,7 +1581,7 @@ class LossMapData(djm.Model):
     asset_ref = djm.TextField()
     value = djm.FloatField()
     std_dev = djm.FloatField(default=0.0)
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_map_data'
@@ -1448,7 +1611,7 @@ class LossCurveData(djm.Model):
     asset_ref = djm.TextField()
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -1488,7 +1651,7 @@ class CollapseMapData(djm.Model):
     asset_ref = djm.TextField()
     value = djm.FloatField()
     std_dev = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"collapse_map_data'
@@ -1514,7 +1677,7 @@ class BCRDistributionData(djm.Model):
     bcr_distribution = djm.ForeignKey("BCRDistribution")
     asset_ref = djm.TextField()
     bcr = djm.FloatField()
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution_data'
@@ -1540,7 +1703,7 @@ class DmgDistPerAssetData(djm.Model):
     mean = djm.FloatField()
     stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=4326)
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset_data'
@@ -1662,7 +1825,7 @@ class ExposureData(djm.Model):
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
     taxonomy = djm.TextField()
-    site = djm.PointField(srid=4326)
+    site = djm.PointField(srid=DEFAULT_SRID)
     # Override the default manager with a GeoManager instance in order to
     # enable spatial queries.
     objects = djm.GeoManager()
