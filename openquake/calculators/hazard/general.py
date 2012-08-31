@@ -39,6 +39,8 @@ from openquake import engine2
 from openquake import java
 from openquake import kvs
 from openquake import writer
+from openquake.export import core as export_core
+from openquake.export import hazard as hazard_export
 from openquake.calculators import base
 from openquake.db import models
 from openquake.input import logictree
@@ -1099,3 +1101,29 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # queuing.)
                     conn.drain_events()
         logs.log_progress("hazard calculation 100% complete", 2)
+
+    def export(self, *args, **kwargs):
+        """
+        If requested by the user, automatically export all result artifacts to
+        the specified format. (NOTE: The only export format supported at the
+        moment is NRML XML.
+
+        :returns:
+            A list of the export filenames, including the absolute path to each
+            file.
+        """
+        exported_files = []
+
+        logs.LOG.debug('> starting exports')
+        if 'exports' in kwargs and 'xml' in kwargs['exports']:
+            outputs = export_core.get_outputs(self.job.id)
+
+            for output in outputs:
+                exported_files.extend(hazard_export.export(
+                    output.id, self.job.hazard_calculation.export_dir))
+
+            for exp_file in exported_files:
+                logs.LOG.debug('exported %s' % exp_file)
+        logs.LOG.debug('< done with exports')
+
+        return exported_files
