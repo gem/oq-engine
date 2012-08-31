@@ -97,8 +97,9 @@ def set_up_arg_parser():
         default='db')
     calc_grp.add_argument(
         '--log-level', '-l',
-        help='defaults to "warn"', required=False,
-        choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
+        help='Defaults to "progress"', required=False,
+        choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
+        default='progress')
     calc_grp.add_argument(
         '--log-file', '-L',
         help=('location to store log messages; if not specified, log messages'

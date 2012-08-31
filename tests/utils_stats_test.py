@@ -59,7 +59,7 @@ class ProgressIndicatorTestCase(helpers.RedisTestCase, unittest.TestCase):
     def test_failure_stats(self):
         """
         The failure counter is incremented when the wrapped function
-        terminates raises an exception.
+        raises an exception.
         """
         area = "bbb"
 
@@ -360,17 +360,17 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1)],
             sorted(stats.failure_counters(123, "g")))
-        self.assertEqual([('oqs/123/h/c-failures/i', 1)],
+        self.assertEqual([('oqs/123/h/c:failed/i', 1)],
                          sorted(stats.failure_counters(123, "h")))
         self.assertEqual(
-            [('oqs/123/r/d-failures/i', 1), ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/r/d:failed/i', 1), ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123, "r")))
 
     def test_failure_counters_with_invalid_area(self):
@@ -383,14 +383,14 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1),
-             ('oqs/123/h/c-failures/i', 1), ('oqs/123/r/d-failures/i', 1),
-             ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1),
+             ('oqs/123/h/c:failed/i', 1), ('oqs/123/r/d:failed/i', 1),
+             ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123)))
 
     def test_failure_counters_with_no_failures(self):
@@ -399,43 +399,147 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         self.assertEqual([], stats.failure_counters(123))
 
 
+_RESULTS = itertools.count(1)
+_JOB_IDS = itertools.count(100)
+_COUNTER = {"h": "nhzrd_done", "r": "nrisk_done"}
+
+
 class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.count_progress()."""
 
-    def test_success_stats(self):
-        """
-        The success counter is incremented when the wrapped function
-        terminates without raising an exception.
-        """
-        area = "h"
+    def test_with_no_job_id(self):
+        # The job_id is neither passed via args nor via kwargs
+        ctype = "h"
 
-        @stats.count_progress(area)
+        @stats.count_progress(ctype)
+        def no_exception():
+            return _RESULTS.next()
+
+        # Call the wrapped function.
+        try:
+            no_exception()
+        except AssertionError, e:
+            self.assertEqual("job ID not found", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_with_invalid_job_id(self):
+        # The job_id is negative
+        ctype = "h"
+
+        @stats.count_progress(ctype)
+        def no_exception(job_id):
+            return _RESULTS.next()
+
+        # Call the wrapped function.
+        try:
+            no_exception(-11)
+        except AssertionError, e:
+            self.assertEqual("Invalid job ID", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_with_no_job_id_in_kwargs(self):
+        # The job_id is neither passed via args nor via kwargs
+        ctype = "h"
+
+        @stats.count_progress(ctype)
+        def no_exception():
+            return _RESULTS.next()
+
+        # Call the wrapped function.
+        try:
+            no_exception(this_job_id_is_not_found=_JOB_IDS.next())
+        except AssertionError, e:
+            self.assertEqual("job ID not found", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_with_job_id_and_data_in_args(self):
+        # The job_id is passed via args
+        result = _RESULTS.next()
+        job_id = _JOB_IDS.next()
+        ctype = "h"
+
+        @stats.count_progress(ctype)
         def no_exception(job_id, items):
-            return 999
+            return result
 
-        previous_value = stats.pk_get(11, "nhzrd_done")
-
-        # Call the wrapped function.
-        self.assertEqual(999, no_exception(11, range(5)))
-
-        value = stats.pk_get(11, "nhzrd_done")
-        self.assertEqual(5, (value - previous_value))
-
-    def test_failure_stats(self):
-        """
-        The failure counter is incremented when the wrapped function
-        terminates raises an exception.
-        """
-        area = "r"
-
-        @stats.count_progress(area)
-        def raise_exception(job_id, items):
-            raise NotImplementedError
-
-        previous_value = stats.pk_get(22, "nrisk_failed")
+        previous_value = stats.pk_get(job_id, _COUNTER[ctype])
 
         # Call the wrapped function.
-        self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
+        self.assertEqual(result, no_exception(job_id, range(result)))
 
-        value = stats.pk_get(22, "nrisk_failed")
-        self.assertEqual(6, (value - previous_value))
+        value = stats.pk_get(job_id, _COUNTER[ctype])
+        self.assertEqual(result, (value - previous_value))
+
+    def test_with_job_id_and_data_in_kwargs(self):
+        # The job_id is passed via kwargs
+        result = _RESULTS.next()
+        job_id = _JOB_IDS.next()
+        ctype = "r"
+
+        @stats.count_progress(ctype, data_arg="items")
+        def no_exception(job_id, items):
+            return result
+
+        previous_value = stats.pk_get(job_id, _COUNTER[ctype])
+
+        # Call the wrapped function.
+        self.assertEqual(
+            result, no_exception(job_id=job_id, items=range(result)))
+
+        value = stats.pk_get(job_id, _COUNTER[ctype])
+        self.assertEqual(result, (value - previous_value))
+
+    def test_with_no_data_arg(self):
+        # The data parameter is neither passed via args nor via kwargs
+        ctype = "r"
+
+        @stats.count_progress(ctype)
+        def no_exception(job_id):
+            return _RESULTS.next()
+
+        # Call the wrapped function.
+        try:
+            no_exception(_JOB_IDS.next())
+        except AssertionError, e:
+            self.assertEqual("data parameter not found", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_with_empty_data_arg(self):
+        # The data parameter is an empty sequence
+        ctype = "r"
+
+        @stats.count_progress(ctype)
+        def no_exception(job_id, items):
+            return _RESULTS.next()
+
+        # Call the wrapped function.
+        try:
+            no_exception(_JOB_IDS.next(), [])
+        except AssertionError, e:
+            self.assertEqual("Internal error: empty data parameter", e.args[0])
+        else:
+            self.fail("AssertionError not raised")
+
+    def test_with_data_arg_in_kwargs_overriding_2nd_positional_param(self):
+        # A data parameter passed via kwargs will override the second
+        # positional parameter.
+        result = _RESULTS.next()
+        job_id = _JOB_IDS.next()
+        ctype = "h"
+
+        @stats.count_progress(ctype, data_arg="the_data_arg")
+        def no_exception(job_id, items, the_data_arg):
+            return result
+
+        previous_value = stats.pk_get(job_id, _COUNTER[ctype])
+
+        # Call the wrapped function.
+        self.assertEqual(result, no_exception(job_id, range(result - 1),
+                         the_data_arg=range(result)))
+
+        value = stats.pk_get(job_id, _COUNTER[ctype])
+        self.assertEqual(result, (value - previous_value))

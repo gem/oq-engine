@@ -115,9 +115,9 @@ def failure_counters(job_id, area=None):
     assert area is None or area in ("g", "h", "r"), "Invalid area."
 
     if area:
-        pattern = "oqs/%s/%s/*-failures*" % (job_id, area)
+        pattern = "oqs/%s/%s/*:failed*" % (job_id, area)
     else:
-        pattern = "oqs/%s/*-failures*" % job_id
+        pattern = "oqs/%s/*:failed*" % job_id
 
     result = keys = kvs_op("keys", pattern)
     if keys:
@@ -208,9 +208,9 @@ def key_name(job_id, area, key_fragment, counter_type):
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
+    def __init__(self, ctype):
+        """Captures the calculation type."""
+        self.ctype = ctype
         self.__name__ = "progress_indicator"
 
     @staticmethod
@@ -231,14 +231,19 @@ class progress_indicator(object):   # pylint: disable=C0103
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = key_name(job_id, self.area, func.__name__, "i")
+                key = key_name(job_id, self.ctype, func.__name__, "i")
                 conn.incr(key)
                 return result
             except:
                 # Count failure
                 key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
+                    job_id, self.ctype, func.__name__ + "-failures", "i")
                 conn.incr(key)
+                # Make sure failures of tasks that use this old (legacy)
+                # decorator propagate to the error handling code in the
+                # supervisor.
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
+                pk_inc(job_id, key)
                 raise
 
         return wrapper
@@ -261,15 +266,36 @@ class count_progress(object):   # pylint: disable=C0103
     ALSO: this decorator presently only supports hazard and risk tasks!
     """
 
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
+    def __init__(self, ctype, data_arg=None):
+        """Captures the calculation type and the name of the data parameter."""
+        self.ctype = ctype
+        self.data_arg = data_arg
         self.__name__ = "count_progress"
 
-    @staticmethod
-    def get_task_data(*args):
+    def get_task_data(self, *args, **kwargs):
         """Return the job_id and the number of work items."""
-        return args[0], len(args[1])
+        job_id = kwargs.get("job_id")
+        if job_id is None and len(args) > 0:
+            job_id = args[0]
+        assert job_id is not None, "job ID not found"
+        assert job_id > 0, "Invalid job ID"
+
+        data = None
+        data_len = None
+        if self.data_arg:
+            data = kwargs.get(self.data_arg)
+        elif len(args) > 1:
+            data = args[1]
+        assert data is not None, "data parameter not found"
+
+        try:
+            data_len = len(data)
+            assert data_len, "Internal error: empty data parameter"
+        except TypeError:
+            # The data parameter is not a sequence or collection, length = 1
+            data_len = 1
+
+        return job_id, data_len
 
     def __call__(self, func):
         """The actual decorator."""
@@ -280,12 +306,12 @@ class count_progress(object):   # pylint: disable=C0103
             job_id, num_items = self.get_task_data(*args, **kwargs)
             try:
                 result = func(*args, **kwargs)
-                key = "nhzrd_done" if self.area == "h" else "nrisk_done"
+                key = "nhzrd_done" if self.ctype == "h" else "nrisk_done"
                 pk_inc(job_id, key, num_items)
                 return result
             except:
                 # Count failure
-                key = "nhzrd_failed" if self.area == "h" else "nrisk_failed"
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
                 pk_inc(job_id, key, num_items)
                 raise
 

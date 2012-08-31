@@ -33,17 +33,17 @@ class UHSTaskHandlerTestCase(UHSBaseTestCase):
         self.assertEqual(0, completed_task_count(self.job_id))
 
     def test_complete_task_count_success(self):
-        stats.incr_counter(self.job_id, 'h', 'compute_uhs_task')
+        stats.pk_inc(self.job_id, "nhzrd_done")
         self.assertEqual(1, completed_task_count(self.job_id))
 
     def test_complete_task_count_failures(self):
-        stats.incr_counter(self.job_id, 'h', 'compute_uhs_task-failures')
+        stats.pk_inc(self.job_id, "nhzrd_failed")
         self.assertEqual(1, completed_task_count(self.job_id))
 
     def test_complete_task_count_success_and_fail(self):
         # Test `complete_task_count` with success and fail counters:
-        stats.incr_counter(self.job_id, 'h', 'compute_uhs_task')
-        stats.incr_counter(self.job_id, 'h', 'compute_uhs_task-failures')
+        stats.pk_inc(self.job_id, "nhzrd_done")
+        stats.pk_inc(self.job_id, "nhzrd_failed")
         self.assertEqual(2, completed_task_count(self.job_id))
 
     def test_remaining_tasks_in_block(self):
@@ -55,8 +55,7 @@ class UHSTaskHandlerTestCase(UHSBaseTestCase):
         # block, a `StopIteration` is raised.
         gen = remaining_tasks_in_block(self.job_id, 4, 0)
 
-        incr_count = lambda: stats.incr_counter(
-            self.job_id, 'h', 'compute_uhs_task')
+        incr_count = lambda: stats.pk_inc(self.job_id, "nhzrd_done")
 
         self.assertEqual(4, gen.next())
         incr_count()
@@ -71,14 +70,13 @@ class UHSTaskHandlerTestCase(UHSBaseTestCase):
         # Same as the above test, except test with the start_count
         # set to something > 0 (to simulate a mid-calculation block).
 
-        incr_count = lambda: stats.incr_counter(
-            self.job_id, 'h', 'compute_uhs_task')
+        incr_count = lambda: stats.pk_inc(self.job_id, "nhzrd_done")
 
         # Just for variety, set 5 successful and 5 failed task counters:
         for _ in xrange(5):
-            stats.incr_counter(self.job_id, 'h', 'compute_uhs_task')
+            stats.pk_inc(self.job_id, "nhzrd_done")
         for _ in xrange(5):
-            stats.incr_counter(self.job_id, 'h', 'compute_uhs_task-failures')
+            stats.pk_inc(self.job_id, "nhzrd_failed")
 
         # count starts at 10
         gen = remaining_tasks_in_block(self.job_id, 4, 10)
