@@ -558,7 +558,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         return investigation_time
 
-
     def initialize_gmf_db_records(self, lt_rlz):
         """
         Create :class:`~openquake.db.models.Output`,
