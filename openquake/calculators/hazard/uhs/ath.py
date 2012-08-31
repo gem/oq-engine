@@ -20,6 +20,7 @@
 
 import time
 
+from openquake import logs
 from openquake.utils import stats
 
 
@@ -36,9 +37,8 @@ def completed_task_count(job_id):
         Number of completed :function:`compute_uhs_task` task executions so
         far.
     """
-    success_count = stats.get_counter(job_id, 'h', 'compute_uhs_task', 'i')
-    fail_count = stats.get_counter(
-        job_id, 'h', 'compute_uhs_task-failures', 'i')
+    success_count = stats.pk_get(job_id, "nhzrd_done")
+    fail_count = stats.pk_get(job_id, "nhzrd_failed")
 
     return (success_count or 0) + (fail_count or 0)
 
@@ -102,3 +102,4 @@ def uhs_task_handler(job_id, num_tasks, start_count):
         except StopIteration:
             # No more tasks remaining in this batch.
             break
+        logs.log_percent_complete(job_id, "hazard")

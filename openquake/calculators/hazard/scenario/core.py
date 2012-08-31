@@ -27,13 +27,27 @@ import json
 
 from openquake import java
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
 from openquake.calculators.hazard.general import BaseHazardCalculator
 from openquake.output import hazard as hazard_output
+from openquake.utils import stats
 
 
 class ScenarioHazardCalculator(BaseHazardCalculator):
     """Scenario Event Based method for performing hazard calculations."""
+
+    def initialize_pr_data(self, **kwargs):
+        """
+        Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        num_calculations = kwargs.get("num_calculations")
+        assert num_calculations, "Invalid 'num_calculations' parameter"
+        stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_total", num_calculations)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_done", 0)
 
     @java.unpack_exception
     def execute(self):
@@ -45,8 +59,18 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client()
 
-        for cnum in xrange(self._number_of_calculations()):
-            gmf = self.compute_ground_motion_field(random_generator)
+        num_calculations = self._number_of_calculations()
+        self.initialize_pr_data(num_calculations=num_calculations)
+
+        for cnum in xrange(num_calculations):
+            try:
+                gmf = self.compute_ground_motion_field(random_generator)
+                stats.pk_inc(self.job_ctxt.job_id, "nhzrd_done", 1)
+            except:
+                # Count failure
+                stats.pk_inc(self.job_ctxt.job_id, "nhzrd_failed", 1)
+                raise
+            logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
             imt = self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]
             self._serialize_gmf(gmf, imt, cnum)
 
