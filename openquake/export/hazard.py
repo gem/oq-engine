@@ -75,6 +75,7 @@ def _export_fn_map():
         'gmf': export_gmf,
         'ses': export_ses,
         'complete_lt_ses': export_ses,
+        'complete_lt_gmf': export_gmf,
     }
     return fn_map
 
@@ -83,6 +84,7 @@ HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
 GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
+COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '|'
 
@@ -154,10 +156,20 @@ def export_gmf(output, target_dir):
     """
     gmf_coll = models.GmfCollection.objects.get(output=output.id)
     lt_rlz = gmf_coll.lt_realization
-    sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-    gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    filename = GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
+    if output.output_type == 'complete_lt_gmf':
+        filename = COMPLETE_LT_GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
+
+        # For the `complete logic tree` GMF, the LT paths are not relevant.
+        sm_lt_path = None
+        gsim_lt_path = None
+    else:
+        # output type should be `gmf`
+        filename = GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
+
+        sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+
     path = os.path.abspath(os.path.join(target_dir, filename))
 
     writer = nrml_writers.EventBasedGMFXMLWriter(

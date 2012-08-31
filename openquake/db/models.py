@@ -739,6 +739,13 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    complete_logic_tree_gmf = fields.OqNullBooleanField(
+        help_text=(
+            'If true, generate a collection of all of the GMFs for all'
+            ' logic tree branches with an adjusted investigation time.'),
+        null=True,
+        blank=True,
+    )
     ground_motion_fields = fields.OqNullBooleanField(
         help_text=('If true, ground motion fields will be computed (in '
                    'addition to stochastic event sets)'),
@@ -1017,6 +1024,7 @@ class Output(djm.Model):
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'gmf', u'Ground Motion Field'),
+        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'ses', u'Stochastic Event Set'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'loss_curve', u'Loss Curve'),
@@ -1259,7 +1267,13 @@ class GmfCollection(djm.Model):
     realization.
     """
     output = djm.ForeignKey('Output')
-    lt_realization = djm.ForeignKey('LtRealization')
+    # If `lt_realization` is None, this is a `complete logic tree`
+    # GMF Collection, containing a single GMF set containing all of the ground
+    # motion fields in the calculation.
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` GMF collection.
+    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
@@ -1280,6 +1294,7 @@ class GmfSet(djm.Model):
     # Keep track of the stochastic event set which this GMF set is associated
     # with.
     ses_ordinal = djm.IntegerField()
+    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
