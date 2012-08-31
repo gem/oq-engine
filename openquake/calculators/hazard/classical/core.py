@@ -68,7 +68,7 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator("h")
+@stats.count_progress("h", data_arg="sites")
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for the given site list."""
 
@@ -350,6 +350,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         sites = self.job_ctxt.sites_to_compute()
         realizations = self.job_ctxt["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
+        self.initialize_pr_data(sites=sites, realizations=realizations)
+
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
@@ -532,6 +534,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 curve_writer.serialize(hc_data)
                 pause *= 0.8
                 pause = min_pause if pause < min_pause else pause
+            logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
         return nrml_path
 

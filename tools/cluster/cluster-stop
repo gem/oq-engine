@@ -56,4 +56,4 @@ ssh root@gemcontrol.ethz.ch 'redis-cli -n 15 flushall'
 echo ""
 echo ">> Stopping redis"
 echo ""
-ssh root@gemcontrol.ethz.ch 'ulimit -n 1024; /etc/init.d/redis-server stop'
+ssh root@gemcontrol.ethz.ch '/etc/init.d/redis-server stop'

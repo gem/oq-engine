@@ -27,14 +27,15 @@ from celery.task import task
 
 from openquake import java
 from openquake import logs
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
+from openquake.calculators.hazard.disagg import subsets
+from openquake.calculators.hazard import general
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
+from openquake.utils import stats
 from openquake.utils.tasks import get_running_job
-from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
-from openquake.calculators.hazard.disagg import subsets
-from openquake.calculators.hazard import general
 
 
 LOG = logs.LOG
@@ -178,22 +179,22 @@ def save_5d_matrix_to_h5(directory, matrix):
 
 @task
 @java.unpack_exception
-def compute_disagg_matrix_task(job_id, site, realization, poe,
-                               result_dir):
+@stats.count_progress("h", data_arg="site")
+def compute_disagg_matrix_task(job_id, realization, poe, result_dir, site):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
 
     :param job_id: id of the calculation record in the KVS
     :type job_id: `str`
-    :param site: a single site of interest
-    :type site: :class:`openquake.shapes.Site` instance`
     :param int realization: logic tree sample iteration number
     :param poe: Probability of Exceedence
     :type poe: `float`
     :param result_dir: location for the Java code to write the matrix in an
         HDF5 file (in a distributed environment, this should be the path of a
         mounted NFS)
+    :param site: a single site of interest
+    :type site: :class:`openquake.shapes.Site` instance`
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
@@ -244,6 +245,8 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
         realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
         poes = self.job_ctxt['POES']
         sites = self.job_ctxt.sites_to_compute()
+
+        self.initialize_pr_data(sites=sites, realizations=realizations)
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
@@ -345,7 +348,6 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
-
             general.store_source_model(self.job_ctxt.job_id,
                                        src_model_rnd.getrandbits(32),
                                        self.job_ctxt.params, self.calc)
@@ -356,14 +358,13 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
                 task_site_pairs = []
                 for site in sites:
                     a_task = compute_disagg_matrix_task.delay(
-                        self.job_ctxt.job_id, site, rlz, poe, result_dir)
+                        self.job_ctxt.job_id, rlz, poe, result_dir, site=site)
 
                     task_site_pairs.append((a_task, site))
 
                 task_data.append((rlz, poe, task_site_pairs))
 
         for rlz, poe, task_site_pairs in task_data:
-
             # accumulates all data for a given (realization, poe) pair
             rlz_poe_data = []
             for a_task, site in task_site_pairs:
@@ -381,6 +382,7 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
                 else:
                     gmv, matrix_path = a_task.result
                     rlz_poe_data.append((site, gmv, matrix_path))
+                logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
             full_da_results.append((rlz, poe, rlz_poe_data))
 

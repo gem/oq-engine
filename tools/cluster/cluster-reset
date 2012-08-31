@@ -51,7 +51,7 @@ ssh root@gemcontrol.ethz.ch '/etc/init.d/redis-server stop'
 echo ""
 echo ">> Starting redis"
 echo ""
-ssh root@gemcontrol.ethz.ch 'ulimit -n 1024; /etc/init.d/redis-server start'
+ssh root@gemcontrol.ethz.ch 'ulimit -n 2048; /etc/init.d/redis-server start'
 
 echo ""
 echo ">> Flushing progress counters"
