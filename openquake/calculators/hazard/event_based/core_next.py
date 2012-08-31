@@ -431,7 +431,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def initialize_complete_lt_ses_db_records(self):
         """
-        Optional; if the user has request to collect `complete logic tree`
+        Optional; if the user has requested to collect `complete logic tree`
         stochastic event set (containing all ruptures from all realizations),
         initialize DB records for those results here.
 

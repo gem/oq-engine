@@ -161,7 +161,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
         # * Run `pre_execute()`.
-        # * Execute the the `stochastic_event_sets` task as a normal function.
+        # * Execute the `stochastic_event_sets` task as a normal function.
         # * Check that the proper results (GMF, SES) were computed.
         # * Finally, call `post_execute()` and verify that `complete logic
         #   tree` artifacts were created.
