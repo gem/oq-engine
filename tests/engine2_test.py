@@ -37,6 +37,7 @@ class PrepareJobTestCase(unittest.TestCase):
 
         self.assertEqual('openquake', job.owner.user_name)
         self.assertEqual('pre_executing', job.status)
+        self.assertEqual('progress', job.log_level)
 
         # Check the make sure it's in the database.
         try:
@@ -50,11 +51,20 @@ class PrepareJobTestCase(unittest.TestCase):
 
         self.assertEqual(user_name, job.owner.user_name)
         self.assertEqual('pre_executing', job.status)
+        self.assertEqual('progress', job.log_level)
 
         try:
             models.OqJob.objects.get(id=job.id)
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
+
+    def test_prepare_job_explicit_log_level(self):
+        # By default, a job is created with a log level of 'progress'
+        # (just to show calculation progress).
+        # In this test, we'll specify 'debug' as the log level.
+        job = engine2.prepare_job(log_level='debug')
+
+        self.assertEqual('debug', job.log_level)
 
 
 class PrepareUserTestCase(unittest.TestCase):

@@ -495,6 +495,15 @@ class OqJob(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
+    LOG_LEVEL_CHOICES = (
+        (u'debug', u'Debug'),
+        (u'info', u'Info'),
+        (u'progress', u'Progress'),
+        (u'warn', u'Warn'),
+        (u'error', u'Error'),
+        (u'critical', u'Critical'),
+    )
+    log_level = djm.TextField(choices=LOG_LEVEL_CHOICES, default='progress')
     STATUS_CHOICES = (
         (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
