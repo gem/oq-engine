@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DISTUTILS_DEBUG=1
+export DH_VERBOSE=1
+export DH_OPTIONS=-v
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+
+%:
+	dh $@ --with quilt
+
+override_dh_quilt_patch:
+	dh_quilt_patch
+	[ -f bin/oq_restart_workers ] || mv bin/oq-restart bin/oq_restart_workers
+	[ -f bin/oq_cache_gc ] || mv bin/cache_gc.py bin/oq_cache_gc
+	[ -f bin/oq_create_db ] || mv bin/create_oq_schema bin/oq_create_db
+	[ -f bin/oq_monitor ] || mv bin/openquake_supervisor bin/oq_monitor
+	[ -f bin/oq_check_monitors ] || mv bin/openquake_supersupervisor bin/oq_check_monitors
+	[ -f bin/oq_log_sink ] || mv bin/openquake_messages_collector.py bin/oq_log_sink
+	cp openquake/__init__.py /tmp
+	cat /tmp/__init__.py | sed -e "s/0)  #.*$$/`date +'%s'`)/" > openquake/__init__.py
+
+override_dh_quilt_unpatch:
+	[ -f bin/oq-restart ] || mv bin/oq_restart_workers bin/oq-restart
+	[ -f bin/cache_gc.py ] || mv bin/oq_cache_gc bin/cache_gc.py
+	[ -f bin/create_oq_schema ] || mv bin/oq_create_db bin/create_oq_schema
+	[ -f bin/openquake_supervisor ] || mv bin/oq_monitor bin/openquake_supervisor
+	[ -f bin/openquake_supersupervisor ] || mv bin/oq_check_monitors bin/openquake_supersupervisor
+	[ -f bin/openquake_messages_collector.py ] || mv bin/oq_log_sink bin/openquake_messages_collector.py
+	dh_quilt_unpatch

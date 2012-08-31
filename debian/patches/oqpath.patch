@@ -1,0 +1,45 @@
+--- a/bin/cache_gc.py
++++ b/bin/cache_gc.py
+@@ -30,9 +30,6 @@
+ import getopt
+ import sys
+ 
+-import oqpath
+-oqpath.set_oq_path()
+-
+ from openquake import kvs
+ from openquake import logs
+ 
+--- a/bin/openquake
++++ b/bin/openquake
+@@ -52,7 +52,6 @@
+ 
+ import argparse
+ import getpass
+-import logging
+ import os
+ import sys
+ 
+@@ -65,8 +64,8 @@
+ except ImportError:
+     sys.path.append('/usr/openquake')
+ 
+-import oqpath
+-oqpath.set_oq_path()
++if not os.environ.get("DJANGO_SETTINGS_MODULE"):
++    os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
+ 
+ from openquake import __version__
+ from openquake.export import core as export
+--- a/bin/openquake_supervisor
++++ b/bin/openquake_supervisor
+@@ -25,9 +25,6 @@
+ import os
+ import sys
+ 
+-import oqpath
+-oqpath.set_oq_path()
+-
+ 
+ def main():  # pylint: disable=C0111
+     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'

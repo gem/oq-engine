@@ -1,0 +1,6 @@
+region-discretization-bug-1027041.patch
+oq-restart.patch
+config.patch
+oqpath.patch
+logsink-cfg.patch
+revision.patch
