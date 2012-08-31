@@ -209,7 +209,7 @@ class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
     def __init__(self, ctype):
-        """Captures the computation ctype parameter."""
+        """Captures the calculation type."""
         self.ctype = ctype
         self.__name__ = "progress_indicator"
 
