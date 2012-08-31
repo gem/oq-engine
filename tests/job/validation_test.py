@@ -608,6 +608,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,
+            complete_logic_tree_gmf=True,
             ground_motion_fields=True,
         )
         form = validation.EventBasedHazardCalculationForm(
@@ -653,6 +654,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
             complete_logic_tree_ses=False,
+            complete_logic_tree_gmf=True,
             ground_motion_fields=True,
         )
         form = validation.EventBasedHazardCalculationForm(

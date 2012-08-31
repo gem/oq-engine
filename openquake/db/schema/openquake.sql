@@ -336,6 +336,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes_hazard_maps float[],
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
+    complete_logic_tree_gmf BOOLEAN,
     ground_motion_fields BOOLEAN
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON', 2);
@@ -892,6 +893,7 @@ CREATE TABLE uiapi.output (
     --      hazard_curve
     --      hazard_map
     --      gmf
+    --      complete_lt_gmf (complete logic tree GMF)
     --      ses
     --      complete_lt_ses (complete logic tree SES)
     --      loss_curve
@@ -904,9 +906,10 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'ses', 'complete_lt_ses', 'loss_curve', 'loss_map', 'collapse_map',
-            'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
-            'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
+            'gmf', 'complete_lt_gmf', 'ses', 'complete_lt_ses', 'loss_curve',
+            'loss_map', 'collapse_map', 'bcr_distribution', 'uh_spectra',
+            'agg_loss_curve', 'dmg_dist_per_asset', 'dmg_dist_per_taxonomy',
+            'dmg_dist_total')),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -1099,7 +1102,17 @@ CREATE TABLE hzrdr.ses_rupture (
 CREATE TABLE hzrdr.gmf_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
-    lt_realization_id INTEGER NOT NULL -- FK to lt_realization.id
+    -- FK to lt_realization.id
+    lt_realization_id INTEGER CONSTRAINT gmf_collection_lt_realization_check
+        CHECK(
+            -- Case 1: Normal GMF collection
+            ((lt_realization_id IS NOT NULL) AND (complete_logic_tree_gmf= FALSE))
+            -- Case 2: GMF collection containing all ground motion fields for the entire
+            -- logic tree.
+            OR ((lt_realization_id IS NULL) AND (complete_logic_tree_gmf = TRUE))),
+    -- A flag to indicate that this is a `complete logic
+    -- tree` GMF collection.
+    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_set (
@@ -1107,7 +1120,14 @@ CREATE TABLE hzrdr.gmf_set (
     gmf_collection_id INTEGER NOT NULL,  -- FK to gmf_collection.id
     investigation_time float NOT NULL,
     -- Keep track of the stochastic event set which this GMF set is associated with
-    ses_ordinal INTEGER NOT NULL
+    ses_ordinal INTEGER CONSTRAINT gmf_set_ses_ordinal_check
+        CHECK(
+            -- Case 1: Normal GMF set
+            ((ses_ordinal IS NOT NULL) AND (complete_logic_tree_gmf = FALSE))
+            -- Case 2: GMF set containing all ground motion fields for the entire
+            -- logic tree.
+            OR ((ses_ordinal IS NULL) AND (complete_logic_tree_gmf = TRUE))),
+    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf (
