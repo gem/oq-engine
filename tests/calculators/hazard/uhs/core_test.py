@@ -248,8 +248,7 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
             # We want to force a failure to occur in the task:
             compute_mock.side_effect = RuntimeError('Mock exception')
 
-            get_counter = lambda: stats.get_counter(
-                self.job_id, 'h', 'compute_uhs_task-failures', 'i')
+            get_counter = lambda: stats.pk_get(self.job_id, "nhzrd_failed")
 
             # The counter should start out empty:
             self.assertIsNone(get_counter())

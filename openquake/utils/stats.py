@@ -208,9 +208,9 @@ def key_name(job_id, area, key_fragment, counter_type):
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
+    def __init__(self, ctype):
+        """Captures the computation ctype parameter."""
+        self.ctype = ctype
         self.__name__ = "progress_indicator"
 
     @staticmethod
@@ -231,14 +231,19 @@ class progress_indicator(object):   # pylint: disable=C0103
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = key_name(job_id, self.area, func.__name__, "i")
+                key = key_name(job_id, self.ctype, func.__name__, "i")
                 conn.incr(key)
                 return result
             except:
                 # Count failure
                 key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
+                    job_id, self.ctype, func.__name__ + "-failures", "i")
                 conn.incr(key)
+                # Make sure failures of tasks that use this old (legacy)
+                # decorator propagate to the error handling code in the
+                # supervisor.
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
+                pk_inc(job_id, key)
                 raise
 
         return wrapper

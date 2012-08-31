@@ -59,7 +59,7 @@ class ProgressIndicatorTestCase(helpers.RedisTestCase, unittest.TestCase):
     def test_failure_stats(self):
         """
         The failure counter is incremented when the wrapped function
-        terminates raises an exception.
+        raises an exception.
         """
         area = "bbb"
 
