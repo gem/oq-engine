@@ -40,15 +40,15 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
     def test_mean_based(self):
-        cfg = helpers.qa_file(
+        cfg = helpers.demo_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
         self._run_job(cfg)
-        self._verify_job_succeeded(QA_OUTPUT_DIR)
-        self._verify_loss_maps(QA_OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.05)
-        self._verify_loss_curves(QA_OUTPUT_DIR, 0.05)
-        self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.05)
+        self._verify_job_succeeded(OUTPUT_DIR)
+        self._verify_loss_maps(OUTPUT_DIR, 0.05)
+        self._verify_loss_ratio_curves(OUTPUT_DIR, 0.05)
+        self._verify_loss_curves(OUTPUT_DIR, 0.05)
+        self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
 
         # Cleaning generated results file.
         #rmtree(QA_OUTPUT_DIR)

@@ -145,7 +145,7 @@ class ScenarioRiskQATest(unittest.TestCase):
             'scenario_risk/computed_output/loss-map-%s.xml' % job.id)
         self.assertTrue(os.path.exists(expected_loss_map_file))
 
-        loss_map = self.loss_map_result_from_file(expected_loss_map_file)
+        loss_map = helpers.loss_map_result_from_file(expected_loss_map_file)
         self._verify_loss_map_within_range(sorted(mb_loss_map),
             sorted(loss_map), 0.05)
 
