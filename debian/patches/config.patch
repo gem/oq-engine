@@ -1,0 +1,22 @@
+--- a/openquake/celeryconfig.py
++++ b/openquake/celeryconfig.py
+@@ -49,7 +49,6 @@
+     "openquake.calculators.hazard.disagg.core",
+     "openquake.calculators.hazard.disagg.subsets",
+     "openquake.calculators.hazard.uhs.core",
+-    "openquake.calculators.risk.general",
+-    "tests.utils.tasks")
++    "openquake.calculators.risk.general")
+ 
+ os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
+--- a/openquake/openquake.cfg
++++ b/openquake/openquake.cfg
+@@ -22,7 +22,7 @@
+ # so set 'timeout=0' in /etc/redis/redis.conf -- please see
+ #       https://bugs.launchpad.net/openquake/+bug/907760
+ # for details.
+-cache_connections = true
++cache_connections = false
+ 
+ [amqp]
+ host = localhost
