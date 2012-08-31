@@ -173,7 +173,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(getpass.getuser())
+        job = engine2.prepare_job(user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
         calculation = engine2.create_hazard_calculation(job.owner, params,

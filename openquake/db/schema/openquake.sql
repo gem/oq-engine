@@ -243,6 +243,8 @@ CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
+    log_level VARCHAR NOT NULL DEFAULT 'progress' CONSTRAINT oq_job_log_level_check
+        CHECK(log_level IN ('debug', 'info', 'progress', 'warn', 'error', 'critical')),
     -- One of: pre_execution, executing, post_execution, post_processing, complete
     status VARCHAR NOT NULL DEFAULT 'pre_executing' CONSTRAINT job_status_value
         CHECK(status IN ('pre_executing', 'executing', 'post_executing',
