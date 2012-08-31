@@ -201,7 +201,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
             with helpers.patch(write_uhs_data) as write_mock:
                 # Call the function under test as a normal function, not a
                 # @task:
-                compute_uhs_task(self.job_id, 0, Site(0.0, 0.0))
+                compute_uhs_task(self.job_id, 0, site=Site(0.0, 0.0))
 
                 self.assertEqual(1, compute_mock.call_count)
                 self.assertEqual(1, write_mock.call_count)
@@ -222,20 +222,18 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
         with helpers.patch(cmpt_uhs):
             with helpers.patch(write_uhs_data):
 
-                get_counter = lambda: stats.get_counter(
-                    self.job_id, 'h', 'compute_uhs_task', 'i')
+                get_counter = lambda: stats.pk_get(self.job_id, "nhzrd_done")
 
-                # First, check that the counter for `compute_uhs_task` is
-                # `None`:
-                self.assertIsNone(get_counter())
+                # First, check that the completion counter is zero
+                self.assertEqual(0, get_counter())
 
                 realization = 0
                 site = Site(0.0, 0.0)
                 # execute the task as a plain old function
-                compute_uhs_task(self.job_id, realization, site)
+                compute_uhs_task(self.job_id, realization, site=site)
                 self.assertEqual(1, get_counter())
 
-                compute_uhs_task(self.job_id, realization, site)
+                compute_uhs_task(self.job_id, realization, site=site)
                 self.assertEqual(2, get_counter())
 
     def test_compute_uhs_task_pi_failure_counter(self):
@@ -251,16 +249,17 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
             get_counter = lambda: stats.pk_get(self.job_id, "nhzrd_failed")
 
             # The counter should start out empty:
-            self.assertIsNone(get_counter())
+            self.assertEqual(0, get_counter())
 
-            # tasks_args: job_id, realization, site
-            task_args = (self.job_id, 0, Site(0.0, 0.0))
-            self.assertRaises(RuntimeError, compute_uhs_task, *task_args)
+            self.assertRaises(RuntimeError, compute_uhs_task,
+                              self.job_id, 0, site=Site(0.0, 0.0))
             self.assertEqual(1, get_counter())
 
             # Create two more failures:
-            self.assertRaises(RuntimeError, compute_uhs_task, *task_args)
-            self.assertRaises(RuntimeError, compute_uhs_task, *task_args)
+            self.assertRaises(RuntimeError, compute_uhs_task,
+                              self.job_id, 0, site=Site(0.0, 0.0))
+            self.assertRaises(RuntimeError, compute_uhs_task,
+                              self.job_id, 0, site=Site(0.0, 0.0))
             self.assertEqual(3, get_counter())
 
 

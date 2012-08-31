@@ -45,7 +45,7 @@ from openquake.utils.general import block_splitter
 # Disabling 'Too many local variables'
 # pylint: disable=R0914
 @task(ignore_results=True)
-@stats.progress_indicator('h')
+@stats.count_progress('h', data_arg="site")
 @java.unpack_exception
 def compute_uhs_task(job_id, realization, site):
     """Compute Uniform Hazard Spectra for a given site of interest and 1 or
