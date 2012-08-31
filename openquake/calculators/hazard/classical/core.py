@@ -289,9 +289,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         the actual curve PoE values). Foreign keys are made from
         `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
         is need to export the full hazard curve results).
-
-        Finally, all data for the calculation which is stored in the `htemp`
-        tables is deleted (at this point, it is no longer needed).
         """
         hc = self.job.hazard_calculation
         im = hc.intensity_measure_types_and_levels
@@ -346,12 +343,23 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
                 hc_data_inserter.flush()
 
-        # delete temporary data
+    def clean_up(self):
+        """
+        Delete temporary database records. These records represent intermediate
+        copies of final calculation results and are no longer needed.
+
+        In this case, this includes all of the data for this calculation in the
+        tables found in the `htemp` schema space.
+        """
+        hc = self.job.hazard_calculation
+
+        logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id).delete()
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+        logs.LOG.debug('< done cleaning up temporary DB data')
 
 
 def update_result_matrix(current, new):
