@@ -180,22 +180,21 @@ def save_5d_matrix_to_h5(directory, matrix):
 @task
 @java.unpack_exception
 @stats.count_progress("h", data_arg="site")
-def compute_disagg_matrix_task(job_id, site, realization, poe,
-                               result_dir):
+def compute_disagg_matrix_task(job_id, realization, poe, result_dir, site):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
 
     :param job_id: id of the calculation record in the KVS
     :type job_id: `str`
-    :param site: a single site of interest
-    :type site: :class:`openquake.shapes.Site` instance`
     :param int realization: logic tree sample iteration number
     :param poe: Probability of Exceedence
     :type poe: `float`
     :param result_dir: location for the Java code to write the matrix in an
         HDF5 file (in a distributed environment, this should be the path of a
         mounted NFS)
+    :param site: a single site of interest
+    :type site: :class:`openquake.shapes.Site` instance`
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
@@ -359,7 +358,7 @@ class DisaggHazardCalculator(general.BaseHazardCalculator):
                 task_site_pairs = []
                 for site in sites:
                     a_task = compute_disagg_matrix_task.delay(
-                        self.job_ctxt.job_id, site, rlz, poe, result_dir)
+                        self.job_ctxt.job_id, rlz, poe, result_dir, site=site)
 
                     task_site_pairs.append((a_task, site))
 
