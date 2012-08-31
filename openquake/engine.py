@@ -44,6 +44,7 @@ from openquake.db.models import Input
 from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
+from openquake.db.models import JobPhaseStats
 from openquake.db.models import JobStats
 from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
@@ -289,13 +290,7 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        # TODO: temporary workaround; remove me when nhlib integration is
-        # complete
-        if self.oq_job_profile.workaround_1027041 is not None:
-            workaround = self.oq_job_profile.workaround_1027041
-            return region.grid.centers(workaround_1027041=workaround)
-        else:
-            return region.grid.centers()
+        return region.grid.centers()
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
@@ -883,6 +878,23 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
     return job
 
 
+def _switch_to_job_phase(job_ctxt, ctype, status):
+    """Switch to a particular phase of execution.
+
+    This involves creating a `job_phase_stats` record and logging the new
+    status.
+
+    :param job_ctxt:
+        An :class:`~openquake.engine.JobContext` instance.
+    :param str ctype: calculation type (hazard|risk)
+    :param str status: one of the following: pre_executing, executing,
+        post_executing, post_processing, export, clean_up, complete
+    """
+    job = OqJob.objects.get(id=job_ctxt.job_id)
+    JobPhaseStats.objects.create(oq_job=job, ctype=ctype, job_status=status)
+    logs.log_progress("%s (%s)" % (status, ctype), 1)
+
+
 def _launch_job(job_ctxt, sections):
     """Instantiate calculator(s) and actually run the job.
 
@@ -919,10 +931,19 @@ def _launch_job(job_ctxt, sections):
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
                        % (job_ctxt.job_id, job_type))
 
+        _switch_to_job_phase(job_ctxt, job_type, "initializing")
         calculator.initialize()
+
+        _switch_to_job_phase(job_ctxt, job_type, "pre_executing")
         calculator.pre_execute()
+
+        _switch_to_job_phase(job_ctxt, job_type, "executing")
         calculator.execute()
+
+        _switch_to_job_phase(job_ctxt, job_type, "post_executing")
         calculator.post_execute()
+
+        _switch_to_job_phase(job_ctxt, job_type, "clean_up")
         calculator.clean_up()
 
 

@@ -34,7 +34,7 @@ from openquake.utils import config
 #   https://bugs.launchpad.net/openquake/+bug/907703
 
 # Please note: counters apply to certain computation areas. At this point
-# there are as follows.
+# these are as follows.
 #   "g" : general
 #   "h" : hazard
 #   "r" : risk
@@ -46,7 +46,9 @@ from openquake.utils import config
 
 # Last but not least: some counters are only used by specific calculators,
 # e.g.
-#   "hcls": classical PSHA
+#   "hcls": classical hazard (openshalite based)
+#   "nhzrd": hazard progress reporting
+#   "nrisk": risk progress reporting
 
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
@@ -61,6 +63,23 @@ STATS_KEYS = {
     "blocks": ("g", "gen:blocks", "t"),
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
+
+    # The last "percent complete" figure that was reported to the end user
+    "lvr": ("g", "gen:lvr", "t"),
+
+    # The total amount of work for a hazard calculation
+    "nhzrd_total": ("h", "nhzrd:total", "t"),
+    # The number of completed hazard work items
+    "nhzrd_done": ("h", "nhzrd:done", "i"),
+    # The number of failed hazard work items
+    "nhzrd_failed": ("h", "nhzrd:failed", "i"),
+
+    # The total amount of work for a risk calculation
+    "nrisk_total": ("r", "nrisk:total", "t"),
+    # The number of completed risk work items
+    "nrisk_done": ("r", "nrisk:done", "i"),
+    # The number of failed risk work items
+    "nrisk_failed": ("r", "nrisk:failed", "i"),
 }
 
 
@@ -96,9 +115,9 @@ def failure_counters(job_id, area=None):
     assert area is None or area in ("g", "h", "r"), "Invalid area."
 
     if area:
-        pattern = "oqs/%s/%s/*-failures*" % (job_id, area)
+        pattern = "oqs/%s/%s/*:failed*" % (job_id, area)
     else:
-        pattern = "oqs/%s/*-failures*" % job_id
+        pattern = "oqs/%s/*:failed*" % job_id
 
     result = keys = kvs_op("keys", pattern)
     if keys:
@@ -119,7 +138,7 @@ def pk_set(job_id, skey, value):
     kvs_op("set", key, value)
 
 
-def pk_inc(job_id, skey):
+def pk_inc(job_id, skey, items=1):
     """Increment the value for a predefined statistics key.
 
     :param int job_id: identifier of the job in question
@@ -128,7 +147,7 @@ def pk_inc(job_id, skey):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    kvs_op("incr", key)
+    kvs_op("incr", key, items)
 
 
 def pk_get(job_id, skey, cast2int=True):
@@ -183,12 +202,15 @@ def key_name(job_id, area, key_fragment, counter_type):
     return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
+# al-maisan, Tue, 28 Aug 2012 09:43:11 +0200
+# PLEASE NOTE: the decorator below is deprecated and should not be used for
+# new code. Please use the 'count_progress' decorator instead.
 class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
+    def __init__(self, ctype):
+        """Captures the calculation type."""
+        self.ctype = ctype
         self.__name__ = "progress_indicator"
 
     @staticmethod
@@ -209,14 +231,88 @@ class progress_indicator(object):   # pylint: disable=C0103
             conn = _redis()
             try:
                 result = func(*args, **kwargs)
-                key = key_name(job_id, self.area, func.__name__, "i")
+                key = key_name(job_id, self.ctype, func.__name__, "i")
                 conn.incr(key)
                 return result
             except:
                 # Count failure
                 key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
+                    job_id, self.ctype, func.__name__ + "-failures", "i")
                 conn.incr(key)
+                # Make sure failures of tasks that use this old (legacy)
+                # decorator propagate to the error handling code in the
+                # supervisor.
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
+                pk_inc(job_id, key)
+                raise
+
+        return wrapper
+
+
+class count_progress(object):   # pylint: disable=C0103
+    """Count successful/failed invocations of wrapped celery task functions.
+
+    Restrictions: for this to work
+
+        - the task parameters must be passed to apply_async() in positional
+          fashion (i.e. *not* as kwargs)
+        - the `job_id` and the collection with the work items must be passed
+          via the first and the second parameter respectively
+
+    These restrictions save us from sifting through all the task function's
+    parameters and finding the desired data (which would be unnecessarily
+    complex *and* error-prone).
+
+    ALSO: this decorator presently only supports hazard and risk tasks!
+    """
+
+    def __init__(self, ctype, data_arg=None):
+        """Captures the calculation type and the name of the data parameter."""
+        self.ctype = ctype
+        self.data_arg = data_arg
+        self.__name__ = "count_progress"
+
+    def get_task_data(self, *args, **kwargs):
+        """Return the job_id and the number of work items."""
+        job_id = kwargs.get("job_id")
+        if job_id is None and len(args) > 0:
+            job_id = args[0]
+        assert job_id is not None, "job ID not found"
+        assert job_id > 0, "Invalid job ID"
+
+        data = None
+        data_len = None
+        if self.data_arg:
+            data = kwargs.get(self.data_arg)
+        elif len(args) > 1:
+            data = args[1]
+        assert data is not None, "data parameter not found"
+
+        try:
+            data_len = len(data)
+            assert data_len, "Internal error: empty data parameter"
+        except TypeError:
+            # The data parameter is not a sequence or collection, length = 1
+            data_len = 1
+
+        return job_id, data_len
+
+    def __call__(self, func):
+        """The actual decorator."""
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """Call the wrapped function and step the done/failed counters in
+               case of success/failure."""
+            job_id, num_items = self.get_task_data(*args, **kwargs)
+            try:
+                result = func(*args, **kwargs)
+                key = "nhzrd_done" if self.ctype == "h" else "nrisk_done"
+                pk_inc(job_id, key, num_items)
+                return result
+            except:
+                # Count failure
+                key = "nhzrd_failed" if self.ctype == "h" else "nrisk_failed"
+                pk_inc(job_id, key, num_items)
                 raise
 
         return wrapper

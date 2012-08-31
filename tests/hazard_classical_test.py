@@ -84,7 +84,7 @@ class DoCurvesTestCase(unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH, OUTPUT_DIR="output",
             NUMBER_OF_LOGIC_TREE_SAMPLES=2, WIDTH_OF_MFD_BIN=1)
 
-        self.job_ctxt = create_job(params)
+        self.job_ctxt = create_job(params, job_id=99)
         self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
 
         # Store the canned result data in the KVS.
@@ -128,8 +128,7 @@ class DoCurvesTestCase(unittest.TestCase):
             self.calculator.do_curves(
                 self.sites, 2, self.calculator.ath, fake_compute_hazard_curve)
         except RuntimeError, err:
-            self.assertTrue("h/fake_compute_hazard_curve-failures" in
-                            err.args[0])
+            self.assertTrue("h/nhzrd:failed/i" in err.args[0])
         else:
             self.fail("RuntimeError not raised")
 

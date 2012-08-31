@@ -35,7 +35,7 @@ LOG = logs.LOG
 
 @task
 @java.unpack_exception
-@stats.progress_indicator("h")
+@stats.count_progress("h", data_arg="realization")
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
@@ -46,6 +46,18 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 
 class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """Probabilistic Event Based method for performing Hazard calculations."""
+
+    def initialize_pr_data(self, **kwargs):
+        """
+        Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        num_calculations = kwargs.get("num_calculations")
+        assert num_calculations, "Invalid 'num_calculations' parameter"
+        stats.pk_set(self.job_ctxt.job_id, "lvr", 0)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_total", num_calculations)
+        stats.pk_set(self.job_ctxt.job_id, "nhzrd_done", 0)
 
     @java.unpack_exception
     @general.create_java_cache
@@ -66,6 +78,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         histories = self.job_ctxt['NUMBER_OF_SEISMICITY_HISTORIES']
         realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        self.initialize_pr_data(num_calculations=histories * realizations)
+
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
             % (histories, realizations))
@@ -79,12 +93,13 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     compute_ground_motion_fields.delay(
                         self.job_ctxt.job_id,
                         self.job_ctxt.sites_to_compute(),
-                        i, j, gmf_generator.getrandbits(32)))
+                        i, realization=j, seed=gmf_generator.getrandbits(32)))
 
             for each_task in pending_tasks:
                 each_task.wait()
                 if each_task.status != 'SUCCESS':
                     raise Exception(each_task.result)
+                logs.log_percent_complete(self.job_ctxt.job_id, "hazard")
 
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(

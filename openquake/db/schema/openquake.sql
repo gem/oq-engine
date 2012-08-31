@@ -601,12 +601,25 @@ CREATE TABLE uiapi.oq_job (
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
-    start_time timestamp with time zone,
-    stop_time timestamp with time zone,
+    start_time timestamp without time zone,
+    stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER NOT NULL,
     -- The number of logic tree samples (for hazard jobs of all types except scenario)
     realizations INTEGER
+) TABLESPACE uiapi_ts;
+
+
+-- how long are the various job phases taking?
+CREATE TABLE uiapi.job_phase_stats (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    -- calculation type (hazard|risk)
+    ctype VARCHAR NOT NULL,
+    job_status VARCHAR NOT NULL,
+    start_time timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    UNIQUE (oq_job_id, ctype, job_status)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1130,10 +1143,6 @@ CREATE TABLE uiapi.oq_job_profile (
     default_pop_cat VARCHAR CONSTRAINT default_pop_cat_value
         CHECK(default_pop_cat IS NULL OR
               default_pop_cat IN ('day', 'night', 'in_transit')),
-    -- Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041
-    -- TODO: remove me when nhlib integration is complete
-    workaround_1027041 BOOLEAN DEFAULT FALSE,
-
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
