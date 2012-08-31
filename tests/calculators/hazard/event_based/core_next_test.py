@@ -158,6 +158,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(250.0, complete_lt_ses.investigation_time)
         self.assertIsNone(complete_lt_ses.ordinal)
 
+    # TODO(LB): This test is becoming a bit epic. Once QA test data is
+    # we can probably refactor or replace this test.
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
         # * Run `pre_execute()`.
@@ -242,12 +244,17 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # TODO: At some point, we'll need to test the actual values of these
         # ruptures. We'll need to collect QA test data for this.
 
-        # Finally, check the complete logic tree SES and make sure it contains
+        # Check the complete logic tree SES and make sure it contains
         # all of the ruptures.
         complete_lt_ses = models.SES.objects.get(
             ses_collection__output__oq_job=self.job.id,
             ses_collection__output__output_type='complete_lt_ses',
             complete_logic_tree_ses=True)
+
+        clt_ses_ruptures = models.SESRupture.objects.filter(
+            ses=complete_lt_ses.id)
+
+        self.assertEqual(210, clt_ses_ruptures.count())
 
         # Test the computed `investigation_time`
         # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
@@ -255,7 +262,16 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertIsNone(complete_lt_ses.ordinal)
 
-        clt_ses_ruptures = models.SESRupture.objects.filter(
-            ses=complete_lt_ses.id)
+        # Check the complete logic tree GMF set and make sure it contains
+        # all of the GMFs.
+        complete_lt_gmf = models.GmfSet.objects.get(
+            gmf_collection__output__oq_job=self.job.id,
+            gmf_collection__output__output_type='complete_lt_gmf',
+            complete_logic_tree_gmf=True)
 
-        self.assertEqual(210, clt_ses_ruptures.count())
+        clt_gmfs = models.GmfNode.objects.filter(
+            gmf__gmf_set=complete_lt_gmf.id)
+        self.assertEqual(expected_gmfs1 + expected_gmfs2, clt_gmfs.count())
+
+        self.assertEqual(500.0, complete_lt_gmf.investigation_time)
+        self.assertIsNone(complete_lt_gmf.ses_ordinal)
