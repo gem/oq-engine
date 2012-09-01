@@ -40,8 +40,6 @@ class BaseMFD(object):
 
         Modifications can be applied one on top of another. The logic
         of stacking modifications is up to a specific MFD implementation.
-        Any number of modifications can be reverted with a single call
-        to :meth:`reset`.
 
         :param modification:
             String name representing the type of modification.
