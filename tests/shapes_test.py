@@ -958,3 +958,82 @@ class RegionTestCase(unittest.TestCase):
         # longitude too low, too high
         self.assertFalse(region.grid.site_inside(shapes.Site(1.76, 1.5)))
         self.assertFalse(region.grid.site_inside(shapes.Site(-0.26, 1.5)))
+
+    def test_workaround_for_1027041(self):
+        # See https://bugs.launchpad.net/openquake/+bug/1027041.
+
+        # Create a 5x3 polygon with an upside-down U shape, like so:
+        #  ........
+        #  .      .
+        #  . .... .
+        #  . .  . .
+        #  . .  . .
+        #  ...  ...
+
+        coords = [(0, 0), (0, 3), (5, 3), (5, 0),
+                  (4, 0), (4, 2), (1, 2), (1, 0)]
+
+        reg = shapes.Region.from_coordinates(coords, cell_size=1.0)
+
+        expected_sites = [
+            shapes.Site(0.0, 0.0),
+            shapes.Site(1.0, 0.0),
+            shapes.Site(2.0, 0.0),
+            shapes.Site(3.0, 0.0),
+            shapes.Site(4.0, 0.0),
+            shapes.Site(5.0, 0.0),
+            shapes.Site(0.0, 1.0),
+            shapes.Site(1.0, 1.0),
+            shapes.Site(2.0, 1.0),
+            shapes.Site(3.0, 1.0),
+            shapes.Site(4.0, 1.0),
+            shapes.Site(5.0, 1.0),
+            shapes.Site(0.0, 2.0),
+            shapes.Site(1.0, 2.0),
+            shapes.Site(2.0, 2.0),
+            shapes.Site(3.0, 2.0),
+            shapes.Site(4.0, 2.0),
+            shapes.Site(5.0, 2.0),
+            shapes.Site(0.0, 3.0),
+            shapes.Site(1.0, 3.0),
+            shapes.Site(2.0, 3.0),
+            shapes.Site(3.0, 3.0),
+            shapes.Site(4.0, 3.0),
+            shapes.Site(5.0, 3.0),
+        ]
+
+        sites = reg.grid.centers()
+        self.assertEqual(expected_sites, sites)
+
+        expected_with_workaround = [
+            shapes.Site(0.0, 0.0),
+            shapes.Site(1.0, 0.0),
+            shapes.Site(4.0, 0.0),
+            shapes.Site(5.0, 0.0),
+            shapes.Site(0.0, 1.0),
+            shapes.Site(1.0, 1.0),
+            shapes.Site(4.0, 1.0),
+            shapes.Site(5.0, 1.0),
+            shapes.Site(0.0, 2.0),
+            shapes.Site(1.0, 2.0),
+            shapes.Site(2.0, 2.0),
+            shapes.Site(3.0, 2.0),
+            shapes.Site(4.0, 2.0),
+            shapes.Site(5.0, 2.0),
+            shapes.Site(0.0, 3.0),
+            shapes.Site(1.0, 3.0),
+            shapes.Site(2.0, 3.0),
+            shapes.Site(3.0, 3.0),
+            shapes.Site(4.0, 3.0),
+            shapes.Site(5.0, 3.0),
+        ]
+        workaround_sites = reg.grid.centers(workaround_1027041=True)
+        # the expect sites here are the same as the first test, minus the
+        # following:
+        #
+        # shapes.Site(2.0, 0.0)
+        # shapes.Site(2.0, 1.0)
+        # shapes.Site(3.0, 0.0)
+        # shapes.Site(3.0, 1.0)
+        # These points make up the empty area inside the upside-down U
+        self.assertEqual(expected_with_workaround, workaround_sites)
