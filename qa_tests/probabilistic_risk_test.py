@@ -51,8 +51,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
 
         # Cleaning generated results file.
-        #rmtree(QA_OUTPUT_DIR)
+        rmtree(QA_OUTPUT_DIR)
 
+    #TODO Add/Complete the skipped QA Tests
     @unittest.skip
     def test_sampled_based(self):
         cfg = helpers.qa_file(
@@ -368,8 +369,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 losses, expected_losses, atol=0.0, rtol=tol))
 
     def _run_job(self, config):
-        ret_code = helpers.run_job(config, ["--output-type=xml",
-                                            '--log-level=debug'])
+        ret_code = helpers.run_job(config, ["--output-type=xml"])
         self.assertEquals(0, ret_code)
 
     def _root(self, filename):

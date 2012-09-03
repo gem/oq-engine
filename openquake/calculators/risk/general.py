@@ -1258,7 +1258,7 @@ def hazard_input_site(job_ctxt, site):
         return job_ctxt.region.grid.point_at(site).site
 
 
-def insurance_boundaries_defind(asset):
+def insurance_boundaries_defined(asset):
     """
     Check if limit and deductibles values have been defined for the asset.
 
@@ -1278,10 +1278,10 @@ def compute_insured_losses(asset, losses):
     Compute insured losses for the given asset using the related set of ground
     motion values and vulnerability function.
 
-    :param losses:
-    :type losses:
     :param asset: the asset used to compute the loss ratios and losses.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    :param losses: loss ratios multiplied by the asset value
+    :type losses: a :py:class:`numpy.ndarray` instance
     """
 
     if insurance_boundaries_defind(asset):

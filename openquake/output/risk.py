@@ -844,15 +844,15 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
 
         if curve_mode == 'loss':
             writers.append(LossCurveDBWriter(nrml_path, job_id))
-        elif curve_mode == 'loss_ratio' or curve_mode == 'insured_loss_curve':
+        elif curve_mode in ('loss_ratio', 'insured_loss_curve'):
             # We are non interested in storing loss ratios in the db
             pass
 
     if 'xml' in serialize_to:
-        if curve_mode == 'loss' or curve_mode == 'insured_loss_curve':
-            writer_class = LossCurveXMLWriter
-        elif curve_mode == 'loss_ratio':
+        if curve_mode == 'loss_ratio':
             writer_class = LossRatioCurveXMLWriter
+        elif curve_mode  in ('loss', 'insured_loss_curve'):
+            writer_class = LossCurveXMLWriter
 
         writers.append(writer_class(nrml_path))
 
