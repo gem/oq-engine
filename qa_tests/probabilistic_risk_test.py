@@ -40,7 +40,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
     def test_mean_based(self):
-        cfg = helpers.demo_file(
+        cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
         self._run_job(cfg)

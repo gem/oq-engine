@@ -1139,10 +1139,10 @@ def compute_insured_loss_curve(asset, loss_curve):
     """
     Compute an insured loss curve.
     :param asset: the asset used to compute the insured loss curve.
-    :type asset: py:class:`dict` as provided by
+    :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposureModelFile`
     :param loss_curve: a loss curve.
-    :type loss_curve: a py:class:`openquake.shapes.Curve` instance.
+    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
     """
     insured_losses = compute_insured_losses(asset, loss_curve.x_values)
 
