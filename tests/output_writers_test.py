@@ -129,6 +129,10 @@ class CreateRiskWriterTest(unittest.TestCase):
             None, ['xml'], "fakepath.xml", "loss")
         self.assertEqual(type(writer), risk_output.LossCurveXMLWriter)
 
+        writer = risk_output.create_loss_curve_writer(
+            None, ['xml'], "fakepath.xml", "insured_loss_curve")
+        self.assertEqual(type(writer), risk_output.LossCurveXMLWriter)
+
         # database writers
         writer = risk_output.create_loss_curve_writer(
             1, ['db'], "fakepath.xml", "loss_ratio")

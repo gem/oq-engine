@@ -20,6 +20,7 @@ import unittest
 import json
 
 from django.contrib.gis import geos
+from openquake.calculators.risk import general
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _compute_lrem
@@ -28,6 +29,8 @@ from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
 from openquake.calculators.risk.general import hazard_input_site
+from openquake.calculators.risk.general import (compute_insured_losses,
+                                                insurance_boundaries_defined)
 from openquake.job import config
 from openquake.db import models
 from openquake import engine
@@ -35,6 +38,7 @@ from openquake import kvs
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
+from openquake.shapes import Curve
 
 from tests.utils import helpers
 
@@ -419,3 +423,83 @@ class HazardInputSiteTestCase(unittest.TestCase):
 
         self.assertEqual(shapes.Site(1.5, 1.5), hazard_input_site(
                 job_ctxt, shapes.Site(1.6, 1.6)))
+
+
+class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
+    emdl = None
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "SEB-exposure.yaml")
+        inputs = [("exposure", path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+        [input] = models.inputs4job(cls.job.id, input_type="exposure",
+            path=path)
+        owner = models.OqUser.objects.get(user_name="openquake")
+        cls.emdl = input.model()
+        if not cls.emdl:
+            cls.emdl = models.ExposureModel(
+                owner=owner, input=input, description="SEB exposure model",
+                category="SEB factory buildings", stco_unit="screws",
+                stco_type="aggregated")
+            cls.emdl.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        imls = [0.10, 0.30, 0.50, 1.00]
+        loss_ratios = [0.05, 0.10, 0.15, 0.30]
+        covs = [0.30, 0.30, 0.20, 0.20]
+
+        self.vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios,
+            covs, "LN")
+
+        self.gmvs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
+                              0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
+
+        self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+                         -0.4336, 0.3426, 3.5784, 2.7694]
+
+        self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
+        self.eps_provider = helpers.EpsilonProvider(self.asset, self.epsilons)
+
+        self.losses = numpy.array([72.23120833, 410.55950159, 180.02423357,
+                                   171.02684563, 250.77079384, 39.45861103,
+                                   114.54372035, 288.28653452, 473.38307021,
+                                   488.47447798])
+
+    def test_insurance_boundaries_defined(self):
+        self.asset.ref = 'a14'
+        self.asset.ins_limit = 700
+        self.asset.deductible = 300
+        self.assertTrue(insurance_boundaries_defined(self.asset))
+
+        self.asset.ins_limit = None
+        self.assertRaises(RuntimeError, insurance_boundaries_defined,
+            self.asset)
+
+        self.asset.ins_limit = 700
+        self.asset.deductible = None
+        self.assertRaises(RuntimeError, insurance_boundaries_defined,
+            self.asset)
+
+    def test_compute_insured_losses(self):
+        self.asset.deductible = 150
+        self.asset.ins_limit = 300
+        expected = numpy.array([0, 300, 180.02423357, 171.02684563,
+                                250.77079384, 0, 0, 288.28653452, 300, 300])
+
+        self.assertTrue(numpy.allclose(expected,
+                compute_insured_losses(self.asset, self.losses)))
+
+    def test_compute_insured_loss_curve(self):
+        self.asset.deductible = 5
+        self.asset.ins_limit = 500
+        loss_curve = Curve(([(10, 0.2), (4, 1.0)]))
+        expected_insured_lc = Curve([(10, 0.2), (0, 1.0)])
+
+        self.assertEqual(expected_insured_lc,
+            general.compute_insured_loss_curve(self.asset, loss_curve))

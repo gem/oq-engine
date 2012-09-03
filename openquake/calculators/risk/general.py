@@ -292,10 +292,15 @@ class BaseRiskCalculator(Calculator):
                 self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
                 self.job_ctxt.job_id,
                 block_id)
+        elif kwargs['curve_mode'] == 'insured_loss_curve':
+            serialize_filename = "%s-insured-loss-block=#%s-block#%s.xml" % (
+                'insured_loss_curves',
+                self.job_ctxt.job_id,
+                block_id)
 
         serialize_path = os.path.join(self.job_ctxt.base_path,
-                                      self.job_ctxt.params['OUTPUT_DIR'],
-                                      serialize_filename)
+            self.job_ctxt.params['OUTPUT_DIR'],
+            serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
         writer = risk_output.create_loss_curve_writer(
@@ -329,6 +334,8 @@ class BaseRiskCalculator(Calculator):
 
         loss_curves = []
         loss_ratio_curves = []
+        insured_loss_curves = []
+
         block = Block.from_kvs(job_id, block_id)
 
         for site in block.sites:
@@ -344,6 +351,10 @@ class BaseRiskCalculator(Calculator):
                     kvs.tokens.loss_ratio_key(
                     job_id, point.row, point.column, asset.asset_ref))
 
+                insured_loss_curve = kvs.get_client().get(
+                    kvs.tokens.insured_loss_curve_key(
+                        job_id, point.row, point.column, asset.asset_ref))
+
                 if loss_curve:
                     loss_curve = shapes.Curve.from_json(loss_curve)
                     loss_curves.append((site, (loss_curve, asset)))
@@ -352,6 +363,13 @@ class BaseRiskCalculator(Calculator):
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
                     loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
+                if insured_loss_curve:
+                    insured_loss_curve = shapes.Curve.from_json(
+                        insured_loss_curve)
+
+                    insured_loss_curves.append((site,
+                        (insured_loss_curve, asset)))
+
         results = self._serialize(block_id, curves=loss_ratio_curves,
                 curve_mode="loss_ratio")
 
@@ -359,6 +377,13 @@ class BaseRiskCalculator(Calculator):
             results.extend(self._serialize(
                 block_id, curves=loss_curves, curve_mode="loss",
                 curve_mode_prefix="loss_curve", render_multi=True))
+
+        if insured_loss_curves:
+            results.extend(self._serialize(
+                block_id, curves=insured_loss_curves,
+                curve_mode="insured_loss_curve",
+                curve_mode_prefix="insured_loss_curve",
+                render_multi=True))
 
         return results
 
@@ -454,11 +479,11 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
 
         for loss_poe in conditional_loss_poes(job_ctxt.params):
             path = os.path.join(job_ctxt.base_path,
-                                job_ctxt.params['OUTPUT_DIR'],
-                                "losses_at-%s.xml" % loss_poe)
+                job_ctxt.params['OUTPUT_DIR'],
+                "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
-                job_ctxt.job_id, job_ctxt.serialize_results_to, path,
-                False)
+                job_ctxt.job_id, job_ctxt.serialize_results_to,
+                path, False)
 
             if writer:
                 metadata = {
@@ -1110,6 +1135,20 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
 
 
+def compute_insured_loss_curve(asset, loss_curve):
+    """
+    Compute an insured loss curve.
+    :param asset: the asset used to compute the insured loss curve.
+    :type asset: :py:class:`dict` as provided by
+        :py:class:`openquake.parser.exposure.ExposureModelFile`
+    :param loss_curve: a loss curve.
+    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
+    """
+    insured_losses = compute_insured_losses(asset, loss_curve.x_values)
+
+    return shapes.Curve(zip(insured_losses, loss_curve.y_values))
+
+
 def _generate_curve(losses, probs_of_exceedance):
     """Generate a loss ratio (or loss) curve, given a set of losses
     and corresponding PoEs (Probabilities of Exceedance).
@@ -1223,3 +1262,39 @@ def hazard_input_site(job_ctxt, site):
         return site
     else:
         return job_ctxt.region.grid.point_at(site).site
+
+
+def insurance_boundaries_defined(asset):
+    """
+    Check if limit and deductibles values have been defined for the asset.
+
+    :param asset: the asset used to compute the losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+    """
+
+    if (asset.ins_limit >= 0 and asset.deductible >= 0):
+        return True
+    else:
+        raise RuntimeError('Insurance boundaries for asset %s are not defined'
+        % asset.asset_ref)
+
+
+def compute_insured_losses(asset, losses):
+    """
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
+
+    :param asset: the asset used to compute the loss ratios and losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
+    :param losses: an array of loss values multiplied by the asset value.
+    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
+    """
+
+    if insurance_boundaries_defined(asset):
+        for i, value in enumerate(losses):
+            if value < asset.deductible:
+                losses[i] = 0
+            else:
+                if value > asset.ins_limit:
+                    losses[i] = asset.ins_limit
+    return losses

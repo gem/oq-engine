@@ -161,15 +161,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             point = self.job_ctxt.region.grid.point_at(site)
             gmvs = self._get_gmvs_at(general.hazard_input_site(
                     self.job_ctxt, site))
-
             gmf = {"IMLs": gmvs, "TSES": self._tses(),
                     "TimeSpan": self._time_span()}
-
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
                 loss_ratios = self.compute_loss_ratios(asset, gmf)
@@ -189,6 +186,14 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                         general.compute_conditional_loss(
                                 self.job_ctxt.job_id, point.column,
                                 point.row, loss_curve, asset, loss_poe)
+
+                    if self.job_ctxt.params.get("INSURED_LOSSES"):
+                        insured_curve = general.compute_insured_loss_curve(
+                            asset, loss_curve)
+                        key = kvs.tokens.insured_loss_curve_key(
+                            self.job_ctxt.job_id, point.row, point.column,
+                            asset.asset_ref)
+                        kvs.get_client().set(key, insured_curve.to_json())
 
         return aggregate_curve.losses
 

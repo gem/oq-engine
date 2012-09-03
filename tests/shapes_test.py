@@ -299,14 +299,14 @@ class CurveTestCase(unittest.TestCase):
         self.assertEquals(curve4, curve5)
         self.assertNotEquals(curve5, curve6)
 
-    def test_can_construct_a_curve_from_dict(self):
+    def test_can_construct_a_curve_from_list(self):
         curve1 = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
-        curve2 = shapes.Curve.from_dict({"0.1": 1.0, "0.2": 2.0})
+        curve2 = shapes.Curve.from_list([[0.1, 1.0], [0.2, 2.0]])
         curve3 = shapes.Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve4 = shapes.Curve.from_dict({"0.1": (1.0, 0.3), "0.2": (2.0, 0.3)})
+        curve4 = shapes.Curve.from_list([[0.1, [1.0, 0.3]], [0.2, [2.0, 0.3]]])
 
         # keys are already floats
-        curve5 = shapes.Curve.from_dict({0.1: (1.0, 0.3), 0.2: (2.0, 0.3)})
+        curve5 = shapes.Curve.from_list([[0.1, [1.0, 0.3]], [0.2, [2.0, 0.3]]])
 
         self.assertEquals(curve1, curve2)
         self.assertEquals(curve3, curve4)

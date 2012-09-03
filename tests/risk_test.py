@@ -43,6 +43,7 @@ from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
 from openquake.calculators.risk.general import ProbabilisticRiskCalculator
+from tests.utils.helpers import EpsilonProvider
 from openquake.calculators.risk.scenario import core as scenario
 from openquake import engine
 from openquake import kvs
@@ -97,17 +98,6 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
         0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
         "TSES": 900, "TimeSpan": 50}
-
-
-class EpsilonProvider(object):
-
-    def __init__(self, asset, epsilons):
-        self.asset = asset
-        self.epsilons = epsilons
-
-    def epsilon(self, asset):
-        assert self.asset is asset
-        return self.epsilons.pop(0)
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
@@ -1154,83 +1144,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                                compute_mean_loss(loss_ratio_curve), 3)
-
-
-class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
-
-    job = None
-    emdl = None
-
-    @classmethod
-    def setUpClass(cls):
-        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "SEB-exposure.yaml")
-        inputs = [("exposure", path)]
-        cls.job = cls.setup_classic_job(inputs=inputs)
-        [input] = models.inputs4job(cls.job.id, input_type="exposure",
-                                    path=path)
-        owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = input.model()
-        if not cls.emdl:
-            cls.emdl = models.ExposureModel(
-                owner=owner, input=input, description="SEB exposure model",
-                category="SEB factory buildings", stco_unit="screws",
-                stco_type="aggregated")
-            cls.emdl.save()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
-
-    def setUp(self):
-        imls = [0.10, 0.30, 0.50, 1.00]
-        loss_ratios = [0.05, 0.10, 0.15, 0.30]
-        covs = [0.30, 0.30, 0.20, 0.20]
-        self.vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios,
-            covs, "LN")
-
-        self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
-
-        self.gmvs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
-                     0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
-
-        self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        self.eps_provider = EpsilonProvider(self.asset, self.epsilons)
-
-    def test_compute_uninsured_losses(self):
-        expected = numpy.array([72.23120833, 410.55950159, 180.02423357,
-                                171.02684563, 250.77079384, 39.45861103,
-                                114.54372035, 288.28653452, 473.38307021,
-                                488.47447798])
-
-        self.assertTrue(numpy.allclose(expected,
-            scenario.compute_uninsured_losses(self.vuln_function,
-                self.gmvs, self.eps_provider, self.asset)))
-
-    def test_insurance_boundaries_defined(self):
-        self.asset.ref = 'a14'
-        self.asset.ins_limit = 700
-        self.asset.deductible = 300
-        self.assertTrue(scenario.insurance_boundaries_defind(self.asset))
-
-        self.asset.ins_limit = None
-        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
-                self.asset)
-
-        self.asset.ins_limit = 700
-        self.asset.deductible = None
-        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
-                self.asset)
-
-    def test_compute_insured_losses(self):
-        self.asset.deductible = 150
-        self.asset.ins_limit = 300
-        expected = numpy.array([0, 300, 180.02423357, 171.02684563,
-                                250.77079384, 0, 0, 288.28653452, 300, 300])
-
-        self.assertTrue(numpy.allclose(expected,
-            scenario.compute_insured_losses(self.vuln_function,
-                self.gmvs, self.eps_provider, self.asset)))
 
 
 class RiskCommonTestCase(unittest.TestCase):

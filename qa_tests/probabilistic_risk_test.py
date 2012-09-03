@@ -26,6 +26,10 @@ from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
 
+from qa_tests.data.probabilistic_event_based_risk.ins_loss_data import (
+    TOTAL_LOSS_PRECISION, LOSSMAP_PRECISION, LOSS_MAP_MB, MEAN_INS_LOSS_MB,
+    STDDEV_INS_LOSS_MB, LOSS_MAP_SB, MEAN_INS_LOSS_SB, STDDEV_INS_LOSS_SB)
+
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
 QA_OUTPUT_DIR = helpers.qa_file(
@@ -36,16 +40,22 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
     def test_mean_based(self):
-        cfg = helpers.demo_file(
-            "probabilistic_event_based_risk/config_qa.gem")
+        try:
+            cfg = helpers.qa_file(
+            "probabilistic_event_based_risk/m_config.gem")
 
-        self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
-        self._verify_loss_maps(OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(OUTPUT_DIR, 0.05)
-        self._verify_loss_curves(OUTPUT_DIR, 0.05)
-        self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
+            self._run_job(cfg)
+            self._verify_job_succeeded(QA_OUTPUT_DIR)
+            self._verify_loss_maps(QA_OUTPUT_DIR, 0.05)
+            self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.05)
+            self._verify_loss_curves(QA_OUTPUT_DIR, 0.05)
+            self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.05)
+        finally:
+        # Cleaning generated results file.
+            rmtree(QA_OUTPUT_DIR)
 
+    #TODO Add/Complete the skipped QA Tests
+    @unittest.skip
     def test_sampled_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
@@ -59,6 +69,68 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
+
+    @unittest.skip
+    def test_insured_loss_mean_based(self):
+        cfg = helpers.qa_file(
+            "probabilistic_event_based_risk/config_insloss_mb.gem")
+
+        result = helpers.run_job(cfg, ['--output-type=xml'],
+            check_output=True)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
+
+        expected_loss_map_file = helpers.qa_file(
+            'probabilistic_event_based_risk/computed_output/insured-loss-map%s'
+            '.xml' % job.id)
+
+        self.assertTrue(os.path.exists(expected_loss_map_file))
+
+        helpers.verify_loss_map(self, expected_loss_map_file, LOSS_MAP_MB,
+            LOSSMAP_PRECISION)
+
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
+
+        self.assertAlmostEqual(MEAN_INS_LOSS_MB, actual_mean,
+            places=TOTAL_LOSS_PRECISION)
+        self.assertAlmostEqual(STDDEV_INS_LOSS_MB, actual_stddev,
+            places=TOTAL_LOSS_PRECISION)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
+
+
+    @unittest.skip
+    def test_insured_loss_sample_based(self):
+        cfg = helpers.qa_file(
+            "probabilistic_event_based_risk/config_insloss_sb.gem")
+
+        result = helpers.run_job(scen_cfg, ['--output-type=xml'],
+            check_output=True)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
+
+        expected_loss_map_file = helpers.qa_file(
+            'scenario_risk_insured_losses/computed_output/insured-loss-map%s'
+            '.xml' % job.id)
+
+        self.assertTrue(os.path.exists(expected_loss_map_file))
+
+        helpers.verify_loss_map(self, expected_loss_map_file, LOSS_MAP_SB,
+            LOSSMAP_PRECISION)
+
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
+
+        self.assertAlmostEqual(MEAN_INS_LOSS_SB, actual_mean,
+            places=TOTAL_LOSS_PRECISION)
+        self.assertAlmostEqual(STDDEV_INS_LOSS_SB, actual_stddev,
+            places=TOTAL_LOSS_PRECISION)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
+
 
     def test_hazard_computed_on_exposure_sites(self):
         # here we compute the hazard on locations
