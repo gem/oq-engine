@@ -157,9 +157,12 @@ def loss_curve_key(job_id, row, col, asset_id, retrofitted=False):
     return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col,
                          "retrofitted" if retrofitted else "normal")
 
+
 def insured_loss_curve_key(job_id, row, col, asset_id):
+    """ Return a insured loss curve key """
     return _generate_key(job_id, INSURED_LOSS_CURVE_KEY_TOKEN, asset_id, row,
         col)
+
 
 def loss_key(job_id, row, col, asset_id, poe):
     """ Return a loss key """

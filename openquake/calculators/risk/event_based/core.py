@@ -27,7 +27,6 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
-from openquake.shapes import Curve
 
 LOGGER = logs.LOG
 
@@ -150,7 +149,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         * (partial) aggregate loss curve
         """
 
-
         self.vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
@@ -190,8 +188,8 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                 point.row, loss_curve, asset, loss_poe)
 
                     if self.job_ctxt.params.get("INSURED_LOSSES"):
-                        insured_curve = general.compute_insured_loss_curve\
-                            (asset, loss_curve)
+                        insured_curve = general.compute_insured_loss_curve(
+                            asset, loss_curve)
                         key = kvs.tokens.insured_loss_curve_key(
                             self.job_ctxt.job_id, point.row, point.column,
                             asset.asset_ref)

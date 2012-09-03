@@ -30,7 +30,7 @@ from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
 from openquake.calculators.risk.general import hazard_input_site
 from openquake.calculators.risk.general import (compute_insured_losses,
-                                                insurance_boundaries_defind)
+                                                insurance_boundaries_defined)
 from openquake.job import config
 from openquake.db import models
 from openquake import engine
@@ -475,15 +475,15 @@ class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
         self.asset.ref = 'a14'
         self.asset.ins_limit = 700
         self.asset.deductible = 300
-        self.assertTrue(insurance_boundaries_defind(self.asset))
+        self.assertTrue(insurance_boundaries_defined(self.asset))
 
         self.asset.ins_limit = None
-        self.assertRaises(RuntimeError, insurance_boundaries_defind,
+        self.assertRaises(RuntimeError, insurance_boundaries_defined,
             self.asset)
 
         self.asset.ins_limit = 700
         self.asset.deductible = None
-        self.assertRaises(RuntimeError, insurance_boundaries_defind,
+        self.assertRaises(RuntimeError, insurance_boundaries_defined,
             self.asset)
 
     def test_compute_insured_losses(self):
@@ -502,4 +502,4 @@ class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
         expected_insured_lc = Curve([(10, 0.2), (0, 1.0)])
 
         self.assertEqual(expected_insured_lc,
-            general.compute_insured_loss_curve(self.asset,loss_curve))
+            general.compute_insured_loss_curve(self.asset, loss_curve))

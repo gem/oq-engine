@@ -368,7 +368,7 @@ class BaseRiskCalculator(Calculator):
                         insured_loss_curve)
 
                     insured_loss_curves.append((site,
-                        (insured_loss_curve,asset)))
+                        (insured_loss_curve, asset)))
 
         results = self._serialize(block_id, curves=loss_ratio_curves,
                 curve_mode="loss_ratio")
@@ -446,7 +446,6 @@ class BaseRiskCalculator(Calculator):
 
 class ProbabilisticRiskCalculator(BaseRiskCalculator):
     """Common base class for the Classical and Event-Based risk calculators."""
-
 
     def compute_risk(self, block_id):
         """Perform calculation and store the result in the kvs.
@@ -1133,11 +1132,18 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
             loss_ratios, loss_ratios_range), gmf_set["TSES"]),
             gmf_set["TimeSpan"])
 
-
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
 
 
 def compute_insured_loss_curve(asset, loss_curve):
+    """
+    Compute an insured loss curve.
+    :param asset: the asset used to compute the insured loss curve.
+    :type asset: py:class:`dict` as provided by
+        :py:class:`openquake.parser.exposure.ExposureModelFile`
+    :param loss_curve: a loss curve.
+    :type loss_curve: a py:class:`openquake.shapes.Curve` instance.
+    """
     insured_losses = compute_insured_losses(asset, loss_curve.x_values)
 
     return shapes.Curve(zip(insured_losses, loss_curve.y_values))
@@ -1279,12 +1285,12 @@ def compute_insured_losses(asset, losses):
     motion values and vulnerability function.
 
     :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    :param losses: loss ratios multiplied by the asset value
-    :type losses: a :py:class:`numpy.ndarray` instance
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
+    :param losses: an array of loss values multiplied by the asset value.
+    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
     """
 
-    if insurance_boundaries_defind(asset):
+    if insurance_boundaries_defined(asset):
         for i, value in enumerate(losses):
             if value < asset.deductible:
                 losses[i] = 0
@@ -1292,4 +1298,3 @@ def compute_insured_losses(asset, losses):
                 if value > asset.ins_limit:
                     losses[i] = asset.ins_limit
     return losses
-
