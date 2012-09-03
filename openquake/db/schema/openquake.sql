@@ -1143,6 +1143,10 @@ CREATE TABLE uiapi.oq_job_profile (
     default_pop_cat VARCHAR CONSTRAINT default_pop_cat_value
         CHECK(default_pop_cat IS NULL OR
               default_pop_cat IN ('day', 'night', 'in_transit')),
+    -- Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041
+    -- TODO: remove me when nhlib integration is complete
+    workaround_1027041 BOOLEAN DEFAULT FALSE,
+
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
