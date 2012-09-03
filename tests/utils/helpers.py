@@ -38,7 +38,9 @@ import textwrap
 import time
 
 from django.core import exceptions
+from lxml import etree
 
+from openquake import xml
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
@@ -845,3 +847,57 @@ def prepare_job_context(path_to_cfg):
         oq_job=job)
 
     return job_ctxt
+
+def mean_stddev_from_result_line(result):
+    result = [line for line in result.split('\n') if len(line) > 0]
+    # We expected the shell output to look something like the following
+    # two lines:
+    # Mean region loss value: XXX.XXX
+    # Standard deviation region loss value: XXX.XXX
+    assert(2 == len(result))
+
+    actual_mean = float(result[0].split()[-1])
+    actual_stddev = float(result[1].split()[-1])
+    return actual_mean, actual_stddev
+
+def loss_map_result_from_file(path):
+    namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
+    root = etree.parse(path)
+
+    lm_data = []
+    lm_nodes = root.xpath('.//nrml:LMNode', namespaces=namespaces)
+
+    for node in lm_nodes:
+        node_data = dict()
+
+        [pos] = node.xpath('.//gml:pos', namespaces=namespaces)
+        node_data['pos'] = pos.text
+
+        [loss] = node.xpath('./nrml:loss', namespaces=namespaces)
+        node_data['asset'] = loss.get('assetRef')
+
+        [mean] = loss.xpath('./nrml:mean', namespaces=namespaces)
+        [stddev] = loss.xpath('./nrml:stdDev', namespaces=namespaces)
+        node_data['mean'] = float(mean.text)
+        node_data['stddev'] = float(stddev.text)
+
+        lm_data.append(node_data)
+
+    return lm_data
+
+def verify_loss_map(test_case, path, lm_data, loss_map_precision):
+    expected_data = loss_map_result_from_file(path)
+
+    assertDeepAlmostEqual(test_case, sorted(expected_data), sorted(lm_data),
+        places=loss_map_precision)
+
+
+class EpsilonProvider(object):
+
+    def __init__(self, asset, epsilons):
+        self.asset = asset
+        self.epsilons = epsilons
+
+    def epsilon(self, asset):
+        assert self.asset is asset
+        return self.epsilons.pop(0)

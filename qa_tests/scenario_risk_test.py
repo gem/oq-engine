@@ -46,49 +46,6 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self.assertEqual("succeeded", OqJob.objects.latest("id").status)
 
-    def _loss_map_result_from_file(self, path):
-        namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
-        root = etree.parse(path)
-
-        lm_data = []
-        lm_nodes = root.xpath('.//nrml:LMNode', namespaces=namespaces)
-
-        for node in lm_nodes:
-            node_data = dict()
-
-            [pos] = node.xpath('.//gml:pos', namespaces=namespaces)
-            node_data['pos'] = pos.text
-
-            [loss] = node.xpath('./nrml:loss', namespaces=namespaces)
-            node_data['asset'] = loss.get('assetRef')
-
-            [mean] = loss.xpath('./nrml:mean', namespaces=namespaces)
-            [stddev] = loss.xpath('./nrml:stdDev', namespaces=namespaces)
-            node_data['mean'] = float(mean.text)
-            node_data['stddev'] = float(stddev.text)
-
-            lm_data.append(node_data)
-
-        return lm_data
-
-    def _mean_stddev_from_result_line(self, result):
-        result = [line for line in result.split('\n') if len(line) > 0]
-        # We expected the shell output to look something like the following
-        # two lines:
-        # Mean region loss value: XXX.XXX
-        # Standard deviation region loss value: XXX.XXX
-        self.assertEqual(2, len(result))
-
-        actual_mean = float(result[0].split()[-1])
-        actual_stddev = float(result[1].split()[-1])
-        return actual_mean, actual_stddev
-
-    def _verify_loss_map(self, path, lm_data):
-        expected_data = self._loss_map_result_from_file(path)
-
-        helpers.assertDeepAlmostEqual(
-            self, sorted(expected_data), sorted(lm_data),
-            places=self.LOSSMAP_PRECISION)
 
     def _verify_loss_map_within_range(self, mb_loss_map,
                                       expected_loss_map, range):
@@ -129,9 +86,10 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self.assertTrue(os.path.exists(expected_loss_map_file))
 
-        self._verify_loss_map(expected_loss_map_file, expected_loss_map)
+        helpers.verify_loss_map(self, expected_loss_map_file,
+            expected_loss_map, self.LOSSMAP_PRECISION)
 
-        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
@@ -187,11 +145,11 @@ class ScenarioRiskQATest(unittest.TestCase):
             'scenario_risk/computed_output/loss-map-%s.xml' % job.id)
         self.assertTrue(os.path.exists(expected_loss_map_file))
 
-        loss_map = self._loss_map_result_from_file(expected_loss_map_file)
+        loss_map = helpers.loss_map_result_from_file(expected_loss_map_file)
         self._verify_loss_map_within_range(sorted(mb_loss_map),
             sorted(loss_map), 0.05)
 
-        exp_mean_loss, exp_stddev_loss = self._mean_stddev_from_result_line(
+        exp_mean_loss, exp_stddev_loss = helpers.mean_stddev_from_result_line(
             result)
         self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
             delta=mb_mean_loss * 0.05)
@@ -226,9 +184,10 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         self.assertTrue(os.path.exists(expected_loss_map_file))
 
-        self._verify_loss_map(expected_loss_map_file, expected_loss_map)
+        helpers.verify_loss_map(self, expected_loss_map_file,
+            expected_loss_map, self.LOSSMAP_PRECISION)
 
-        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
+        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
 
         self.assertAlmostEqual(
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
