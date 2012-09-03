@@ -426,6 +426,8 @@ COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
 COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
+-- TODO: remove me when nhlib integration is complete
+COMMENT ON COLUMN uiapi.oq_job_profile.workaround_1027041 IS 'Workaround flag for https://bugs.launchpad.net/openquake/+bug/1027041';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
