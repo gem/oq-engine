@@ -60,12 +60,17 @@ class AkB_2010_AttenRel(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]        
 
-        mean = self._compute_magnitude(rup, C) + \
+        imean = self._compute_magnitude(rup, C) + \
             self._compute_distance(rup, dists, imt, C) + \
             self._get_site_amplification(sites, imt, C) + \
-            self._get_mechanism(rup, sites, imt, C)
+            self._get_mechanism(sites, rup, imt, C)
         
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        # Changing the base of the logarithm, from 10 to exp and units
+        # output in m/s2 
+        mean = np.log(10.0**(imean - 2.0))
+        
+        istddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        stddevs = (np.array(istddevs) - 2.0)
         
         return mean, stddevs
 
@@ -83,18 +88,16 @@ class AkB_2010_AttenRel(GMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['Sigma2'] + np.zeros(num_sites))
         return stddevs
-
+         
     def _compute_magnitude(self, rup, C):        
         
         # b1 + b2*M + b3*(M**2)
-        
         return C['b1'] + (C['b2']*rup.mag) + (C['b3']*(rup.mag**2))
       
     def _compute_distance(self, rup, dists, imt, C):        
         
         # ((b4 + b5*M)*(sqrt(rjb**2 + b6**2)))
-        
-        return ((C['b4'] + C['b5']*rup.mag)*(np.sqrt(dists.rjb**2 + C['b6']**2)))
+        return ((C['b4'] + C['b5']*rup.mag)*np.log10((np.sqrt(dists.rjb**2.0 + C['b6']**2.0)))) 
 
 
     def _get_site_amplification(self, sites, imt, C):        
@@ -102,31 +105,31 @@ class AkB_2010_AttenRel(GMPE):
         Ss, Sa = self._get_site_type_dummy_variables(sites)
         
         # b7*Ss + b8*Sa
-        
         return (C['b7']*Ss) + (C['b8']*Sa)
-
 
     def _get_site_type_dummy_variables(self,sites):        
                
-        Ss = np.zeros((len(sites.vs30),1))
-        Sa = np.zeros((len(sites.vs30),1))
+        Ss = np.zeros((len(sites.vs30),))
+        Sa = np.zeros((len(sites.vs30),))
         # Soft soil; Vs30 < 360 m/s. Page 199.
-        idxSs = (sites.vs30 < 360) 
+        idxSs = (sites.vs30 < 360.0) 
         # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
-        idxSa = (sites.vs30 >= 360)&(sites.vs30 <= 750) 
+        idxSa = (sites.vs30 >= 360.0)&(sites.vs30 <= 750.0) 
         Ss[idxSs] = 1
-        Ss[idxSa] = 1
+        Sa[idxSa] = 1
         return Ss, Sa 
         
-    def _get_mechanism(self, rup, sites, imt, C):                
-        Fn, Fr = self._get_fault_type_dummy_variables(imt, rup, sites)        
+        
+    def _get_mechanism(self, sites, rup, imt, C):
+                
+        Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)        
         # b9*Fn + b10*Fr
         return (C['b9']*Fn) + (C['b10']*Fr)        
     
     # Same classificcation of SadighEtAl1997. Akkar and Bommer 2010 
     # is based on Akkar and Bommer 2007b; read Strong-Motion Dataset 
     # and record Processing in page 514 (Akkar and Bommer 2007b).
-    def _get_fault_type_dummy_variables(self, imt, rup, sites):        
+    def _get_fault_type_dummy_variables(self, sites, rup, imt):        
                 
         Fn, Fr = 0, 0
         if rup.rake >= -135 and rup.rake <= -45:
@@ -135,14 +138,17 @@ class AkB_2010_AttenRel(GMPE):
         elif rup.rake >= 45 and rup.rake <= 135:
             # reverse
             Fr = 1
-        
         return Fn, Fr  
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT	 b1	      b2	      b3	      b4	      b5	      b6	      b7	       b8	      b9	       b10	      Sigma1	Sigma2	SigmaTot
-    pga	 1.04159	0.91333	-0.08140	-2.92728	0.28120	7.86638	0.08753	 0.01527	-0.04189	 0.08015	0.2610	0.0994	0.279287236
-    0.05	 2.11528	0.72571	-0.07351	-3.33201	0.33534	7.74734	0.04707	-0.02426	-0.04260	 0.08649	0.2720	0.1142	0.295001085
+    pga	 1.43525	0.74866	-0.06520	-2.72950	0.25139	7.74959	0.08320	 0.00766	-0.05823	 0.07087	0.2611	0.1056	0.281646179
+    0.01	 1.43153	0.75258	-0.06557	-2.73290	0.25170	7.73304	0.08105	 0.00745	-0.05886	 0.07169	0.2616	0.1051	0.281922986
+    0.02	 1.48690	0.75966	-0.06767	-2.82146	0.26510	7.20661	0.07825	 0.00618	-0.06111	 0.06756	0.2635	0.1114	0.286080775
+    0.03	 1.64821	0.73507	-0.06700	-2.89764	0.27607	6.87179	0.06376	-0.00528	-0.06189	 0.06529	0.2675	0.1137	0.290661212
+    0.04	 2.08925	0.65032	-0.06218	-3.02618	0.28999	7.42328	0.05045	-0.02091	-0.06278	 0.05935	0.2709	0.1152	0.294377054
+    0.05	 2.49228	0.58575	-0.06043	-3.20215	0.31485	7.75532	0.03798	-0.03143	-0.06708	 0.06382	0.2728	0.1181	0.297266631
     0.10	 2.11994	0.75179	-0.07448	-3.10538	0.30253	8.21405	0.02667	-0.00062	-0.04906	 0.07910	0.2728	0.1167	0.296713212
     0.15	 1.64489	0.83683	-0.07544	-2.75848	0.25490	8.31786	0.02578	 0.01703	-0.04184	 0.07840	0.2788	0.1192	0.303212928
     0.20	 0.92065	0.96815	-0.07903	-2.49264	0.21790	8.21914	0.06557	 0.02105	-0.02098	 0.08438	0.2821	0.1081	0.302102665
