@@ -169,9 +169,8 @@ def do_export(output_id, target_dir):
         print 'No output found for OUTPUT_ID %s' % output_id
 
 
-if __name__ == '__main__':
+def main():
     arg_parser = set_up_arg_parser()
-
     args = arg_parser.parse_args()
 
     if args.version:
@@ -214,3 +213,7 @@ if __name__ == '__main__':
         do_export(output_id, target_dir)
     else:
         arg_parser.print_usage()
+
+
+if __name__ == '__main__':
+    main()
