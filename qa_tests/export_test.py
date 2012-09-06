@@ -64,7 +64,7 @@ class CalculationUserAssociation(unittest.TestCase):
 
     def test_full_calc_user_assoc(self):
         # Run a full calculation in the same as other QA tests (using
-        # `subprocess` to invoke bin/openquake) and check the following:
+        # `subprocess` to invoke bin/oqscript.py) and check the following:
         # 1. There is an OqUser record for the current user.
         # 2. This user is the owner of all OqJobProfile, OqJob,
         #    and Ouput records.

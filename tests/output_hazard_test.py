@@ -36,7 +36,7 @@ from tests.utils import helpers
 # The data below was captured (and subsequently modified for testing purposes)
 # by running
 #
-#   bin/openquake --config-file=demos/classical_psha_simple/config.gem
+#   bin/oqscript.py --config-file=demos/classical_psha_simple/config.gem
 #
 # and putting a breakpoint in openquake/writer.py, line 86
 def HAZARD_MAP_MEAN_DATA():
