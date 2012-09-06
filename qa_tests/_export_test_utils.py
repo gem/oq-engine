@@ -19,7 +19,7 @@
 
 def check_list_calcs(testcase, cli_output, expected_calc_id):
     """Helper function for testing CLI output of
-    `bin/openquake --list-calculations`.
+    `bin/oqscript.py --list-calculations`.
 
     :param testcase:
         :class:`unittest.TestCase` instance.
@@ -46,7 +46,7 @@ def check_list_calcs(testcase, cli_output, expected_calc_id):
 def check_list_outputs(testcase, cli_output, expected_output_id,
                        expected_output_type):
     """Helper function for testing CLI output of
-    `bin/openquake --list-outputs CALC_ID`.
+    `bin/oqscript.py --list-outputs CALC_ID`.
 
     :param testcase:
         :class:`unittest.TestCase` instance.

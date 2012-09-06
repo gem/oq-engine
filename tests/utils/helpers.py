@@ -189,7 +189,7 @@ def run_job(config_file, params=None, check_output=False):
     :param str config_file:
         Path to the calculation config file.
     :param list params:
-        List of additional command line params to bin/openquake. Optional.
+        List of additional command line params to bin/oqscript.py. Optional.
     :param bool check_output:
         If `True`, use :func:`subprocess.check_output` instead of
         :func:`subprocess.check_call`.
@@ -198,14 +198,14 @@ def run_job(config_file, params=None, check_output=False):
         With the default input, return the return code of the subprocess.
 
         If ``check_output`` is set to True, return the output of the subprocess
-        call to bin/openquake as a `str`. See
+        call to bin/oqscript.py as a `str`. See
         http://docs.python.org/library/subprocess.html#subprocess.check_output
         for more details.
     :raises:
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["openquake/bin/openquake", "--force-inputs",
+    args = ["openquake/bin/oqscript.py", "--force-inputs",
             "--config-file=" + config_file]
     if not params is None:
         args.extend(params)

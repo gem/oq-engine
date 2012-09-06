@@ -24,7 +24,7 @@ class LogFileTestCase(unittest.TestCase):
     """Tests for the --log-file openquake command line option."""
 
     def test_log_file(self):
-        # Test logging to a file when running bin/openquake.
+        # Test logging to a file when running bin/oqscript.py.
         uhs_cfg = helpers.demo_file('uhs/config.gem')
 
         log_file = './%s.log' % helpers.random_string()
