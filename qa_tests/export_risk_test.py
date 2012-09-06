@@ -55,7 +55,8 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(
-                    ['openquake/bin/oqscript.py', '--list-outputs', str(job.id)]))
+                    ['openquake/bin/oqscript.py', '--list-outputs',
+                     str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id,
                                'agg_loss_curve')
@@ -107,7 +108,8 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             outputs = helpers.prepare_cli_output(
                 subprocess.check_output(
-                    ["openquake/bin/oqscript.py", "--list-outputs", str(job.id)]))
+                    ["openquake/bin/oqscript.py", "--list-outputs",
+                     str(job.id)]))
 
             # the damage distributios and collapse map as output...
             check_list_outputs(self, outputs, oasset.id, "dmg_dist_per_asset")
@@ -129,8 +131,8 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             # and per taxonomy
             exports = helpers.prepare_cli_output(
-                subprocess.check_output(["openquake/bin/oqscript.py", "--export",
-                str(otaxon.id), export_target_dir]))
+                subprocess.check_output(["openquake/bin/oqscript.py",
+                    "--export", str(otaxon.id), export_target_dir]))
 
             expected_file = os.path.join(export_target_dir,
                     "dmg-dist-taxonomy-%s.xml" % job.id)
@@ -139,8 +141,8 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             # and total damage distribution
             exports = helpers.prepare_cli_output(
-                subprocess.check_output(["openquake/bin/oqscript.py", "--export",
-                str(ototal.id), export_target_dir]))
+                subprocess.check_output(["openquake/bin/oqscript.py",
+                    "--export", str(ototal.id), export_target_dir]))
 
             expected_file = os.path.join(export_target_dir,
                     "dmg-dist-total-%s.xml" % job.id)
@@ -149,8 +151,8 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             # and collapse map
             exports = helpers.prepare_cli_output(
-                subprocess.check_output(["openquake/bin/oqscript.py", "--export",
-                str(omap.id), export_target_dir]))
+                subprocess.check_output(["openquake/bin/oqscript.py",
+                    "--export", str(omap.id), export_target_dir]))
 
             expected_file = os.path.join(export_target_dir,
                     "collapse-map-%s.xml" % job.id)

@@ -67,13 +67,15 @@ class ExportUHSTestCase(unittest.TestCase):
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(
-                    ['openquake/bin/oqscript.py', '--list-outputs', str(job.id)]))
+                    ['openquake/bin/oqscript.py', '--list-outputs',
+                     str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id, 'uh_spectra')
 
             listed_exports = helpers.prepare_cli_output(
-                subprocess.check_output(['openquake/bin/oqscript.py', '--export',
-                                         str(output.id), export_target_dir]))
+                subprocess.check_output(
+                    ['openquake/bin/oqscript.py', '--export',
+                     str(output.id), export_target_dir]))
 
             self.assertEqual(expected_export_files, listed_exports)
 
