@@ -37,7 +37,7 @@ PGPASSWORD=openquake psql -U oq_job_init -h localhost openquake <<EOF
 EOF
 
 export MPLCONFIGDIR=/tmp
-export JAVA_HOME=/usr/lib/jvm/java-6-openjdk/jre
+export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-amd64/jre
 export DJANGO_SETTINGS_MODULE="openquake.settings"
 
 cd /usr/openquake
