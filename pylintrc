@@ -204,12 +204,12 @@ deprecated-modules=regsub,string,TERMIOS,Bastion,rexec
 
 # Create a graph of every (i.e. internal and external) dependencies in the
 # given file (report RP0402 must not be disabled)
-import-graph=
+import-graph=import.png
 
 # Create a graph of external dependencies in the given file (report RP0402 must
 # not be disabled)
-ext-import-graph=
+ext-import-graph=ext-import.png
 
 # Create a graph of internal dependencies in the given file (report RP0402 must
 # not be disabled)
-int-import-graph=
+int-import-graph=int-import.png
