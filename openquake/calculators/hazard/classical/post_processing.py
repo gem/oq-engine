@@ -18,152 +18,126 @@
 
 """
 Post processing functionality for the classical PSHA hazard calculator.
+E.g. mean and quantile curves.
 """
 
 import numpy
 from scipy.stats import mstats
 
 
-class PostProcessor(object):
-    """Calculate post-processing per-site aggregate results. E.g. mean
-    and quantile curves.
+# Number of locations considered by each task
+DEFAULT_LOCATIONS_PER_TASK = 100
 
-    Implements the Command pattern where the commands are instances
-    for computing the post-processing output
 
-    The instances of this class should used with the following protocol:
-    a_post_processor = PostProcessor(...)
-    a_post_processor.initialize() # divide the calculation in subtasks
-    a_post_processor.run() # execute subtasks
+def setup_tasks(job, calculation, curve_finder, writers,
+                locations_per_task=DEFAULT_LOCATIONS_PER_TASK):
+    """
+    Return the tasks for the post processing computation and setup
+    the output.
 
-    :attribute _calculation
-      The hazard calculation object with the configuration of the calculation
+    Each task is responsible to calculate the mean/quantile curve
+    for a chunk of locations and for a specific intensity measure
+    type.
 
-    :attribute _curve_finder
+    The setup of the output may involve the creation of object on
+    the database.
+
+    :param job
+      The job associated with this computation
+
+    :param calculation
+      An object holding the configuration of the calculation.
+      It should implement the property intensity_measure_types_and_levels
+      (returning a dictionary imt -> levels)
+      the method #individual_curves_per_location
+
+    :param locations_per_task
+      Number of locations processed by each task in the post process
+      phase (optional)
+
+    :param curve_finder
       An object used to query for individual hazard curves.
       It should implement the methods #individual_curve_nr and
       #individual_curve_chunks
 
-    :attribute _result_writer_factory
-      An object used to create ResultWriters.
-      It should implement #create_mean_curve_writer and
-      #create_quantile_curve_writer
-
+    :param writers
+      An dictionary of ResultWriters classes.
       A ResultWriter is a context manager that implement the method
-      #add_data and #create_aggregate_result. It could flush the
+      #add_data and #create_aggregate_result. It flushes the
       results when it exits from the generated context
-
-    :attribute _task_handler
-      An object used to distribute the post process in subtasks.
-      It should implement the method #enqueue, #apply_async, #wait_for_results
-      and #apply
     """
 
-    # Number of locations processed by each task in the post process phase
-    CURVE_BLOCK_SIZE = 100
+    curves_per_location = calculation.individual_curves_per_location()
+    curves_per_task = curves_per_location * locations_per_task
 
-    # minimum number of curves to be processed with a distributed queue
-    DISTRIBUTION_THRESHOLD = 1000
+    tasks, tasks_args = [], []
 
-    def __init__(self, hc,
-                 curve_finder, result_writer_factory, task_handler):
-        self._calculation = hc
-        self._curve_finder = curve_finder
-        self._result_writer_factory = result_writer_factory
-        self._task_handler = task_handler
-        self._curves_per_location = hc.individual_curves_per_location()
+    for imt in calculation.intensity_measure_types_and_levels:
 
-    def initialize(self):
-        """
-        Divide the whole computation in tasks.
+        chunks_generator = curve_finder.individual_curves_chunks
 
-        Each task is responsible to calculate the mean/quantile curve
-        for a chunk of curves and for a specific intensity measure
-        type.
-        """
+        if calculation.should_compute_mean_curves():
+            writer = writers['mean_curves'](job, imt)
+            writer.create_aggregate_result()
 
-        curves_per_task = self.curves_per_task()
+            fn = _mean_curve_fn()
 
-        writer_factory = self._result_writer_factory
+            for chunk_of_curves in chunks_generator(job, imt,
+                                                    curves_per_task):
+                tasks.append(fn)
+                tasks_args.append((
+                    chunk_of_curves, curves_per_location,
+                    calculation.number_of_logic_tree_samples,
+                    writer))
 
-        for imt in self._calculation.intensity_measure_types_and_levels:
+        if calculation.should_compute_quantile_functions():
+            fn = _quantile_curve_fn()
 
-            chunks_generator = self._curve_finder.individual_curves_chunks
-
-            if self.should_compute_mean_curves():
-                writer = writer_factory.create_mean_curve_writer(imt)
+            for quantile in calculation.quantile_hazard_curves:
+                writer = writers['quantile_curves'](job, imt, quantile)
                 writer.create_aggregate_result()
 
-                for chunk_of_curves in chunks_generator(
-                        imt, curves_per_task):
-                    self._task_handler.enqueue(
-                        MeanCurveCalculator,
-                        curves_per_location=self._curves_per_location,
-                        chunk_of_curves=chunk_of_curves,
-                        curve_writer=writer,
-                        use_weights=self.should_consider_weights())
+                for chunk_of_curves in chunks_generator(imt, curves_per_task):
+                    tasks.append(fn)
+                    tasks_args.append(
+                        (quantile, chunk_of_curves, curves_per_location,
+                         calculation.number_of_logic_tree_samples, writer))
+            return tasks, tasks_args
 
-            if self.should_compute_quantile_functions():
-                for quantile in self._calculation.quantile_hazard_curves:
-                    writer = writer_factory.create_quantile_curve_writer(
-                        imt, quantile)
-                    writer.create_aggregate_result()
-
-                    for chunk_of_curves in chunks_generator(imt,
-                                                            curves_per_task):
-                        self._task_handler.enqueue(
-                            QuantileCurveCalculator,
-                            curves_per_location=self._curves_per_location,
-                            chunk_of_curves=chunk_of_curves,
-                            curve_writer=writer,
-                            quantile=quantile,
-                            use_weights=self.should_consider_weights())
-
-    def run(self):
-        """
-        Execute the calculation using the task queue handler. If the
-        taskset is too big, it distributes the computation, otherwise
-        it is performed locally
-        """
-        if self.should_be_distributed():
-            self._task_handler.apply_async()
-            self._task_handler.wait_for_results()
-        else:
-            self._task_handler.apply()
-
-    def should_consider_weights(self):
-        """
-        Return True if the calculation of aggregate result should
-        consider the weight of the individual curves
-        """
-        return not (self._calculation.number_of_logic_tree_samples > 0)
-
-    def should_compute_mean_curves(self):
+    def _should_compute_mean_curves(self):
         """
         Return None if no mean curve calculation has been requested
         """
         return self._calculation.mean_hazard_curves
 
-    def should_compute_quantile_functions(self):
+    def _should_compute_quantile_functions(self):
         """
         Return None if no quantile curve calculation has been requested
         """
         return self._calculation.quantile_hazard_curves
 
-    def should_be_distributed(self):
+    def _should_be_distributed(self):
         """
         Return True if the calculation should be distributed
         """
-        curve_nr = self._curve_finder.individual_curves_nr()
-        return curve_nr > self.__class__.DISTRIBUTION_THRESHOLD
+        return self._curve_nr > self.__class__.DISTRIBUTION_THRESHOLD
 
-    def curves_per_task(self):
+def _curves_per_task(curve_finder, location_block_size):
         """
         Returns the number of curves calculated by each task
         """
-        block_size = self.__class__.CURVE_BLOCK_SIZE
-        chunk_size = self._curves_per_location
-        return block_size * chunk_size
+    def __init__(self, job, calc,
+                 location_block_size=None):
+        self._location_block_size = (location_block_size or
+                                     self.__class__.DEFAULT_CURVE_BLOCK_SIZE)
+        self._job = job
+        self._calculation = calc
+        self._curves_per_location = calc.individual_curves_per_location()
+        self._curve_nr = self._curve_finder.individual_curves_nr(self._job)
+
+
+        
+        return self._curves_per_location * self._location_block_size
 
 
 class PerSiteResultCalculator(object):
@@ -185,21 +159,17 @@ class PerSiteResultCalculator(object):
     :attribute _result_writer
       an object that can save the result.
       See `PostProcessor` for more details
-
-    :attribute _use_weights
-      a boolean that indicates if the aggregate values should be
-      computed by weighting the individual contributes.
-      We remark that weight values are required to sum to 1
     """
-    def __init__(self, curves_per_location, chunk_of_curves,
-                 curve_writer, use_weights=False):
-        self._chunk_of_curves = chunk_of_curves
-        self._curves_per_location = curves_per_location
-        self._result_writer = curve_writer
-        self._use_weights = use_weights
-        self._level_nr = None
 
-    def run(self):
+    def _should_consider_weights(self):
+        """
+        Return True if the calculation of aggregate result should
+        consider the weight of the individual curves
+        """
+        return not (
+            self.number_of_logic_tree_samples > 0)
+
+    def __call__(self, ):
         """
         Fetch the curves, calculate the mean curves and save them
         """
@@ -248,16 +218,6 @@ class PerSiteResultCalculator(object):
 
         return numpy.array(weights[0:self._curves_per_location])
 
-
-class PerSiteCurveCalculator(PerSiteResultCalculator):
-    """
-    Abstract class that defines methods to get and store per site
-    curve aggregate data
-    """
-
-    def compute_results(self, poe_matrix, weights=None):
-        raise NotImplementedError
-
     def fetch_curves(self):
         """
         Returns a 3d matrix with shape given by
@@ -272,7 +232,7 @@ class PerSiteCurveCalculator(PerSiteResultCalculator):
                              'F')
 
 
-class MeanCurveCalculator(PerSiteCurveCalculator):
+class MeanCurveCalculator(PerSiteResultCalculator):
     """
     Calculate mean curves.
 
@@ -281,13 +241,10 @@ class MeanCurveCalculator(PerSiteCurveCalculator):
 
     See the base class doc for other attributes
     """
-    def __init__(self, curves_per_location, chunk_of_curves,
-                 curve_writer, use_weights=False):
+    def __init__(self, job, curves_per_location, chunk_of_curves,
+                 curve_writer):
         super(MeanCurveCalculator, self).__init__(
-            curves_per_location,
-            chunk_of_curves,
-            curve_writer,
-            use_weights=use_weights)
+            job, curves_per_location, chunk_of_curves, curve_writer)
 
     def compute_results(self, poe_matrix, weights=None):
         """
@@ -296,17 +253,14 @@ class MeanCurveCalculator(PerSiteCurveCalculator):
         return numpy.average(poe_matrix, weights=weights, axis=0)
 
 
-class QuantileCurveCalculator(PerSiteCurveCalculator):
+class QuantileCurveCalculator(PerSiteResultCalculator):
     """
     Compute quantile curves for a block of locations
     """
-    def __init__(self, curves_per_location, chunk_of_curves, curve_writer,
-                 quantile, use_weights=None):
+    def __init__(self, job, curves_per_location, chunk_of_curves, curve_writer,
+                 quantile):
         super(QuantileCurveCalculator, self).__init__(
-            curves_per_location,
-            chunk_of_curves,
-            curve_writer,
-            use_weights=use_weights)
+            job, curves_per_location, chunk_of_curves, curve_writer)
 
         self._quantile = quantile
 
