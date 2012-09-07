@@ -17,8 +17,6 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
-from __future__ import absolute_import
-
 import nhlib
 import nhlib.calc
 import nhlib.imt
@@ -35,9 +33,9 @@ from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
-from openquake.utils.task_handlers import CeleryTaskHandler
-from openquake.db.aggregate_result_writer import AggregateResultWriterFactory
-from .post_processing import PostProcessor
+from openquake.db.aggregate_result_writer import (MeanCurveWriter,
+                                                  QuantileCurveWriter)
+from openquake.calculators.hazard.classical import post_processing
 
 
 # Silencing 'Too many local variables'
@@ -352,18 +350,14 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
     def post_process(self):
         logs.LOG.debug('> starting post process')
 
-        curve_finder = models.HazardCurveData.objects
-        curve_finder.current_job = self.job
-
-        writer_factory = AggregateResultWriterFactory(self.job)
-
-        post_processor = PostProcessor(
+        tasks, tasks_args = post_processing.setup_tasks(
+            self.job,
             self.job.hazard_calculation,
-            curve_finder=curve_finder,
-            result_writer_factory=writer_factory,
-            task_handler=CeleryTaskHandler())
-        post_processor.initialize()
-        post_processor.run()
+            curve_finder=models.HazardCurveData.objects,
+            writers=dict(mean_curves=MeanCurveWriter,
+                         quantile_curves=QuantileCurveWriter))
+
+        utils_tasks.distribute(tasks, ("post_processing", tasks_args))
 
         logs.LOG.debug('< done with post process')
 

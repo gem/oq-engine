@@ -793,6 +793,7 @@ class HazardCalculation(djm.Model):
         expected after a full computation of the hazard calculation
         has been performed
         """
+
         realizations_nr = self.ltrealization_set.count()
         imt_nr = len(self.intensity_measure_types_and_levels)
         return realizations_nr * imt_nr
@@ -1188,21 +1189,14 @@ class HazardCurveDataManager(djm.Manager):
     Manager class to filter and create HazardCurveData objects
     """
 
-    def __init__(self):
-        super(HazardCurveDataManager, self).__init__()
-        self.current_job = None
-
-    def individual_curves(self, imt=None):
+    def individual_curves(self, job, imt=None):
         """
         Returns all the individual hazard curve data objects. If `imt`
         is given the results are filtered by intensity measure type.
         Here imt is given in the long format.
         """
-        if not self.current_job:
-            raise ValueError(
-                "Set the current_job attribute to use this method")
         query_args = {'hazard_curve__statistics__isnull': True,
-                      'hazard_curve__output__oq_job': self.current_job,
+                      'hazard_curve__output__oq_job': job,
                       'hazard_curve__output__output_type': "hazard_curve"}
         if imt:
             hc_im_type, sa_period, sa_damping = parse_imt(imt)
@@ -1213,21 +1207,21 @@ class HazardCurveDataManager(djm.Manager):
         queryset = self.filter(**query_args)
         return queryset
 
-    def individual_curves_ordered(self, imt=None):
+    def individual_curves_ordered(self, job, imt=None):
         """
         Same as #individual_curves but the results are ordered by location
         """
-        return self.individual_curves(imt).order_by('location')
+        return self.individual_curves(job, imt).order_by('location')
 
-    def individual_curves_nr(self, imt=None):
+    def individual_curves_nr(self, job, imt=None):
         """
         Returns the number of individual curves. If `imt` is given, it
         returns the number of individual curves with intensity measure
         type `imt`
         """
-        return self.individual_curves(imt).count()
+        return self.individual_curves(job, imt).count()
 
-    def individual_curves_chunks(self, imt=None, block_size=1):
+    def individual_curves_chunks(self, job, imt=None, block_size=1):
         """
         Return a generator of individual curves in chunks. A chunk is
         function that when invoked (with a parameter `field`) returns a
@@ -1237,7 +1231,7 @@ class HazardCurveDataManager(djm.Manager):
 
         Allowed values for `field` are ['poes', 'wkb', 'weight']
         """
-        curve_nr = self.individual_curves_nr(imt)
+        curve_nr = self.individual_curves_nr(job, imt)
         ranges = xrange(0, curve_nr, block_size)
 
         finder = self
@@ -1245,8 +1239,7 @@ class HazardCurveDataManager(djm.Manager):
         def chunk_getter(offset, field):
             assert (field in ['poes', 'wkb', 'weight'])
 
-            base_queryset = finder.individual_curves_ordered(
-                imt)
+            base_queryset = finder.individual_curves_ordered(job, imt)
             base_queryset = base_queryset.extra({
                 'wkb': 'asBinary(location)',
                 'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
