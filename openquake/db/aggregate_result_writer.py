@@ -28,39 +28,6 @@ from openquake.db import models
 from django.db import transaction
 
 
-class AggregateResultWriterFactory(object):
-    """
-    A factory of aggregate result db writers.
-
-    :attribute _job
-      the current job
-    """
-
-    def __init__(self, job):
-        self._job = job
-
-    def create_mean_curve_writer(self, imt):
-        """
-        Create a writer of mean curves
-
-        :param imt
-          the intensity measure type in long form. E.g. SA(0.001)
-        """
-        return MeanCurveWriter(self._job, imt)
-
-    def create_quantile_curve_writer(self, imt, quantile):
-        """
-        Create a writer of quantile curves
-
-        :param imt
-          the intensity measure type in long form. E.g. SA(0.001)
-
-        :param quantile
-          the quantile being serialized
-        """
-        return QuantileCurveWriter(self._job, imt, quantile)
-
-
 class AggregateResultWriter(object):
     """
     Manager to serialize to db Aggregate results (Mean curves,
