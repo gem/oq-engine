@@ -1,18 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" 
+<nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
     <sourceModel gml:id="sm1">
-		
+
         <simpleFaultSource gml:id="src01">
             <gml:name>PEER test "FAULT 1" model</gml:name>
-            
+
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
             <rake>0.0</rake>
-            
-	        <truncatedGutenbergRichter>
+
+            <truncatedGutenbergRichter>
                 <aValueCumulative>3.1292</aValueCumulative>
                 <bValue>0.9</bValue>
                 <minMagnitude>5.0</minMagnitude>
@@ -36,6 +36,6 @@
             </simpleFaultGeometry>
 
         </simpleFaultSource>
-        
+
     </sourceModel>
 </nrml>
