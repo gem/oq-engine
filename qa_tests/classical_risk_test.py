@@ -29,8 +29,12 @@ from openquake.xml import NRML_NS
 
 from tests.utils import helpers
 
+from qa_tests.data.classical_risk_test.test_data import (
+    EXPECTED_CLOSS_01, EXPECTED_CLOSS_02, EXPECTED_POES_LRC,
+    EXPECTED_LOSS_RATIOS_LRC, EXPECTED_POES_LC, EXPECTED_LOSSES_LC)
+
 OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
-QA_OUTPUT_DIR = helpers.qa_file('classical_psha_based_risk/computed_output')
+QA_OUTPUT_DIR = helpers.qa_file('classical_risk_test/computed_output')
 
 
 class ClassicalRiskQATestCase(unittest.TestCase):
@@ -50,7 +54,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
     @attr('slow')
     def test_verify_output_per_asset(self):
         cfg = helpers.qa_file(
-            'classical_psha_based_risk/qa_config.gem')
+            'classical_risk_test/qa_config.gem')
         self._run_job(cfg)
 
         exp_num_items = 3815
@@ -103,20 +107,18 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
     def _verify_loss_maps(self):
         filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
-        expected_closs = 0.264530582
 
         closs = float(self._get(filename, "//nrml:value"))
 
         self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
+                closs, EXPECTED_CLOSS_01, atol=0.0, rtol=0.05))
 
         filename = "%s/losses_at-0.02.xml" % OUTPUT_DIR
-        expected_closs = 0.143009004
 
         closs = float(self._get(filename, "//nrml:value"))
 
         self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
+                closs, EXPECTED_CLOSS_02, atol=0.0, rtol=0.05))
 
     def _verify_loss_ratio_curve(self):
         job = OqJob.objects.latest('id')
@@ -126,26 +128,13 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
-        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
-                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
-                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
-                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
-                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
-                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
-                0.00002461, 0.00000904]
-
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, EXPECTED_POES_LRC, atol=0.0, rtol=0.05))
 
         loss_ratios = [float(x) for x in self._get(
             filename, "//nrml:lossRatio").split()]
 
-        expected_loss_ratios = [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
-                0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.24, 0.28,
-                0.32, 0.36, 0.40, 0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
-                0.92, 0.96, 1.00]
-
-        self.assertTrue(numpy.allclose(expected_loss_ratios, loss_ratios))
+        self.assertTrue(numpy.allclose(EXPECTED_LOSS_RATIOS_LRC, loss_ratios))
 
     def _verify_loss_curve(self):
         job = OqJob.objects.latest('id')
@@ -155,25 +144,12 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
-        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
-                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
-                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
-                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
-                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
-                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
-                0.00002461, 0.00000904]
-
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, EXPECTED_POES_LC, atol=0.0, rtol=0.05))
 
         losses = [float(x) for x in self._get(filename, "//nrml:loss").split()]
 
-        expected_losses = [0.00, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16,
-                0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.48, 0.56,
-                0.64, 0.72, 0.80, 0.96, 1.12, 1.28, 1.44, 1.60, 1.68,
-                1.76, 1.84, 1.92, 2.00]
-
-        self.assertTrue(numpy.allclose(expected_losses, losses))
+        self.assertTrue(numpy.allclose(EXPECTED_LOSSES_LC, losses))
 
     def _verify_job_succeeded(self, dir):
         job = OqJob.objects.latest('id')
