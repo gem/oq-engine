@@ -51,10 +51,22 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'classical_psha_based_risk/config.gem')
 
         self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
-        self._verify_loss_curve(EXPECTED_POES_LC, EXPECTED_LOSSES_LC,
+
+        job_id = OqJob.objects.latest('id').id
+        expected_files = [
+            'hazardcurve-0.xml',
+            'hazardcurve-mean.xml',
+            'losscurves-block-#%s-block#0.xml' % job_id,
+            'losscurves-loss-block-#%s-block#0.xml' % job_id,
+            'losses_at-0.01.xml',
+            'losses_at-0.02.xml',
+            'losses_at-0.05.xml'
+        ]
+
+        self._verify_job_succeeded(OUTPUT_DIR, expected_files)
+        self._verify_loss_curve(job_id, EXPECTED_POES_LC, EXPECTED_LOSSES_LC,
             0.0, OUTPUT_DIR)
-        self._verify_loss_ratio_curve(EXPECTED_POES_LRC,
+        self._verify_loss_ratio_curve(job_id, EXPECTED_POES_LRC,
             EXPECTED_LOSS_RATIOS_LRC, 0.0, OUTPUT_DIR)
         self._verify_loss_maps(EXPECTED_CLOSS_01, EXPECTED_CLOSS_02)
 
@@ -65,12 +77,20 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
             self._run_job(cfg)
 
-            self._verify_job_succeeded(OUTPUT_BETA_DIR)
+            job_id = OqJob.objects.latest('id').id
+            expected_files = [
+                'hazardcurve-0.xml',
+                'hazardcurve-mean.xml',
+                'losscurves-block-#%s-block#0.xml' % job_id,
+                'losscurves-loss-block-#%s-block#0.xml' % job_id,
+                'losses_at-0.01.xml',
+            ]
+            self._verify_job_succeeded(OUTPUT_BETA_DIR, expected_files)
 
-            self._verify_loss_curve(B_EXPECTED_POES_LC_LRC,
+            self._verify_loss_curve(job_id, B_EXPECTED_POES_LC_LRC,
                 B_EXPECTED_LOSSES_LC, 0.05, OUTPUT_BETA_DIR)
 
-            self._verify_loss_ratio_curve(B_EXPECTED_POES_LC_LRC,
+            self._verify_loss_ratio_curve(job_id, B_EXPECTED_POES_LC_LRC,
                 B_EXPECTED_LOSS_RATIOS_LRC, 0.05, OUTPUT_BETA_DIR)
 
             self._verify_loss_maps(B_EXPECTED_CLOSS)
@@ -144,12 +164,11 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             self.assertTrue(numpy.allclose(
                     closs, exp_closs, atol=0.0, rtol=0.05))
 
-    def _verify_loss_ratio_curve(self, expected_poes, expected_loss_ratios,
-                                 tol, output_dir):
-        job = OqJob.objects.latest('id')
+    def _verify_loss_ratio_curve(self, job_id, expected_poes,
+                                 expected_loss_ratios, tol, output_dir):
 
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
-                output_dir, job.id)
+                output_dir, job_id)
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
@@ -162,12 +181,11 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_loss_ratios, loss_ratios,
             atol=0.0, rtol=tol))
 
-    def _verify_loss_curve(self, expected_poes, expected_losses, tol,
+    def _verify_loss_curve(self, job_id, expected_poes, expected_losses, tol,
                            output_dir):
-        job = OqJob.objects.latest('id')
 
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
-                output_dir, job.id)
+                output_dir, job_id)
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
@@ -179,20 +197,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_losses, losses, atol=0.0,
             rtol=tol))
 
-    def _verify_job_succeeded(self, dir):
+    def _verify_job_succeeded(self, dir, expected_files):
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
-
-        expected_files = [
-            'hazardcurve-0.xml',
-            'hazardcurve-mean.xml',
-            'losscurves-block-#%s-block#0.xml' % job.id,
-            'losscurves-loss-block-#%s-block#0.xml' % job.id,
-            'losses_at-0.01.xml',
-            #'losses_at-0.02.xml',
-            #'losses_at-0.05.xml'
-        ]
-
         for f in expected_files:
             self.assertTrue(os.path.exists(os.path.join(dir, f)))
 
