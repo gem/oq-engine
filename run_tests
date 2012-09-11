@@ -2,8 +2,9 @@
 # First, purge all .pyc files to clean the source tree,
 # in case some modules were deleted or moved.
 find . -name "*.pyc" -delete
-# We look for tests by recursively searching into the tests/ dir,
-# in addition to doctests within the openquake codebase.
+
+# Use the current dir as a working directory for test discovery.
+# This should pick up everything in tests/ and qa_tests/
 (export DJANGO_SETTINGS_MODULE="openquake.settings";
  PYTHONPATH="$PYTHONPATH:openquake/nrml";
- nosetests --with-doctest "$@" tests openquake 2>&1 | tee last_test_run.log)
+ nosetests "$@" --with-doctest -w . 2>&1 | tee last_test_run.log)
