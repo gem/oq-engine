@@ -1,4 +1,9 @@
 #!/bin/bash
+# The following attributes have been applied to various tests, to control
+# which tests are executed:
+#   * 'qa'
+#   * 'slow'
+
 # First, purge all .pyc files to clean the source tree,
 # in case some modules were deleted or moved.
 find . -name "*.pyc" -delete
