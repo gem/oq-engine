@@ -37,5 +37,5 @@ class ClassicalHazardCase1TestCase(unittest.TestCase):
         [actual_curve] = models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job.id)
 
-        numpy.testing.assert_almost_equal(
-            expected_curve_poes, actual_curve.poes)
+        numpy.testing.assert_array_almost_equal(
+            expected_curve_poes, actual_curve.poes, decimal=4)
