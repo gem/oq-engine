@@ -20,18 +20,18 @@ import unittest
 from nose.plugins.attrib import attr
 from openquake import engine2
 from openquake.db import models
-from qa_tests import _utils as qa_util
+from qa_tests import _utils as qa_utils
 from tests.utils import helpers
 
 
-class ClassicalHazardCase1TestCase(unittest.TestCase):
+class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-        job = qa_util.run_hazard(cfg)
-
         expected_curve_poes = [0.4570, 0.0587, 0.0069]
+
+        job = self.run_hazard(cfg)
 
         # One curve only:
         [actual_curve] = models.HazardCurveData.objects.filter(
