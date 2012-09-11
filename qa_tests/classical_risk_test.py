@@ -153,8 +153,15 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         cfg = helpers.demo_file(
             "classical_psha_based_risk/config_hzr_exposure.gem")
 
+        job_id = OqJob.objects.latest('id').id
+        expected_files = ['hazardcurve-0.xml', 'hazardcurve-mean.xml',
+                          'losscurves-block-#%s-block#0.xml' % job_id,
+                          'losscurves-loss-block-#%s-block#0.xml' % job_id,
+                          'losses_at-0.01.xml', 'losses_at-0.02.xml',
+                          'losses_at-0.05.xml']
+
         self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
+        self._verify_job_succeeded(OUTPUT_DIR, expected_files)
 
     def _verify_loss_maps(self, *expected_closses):
         for i, exp_closs in enumerate(expected_closses, start=1):
