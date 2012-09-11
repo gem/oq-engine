@@ -19,3 +19,5 @@ tests/data/usgs-nshm/**/*
 *.tiff
 openquake.db
 coverage.ec
+.coverage
+last_test_run.log
