@@ -12,4 +12,4 @@ find . -name "*.pyc" -delete
 # This should pick up everything in tests/ and qa_tests/
 (export DJANGO_SETTINGS_MODULE="openquake.settings";
  PYTHONPATH="$PYTHONPATH:openquake/nrml";
- nosetests "$@" --with-doctest -w . 2>&1 | tee last_test_run.log)
+ nosetests "$@" -w . 2>&1 | tee last_test_run.log)
