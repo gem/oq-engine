@@ -15,13 +15,10 @@
 
 import numpy
 import os
-import unittest
 
 from nose.plugins.attrib import attr
-from openquake import engine2
 from openquake.db import models
 from qa_tests import _utils as qa_utils
-from tests.utils import helpers
 
 
 class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
