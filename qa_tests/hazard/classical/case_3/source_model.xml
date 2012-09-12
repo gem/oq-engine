@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
-    <sourceModel name="Classicl Hazard QA Test, Case 3 source model">
+    <sourceModel name="Classical Hazard QA Test, Case 3 source model">
         <areaSource id="1" name="area source" tectonicRegion="active shallow crust">
             <areaGeometry>
                 <gml:Polygon>
