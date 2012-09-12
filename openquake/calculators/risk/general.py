@@ -38,6 +38,7 @@ from numpy import linspace
 from numpy import mean
 from numpy import where
 from numpy import zeros
+from numpy.random import beta as beta_dist
 from scipy import sqrt, log
 from scipy import stats
 
@@ -880,18 +881,24 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
                 ground_motion_field = vuln_function.imls[-1]
 
             mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
-
             cov = vuln_function.cov_for(ground_motion_field)
-            variance = (mean_ratio * cov) ** 2.0
 
-            epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(
-                math.log((variance / mean_ratio ** 2.0) + 1.0))
+            if vuln_function.is_beta:
+                stddev = cov * mean_ratio
+                alpha = compute_alpha(mean_ratio, stddev)
+                beta = compute_beta(mean_ratio, stddev)
+                loss_ratios.append(beta_dist(alpha, beta, size=None))
+            else:
+                variance = (mean_ratio * cov) ** 2.0
+                epsilon = epsilon_provider.epsilon(asset)
 
-            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                variance + mean_ratio ** 2.0))
+                sigma = math.sqrt(
+                    math.log((variance / mean_ratio ** 2.0) + 1.0))
 
-            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
+                mu = math.log(mean_ratio ** 2.0 / math.sqrt(
+                    variance + mean_ratio ** 2.0))
+
+                loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
     return array(loss_ratios)
 

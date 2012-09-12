@@ -659,6 +659,14 @@ class VulnerabilityFunction(object):
         return self._distribution
 
     @property
+    def is_beta(self):
+        """
+        True if this vulnerability function is defined with
+        a beta distribution.
+        """
+        return self.distribution == "BT"
+
+    @property
     def imls(self):
         """
         IML values as a numpy.array.
