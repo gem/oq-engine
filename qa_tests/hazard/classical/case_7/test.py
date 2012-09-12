@@ -85,12 +85,12 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             [exported_file_b1] = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
-            actual_text_b1 = open(exported_file, 'r').readlines()
+            actual_text_b1 = open(exported_file_b1, 'r').readlines()
             self.assertEqual(expected_text_b1, actual_text_b1)
 
             [exported_file_b2] = hazard_export.export(
                 actual_curve_b2.hazard_curve.output.id, result_dir)
-            actual_text_b2 = open(exported_file, 'r').readlines()
+            actual_text_b2 = open(exported_file_b2, 'r').readlines()
             self.assertEqual(expected_text_b2, actual_text_b2)
 
             # TODO: Test the mean curve as well.
