@@ -226,7 +226,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self._check_logic_tree_realization_source_progress(ltr)
 
     @attr('slow')
-    def test_execute_and_post_execute(self):
+    def test_complete_calculation_workflow(self):
+        # Test the calculation workflow, from pre_execute through clean_up
+        # TODO: `post_process` is skipped for the moment until this
+        # functionality is available
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
@@ -269,7 +272,11 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
                 hazard_curve=sa_curves.id)
             self.assertEqual(120, len(sa_curve_data))
 
-        # last thing, make sure that post_execute cleaned up the htemp tables
+        self.job.status = 'clean_up'
+        self.job.save()
+        self.calc.clean_up()
+
+        # last thing, make sure that `clean_up` cleaned up the htemp tables
         hcp = models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id)
         self.assertEqual(0, len(hcp))

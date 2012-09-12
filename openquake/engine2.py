@@ -30,12 +30,24 @@ from openquake.db import models
 from openquake.supervising import supervisor
 
 
-def prepare_job(user_name="openquake"):
-    """Create job for the given user, return it."""
+def prepare_job(user_name="openquake", log_level='progress'):
+    """
+    Create job for the given user, return it.
+
+    :param str username:
+        Username of the user who owns/started this job. If the username doesn't
+        exist, a user record for this name will be created.
+    :param str log_level:
+        Defaults to 'progress'. Specify a logging level for this job. This
+        level can be passed, for example, from the command line interface using
+        the `--log-level` directive.
+    :returns:
+        :class:`openquake.db.models.OqJob` instance.
+    """
     # See if the current user exists
     # If not, create a record for them
     owner = prepare_user(user_name)
-    job = models.OqJob(owner=owner)
+    job = models.OqJob(owner=owner, log_level=log_level)
     job.save()
     return job
 

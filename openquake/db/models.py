@@ -504,6 +504,15 @@ class OqJob(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
+    LOG_LEVEL_CHOICES = (
+        (u'debug', u'Debug'),
+        (u'info', u'Info'),
+        (u'progress', u'Progress'),
+        (u'warn', u'Warn'),
+        (u'error', u'Error'),
+        (u'critical', u'Critical'),
+    )
+    log_level = djm.TextField(choices=LOG_LEVEL_CHOICES, default='progress')
     STATUS_CHOICES = (
         (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
@@ -739,6 +748,13 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    complete_logic_tree_gmf = fields.OqNullBooleanField(
+        help_text=(
+            'If true, generate a collection of all of the GMFs for all'
+            ' logic tree branches with an adjusted investigation time.'),
+        null=True,
+        blank=True,
+    )
     ground_motion_fields = fields.OqNullBooleanField(
         help_text=('If true, ground motion fields will be computed (in '
                    'addition to stochastic event sets)'),
@@ -797,6 +813,26 @@ class HazardCalculation(djm.Model):
         realizations_nr = self.ltrealization_set.count()
         imt_nr = len(self.intensity_measure_types_and_levels)
         return realizations_nr * imt_nr
+
+    def should_compute_mean_curves(self):
+        """
+        Return True if mean curve calculation has been requested
+        """
+        return self.mean_hazard_curves is not None
+
+    def should_compute_quantile_curves(self):
+        """
+        Return True if quantile curve calculation has been requested
+        """
+        return self.quantile_hazard_curves is not None
+
+    def should_consider_weights_in_aggregates(self):
+        """
+        Return True if the calculation of aggregate result should
+        consider the weight of the individual curves
+        """
+        return not (
+            self.number_of_logic_tree_samples > 0)
 
     def points_to_compute(self):
         """
@@ -1043,7 +1079,9 @@ class Output(djm.Model):
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'gmf', u'Ground Motion Field'),
+        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'ses', u'Stochastic Event Set'),
+        (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
@@ -1276,10 +1314,23 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.ForeignKey('Output')
-    lt_realization = djm.ForeignKey('LtRealization')
+    # If `lt_realization` is None, this is a `complete logic tree`
+    # Stochastic Event Set Collection, containing a single stochastic
+    # event set containing all of the ruptures from the entire
+    # calculation.
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` SES collection.
+    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
+
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`SES` objects.
+        """
+        return SES.objects.filter(ses_collection=self.id).iterator()
 
 
 class SES(djm.Model):
@@ -1293,10 +1344,20 @@ class SES(djm.Model):
     investigation_time = djm.FloatField()
     # Order number of this Stochastic Event Set in a series of SESs
     # (for a given logic tree realization).
-    ordinal = djm.IntegerField()
+    # For `complete logic tree` SESs, this should be None/NULL.
+    ordinal = djm.IntegerField(null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` SES.
+    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
+
+    def __iter__(self):
+        """
+        Iterator for walking through all child :class:`SESRupture` objects.
+        """
+        return SESRupture.objects.filter(ses=self.id).iterator()
 
 
 class SESRupture(djm.Model):
@@ -1382,7 +1443,13 @@ class GmfCollection(djm.Model):
     realization.
     """
     output = djm.ForeignKey('Output')
-    lt_realization = djm.ForeignKey('LtRealization')
+    # If `lt_realization` is None, this is a `complete logic tree`
+    # GMF Collection, containing a single GMF set containing all of the ground
+    # motion fields in the calculation.
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    # A flag to indicate that this is a `complete logic
+    # tree` GMF collection.
+    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
@@ -1403,6 +1470,7 @@ class GmfSet(djm.Model):
     # Keep track of the stochastic event set which this GMF set is associated
     # with.
     ses_ordinal = djm.IntegerField()
+    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
