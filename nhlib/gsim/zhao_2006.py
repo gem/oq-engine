@@ -331,6 +331,16 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 pag 909)
+        print 'magnitude term: ', self._compute_magnitude_term(C, rup)
+        print 'distance term: ', self._compute_distance_term(C, rup, dists)
+        print 'focal depth term: ', self._compute_focal_depth_term(C, rup)
+        print 'site class term: ', self._compute_site_class_term(C, sites)
+        print 'magnitude square term: ', self._compute_magnitude_squared_term(
+                                             P=C_SSLAB['PS'], M=6.5,
+                                             Q=C_SSLAB['QS'],
+                                             W=C_SSLAB['WS'], rup=rup)
+        print 'subduction slab term: ', C_SSLAB['SS']
+        print 'slab correction term: ', self._compute_slab_correction_term(C_SSLAB, dists)
         mean = self._compute_magnitude_term(C, rup) +\
             self._compute_distance_term(C, rup, dists) +\
             self._compute_focal_depth_term(C, rup) +\
@@ -353,12 +363,17 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         Compute path modification term for slab events, that is
         the 8-th term in equation 1, pag 901.
         """
-        slab_term = np.zeros(len(dists.rrup))
+        #slab_term = np.zeros(len(dists.rrup))
 
         # pag 902. "The modification factor for slab events applies only
         # to a source distance of about 40 km or larger."
-        idx = dists.rrup >= 40.0
-        slab_term[idx] = C['SSL'] * np.log(dists.rrup[idx])
+        #idx = dists.rrup >= 40.0
+        #slab_term[idx] = C['SSL'] * np.log(dists.rrup[idx])
+        
+        #SFD=alog(SQRT(dist*dist+Ra*Ra))-alog(Rc) dove Ra = 0 e RC = 125
+        Ra = 0.0
+        Rc = 125.0
+        slab_term = C['SSL'] * (np.log(dists.rrup) - np.log(Rc))
 
         return slab_term
 
