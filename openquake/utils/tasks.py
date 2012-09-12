@@ -208,3 +208,15 @@ def oqtask(task_func):
             raise
 
     return task(wrapped, ignore_result=True)
+
+
+def oqsimpletask(func):
+    """
+    Wrap a function to make it accept a job_id argument as first
+    argument. Therefore, the `func` can be used by the oqtask
+    decorator. Return an oqtask decorated function
+    """
+    def wrapped(_, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    return oqtask(wrapped)

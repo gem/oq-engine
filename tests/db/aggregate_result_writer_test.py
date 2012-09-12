@@ -30,7 +30,7 @@ import random
 import unittest
 from openquake.db import models as openquake
 from openquake.db.aggregate_result_writer import (
-    AggregateResultWriter, MeanCurveWriter, QuantileCurveWriter)
+    MeanCurveWriter, QuantileCurveWriter)
 
 from ..utils import helpers
 
