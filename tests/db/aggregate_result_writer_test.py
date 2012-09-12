@@ -27,24 +27,25 @@ hazard maps, etc.)
 from __future__ import absolute_import
 
 import random
+import unittest
 from openquake.db import models as openquake
 from openquake.db.aggregate_result_writer import (
-    AggregateResultWriterFactory, AggregateResultWriter)
+    AggregateResultWriter, MeanCurveWriter, QuantileCurveWriter)
 
-from .models_manager_test import TestCaseWithAJob
 from ..utils import helpers
 
 
-class AggregateResultWriterFactoryTestCase(TestCaseWithAJob):
+class AggregateResultWriterFactoryTestCase(unittest.TestCase):
     """
     Test the manager to create aggregate result writer
     """
+
     def setUp(self):
-        super(AggregateResultWriterFactoryTestCase, self).setUp()
-        self.factory = AggregateResultWriterFactory(self.job)
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        self.job = helpers.get_hazard_job(cfg, username="test_user")
 
     def test_create_mean_output(self):
-        writer = self.factory.create_mean_curve_writer(imt="PGA")
+        writer = MeanCurveWriter(self.job, imt="PGA")
         curve, output = writer.create_aggregate_result()
         self.assertEqual(1,
                          openquake.Output.objects.filter(pk=output.id).count())
@@ -70,9 +71,8 @@ class AggregateResultWriterFactoryTestCase(TestCaseWithAJob):
     def test_create_quantile_output(self):
         period = 0.025
 
-        writer = self.factory.create_quantile_curve_writer(
-            quantile=0.5,
-            imt="SA(%s)" % period)
+        writer = QuantileCurveWriter(
+            self.job, quantile=0.5, imt="SA(%s)" % period)
         curve, output = writer.create_aggregate_result()
         self.assertEqual(1,
                          openquake.Output.objects.filter(pk=output.id).count())
@@ -88,21 +88,19 @@ class AggregateResultWriterFactoryTestCase(TestCaseWithAJob):
         self.assertEqual(curve.output, output)
 
 
-class AggregateResultWriterTestCase(TestCaseWithAJob):
+class AggregateResultWriterTestCase(unittest.TestCase):
     """
     Test the manager to create aggregate result
     """
     def setUp(self):
-        super(AggregateResultWriterTestCase, self).setUp()
-        factory = AggregateResultWriterFactory(self.job)
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        self.job = helpers.get_hazard_job(cfg, username="test_user")
 
-        self.mean_curve_writer = factory.create_mean_curve_writer(
-            imt="PGA")
+        self.mean_curve_writer = MeanCurveWriter(self.job, imt="PGA")
         self.mean_curve, self.mean_output = (
             self.mean_curve_writer.create_aggregate_result())
-        self.quantile_curve_writer = factory.create_quantile_curve_writer(
-            quantile=0.5,
-            imt="PGA")
+        self.quantile_curve_writer = QuantileCurveWriter(
+            self.job, quantile=0.5, imt="PGA")
         self.quantile_curve, self.quantile_output = (
             self.quantile_curve_writer.create_aggregate_result())
 
