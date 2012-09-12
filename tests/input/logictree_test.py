@@ -999,7 +999,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>nhlib.gsim.GMPE</uncertaintyModel>
+                        <uncertaintyModel>nhlib.gsim.FakeGMPE</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1009,7 +1009,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "module 'nhlib.gsim' does not contain name 'GMPE'"
+        error = "module 'nhlib.gsim' does not contain name 'FakeGMPE'"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
@@ -2088,9 +2088,6 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
                            for source in a_nrml_sources]
         for i, source in enumerate(a_nhlib_sources):
             modify_source(source)
-            # these parameters are expected to be different
-            del source.mfd._original_parameters
-            del e_nhlib_sources[i].mfd._original_parameters
 
         self.assertEqual(len(e_nhlib_sources), len(a_nhlib_sources))
         for i in xrange(len(e_nhlib_sources)):

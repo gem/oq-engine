@@ -33,13 +33,12 @@ import mock
 from tests.utils.helpers import random_location_generator
 
 from openquake.calculators.hazard.classical.post_processing import (
-    PostProcessor, PerSiteResultCalculator, PerSiteCurveCalculator,
-    MeanCurveCalculator, QuantileCurveCalculator)
+    setup_tasks, mean_curves, quantile_curves, persite_result_decorator)
 
 
-class MeanCurveCalculatorTestCase(unittest.TestCase):
+class PostProcessingTestCase(unittest.TestCase):
     """
-    Tests the mean curves calculator.
+    Tests the mean and quantile curves calculation.
     """
 
     MAX_LOCATION_NR = 50
@@ -61,49 +60,13 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
 
         self.curve_writer = SimpleCurveWriter()
 
-    def test_locations(self):
+    def test_mean(self):
         getter = curve_chunks_getter(self.curve_db)
 
-        mean_calculator = MeanCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer)
+        mean_calculator = persite_result_decorator(
+            mean_curves)
 
-        locations = list(mean_calculator.locations())
-        self.assertEqual(self.location_db, locations)
-
-    def test_fetch_curves(self):
-        getter = curve_chunks_getter(self.curve_db)
-
-        mean_calculator = MeanCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer)
-
-        poe_matrix = mean_calculator.fetch_curves()
-
-        expected_shape = (self.curves_per_location,
-                          self.location_nr,
-                          self.level_nr)
-        self.assertEqual(expected_shape, numpy.shape(poe_matrix))
-
-        for x in range(0, self.location_nr):
-            for y in range(0, self.curves_per_location):
-                for z in range(0, self.level_nr):
-                    index = x * self.curves_per_location + y
-                    numpy.testing.assert_allclose(
-                        self.curve_db[index]['poes'][z],
-                        poe_matrix[y][x][z])
-
-    def test_run(self):
-        getter = curve_chunks_getter(self.curve_db)
-
-        mean_calculator = MeanCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer)
-
-        mean_calculator.run()
+        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
 
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
         locations = [v['wkb'] for v in self.curve_writer.curves]
@@ -123,17 +86,13 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
                 self.curve_writer.curves[i]['poes'],
                 atol=self.__class__.SIGMA * 10)
 
-    def test_run_with_weights(self):
+    def test_mean_with_weights(self):
         self._setup_with_presets()
         getter = curve_chunks_getter(self.curve_db)
 
-        mean_calculator = MeanCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer,
-            use_weights=True)
-
-        mean_calculator.run()
+        mean_calculator = persite_result_decorator(
+            mean_curves)
+        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
 
         expected_mean_curves = [
             numpy.array([0.909707, 0.882379, 0.849248]),
@@ -174,23 +133,14 @@ class MeanCurveCalculatorTestCase(unittest.TestCase):
                  weight=0.2,
                  poes=numpy.array([9.2439e-01, 8.6700e-01, 7.7785e-01]))]
 
-
-class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
-    """
-    Tests the quantile curves calculator.
-    """
-    def test_run(self):
+    def test_quantile(self):
         getter = curve_chunks_getter(self.curve_db)
 
-        # test the median calculation
-        quantile_calculator = QuantileCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer,
-            quantile=0.5)
+        quantile_fn = persite_result_decorator(
+            quantile_curves)
 
-        quantile_calculator.run()
-
+        quantile_fn(getter, self.curves_per_location, 0, self.curve_writer,
+                    quantile=0.5)
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
@@ -207,18 +157,16 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
                 self.curve_writer.curves[i]['poes'],
                 atol=self.__class__.SIGMA * 10)
 
-    def test_run_with_weights(self):
+    def test_quantile_with_weights(self):
         self._setup_with_presets()
         getter = curve_chunks_getter(self.curve_db)
 
-        quantile_calculator = QuantileCurveCalculator(
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=getter,
-            curve_writer=self.curve_writer,
-            use_weights=True,
-            quantile=0.3)
+        quantile_fn = persite_result_decorator(
+            quantile_curves)
 
-        quantile_calculator.run()
+        quantile_fn(getter, self.curves_per_location, 1, self.curve_writer,
+                    quantile=0.5)
+        self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
             numpy.array([0.69909, 0.60859, 0.50328]),
@@ -230,43 +178,49 @@ class QuantileCurveCalculatorTestCase(MeanCurveCalculatorTestCase):
                 expected_quantile_curves[i],
                 self.curve_writer.curves[i]['poes'])
 
-    def test_base_classes(self):
-        """Test the base classes are abstract classes"""
-        a_calculator = PerSiteResultCalculator(
-            curves_per_location=mock.Mock(),
-            chunk_of_curves=mock.Mock(),
-            curve_writer=mock.Mock())
-        self.assertRaises(NotImplementedError, a_calculator.compute_results,
-                         mock.Mock())
-        a_calculator = PerSiteCurveCalculator(
-            curves_per_location=mock.Mock(),
-            chunk_of_curves=mock.Mock(),
-            curve_writer=mock.Mock())
-        self.assertRaises(NotImplementedError, a_calculator.compute_results,
-                         mock.Mock())
+    def test_persite_result_decorator(self):
+        getter = curve_chunks_getter(self.curve_db)
+
+        func = mock.Mock()
+
+        prefix = "openquake.calculators.hazard.classical.post_processing"
+        with mock.patch(prefix + '._fetch_curves') as fc:
+            with mock.patch(
+                    prefix + '._write_aggregate_results') as war:
+                fc.return_value = (1, 2, 3)
+
+                new_func = persite_result_decorator(func)
+
+                a_value = random.random()
+                new_func(
+                    getter,
+                    self.curves_per_location,
+                    0,
+                    self.curve_writer, ya_arg=a_value)
+
+                self.assertEqual(1, fc.call_count)
+                self.assertEqual(1, war.call_count)
+                self.assertEqual(1, func.call_count)
 
 
 class PostProcessorTestCase(unittest.TestCase):
     """
-    Tests for the main methods of the post processor of the classical
-    hazard calculator
+    Tests that the post processing setup the right number of tasks
     """
     def setUp(self):
         self.curves_per_location = 10
         location_nr = 10
-        curve_nr = 100
-        chunk_size = 1 + curve_nr / 5
+        curve_nr = location_nr * self.curves_per_location
+        self.chunk_size = 1 + curve_nr / 5
 
-        self.curve_writer_factory = mock.Mock()
-        self.curve_writer = mock.Mock()
-        self.curve_writer_factory.create_mean_curve_writer = mock.Mock(
-            return_value=self.curve_writer)
+        self.writers = dict(mean_curves=mock.Mock(),
+                            quantile_curves=mock.Mock())
 
         curve_db = _curve_db(location_nr, 1,
                                       self.curves_per_location, 0)
 
-        self.a_chunk_getter = curve_chunks_getter(curve_db[0: chunk_size])
-        self.task_nr = math.ceil(curve_nr / float(chunk_size))
+        self.a_chunk_getter = curve_chunks_getter(curve_db[0: self.chunk_size])
+        self.task_nr = math.ceil(curve_nr / float(self.chunk_size))
         self.chunk_getters = list(itertools.repeat(
             self.a_chunk_getter, int(self.task_nr)))
 
@@ -294,19 +248,17 @@ class PostProcessorTestCase(unittest.TestCase):
             }
         calculation.mean_hazard_curves = True
         calculation.quantile_hazard_curves = [0.5, 0.3]
+        calculation.should_compute_hazard_curves.return_value = True
 
-        task_handler = mock.Mock()
-        a_post_processor = PostProcessor(calculation,
-                                         self.curve_finder,
-                                         mock.Mock(),
-                                         task_handler)
         # Act
-        a_post_processor.initialize()
+        tasks, tasks_args = setup_tasks(
+            mock.Mock(), calculation, self.curve_finder, self.writers,
+            self.chunk_size)
 
         # Assert
         expected_task_nr = 2 * (1 + 2) * self.task_nr
-        self.assertEqual(expected_task_nr,
-                         task_handler.enqueue.call_count)
+        self.assertEqual(expected_task_nr, len(tasks))
+        self.assertEqual(expected_task_nr, len(tasks_args))
 
     def test_initialize_one_calculation_with_1imt(self):
         """
@@ -323,75 +275,16 @@ class PostProcessorTestCase(unittest.TestCase):
             'SA(10)': range(1, 10)
             }
         calculation.mean_hazard_curves = True
-        calculation.quantile_hazard_curves = None
+        calculation.should_compute_quantile_curves.return_value = None
 
-        task_handler = mock.Mock()
-        a_post_processor = PostProcessor(calculation,
-                                         self.curve_finder,
-                                         self.curve_writer_factory,
-                                         task_handler)
         # Act
-        a_post_processor.initialize()
+        tasks, tasks_args = setup_tasks(
+            mock.Mock(), calculation, self.curve_finder, self.writers,
+            self.chunk_size)
 
         # Assert
-        task_handler.enqueue.assert_called_with(
-            MeanCurveCalculator,
-            curves_per_location=self.curves_per_location,
-            chunk_of_curves=self.a_chunk_getter,
-            curve_writer=self.curve_writer,
-            use_weights=False)
-
-        expected_task_nr = self.task_nr
-        self.assertEqual(expected_task_nr,
-                         task_handler.enqueue.call_count)
-
-    def test_run(self):
-        """
-        Test that the post processor calls the proper task queue
-        handler methods
-        """
-        calculation = mock.Mock()
-        task_handler = mock.Mock()
-        a_post_processor = PostProcessor(calculation,
-                                         self.curve_finder,
-                                         mock.Mock(),
-                                         task_handler)
-        a_post_processor.should_be_distributed = mock.MagicMock(
-            return_value=True, name="should_be_distributed")
-        a_post_processor.run()
-        self.assertEqual(task_handler.apply_async.call_count, 1)
-        self.assertEqual(task_handler.wait_for_results.call_count, 1)
-
-        a_post_processor.should_be_distributed.return_value = False
-        a_post_processor.run()
-        self.assertEqual(task_handler.apply_async.call_count, 1)
-        self.assertEqual(task_handler.wait_for_results.call_count, 1)
-        self.assertEqual(task_handler.apply.call_count, 1)
-
-    def test_should_be_distributed(self):
-        calculation = mock.Mock()
-        self.curve_finder.individual_curves_nr = mock.Mock(
-            return_value=1)
-
-        task_handler = mock.Mock()
-        a_post_processor = PostProcessor(calculation,
-                                         self.curve_finder,
-                                         mock.Mock(),
-                                         task_handler)
-
-        # with a very small number of curves we expect False
-        self.assertFalse(a_post_processor.should_be_distributed())
-
-        self.curve_finder.individual_curves_nr = mock.Mock(
-            return_value=10 ** 10)
-
-        a_post_processor = PostProcessor(calculation,
-                                         self.curve_finder,
-                                         mock.Mock(),
-                                         task_handler)
-
-        # with a very big number of curves we expect True
-        self.assertTrue(a_post_processor.should_be_distributed())
+        self.assertEqual(self.task_nr, len(tasks))
+        self.assertEqual(self.task_nr, len(tasks_args))
 
 
 def curve_chunks_getter(db):
