@@ -33,7 +33,8 @@ import mock
 from tests.utils.helpers import random_location_generator
 
 from openquake.calculators.hazard.classical.post_processing import (
-    setup_tasks, mean_curves, quantile_curves, persite_result_decorator)
+    setup_tasks, mean_curves, quantile_curves, persite_result_decorator,
+    mean_curves_weighted, quantile_curves_weighted)
 
 
 class PostProcessingTestCase(unittest.TestCase):
@@ -61,12 +62,12 @@ class PostProcessingTestCase(unittest.TestCase):
         self.curve_writer = SimpleCurveWriter()
 
     def test_mean(self):
-        getter = curve_chunks_getter(self.curve_db)
+        chunk = curve_chunks_getter(
+            self.curve_db, self.location_db, self.curves_per_location)
 
-        mean_calculator = persite_result_decorator(
-            mean_curves)
+        mean_fn = persite_result_decorator(mean_curves)
 
-        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
+        mean_fn(chunk, self.curve_writer, False)
 
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
         locations = [v['wkb'] for v in self.curve_writer.curves]
@@ -87,12 +88,12 @@ class PostProcessingTestCase(unittest.TestCase):
                 atol=self.__class__.SIGMA * 10)
 
     def test_quantile(self):
-        getter = curve_chunks_getter(self.curve_db)
+        chunk = curve_chunks_getter(
+            self.curve_db, self.location_db, self.curves_per_location)
 
         quantile_fn = persite_result_decorator(quantile_curves)
 
-        quantile_fn(getter, self.curves_per_location, 0, self.curve_writer,
-                    quantile=0.5)
+        quantile_fn(chunk, self.curve_writer, False, quantile=0.5)
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
@@ -110,7 +111,8 @@ class PostProcessingTestCase(unittest.TestCase):
                 atol=self.__class__.SIGMA * 10)
 
     def test_persite_result_decorator(self):
-        getter = curve_chunks_getter(self.curve_db)
+        chunk = curve_chunks_getter(
+            self.curve_db, self.location_db, self.curves_per_location)
 
         func = mock.Mock()
 
@@ -123,11 +125,7 @@ class PostProcessingTestCase(unittest.TestCase):
                 new_func = persite_result_decorator(func)
 
                 a_value = random.random()
-                new_func(
-                    getter,
-                    self.curves_per_location,
-                    0,
-                    self.curve_writer, ya_arg=a_value)
+                new_func(chunk, self.curve_writer, True, ya_arg=a_value)
 
                 self.assertEqual(1, fc.call_count)
                 self.assertEqual(1, war.call_count)
@@ -142,8 +140,8 @@ class PostProcessingWithWeight(unittest.TestCase):
         self.location_nr = 2
         self.curves_per_location = 3
         self.level_nr = 3
-        self.location_db = [random_location_generator(),
-                            random_location_generator()]
+        self.location_db = [random_location_generator().wkb,
+                            random_location_generator().wkb]
         self.curve_db = [
             dict(wkb=self.location_db[0],
                  weight=0.5,
@@ -166,16 +164,15 @@ class PostProcessingWithWeight(unittest.TestCase):
         self.curve_writer = SimpleCurveWriter()
 
     def test_mean_with_weights(self):
-        getter = curve_chunks_getter(self.curve_db)
+        chunk = curve_chunks_getter(
+            self.curve_db, self.location_db, self.curves_per_location)
 
-        mean_calculator = persite_result_decorator(
-            mean_curves)
-        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
+        mean_fn = persite_result_decorator(mean_curves_weighted)
+        mean_fn(chunk, self.curve_writer, True)
 
         expected_mean_curves = [
-            numpy.array([0.89968333, 0.86939, 0.83316333]),
-            numpy.array([0.91289333, 0.85480667, 0.76807667])
-            ]
+            numpy.array([0.909707, 0.882379, 0.849248]),
+            numpy.array([0.912911, 0.85602, 0.771468])]
 
         for i in range(0, self.location_nr):
             numpy.testing.assert_allclose(
@@ -183,12 +180,12 @@ class PostProcessingWithWeight(unittest.TestCase):
                 self.curve_writer.curves[i]['poes'])
 
     def test_quantile_with_weights(self):
-        getter = curve_chunks_getter(self.curve_db)
+        chunk = curve_chunks_getter(
+            self.curve_db, self.location_db, self.curves_per_location)
 
-        quantile_fn = persite_result_decorator(quantile_curves)
+        quantile_fn = persite_result_decorator(quantile_curves_weighted)
 
-        quantile_fn(getter, self.curves_per_location, 1, self.curve_writer,
-                    quantile=0.3)
+        quantile_fn(chunk, self.curve_writer, True, quantile=0.3)
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
@@ -215,10 +212,12 @@ class PostProcessorTestCase(unittest.TestCase):
         self.writers = dict(mean_curves=mock.Mock(),
                             quantile_curves=mock.Mock())
 
-        curve_db = _curve_db(location_nr, 1,
-                                      self.curves_per_location, 0)
+        curve_db, location_db = _curve_db(location_nr, 1,
+                                          self.curves_per_location, 0)
 
-        self.a_chunk_getter = curve_chunks_getter(curve_db[0: self.chunk_size])
+        self.a_chunk_getter = curve_chunks_getter(
+            curve_db[0: self.chunk_size], location_db,
+            self.curves_per_location)
         self.task_nr = math.ceil(curve_nr / float(self.chunk_size))
         self.chunk_getters = list(itertools.repeat(
             self.a_chunk_getter, int(self.task_nr)))
@@ -230,10 +229,10 @@ class PostProcessorTestCase(unittest.TestCase):
         self.curve_finder.individual_curves_chunks = mock.Mock(
             return_value=self.chunk_getters)
 
-    def test_initialize_both_calculation_with_2imt(self):
+    def test_setup_tasks_with_2imt(self):
         """
-        Test that #initialize method has divided properly the main
-        task with 2 imts and both mean and quantile calculation
+        setup_tasks should creat tasks for 2 imt and for mean and
+        quantile calculation
         """
 
         # Arrange
@@ -250,19 +249,17 @@ class PostProcessorTestCase(unittest.TestCase):
         calculation.should_compute_hazard_curves.return_value = True
 
         # Act
-        tasks, tasks_args = setup_tasks(
+        tasks = setup_tasks(
             mock.Mock(), calculation, self.curve_finder, self.writers,
             self.chunk_size)
 
         # Assert
-        expected_task_nr = (1 + 2) * self.task_nr
-        self.assertEqual(expected_task_nr, len(tasks))
-        self.assertEqual(expected_task_nr, len(tasks_args))
+        self.assertEqual(2, len(tasks))
 
-    def test_initialize_one_calculation_with_1imt(self):
+    def test_setup_tasks_with_1imt(self):
         """
-        Test that #initialize method has divided properly the main
-        task with 1 imt and only mean curves
+        setup_tasks should creat a task for 1 imt and mean curves
+        calculation
         """
 
         # Arrange
@@ -277,21 +274,28 @@ class PostProcessorTestCase(unittest.TestCase):
         calculation.should_compute_quantile_curves.return_value = None
 
         # Act
-        tasks, tasks_args = setup_tasks(
+        tasks = setup_tasks(
             mock.Mock(), calculation, self.curve_finder, self.writers,
             self.chunk_size)
 
         # Assert
-        self.assertEqual(self.task_nr, len(tasks))
-        self.assertEqual(self.task_nr, len(tasks_args))
+        self.assertEqual(1, len(tasks))
 
 
-def curve_chunks_getter(db):
+def curve_chunks_getter(curve_db, location_db, curves_per_location):
     """
-    Simple curve chunks getter. Returns a function that extracts
-    curve fields from a dictionary
+    A simple chunks_getter that returns all the curves into the db
     """
-    return (lambda field: [curve[field] for curve in db])
+    return SimpleCurveFinder(curve_db, location_db, curves_per_location)
+
+
+class SimpleCurveFinder(object):
+    def __init__(self, curve_db, location_db, curves_per_location):
+        self.curve_db = curve_db
+        self.locations = location_db
+        self.curves_per_location = curves_per_location
+        self.poes = [c['poes'] for c in curve_db]
+        self.weights = [c['weight'] for c in curve_db][0:curves_per_location]
 
 
 class SimpleCurveWriter(object):

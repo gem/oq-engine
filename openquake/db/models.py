@@ -1259,34 +1259,72 @@ class HazardCurveDataManager(djm.Manager):
         """
         return self.individual_curves(job, imt).count()
 
-    def individual_curves_chunks(self, job, imt=None, block_size=1):
+    def individual_curves_chunk(self, job, imt, offset, block_size):
         """
-        Return a generator of individual curves in chunks. A chunk is
-        function that when invoked (with a parameter `field`) returns a
-        chunk of curves (with values restricted on `field`). E.g.
+        Get a chunk of individual curves related to `job` with `imt`
+        at offset `offset`. The size of the returned chunk is
+        `block_size`. The results are augmented with the wkb
+        representation of the location and the weight of the
+        individual curve
+        """
+        base_queryset = self.individual_curves_ordered(job, imt)
+        base_queryset = base_queryset.extra({
+            'wkb': 'asBinary(location)',
+            'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
+            })
+        return base_queryset.values_list(
+                ['poes', 'wkb', 'weight'])[offset: block_size + offset]
 
-        all_the_poes = self.individual_curves_chunks().next()('poes')
-
-        Allowed values for `field` are ['poes', 'wkb', 'weight']
+    def individual_curves_chunks(self, job, imt, location_block_size=1):
+        """
+        Return a list of chunk of individual curves. A chunk is a
+        tuple with all the ingredients needed to get a chunk of
+        individual curves, i.e. a curve finder, the current job, the
+        imt of the curves, a block size and an offset
         """
         curve_nr = self.individual_curves_nr(job, imt)
+        calc = job.hazard_calculation
+        curves_per_location = calc.individual_curves_per_location()
+        block_size = location_block_size * curves_per_location
         ranges = xrange(0, curve_nr, block_size)
 
-        finder = self
+        return [IndividualHazardCurveChunk(
+                job, imt, curves_per_location, offset, block_size)
+                for offset in ranges]
 
-        def chunk_getter(offset, field):
-            assert (field in ['poes', 'wkb', 'weight'])
 
-            base_queryset = finder.individual_curves_ordered(job, imt)
-            base_queryset = base_queryset.extra({
-                'wkb': 'asBinary(location)',
-                'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
-                })
-            return base_queryset.values_list(
-                field, flat=True)[offset: block_size + offset]
+class IndividualHazardCurveChunk(object):
+    """
+    A class that model a chunk of individual curves that might cover
+    different locations
+    """
 
-        for offset in ranges:
-            yield (lambda field: chunk_getter(offset, field))
+    def __init__(self, job, imt, curves_per_location, offset, block_size):
+        self.job = job
+        self.imt = imt
+        self.offset = offset
+        self.curves_per_location = curves_per_location
+        self.block_size = block_size
+        self._raw_data = None
+
+    @property
+    def raw_data(self):
+        return HazardCurveData.objects.individual_curves_chunk(
+            self.job, self.imt, self.offset, self.block_size)
+
+    @property
+    def poes(self):
+        return [r['poes'] for r in self.raw_data]
+
+    @property
+    def weights(self):
+        weights = [r['weight'] for r in self.raw_data]
+        return weights[0::self.curves_per_location]
+
+    @property
+    def locations(self):
+        locations = [r['wkb'] for r in self.raw_data]
+        return locations[0::self.curves_per_location]
 
 
 class HazardCurveData(djm.Model):

@@ -358,13 +358,16 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
     def post_process(self):
         logs.LOG.debug('> starting post process')
 
-        tasks, tasks_args = post_processing.setup_tasks(
+        tasks = post_processing.setup_tasks(
             self.job, self.job.hazard_calculation,
             curve_finder=models.HazardCurveData.objects,
             writers=dict(mean_curves=MeanCurveWriter,
                          quantile_curves=QuantileCurveWriter))
 
-        utils_tasks.distribute(tasks, ("post_processing", tasks_args))
+        for task, task_args in tasks.items():
+            task_args.insert(0, self.job.pk)
+            oqtask = utils_tasks.oqsimpletask(task)
+            utils_tasks.distribute(oqtask, ("post_processing", task_args))
 
         logs.LOG.debug('< done with post process')
 
