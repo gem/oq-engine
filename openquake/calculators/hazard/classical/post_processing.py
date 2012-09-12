@@ -148,16 +148,20 @@ def persite_result_decorator(func):
 
 def _fetch_curves(chunk_of_curves, curves_per_location,
                   number_of_logic_tree_samples):
+    """
+    Fetch the individual curves poes. See `persite_result_decorator`
+    for more details
+    """
     curves = chunk_of_curves('poes')
     level_nr, loc_nr = len(curves[0]), len(curves) / curves_per_location
     poe_matrix = numpy.reshape(
         curves, (curves_per_location, loc_nr, level_nr), 'F')
 
-    if number_of_logic_tree_samples:
-        weights = None
-    else:
+    if number_of_logic_tree_samples > 0:
         weights = numpy.array(
             chunk_of_curves('weight')[0:curves_per_location])
+    else:
+        weights = None
 
     # get a list of distinct locations in wkb format
     locations = chunk_of_curves('wkb')[::curves_per_location]
@@ -166,6 +170,9 @@ def _fetch_curves(chunk_of_curves, curves_per_location,
 
 
 def _write_aggregate_results(writer, results, locations):
+    """
+    Write `results` for each location in `locations` by using `writer`
+    """
     with writer as w:
         for i, location in enumerate(locations):
             w.add_data(location, results[i].tolist())
@@ -190,9 +197,6 @@ def quantile_curves(poe_matrix, weights, quantile):
     """
     Compute quantile curves
 
-    :param quantile
-      The quantile considered by the computation
-
     :param poe_matrix
       a 3d matrix with shape given by (curves_per_location x
       number of locations x intensity measure levels)
@@ -200,6 +204,9 @@ def quantile_curves(poe_matrix, weights, quantile):
     :param weights
       a vector of weights with size equal to the number of
       curves per location
+
+    :param quantile
+      The quantile considered by the computation
     """
 
     # mquantiles can not work on 3d matrixes, so we roll back the
@@ -217,7 +224,7 @@ def quantile_curves(poe_matrix, weights, quantile):
         ret = []
         for curves in poe_matrixes:  # iterate on locations
             result_curve = []
-            for poes in curves:  # iterate on individual curves
+            for poes in curves:  # iterate on levels
                 sorted_poe_idxs = numpy.argsort(poes)
                 sorted_weights = weights[sorted_poe_idxs]
                 sorted_poes = poes[sorted_poe_idxs]
@@ -225,5 +232,5 @@ def quantile_curves(poe_matrix, weights, quantile):
                 cum_weights = numpy.cumsum(sorted_weights)
                 result_curve.append(
                     numpy.interp(quantile, cum_weights, sorted_poes))
-                ret.append(result_curve)
+            ret.append(result_curve)
         return numpy.array(ret).transpose()

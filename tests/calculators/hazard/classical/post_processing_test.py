@@ -86,27 +86,58 @@ class PostProcessingTestCase(unittest.TestCase):
                 self.curve_writer.curves[i]['poes'],
                 atol=self.__class__.SIGMA * 10)
 
-    def test_mean_with_weights(self):
-        self._setup_with_presets()
+    def test_quantile(self):
         getter = curve_chunks_getter(self.curve_db)
 
-        mean_calculator = persite_result_decorator(
-            mean_curves)
-        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
+        quantile_fn = persite_result_decorator(quantile_curves)
 
-        expected_mean_curves = [
-            numpy.array([0.909707, 0.882379, 0.849248]),
-            numpy.array([0.912911, 0.85602, 0.771468])
-            ]
+        quantile_fn(getter, self.curves_per_location, 0, self.curve_writer,
+                    quantile=0.5)
+        self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
+
+        expected_quantile_curves = [
+            dict(wkb=location,
+                 poes=[1. / (1 + i + j) for j in range(0, self.level_nr)])
+            for i, location in enumerate(self.location_db)]
 
         for i in range(0, self.location_nr):
+            self.assertEqual(
+                expected_quantile_curves[i]['wkb'],
+                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
-                expected_mean_curves[i],
-                self.curve_writer.curves[i]['poes'])
+                expected_quantile_curves[i]['poes'],
+                self.curve_writer.curves[i]['poes'],
+                atol=self.__class__.SIGMA * 10)
 
-    def _setup_with_presets(self):
+    def test_persite_result_decorator(self):
+        getter = curve_chunks_getter(self.curve_db)
+
+        func = mock.Mock()
+
+        prefix = "openquake.calculators.hazard.classical.post_processing"
+        with mock.patch(prefix + '._fetch_curves') as fc:
+            with mock.patch(
+                    prefix + '._write_aggregate_results') as war:
+                fc.return_value = (1, 2, 3)
+
+                new_func = persite_result_decorator(func)
+
+                a_value = random.random()
+                new_func(
+                    getter,
+                    self.curves_per_location,
+                    0,
+                    self.curve_writer, ya_arg=a_value)
+
+                self.assertEqual(1, fc.call_count)
+                self.assertEqual(1, war.call_count)
+                self.assertEqual(1, func.call_count)
+
+
+class PostProcessingWithWeight(unittest.TestCase):
+    def setUp(self):
         """
-        Setup a curve database with "real" data
+        Setup a curve database with presets data
         """
         self.location_nr = 2
         self.curves_per_location = 3
@@ -132,40 +163,32 @@ class PostProcessingTestCase(unittest.TestCase):
             dict(wkb=self.location_db[1],
                  weight=0.2,
                  poes=numpy.array([9.2439e-01, 8.6700e-01, 7.7785e-01]))]
+        self.curve_writer = SimpleCurveWriter()
 
-    def test_quantile(self):
+    def test_mean_with_weights(self):
         getter = curve_chunks_getter(self.curve_db)
 
-        quantile_fn = persite_result_decorator(
-            quantile_curves)
+        mean_calculator = persite_result_decorator(
+            mean_curves)
+        mean_calculator(getter, self.curves_per_location, 0, self.curve_writer)
 
-        quantile_fn(getter, self.curves_per_location, 0, self.curve_writer,
-                    quantile=0.5)
-        self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
-
-        expected_quantile_curves = [
-            dict(wkb=location,
-                 poes=[1. / (1 + i + j) for j in range(0, self.level_nr)])
-            for i, location in enumerate(self.location_db)]
+        expected_mean_curves = [
+            numpy.array([0.89968333, 0.86939, 0.83316333]),
+            numpy.array([0.91289333, 0.85480667, 0.76807667])
+            ]
 
         for i in range(0, self.location_nr):
-            self.assertEqual(
-                expected_quantile_curves[i]['wkb'],
-                self.curve_writer.curves[i]['wkb'])
             numpy.testing.assert_allclose(
-                expected_quantile_curves[i]['poes'],
-                self.curve_writer.curves[i]['poes'],
-                atol=self.__class__.SIGMA * 10)
+                expected_mean_curves[i],
+                self.curve_writer.curves[i]['poes'])
 
     def test_quantile_with_weights(self):
-        self._setup_with_presets()
         getter = curve_chunks_getter(self.curve_db)
 
-        quantile_fn = persite_result_decorator(
-            quantile_curves)
+        quantile_fn = persite_result_decorator(quantile_curves)
 
         quantile_fn(getter, self.curves_per_location, 1, self.curve_writer,
-                    quantile=0.5)
+                    quantile=0.3)
         self.assertAlmostEqual(self.location_nr, len(self.curve_writer.curves))
 
         expected_quantile_curves = [
@@ -177,30 +200,6 @@ class PostProcessingTestCase(unittest.TestCase):
             numpy.testing.assert_allclose(
                 expected_quantile_curves[i],
                 self.curve_writer.curves[i]['poes'])
-
-    def test_persite_result_decorator(self):
-        getter = curve_chunks_getter(self.curve_db)
-
-        func = mock.Mock()
-
-        prefix = "openquake.calculators.hazard.classical.post_processing"
-        with mock.patch(prefix + '._fetch_curves') as fc:
-            with mock.patch(
-                    prefix + '._write_aggregate_results') as war:
-                fc.return_value = (1, 2, 3)
-
-                new_func = persite_result_decorator(func)
-
-                a_value = random.random()
-                new_func(
-                    getter,
-                    self.curves_per_location,
-                    0,
-                    self.curve_writer, ya_arg=a_value)
-
-                self.assertEqual(1, fc.call_count)
-                self.assertEqual(1, war.call_count)
-                self.assertEqual(1, func.call_count)
 
 
 class PostProcessorTestCase(unittest.TestCase):
@@ -256,7 +255,7 @@ class PostProcessorTestCase(unittest.TestCase):
             self.chunk_size)
 
         # Assert
-        expected_task_nr = 2 * (1 + 2) * self.task_nr
+        expected_task_nr = (1 + 2) * self.task_nr
         self.assertEqual(expected_task_nr, len(tasks))
         self.assertEqual(expected_task_nr, len(tasks_args))
 
@@ -352,28 +351,3 @@ def _curve_db(location_nr, level_nr, curves_per_location, sigma):
                      weight=weights[j],
                      poes=numpy.array(poes)))
     return curve_db, location_db
-
-
-def _curve_db_with_weights(location_nr, level_nr,
-                                    curves_per_location):
-    """
-    Setup a curve db with random weights
-    """
-    curve_db = []
-    location_db = []
-
-    weights = [random.random() for _ in range(0, curves_per_location)]
-    weights = [w / sum(weights) for w in weights]
-
-    for _ in range(0, location_nr):
-        location = random_location_generator()
-        location_db.append(location.wkb)
-        for j in range(0, curves_per_location):
-            poes = []
-            for k in range(0, level_nr):
-                poes.append(min(1, 1.0 / (1 + k)))
-            curve_db.append(
-                dict(wkb=location.wkb,
-                     weight=weights[j],
-                     poes=numpy.array(poes)))
-    return curve_db, location_db, weights
