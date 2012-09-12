@@ -36,7 +36,7 @@ class TestCaseWithAJob(unittest.TestCase):
     def setUp(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username="test_user")
-        for i in range(0, random.randint(0, 10)):
+        for i in range(0, random.randint(1, 10)):
             models.LtRealization(
                 hazard_calculation=self.job.hazard_calculation,
                 ordinal=i, seed=None, weight=1 / (i + 1), sm_lt_path=[i],
@@ -167,10 +167,23 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         Test getting individual curves in chunks
         """
         block_size = 1
-        chunks = self.manager.individual_curves_chunks(self.job,
-                                                       block_size=block_size)
+        chunks = self.manager.individual_curves_chunks(
+            self.job, location_block_size=block_size)
+        self.assertEqual(1, len(chunks))
 
-        chunk_getter = chunks.next()
-        chunk = chunk_getter('wkb')
+        chunk = chunks[0].locations
         self.assertEqual(len(chunk), block_size)
         self.assertEqual(str(chunk[0]), self.a_location.wkb)
+
+    def test_individual_curves_chunk(self):
+        """
+        Test getting a chunk of individual curves
+        """
+        curves = self.manager.individual_curves_chunk(
+            self.job, "PGA", 0, 1)
+        self.assertEqual(1, len(curves))
+
+        curve = curves[0]
+        self.assertEqual(
+            sorted(['poes', 'wkb', 'hazard_curve__lt_realization__weight']),
+            sorted(curve.keys()))

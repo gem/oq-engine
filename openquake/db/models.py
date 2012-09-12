@@ -1270,12 +1270,13 @@ class HazardCurveDataManager(djm.Manager):
         base_queryset = self.individual_curves_ordered(job, imt)
         base_queryset = base_queryset.extra({
             'wkb': 'asBinary(location)',
-            'weight': 'coalesce(hazard_curve__lt_realization__weight, 1)'
             })
-        return base_queryset.values_list(
-                ['poes', 'wkb', 'weight'])[offset: block_size + offset]
+        values = base_queryset.values(
+            'poes', 'wkb', 'hazard_curve__lt_realization__weight')
 
-    def individual_curves_chunks(self, job, imt, location_block_size=1):
+        return values[offset: block_size + offset]
+
+    def individual_curves_chunks(self, job, imt=None, location_block_size=1):
         """
         Return a list of chunk of individual curves. A chunk is a
         tuple with all the ingredients needed to get a chunk of
@@ -1318,7 +1319,8 @@ class IndividualHazardCurveChunk(object):
 
     @property
     def weights(self):
-        weights = [r['weight'] for r in self.raw_data]
+        weights = [r['hazard_curve__lt_realization__weight']
+                   for r in self.raw_data]
         return weights[0::self.curves_per_location]
 
     @property
