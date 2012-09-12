@@ -35,12 +35,13 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self._setup_a_new_calculator()
+        self.job, self.calc = self._setup_a_new_calculator()
 
     def _setup_a_new_calculator(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        self.calc = core.ClassicalHazardCalculator(self.job)
+        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        calc = core.ClassicalHazardCalculator(job)
+        return job, calc
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
@@ -290,7 +291,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_post_process(self):
-        self._setup_a_new_calculator()
+        self.job, self.calc = self._setup_a_new_calculator()
 
         self.calc.pre_execute()
         self.job.is_running = True
@@ -307,12 +308,12 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
         self.calc.post_process()
 
-        models.HazardCurveData.objects.current_job = self.job
         number_of_curves = (
-            models.HazardCurveData.objects.individual_curves().count())
+            models.HazardCurveData.objects.individual_curves(self.job).count())
 
         curves_per_loc = (
-            self.job.hazard_calculation.individual_curves_per_location())
+            self.job.hazard_calculation.individual_curves_per_location(
+                self.job))
 
         imts_nr = len(
             self.job.hazard_calculation.intensity_measure_types_and_levels)
