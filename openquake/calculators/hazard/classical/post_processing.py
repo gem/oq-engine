@@ -21,6 +21,7 @@ Post processing functionality for the classical PSHA hazard calculator.
 E.g. mean and quantile curves.
 """
 
+import functools
 import numpy
 from scipy.stats import mstats
 
@@ -39,8 +40,8 @@ def setup_tasks(job, calculation, curve_finder, writers,
     for a chunk of locations and for a specific intensity measure
     type.
 
-    The setup of the output may involve the creation of object on
-    the database.
+    The setup of the output involves the creation of a aggregate
+    result container object.
 
     :param job
       The job associated with this computation
@@ -69,229 +70,160 @@ def setup_tasks(job, calculation, curve_finder, writers,
 
     curves_per_location = calculation.individual_curves_per_location()
     curves_per_task = curves_per_location * locations_per_task
-
     tasks, tasks_args = [], []
+    mean_curve_fn = persite_result_decorator(mean_curves)
 
     for imt in calculation.intensity_measure_types_and_levels:
-
-        chunks_generator = curve_finder.individual_curves_chunks
 
         if calculation.should_compute_mean_curves():
             writer = writers['mean_curves'](job, imt)
             writer.create_aggregate_result()
 
-            fn = _mean_curve_fn()
-
-            for chunk_of_curves in chunks_generator(job, imt,
-                                                    curves_per_task):
-                tasks.append(fn)
+            for chunk_of_curves in (
+                    curve_finder.individual_curves_chunks(job, imt,
+                                                          curves_per_task)):
+                tasks.append(mean_curve_fn)
                 tasks_args.append((
                     chunk_of_curves, curves_per_location,
                     calculation.number_of_logic_tree_samples,
                     writer))
 
-        if calculation.should_compute_quantile_functions():
-            fn = _quantile_curve_fn()
-
+        if calculation.should_compute_quantile_curves():
             for quantile in calculation.quantile_hazard_curves:
+                quantile_curve_fn = persite_result_decorator(
+                    functools.partial(quantile_curves, quantile=quantile))
                 writer = writers['quantile_curves'](job, imt, quantile)
                 writer.create_aggregate_result()
 
-                for chunk_of_curves in chunks_generator(imt, curves_per_task):
-                    tasks.append(fn)
+                for chunk_of_curves in (
+                        curve_finder.individual_curves_chunks(
+                            imt, curves_per_task)):
+                    tasks.append(quantile_curve_fn)
                     tasks_args.append(
-                        (quantile, chunk_of_curves, curves_per_location,
-                         calculation.number_of_logic_tree_samples, writer))
-            return tasks, tasks_args
-
-    def _should_compute_mean_curves(self):
-        """
-        Return None if no mean curve calculation has been requested
-        """
-        return self._calculation.mean_hazard_curves
-
-    def _should_compute_quantile_functions(self):
-        """
-        Return None if no quantile curve calculation has been requested
-        """
-        return self._calculation.quantile_hazard_curves
-
-    def _should_be_distributed(self):
-        """
-        Return True if the calculation should be distributed
-        """
-        return self._curve_nr > self.__class__.DISTRIBUTION_THRESHOLD
-
-def _curves_per_task(curve_finder, location_block_size):
-        """
-        Returns the number of curves calculated by each task
-        """
-    def __init__(self, job, calc,
-                 location_block_size=None):
-        self._location_block_size = (location_block_size or
-                                     self.__class__.DEFAULT_CURVE_BLOCK_SIZE)
-        self._job = job
-        self._calculation = calc
-        self._curves_per_location = calc.individual_curves_per_location()
-        self._curve_nr = self._curve_finder.individual_curves_nr(self._job)
+                        (chunk_of_curves, curves_per_location,
+                         calculation.number_of_logic_tree_samples, writer,
+                         quantile))
+        return tasks, tasks_args
 
 
-        
-        return self._curves_per_location * self._location_block_size
-
-
-class PerSiteResultCalculator(object):
+def persite_result_decorator(func):
     """
-    Abstract class to calculate per-site result (e.g. mean curves).
-
-    :attribute _curves_per_location
-      the number of curves for each location considered for
-      calculation
-
-    :attribute _chunk_of_curves a list of individual curve chunks
-      (usually spanning more locations). Each chunk is a function that
-      actually fetches the curves when it is invoked. This function
-      accept a parameter `field` that can be:
-
-      "poes" to fetch the y values
-      "wkb" to fetch the locations.
-
-    :attribute _result_writer
-      an object that can save the result.
-      See `PostProcessor` for more details
+    Decorator function to calculate per-site result (e.g. mean
+    curves). It creates a new function that fetch the curves with a
+    reader object, compute the results, write them using a writer
+    object
     """
-
-    def _should_consider_weights(self):
+    def new_function(chunk_of_curves, curves_per_location,
+                     number_of_logic_tree_samples, writer, *args, **kwargs):
         """
-        Return True if the calculation of aggregate result should
-        consider the weight of the individual curves
+        :param curves_per_location
+        the number of curves for each location considered for
+        calculation
+
+        :param chunk_of_curves a list of individual curve chunks
+        (usually spanning more locations). Each chunk is a function that
+        actually fetches the curves when it is invoked. This function
+        accept a parameter `field` that can be:
+
+        "poes" to fetch the y values
+        "wkb" to fetch the locations.
+
+        :param number_of_logic_tree_samples
+        The number of logic tree samples of the computation. If
+        non-zero, weights are not considered
+
+        :param writer
+        an object that can save the result.
         """
-        return not (
-            self.number_of_logic_tree_samples > 0)
 
-    def __call__(self, ):
-        """
-        Fetch the curves, calculate the mean curves and save them
-        """
-        poe_matrix = self.fetch_curves()
+        poe_matrix, weights, locations = _fetch_curves(
+            chunk_of_curves, curves_per_location, number_of_logic_tree_samples)
 
-        if self._use_weights:
-            weights = self.fetch_weights()
-        else:
-            weights = None
+        results = func(poe_matrix, weights, *args, **kwargs)
 
-        results = self.compute_results(poe_matrix, weights)
+        _write_aggregate_results(writer, results, locations)
 
-        with self._result_writer as writer:
-            for i, location in enumerate(self.locations()):
-                result = results[i]
-                writer.add_data(location, result.tolist())
-
-    def compute_results(self, poe_matrix, weights=None):
-        """
-        Abstract method. Given a 3d matrix with shape
-        (curves_per_location x number of locations x levels))
-        compute a result for each location.
-
-        If `weigths` are given, the computation have to consider the
-        weights for the individual contribution
-        """
-        raise NotImplementedError
-
-    def locations(self):
-        """
-        A generator of locations in wkb format considered by the
-        computation
-        """
-        locations = self._chunk_of_curves('wkb')
-        distinct_locations = locations[::self._curves_per_location]
-
-        for location in distinct_locations:
-            yield location
-
-    def fetch_weights(self):
-        """
-        Return a vector of weights of dimension equal to the number of
-        curves per location
-        """
-        weights = self._chunk_of_curves('weight')
-
-        return numpy.array(weights[0:self._curves_per_location])
-
-    def fetch_curves(self):
-        """
-        Returns a 3d matrix with shape given by
-        (curves_per_location x number of locations x levels))
-        """
-        curves = self._chunk_of_curves('poes')
-        level_nr = len(curves[0])
-        self._level_nr = level_nr
-        loc_nr = len(curves) / self._curves_per_location
-        return numpy.reshape(curves,
-                             (self._curves_per_location, loc_nr, level_nr),
-                             'F')
+    return new_function
 
 
-class MeanCurveCalculator(PerSiteResultCalculator):
+def _fetch_curves(chunk_of_curves, curves_per_location,
+                  number_of_logic_tree_samples):
+    curves = chunk_of_curves('poes')
+    level_nr, loc_nr = len(curves[0]), len(curves) / curves_per_location
+    poe_matrix = numpy.reshape(
+        curves, (curves_per_location, loc_nr, level_nr), 'F')
+
+    if number_of_logic_tree_samples:
+        weights = None
+    else:
+        weights = numpy.array(
+            chunk_of_curves('weight')[0:curves_per_location])
+
+    # get a list of distinct locations in wkb format
+    locations = chunk_of_curves('wkb')[::curves_per_location]
+
+    return poe_matrix, weights, locations
+
+
+def _write_aggregate_results(writer, results, locations):
+    with writer as w:
+        for i, location in enumerate(locations):
+            w.add_data(location, results[i].tolist())
+
+
+def mean_curves(poe_matrix, weights):
     """
     Calculate mean curves.
 
-    :attribute _result_writer
-      an object that can save the result by calling #create_mean_curve
+    :param poe_matrix
+      a 3d matrix with shape given by (curves_per_location x
+      number of locations x intensity measure levels)
 
-    See the base class doc for other attributes
+    :param weights
+      a vector of weights with size equal to the number of
+      curves per location
     """
-    def __init__(self, job, curves_per_location, chunk_of_curves,
-                 curve_writer):
-        super(MeanCurveCalculator, self).__init__(
-            job, curves_per_location, chunk_of_curves, curve_writer)
-
-    def compute_results(self, poe_matrix, weights=None):
-        """
-        Calculate all the mean curves in one shot
-        """
-        return numpy.average(poe_matrix, weights=weights, axis=0)
+    return numpy.average(poe_matrix, weights=weights, axis=0)
 
 
-class QuantileCurveCalculator(PerSiteResultCalculator):
+def quantile_curves(poe_matrix, weights, quantile):
     """
-    Compute quantile curves for a block of locations
+    Compute quantile curves
+
+    :param quantile
+      The quantile considered by the computation
+
+    :param poe_matrix
+      a 3d matrix with shape given by (curves_per_location x
+      number of locations x intensity measure levels)
+
+    :param weights
+      a vector of weights with size equal to the number of
+      curves per location
     """
-    def __init__(self, job, curves_per_location, chunk_of_curves, curve_writer,
-                 quantile):
-        super(QuantileCurveCalculator, self).__init__(
-            job, curves_per_location, chunk_of_curves, curve_writer)
 
-        self._quantile = quantile
+    # mquantiles can not work on 3d matrixes, so we roll back the
+    # location axis as first dimension, then we iterate on each
+    # locations
+    if weights is None:
+        poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
+        return [mstats.mquantiles(curves, quantile, axis=0)[0]
+                for curves in poe_matrixes]
+    else:
+        # Here, we expect that weight values sum to 1. A weight
+        # describes the probability that a realization is expected
+        # to occur.
+        poe_matrixes = poe_matrix.transpose()
+        ret = []
+        for curves in poe_matrixes:  # iterate on locations
+            result_curve = []
+            for poes in curves:  # iterate on individual curves
+                sorted_poe_idxs = numpy.argsort(poes)
+                sorted_weights = weights[sorted_poe_idxs]
+                sorted_poes = poes[sorted_poe_idxs]
 
-    def compute_results(self, poe_matrix, weights=None):
-        """
-        Compute all the quantile function (for quantiles given by the
-        attribute `quantile`) for each location in one shot
-        """
-
-        # mquantiles can not work on 3d matrixes, so we roll back the
-        # location axis as first dimension, then we iterate on each
-        # locations
-        if not self._use_weights:
-            poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
-            return [mstats.mquantiles(curves, self._quantile, axis=0)[0]
-                    for curves in poe_matrixes]
-        else:
-            # Here, we expect that weight values sum to 1. A weight
-            # describes the probability that a realization is expected
-            # to occur.
-            poe_matrixes = poe_matrix.transpose()
-            ret = []
-            for curves in poe_matrixes:  # iterate on locations
-                result_curve = []
-                for poes in curves:
-                    sorted_poe_idxs = numpy.argsort(poes)
-                    sorted_weights = weights[sorted_poe_idxs]
-                    sorted_poes = poes[sorted_poe_idxs]
-
-                    cum_weights = numpy.cumsum(sorted_weights)
-                    result_curve.append(
-                        numpy.interp(self._quantile, cum_weights, sorted_poes))
+                cum_weights = numpy.cumsum(sorted_weights)
+                result_curve.append(
+                    numpy.interp(quantile, cum_weights, sorted_poes))
                 ret.append(result_curve)
-            return numpy.array(ret).transpose()
+        return numpy.array(ret).transpose()
