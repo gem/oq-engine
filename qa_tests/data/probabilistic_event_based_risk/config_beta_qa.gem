@@ -21,7 +21,7 @@ GMF_OUTPUT = true
 GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree_beta.xml
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
 # output directory - relative to this file
@@ -123,7 +123,7 @@ NUMBER_OF_SEISMICITY_HISTORIES = 50
 EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
-VULNERABILITY = vulnerability_model.xml
+VULNERABILITY = vulnerability_model_beta.xml
 
 LOSS_CURVES_OUTPUT_PREFIX = loss_curves
 
