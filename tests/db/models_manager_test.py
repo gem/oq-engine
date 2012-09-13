@@ -73,7 +73,7 @@ class HazardCurveManagerTestCase(TestCaseWithAJob):
             self.job, "fake output", "hazard_curve")
 
     def test_create_aggregate_curve(self):
-        curve = self.manager.create_aggregate_curve(self.output, "PGA")
+        curve = self.manager.create_aggregate_curve(self.output, "PGA", "mean")
         self.assertEqual(1, self.manager.filter(pk=curve.id).count())
 
         curve = self.manager.create_aggregate_curve(self.output,
@@ -81,13 +81,9 @@ class HazardCurveManagerTestCase(TestCaseWithAJob):
                                             statistics="mean")
         self.assertEqual(1, self.manager.filter(pk=curve.id).count())
 
-        self.assertRaises(AttributeError,
-                          self.manager.create_aggregate_curve,
-                          self.output, "SA(")
-
         self.assertRaises(ValueError,
                           self.manager.create_aggregate_curve,
-                          self.output, "SA(10)", quantile=0.5)
+                          self.output, "SA(10)", "mean", quantile=0.5)
 
 
 class HazardCurveDataManagerTestCase(TestCaseWithAJob):
