@@ -53,13 +53,12 @@ class OutputManagerTestCase(TestCaseWithAJob):
         self.manager = models.Output.objects
 
     def test_create_output(self):
-        output = self.manager.create_output(self.job,
-                                            "fake output")
+        output = self.manager.create_output(
+            self.job, "fake output", "hazard_curve")
         self.assertEqual(1, self.manager.filter(pk=output.id).count())
 
-        output = self.manager.create_output(self.job,
-                                            "another fake output",
-                                            "hazard_map")
+        output = self.manager.create_output(
+            self.job, "another fake output", "hazard_map")
         self.assertEqual(1, self.manager.filter(pk=output.id).count())
 
 
@@ -70,8 +69,8 @@ class HazardCurveManagerTestCase(TestCaseWithAJob):
     def setUp(self):
         super(HazardCurveManagerTestCase, self).setUp()
         self.manager = models.HazardCurve.objects
-        self.output = models.Output.objects.create_output(self.job,
-                                                             "fake output")
+        self.output = models.Output.objects.create_output(
+            self.job, "fake output", "hazard_curve")
 
     def test_create_aggregate_curve(self):
         curve = self.manager.create_aggregate_curve(self.output, "PGA")
@@ -102,8 +101,8 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
 
         # Setup some data
         # Requires a working version of Django models
-        output = models.Output.objects.create_output(self.job,
-                                                        "fake output")
+        output = models.Output.objects.create_output(
+            self.job, "fake output", "hazard_curve")
         realization = models.LtRealization.objects.all()[0]
         curve = models.HazardCurve.objects.create(
             output=output,
