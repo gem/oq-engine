@@ -21,6 +21,7 @@ Post processing functionality for the classical PSHA hazard calculator.
 E.g. mean and quantile curves.
 """
 
+from functools import wraps
 import numpy
 from scipy.stats import mstats
 
@@ -67,15 +68,15 @@ def setup_tasks(job, calculation, curve_finder, writers,
       phase (optional)
     """
 
-    tasks = {}
+    tasks = []
 
-    use_weights = calculation.number_of_logic_tree_samples > 0
+    use_weights = calculation.number_of_logic_tree_samples == 0
     if use_weights:
-        mean_curves_fn = persite_result_decorator(mean_curves_weighted)
-        quantile_curves_fn = persite_result_decorator(quantile_curves_weighted)
+        mean_curves_fn = "mean_weighted"
+        quantile_curves_fn = "quantile_weighted"
     else:
-        mean_curves_fn = persite_result_decorator(mean_curves)
-        quantile_curves_fn = persite_result_decorator(quantile_curves)
+        mean_curves_fn = "mean"
+        quantile_curves_fn = "quantile"
 
     for imt in calculation.intensity_measure_types_and_levels:
 
@@ -84,20 +85,28 @@ def setup_tasks(job, calculation, curve_finder, writers,
 
         for chunk in chunks:
             if calculation.should_compute_mean_curves():
-                tasks[mean_curves_fn] = tasks.get(mean_curves_fn, [])
                 writer = writers['mean_curves'](job, imt)
                 writer.create_aggregate_result()
-                tasks[mean_curves_fn].append((chunk, writer, use_weights))
+                tasks.append(
+                    [mean_curves_fn, (chunk, writer, use_weights)])
 
             if calculation.should_compute_quantile_curves():
                 for quantile in calculation.quantile_hazard_curves:
-                    tasks[quantile_curves_fn] = tasks.get(
-                        quantile_curves_fn, [])
                     writer = writers['quantile_curves'](job, imt, quantile)
                     writer.create_aggregate_result()
-                    tasks[quantile_curves_fn].append(
-                        (chunk, writer, use_weights, quantile))
+                    tasks.append(
+                        [quantile_curves_fn,
+                         (chunk, writer, use_weights, quantile)])
     return tasks
+
+
+def get_post_processing_fn(key):
+    base_fns = {
+        "mean_weighted": mean_curves_weighted,
+        "quantile_weighted": quantile_curves_weighted,
+        "mean": mean_curves,
+        "quantile": quantile_curves}
+    return persite_result_decorator(base_fns[key])
 
 
 def persite_result_decorator(func):
@@ -107,6 +116,7 @@ def persite_result_decorator(func):
     reader object, compute the results, write them using a writer
     object.
     """
+
     def new_function(chunk_of_curves, writer, use_weights, *args, **kwargs):
         """
         :param chunk_of_curves is an object that implements the
