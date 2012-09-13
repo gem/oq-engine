@@ -312,8 +312,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             models.HazardCurveData.objects.individual_curves(self.job).count())
 
         curves_per_loc = (
-            self.job.hazard_calculation.individual_curves_per_location(
-                self.job))
+            self.job.hazard_calculation.individual_curves_per_location())
 
         imts_nr = len(
             self.job.hazard_calculation.intensity_measure_types_and_levels)
@@ -321,21 +320,20 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         expected_number_of_mean_curves = imts_nr
         expected_number_of_mean_curve_outputs = expected_number_of_mean_curves
 
+        outputs = models.Output.objects.filter(
+            output_type="hazard_curve", oq_job=self.job,
+            hazardcurve__statistics="mean")
+
         self.assertEqual(expected_number_of_mean_curve_outputs,
-                         models.Output.objects.filter(
-                             output_type="hazard_curve",
-                             oq_job=self.job,
-                             hazardcurve__statistics="mean").count())
-        self.assertEqual(expected_number_of_mean_curves,
-                         models.HazardCurve.objects.filter(
-                             output__output_type="hazard_curve",
-                             output__oq_job=self.job,
-                             statistics="mean").count())
-        self.assertEqual(expected_number_of_mean_curve_data,
-                         models.HazardCurveData.objects.filter(
-                             hazard_curve__output__output_type="hazard_curve",
-                             hazard_curve__output__oq_job=self.job,
-                             hazard_curve__statistics="mean").count())
+                         outputs.count())
+        curves = models.HazardCurve.objects.filter(
+            output__output_type="hazard_curve", output__oq_job=self.job,
+            statistics="mean")
+
+        self.assertEqual(expected_number_of_mean_curves, curves.count())
+
+        for curve in curves:
+            self.assertEqual(60, curve.hazardcurvedata_set.count())
 
         quantiles = len(self.job.hazard_calculation.quantile_hazard_curves)
         expected_number_of_quantile_curve_outputs = imts_nr * quantiles

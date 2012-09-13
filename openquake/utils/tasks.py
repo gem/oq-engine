@@ -186,9 +186,11 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first arugment passed to a task
-        # this is the only required argument
-        job_id = args[0]
+        # job_id is always assumed to be or a keyword argument or the
+        # first arugment passed to a task this is the only required
+        # argument
+        job_id = kwargs.get('job_id') or args[0]
+
         # Set up logging via amqp.
         try:
             # check if the job is still running
@@ -208,15 +210,3 @@ def oqtask(task_func):
             raise
 
     return task(wrapped, ignore_result=True)
-
-
-def oqsimpletask(func):
-    """
-    Wrap a function to make it accept a job_id argument as first
-    argument. Therefore, the `func` can be used by the oqtask
-    decorator. Return an oqtask decorated function
-    """
-    def wrapped(_, *args, **kwargs):
-        return func(*args, **kwargs)
-
-    return oqtask(wrapped)

@@ -1321,7 +1321,7 @@ class IndividualHazardCurveChunk(object):
     def weights(self):
         weights = [r['hazard_curve__lt_realization__weight']
                    for r in self.raw_data]
-        return weights[0::self.curves_per_location]
+        return weights[0:self.curves_per_location]
 
     @property
     def locations(self):
