@@ -818,13 +818,14 @@ class HazardCalculation(djm.Model):
         """
         Return True if mean curve calculation has been requested
         """
-        return self.mean_hazard_curves is not None
+        return self.mean_hazard_curves is True
 
     def should_compute_quantile_curves(self):
         """
         Return True if quantile curve calculation has been requested
         """
-        return self.quantile_hazard_curves is not None
+        return (self.quantile_hazard_curves is not None
+                and len(self.quantile_hazard_curves) > 0)
 
     def should_consider_weights_in_aggregates(self):
         """
