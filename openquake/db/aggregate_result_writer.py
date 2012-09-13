@@ -48,8 +48,7 @@ class AggregateResultWriter(object):
         self._imt = imt
         self._inserter = BulkInserter(self.__class__.model)
         self._aggregate_result = None
-        self._transaction_handler = transaction.commit_on_success(
-            using='reslt_writer')
+        self._transaction_handler = None
 
     def _create_output(self):
         """
@@ -92,12 +91,16 @@ class AggregateResultWriter(object):
         raise NotImplementedError
 
     def __enter__(self):
+        self._transaction_handler = transaction.commit_on_success(
+            using='reslt_writer')
         self._transaction_handler.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_type:
             self._flush_data()
+        else:
+            raise exc_val
         self._transaction_handler.__exit__(exc_type, exc_val, exc_tb)
 
     def _flush_data(self):
