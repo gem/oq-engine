@@ -63,18 +63,24 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             expected_curve_poes_b1 = [0.86466, 0.82460, 0.36525]
             expected_curve_poes_b2 = [0.63212, 0.61186, 0.25110]
-            expected_text_b1 = StringIO.StringIO(self.EXPECTED_XML_B1).readlines()
-            expected_text_b2 = StringIO.StringIO(self.EXPECTED_XML_B2).readlines()
+            expected_text_b1 = StringIO.StringIO(
+                self.EXPECTED_XML_B1).readlines()
+            expected_text_b2 = StringIO.StringIO(
+                self.EXPECTED_XML_B2).readlines()
 
             job = self.run_hazard(cfg)
 
             # Test the poe values for the two curves.
-            actual_curve_b1, actual_curve_b2 = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id).order_by('hazard_curve__lt_realization__sm_lt_path')
+            actual_curve_b1, actual_curve_b2 = \
+                models.HazardCurveData.objects\
+                    .filter(hazard_curve__output__oq_job=job.id)\
+                    .order_by('hazard_curve__lt_realization__sm_lt_path')
 
             # Sanity check, to make sure we have the curves ordered correctly:
-            self.assertEqual(['b1'], actual_curve_b1.hazard_curve.lt_realization.sm_lt_path)
-            self.assertEqual(['b2'], actual_curve_b2.hazard_curve.lt_realization.sm_lt_path)
+            self.assertEqual(
+                ['b1'], actual_curve_b1.hazard_curve.lt_realization.sm_lt_path)
+            self.assertEqual(
+                ['b2'], actual_curve_b2.hazard_curve.lt_realization.sm_lt_path)
 
             numpy.testing.assert_array_almost_equal(
                 expected_curve_poes_b1, actual_curve_b1.poes, decimal=3)
@@ -94,6 +100,7 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             self.assertEqual(expected_text_b2, actual_text_b2)
 
             # TODO: Test the mean curve as well.
-            # At the time this test was written, post processing functionality was not available.
+            # At the time this test was written, post processing functionality
+            # was not available.
         finally:
             shutil.rmtree(result_dir)
