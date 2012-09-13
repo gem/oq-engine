@@ -82,7 +82,7 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
                 self.EXPECTED_XML_B1_B2).readlines()
             expected_text_b1_b3 = StringIO.StringIO(
                 self.EXPECTED_XML_B1_B3).readlines()
-            expected_text_b1_b4= StringIO.StringIO(
+            expected_text_b1_b4 = StringIO.StringIO(
                 self.EXPECTED_XML_B1_B4).readlines()
 
             job = self.run_hazard(cfg)
