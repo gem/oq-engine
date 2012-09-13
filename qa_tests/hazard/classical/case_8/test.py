@@ -55,7 +55,6 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
-
     EXPECTED_XML_B1_B4 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1|b4" gsimTreePath="b1">
@@ -79,20 +78,31 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
             expected_curve_poes_b1_b2 = [0.095163, 0.012362, 0.002262, 0.0]
             expected_curve_poes_b1_b3 = [0.009950, 0.00076, 9.99995E-6, 0.0]
             expected_curve_poes_b1_b4 = [0.0009995, 4.5489E-5, 4.07365E-6, 0.0]
-            expected_text_b1_b2 = StringIO.StringIO(self.EXPECTED_XML_B1_B2).readlines()
-            expected_text_b1_b3 = StringIO.StringIO(self.EXPECTED_XML_B1_B3).readlines()
-            expected_text_b1_b4= StringIO.StringIO(self.EXPECTED_XML_B1_B4).readlines()
+            expected_text_b1_b2 = StringIO.StringIO(
+                self.EXPECTED_XML_B1_B2).readlines()
+            expected_text_b1_b3 = StringIO.StringIO(
+                self.EXPECTED_XML_B1_B3).readlines()
+            expected_text_b1_b4= StringIO.StringIO(
+                self.EXPECTED_XML_B1_B4).readlines()
 
             job = self.run_hazard(cfg)
 
             # Test the poe values for the three curves:
-            curve_b1_b2, curve_b1_b3, curve_b1_b4 = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id).order_by('hazard_curve__lt_realization__sm_lt_path')
+            curve_b1_b2, curve_b1_b3, curve_b1_b4 = \
+                models.HazardCurveData.objects\
+                    .filter(hazard_curve__output__oq_job=job.id)\
+                    .order_by('hazard_curve__lt_realization__sm_lt_path')
 
             # Sanity check, to make sure we have the curves ordered correctly:
-            self.assertEqual(['b1', 'b2'], curve_b1_b2.hazard_curve.lt_realization.sm_lt_path)
-            self.assertEqual(['b1', 'b3'], curve_b1_b3.hazard_curve.lt_realization.sm_lt_path)
-            self.assertEqual(['b1', 'b4'], curve_b1_b4.hazard_curve.lt_realization.sm_lt_path)
+            self.assertEqual(
+                ['b1', 'b2'],
+                curve_b1_b2.hazard_curve.lt_realization.sm_lt_path)
+            self.assertEqual(
+                ['b1', 'b3'],
+                curve_b1_b3.hazard_curve.lt_realization.sm_lt_path)
+            self.assertEqual(
+                ['b1', 'b4'],
+                curve_b1_b4.hazard_curve.lt_realization.sm_lt_path)
 
             numpy.testing.assert_array_almost_equal(
                 expected_curve_poes_b1_b2, curve_b1_b2.poes, decimal=3)
