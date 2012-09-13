@@ -133,6 +133,10 @@ class PostProcessingTestCase(unittest.TestCase):
 
 
 class PostProcessingWithWeight(unittest.TestCase):
+    """
+    Tests the calculation when full path enumeration occurs and
+    weights should be considered
+    """
     def setUp(self):
         """
         Setup a curve database with presets data
@@ -290,6 +294,10 @@ def curve_chunks_getter(curve_db, location_db, curves_per_location):
 
 
 class SimpleCurveFinder(object):
+    """
+    A simple object that implements the curve finder protocol needed
+    by the post_processing module
+    """
     def __init__(self, curve_db, location_db, curves_per_location):
         self.curve_db = curve_db
         self.locations = location_db
