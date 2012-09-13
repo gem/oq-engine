@@ -254,7 +254,7 @@ class PostProcessorTestCase(unittest.TestCase):
             self.chunk_size)
 
         # Assert
-        self.assertEqual(2, len(tasks))
+        self.assertEqual(30, len(tasks))
 
     def test_setup_tasks_with_1imt(self):
         """
@@ -279,7 +279,7 @@ class PostProcessorTestCase(unittest.TestCase):
             self.chunk_size)
 
         # Assert
-        self.assertEqual(1, len(tasks))
+        self.assertEqual(5, len(tasks))
 
 
 def curve_chunks_getter(curve_db, location_db, curves_per_location):

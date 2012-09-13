@@ -364,10 +364,9 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             writers=dict(mean_curves=MeanCurveWriter,
                          quantile_curves=QuantileCurveWriter))
 
-        for task, task_args in tasks.items():
-            task_args.insert(0, self.job.pk)
-            oqtask = utils_tasks.oqsimpletask(task)
-            utils_tasks.distribute(oqtask, ("post_processing", task_args))
+        utils_tasks.distribute(
+                do_post_process, ("post_processing_task", tasks),
+                tf_args=dict(job_id=self.job.id))
 
         logs.LOG.debug('< done with post process')
 
@@ -379,6 +378,14 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
 
         logs.LOG.debug('< done with exports')
+
+
+@utils_tasks.oqtask
+def do_post_process(job_id, post_processing_task):
+    func_key, func_args = post_processing_task
+    func = post_processing.get_post_processing_fn(func_key)
+    func(*func_args)
+do_post_process.ignore_result = False
 
 
 def update_result_matrix(current, new):
