@@ -3,6 +3,8 @@
 # which tests are executed:
 #   * 'qa'
 #   * 'slow'
+# The run the "short" unit test suite, do the following:
+# $ ./run_tests --with-doctest -a '!qa,!slow' --with-coverage --cover-package=openquake
 
 # First, purge all .pyc files to clean the source tree,
 # in case some modules were deleted or moved.
