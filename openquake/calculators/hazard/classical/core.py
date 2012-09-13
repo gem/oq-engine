@@ -370,15 +370,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         logs.LOG.debug('< done with post process')
 
-    def export(self, *args, **kwargs):
-        """Export to NRML"""
-        logs.LOG.debug('> starting exports')
-
-        if "exports" in kwargs and "xml" in kwargs["exports"]:
-            hexp.curves2nrml(self.job.hazard_calculation.export_dir, self.job)
-
-        logs.LOG.debug('< done with exports')
-
 
 @utils_tasks.oqtask
 def do_post_process(job_id, post_processing_task):
