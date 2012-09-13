@@ -1056,7 +1056,7 @@ class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
     """
-    def create_output(self, job, display_name, output_type="hazard_curve"):
+    def create_output(self, job, display_name, output_type):
         """
         Create an output for the given `job`, `display_name` and
         `output_type` (default to hazard_curve)
