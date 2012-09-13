@@ -21,7 +21,6 @@ Post processing functionality for the classical PSHA hazard calculator.
 E.g. mean and quantile curves.
 """
 
-from functools import wraps
 import numpy
 from scipy.stats import mstats
 
@@ -101,6 +100,10 @@ def setup_tasks(job, calculation, curve_finder, writers,
 
 
 def get_post_processing_fn(key):
+    """
+    Given a key it returns a scientific function decorated with the
+    persite_result_decorator
+    """
     base_fns = {
         "mean_weighted": mean_curves_weighted,
         "quantile_weighted": quantile_curves_weighted,
