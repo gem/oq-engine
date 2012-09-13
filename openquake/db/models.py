@@ -1171,8 +1171,7 @@ class HazardCurveManager(djm.Manager):
     Manager class to filter and create HazardCurve objects
     """
 
-    def create_aggregate_curve(self, output, imt,
-                               statistics="mean", quantile=None):
+    def create_aggregate_curve(self, output, imt, statistics, quantile=None):
         """
         Create an aggregate curve with intensity measure type `imt`
         for the given `statistics` (default to mean) and `quantile`.
