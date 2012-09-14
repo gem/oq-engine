@@ -15,6 +15,8 @@
 
 import unittest
 
+from lxml import etree
+
 from openquake import engine2
 from tests.utils import helpers
 
@@ -48,3 +50,16 @@ class BaseQATestCase(unittest.TestCase):
         self.assertFalse(completed_job.is_running)
         self.assertEqual('complete', completed_job.status)
         return completed_job
+
+    def assert_xml_equal(self, a, b):
+        """
+        Compare two XML artifacts for equality.
+
+        :param a, b:
+            Paths to XML files, or a file-like object containing the XML
+            contents.
+        """
+        contents_a = etree.tostring(etree.parse(a), pretty_print=True)
+        contents_b = etree.tostring(etree.parse(b), pretty_print=True)
+
+        self.assertEqual(contents_a, contents_b)
