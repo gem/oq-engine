@@ -82,20 +82,22 @@ def setup_tasks(job, calculation, curve_finder, writers,
         chunks = curve_finder.individual_curves_chunks(
             job, imt, locations_per_task)
 
-        for chunk in chunks:
-            if calculation.should_compute_mean_curves():
-                writer = writers['mean_curves'](job, imt)
-                writer.create_aggregate_result()
+        if calculation.should_compute_mean_curves():
+            writer = writers['mean_curves'](job, imt)
+            writer.create_aggregate_result()
+
+            for chunk in chunks:
                 tasks.append(
                     [mean_curves_fn, (chunk, writer, use_weights)])
 
-            if calculation.should_compute_quantile_curves():
-                for quantile in calculation.quantile_hazard_curves:
-                    writer = writers['quantile_curves'](job, imt, quantile)
-                    writer.create_aggregate_result()
+        if calculation.should_compute_quantile_curves():
+            for quantile in calculation.quantile_hazard_curves:
+                writer = writers['quantile_curves'](job, imt, quantile)
+                writer.create_aggregate_result()
+                for chunk in chunks:
                     tasks.append(
                         [quantile_curves_fn,
-                         (chunk, writer, use_weights, quantile)])
+                    (chunk, writer, use_weights, quantile)])
     return tasks
 
 
