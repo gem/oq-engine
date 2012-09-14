@@ -1,7 +1,0 @@
-#!/bin/bash
-# First, purge all .pyc files to clean the source tree,
-# in case some modules were deleted or moved.
-find . -name "*.pyc" -delete
-(export DJANGO_SETTINGS_MODULE="openquake.settings";
- PYTHONPATH="$PYTHONPATH:openquake/nrml";
- nosetests "$@" qa_tests 2>&1 | tee last_qa_test_run.log)
