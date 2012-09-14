@@ -63,10 +63,6 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             expected_curve_poes_b1 = [0.86466, 0.82460, 0.36525]
             expected_curve_poes_b2 = [0.63212, 0.61186, 0.25110]
-            expected_text_b1 = StringIO.StringIO(
-                self.EXPECTED_XML_B1).readlines()
-            expected_text_b2 = StringIO.StringIO(
-                self.EXPECTED_XML_B2).readlines()
 
             job = self.run_hazard(cfg)
 
@@ -91,13 +87,13 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             [exported_file_b1] = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
-            actual_text_b1 = open(exported_file_b1, 'r').readlines()
-            self.assertEqual(expected_text_b1, actual_text_b1)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1), exported_file_b1)
 
             [exported_file_b2] = hazard_export.export(
                 actual_curve_b2.hazard_curve.output.id, result_dir)
-            actual_text_b2 = open(exported_file_b2, 'r').readlines()
-            self.assertEqual(expected_text_b2, actual_text_b2)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B2), exported_file_b2)
 
             # TODO: Test the mean curve as well.
             # At the time this test was written, post processing functionality
