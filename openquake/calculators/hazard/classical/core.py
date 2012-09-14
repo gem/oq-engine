@@ -17,8 +17,6 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
-import re
-
 import nhlib
 import nhlib.calc
 import nhlib.imt
@@ -34,6 +32,10 @@ from openquake.export import hazard as hexp
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+
+from openquake.db.aggregate_result_writer import (MeanCurveWriter,
+                                                  QuantileCurveWriter)
+from openquake.calculators.hazard.classical import post_processing
 
 
 # Silencing 'Too many local variables'
@@ -301,15 +303,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
-                sa_period = None
-                sa_damping = None
-                if 'SA' in imt:
-                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
-                    sa_period = float(match.group(1))
-                    sa_damping = haz_general.DEFAULT_SA_DAMPING
-                    hc_im_type = 'SA'  # don't include the period
-                else:
-                    hc_im_type = imt
+                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
                 hco = models.Output(
                     owner=hc.owner,
@@ -360,6 +354,29 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             lt_realization__hazard_calculation=hc.id).delete()
         models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
+
+    def post_process(self):
+        logs.LOG.debug('> starting post process')
+
+        tasks = post_processing.setup_tasks(
+            self.job, self.job.hazard_calculation,
+            curve_finder=models.HazardCurveData.objects,
+            writers=dict(mean_curves=MeanCurveWriter,
+                         quantile_curves=QuantileCurveWriter))
+
+        utils_tasks.distribute(
+                do_post_process, ("post_processing_task", tasks),
+                tf_args=dict(job_id=self.job.id))
+
+        logs.LOG.debug('< done with post process')
+
+
+@utils_tasks.oqtask
+def do_post_process(job_id, post_processing_task):
+    func_key, func_args = post_processing_task
+    func = post_processing.get_post_processing_fn(func_key)
+    func(*func_args)
+do_post_process.ignore_result = False
 
 
 def update_result_matrix(current, new):
