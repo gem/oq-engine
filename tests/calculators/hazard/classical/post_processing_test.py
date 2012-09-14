@@ -37,6 +37,10 @@ from openquake.calculators.hazard.classical.post_processing import (
     mean_curves_weighted, quantile_curves_weighted)
 
 
+# package prefix used for mock.patching
+MOCK_PREFIX = "openquake.calculators.hazard.classical.post_processing"
+
+
 class PostProcessingTestCase(unittest.TestCase):
     """
     Tests the mean and quantile curves calculation.
@@ -116,10 +120,9 @@ class PostProcessingTestCase(unittest.TestCase):
 
         func = mock.Mock()
 
-        prefix = "openquake.calculators.hazard.classical.post_processing"
-        with mock.patch(prefix + '._fetch_curves') as fc:
+        with mock.patch(MOCK_PREFIX + '._fetch_curves') as fc:
             with mock.patch(
-                    prefix + '._write_aggregate_results') as war:
+                    MOCK_PREFIX + '._write_aggregate_results') as war:
                 fc.return_value = (1, 2, 3)
 
                 new_func = persite_result_decorator(func)
@@ -259,10 +262,12 @@ class PostProcessorTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(30, len(tasks))
+        self.assertEqual(2, self.writers['mean_curves'].call_count)
+        self.assertEqual(4, self.writers['quantile_curves'].call_count)
 
     def test_setup_tasks_with_1imt(self):
         """
-        setup_tasks should creat a task for 1 imt and mean curves
+        setup_tasks should create tasks for 1 imt and mean curves
         calculation
         """
 
@@ -284,6 +289,10 @@ class PostProcessorTestCase(unittest.TestCase):
 
         # Assert
         self.assertEqual(5, len(tasks))
+        self.assertEqual(
+            1, self.writers['mean_curves'].call_count)
+        self.assertEqual(
+            0, self.writers['quantile_curves'].call_count)
 
 
 def curve_chunks_getter(curve_db, location_db, curves_per_location):
