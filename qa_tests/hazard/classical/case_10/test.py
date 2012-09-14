@@ -63,10 +63,6 @@ class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             expected_curve_poes_b1_b2 = [0.00995, 0.00076, 9.7E-5, 0.0]
             expected_curve_poes_b1_b3 = [0.043, 0.0012, 7.394E-5, 0.0]
-            expected_text_b1_b2 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B2).readlines()
-            expected_text_b1_b3 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B3).readlines()
 
             job = self.run_hazard(cfg)
 
@@ -91,12 +87,14 @@ class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             [exported_file_b1_b2] = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            actual_text_b1_b2 = open(exported_file_b1_b2, 'r').readlines()
-            self.assertEqual(expected_text_b1_b2, actual_text_b1_b2)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
+                exported_file_b1_b2)
 
             [exported_file_b1_b3] = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            actual_text_b1_b3 = open(exported_file_b1_b3, 'r').readlines()
-            self.assertEqual(expected_text_b1_b3, actual_text_b1_b3)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
+                exported_file_b1_b3)
         finally:
             shutil.rmtree(result_dir)

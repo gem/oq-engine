@@ -78,12 +78,6 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
             expected_curve_poes_b1_b2 = [0.095163, 0.012362, 0.002262, 0.0]
             expected_curve_poes_b1_b3 = [0.009950, 0.00076, 9.99995E-6, 0.0]
             expected_curve_poes_b1_b4 = [0.0009995, 4.5489E-5, 4.07365E-6, 0.0]
-            expected_text_b1_b2 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B2).readlines()
-            expected_text_b1_b3 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B3).readlines()
-            expected_text_b1_b4 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B4).readlines()
 
             job = self.run_hazard(cfg)
 
@@ -114,17 +108,20 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             [exported_file_b1_b2] = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            actual_text_b1_b2 = open(exported_file_b1_b2, 'r').readlines()
-            self.assertEqual(expected_text_b1_b2, actual_text_b1_b2)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
+                exported_file_b1_b2)
 
             [exported_file_b1_b3] = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            actual_text_b1_b3 = open(exported_file_b1_b3, 'r').readlines()
-            self.assertEqual(expected_text_b1_b3, actual_text_b1_b3)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
+                exported_file_b1_b3)
 
             [exported_file_b1_b4] = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
-            actual_text_b1_b4 = open(exported_file_b1_b4, 'r').readlines()
-            self.assertEqual(expected_text_b1_b4, actual_text_b1_b4)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B4),
+                exported_file_b1_b4)
         finally:
             shutil.rmtree(result_dir)
