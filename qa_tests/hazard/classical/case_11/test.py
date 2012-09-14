@@ -79,12 +79,6 @@ class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
             expected_curve_poes_b1_b2 = [0.0055, 0.00042, 5.77E-5, 0.0]
             expected_curve_poes_b1_b3 = [0.00995, 0.00076, 9.7E-5, 0.0]
             expected_curve_poes_b1_b4 = [0.018, 0.0013, 0.00014, 0.0]
-            expected_text_b1_b2 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B2).readlines()
-            expected_text_b1_b3 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B3).readlines()
-            expected_text_b1_b4 = StringIO.StringIO(
-                self.EXPECTED_XML_B1_B4).readlines()
 
             job = self.run_hazard(cfg)
 
@@ -115,22 +109,24 @@ class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
             # Test the exports as well:
             [exported_file_b1_b2] = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
-            actual_text_b1_b2 = open(exported_file_b1_b2, 'r').readlines()
-            self.assertEqual(expected_text_b1_b2, actual_text_b1_b2)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B2),
+                exported_file_b1_b2)
 
             [exported_file_b1_b3] = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
-            actual_text_b1_b3 = open(exported_file_b1_b3, 'r').readlines()
-            self.assertEqual(expected_text_b1_b3, actual_text_b1_b3)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B3),
+                exported_file_b1_b3)
 
             [exported_file_b1_b4] = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
-            actual_text_b1_b4 = open(exported_file_b1_b4, 'r').readlines()
-            self.assertEqual(expected_text_b1_b4, actual_text_b1_b4)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_B1_B4),
+                exported_file_b1_b4)
 
             # TODO: Test weighted quantile (0.1) and weighted mean aggregates.
             # We can't test this yet because post-processing functionality is
             # not yet available.
-
         finally:
             shutil.rmtree(result_dir)
