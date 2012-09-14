@@ -54,7 +54,7 @@
         <xs:attribute name="branchSetID" type="xs:ID" use="required"></xs:attribute>
         <xs:attribute name="uncertaintyType" type="LogicTreeBranchUncertaintyType" use="required"/>
         <xs:attribute name="applyToBranches" type="gml:NCNameList" use="optional" default="ALL"></xs:attribute>
-        <xs:attribute name="applyToSources" type="gml:NCNameList" use="optional"></xs:attribute>
+        <xs:attribute name="applyToSources" type="StringList" use="optional"></xs:attribute>
         <xs:attribute name="applyToSourceType" type="SourceType" use="optional"></xs:attribute>
         <xs:attribute name="applyToTectonicRegionType" type="xs:string" use="optional"></xs:attribute>
     </xs:complexType>
