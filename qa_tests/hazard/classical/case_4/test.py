@@ -48,7 +48,6 @@ class ClassicalHazardCase4TestCase(qa_utils.BaseQATestCase):
         try:
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             expected_curve_poes = [0.63212, 0.61186, 0.25110]
-            expected_text = StringIO.StringIO(self.EXPECTED_XML).readlines()
 
             job = self.run_hazard(cfg)
 
@@ -62,7 +61,7 @@ class ClassicalHazardCase4TestCase(qa_utils.BaseQATestCase):
             # Test the export as well:
             [exported_file] = hazard_export.export(
                 actual_curve.hazard_curve.output.id, result_dir)
-            actual_text = open(exported_file, 'r').readlines()
-            self.assertEqual(expected_text, actual_text)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML), exported_file)
         finally:
             shutil.rmtree(result_dir)
