@@ -30,3 +30,5 @@ dbinary.xml
 .ropeproject
 *_flymake.py
 .coverage
+last_test_run.log
+
