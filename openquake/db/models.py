@@ -761,6 +761,12 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    hazard_curves_from_gmfs = fields.OqNullBooleanField(
+        help_text=('If true, ground motion fields will be post-processed into '
+                   'hazard curves.'),
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
