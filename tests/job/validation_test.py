@@ -582,6 +582,9 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
     def test_valid_event_based_params(self):
+        subset_iml_imt = VALID_IML_IMT.copy()
+        subset_iml_imt.pop('PGA')
+
         hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
@@ -602,6 +605,9 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
             intensity_measure_types=VALID_IML_IMT.keys(),
+            # intensity_measure_types_and_levels just needs to be a subset of
+            # intensity_measure_types
+            intensity_measure_types_and_levels=subset_iml_imt,
             truncation_level=0.0,
             maximum_distance=100.0,
             ses_per_logic_tree_path=5,
@@ -610,6 +616,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             complete_logic_tree_ses=False,
             complete_logic_tree_gmf=True,
             ground_motion_fields=True,
+            hazard_curves_from_gmfs=False,
         )
         form = validation.EventBasedHazardCalculationForm(
             instance=hc, files=None
@@ -656,6 +663,107 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             complete_logic_tree_ses=False,
             complete_logic_tree_gmf=True,
             ground_motion_fields=True,
+        )
+        form = validation.EventBasedHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+    def test_hazard_curves_from_gmf_no_iml_imt(self):
+        # Test a configuration where the user has requested to post-process
+        # GMFs into hazard curves.
+        # In this case, the configuration is missing the required
+        # `intensity_measure_types_and_levels`.
+        expected_errors = {
+            'intensity_measure_types_and_levels': [
+                '`hazard_curve_from_gmfs` requires '
+                '`intensity_measure_types_and_levels`'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            ses_per_logic_tree_path=5,
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params={"vs30_clustering": True},
+            complete_logic_tree_ses=False,
+            complete_logic_tree_gmf=True,
+            ground_motion_fields=True,
+            hazard_curves_from_gmfs=True,
+        )
+        form = validation.EventBasedHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+
+    def test_hazard_curves_from_gmf_invalid_iml_imt(self):
+        # Test a configuration where the user has requested to post-process
+        # GMFs into hazard curves.
+        # In this case, the configuration has the required
+        # `intensity_measure_types_and_levels`, but the IMTs are not a subset
+        # of `intensity_measure_types`.
+        expected_errors = {
+            'intensity_measure_types_and_levels': [
+                'The IMTs in `intensity_measure_types_and_levels` must be a '
+                'subset of `intensity_measure_types`'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types=VALID_IML_IMT.keys().pop(),
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            ses_per_logic_tree_path=5,
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params={"vs30_clustering": True},
+            complete_logic_tree_ses=False,
+            complete_logic_tree_gmf=True,
+            ground_motion_fields=True,
+            hazard_curves_from_gmfs=True,
         )
         form = validation.EventBasedHazardCalculationForm(
             instance=hc, files=None
