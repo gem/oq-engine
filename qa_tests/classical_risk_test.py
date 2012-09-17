@@ -68,7 +68,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             0.0, OUTPUT_DIR)
         self._verify_loss_ratio_curve(job_id, EXPECTED_POES_LRC,
             EXPECTED_LOSS_RATIOS_LRC, 0.0, OUTPUT_DIR)
-        self._verify_loss_maps(EXPECTED_CLOSS_01, EXPECTED_CLOSS_02)
+        self._verify_loss_maps(OUTPUT_DIR, EXPECTED_CLOSS_01,
+            EXPECTED_CLOSS_02)
 
     def test_classical_beta_distrib(self):
         try:
@@ -93,7 +94,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             self._verify_loss_ratio_curve(job_id, B_EXPECTED_POES_LC_LRC,
                 B_EXPECTED_LOSS_RATIOS_LRC, 0.05, OUTPUT_BETA_DIR)
 
-            self._verify_loss_maps(B_EXPECTED_CLOSS)
+            self._verify_loss_maps(OUTPUT_BETA_DIR, B_EXPECTED_CLOSS)
 
         finally:
             # Cleaning generated results file.
@@ -163,9 +164,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._run_job(cfg)
         self._verify_job_succeeded(OUTPUT_DIR, expected_files)
 
-    def _verify_loss_maps(self, *expected_closses):
+    def _verify_loss_maps(self, output_dir, *expected_closses):
         for i, exp_closs in enumerate(expected_closses, start=1):
-            filename = "%s/losses_at-0.0%s.xml" % (OUTPUT_DIR, i)
+            filename = "%s/losses_at-0.0%s.xml" % (output_dir, i)
             closs = float(self._get(filename, "//nrml:value"))
 
             self.assertTrue(numpy.allclose(
