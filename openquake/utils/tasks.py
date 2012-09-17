@@ -186,9 +186,11 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first arugment passed to a task
+        # job_id is always assumed to be the first argument passed to
+        # the task, or a keyword argument
         # this is the only required argument
-        job_id = args[0]
+        job_id = kwargs.get('job_id') or args[0]
+
         # Set up logging via amqp.
         try:
             # check if the job is still running
