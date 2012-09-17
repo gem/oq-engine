@@ -733,6 +733,8 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
                 'The IMTs in `intensity_measure_types_and_levels` must be a '
                 'subset of `intensity_measure_types`'],
         }
+        iml_imt = VALID_IML_IMT.keys()
+        iml_imt.pop()
 
         hc = models.HazardCalculation(
             owner=helpers.default_user(),
@@ -753,7 +755,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types=VALID_IML_IMT.keys().pop(),
+            intensity_measure_types=iml_imt,
             intensity_measure_types_and_levels=VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
