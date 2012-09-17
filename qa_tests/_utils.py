@@ -45,9 +45,13 @@ class BaseQATestCase(unittest.TestCase):
             exports = []
 
         job = helpers.get_hazard_job(cfg)
-        completed_job = engine2._do_run_hazard(job, exports)
+        job.is_running = True
+        job.save()
 
-        self.assertFalse(completed_job.is_running)
+        completed_job = engine2._do_run_hazard(job, exports)
+        job.is_running = False
+        job.save()
+
         self.assertEqual('complete', completed_job.status)
         return completed_job
 
