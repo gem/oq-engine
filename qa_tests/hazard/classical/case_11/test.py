@@ -25,7 +25,7 @@ from openquake.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
-class ClassicalHazardCase10TestCase(qa_utils.BaseQATestCase):
+class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
