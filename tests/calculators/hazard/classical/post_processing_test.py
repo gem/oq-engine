@@ -23,12 +23,13 @@
 Test classical calculator post processing features
 """
 
-import random
-import numpy
-import unittest
+import decimal
 import itertools
 import math
 import mock
+import numpy
+import random
+import unittest
 
 from tests.utils.helpers import random_location_generator
 
@@ -204,6 +205,39 @@ class PostProcessingWithWeight(unittest.TestCase):
             numpy.testing.assert_allclose(
                 expected_quantile_curves[i],
                 self.curve_writer.curves[i]['poes'])
+
+    def test_weighted_quantile_with_decimal_weights(self):
+        # NOTE(LB): This is a test for a bug I found.
+        # In the case of end-branch enumeration with _more_ than 1 branch,
+        # numpy.interp (used in `quantile_curves_weighted`) cannot handle the
+        # `weights` input properly. `weights` is passed as a list of
+        # `decimal.Decimal` types. Numpy throws back this error:
+        # TypeError: array cannot be safely cast to required type
+        # This doesn't appear to be a problem when there is only a single end
+        # branch in the logic tree (and so the single weight is
+        # decimal.Decimal(1.0)).
+        input_curves = numpy.array([
+            [[0.99996, 0.99962, 0.99674],
+            [0.91873, 0.86697, 0.78992]],
+
+            [[ 0.69909, 0.60859, 0.50328],
+            [0.89556, 0.83045, 0.73646]],
+
+            [[1.0, 0.99996, 0.99947],
+            [0.92439, 0.867, 0.77785]]
+        ])
+
+        expected_curves = [
+            numpy.array([0.69909, 0.60859, 0.50328]),
+            numpy.array([0.89556, 0.83045, 0.73646])
+        ]
+
+        weights = [decimal.Decimal(x) for x in (0.5, 0.3, 0.2)]
+        quantile = 0.3
+
+        actual_curves = quantile_curves_weighted(input_curves, weights, quantile)
+
+        numpy.testing.assert_array_almost_equal(expected_curves, actual_curves)
 
 
 class PostProcessorTestCase(unittest.TestCase):
