@@ -37,6 +37,7 @@ from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
 from openquake.export.risk import export_dmg_dist_total, export_collapse_map
+from openquake.calculators.risk.risk_lib.scenario_damage import models as rl
 
 LOGGER = logs.LOG
 
@@ -227,6 +228,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             for asset in assets:
                 funcs = fset.filter(
                     taxonomy=asset.taxonomy).order_by("lsi")
+
+                funcs = _to_rl(funcs)
 
                 assert len(funcs) > 0, ("no limit states associated "
                         "with taxonomy %s of asset %s.") % (
@@ -444,51 +447,7 @@ def compute_gmv_fractions(funcs, gmv):
         to the highest)
     """
 
-    def _no_damage(fm, gmv):
-        """
-        There is no damage when ground motions values are less
-        than the first iml or when the no damage limit value
-        is greater than the ground motions value.
-        """
-        discrete = fm.format == "discrete"
-        no_damage_limit = fm.no_damage_limit is not None
 
-        return ((discrete and not no_damage_limit and gmv < fm.imls[0]) or
-            (discrete and no_damage_limit and gmv < fm.no_damage_limit))
-
-    def compute_poe_con(iml, func):
-        """
-        Compute the Probability of Exceedance for the given
-        Intensity Measure Level using continuous functions.
-        """
-
-        variance = func.stddev ** 2.0
-        sigma = math.sqrt(math.log((variance / func.mean ** 2.0) + 1.0))
-        mu = math.exp(math.log(func.mean ** 2.0 / math.sqrt(
-                variance + func.mean ** 2.0)))
-
-        return scipy.stats.lognorm.cdf(iml, sigma, scale=mu)
-
-    def compute_poe_dsc(iml, func):
-        """
-        Compute the Probability of Exceedance for the given
-        Intensity Measure Level using discrete functions.
-        """
-
-        highest_iml = func.fragility_model.imls[-1]
-        no_damage_limit = func.fragility_model.no_damage_limit
-
-        # when the intensity measure level is above
-        # the range, we use the highest one
-        if iml > highest_iml:
-            iml = highest_iml
-
-        imls = [no_damage_limit] + func.fragility_model.imls
-        poes = [0.0] + func.poes
-
-        return scipy.interpolate.interp1d(imls, poes)(iml)
-
-    ftype_poe_map = {Ffc: compute_poe_con, Ffd: compute_poe_dsc}
 
     # we always have a number of damage states
     # which is len(limit states) + 1
@@ -501,11 +460,11 @@ def compute_gmv_fractions(funcs, gmv):
     # intensity measure level defined in the model
     # we simply use 100% no_damage and 0% for the
     # remaining limit states
-    if _no_damage(fm, gmv):
+    if fm.no_damage(gmv):
         damage_states[0] = 1.0
         return numpy.array(damage_states)
 
-    first_poe = ftype_poe_map[funcs[0].__class__](gmv, funcs[0])
+    first_poe = funcs[0].poe(gmv)
 
     # first damage state is always 1 - the probability
     # of exceedance of first limit state
@@ -516,14 +475,13 @@ def compute_gmv_fractions(funcs, gmv):
     # starting from one, the first damage state
     # is already computed...
     for x in xrange(1, len(funcs)):
-        poe = ftype_poe_map[funcs[x].__class__](gmv, funcs[x])
+        poe = funcs[x].poe(gmv)
         damage_states[x] = last_poe - poe
         last_poe = poe
 
     # last damage state is equal to the probabily
     # of exceedance of the last limit state
-    damage_states[len(funcs)] = ftype_poe_map[
-        funcs[len(funcs) - 1].__class__](gmv, funcs[len(funcs) - 1])
+    damage_states[len(funcs)] = funcs[len(funcs) - 1].poe(gmv)
 
     return numpy.array(damage_states)
 
@@ -552,3 +510,20 @@ def _fm(oq_job):
     [fm] = FragilityModel.objects.filter(input=ism, owner=oq_job.owner)
 
     return fm
+
+
+def _to_rl_frag_function(func):
+    fm = func.fragility_model
+    fm_rl = rl.FragilityModel(fm.format,
+        fm.no_damage_limit, fm.imls)
+    if isinstance(func, Ffc):
+        func_rl = rl.FragilityFunctionContinuous(
+                fm_rl, func.mean, func.stddev)
+    else:
+        func_rl = rl.FragilityFunctionDiscrete(
+            fm_rl, func.poes)
+    return func_rl
+
+
+def _to_rl(funcs):
+    return [_to_rl_frag_function(item) for item in funcs]
