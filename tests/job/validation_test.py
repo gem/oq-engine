@@ -729,8 +729,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         # of `intensity_measure_types`.
         expected_errors = {
             'intensity_measure_types_and_levels': [
-                'The IMTs in `intensity_measure_types_and_levels` must be a '
-                'subset of `intensity_measure_types`'],
+                'Unknown IMT(s) [SA(0)] in `intensity_measure_types`'],
         }
         iml_imt = VALID_IML_IMT.keys()
         iml_imt.pop()
