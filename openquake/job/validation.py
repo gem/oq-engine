@@ -297,11 +297,14 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
 
                 # 2) The IMT keys in `intensity_measure_types_and_levels` need
                 #    to be a subset of `intensity_measure_types`.
-                if (not set(hc.intensity_measure_types_and_levels.keys())\
-                    .issubset(set(hc.intensity_measure_types))):
-                    msg = 'The IMTs in `%s` must be a subset of `%s`'
-                    msg %= ('intensity_measure_types_and_levels',
+                imts = set(hc.intensity_measure_types_and_levels.keys())
+                all_imts = set(hc.intensity_measure_types)
+
+                if not imts.issubset(all_imts):
+                    msg = 'Unknown IMT(s) [%s] in `%s`'
+                    msg %= (', '.join(sorted(imts - all_imts)),
                             'intensity_measure_types')
+
                     self._add_error('intensity_measure_types_and_levels', msg)
                     all_valid = False
 
