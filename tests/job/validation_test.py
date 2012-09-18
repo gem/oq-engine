@@ -721,7 +721,6 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
-
     def test_hazard_curves_from_gmf_invalid_iml_imt(self):
         # Test a configuration where the user has requested to post-process
         # GMFs into hazard curves.
