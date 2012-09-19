@@ -337,7 +337,8 @@ CREATE TABLE uiapi.hazard_calculation (
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
-    ground_motion_fields BOOLEAN
+    ground_motion_fields BOOLEAN,
+    hazard_curves_from_gmfs BOOLEAN
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'sites', 4326, 'MULTIPOINT', 2);
