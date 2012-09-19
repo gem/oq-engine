@@ -237,6 +237,10 @@ def quantile_curves_weighted(poe_matrix, weights, quantile):
     :param quantile
       The quantile considered by the computation
     """
+    # NOTE(LB): Weights might be passed as a list of `decimal.Decimal`
+    # types, and numpy.interp can't handle this (it throws TypeErrors).
+    # So we explicitly cast to floats here before doing interpolation.
+    weights = numpy.array(weights, dtype=numpy.float64)
 
     # Here, we expect that weight values sum to 1. A weight
     # describes the probability that a realization is expected
