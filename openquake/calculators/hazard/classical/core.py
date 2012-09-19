@@ -28,7 +28,6 @@ from openquake import logs
 from openquake import writer
 from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
-from openquake.export import hazard as hexp
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
@@ -161,7 +160,14 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
         # Update realiation progress,
         # mark realization as complete if it is done
         # First, refresh the logic tree realization record:
-        lt_rlz = models.LtRealization.objects.get(id=lt_rlz.id)
+        ltr_query = """
+        SELECT * FROM hzrdr.lt_realization
+        WHERE id = %s
+        FOR UPDATE
+        """
+
+        [lt_rlz] = models.LtRealization.objects.raw(
+            ltr_query, [lt_rlz.id])
 
         lt_rlz.completed_sources += len(src_ids)
         if lt_rlz.completed_sources == lt_rlz.total_sources:
