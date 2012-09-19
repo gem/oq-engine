@@ -220,7 +220,7 @@ class PostProcessingWithWeight(unittest.TestCase):
             [[0.99996, 0.99962, 0.99674],
             [0.91873, 0.86697, 0.78992]],
 
-            [[ 0.69909, 0.60859, 0.50328],
+            [[0.69909, 0.60859, 0.50328],
             [0.89556, 0.83045, 0.73646]],
 
             [[1.0, 0.99996, 0.99947],
@@ -235,7 +235,8 @@ class PostProcessingWithWeight(unittest.TestCase):
         weights = [decimal.Decimal(x) for x in (0.5, 0.3, 0.2)]
         quantile = 0.3
 
-        actual_curves = quantile_curves_weighted(input_curves, weights, quantile)
+        actual_curves = quantile_curves_weighted(
+            input_curves, weights, quantile)
 
         numpy.testing.assert_array_almost_equal(expected_curves, actual_curves)
 
