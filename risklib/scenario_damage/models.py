@@ -17,9 +17,12 @@ import math
 from scipy.stats import lognorm
 from scipy.interpolate import interp1d
 
-# TODO: add validation on input values
 # TODO: add immutability
-class FragilityFunctionContinuous(object):
+# TODO: add validation on input values
+class FragilityFunction(object):
+    pass
+
+class FragilityFunctionContinuous(FragilityFunction):
 
     def __init__(self, fragility_model, mean, stddev):
         self.mean = mean
@@ -28,8 +31,8 @@ class FragilityFunctionContinuous(object):
 
     def poe(self, iml):
         """
-        Compute the Probability of Exceedance for the given
-        Intensity Measure Level using continuous functions.
+        Compute the Probability of Exceedance (PoE) for the given
+        Intensity Measure Level (IML).
         """
 
         variance = self.stddev ** 2.0
@@ -40,7 +43,7 @@ class FragilityFunctionContinuous(object):
         return lognorm.cdf(iml, sigma, scale=mu)
 
 
-class FragilityFunctionDiscrete(object):
+class FragilityFunctionDiscrete(FragilityFunction):
 
     def __init__(self, fragility_model, poes):
         self.poes = poes
@@ -48,8 +51,8 @@ class FragilityFunctionDiscrete(object):
 
     def poe(self, iml):
         """
-        Compute the Probability of Exceedance for the given
-        Intensity Measure Level using discrete functions.
+        Compute the Probability of Exceedance (PoE) for the given
+        Intensity Measure Level (IML).
         """
 
         highest_iml = self.fragility_model.imls[-1]

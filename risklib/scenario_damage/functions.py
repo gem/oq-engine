@@ -15,21 +15,24 @@
 
 import numpy
 
-# TODO Update doc
+# TODO: add tests
+# TODO: refactoring
+# TODO: aggregation of results?
 def compute_gmf_fractions(gmf, funcs):
     """
     Compute the fractions of each damage state for
-    each ground motion value given.
+    each ground motion value given. `gmf` means Ground Motion Field,
+    a set of Ground Motion Values that are logically related (they
+    are generally associated with a single asset).
 
-    :param gmf: ground motion values computed in the grid
-        point where the asset is located.
+    :param gmf: ground motion values.
     :type gmf: list of floats
     :param funcs: list of fragility functions describing
         the distribution for each limit state. The functions
         must be in order from the one with the lowest
         limit state to the one with the highest limit state.
     :type funcs: list of
-        :py:class:`openquake.db.models.Ffc` instances
+        :py:class:`risklib.scenario_damage.models.FragilityFunction` instances
     :returns: the fractions for each damage state.
     :rtype: 2d `numpy.array`. Each column represents
         a damage state (in order from the lowest
@@ -43,7 +46,7 @@ def compute_gmf_fractions(gmf, funcs):
     fractions = numpy.zeros((len(gmf), len(funcs) + 1))
 
     for x, gmv in enumerate(gmf):
-        fractions[x] += compute_gmv_fractions(funcs, gmv)
+        fractions[x] = compute_gmv_fractions(funcs, gmv)
 
     return fractions
 
@@ -51,17 +54,18 @@ def compute_gmf_fractions(gmf, funcs):
 def compute_gmv_fractions(funcs, gmv):
     """
     Compute the fractions of each damage state for
-    the ground motion value given.
+    the Ground Motion Value given (a Ground Motion Value
+    defines the Intensity Measure Level (IML) used to
+    interpolate the Fragility Function.
 
-    :param gmv: ground motion value that defines the Intensity
-        Measure Level used to interpolate the fragility functions.
+    :param gmv: ground motion value.
     :type gmv: float
     :param funcs: list of fragility functions describing
         the distribution for each limit state. The functions
         must be in order from the one with the lowest
         limit state to the one with the highest limit state.
     :type funcs: list of
-        :py:class:`openquake.db.models.Ffc` instances
+        :py:class:`risklib.scenario_damage.models.FragilityFunction` instances
     :returns: the fraction of buildings of each damage state
         computed for the given ground motion value.
     :rtype: 1d `numpy.array`. Each value represents
@@ -72,7 +76,6 @@ def compute_gmv_fractions(funcs, gmv):
     # we always have a number of damage states
     # which is len(limit states) + 1
     damage_states = numpy.zeros(len(funcs) + 1)
-
     fm = funcs[0].fragility_model
 
     # when we have a discrete fragility model and
@@ -89,7 +92,6 @@ def compute_gmv_fractions(funcs, gmv):
     # first damage state is always 1 - the probability
     # of exceedance of first limit state
     damage_states[0] = 1 - first_poe
-
     last_poe = first_poe
 
     # starting from one, the first damage state
@@ -99,8 +101,7 @@ def compute_gmv_fractions(funcs, gmv):
         damage_states[x] = last_poe - poe
         last_poe = poe
 
-    # last damage state is equal to the probabily
+    # last damage state is equal to the probability
     # of exceedance of the last limit state
     damage_states[len(funcs)] = funcs[len(funcs) - 1].poe(gmv)
-
     return numpy.array(damage_states)
