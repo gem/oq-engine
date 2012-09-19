@@ -356,19 +356,24 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         logs.LOG.debug('< done cleaning up temporary DB data')
 
     def post_process(self):
-        logs.LOG.debug('> starting post process')
+        logs.LOG.debug('> starting post processing')
 
-        tasks = post_processing.setup_tasks(
-            self.job, self.job.hazard_calculation,
-            curve_finder=models.HazardCurveData.objects,
-            writers=dict(mean_curves=MeanCurveWriter,
-                         quantile_curves=QuantileCurveWriter))
+        hc = self.job.hazard_calculation
+        # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
+        # has some value (not an empty list), do post processing.
+        # Otherwise, just skip it altogether.
+        if hc.mean_hazard_curves or hc.quantile_hazard_curves:
+            tasks = post_processing.setup_tasks(
+                self.job, self.job.hazard_calculation,
+                curve_finder=models.HazardCurveData.objects,
+                writers=dict(mean_curves=MeanCurveWriter,
+                             quantile_curves=QuantileCurveWriter))
 
-        utils_tasks.distribute(
-                do_post_process, ("post_processing_task", tasks),
-                tf_args=dict(job_id=self.job.id))
+            utils_tasks.distribute(
+                    do_post_process, ("post_processing_task", tasks),
+                    tf_args=dict(job_id=self.job.id))
 
-        logs.LOG.debug('< done with post process')
+        logs.LOG.debug('< done with post processing')
 
 
 @utils_tasks.oqtask
