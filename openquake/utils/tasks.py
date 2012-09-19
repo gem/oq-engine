@@ -195,13 +195,19 @@ def oqtask(task_func):
         try:
             # check if the job is still running
             job = models.OqJob.objects.get(id=job_id)
-            if not job.status == 'executing' and not job.is_running:
+
+            # Setup task logging, via AMQP ...
+            logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
+
+            logs.LOG.debug('job.is_running == %s' % job.is_running)
+            logs.LOG.debug('job.status == %s' % job.status)
+            # Tasks can be used in either the `execute` or `post-process` phase
+            if not (job.is_running
+                    and job.status in ('executing', 'post_processing')):
                 # the job is not running
                 raise JobCompletedError(job_id)
             # The job is running.
-            # Setup task logging, via AMQP ...
-            logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
-            # ... and continue with task execution.
+            # ... now continue with task execution.
             task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
