@@ -55,6 +55,20 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
+    EXPECTED_XML_MEAN = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves IMT="PGA" investigationTime="1.0" statistics="mean">
+    <IMLs>0.1 0.12 0.2</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <poEs>0.794901469383 0.76026772458 0.332084317184</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+"""
+
     @attr('qa')
     def test(self):
         result_dir = tempfile.mkdtemp()
@@ -63,13 +77,15 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             expected_curve_poes_b1 = [0.86466, 0.82460, 0.36525]
             expected_curve_poes_b2 = [0.63212, 0.61186, 0.25110]
+            expected_mean_poes = [0.794898, 0.760778, 0.331005]
 
             job = self.run_hazard(cfg)
 
             # Test the poe values for the two curves.
             actual_curve_b1, actual_curve_b2 = \
                 models.HazardCurveData.objects\
-                    .filter(hazard_curve__output__oq_job=job.id)\
+                    .filter(hazard_curve__output__oq_job=job.id,
+                            hazard_curve__lt_realization__isnull=False)\
                     .order_by('hazard_curve__lt_realization__sm_lt_path')
 
             # Sanity check, to make sure we have the curves ordered correctly:
@@ -84,6 +100,13 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             numpy.testing.assert_array_almost_equal(
                 expected_curve_poes_b2, actual_curve_b2.poes, decimal=3)
 
+            # Test the mean curve:
+            [mean_curve] = models.HazardCurveData.objects\
+                .filter(hazard_curve__output__oq_job=job.id,
+                        hazard_curve__statistics='mean')
+            numpy.testing.assert_array_almost_equal(
+                expected_mean_poes, mean_curve.poes, decimal=3)
+
             # Test the exports as well:
             [exported_file_b1] = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
@@ -95,8 +118,10 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B2), exported_file_b2)
 
-            # TODO: Test the mean curve as well.
-            # At the time this test was written, post processing functionality
-            # was not available.
+            # mean:
+            [exported_file_mean] = hazard_export.export(
+                mean_curve.hazard_curve.output.id, result_dir)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_XML_MEAN), exported_file_mean)
         finally:
             shutil.rmtree(result_dir)
