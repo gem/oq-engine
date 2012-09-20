@@ -15,10 +15,33 @@
 
 import numpy
 
+
+def collapse_map(fractions):
+    # the collapse map needs the fractions
+    # for each ground motion value of the
+    # last damage state (the last column)
+    last_damage_state = fractions[:, -1]
+    return numpy.mean(last_damage_state), numpy.std(last_damage_state, ddof=1)
+
+
+def damage_distribution_per_asset(asset, fragility_functions, ground_motion_field):
+    fractions = _compute_gmf_fractions(ground_motion_field,
+        fragility_functions) * asset.number_of_units
+
+    return _damage_distribution_asset(fractions), fractions
+
+
+def _damage_distribution_asset(fractions):
+    mean = numpy.mean(fractions, axis=0)
+    stddev = numpy.std(fractions, axis=0, ddof=1)
+
+    return (mean, stddev)
+
+
 # TODO: add tests
 # TODO: refactoring
 # TODO: aggregation of results?
-def compute_gmf_fractions(gmf, funcs):
+def _compute_gmf_fractions(gmf, funcs):
     """
     Compute the fractions of each damage state for
     each ground motion value given. `gmf` means Ground Motion Field,
@@ -46,12 +69,12 @@ def compute_gmf_fractions(gmf, funcs):
     fractions = numpy.zeros((len(gmf), len(funcs) + 1))
 
     for x, gmv in enumerate(gmf):
-        fractions[x] = compute_gmv_fractions(funcs, gmv)
+        fractions[x] = _compute_gmv_fractions(funcs, gmv)
 
     return fractions
 
 
-def compute_gmv_fractions(funcs, gmv):
+def _compute_gmv_fractions(funcs, gmv):
     """
     Compute the fractions of each damage state for
     the Ground Motion Value given (a Ground Motion Value

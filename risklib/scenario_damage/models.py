@@ -87,3 +87,9 @@ class FragilityModel(object):
 
         return ((discrete and not no_damage_limit and gmv < self.imls[0]) or
                 (discrete and no_damage_limit and gmv < self.no_damage_limit))
+
+
+class Asset(object):
+
+    def __init__(self, number_of_units):
+        self.number_of_units = number_of_units
