@@ -233,24 +233,20 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                         "with taxonomy %s of asset %s.") % (
                         asset.taxonomy, asset.asset_ref)
 
-                fractions = functions.compute_gmf_fractions(
-                    gmf, funcs) * asset.number_of_units
+                damage_distribution_asset, fractions = functions.damage_distribution_per_asset(
+                    asset, funcs, gmf)
 
                 current_fractions = ddt_fractions.get(
                     asset.taxonomy, numpy.zeros((len(gmf), len(funcs) + 1)))
 
                 ddt_fractions[asset.taxonomy] = current_fractions + fractions
 
-                self._store_dda(fractions, asset, fm)
-
-                # the collapse map needs the fractions
-                # for each ground motion value of the
-                # last damage state (the last column)
-                self._store_cmap(fractions[:, -1], asset)
+                self._store_dda(asset, fm, damage_distribution_asset)
+                self._store_cmap(asset, functions.collapse_map(fractions))
 
         return ddt_fractions
 
-    def _store_cmap(self, dstate, asset):
+    def _store_cmap(self, asset, (mean, stddev)):
         """
         Store the collapse map data for the given asset.
         """
@@ -263,11 +259,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         CollapseMapData(
             collapse_map=cm,
             asset_ref=asset.asset_ref,
-            value=numpy.mean(dstate),
-            std_dev=numpy.std(dstate, ddof=1),
+            value=mean,
+            std_dev=stddev,
             location=asset.site).save()
 
-    def _store_dda(self, fractions, asset, fm):
+    def _store_dda(self, asset, fm, (mean, stddev)):
         """
         Store the damage distribution per asset.
 
@@ -290,9 +286,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__owner=self.job_ctxt.oq_job.owner,
                 output__oq_job=self.job_ctxt.oq_job,
                 output__output_type="dmg_dist_per_asset")
-
-        mean = numpy.mean(fractions, axis=0)
-        stddev = numpy.std(fractions, axis=0, ddof=1)
 
         for x in xrange(len(mean)):
             DmgDistPerAssetData(
