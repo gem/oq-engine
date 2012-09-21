@@ -190,10 +190,19 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                     if self.job_ctxt.params.get("INSURED_LOSSES"):
                         insured_curve = general.compute_insured_loss_curve(
                             asset, loss_curve)
-                        key = kvs.tokens.insured_loss_curve_key(
+                        insured_loss_ratio_curve = general\
+                            .compute_insured_loss_rat_curve(asset,
+                                insured_curve)
+                        key_ic = kvs.tokens.insured_loss_curve_key(
                             self.job_ctxt.job_id, point.row, point.column,
                             asset.asset_ref)
-                        kvs.get_client().set(key, insured_curve.to_json())
+                        kvs.get_client().set(key_ic, insured_curve.to_json())
+
+                        key_irc = kvs.tokens.insured_loss_ratio_curve_key(
+                            self.job_ctxt.job_id, point.row, point.column,
+                            asset.asset_ref)
+                        kvs.get_client().set(key_irc,
+                            insured_loss_ratio_curve.to_json())
 
         return aggregate_curve.losses
 
