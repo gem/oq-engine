@@ -39,7 +39,6 @@ GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.gmf_collection_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.gmf_set_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.gmf_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdr.gmf_node_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_map_data_id_seq to GROUP openquake;
@@ -156,10 +155,6 @@ GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_set TO oq_reslt_writer;
 -- hzrdr.gmf
 GRANT SELECT ON hzrdr.gmf TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON hzrdr.gmf TO oq_reslt_writer;
-
--- hzrdr.gmf_node
-GRANT SELECT ON hzrdr.gmf_node TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_node TO oq_reslt_writer;
 
 -- hzrdr.hazard_map
 GRANT SELECT ON hzrdr.hazard_map TO GROUP openquake;
