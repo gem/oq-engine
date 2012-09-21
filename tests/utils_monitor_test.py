@@ -24,35 +24,48 @@ Unit tests for the utils.stats module.
 
 import unittest
 
+from openquake import engine
+from openquake.db import models
 from openquake.utils import monitor
 
 from tests.utils.helpers import patch
 
 
-class GetCeleryStatusTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.monitor._get_celery_status()."""
+class GetCnodeStatusTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor._get_cnode_status()."""
 
-    def test__get_celery_status(self):
-        # _get_celery_status() produces the proper results
+    def test__get_cnode_status(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(
-                ["gemsun02: OK", "gemsun01: OK", "gemsun03: OK", ""
+                ["gemsun02: OK", "gemsun01: OK", "gemsun03: OK", "",
                  "3 nodes online."])
-            actual = monitor._get_celery_status()
+            actual = monitor._get_cnode_status()
             expected = {"gemsun01": "OK", "gemsun02": "OK", "gemsun03": "OK"}
             self.assertEqual(expected, actual)
 
-    def test__get_celery_status_with_one(self):
+    def test__get_cnode_status_with_one(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(["usc: OK", "", "1 node online."])
-            actual = monitor._get_celery_status()
+            actual = monitor._get_cnode_status()
             expected = {"usc": "OK"}
             self.assertEqual(expected, actual)
 
-    def test__get_celery_status_with_mixed(self):
+    def test__get_cnode_status_with_mixed(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(
                 ["oqt: OK", "usc: ERROR", "", "2 nodes online."])
-            actual = monitor._get_celery_status()
+            actual = monitor._get_cnode_status()
             expected = {"oqt": "OK", "usc": "ERROR"}
             self.assertEqual(expected, actual)
+
+
+class GetCnodeStatusInDbTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor._get_cnode_status_in_db()."""
+
+    def test__get_cnode_status_in_db(self):
+        job = engine.prepare_job()
+        for node, status in [("N1", "up"), ("N2", "down"), ("N3", "error")]:
+            ns = models.NodeStats(oq_job=job, node=node, status=status)
+            ns.save()
+        expected = {"N1": "up", "N2": "down", "N3": "error"}
+        self.assertEqual(expected, monitor._get_cnode_status_in_db(job.id))

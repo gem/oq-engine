@@ -34,15 +34,15 @@ def monitor_celery_nodes(job_id):
     :return: a 2-tuple where the first and second element is a list of celery
         nodes that became available and unavailable since the last call.
     """
-    ccs = _get_celery_status()
-    dbi = _get_db_status()
+    ccs = _get_cnode_status()
+    dbi = _get_cnode_status_in_db(job_id)
 
 
-def _get_celery_status():
-    """Call `celeryctl status` and return the results.
+def _get_cnode_status():
+    """Get compute node status (from celery).
 
-    :return: a list of strings with celery node status info e.g.
-        ['gemsun02: OK', 'gemsun01: OK', '', '2 nodes online.']
+    :return: a dict with compute node status info e.g.
+        `{"oqt": "OK", "usc": "ERROR"}`
     """
     csi = subprocess.check_output("cd /usr/openquake; celeryctl status -C",
                                   shell=True)
@@ -54,12 +54,13 @@ def _get_celery_status():
     return dict(tuple(cs.split(": ")) for cs in csi if cs.find(":") > -1)
 
 
-def _get_db_status(job_id):
-    """Get the compute node information stored in the database.
+def _get_cnode_status_in_db(job_id):
+    """Get compute node status stored in the database.
 
     :param int job_id: identifier of the job at hand
     :return: a potentially empty dictionary where the keys are node names
-        and the values are either 'up' or 'down'.
+        and the values are either 'up' or 'down' e.g.
+        `{"N1": "up", "N2": "down", "N3": "error"}`
     """
     dbi = models.NodeStats.objects.filter(oq_job__id=job_id).\
                                      order_by("updated_at")

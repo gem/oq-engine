@@ -85,6 +85,7 @@ GRANT ALL ON SEQUENCE uiapi.model_content_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_phase_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.node_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
