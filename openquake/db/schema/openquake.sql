@@ -1098,7 +1098,11 @@ CREATE TABLE hzrdr.ses_rupture (
     is_from_fault_source BOOLEAN NOT NULL,
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
-    depths BYTEA NOT NULL
+    depths BYTEA NOT NULL,
+    task_ordinal INTEGER NOT NULL,
+    -- The sequence number of the rupture within a given task.
+    -- TODO: unique constraint on task_ordinal, rupture_ordinal?
+    rupture_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1133,6 +1137,7 @@ CREATE TABLE hzrdr.gmf_set (
     complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
 ) TABLESPACE hzrdr_ts;
 
+-- TODO: better doc about how this table is structured and used
 CREATE TABLE hzrdr.gmf (
     id SERIAL PRIMARY KEY,
     gmf_set_id INTEGER NOT NULL,  -- FK to gmf_set.id
@@ -1145,20 +1150,16 @@ CREATE TABLE hzrdr.gmf (
     sa_damping float CONSTRAINT gmf_sa_damping
         CHECK(
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
-            OR ((imt != 'SA') AND (sa_damping IS NULL)))
+            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[],
+    -- TODO: unique constraint on gmf_set_id and task_ordinal?
+    task_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
-
-CREATE TABLE hzrdr.gmf_node (
-    id SERIAL PRIMARY KEY,
-    gmf_id INTEGER NOT NULL,  -- FK to gmf.id
-    iml float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_node', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.gmf_node ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
 
 
 -- GMF data.
--- TODO: DEPRECATED; use gmf_collection, gmf_set, gmf, and gmf_node
+-- TODO: DEPRECATED; use gmf_collection, gmf_set, and gmf
 CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
@@ -1795,12 +1796,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
-ON DELETE CASCADE;
-
--- gmf_node -> gmf FK
-ALTER TABLE hzrdr.gmf_node
-ADD CONSTRAINT hzrdr_gmf_node_gmf_fk
-FOREIGN KEY (gmf_id) REFERENCES hzrdr.gmf(id)
 ON DELETE CASCADE;
 
 
