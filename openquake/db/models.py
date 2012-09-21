@@ -774,6 +774,24 @@ class JobPhaseStats(djm.Model):
         db_table = 'uiapi\".\"job_phase_stats'
 
 
+class NodeStats(djm.Model):
+    '''
+    Capture when the various compute nodes became available/unavailable.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    # calculation type (hazard|risk)
+    node = djm.TextField()
+    STATUS_CHOICES = (
+        (u'up', u'Available'),
+        (u'down', u'Unavailable'),
+    )
+    status = djm.TextField(choices=STATUS_CHOICES)
+    updated_at = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"node_stats'
+
+
 class Job2profile(djm.Model):
     '''
     Associates jobs with their profiles.

@@ -623,6 +623,16 @@ CREATE TABLE uiapi.job_phase_stats (
 ) TABLESPACE uiapi_ts;
 
 
+CREATE TABLE uiapi.node_stats (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    node VARCHAR NOT NULL,
+    status VARCHAR NOT NULL CONSTRAINT node_status_value
+        CHECK(status IN ('up', 'down')),
+    updated_at timestamp without time zone
+) TABLESPACE uiapi_ts;
+
+
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,

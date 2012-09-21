@@ -342,6 +342,13 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_init;
 -- oq_job_superv is granted write access so that the job supervisor can record job completion time
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 
+-- uiapi.node_stats
+-- what nodes became available/unavailable at what time?
+GRANT SELECT ON uiapi.node_stats TO GROUP openquake;
+GRANT SELECT,INSERT ON uiapi.node_stats to oq_job_init;
+GRANT SELECT,INSERT ON uiapi.node_stats to oq_job_superv;
+GRANT SELECT ON uiapi.node_stats TO oq_reslt_writer;
+
 -- uiapi.oq_job_profile
 GRANT SELECT ON uiapi.oq_job_profile TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job_profile TO oq_job_init;
