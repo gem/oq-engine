@@ -69,3 +69,23 @@ class GetCnodeStatusInDbTestCase(unittest.TestCase):
             ns.save()
         expected = {"N1": "up", "N2": "down", "N3": "error"}
         self.assertEqual(expected, monitor._get_cnode_status_in_db(job.id))
+
+    def test__get_cnode_status_in_db_and_wrong_job_id(self):
+        job = engine.prepare_job()
+        for node, status in [("O1", "up"), ("O2", "down"), ("O3", "error")]:
+            ns = models.NodeStats(oq_job=job, node=node, status=status)
+            ns.save()
+        expected = {}
+        self.assertEqual(expected, monitor._get_cnode_status_in_db(-1))
+
+    def test__get_cnode_status_in_db_and_two_jobs(self):
+        job1 = engine.prepare_job()
+        for node, status in [("P1", "up"), ("P2", "down"), ("P3", "error")]:
+            ns = models.NodeStats(oq_job=job1, node=node, status=status)
+            ns.save()
+        job2 = engine.prepare_job()
+        for node, status in [("Q2", "down"), ("Q3", "error")]:
+            ns = models.NodeStats(oq_job=job2, node=node, status=status)
+            ns.save()
+        expected = {u"Q2": u"down", u"Q3": u"error"}
+        self.assertEqual(expected, monitor._get_cnode_status_in_db(job2.id))
