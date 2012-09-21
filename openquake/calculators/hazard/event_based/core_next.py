@@ -66,7 +66,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
+def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -141,6 +141,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         if hc.ground_motion_correlation_model is not None:
             correl_model = _get_correl_model(hc)
 
+
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -160,6 +161,11 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
         if hc.ground_motion_fields:
+            # Initialize a cache to hold all gmf data for this stochastic event set.
+            # This includes GMFs for all ruptures in this SES,
+            # and each GMF includes ground motion values for each point of interest.
+            gmf_cache = _create_gmf_cache(len(points_to_compute), imts)
+
             logs.LOG.debug('> computing also ground motion fields')
             # This will be the "container" for all computed ground motion field
             # results for this stochastic event set.
@@ -170,11 +176,13 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
             filtered_sources, hc.investigation_time)
 
         logs.LOG.debug('> looping over ruptures')
-        rupture_ctr = 0
+        rupture_ordinal = 0
         for rupture in ses_poissonian:
+            rupture_ordinal += 1
+
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
-            _save_ses_rupture(ses, rupture, cmplt_lt_ses)
+            _save_ses_rupture(ses, rupture, cmplt_lt_ses, task_ordinal, rupture_ordinal)
             logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
@@ -199,20 +207,34 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed):
                 gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
                 logs.LOG.debug('< done computing ground motion fields')
 
-                logs.LOG.debug('> saving GMF results to DB')
-                _save_gmf_nodes(
-                    gmf_set, gmf_dict, points_to_compute, cmplt_lt_gmf)
-                logs.LOG.debug('< done saving GMF results to DB')
-            rupture_ctr += 1
+                # update the gmf cache:
+                for k, v in gmf_dict.iteritems():
+                    gmf_cache[k] = numpy.append(gmf_cache[k], gmf_dict[k], axis=1)
+
 
         logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
-                       % (rupture_ctr, ses_rlz_n, hc.ses_per_logic_tree_path))
+                       % (rupture_ordinal, ses_rlz_n, hc.ses_per_logic_tree_path))
         logs.LOG.debug('< done computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
+        if hc.ground_motion_fields:
+            # save the GMFs to the DB
+            logs.LOG.debug('> saving GMF results to DB')
+            _save_gmfs(gmf_set, gmf_cache, points_to_compute, task_ordinal)  # TODO: deal with complete lt GMF
+            logs.LOG.debug('< done saving GMF results to DB')
+
     logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id, len(src_ids))
+
+
+def _create_gmf_cache(n_sites, imts):
+    cache = dict()
+
+    for imt in imts:
+        cache[imt] = numpy.empty((n_sites, 0))
+
+    return cache
 
 
 def _get_correl_model(hc):
@@ -236,7 +258,8 @@ def _get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
+def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
+                      rupture_ordinal):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -293,6 +316,8 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
         lons=lons,
         lats=lats,
         depths=depths,
+        task_ordinal=task_ordinal,
+        rupture_ordinal=rupture_ordinal,
     )
     if complete_logic_tree_ses is not None:
         models.SESRupture.objects.create(
@@ -306,65 +331,46 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
             lons=lons,
             lats=lats,
             depths=depths,
+            task_ordinal=task_ordinal,
+            rupture_ordinal=rupture_ordinal,
         )
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmf_nodes(gmf_set, gmf_dict, points_to_compute,
-                    complete_logic_tree_gmf_set):
-    """
-    Helper function for saving ground motion field results to the database.
+def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
+    inserter = writer.BulkInserter(models.Gmf)
 
-    :param gmf_set:
-        :class:`openquake.db.models.GmfSet` record with which the input ground
-        motion field data will be associated.
-    :param dict gmf_dict:
-        The result of the GMF calculation, performed by nhlib. For more info,
-        view the documentation for :func:`nhlib.calc.gmf.ground_motion_fields`.
-    :param points_to_compute:
-        A :class:`nhlib.geo.mesh.Mesh` object representing all of the points of
-        interest.
-    :param complete_logic_tree_gmf_set:
-        :class:`openquake.db.models.GmfSet` representing the `complete logic
-        tree` GMF set.
-        If not None, save a copy of the input GMFs (in ``gmf_dict``) to this
-        GMF set.
+    # import nose; nose.tools.set_trace()
+    for imt, gmfs in gmf_dict.iteritems():
 
-        The indices of this mesh are used in relation to the indices of results
-        in the GMF matrices to determine where the GMFs are located.
-    """
-    for imt, gmf_matrix in gmf_dict.iteritems():
-        # NOTE: The values of each `gmf_matrix` are numpy.matrix types.
-        # We need to convert them to numpy.array types before saving.
-        # (The ORM doesn't like numpy.matrix types.)
-        gmf_matrix = numpy.array(gmf_matrix)
-        gmf = _create_gmf_record(gmf_set, imt)
+        # ``gmfs`` comes in as a numpy.matrix
+        # we want it is an array; it handles subscripting
+        # in the way that we want
+        # import nose; nose.tools.set_trace()
+        gmfs = numpy.array(gmfs)
+        # import nose; nose.tools.set_trace()
 
-        clt_gmf = None
-        if complete_logic_tree_gmf_set is not None:
-            clt_gmf = _create_gmf_record(complete_logic_tree_gmf_set, imt)
-
-        gmf_bulk_inserter = writer.BulkInserter(models.GmfNode)
+        sa_period = None
+        sa_damping = None
+        if isinstance(imt, nhlib.imt.SA):
+            sa_period = imt.period
+            sa_damping = imt.damping
+        imt_name = imt.__class__.__name__
 
         for i, location in enumerate(points_to_compute):
-            gmf_bulk_inserter.add_entry(
-                gmf_id=gmf.id,
-                # GMF results are a 2D array; in the case of the
-                # event-based calculator, we only compute 1
-                # realization (in the scenario calculator it can be
-                # many). Thus, we take the one and only value for
-                # the point of interest (`i`).
-                iml=gmf_matrix[i][0],
-                location=location.wkt2d)
+            # import nose; nose.tools.set_trace()
+            inserter.add_entry(
+                gmf_set_id=gmf_set.id,
+                imt=imt_name,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                # TODO:
+                location=location.wkt2d,
+                gmvs=gmfs[i].tolist(),
+                task_ordinal=task_ordinal,
+            )
 
-            # If the option is specified, save a copy to the complete logic
-            # tree GMF:
-            if clt_gmf is not None:
-                gmf_bulk_inserter.add_entry(
-                    gmf_id=clt_gmf.id,
-                    iml=gmf_matrix[i][0],
-                    location=location.wkt2d)
-        gmf_bulk_inserter.flush()
+    inserter.flush()
 
 
 def _create_gmf_record(gmf_set, imt):
@@ -419,6 +425,7 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
     realizations = models.LtRealization.objects.filter(
             hazard_calculation=hc, is_complete=False)
 
+    task_ordinal = 1
     for lt_rlz in realizations:
         source_progress = models.SourceProgress.objects.filter(
                 is_complete=False, lt_realization=lt_rlz).order_by('id')
@@ -431,8 +438,9 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
             # positive (since numpy will convert it to a unsigned long).
             task_seed = rnd.randint(0, MAX_SINT_32)
             task_args = (job.id, source_ids[offset:offset + sources_per_task],
-                         lt_rlz.id, task_seed)
+                         lt_rlz.id, task_seed, task_ordinal)
             yield task_args
+            task_ordinal += 1
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
