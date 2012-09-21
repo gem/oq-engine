@@ -628,7 +628,7 @@ CREATE TABLE uiapi.node_stats (
     oq_job_id INTEGER NOT NULL,
     node VARCHAR NOT NULL,
     status VARCHAR NOT NULL CONSTRAINT node_status_value
-        CHECK(status IN ('up', 'down')),
+        CHECK(status IN ('up', 'down', 'error')),
     updated_at timestamp without time zone
 ) TABLESPACE uiapi_ts;
 

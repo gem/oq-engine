@@ -782,8 +782,9 @@ class NodeStats(djm.Model):
     # calculation type (hazard|risk)
     node = djm.TextField()
     STATUS_CHOICES = (
-        (u'up', u'Available'),
-        (u'down', u'Unavailable'),
+        (u"up", u"Compute node available"),
+        (u"down", u"Compute node unavailable"),
+        (u"error", u"Compute node with errors"),
     )
     status = djm.TextField(choices=STATUS_CHOICES)
     updated_at = djm.DateTimeField(editable=False, default=datetime.utcnow)
