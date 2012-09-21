@@ -1438,6 +1438,8 @@ class SESRupture(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
+    task_ordinal = djm.IntegerField()
+    rupture_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1539,6 +1541,11 @@ class Gmf(djm.Model):
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    task_ordinal = djm.IntegerField()
+
+    objects = djm.GeoManager()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
@@ -1548,19 +1555,6 @@ class Gmf(djm.Model):
         Iterator for walking through all child :class:`Gmf` objects.
         """
         return GmfNode.objects.filter(gmf=self.id).iterator()
-
-
-class GmfNode(djm.Model):
-    """
-    An indiviual node of a ground motion field, consisting of a ground motion
-    value/intensity measure level and a point geometry.
-    """
-    gmf = djm.ForeignKey('Gmf')
-    location = djm.PointField(srid=DEFAULT_SRID)
-    iml = djm.FloatField()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_node'
 
 
 class GmfData(djm.Model):
