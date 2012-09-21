@@ -209,42 +209,20 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = kwargs["fmodel"]
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        fset = fm.ffd_set if fm.format == "discrete" else fm.ffc_set
+        funcs = _load_fragility_functions(fm)
 
-        # fractions of each damage state per building taxonomy
-        # for the given block
-        ddt_fractions = {}
+        ground_motion_field_loader = lambda site: general.load_gmvs_at(
+            self.job_ctxt.job_id, general.hazard_input_site(self.job_ctxt, site))
 
-        for site in block.sites:
-            gmf = general.load_gmvs_at(self.job_ctxt.job_id,
-                    general.hazard_input_site(
-                    self.job_ctxt, site))
+        assets_loader = lambda site: general.BaseRiskCalculator.assets_at(
+            self.job_ctxt.job_id, site)
 
-            assets = general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
+        def on_asset_complete_cb(damage_distribution_asset, collapse_map, asset, fm):
+            self._store_cmap(asset, collapse_map)
+            self._store_dda(asset, fm, damage_distribution_asset)
 
-            for asset in assets:
-                funcs = fset.filter(
-                    taxonomy=asset.taxonomy).order_by("lsi")
-
-                funcs = _to_rl(funcs)
-
-                assert len(funcs) > 0, ("no limit states associated "
-                        "with taxonomy %s of asset %s.") % (
-                        asset.taxonomy, asset.asset_ref)
-
-                damage_distribution_asset, fractions = functions.damage_distribution_per_asset(
-                    asset, funcs, gmf)
-
-                current_fractions = ddt_fractions.get(
-                    asset.taxonomy, numpy.zeros((len(gmf), len(funcs) + 1)))
-
-                ddt_fractions[asset.taxonomy] = current_fractions + fractions
-
-                self._store_dda(asset, fm, damage_distribution_asset)
-                self._store_cmap(asset, functions.collapse_map(fractions))
-
-        return ddt_fractions
+        return functions.compute_damage(block.sites, funcs, assets_loader,
+            ground_motion_field_loader, on_asset_complete_cb)
 
     def _store_cmap(self, asset, (mean, stddev)):
         """
@@ -411,20 +389,16 @@ def _fm(oq_job):
     return fm
 
 
-def _to_rl_frag_function(func):
-    fm = func.fragility_model
-    fm_rl = models.FragilityModel(fm.format, fm.imls,
-        fm.no_damage_limit)
+def _load_fragility_functions(fmodel):
+    set = fmodel.ffd_set if fmodel.format == "discrete" else fmodel.ffc_set
+    # should we move ordering by lsi in RiskLib?
+    fragility_functions = set.all().order_by("taxonomy", "lsi")
+    fragility_model = {}
 
-    if isinstance(func, Ffc):
-        func_rl = models.FragilityFunctionContinuous(
-                fm_rl, func.mean, func.stddev)
-    else:
-        func_rl = models.FragilityFunctionDiscrete(
-            fm_rl, func.poes)
+    for function in fragility_functions:
+        if not fragility_model.get(function.taxonomy):
+            fragility_model[function.taxonomy] = [function]
+        else:
+            fragility_model[function.taxonomy].append(function)
 
-    return func_rl
-
-
-def _to_rl(funcs):
-    return [_to_rl_frag_function(item) for item in funcs]
+    return fragility_model

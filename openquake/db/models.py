@@ -1589,6 +1589,10 @@ class Ffc(djm.Model):
     stddev = djm.FloatField(help_text="Standard deviation")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    @property
+    def is_discrete(self):
+        return False
+
     class Meta:
         db_table = 'riski\".\"ffc'
 
@@ -1604,6 +1608,10 @@ class Ffd(djm.Model):
     taxonomy = djm.TextField()
     poes = FloatArrayField(help_text="Probabilities of exceedance")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    @property
+    def is_discrete(self):
+        return True
 
     class Meta:
         db_table = 'riski\".\"ffd'
