@@ -631,15 +631,15 @@ AS $$
     OLD = TD["old"]
     NEW = TD["new"]
 
-    if NEW["previous_status"] is not None:
+    if NEW["current_status"] != OLD["current_status"]
+        NEW["current_ts"] = datetime.utcnow()
+        NEW["previous_status"] = OLD["current_status"]
+        NEW["previous_ts"] = OLD["current_ts"]
+        result = "MODIFY"
+
         if NEW["previous_status"] == "up":
             # state transition: up -> down/error
             NEW["failures"] += 1
-            result = "MODIFY"
-        if NEW["previous_status"] == OLD["current_status"]:
-            NEW["previous_ts"] = OLD["current_ts"]
-            NEW["current_ts"] = datetime.utcnow()
-            result = "MODIFY"
     else:
         result = "OK"
 

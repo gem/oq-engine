@@ -134,7 +134,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         cs = models.CNodeStats(oq_job=self.job, node="N3", current_status="up")
         cs.save(using="job_superv")
         cs.current_status = "down"
-        cs.previous_status = "up"
         cs.save(using="job_superv")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
@@ -146,7 +145,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         cs = models.CNodeStats(oq_job=self.job, node="N4", current_status="up")
         cs.save(using="job_superv")
         cs.current_status = "error"
-        cs.previous_status = "up"
         cs.save(using="job_superv")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
@@ -160,7 +158,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
                                current_status="down")
         cs.save(using="job_superv")
         cs.current_status = "error"
-        cs.previous_status = "down"
         cs.save(using="job_superv")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
@@ -174,7 +171,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
                                current_status="down")
         cs.save(using="job_superv")
         cs.current_status = "up"
-        cs.previous_status = "down"
         cs.save(using="job_superv")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
@@ -189,7 +185,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         old_current_ts = cs.current_ts
 
         cs.current_status = "up"
-        cs.previous_status = "down"
         cs.save(using="job_superv")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
@@ -270,8 +265,8 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
     def test_monitor_compute_nodes_with_failures_before_calculation(self):
         # Result: 1 node failure; this simulates the situation where a
         # node has failed from the very beginning and never recovered i.e. it
-        # never took on any tasks. However, only nodes that were functioning at
-        # some time during the calculation and *then* failed are counted.
+        # never took on any tasks. Only nodes that were functioning at some
+        # time during the calculation and *then* failed are counted.
         n1 = models.CNodeStats(oq_job=self.job, node="N6", current_status="up")
         n1.save(using="job_superv")
         n2 = models.CNodeStats(oq_job=self.job, node="N7",
@@ -280,7 +275,30 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         self.live_mock.return_value = {}
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(1, actual)
+        # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual("down", n1.current_status)
         self.assertEqual("up", n1.previous_status)
+        self.assertEqual(1, n1.failures)
+
+    def test_monitor_compute_nodes_with_failed_and_recovered_node(self):
+        # Result: 1 node failure; the node failed and recovered. Its failures
+        # counter is unaffected by the recovery.
+        n1 = models.CNodeStats(oq_job=self.job, node="N8", current_status="up")
+        n1.save(using="job_superv")
+        self.assertEqual(0, n1.failures)
+
+        n1.current_status = "error"
+        n1.save(using="job_superv")
+        print n1.id
+        self.assertEqual(1, n1.failures)
+
+        self.db_mock.return_value = {"N8": n1}
+        self.live_mock.return_value = {"N8": "OK"}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(1, actual)
+        # The failed node has been updated to capture that.
+        n1 = models.CNodeStats.objects.get(id=n1.id)
+        self.assertEqual("up", n1.current_status)
+        self.assertEqual("error", n1.previous_status)
         self.assertEqual(1, n1.failures)
