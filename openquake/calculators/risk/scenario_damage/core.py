@@ -25,7 +25,7 @@ import os
 from openquake import logs
 from openquake.calculators.risk import general
 from openquake.db.models import Output, FragilityModel
-from openquake.db.models import DmgDistPerAsset, Ffc
+from openquake.db.models import DmgDistPerAsset
 from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
 from openquake.db.models import (DmgDistPerTaxonomyData,
 DmgDistTotal, DmgDistTotalData, ExposureModel, CollapseMap, CollapseMapData)
@@ -191,15 +191,15 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         assets_loader = lambda site: general.BaseRiskCalculator.assets_at(
             self.job_ctxt.job_id, site)
 
-        def on_asset_complete_cb(damage_distribution_asset,
-                                 collapse_map, asset, damage_states):
+        def on_asset_complete_cb(asset, damage_distribution_asset,
+                                 collapse_map):
 
             self._store_cmap(asset, collapse_map)
-            self._store_dda(asset, damage_states,
+            self._store_dda(asset, risklib.damage_states(fragility_model),
                 damage_distribution_asset)
 
-        return risklib.compute_damage(block.sites, frag_functions,
-            assets_loader, ground_motion_field_loader,
+        return risklib.compute_damage(block.sites, assets_loader,
+            (fragility_model, frag_functions), ground_motion_field_loader,
             on_asset_complete_cb)
 
     def _store_cmap(self, asset, (mean, stddev)):
