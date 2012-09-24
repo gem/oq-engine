@@ -34,42 +34,43 @@ def monitor_compute_nodes(job):
     :return: a 2-tuple where the first and second element is a list of compute
         nodes that became available and unavailable since the last call.
     """
-    from_celery = _get_cnode_status()
-    in_db = _get_cnode_status_in_db(job)
+    live_stats = _live_cnode_status()
+    db_stats = _db_cnode_status(job)
 
-    # working nodes according to celery
-    cworking_nodes = set(node for node, status in from_celery.iteritems()
+    # working nodes according to live stats
+    lworking_nodes = set(node for node, status in live_stats.iteritems()
                          if status == "OK")
     # working nodes according to the database
-    dworking_nodes = set(cs.node for cs in in_db.values() if cs.failures == 0)
+    dworking_nodes = set(cs.node for cs in db_stats.values()
+                         if cs.failures == 0)
 
     # Which working nodes stored in the db have gone bad/down?
-    for node in dworking_nodes - cworking_nodes:
-        status = "error" if node in from_celery else "down"
-        cs = in_db[node]
+    for node in dworking_nodes - lworking_nodes:
+        status = "error" if node in live_stats else "down"
+        cs = db_stats[node]
         cs.previous_status = cs.current_status
         cs.current_status = status
         cs.save(using="job_superv")
 
     # Any entirely new nodes?
-    new_nodes = set(from_celery.keys()) - set(in_db.keys())
+    new_nodes = set(live_stats.keys()) - set(db_stats.keys())
     for node in new_nodes:
-        status = "up" if from_celery[node] == "OK" else "error"
+        status = "up" if live_stats[node] == "OK" else "error"
         cs = models.CNodeStats(oq_job=job, node=node, status=status)
         cs.save(using="job_superv")
 
     # Any nodes that came back after a failure?
-    dfailed_nodes = set(cs.node for cs in in_db.values()
+    dfailed_nodes = set(cs.node for cs in db_stats.values()
                        if cs.current_status != "up")
-    recovered_nodes = cworking_nodes.intersection(dfailed_nodes)
+    recovered_nodes = lworking_nodes.intersection(dfailed_nodes)
     for node in recovered_nodes:
-        cs = in_db[node]
+        cs = db_stats[node]
         cs.previous_status = cs.current_status
         cs.current_status = "up"
         cs.save(using="job_superv")
 
 
-def _get_cnode_status():
+def _live_cnode_status():
     """Get compute node status (from celery).
 
     :return: a dict with compute node status info e.g.
@@ -85,7 +86,7 @@ def _get_cnode_status():
     return dict(tuple(cs.split(": ")) for cs in csi if cs.find(":") > -1)
 
 
-def _get_cnode_status_in_db(job):
+def _db_cnode_status(job):
     """Get compute node status stored in the database.
 
     :param job: The :class:`openquake.db.models.OqJob` instance to use

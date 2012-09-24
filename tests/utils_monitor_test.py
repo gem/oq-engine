@@ -35,38 +35,38 @@ from openquake.utils import monitor
 from tests.utils.helpers import patch
 
 
-class GetCnodeStatusTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.monitor._get_cnode_status()."""
+class LiveCnodeStatusTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor._live_cnode_status()."""
 
-    def test__get_cnode_status(self):
+    def test__live_cnode_status(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(
                 ["gemsun02: OK", "gemsun01: OK", "gemsun03: OK", "",
                  "3 nodes online."])
-            actual = monitor._get_cnode_status()
+            actual = monitor._live_cnode_status()
             expected = {"gemsun01": "OK", "gemsun02": "OK", "gemsun03": "OK"}
             self.assertEqual(expected, actual)
 
-    def test__get_cnode_status_with_one(self):
+    def test__live_cnode_status_with_one(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(["usc: OK", "", "1 node online."])
-            actual = monitor._get_cnode_status()
+            actual = monitor._live_cnode_status()
             expected = {"usc": "OK"}
             self.assertEqual(expected, actual)
 
-    def test__get_cnode_status_with_mixed(self):
+    def test__live_cnode_status_with_mixed(self):
         with patch('subprocess.check_output') as mock:
             mock.return_value = "\n".join(
                 ["oqt: OK", "usc: ERROR", "", "2 nodes online."])
-            actual = monitor._get_cnode_status()
+            actual = monitor._live_cnode_status()
             expected = {"oqt": "OK", "usc": "ERROR"}
             self.assertEqual(expected, actual)
 
 
-class GetCnodeStatusInDbTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.monitor._get_cnode_status_in_db()."""
+class DbCnodeStatusTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor._db_cnode_status()."""
 
-    def test__get_cnode_status_in_db(self):
+    def test__db_cnode_status(self):
         job = engine.prepare_job()
         expected = {}
         for node, status in [("N1", "up"), ("N2", "down"), ("N3", "error")]:
@@ -74,18 +74,18 @@ class GetCnodeStatusInDbTestCase(unittest.TestCase):
                                    current_status=status)
             ns.save(using="job_superv")
             expected[node] = ns
-        self.assertEqual(expected, monitor._get_cnode_status_in_db(job.id))
+        self.assertEqual(expected, monitor._db_cnode_status(job.id))
 
-    def test__get_cnode_status_in_db_and_wrong_job_id(self):
+    def test__db_cnode_status_and_wrong_job_id(self):
         job = engine.prepare_job()
         expected = {}
         for node, status in [("O1", "up"), ("O2", "down"), ("O3", "error")]:
             ns = models.CNodeStats(oq_job=job, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
-        self.assertEqual(expected, monitor._get_cnode_status_in_db(-1))
+        self.assertEqual(expected, monitor._db_cnode_status(-1))
 
-    def test__get_cnode_status_in_db_and_two_jobs(self):
+    def test__db_cnode_status_and_two_jobs(self):
         job1 = engine.prepare_job()
         for node, status in [("P1", "up"), ("P2", "down"), ("P3", "error")]:
             ns = models.CNodeStats(oq_job=job1, node=node,
@@ -98,7 +98,7 @@ class GetCnodeStatusInDbTestCase(unittest.TestCase):
                                    current_status=status)
             ns.save(using="job_superv")
             expected[node] = ns
-        self.assertEqual(expected, monitor._get_cnode_status_in_db(job2.id))
+        self.assertEqual(expected, monitor._db_cnode_status(job2.id))
 
 
 class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
