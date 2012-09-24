@@ -32,8 +32,8 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # the fractions of buildings we use the highest intensity
         # measure level defined in the model (0.7 in this case)
 
-        fm = FragilityModel("discrete", imls=[0.1, 0.3, 0.5, 0.7])
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
+        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], None)
+        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to(_compute_gmv_fractions([func], 0.7),
             _compute_gmv_fractions([func], 0.8))
@@ -48,8 +48,8 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 100% no_damage and 0% for the
         # remaining limit states defined in the model
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7])
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
+        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], None)
+        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0],
             _compute_gmv_fractions([func], 0.05))
@@ -65,9 +65,9 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-            no_damage_limit=0.05)
+            None, no_damage_limit=0.05)
 
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
+        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0],
             _compute_gmv_fractions([func], 0.02))
@@ -82,11 +82,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 97.5% no_damage and 2.5% for the
         # remaining limit states defined in the model.
 
-        fm = FragilityModel(format="discrete", imls=[0.1, 0.3, 0.5, 0.7],
-            no_damage_limit=0.05)
+        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
+            None, no_damage_limit=0.05)
 
-        func1 = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
-        func2 = FragilityFunctionDiscrete(fm, [0.00, 0.05, 0.20, 0.50])
+        func1 = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
+        func2 = FragilityFunctionDiscrete(fm, [0.00, 0.05, 0.20, 0.50], 2)
 
         self._close_to([0.975, 0.025, 0.],
             _compute_gmv_fractions([func1, func2], 0.075))
