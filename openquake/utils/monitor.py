@@ -28,11 +28,15 @@ from openquake.db import models
 
 
 def monitor_compute_nodes(job):
-    """Check what compute nodes are running and return the delta (if any).
+    """Check compute nodes and return the total number of failures.
+
+    Please note that this function counts the total number of node
+    failures that occurred during a calculation and *not* the number
+    of currently failed nodes.
 
     :param job: The :class:`openquake.db.models.OqJob` instance to use
-    :return: a 2-tuple where the first and second element is a list of compute
-        nodes that became available and unavailable since the last call.
+    :return: the number of failures i.e. how many nodes went from "up" to
+        "down" or "error" *at some time* during the calculation
     """
     live_stats = _live_cnode_status()
     db_stats = _db_cnode_status(job)
@@ -45,29 +49,34 @@ def monitor_compute_nodes(job):
                          if cs.failures == 0)
 
     # Which working nodes stored in the db have gone bad/down?
-    for node in dworking_nodes - lworking_nodes:
+    old_failed = set(cs.node for cs in db_stats.values()
+                       if cs.current_status != "up")
+    total_failures = len(old_failed)
+    new_failed = dworking_nodes - lworking_nodes
+    for node in new_failed:
         status = "error" if node in live_stats else "down"
         cs = db_stats[node]
         cs.previous_status = cs.current_status
         cs.current_status = status
         cs.save(using="job_superv")
+        total_failures += 1
 
     # Any entirely new nodes?
     new_nodes = set(live_stats.keys()) - set(db_stats.keys())
     for node in new_nodes:
         status = "up" if live_stats[node] == "OK" else "error"
-        cs = models.CNodeStats(oq_job=job, node=node, status=status)
+        cs = models.CNodeStats(oq_job=job, node=node, current_status=status)
         cs.save(using="job_superv")
 
     # Any nodes that came back after a failure?
-    dfailed_nodes = set(cs.node for cs in db_stats.values()
-                       if cs.current_status != "up")
-    recovered_nodes = lworking_nodes.intersection(dfailed_nodes)
+    recovered_nodes = lworking_nodes.intersection(old_failed)
     for node in recovered_nodes:
         cs = db_stats[node]
         cs.previous_status = cs.current_status
         cs.current_status = "up"
         cs.save(using="job_superv")
+
+    return total_failures
 
 
 def _live_cnode_status():

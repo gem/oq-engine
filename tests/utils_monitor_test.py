@@ -210,3 +210,65 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
 
         self.assertIs(None, cs.previous_ts)
         self.assertEqual(old_current_ts, cs.current_ts)
+
+
+class MonitorComputeNodesTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor.monitor_compute_nodes()."""
+
+    job = None
+    db_patch = None
+    live_patch = None
+    db_mock = None
+    live_mock = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = engine.prepare_job()
+
+    def setUp(self):
+        self.db_patch = patch('openquake.utils.monitor._db_cnode_status')
+        self.live_patch = patch('openquake.utils.monitor._live_cnode_status')
+        self.db_mock = self.db_patch.start()
+        self.live_mock = self.live_patch.start()
+
+    def tearDown(self):
+        self.db_patch.stop()
+        self.db_patch = None
+        self.live_patch.stop()
+        self.live_patch = None
+
+    def test_monitor_compute_nodes_with_zero_nodes(self):
+        # Result: 0 failed nodes
+        self.db_mock.return_value = {}
+        self.live_mock.return_value = {}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(0, actual)
+
+    def test_monitor_compute_nodes_with_a_node_that_went_offline(self):
+        # Result: 1 failed nodes
+        cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
+        self.db_mock.return_value = {"N1": cs}
+        self.live_mock.return_value = {}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(1, actual)
+
+    def test_monitor_compute_nodes_with_a_node_that_has_errors(self):
+        # Result: 1 failed nodes
+        cs = models.CNodeStats(oq_job=self.job, node="N2", current_status="up")
+        self.db_mock.return_value = {"N2": cs}
+        self.live_mock.return_value = {"N2": "ERROR"}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(1, actual)
+
+    def test_monitor_compute_nodes_with_failures_during_calculation(self):
+        # Result: 2 node failures, please note that the function under test
+        # counts the total number of node failures that occurred during a
+        # calculation and *not* the number of currently failed nodes.
+        cs1 = models.CNodeStats(oq_job=self.job, node="N3",
+                                current_status="up")
+        cs2 = models.CNodeStats(oq_job=self.job, node="N4",
+                                current_status="down", failures=1)
+        self.db_mock.return_value = {"N3": cs1, "N4": cs2}
+        self.live_mock.return_value = {"N5": "OK"}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(2, actual)
