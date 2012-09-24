@@ -43,10 +43,11 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityModel(object):
 
-    def __init__(self, format, imls, limit_states, no_damage_limit=None):
+    def __init__(self, format, imls, limit_states,
+                 no_damage_limit=None):
         self.imls = imls
         self.format = format
-        self.limit_states = limit_states
+        self.lss = limit_states
         self.no_damage_limit = no_damage_limit
 
 

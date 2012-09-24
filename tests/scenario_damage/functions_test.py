@@ -21,6 +21,9 @@ from risklib.scenario_damage.models import (
     FragilityModel, FragilityFunctionDiscrete)
 
 
+LIMIT_STATES = ["state1", "state2"]
+
+
 class ScenarioDamageFunctionsTestCase(unittest.TestCase):
 
     def test_dda_iml_above_range(self):
@@ -32,11 +35,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # the fractions of buildings we use the highest intensity
         # measure level defined in the model (0.7 in this case)
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], None)
+        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
-        self._close_to(_compute_gmv_fractions([func], 0.7),
-            _compute_gmv_fractions([func], 0.8))
+        self._close_to(_compute_gmv_fractions((fm, [func]), 0.7),
+            _compute_gmv_fractions((fm, [func]), 0.8))
 
     def test_dda_iml_below_range_damage_limit_undefined(self):
         # corner case where we have a ground motion value
@@ -48,11 +51,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 100% no_damage and 0% for the
         # remaining limit states defined in the model
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], None)
+        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
-        self._close_to([1.0, 0.0],
-            _compute_gmv_fractions([func], 0.05))
+        self._close_to([1.0, 0.0, 0.0],
+            _compute_gmv_fractions((fm, [func]), 0.05))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -65,12 +68,12 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-            None, no_damage_limit=0.05)
+            LIMIT_STATES, no_damage_limit=0.05)
 
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
-        self._close_to([1.0, 0.0],
-            _compute_gmv_fractions([func], 0.02))
+        self._close_to([1.0, 0.0, 0.0],
+            _compute_gmv_fractions((fm, [func]), 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -83,13 +86,13 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-            None, no_damage_limit=0.05)
+            LIMIT_STATES, no_damage_limit=0.05)
 
         func1 = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
         func2 = FragilityFunctionDiscrete(fm, [0.00, 0.05, 0.20, 0.50], 2)
 
         self._close_to([0.975, 0.025, 0.],
-            _compute_gmv_fractions([func1, func2], 0.075))
+            _compute_gmv_fractions((fm, [func1, func2]), 0.075))
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))

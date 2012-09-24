@@ -4,4 +4,4 @@
 find . -name "*.pyc" -delete
 # We look for tests by recursively searching into the tests/ dir,
 # in addition to doctests within the risklib codebase.
-nosetests --with-doctest "$@" tests risklib 2>&1 | tee last_test_run.log
+nosetests --with-coverage --cover-package risklib --with-doctest "$@" tests risklib 2>&1 | tee last_test_run.log

@@ -13,64 +13,102 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
+
+"""
+This module defines the functions useful for a scenario-damage
+calculator
+"""
+
+
+from __future__ import absolute_import
+
+
 import numpy
-from scipy.stats import lognorm
-from scipy.interpolate import interp1d
+from .fragility_model import damage_states, no_damage
+from .fragility_function import poe
 
 
-def damage_states(fragility_model):
-    """
-    Return the damage states from the given limit states.
-
-    For N limit states in the fragility model, we always
-    define N+1 damage states. The first damage state
-    should always be 'no_damage'.
-    """
-
-    dmg_states = list(fragility_model.lss)
-    dmg_states.insert(0, "no_damage")
-
-    return dmg_states
+EMPTY_CALLBACK = lambda: None
 
 
-def compute_damage(sites, frag_functions, assets_getter,
+def compute_damage(sites, assets_getter,
+                   (fragility_model, fragility_functions),
                    ground_motion_field_getter,
-                   on_asset_complete_cb=lambda: None):
+                   on_asset_complete=EMPTY_CALLBACK):
+    """
+    Compute the damage distributions and the collapse maps for each
+    asset associated with `sites`. Then, it aggregates such results for
+    each taxonomy.
 
+    :param sites
+      an iterator over a block of sites.
+
+    :param fragility_functions
+      a dictionary mapping a taxonomy to its corresponding fragility
+      function
+
+    :param assets_getter
+      a function that returns an iterator over the assets related to
+      the site given in input
+
+    :param ground_motion_field_getter
+      a function that returns the ground motion field related to the
+      site given in input
+
+    :param on_asset_complete
+
+      a function that is called when the damage distribution and the
+      collapse map related to an asset has been computed. The callback
+      must accept the following params: damage_distribution_asset,
+      collapse_map, asset
+
+    :return a dictionary where each key represents a taxonomy and the
+    corresponding value is a numpy matrix NxM (damage states x ground
+    motion dimension)
+    """
     fractions_per_taxonomy = {}
-    dmg_states = damage_states(
-        frag_functions[frag_functions.keys()[0]][0].fragility_model)
 
     for site in sites:
         assets = assets_getter(site)
         ground_motion_field = ground_motion_field_getter(site)
 
         for asset in assets:
-            damage_distribution_asset, fractions = \
-                damage_distribution_per_asset(
-                asset, frag_functions, ground_motion_field)
+            taxonomy = asset.taxonomy
 
-            on_asset_complete_cb(damage_distribution_asset,
-                collapse_map(fractions), asset, dmg_states)
+            damage_distribution_asset, fractions = (
+                damage_distribution_per_asset(
+                    asset,
+                    (fragility_model, fragility_functions[taxonomy]),
+                    ground_motion_field))
+
+            asset_collapse_map = collapse_map(fractions)
+            on_asset_complete(
+                asset, damage_distribution_asset, asset_collapse_map)
 
             asset_fractions = fractions_per_taxonomy.get(
-                asset.taxonomy, numpy.zeros((len(ground_motion_field),
-                                             len(frag_functions) + 1)))
+                taxonomy,
+                make_damage_distribution_matrix(
+                    fragility_model, ground_motion_field))
 
-            fractions_per_taxonomy[asset.taxonomy] = asset_fractions + fractions
+            fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
 
     return fractions_per_taxonomy
 
 
 def damage_distribution_by_taxonomy(set_of_fractions):
+    """
+    Given an iterator over fractions, it aggregates them by taxonomy
+    and returns the means and standard deviations for each taxonomy.
+
+    :param set_of_fractions
+      set_of_fractions is an iterator over dictionaries, where each
+      dictionary maps a taxonomy to a damage distribution matrix
+    """
     total_fractions = {}
 
     for fractions in set_of_fractions:
-        for taxonomy in fractions.keys():
-            current_fractions = total_fractions.get(taxonomy, None)
-
-            if current_fractions is None:
+        for taxonomy in fractions:
+            if not taxonomy in total_fractions:
                 total_fractions[taxonomy] = numpy.array(fractions[taxonomy])
             else:
                 total_fractions[taxonomy] += fractions[taxonomy]
@@ -78,94 +116,75 @@ def damage_distribution_by_taxonomy(set_of_fractions):
     means = {}
     stddevs = {}
 
-    for taxonomy in total_fractions.keys():
-        means[taxonomy] = numpy.mean(total_fractions[taxonomy], axis=0)
-        stddevs[taxonomy] = numpy.std(
-            total_fractions[taxonomy], axis=0, ddof=1)
+    for taxonomy in total_fractions:
+        means[taxonomy], stddevs[taxonomy] = (
+            damage_distribution_stats(total_fractions[taxonomy]))
 
     return (means, stddevs)
 
 
 def total_damage_distribution(set_of_fractions):
-    total_fractions = None
+
+    if not set_of_fractions or not set_of_fractions[0]:
+        return None
+
+    # get the shape of the damage distribution matrix
+    shape = set_of_fractions[0].values()[0].shape
+
+    total_fractions = numpy.zeros(shape)
 
     for fractions in set_of_fractions:
-        for taxonomy in fractions.keys():
+        for taxonomy in fractions:
+            total_fractions += fractions[taxonomy]
 
-            if total_fractions is None:
-                total_fractions = numpy.array(fractions[taxonomy])
-            else:
-                total_fractions += fractions[taxonomy]
-
-    return numpy.mean(total_fractions, axis=0),\
-           numpy.std(total_fractions, axis=0, ddof=1)
+    return damage_distribution_stats(total_fractions)
 
 
 def collapse_map(fractions):
     # the collapse map needs the fractions
     # for each ground motion value of the
     # last damage state (the last column)
-    last_damage_state = fractions[:, -1]
-    return numpy.mean(last_damage_state), \
-        numpy.std(last_damage_state, ddof=1)
+    return damage_distribution_stats(fractions[:, -1])
 
 
-def damage_distribution_per_asset(asset, fragility_functions,
+def damage_distribution_per_asset(asset,
+                                  (fragility_model, fragility_functions),
                                   ground_motion_field):
+    """
+    Computes the damage distribution related with a single asset.
 
+    :return a tuple of the form ((x, y), z) where z is a matrix NxM
+      (damage states per ground motion values), x and y are vectors with
+      the means and the standard deviation computed for each damage
+      state, respectively.
+
+    :param asset
+      the asset considered. It must provide the property
+      number_of_units
+
+    :param fragility_functions
+      an iterator over the fragility functions related with the
+      `asset`. Each Fragility function must provide the property lsi
+      (limit state index)
+
+    :param ground_motion_field
+      the ground motion field object associated with the `asset`
+    """
     # sorting the functions by lsi (limit state index),
     # because the algorithm must process them from the one
     # with the lowest limit state to the one with
     # the highest limit state
-    functions = fragility_functions[asset.taxonomy]
-    functions.sort(key=lambda x: x.lsi)
+    fragility_functions_sorted = sorted(
+        fragility_functions, key=lambda x: x.lsi)
 
-    fractions = _compute_gmf_fractions(ground_motion_field,
-        fragility_functions[asset.taxonomy]) * asset.number_of_units
+    fractions = _compute_gmf_fractions(
+        (fragility_model, fragility_functions_sorted), ground_motion_field)
+    fractions *= asset.number_of_units
 
-    return (numpy.mean(fractions, axis=0),
-            numpy.std(fractions, axis=0, ddof=1)), fractions
-
-
-def _poe(fragility_function, iml):
-    """
-    Compute the Probability of Exceedance (PoE) for the given
-    Intensity Measure Level (IML).
-    """
-    if fragility_function.is_discrete:
-        return _poe_discrete(fragility_function, iml)
-    else:
-        return _poe_continuous(fragility_function, iml)
+    return damage_distribution_stats(fractions), fractions
 
 
-def _poe_discrete(fragility_function, iml):
-    fm = fragility_function.fragility_model
-
-    highest_iml = fm.imls[-1]
-    no_damage_limit = fm.no_damage_limit
-
-    # when the intensity measure level is above
-    # the range, we use the highest one
-    if iml > highest_iml: iml = highest_iml
-
-    imls = [no_damage_limit] + fm.imls
-    poes = [0.0] + fragility_function.poes
-
-    return interp1d(imls, poes)(iml)
-
-
-def _poe_continuous(fragility_function, iml):
-    variance = fragility_function.stddev ** 2.0
-    sigma = math.sqrt(math.log(
-        (variance / fragility_function.mean ** 2.0) + 1.0))
-
-    mu = fragility_function.mean ** 2.0 / math.sqrt(
-        variance + fragility_function.mean ** 2.0)
-
-    return lognorm.cdf(iml, sigma, scale=mu)
-
-
-def _compute_gmf_fractions(gmf, funcs):
+def _compute_gmf_fractions((fragility_model, funcs), gmf):
     """
     Compute the fractions of each damage state for
     each ground motion value given. `gmf` means Ground Motion Field,
@@ -190,20 +209,24 @@ def _compute_gmf_fractions(gmf, funcs):
 
     # we always have a number of damage states
     # which is len(limit states) + 1
-    fractions = numpy.zeros((len(gmf), len(funcs) + 1))
+    fractions = make_damage_distribution_matrix(fragility_model, gmf)
 
     for x, gmv in enumerate(gmf):
-        fractions[x] = _compute_gmv_fractions(funcs, gmv)
+        fractions[x] = _compute_gmv_fractions(
+            (fragility_model, funcs), gmv)
 
     return fractions
 
 
-def _compute_gmv_fractions(funcs, gmv):
+def _compute_gmv_fractions((fragility_model, funcs), gmv):
     """
     Compute the fractions of each damage state for
     the Ground Motion Value given (a Ground Motion Value
     defines the Intensity Measure Level (IML) used to
     interpolate the Fragility Function.
+
+    :param fragility_model
+      The fragility model
 
     :param gmv: ground motion value.
     :type gmv: float
@@ -222,49 +245,46 @@ def _compute_gmv_fractions(funcs, gmv):
 
     # we always have a number of damage states
     # which is len(limit states) + 1
-    damage_states = numpy.zeros(len(funcs) + 1)
-    fm = funcs[0].fragility_model
+    damage_state_values = make_damage_distribution_matrix(fragility_model)
 
     # when we have a discrete fragility model and
     # the ground motion value is below the lowest
     # intensity measure level defined in the model
     # we simply use 100% no_damage and 0% for the
     # remaining limit states
-    if _no_damage(fm, gmv):
-        damage_states[0] = 1.0
-        return numpy.array(damage_states)
+    if no_damage(fragility_model, gmv):
+        damage_state_values[0] = 1.0
+        return numpy.array(damage_state_values)
 
-    first_poe = _poe(funcs[0], gmv)
+    first_poe = poe(funcs[0], gmv)
 
     # first damage state is always 1 - the probability
     # of exceedance of first limit state
-    damage_states[0] = 1 - first_poe
+    damage_state_values[0] = 1 - first_poe
     last_poe = first_poe
 
     # starting from one, the first damage state
     # is already computed...
     for x in xrange(1, len(funcs)):
-        poe = _poe(funcs[x], gmv)
-        damage_states[x] = last_poe - poe
-        last_poe = poe
+        a_poe = poe(funcs[x], gmv)
+        damage_state_values[x] = last_poe - a_poe
+        last_poe = a_poe
 
     # last damage state is equal to the probability
     # of exceedance of the last limit state
-    damage_states[len(funcs)] = _poe(funcs[len(funcs) - 1], gmv)
-    return numpy.array(damage_states)
+    damage_state_values[len(funcs)] = poe(funcs[len(funcs) - 1], gmv)
+    return numpy.array(damage_state_values)
 
 
-def _no_damage(fragility_model, gmv):
-    """
-    There is no damage when ground motions values are less
-    than the first iml or when the no damage limit value
-    is greater than the ground motions value.
-    """
+def make_damage_distribution_matrix(fragility_model, ground_motion_field=None):
+    if ground_motion_field:
+        shape = (len(ground_motion_field),
+                 len(damage_states(fragility_model)))
+    else:
+        shape = len(damage_states(fragility_model))
+    return numpy.zeros(shape)
 
-    discrete = fragility_model.format == "discrete"
-    no_damage_limit = fragility_model.no_damage_limit is not None
 
-    return ((discrete and not no_damage_limit and
-             gmv < fragility_model.imls[0]) or
-            (discrete and no_damage_limit and
-             gmv < fragility_model.no_damage_limit))
+def damage_distribution_stats(fractions):
+    return (numpy.mean(fractions, axis=0),
+            numpy.std(fractions, axis=0, ddof=1))

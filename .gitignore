@@ -1,2 +1,5 @@
 *.pyc
 *.DS_Store
+\#*\#
+last_test_run.log
+.coverage
