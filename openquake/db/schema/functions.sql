@@ -626,15 +626,14 @@ COMMENT ON FUNCTION pcheck_oq_job_profile() IS
 CREATE OR REPLACE FUNCTION pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
-    # By default we will merely consent to the insert/update operation.
-    result = "OK"
-
     NEW = TD["new"] # new data resulting from insert or update
 
     if NEW["previous_status"] is not None and NEW["previous_status"] == "up":
         # state transition: up -> down/error
         NEW["failures"] += 1
         result = "MODIFY"
+    else:
+        result = "OK"
 
     return result
 $$ LANGUAGE plpythonu;
