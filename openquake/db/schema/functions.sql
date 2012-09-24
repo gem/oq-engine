@@ -634,7 +634,7 @@ AS $$
             # state transition: up -> down/error
             NEW["failures"] += 1
             result = "MODIFY"
-        if NEW["previous_status"] == OLD["current_ts"]:
+        if NEW["previous_status"] == OLD["current_status"]:
             NEW["previous_ts"] = OLD["current_ts"]
             NEW["current_ts"] = datetime.utcnow()
             result = "MODIFY"

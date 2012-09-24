@@ -790,8 +790,12 @@ class CNodeStats(djm.Model):
     previous_status = djm.TextField(
         choices=STATUS_CHOICES, null=True,
         help_text="Previous compute node status (if any)")
+
+    # Please note: the time stamps are managed by triggers, no need to set
+    # them manually
     current_ts = djm.DateTimeField(editable=False, default=datetime.utcnow)
     previous_ts = djm.DateTimeField(null=True)
+
     failures = djm.IntegerField(
         help_text="Number of up -> down/error status changes", default=0)
 
