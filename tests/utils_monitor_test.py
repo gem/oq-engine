@@ -95,7 +95,7 @@ class GetCnodeStatusInDbTestCase(unittest.TestCase):
         self.assertEqual(expected, monitor._get_cnode_status_in_db(job2.id))
 
 
-class CNodeStatsTestCase(DjangoTestCase, helpers.DbTestCase):
+class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
     """Test the cnode_stats database constraints."""
 
     job = None
@@ -106,18 +106,59 @@ class CNodeStatsTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_cnode_stats_with_correct_data(self):
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
-        cs.save()
+        cs.save(using='job_superv')
 
     def test_cnode_stats_with_equal_statuses(self):
         # The previous and the current status must not be the same.
         cs = models.CNodeStats(oq_job=self.job, node="N2", current_status="up")
         cs.previous_status = "up"
         try:
-            cs.save()
+            cs.save(using='job_superv')
         except DatabaseError, de:
-            self.assertEqual(
-                "Exception: area_type is mandatory for <coco_type=per_area> "
-                "(exposure_model)", de.args[0].split('\n', 1)[0])
+            self.assertTrue (
+                'violates check constraint "valid_status"' in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
+
+    def test_cnode_stats_failure_counter_with_up_down_transition(self):
+        cs = models.CNodeStats(oq_job=self.job, node="N3", current_status="up")
+        cs.save(using='job_superv')
+        cs.current_status = "down"
+        cs.previous_status = "up"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertEqual(1, cs.failures)
+
+    def test_cnode_stats_failure_counter_with_up_error_transition(self):
+        cs = models.CNodeStats(oq_job=self.job, node="N4", current_status="up")
+        cs.save(using='job_superv')
+        cs.current_status = "error"
+        cs.previous_status = "up"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertEqual(1, cs.failures)
+
+    def test_cnode_stats_failure_counter_with_down_error_transition(self):
+        cs = models.CNodeStats(oq_job=self.job, node="N5",
+                               current_status="down")
+        cs.save(using='job_superv')
+        cs.current_status = "error"
+        cs.previous_status = "down"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertEqual(0, cs.failures)
+
+    def test_cnode_stats_failure_counter_with_down_up_transition(self):
+        cs = models.CNodeStats(oq_job=self.job, node="N6",
+                               current_status="down")
+        cs.save(using='job_superv')
+        cs.current_status = "up"
+        cs.previous_status = "down"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertEqual(0, cs.failures)

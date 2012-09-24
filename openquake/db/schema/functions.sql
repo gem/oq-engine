@@ -626,12 +626,18 @@ COMMENT ON FUNCTION pcheck_oq_job_profile() IS
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
-    NEW = TD["new"] # new data resulting from insert or update
+    OLD = TD["old"]
+    NEW = TD["new"]
 
-    if NEW["previous_status"] is not None and NEW["previous_status"] == "up":
-        # state transition: up -> down/error
-        NEW["failures"] += 1
-        result = "MODIFY"
+    if NEW["previous_status"] is not None:
+        if NEW["previous_status"] == "up":
+            # state transition: up -> down/error
+            NEW["failures"] += 1
+            result = "MODIFY"
+        if NEW["previous_status"] == OLD["current_ts"]:
+            NEW["previous_ts"] = OLD["current_ts"]
+            NEW["current_ts"] = datetime.utcnow()
+            result = "MODIFY"
     else:
         result = "OK"
 
