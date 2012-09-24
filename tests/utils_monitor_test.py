@@ -215,11 +215,7 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
 class MonitorComputeNodesTestCase(unittest.TestCase):
     """Tests the behaviour of utils.monitor.monitor_compute_nodes()."""
 
-    job = None
-    db_patch = None
-    live_patch = None
-    db_mock = None
-    live_mock = None
+    job = db_patch = live_patch = db_mock = live_mock = None
 
     @classmethod
     def setUpClass(cls):
@@ -233,9 +229,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.db_patch.stop()
-        self.db_patch = None
         self.live_patch.stop()
-        self.live_patch = None
 
     def test_monitor_compute_nodes_with_zero_nodes(self):
         # Result: 0 failed nodes
