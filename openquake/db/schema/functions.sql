@@ -623,6 +623,33 @@ COMMENT ON FUNCTION pcheck_oq_job_profile() IS
 'Make sure the inserted/updated job profile record is consistent.';
 
 
+CREATE OR REPLACE FUNCTION pcount_cnode_failures()
+  RETURNS TRIGGER
+AS $$
+    # By default we will merely consent to the insert/update operation.
+    result = "OK"
+
+    NEW = TD["new"] # new data resulting from insert or update
+
+    if NEW["previous_status"] is not None and NEW["previous_status"] == "up":
+        # state transition: up -> down/error
+        NEW["failures"] += 1
+        result = "MODIFY"
+
+    return result
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcount_cnode_failures() IS
+'Update the failure count for the compute node at hand as needed.';
+
+
+CREATE TRIGGER uiapi_cnode_stats_before_update_trig
+BEFORE UPDATE ON uiapi.cnode_stats
+FOR EACH ROW EXECUTE PROCEDURE
+uiapi.pcheck_dmg_state_cnode_stats();
+
+
 CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
 FOR EACH ROW EXECUTE PROCEDURE
