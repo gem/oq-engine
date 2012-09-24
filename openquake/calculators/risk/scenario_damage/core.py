@@ -21,7 +21,6 @@ damage assessment approach.
 """
 
 import os
-import numpy
 
 from openquake import logs
 from openquake.calculators.risk import general
@@ -35,7 +34,7 @@ from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
 from openquake.export.risk import export_dmg_dist_total, export_collapse_map
-from risklib.scenario_damage import models, functions
+from risklib.scenario_damage import functions as risklib
 
 LOGGER = logs.LOG
 
@@ -50,11 +49,13 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         # fractions of each damage state per building taxonomy
         # for the entire computation
-        self.ddt_fractions = {}
+        self.dd_taxonomy_means = {}
+        self.dd_taxonomy_stddevs = {}
 
         # fractions of each damage state for the distribution
         # of the entire computation
-        self.total_fractions = None
+        self.total_distribution_means = None
+        self.total_distribution_stddevs = None
 
     def pre_execute(self):
         """
@@ -76,6 +77,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         oq_job = self.job_ctxt.oq_job
         fm = _fm(oq_job)
+        damage_states = risklib.damage_states(fm)
 
         output = Output(
             owner=oq_job.owner,
@@ -89,7 +91,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         DmgDistPerAsset(
             output=output,
-            dmg_states=_damage_states(fm.lss)).save()
+            dmg_states=damage_states).save()
 
         output = Output(
             owner=oq_job.owner,
@@ -103,7 +105,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         DmgDistPerTaxonomy(
             output=output,
-            dmg_states=_damage_states(fm.lss)).save()
+            dmg_states=damage_states).save()
 
         output = Output(
             owner=oq_job.owner,
@@ -117,7 +119,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         DmgDistTotal(
             output=output,
-            dmg_states=_damage_states(fm.lss)).save()
+            dmg_states=damage_states).save()
 
         output = Output(
             owner=oq_job.owner,
@@ -145,44 +147,15 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         region_fractions = distribute(
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
-            tf_args=dict(job_id=self.job_ctxt.job_id,
-            fmodel=_fm(self.job_ctxt.oq_job)))
+            tf_args=dict(job_id=self.job_ctxt.job_id))
 
-        self._collect_fractions(region_fractions)
+        self.dd_taxonomy_means, self.dd_taxonomy_stddevs = \
+            risklib.damage_distribution_by_taxonomy(region_fractions)
+
+        self.total_distribution_means, self.total_distribution_stddevs = \
+            risklib.total_damage_distribution(region_fractions)
 
         LOGGER.debug("Scenario damage risk computation completed.")
-
-    def _collect_fractions(self, region_fractions):
-        """
-        Sum the fractions (of each damage state per building taxonomy)
-        of each computation block.
-
-        :param region_fractions: fractions for each damage state
-            per building taxonomy for each different block computed.
-        :type region_fractions: `list` of 2d `numpy.array`.
-            Each column of the array represents a damage state (in order from
-            the lowest to the highest). Each row represents the
-            values for that damage state for a particular
-            ground motion value.
-        """
-
-        for bfractions in region_fractions:
-            for taxonomy in bfractions.keys():
-                fractions = self.ddt_fractions.get(taxonomy, None)
-
-                # sum per taxonomy
-                if not fractions:
-                    self.ddt_fractions[taxonomy] = numpy.array(
-                        bfractions[taxonomy])
-                else:
-                    self.ddt_fractions[taxonomy] += bfractions[taxonomy]
-
-                # global sum
-                if self.total_fractions is None:
-                    self.total_fractions = numpy.array(
-                        bfractions[taxonomy])
-                else:
-                    self.total_fractions += bfractions[taxonomy]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -207,22 +180,27 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             a 2d `numpy.array`)
         """
 
-        fm = kwargs["fmodel"]
+        fragility_model = _fm(self.job_ctxt.oq_job)
+        frag_functions = fragility_model.functions_by_taxonomy()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        funcs = _load_fragility_functions(fm)
 
         ground_motion_field_loader = lambda site: general.load_gmvs_at(
-            self.job_ctxt.job_id, general.hazard_input_site(self.job_ctxt, site))
+            self.job_ctxt.job_id, general.hazard_input_site(
+            self.job_ctxt, site))
 
         assets_loader = lambda site: general.BaseRiskCalculator.assets_at(
             self.job_ctxt.job_id, site)
 
-        def on_asset_complete_cb(damage_distribution_asset, collapse_map, asset, fm):
-            self._store_cmap(asset, collapse_map)
-            self._store_dda(asset, fm, damage_distribution_asset)
+        def on_asset_complete_cb(damage_distribution_asset,
+                                 collapse_map, asset, damage_states):
 
-        return functions.compute_damage(block.sites, funcs, assets_loader,
-            ground_motion_field_loader, on_asset_complete_cb)
+            self._store_cmap(asset, collapse_map)
+            self._store_dda(asset, damage_states,
+                damage_distribution_asset)
+
+        return risklib.compute_damage(block.sites, frag_functions,
+            assets_loader, ground_motion_field_loader,
+            on_asset_complete_cb)
 
     def _store_cmap(self, asset, (mean, stddev)):
         """
@@ -241,7 +219,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             std_dev=stddev,
             location=asset.site).save()
 
-    def _store_dda(self, asset, fm, (mean, stddev)):
+    def _store_dda(self, asset, damage_states, (mean, stddev)):
         """
         Store the damage distribution per asset.
 
@@ -269,7 +247,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             DmgDistPerAssetData(
                 dmg_dist_per_asset=dds,
                 exposure_data=asset,
-                dmg_state=_damage_states(fm.lss)[x],
+                dmg_state=damage_states[x],
                 mean=mean[x],
                 stddev=stddev[x],
                 location=asset.site).save()
@@ -285,18 +263,17 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__output_type="dmg_dist_per_taxonomy")
 
         fm = _fm(self.job_ctxt.oq_job)
+        damage_states = risklib.damage_states(fm)
 
-        for taxonomy in self.ddt_fractions.keys():
-            mean = numpy.mean(self.ddt_fractions[taxonomy], axis=0)
-            stddev = numpy.std(self.ddt_fractions[taxonomy], axis=0, ddof=1)
+        for taxonomy in self.dd_taxonomy_means.keys():
 
-            for x in xrange(len(mean)):
+            for x in xrange(len(self.dd_taxonomy_means[taxonomy])):
                 DmgDistPerTaxonomyData(
                     dmg_dist_per_taxonomy=ddt,
                     taxonomy=taxonomy,
-                    dmg_state=_damage_states(fm.lss)[x],
-                    mean=mean[x],
-                    stddev=stddev[x]).save()
+                    dmg_state=damage_states[x],
+                    mean=self.dd_taxonomy_means[taxonomy][x],
+                    stddev=self.dd_taxonomy_stddevs[taxonomy][x]).save()
 
     def _store_total_distribution(self):
         """
@@ -310,15 +287,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = _fm(self.job_ctxt.oq_job)
 
-        mean = numpy.mean(self.total_fractions, axis=0)
-        stddev = numpy.std(self.total_fractions, axis=0, ddof=1)
-
-        for x in xrange(len(mean)):
+        for x in xrange(len(self.total_distribution_means)):
             DmgDistTotalData(
                 dmg_dist_total=dd,
-                dmg_state=_damage_states(fm.lss)[x],
-                mean=mean[x],
-                stddev=stddev[x]).save()
+                dmg_state=risklib.damage_states(fm)[x],
+                mean=self.total_distribution_means[x],
+                stddev=self.total_distribution_stddevs[x]).save()
 
     def post_execute(self):
         """
@@ -363,21 +337,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             export_collapse_map(output, target_dir)
 
 
-def _damage_states(limit_states):
-    """
-    Return the damage states from the given limit states.
-
-    For N limit states in the fragility model, we always
-    define N+1 damage states. The first damage state
-    should always be 'no_damage'.
-    """
-
-    dmg_states = list(limit_states)
-    dmg_states.insert(0, "no_damage")
-
-    return dmg_states
-
-
 def _fm(oq_job):
     """
     Return the fragility model related to the current computation.
@@ -387,18 +346,3 @@ def _fm(oq_job):
     [fm] = FragilityModel.objects.filter(input=ism, owner=oq_job.owner)
 
     return fm
-
-
-def _load_fragility_functions(fmodel):
-    set = fmodel.ffd_set if fmodel.format == "discrete" else fmodel.ffc_set
-    # should we move ordering by lsi in RiskLib?
-    fragility_functions = set.all().order_by("taxonomy", "lsi")
-    fragility_model = {}
-
-    for function in fragility_functions:
-        if not fragility_model.get(function.taxonomy):
-            fragility_model[function.taxonomy] = [function]
-        else:
-            fragility_model[function.taxonomy].append(function)
-
-    return fragility_model

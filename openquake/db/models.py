@@ -1571,6 +1571,18 @@ class FragilityModel(djm.Model):
         null=True, help_text="No Damage Limit value, for discrete models only")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def functions_by_taxonomy(self):
+        functions = {}
+        set = self.ffd_set if self.format == "discrete" else self.ffc_set
+
+        for function in set.all():
+            if not functions.get(function.taxonomy):
+                functions[function.taxonomy] = [function]
+            else:
+                functions[function.taxonomy].append(function)
+
+        return functions
+
     class Meta:
         db_table = 'riski\".\"fragility_model'
 
