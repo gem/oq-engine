@@ -290,7 +290,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
 
         n1.current_status = "error"
         n1.save(using="job_superv")
-        print n1.id
+        n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual(1, n1.failures)
 
         self.db_mock.return_value = {"N8": n1}

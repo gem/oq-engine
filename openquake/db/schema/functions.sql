@@ -631,7 +631,7 @@ AS $$
     OLD = TD["old"]
     NEW = TD["new"]
 
-    if NEW["current_status"] != OLD["current_status"]
+    if NEW["current_status"] != OLD["current_status"]:
         NEW["current_ts"] = datetime.utcnow()
         NEW["previous_status"] = OLD["current_status"]
         NEW["previous_ts"] = OLD["current_ts"]

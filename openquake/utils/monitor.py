@@ -55,7 +55,6 @@ def monitor_compute_nodes(job):
     for node in new_failed:
         status = "error" if node in live_stats else "down"
         cs = db_stats[node]
-        cs.previous_status = cs.current_status
         cs.current_status = status
         cs.save(using="job_superv")
         total_failures += 1
@@ -71,7 +70,6 @@ def monitor_compute_nodes(job):
     recovered_nodes = lworking_nodes.intersection(old_failed)
     for node in recovered_nodes:
         cs = db_stats[node]
-        cs.previous_status = cs.current_status
         cs.current_status = "up"
         cs.save(using="job_superv")
 

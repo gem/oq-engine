@@ -787,6 +787,9 @@ class CNodeStats(djm.Model):
     )
     current_status = djm.TextField(
         choices=STATUS_CHOICES, help_text="Current compute node status")
+
+    # Please note: the previous_status is managed by triggers, no need to set
+    # it manually
     previous_status = djm.TextField(
         choices=STATUS_CHOICES, null=True,
         help_text="Previous compute node status (if any)")
