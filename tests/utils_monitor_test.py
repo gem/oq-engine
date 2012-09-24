@@ -253,14 +253,20 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         # Result: 2 node failures, please note that the function under test
         # counts the total number of node failures that occurred during a
         # calculation and *not* the number of currently failed nodes.
-        cs1 = models.CNodeStats(oq_job=self.job, node="N3",
+        n1 = models.CNodeStats(oq_job=self.job, node="N3",
                                 current_status="up")
-        cs2 = models.CNodeStats(oq_job=self.job, node="N4",
+        n2 = models.CNodeStats(oq_job=self.job, node="N4",
                                 current_status="down", failures=1)
-        self.db_mock.return_value = {"N3": cs1, "N4": cs2}
+        self.db_mock.return_value = {"N3": n1, "N4": n2}
         self.live_mock.return_value = {"N5": "OK"}
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(2, actual)
+        # Please note also that the new node ("N5") was written to the
+        # database
+        [n3] = models.CNodeStats.objects.filter(oq_job=self.job, node="N5")
+        self.assertEqual("up", n3.current_status)
+        self.assertIs(None, n3.previous_status)
+        self.assertEqual(0, n3.failures)
 
     def test_monitor_compute_nodes_with_failures_before_calculation(self):
         # Result: 1 node failure; this simulates the situation where a
