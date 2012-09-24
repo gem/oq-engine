@@ -623,7 +623,7 @@ COMMENT ON FUNCTION pcheck_oq_job_profile() IS
 'Make sure the inserted/updated job profile record is consistent.';
 
 
-CREATE OR REPLACE FUNCTION pcount_cnode_failures()
+CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
     NEW = TD["new"] # new data resulting from insert or update
@@ -639,20 +639,18 @@ AS $$
 $$ LANGUAGE plpythonu;
 
 
-COMMENT ON FUNCTION pcount_cnode_failures() IS
+COMMENT ON FUNCTION uiapi.pcount_cnode_failures() IS
 'Update the failure count for the compute node at hand as needed.';
 
 
 CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
-FOR EACH ROW EXECUTE PROCEDURE
-uiapi.pcheck_dmg_state_cnode_stats();
+FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
 
 
 CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
-FOR EACH ROW EXECUTE PROCEDURE
-riskr.pcheck_dmg_state_dmg_dist_total_data();
+FOR EACH ROW EXECUTE PROCEDURE riskr.pcheck_dmg_state_dmg_dist_total_data();
 -- End Damage Distribution, Total
 
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig

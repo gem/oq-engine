@@ -24,6 +24,10 @@ Unit tests for the utils.stats module.
 
 import unittest
 
+from django.db import transaction
+from django.db.utils import DatabaseError
+from django.test import TestCase as DjangoTestCase
+
 from openquake import engine
 from openquake.db import models
 from openquake.utils import monitor
@@ -89,3 +93,31 @@ class GetCnodeStatusInDbTestCase(unittest.TestCase):
             ns.save()
         expected = {u"Q2": u"down", u"Q3": u"error"}
         self.assertEqual(expected, monitor._get_cnode_status_in_db(job2.id))
+
+
+class CNodeStatsTestCase(DjangoTestCase, helpers.DbTestCase):
+    """Test the cnode_stats database constraints."""
+
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = engine.prepare_job()
+
+    def test_cnode_stats_with_correct_data(self):
+        cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
+        cs.save()
+
+    def test_cnode_stats_with_equal_statuses(self):
+        # The previous and the current status must not be the same.
+        cs = models.CNodeStats(oq_job=self.job, node="N2", current_status="up")
+        cs.previous_status = "up"
+        try:
+            cs.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: area_type is mandatory for <coco_type=per_area> "
+                "(exposure_model)", de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")

@@ -627,9 +627,9 @@ CREATE TABLE uiapi.cnode_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
     node VARCHAR NOT NULL,
-    current_status VARCHAR NOT NULL CONSTRAINT node_status_value
+    current_status VARCHAR NOT NULL CONSTRAINT current_status_value
         CHECK(current_status IN ('up', 'down', 'error')),
-    previous_status VARCHAR CONSTRAINT node_status_value
+    previous_status VARCHAR CONSTRAINT previous_status_value
         CHECK(previous_status IS NULL OR
               previous_status IN ('up', 'down', 'error')),
     current_ts timestamp without time zone NOT NULL,
@@ -1888,11 +1888,11 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_phase_fk
-FOREIGN KEY (oq_job_phase_id) REFERENCES uiapi.oq_job_phase(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_cnode_fk
-FOREIGN KEY (oq_cnode_id) REFERENCES uiapi.oq_cnode(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
