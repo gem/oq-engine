@@ -111,6 +111,7 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         cls.job = engine.prepare_job()
 
     def test_cnode_stats_with_correct_data(self):
+        # The db record is saved w/o triggering an exception
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
         cs.save(using="job_superv")
 
@@ -128,6 +129,8 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
             self.fail("DatabaseError not raised")
 
     def test_cnode_stats_failure_counter_with_up_down_transition(self):
+        # The failures counter is incremented in case of a
+        #   up -> down transition
         cs = models.CNodeStats(oq_job=self.job, node="N3", current_status="up")
         cs.save(using="job_superv")
         cs.current_status = "down"
@@ -138,6 +141,8 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         self.assertEqual(1, cs.failures)
 
     def test_cnode_stats_failure_counter_with_up_error_transition(self):
+        # The failures counter is incremented in case of a
+        #   up -> error transition
         cs = models.CNodeStats(oq_job=self.job, node="N4", current_status="up")
         cs.save(using="job_superv")
         cs.current_status = "error"
@@ -148,6 +153,9 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         self.assertEqual(1, cs.failures)
 
     def test_cnode_stats_failure_counter_with_down_error_transition(self):
+        # The failures counter is only stepped in case of a
+        #   up -> down/error transition
+        # and will remain unchanged here.
         cs = models.CNodeStats(oq_job=self.job, node="N5",
                                current_status="down")
         cs.save(using="job_superv")
@@ -159,6 +167,9 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         self.assertEqual(0, cs.failures)
 
     def test_cnode_stats_failure_counter_with_down_up_transition(self):
+        # The failures counter is only stepped in case of a
+        #   up -> down/error transition
+        # and will remain unchanged here.
         cs = models.CNodeStats(oq_job=self.job, node="N6",
                                current_status="down")
         cs.save(using="job_superv")
