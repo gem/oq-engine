@@ -27,16 +27,26 @@ import subprocess
 from openquake.db import models
 
 
-def monitor_celery_nodes(job_id):
-    """Check what celery nodes are running and return the delta (if any).
+def monitor_compute_nodes(job):
+    """Check what compute nodes are running and return the delta (if any).
 
     :param int job_id: identifier of the job at hand
-    :return: a 2-tuple where the first and second element is a list of celery
+    :return: a 2-tuple where the first and second element is a list of compute
         nodes that became available and unavailable since the last call.
     """
-    ccs = _get_cnode_status()
-    dbi = _get_cnode_status_in_db(job_id)
+    from_celery = _get_cnode_status()
+    in_db = _get_cnode_status_in_db(job)
 
+    # compute nodes known to celery
+    cns = set(node for node, status in from_celery.iteritems()
+              if status == "OK")
+    # compute nodes stored in the db
+    dbns = set(node for node, status in in_db.iteritems() if status == "up")
+
+    # Which nodes stored in the db have gone bad/down?
+    for node in dbns - cns:
+        status = "error" if node in from_celery else "down"
+        ns = models.NodeStats(oq_job=job, node=node, status=status)
 
 def _get_cnode_status():
     """Get compute node status (from celery).
@@ -54,7 +64,7 @@ def _get_cnode_status():
     return dict(tuple(cs.split(": ")) for cs in csi if cs.find(":") > -1)
 
 
-def _get_cnode_status_in_db(job_id):
+def _get_cnode_status_in_db(job):
     """Get compute node status stored in the database.
 
     :param int job_id: identifier of the job at hand
@@ -62,6 +72,5 @@ def _get_cnode_status_in_db(job_id):
         and the values are either 'up' or 'down' e.g.
         `{"N1": "up", "N2": "down", "N3": "error"}`
     """
-    dbi = models.NodeStats.objects.filter(oq_job__id=job_id).\
-                                     order_by("updated_at")
+    dbi = models.NodeStats.objects.filter(oq_job=job).order_by("updated_at")
     return dict((ns.node, ns.status) for ns in dbi)

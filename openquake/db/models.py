@@ -774,23 +774,29 @@ class JobPhaseStats(djm.Model):
         db_table = 'uiapi\".\"job_phase_stats'
 
 
-class NodeStats(djm.Model):
+class CNodeStats(djm.Model):
     '''
-    Capture when the various compute nodes became available/unavailable.
+    Captures the compute node status (changes).
     '''
     oq_job = djm.ForeignKey('OqJob')
-    # calculation type (hazard|risk)
-    node = djm.TextField()
+    node = djm.TextField(help_text="Compute node name")
     STATUS_CHOICES = (
         (u"up", u"Compute node available"),
         (u"down", u"Compute node unavailable"),
         (u"error", u"Compute node with errors"),
     )
-    status = djm.TextField(choices=STATUS_CHOICES)
-    updated_at = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    current_status = djm.TextField(
+        choices=STATUS_CHOICES, help_text="Current compute node status")
+    previous_status = djm.TextField(
+        choices=STATUS_CHOICES, null=True,
+        help_text="Previous compute node status (if any)")
+    current_ts = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    previous_ts = djm.DateTimeField(null=True)
+    failures = djm.IntegerField(
+        help_text="Number of up -> down/error status changes", default=0)
 
     class Meta:
-        db_table = 'uiapi\".\"node_stats'
+        db_table = 'uiapi\".\"cnode_stats'
 
 
 class Job2profile(djm.Model):
