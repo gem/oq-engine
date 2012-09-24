@@ -626,6 +626,8 @@ COMMENT ON FUNCTION pcheck_oq_job_profile() IS
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
+    from datetime import datetime
+
     OLD = TD["old"]
     NEW = TD["new"]
 
