@@ -162,3 +162,34 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         cs = models.CNodeStats.objects.get(id=cs.id)
 
         self.assertEqual(0, cs.failures)
+
+    def test_cnode_stats_with_state_transition_and_managed_timestamps(self):
+        # The `previous_ts` and `current_ts` time stamps are managed properly
+        # in case of a state transition
+        cs = models.CNodeStats(oq_job=self.job, node="N7",
+                               current_status="down")
+        cs.save(using='job_superv')
+        old_current_ts = cs.current_ts
+
+        cs.current_status = "up"
+        cs.previous_status = "down"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertIsNot(None, cs.previous_ts)
+        self.assertEqual(old_current_ts, cs.previous_ts)
+
+    def test_cnode_stats_without_state_transition_and_same_timestamps(self):
+        # The `previous_ts` and `current_ts` time stamps are untouched
+        # if the compute node status did not change
+        cs = models.CNodeStats(oq_job=self.job, node="N8",
+                               current_status="down")
+        cs.save(using='job_superv')
+        old_current_ts = cs.current_ts
+
+        cs.node = "N8+1"
+        cs.save(using='job_superv')
+        cs = models.CNodeStats.objects.get(id=cs.id)
+
+        self.assertIs(None, cs.previous_ts)
+        self.assertEqual(old_current_ts, cs.current_ts)
