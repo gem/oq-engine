@@ -46,11 +46,10 @@ def monitor_compute_nodes(job):
                          if status == "OK")
     # working nodes according to the database
     dworking_nodes = set(cs.node for cs in db_stats.values()
-                         if cs.failures == 0)
+                         if cs.current_status == "up" and cs.failures == 0)
 
     # Which working nodes stored in the db have gone bad/down?
-    old_failed = set(cs.node for cs in db_stats.values()
-                       if cs.current_status != "up")
+    old_failed = set(cs.node for cs in db_stats.values() if cs.failures > 0)
     total_failures = len(old_failed)
     new_failed = dworking_nodes - lworking_nodes
     for node in new_failed:

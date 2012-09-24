@@ -272,3 +272,21 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         self.live_mock.return_value = {"N5": "OK"}
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(2, actual)
+
+    def test_monitor_compute_nodes_with_failures_before_calculation(self):
+        # Result: 1 node failure; this simulates the situation where a
+        # node has failed from the very beginning and never recovered i.e. it
+        # never took on any tasks. However, only nodes that were functioning at
+        # some time during the calculation and *then* failed are counted.
+        n1 = models.CNodeStats(oq_job=self.job, node="N6", current_status="up")
+        n1.save(using="job_superv")
+        n2 = models.CNodeStats(oq_job=self.job, node="N7",
+                               current_status="down")
+        self.db_mock.return_value = {"N6": n1, "N7": n2}
+        self.live_mock.return_value = {}
+        actual = monitor.monitor_compute_nodes(self.job)
+        self.assertEqual(1, actual)
+        n1 = models.CNodeStats.objects.get(id=n1.id)
+        self.assertEqual("down", n1.current_status)
+        self.assertEqual("up", n1.previous_status)
+        self.assertEqual(1, n1.failures)
