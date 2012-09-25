@@ -122,7 +122,7 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         try:
             cs.save(using="job_superv")
         except DatabaseError, de:
-            self.assertTrue (
+            self.assertTrue(
                 'violates check constraint "valid_status"' in de.args[0])
             transaction.rollback()
         else:
