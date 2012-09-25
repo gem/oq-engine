@@ -34,7 +34,7 @@ from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
 from openquake.export.risk import export_dmg_dist_total, export_collapse_map
-from risklib.scenario_damage import functions as risklib
+from risklib import scenario_damage as risklib
 
 LOGGER = logs.LOG
 
