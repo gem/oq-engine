@@ -26,12 +26,14 @@ from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
-from openquake.calculators.risk.general import ProbabilisticRiskCalculator, compute_risk, Block, hazard_input_site, BaseRiskCalculator, compute_bcr_for_block, compute_conditional_loss
-from risklib.curve import Curve
+from openquake.calculators.risk.general import (
+    ProbabilisticRiskCalculator, compute_risk, Block,
+    hazard_input_site, BaseRiskCalculator, compute_bcr_for_block)
 
-from risklib.classical import compute_loss_ratio_curve, compute_loss_curve
+import risklib
 
 LOGGER = logs.LOG
+
 
 def conditional_loss_poes(params):
     """Return the PoE(s) specified in the configuration file used to
@@ -75,12 +77,12 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
         job = models.OqJob.objects.get(id=self.job_ctxt.job_id)
-        hc = models.HazardCurveData.objects.filter(
+        hc = models.Hazardrisklib.curve.CurveData.objects.filter(
             hazard_curve__output__oq_job=job,
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return Curve(zip(job.profile().imls, hc.poes))
+        return risklib.curve.Curve(zip(job.profile().imls, hc.poes))
 
     def _compute_loss(self, block_id):
         """
@@ -91,6 +93,9 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
+        lrem_steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
+        loss_poes = conditional_loss_poes(self.job_ctxt.params)
+
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             hazard_curve = self._get_db_curve(
@@ -100,17 +105,35 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-                loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point, asset, hazard_curve, vuln_curves)
+                vuln_function_reference = asset.taxonomy
+                vuln_function = vuln_curves.get(vuln_function_reference, None)
 
-                if loss_ratio_curve:
-                    loss_curve = self.compute_loss_curve(
-                        point, loss_ratio_curve, asset)
+                if not vuln_function:
+                    LOGGER.error("Unknown vulnerability function"
+                                 " %s for asset %s" % (
+                                     asset.taxonomy, asset.asset_ref))
 
-                    for poe in conditional_loss_poes(self.job_ctxt.params):
-                        compute_conditional_loss(
-                            self.job_ctxt.job_id, point.column,
-                            point.row, loss_curve, asset, poe)
+                risklib.classical.compute_classical_per_asset(
+                    asset, vuln_function, hazard_curve, lrem_steps, loss_poes)
+
+                loss_key = kvs.tokens.loss_curve_key(
+                    self.job_ctxt.job_id, point.row,
+                    point.column, asset.asset_ref)
+
+                kvs.get_client().set(loss_key, loss_curve.to_json())
+
+                for poe, loss in loss_conditionals.items():
+                    key = kvs.tokens.loss_key(
+                        self.job_ctxt.job_id, point.row, point.column,
+                        asset.asset_ref, poe)
+                    kvs.get_client().set(key, loss)
+
+                loss_ratio_key = kvs.tokens.loss_ratio_key(
+                    self.job_ctxt.job_id, point.row,
+                    point.column, asset.asset_ref)
+
+                kvs.get_client().set(loss_ratio_key,
+                                     loss_ratio_curve.to_json())
 
         return True
 
@@ -130,10 +153,11 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             job_profile = self.job_ctxt.oq_job_profile
             hazard_curve = self._get_db_curve(
                 hazard_input_site(self.job_ctxt, site))
-            loss_ratio_curve = compute_loss_ratio_curve(
+            loss_ratio_curve = risklib.classical.compute_loss_ratio_curve(
                     vuln_function, hazard_curve,
                     job_profile.lrem_steps_per_interval)
-            return compute_loss_curve(loss_ratio_curve, asset.value)
+            return risklib.classical.compute_loss_curve(
+                loss_ratio_curve, asset.value)
 
         bcr = compute_bcr_for_block(job_ctxt, block.sites,
             get_loss_curve, float(job_ctxt.params['INTEREST_RATE']),
@@ -143,62 +167,3 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
-
-    def compute_loss_curve(self, point, loss_ratio_curve, asset):
-        """
-        Computes the loss ratio and store it in kvs to provide
-        data to the @output decorator which does the serialization.
-
-        :param point: the point of the grid we want to compute
-        :type point: :py:class:`openquake.shapes.GridPoint`
-        :param loss_ratio_curve: the loss ratio curve
-        :type loss_ratio_curve: :py:class `openquake.shapes.Curve`
-        :param asset: the asset for which to compute the loss curve
-        :type asset: :py:class:`dict` as provided by
-               :py:class:`openquake.parser.exposure.ExposureModelFile`
-        """
-
-        loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
-        loss_key = kvs.tokens.loss_curve_key(
-            self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
-
-        kvs.get_client().set(loss_key, loss_curve.to_json())
-
-        return loss_curve
-
-    def compute_loss_ratio_curve(self, point, asset,
-                                 hazard_curve, vuln_curves):
-        """ Computes the loss ratio curve and stores in kvs
-            the curve itself
-
-        :param point: the point of the grid we want to compute
-        :type point: :py:class:`openquake.shapes.GridPoint`
-        :param asset: the asset used to compute the loss curve
-        :type asset: :py:class:`dict` as provided by
-            :py:class:`openquake.parser.exposure.ExposureModelFile`
-        :param hazard_curve: the hazard curve used to compute the
-            loss ratio curve
-        :type hazard_curve: :py:class:`openquake.shapes.Curve`
-        """
-
-        # we get the vulnerability function related to the asset
-
-        vuln_function_reference = asset.taxonomy
-        vuln_function = vuln_curves.get(vuln_function_reference, None)
-
-        if not vuln_function:
-            LOGGER.error("Unknown vulnerability function %s for asset %s"
-                         % (asset.taxonomy, asset.asset_ref))
-
-            return None
-
-        lrem_steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
-        loss_ratio_curve = compute_loss_ratio_curve(
-            vuln_function, hazard_curve, lrem_steps)
-
-        loss_ratio_key = kvs.tokens.loss_ratio_key(
-            self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
-
-        kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
-
-        return loss_ratio_curve
