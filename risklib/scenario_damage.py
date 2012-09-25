@@ -19,13 +19,9 @@ This module defines the functions useful for a scenario-damage
 calculator
 """
 
-
-from __future__ import absolute_import
-
-
 import numpy
-from .fragility_model import damage_states, no_damage
-from .fragility_function import poe
+from risklib.fragility_model import damage_states, no_damage
+from risklib.fragility_function import poe
 
 
 EMPTY_CALLBACK = lambda: None
