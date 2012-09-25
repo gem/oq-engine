@@ -47,51 +47,6 @@ class SingletonTestCase(unittest.TestCase):
         self.assertTrue(instance3 is instance1)
 
 
-class MemoizerTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.general.MemoizeMutable"""
-
-    def setUp(self):
-        self.counter = 0
-
-    def test_unashable_types(self):
-        """ Tests 'unhashable' types like dict, lists """
-
-        @general.MemoizeMutable
-        def my_memoized_method(*args, **kwargs):
-            """ the memoized decorated method """
-            self.counter += 1
-            return self.counter
-
-        # not cached
-        my_memoized_method([1, 2, 3],
-                           {'key1': 'value1', 'key2': 'value2'})
-
-        # cached with return values
-        self.assertEqual(1, my_memoized_method([1, 2, 3],
-                           {'key1': 'value1', 'key2': 'value2'}))
-
-        # should be called only one time
-        self.assertEqual(self.counter, 1)
-
-    def test_memoizer(self):
-        """ Tests the caching of 'normal' types """
-
-        @general.MemoizeMutable
-        def my_memoized_method(mystring, myint):
-            """ the memoized decorated method """
-            self.counter += 1
-            return self.counter
-
-        # not cached
-        my_memoized_method('bla', 1)
-
-        # cached with return values
-        self.assertEqual(1, my_memoized_method('bla', 1))
-
-        # should be called only one time
-        self.assertEqual(self.counter, 1)
-
-
 class BlockSplitterTestCase(unittest.TestCase):
     """Tests for :function:`openquake.utils.general.block_splitter`."""
 
