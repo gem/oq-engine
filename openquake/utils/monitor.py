@@ -83,6 +83,8 @@ def _live_cnode_status():
     """
     ins = inspect()
     live_nodes = ins.ping()
+    # ping returns a dict like this:
+    #   {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
     return set(live_nodes.keys())
 
 
