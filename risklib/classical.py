@@ -23,7 +23,9 @@ from scipy import stats
 from numpy import array, empty
 from numpy import concatenate
 from risklib.curve import Curve, EMPTY_CURVE
+from risklib.signals import EMPTY_CALLBACK
 from numpy import linspace, mean, subtract
+
 
 def compute_loss_curve(loss_ratio_curve, asset):
     """Compute the loss curve for the given asset value.
@@ -81,6 +83,39 @@ def unique_curve(curve):
         seen[ordinate] = abscissa
 
     return zip(seen.values(), seen.keys())
+
+
+def compute_conditional_loss_vector(curve, probabilities):
+    return dict([(poe, compute_conditional_loss(curve, poe))
+                 for poe in probabilities])
+
+
+def compute_classical(sites, assets_getter,
+                      vulnerability_model, hazard_getter,
+                      steps, conditional_loss_poes,
+                      on_asset_complete=EMPTY_CALLBACK):
+    for site in sites:
+        point, hazard_curve = hazard_getter(site)
+        assets = assets_getter(site)
+
+        for asset in assets:
+            vulnerability_function = vulnerability_model[asset.taxonomy]
+            loss_ratio_curve, loss_curve, loss_conditionals = (
+                compute_classical_per_asset(
+                    asset, vulnerability_function, hazard_curve,
+                    steps, conditional_loss_poes))
+            on_asset_complete(asset, point, loss_ratio_curve,
+                              loss_curve, loss_conditionals)
+
+
+def compute_classical_per_asset(asset, vulnerability_function,
+                                hazard_curve, steps, loss_poes):
+    loss_ratio_curve = compute_loss_ratio_curve(
+        vulnerability_function, hazard_curve, steps)
+    loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
+    loss_conditionals = compute_conditional_loss_vector(
+            loss_curve, loss_poes)
+    return loss_ratio_curve, loss_curve, loss_conditionals
 
 
 def compute_conditional_loss(curve, probability):
