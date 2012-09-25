@@ -783,7 +783,6 @@ class CNodeStats(djm.Model):
     STATUS_CHOICES = (
         (u"up", u"Compute node available"),
         (u"down", u"Compute node unavailable"),
-        (u"error", u"Compute node with errors"),
     )
     current_status = djm.TextField(
         choices=STATUS_CHOICES, help_text="Current compute node status")

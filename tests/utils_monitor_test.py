@@ -35,41 +35,13 @@ from openquake.utils import monitor
 from tests.utils.helpers import patch
 
 
-class LiveCnodeStatusTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.monitor._live_cnode_status()."""
-
-    def test__live_cnode_status(self):
-        with patch('subprocess.check_output') as mock:
-            mock.return_value = "\n".join(
-                ["gemsun02: OK", "gemsun01: OK", "gemsun03: OK", "",
-                 "3 nodes online."])
-            actual = monitor._live_cnode_status()
-            expected = {"gemsun01": "OK", "gemsun02": "OK", "gemsun03": "OK"}
-            self.assertEqual(expected, actual)
-
-    def test__live_cnode_status_with_one(self):
-        with patch('subprocess.check_output') as mock:
-            mock.return_value = "\n".join(["usc: OK", "", "1 node online."])
-            actual = monitor._live_cnode_status()
-            expected = {"usc": "OK"}
-            self.assertEqual(expected, actual)
-
-    def test__live_cnode_status_with_mixed(self):
-        with patch('subprocess.check_output') as mock:
-            mock.return_value = "\n".join(
-                ["oqt: OK", "usc: ERROR", "", "2 nodes online."])
-            actual = monitor._live_cnode_status()
-            expected = {"oqt": "OK", "usc": "ERROR"}
-            self.assertEqual(expected, actual)
-
-
 class DbCnodeStatusTestCase(unittest.TestCase):
     """Tests the behaviour of utils.monitor._db_cnode_status()."""
 
     def test__db_cnode_status(self):
         job = engine.prepare_job()
         expected = {}
-        for node, status in [("N1", "up"), ("N2", "down"), ("N3", "error")]:
+        for node, status in [("N1", "up"), ("N2", "down"), ("N3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
@@ -79,7 +51,7 @@ class DbCnodeStatusTestCase(unittest.TestCase):
     def test__db_cnode_status_and_wrong_job_id(self):
         job = engine.prepare_job()
         expected = {}
-        for node, status in [("O1", "up"), ("O2", "down"), ("O3", "error")]:
+        for node, status in [("O1", "up"), ("O2", "down"), ("O3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
@@ -87,13 +59,13 @@ class DbCnodeStatusTestCase(unittest.TestCase):
 
     def test__db_cnode_status_and_two_jobs(self):
         job1 = engine.prepare_job()
-        for node, status in [("P1", "up"), ("P2", "down"), ("P3", "error")]:
+        for node, status in [("P1", "up"), ("P2", "down"), ("P3", "down")]:
             ns = models.CNodeStats(oq_job=job1, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
         job2 = engine.prepare_job()
         expected = {}
-        for node, status in [("Q2", "down"), ("Q3", "error")]:
+        for node, status in [("Q2", "down"), ("Q3", "down")]:
             ns = models.CNodeStats(oq_job=job2, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
@@ -139,33 +111,9 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
 
         self.assertEqual(1, cs.failures)
 
-    def test_cnode_stats_failure_counter_with_up_error_transition(self):
-        # The failures counter is incremented in case of a
-        #   up -> error transition
-        cs = models.CNodeStats(oq_job=self.job, node="N4", current_status="up")
-        cs.save(using="job_superv")
-        cs.current_status = "error"
-        cs.save(using="job_superv")
-        cs = models.CNodeStats.objects.get(id=cs.id)
-
-        self.assertEqual(1, cs.failures)
-
-    def test_cnode_stats_failure_counter_with_down_error_transition(self):
-        # The failures counter is only stepped in case of a
-        #   up -> down/error transition
-        # and will remain unchanged here.
-        cs = models.CNodeStats(oq_job=self.job, node="N5",
-                               current_status="down")
-        cs.save(using="job_superv")
-        cs.current_status = "error"
-        cs.save(using="job_superv")
-        cs = models.CNodeStats.objects.get(id=cs.id)
-
-        self.assertEqual(0, cs.failures)
-
     def test_cnode_stats_failure_counter_with_down_up_transition(self):
         # The failures counter is only stepped in case of a
-        #   up -> down/error transition
+        #   up -> down transition
         # and will remain unchanged here.
         cs = models.CNodeStats(oq_job=self.job, node="N6",
                                current_status="down")
@@ -229,7 +177,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
     def test_monitor_compute_nodes_with_zero_nodes(self):
         # Result: 0 failed nodes
         self.db_mock.return_value = {}
-        self.live_mock.return_value = {}
+        self.live_mock.return_value = set()
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(0, actual)
 
@@ -237,15 +185,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         # Result: 1 failed nodes
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
         self.db_mock.return_value = {"N1": cs}
-        self.live_mock.return_value = {}
-        actual = monitor.monitor_compute_nodes(self.job)
-        self.assertEqual(1, actual)
-
-    def test_monitor_compute_nodes_with_a_node_that_has_errors(self):
-        # Result: 1 failed nodes
-        cs = models.CNodeStats(oq_job=self.job, node="N2", current_status="up")
-        self.db_mock.return_value = {"N2": cs}
-        self.live_mock.return_value = {"N2": "ERROR"}
+        self.live_mock.return_value = set()
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(1, actual)
 
@@ -258,7 +198,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         n2 = models.CNodeStats(oq_job=self.job, node="N4",
                                 current_status="down", failures=1)
         self.db_mock.return_value = {"N3": n1, "N4": n2}
-        self.live_mock.return_value = {"N5": "OK"}
+        self.live_mock.return_value = set(["N5"])
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(2, actual)
         # Please note also that the new node ("N5") was written to the
@@ -278,7 +218,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         n2 = models.CNodeStats(oq_job=self.job, node="N7",
                                current_status="down")
         self.db_mock.return_value = {"N6": n1, "N7": n2}
-        self.live_mock.return_value = {}
+        self.live_mock.return_value = set()
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(1, actual)
         # The failed node has been updated to capture that.
@@ -294,17 +234,17 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         n1.save(using="job_superv")
         self.assertEqual(0, n1.failures)
 
-        n1.current_status = "error"
+        n1.current_status = "down"
         n1.save(using="job_superv")
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual(1, n1.failures)
 
         self.db_mock.return_value = {"N8": n1}
-        self.live_mock.return_value = {"N8": "OK"}
+        self.live_mock.return_value = set(["N8"])
         actual = monitor.monitor_compute_nodes(self.job)
         self.assertEqual(1, actual)
         # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual("up", n1.current_status)
-        self.assertEqual("error", n1.previous_status)
+        self.assertEqual("down", n1.previous_status)
         self.assertEqual(1, n1.failures)

@@ -22,7 +22,7 @@ Utility functions related to monitoring.
 """
 
 
-import subprocess
+from celery.task.control import inspect
 
 from openquake.db import models
 
@@ -36,42 +36,39 @@ def monitor_compute_nodes(job):
 
     :param job: The :class:`openquake.db.models.OqJob` instance to use
     :return: the number of failures i.e. how many nodes went from "up" to
-        "down" or "error" *at some time* during the calculation
+        "down" *at some time* during the calculation
     """
-    live_stats = _live_cnode_status()
+    live_nodes = _live_cnode_status()
     db_stats = _db_cnode_status(job)
 
-    # working nodes according to live stats
-    lworking_nodes = set(node for node, status in live_stats.iteritems()
-                         if status == "OK")
-    # working nodes according to the database
-    dworking_nodes = set(cs.node for cs in db_stats.values()
-                         if cs.current_status == "up" and cs.failures == 0)
-
-    # Which working nodes stored in the db have gone bad/down?
-    old_failed = set(cs.node for cs in db_stats.values() if cs.failures > 0)
-    total_failures = len(old_failed)
-    new_failed = dworking_nodes - lworking_nodes
-    for node in new_failed:
-        status = "error" if node in live_stats else "down"
+    def set_status(node, status):
+        """Update the status of the given node in the database."""
         cs = db_stats[node]
         cs.current_status = status
         cs.save(using="job_superv")
+
+    # working nodes according to the database
+    dworking_nodes = set(cs.node for cs in db_stats.values()
+                         if cs.current_status == "up" and cs.failures == 0)
+    # nodes that have failed at least once at some time during the calculation
+    dfailed_nodes = set(cs.node for cs in db_stats.values() if cs.failures > 0)
+
+    # Which working nodes stored in the db have gone bad/down?
+    total_failures = len(dfailed_nodes)
+    new_failed = dworking_nodes - live_nodes
+    for node in new_failed:
+        set_status(node, "down")
         total_failures += 1
 
     # Any entirely new nodes?
-    new_nodes = set(live_stats.keys()) - set(db_stats.keys())
+    new_nodes = live_nodes - set(db_stats.keys())
     for node in new_nodes:
-        status = "up" if live_stats[node] == "OK" else "error"
-        cs = models.CNodeStats(oq_job=job, node=node, current_status=status)
+        cs = models.CNodeStats(oq_job=job, node=node, current_status="up")
         cs.save(using="job_superv")
 
     # Any nodes that came back after a failure?
-    recovered_nodes = lworking_nodes.intersection(old_failed)
-    for node in recovered_nodes:
-        cs = db_stats[node]
-        cs.current_status = "up"
-        cs.save(using="job_superv")
+    for node in live_nodes.intersection(dfailed_nodes):
+        set_status(node, "up")
 
     return total_failures
 
@@ -79,17 +76,14 @@ def monitor_compute_nodes(job):
 def _live_cnode_status():
     """Get compute node status (from celery).
 
-    :return: a dict with compute node status info e.g.
-        `{"oqt": "OK", "usc": "ERROR"}`
+    The main reason this function exists is that mocking any celery artefact
+    (for the purpose of testing) is a nightmare.
+
+    :return: a set with the names of the live nodes
     """
-    csi = subprocess.check_output("cd /usr/openquake; celeryctl status -C",
-                                  shell=True)
-    csi = csi.splitlines()
-    # now we should have data like this:
-    # ['gemsun02: OK', 'gemsun01: OK', 'gemsun03: OK', 'gemsun04: OK',
-    #  'gemmicro02: OK', 'bigstar04: OK', 'gemmicro01: OK', '',
-    #  '7 nodes online.']
-    return dict(tuple(cs.split(": ")) for cs in csi if cs.find(":") > -1)
+    ins = inspect()
+    live_nodes = ins.ping()
+    return set(live_nodes.keys())
 
 
 def _db_cnode_status(job):
