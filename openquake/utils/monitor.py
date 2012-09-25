@@ -92,7 +92,7 @@ def _db_cnode_status(job):
     :param job: The :class:`openquake.db.models.OqJob` instance to use
     :return: a potentially empty dictionary where the keys are node names
         and the values are either 'up' or 'down' e.g.
-        `{"N1": "up", "N2": "down", "N3": "error"}`
+        `{"N1": "up", "N2": "down", "N3": "down"}`
     """
     dbi = models.CNodeStats.objects.filter(oq_job=job).order_by("current_ts")
     return dict((cs.node, cs) for cs in dbi)
