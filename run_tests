@@ -1,0 +1,7 @@
+#!/bin/bash
+# First, purge all .pyc files to clean the source tree,
+# in case some modules were deleted or moved.
+find . -name "*.pyc" -delete
+# We look for tests by recursively searching into the tests/ dir,
+# in addition to doctests within the risklib codebase.
+nosetests --with-coverage --cover-package risklib --with-doctest "$@" tests risklib 2>&1 | tee last_test_run.log
