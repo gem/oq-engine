@@ -77,7 +77,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
         job = models.OqJob.objects.get(id=self.job_ctxt.job_id)
-        hc = models.Hazardrisklib.curve.CurveData.objects.filter(
+        hc = models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job,
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
@@ -96,46 +96,38 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         lrem_steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
         loss_poes = conditional_loss_poes(self.job_ctxt.params)
 
-        for site in block.sites:
-            point = self.job_ctxt.region.grid.point_at(site)
-            hazard_curve = self._get_db_curve(
-                hazard_input_site(self.job_ctxt, site))
-
-            assets = BaseRiskCalculator.assets_at(
+        assets_getter = lambda site: BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
 
-            for asset in assets:
-                vuln_function_reference = asset.taxonomy
-                vuln_function = vuln_curves.get(vuln_function_reference, None)
+        hazard_getter = lambda site: (
+            self.job_ctxt.region.grid.point_at(site),
+            self._get_db_curve(
+                hazard_input_site(self.job_ctxt, site)))
 
-                if not vuln_function:
-                    LOGGER.error("Unknown vulnerability function"
-                                 " %s for asset %s" % (
-                                     asset.taxonomy, asset.asset_ref))
+        def on_asset_complete(asset, point, loss_ratio_curve,
+                              loss_curve, loss_conditionals):
+            loss_key = kvs.tokens.loss_curve_key(
+                self.job_ctxt.job_id, point.row,
+                point.column, asset.asset_ref)
 
-                risklib.classical.compute_classical_per_asset(
-                    asset, vuln_function, hazard_curve, lrem_steps, loss_poes)
+            kvs.get_client().set(loss_key, loss_curve.to_json())
 
-                loss_key = kvs.tokens.loss_curve_key(
-                    self.job_ctxt.job_id, point.row,
-                    point.column, asset.asset_ref)
+            for poe, loss in loss_conditionals.items():
+                key = kvs.tokens.loss_key(
+                    self.job_ctxt.job_id, point.row, point.column,
+                    asset.asset_ref, poe)
+                kvs.get_client().set(key, loss)
 
-                kvs.get_client().set(loss_key, loss_curve.to_json())
+            loss_ratio_key = kvs.tokens.loss_ratio_key(
+                self.job_ctxt.job_id, point.row,
+                point.column, asset.asset_ref)
 
-                for poe, loss in loss_conditionals.items():
-                    key = kvs.tokens.loss_key(
-                        self.job_ctxt.job_id, point.row, point.column,
-                        asset.asset_ref, poe)
-                    kvs.get_client().set(key, loss)
+            kvs.get_client().set(loss_ratio_key,
+                                 loss_ratio_curve.to_json())
 
-                loss_ratio_key = kvs.tokens.loss_ratio_key(
-                    self.job_ctxt.job_id, point.row,
-                    point.column, asset.asset_ref)
-
-                kvs.get_client().set(loss_ratio_key,
-                                     loss_ratio_curve.to_json())
-
-        return True
+        risklib.classical.compute_classical(
+            block.sites, assets_getter, vuln_curves, hazard_getter,
+            lrem_steps, loss_poes, on_asset_complete)
 
     def _compute_bcr(self, block_id):
         """
