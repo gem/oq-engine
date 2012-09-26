@@ -636,7 +636,7 @@ AS $$
         NEW["previous_ts"] = OLD["current_ts"]
         result = "MODIFY"
 
-        if NEW["previous_status"] == "up":
+        if NEW["current_status"] == "down":
             # state transition: up -> down
             NEW["failures"] += 1
     else:
