@@ -30,15 +30,11 @@ from openquake.calculators.risk.event_based import core as eb_core
 from openquake.calculators.risk.general import AggregateLossCurve
 from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import Block
-from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import _compute_cumulative_histogram
 from openquake.calculators.risk.general import compute_loss_curve
 from openquake.calculators.risk.general import compute_loss_ratio_curve
 from openquake.calculators.risk.general import compute_loss_ratios
 from openquake.calculators.risk.general import _compute_loss_ratios_range
-from openquake.calculators.risk.general import compute_mean_loss
-from openquake.calculators.risk.general import _compute_mid_mean_pe
-from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
 from openquake.calculators.risk.general import ProbabilisticRiskCalculator
@@ -843,58 +839,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         helpers.assertDeepAlmostEqual(
             self, res, [[[1, 1], [[expected_result, "rubcr"]]]])
 
-    def test_loss_ratio_pe_mid_curve_computation(self):
-        loss_ratio_curve = shapes.Curve([(0, 0.3460), (0.06, 0.12),
-                (0.12, 0.057), (0.18, 0.04),
-                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
-
-        expected_curve = shapes.Curve([(0.0300, 0.2330), (0.0900, 0.0885),
-                (0.1500, 0.0485), (0.2100, 0.0295),
-                (0.2700, 0.0140), (0.3750, 0.0045)])
-
-        self.assertEqual(expected_curve,
-                _compute_mid_mean_pe(loss_ratio_curve))
-
-    def test_loss_ratio_po_computation(self):
-        loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330),
-                (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295),
-                (0.2700, 0.0140), (0.3750, 0.0045)])
-
-        expected_curve = shapes.Curve([(0.0600, 0.1445),
-                (0.1200, 0.0400), (0.1800, 0.0190), (0.2400, 0.0155),
-                (0.3225, 0.0095)])
-
-        self.assertEqual(expected_curve,
-                _compute_mid_po(loss_ratio_pe_mid_curve))
-
-    def test_mean_loss_ratio_computation(self):
-        loss_ratio_curve = shapes.Curve([(0, 0.3460), (0.06, 0.12),
-                (0.12, 0.057), (0.18, 0.04),
-                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
-
-        # TODO (ac): Check the difference between 0.023305 and 0.023673
-        self.assertAlmostEqual(0.023305,
-                               compute_mean_loss(loss_ratio_curve), 3)
-
-
-class RiskCommonTestCase(unittest.TestCase):
-
-    def test_compute_bcr(self):
-        # numbers are proven to be correct
-        eal_orig = 0.00838
-        eal_retrofitted = 0.00587
-        retrofitting_cost = 0.1
-        interest = 0.05
-        life_expectancy = 40
-        expected_result = 0.43405
-
-        result = compute_bcr(eal_orig, eal_retrofitted, interest,
-                             life_expectancy, retrofitting_cost)
-        self.assertAlmostEqual(result, expected_result, delta=2e-5)
-
 
 class RiskJobGeneralTestCase(unittest.TestCase):
-
     def _make_job(self, params):
         self.job = helpers.create_job(params, base_path=".")
         self.job_id = self.job.job_id

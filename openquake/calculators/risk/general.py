@@ -32,14 +32,11 @@ from celery.task import task
 from django.contrib.gis import geos
 
 from numpy import array
-from numpy import exp
 from numpy import histogram
 from numpy import linspace
 from numpy import mean
 from numpy import where
 from numpy import zeros
-from scipy import sqrt, log
-from scipy import stats
 
 from openquake.calculators.base import Calculator
 from openquake.db import models
@@ -54,7 +51,7 @@ from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
-from risklib import classical
+from risklib import classical, benefit_cost_ratio
 
 
 LOG = logs.LOG
@@ -678,15 +675,15 @@ def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
                      asset.asset_ref, loss_curve)
-            eal_original = compute_mean_loss(loss_curve)
+            eal_original = benefit_cost_ratio._compute_mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset.taxonomy]
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
                      asset.asset_ref, loss_curve)
-            eal_retrofitted = compute_mean_loss(loss_curve)
+            eal_retrofitted = benefit_cost_ratio._compute_mean_loss(loss_curve)
 
-            bcr = compute_bcr(eal_original, eal_retrofitted,
+            bcr = benefit_cost_ratio._bcr(eal_original, eal_retrofitted,
                               interest_rate, asset_life_expectancy,
                               asset.retrofitting_cost)
 
@@ -717,38 +714,6 @@ def compute_loss_curve(loss_ratio_curve, asset):
     return loss_ratio_curve.rescale_abscissae(asset)
 
 
-def _compute_mid_mean_pe(loss_ratio_curve):
-    """Compute a new loss ratio curve taking the mean values."""
-
-    loss_ratios = loss_ratio_curve.abscissae
-    pes = loss_ratio_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
-
-    return shapes.Curve(zip(ratios, mid_pes))
-
-
-def _compute_mid_po(loss_ratio_pe_mid_curve):
-    """Compute a loss ratio curve that has PoOs
-    (Probabilities of Occurrence) as Y values."""
-
-    loss_ratios = loss_ratio_pe_mid_curve.abscissae
-    pes = loss_ratio_pe_mid_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    pos = collect(loop(pes, lambda x, y: x - y))
-
-    return shapes.Curve(zip(ratios, pos))
-
-
-def compute_mean_loss(curve):
-    """Compute the mean loss (or loss ratio) for the given curve."""
-
-    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-    return sum(i * j for i, j in zip(
-            mid_curve.abscissae, mid_curve.ordinates))
-
 
 def loop(elements, func, *args):
     """Loop over the given elements, yielding func(current, next, *args)."""
@@ -774,27 +739,6 @@ def unique_curve(curve):
         seen[ordinate] = abscissa
 
     return zip(seen.values(), seen.keys())
-
-
-def compute_bcr(eal_original, eal_retrofitted, interest_rate,
-                asset_life_expectancy, retrofitting_cost):
-    """
-    Compute the Benefit-Cost Ratio.
-
-    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
-
-    Where:
-
-    * BCR -- Benefit cost ratio
-    * EALo -- Expected annual loss for original asset
-    * EALr -- Expected annual loss for retrofitted asset
-    * r -- Interest rate
-    * t -- Life expectancy of the asset
-    * C -- Retrofitting cost
-    """
-    return ((eal_original - eal_retrofitted)
-            * (1 - exp(- interest_rate * asset_life_expectancy))
-            / (interest_rate * retrofitting_cost))
 
 
 def compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):

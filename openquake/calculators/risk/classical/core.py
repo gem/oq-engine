@@ -28,8 +28,9 @@ from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk.general import (
     ProbabilisticRiskCalculator, compute_risk, Block,
-    hazard_input_site, BaseRiskCalculator, compute_bcr_for_block)
+    hazard_input_site, BaseRiskCalculator)
 
+from collections import defaultdict
 import risklib
 
 LOGGER = logs.LOG
@@ -138,24 +139,31 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         data structure spec.
         """
         job_ctxt = self.job_ctxt
-        block = Block.from_kvs(job_ctxt.job_id, block_id)
+        job_id = job_ctxt.job_id
+        block = Block.from_kvs(job_id, block_id)
 
-        def get_loss_curve(site, vuln_function, asset):
-            "Compute loss curve basing on hazard curve"
-            job_profile = self.job_ctxt.oq_job_profile
-            hazard_curve = self._get_db_curve(
-                hazard_input_site(self.job_ctxt, site))
-            steps = job_profile.lrem_steps_per_interval
-            lrem = risklib.classical.compute_lrem(vuln_function, steps)
-            loss_ratio_curve = risklib.classical.compute_loss_ratio_curve(
-                    vuln_function, lrem, hazard_curve,
-                    steps)
-            return risklib.classical.compute_loss_curve(
-                loss_ratio_curve, asset.value)
+        result = defaultdict(list)
 
-        bcr = compute_bcr_for_block(job_ctxt, block.sites,
-            get_loss_curve, float(job_ctxt.params['INTEREST_RATE']),
-            float(job_ctxt.params['ASSET_LIFE_EXPECTANCY']))
+        def on_asset_complete(asset, bcr, eal_original, eal_retrofitted):
+            result[(asset.site.x, asset.site.y)].append(
+                ({'bcr': bcr,
+                  'eal_original': eal_original,
+                  'eal_retrofitted': eal_retrofitted},
+                  asset.asset_ref))
+
+        risklib.benefit_cost_ratio.compute_benefit_cost_ratio(
+            block.sites,
+            lambda site: BaseRiskCalculator.assets_at(job_id, site),
+            vulnerability.load_vuln_model_from_kvs(job_id),
+            vulnerability.load_vuln_model_from_kvs(job_id, retrofitted=True),
+            lambda site: self._get_db_curve(hazard_input_site(
+                self.job_ctxt, site)),
+            self.job_ctxt.oq_job_profile.lrem_steps_per_interval,
+            float(job_ctxt.params['INTEREST_RATE']),
+            float(job_ctxt.params['ASSET_LIFE_EXPECTANCY']),
+            on_asset_complete)
+
+        bcr = result.items()
 
         bcr_block_key = kvs.tokens.bcr_block_key(job_ctxt.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
