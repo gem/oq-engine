@@ -22,9 +22,7 @@ calculator
 import numpy
 from risklib.fragility_model import damage_states, no_damage
 from risklib.fragility_function import poe
-
-
-EMPTY_CALLBACK = lambda: None
+from risklib.signals import EMPTY_CALLBACK
 
 
 def compute_damage(sites, assets_getter,
