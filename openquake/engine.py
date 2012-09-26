@@ -899,11 +899,6 @@ def _switch_to_job_phase(job_ctxt, ctype, status):
     job = OqJob.objects.get(id=job_ctxt.job_id)
     JobPhaseStats.objects.create(oq_job=job, ctype=ctype, job_status=status)
     logs.log_progress("%s (%s)" % (status, ctype), 1)
-    if ctype == "hazard" and status == "executing":
-        # Record the time (in seconds since epoch) to allow the supervisor
-        # to make a meaningful "length of time w/o progress" comparison.
-        tstamp = int(datetime.now().strftime("%s"))
-        stats.pk_set(job_ctxt.job_id, "lvr_ts", tstamp)
 
 
 def _launch_job(job_ctxt, sections):

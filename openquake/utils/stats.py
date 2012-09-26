@@ -25,6 +25,7 @@ from datetime import datetime
 from functools import wraps
 import redis
 
+from openquake.models import JobPhaseStats
 from openquake.utils import config
 
 
@@ -390,3 +391,25 @@ def delete_job_counters(job_id):
 def debug_stats_enabled():
     """True if debug statistics counters are enabled."""
     return config.flag_set("statistics", "debug")
+
+
+def time_since_last_progress(job_id):
+    """Get length of time since the last task completed.
+
+    :param int job_id: identifier of the job in question
+    :returns: number of seconds since the last task completed (or the
+        execute phase began)
+    """
+    def epoch(dto):
+        """Convert a datetime object to seconds since epoch"""
+        return int(dto.strftime("%s"))
+
+    tstamp = epoch(datetime.now())
+    lvr_ts = pk_get(job_id, "lvr_ts")
+    if lvr_ts == 0:
+        jpss = JobPhaseStats.objects.filter(oq_job__id=job_id,
+                                            ctype="executing")
+        [jps] = jpss.order_by("-start_time")[:1]
+        lvr_ts = epoch(jps.start_time)
+
+    return tstamp - lvr_ts
