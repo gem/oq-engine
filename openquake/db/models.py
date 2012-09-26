@@ -1001,6 +1001,10 @@ class OqJobProfile(djm.Model):
     # TODO: This is purely a temporary workaround and will be removed and will
     # be removed when nhlib integration is complete.
     workaround_1027041 = djm.NullBooleanField(null=True, default=False)
+    # The timeout is stored in seconds and is 1 hour by default.
+    hazard_no_progress_timeout = djm.IntegerField(
+        default=3600, help_text="what time period w/o any progress is "
+                                "acceptable for hazard calculations?")
 
     class Meta:
         db_table = 'uiapi\".\"oq_job_profile'
