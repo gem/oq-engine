@@ -34,7 +34,7 @@ from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
 from openquake.export.risk import export_dmg_dist_total, export_collapse_map
-from risklib import scenario_damage as risklib
+from risklib import scenario_damage
 
 LOGGER = logs.LOG
 
@@ -77,7 +77,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         oq_job = self.job_ctxt.oq_job
         fm = _fm(oq_job)
-        damage_states = risklib.damage_states(fm)
+        damage_states = scenario_damage.damage_states(fm)
 
         output = Output(
             owner=oq_job.owner,
@@ -150,10 +150,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             tf_args=dict(job_id=self.job_ctxt.job_id))
 
         self.dd_taxonomy_means, self.dd_taxonomy_stddevs = \
-            risklib.damage_distribution_by_taxonomy(region_fractions)
+            scenario_damage.damage_distribution_by_taxonomy(region_fractions)
 
         self.total_distribution_means, self.total_distribution_stddevs = \
-            risklib.total_damage_distribution(region_fractions)
+            scenario_damage.total_damage_distribution(region_fractions)
 
         LOGGER.debug("Scenario damage risk computation completed.")
 
@@ -195,10 +195,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                                  collapse_map):
 
             self._store_cmap(asset, collapse_map)
-            self._store_dda(asset, risklib.damage_states(fragility_model),
+            self._store_dda(asset,
+                            scenario_damage.damage_states(fragility_model),
                 damage_distribution_asset)
 
-        return risklib.compute_damage(block.sites, assets_loader,
+        return scenario_damage.compute_damage(block.sites, assets_loader,
             (fragility_model, frag_functions), ground_motion_field_loader,
             on_asset_complete_cb)
 
@@ -263,7 +264,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__output_type="dmg_dist_per_taxonomy")
 
         fm = _fm(self.job_ctxt.oq_job)
-        damage_states = risklib.damage_states(fm)
+        damage_states = scenario_damage.damage_states(fm)
 
         for taxonomy in self.dd_taxonomy_means.keys():
 
@@ -290,7 +291,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         for x in xrange(len(self.total_distribution_means)):
             DmgDistTotalData(
                 dmg_dist_total=dd,
-                dmg_state=risklib.damage_states(fm)[x],
+                dmg_state=scenario_damage.damage_states(fm)[x],
                 mean=self.total_distribution_means[x],
                 stddev=self.total_distribution_stddevs[x]).save()
 
