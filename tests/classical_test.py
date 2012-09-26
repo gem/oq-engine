@@ -19,9 +19,9 @@ from numpy import allclose, array
 
 from risklib.curve import Curve
 from risklib.vulnerability_function import VulnerabilityFunction
-from risklib.classical import (_compute_lrem,
-    _compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta,
-    _compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po,
+from risklib.classical import (compute_lrem,
+    compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta,
+    compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po,
     _split_loss_ratios)
 
 
@@ -39,7 +39,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertEqual(0.0, _compute_conditional_loss(loss_curve, 0.200))
+        self.assertEqual(0.0, compute_conditional_loss(loss_curve, 0.200))
 
     def test_loss_is_max_if_probability_is_too_low(self):
         loss_curve = Curve([
@@ -47,20 +47,20 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertEqual(0.30, _compute_conditional_loss(loss_curve, 0.050))
+        self.assertEqual(0.30, compute_conditional_loss(loss_curve, 0.050))
 
     def test_conditional_loss_duplicates(self):
-        # we feed _compute_conditional_loss with some duplicated data to see if
+        # we feed compute_conditional_loss with some duplicated data to see if
         # it's handled correctly
 
-        loss1 = _compute_conditional_loss(Curve([
+        loss1 = compute_conditional_loss(Curve([
             (0.21, 0.131), (0.24, 0.108),
             (0.27, 0.089), (0.30, 0.066),
         ]), 0.100)
 
         # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
         # should be skipped
-        loss2 = _compute_conditional_loss(Curve([
+        loss2 = compute_conditional_loss(Curve([
             (0.19, 0.131), (0.20, 0.131), (0.21, 0.131),
             (0.24, 0.108), (0.27, 0.089), (0.30, 0.066),
         ]), 0.100)
@@ -73,7 +73,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertAlmostEqual(0.2526, _compute_conditional_loss(
+        self.assertAlmostEqual(0.2526, compute_conditional_loss(
             loss_curve, 0.100), 4)
 
     def test_compute_alphas(self):
@@ -127,7 +127,7 @@ class ClassicalTestCase(unittest.TestCase):
         vulnerability_function = VulnerabilityFunction(
             self.imls, self.mean_loss_ratios, self.covs, "BT")
 
-        lrem = _compute_lrem(vulnerability_function, 5)
+        lrem = compute_lrem(vulnerability_function, 5)
         self.assertTrue(allclose(expected_lrem, lrem, rtol=0.0, atol=0.0005))
 
     def test_lrem_po_computation(self):
@@ -145,7 +145,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
-        lrem = _compute_lrem(vuln_function, 2)
+        lrem = compute_lrem(vuln_function, 2)
         lrem_po = _compute_lrem_po(vuln_function,lrem, hazard_curve)
 
         self.assertTrue(allclose(0.07, lrem_po[0][0], atol=0.005))
@@ -253,7 +253,7 @@ class ClassicalTestCase(unittest.TestCase):
              [2.89163471e-09, 2.43138842e-14, 6.60395072e-11, 7.56938368e-09],
              [2.38464803e-11, 0., 1.11022302e-16, 0.]])
 
-        loss_ratio_curve = _compute_loss_ratio_curve(
+        loss_ratio_curve = compute_loss_ratio_curve(
             vulnerability_function, lrem, hazard_curve, 2)
 
         expected_curve = Curve([

@@ -29,7 +29,7 @@ def compute_classical(sites, assets_getter,
                       on_asset_complete=EMPTY_CALLBACK):
 
     loss_ratio_exceedance_matrices = dict(
-        [(taxonomy, _compute_lrem(vulnerability_function, steps))
+        [(taxonomy, compute_lrem(vulnerability_function, steps))
          for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     for site in sites:
@@ -47,7 +47,7 @@ def compute_classical(sites, assets_getter,
                 loss_curve, loss_conditionals)
 
 
-def _compute_lrem(vuln_function, steps):
+def compute_lrem(vuln_function, steps):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
 
     :param vuln_function:
@@ -88,20 +88,20 @@ def _compute_lrem(vuln_function, steps):
 
 def _compute_classical_per_asset(asset, vulnerability_function, lrem,
                                 hazard_curve, steps, loss_poes):
-    loss_ratio_curve = _compute_loss_ratio_curve(
+    loss_ratio_curve = compute_loss_ratio_curve(
         vulnerability_function, lrem, hazard_curve, steps)
-    loss_curve = _compute_loss_curve(loss_ratio_curve, asset.value)
+    loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
     loss_conditionals = _compute_conditional_loss_vector(
         loss_curve, loss_poes)
     return loss_ratio_curve, loss_curve, loss_conditionals
 
 
 def _compute_conditional_loss_vector(curve, probabilities):
-    return dict([(poe, _compute_conditional_loss(curve, poe))
+    return dict([(poe, compute_conditional_loss(curve, poe))
                  for poe in probabilities])
 
 
-def _compute_loss_curve(loss_ratio_curve, asset):
+def compute_loss_curve(loss_ratio_curve, asset):
     """
     Compute the loss curve for the given asset value.
 
@@ -156,7 +156,7 @@ def _remove_ordinate_duplicates(curve):
     return zip(seen.values(), seen.keys())
 
 
-def _compute_conditional_loss(curve, probability):
+def compute_conditional_loss(curve, probability):
     """
     Return the loss (or loss ratio) corresponding to the given
     PoE (Probability of Exceendance).
@@ -178,7 +178,7 @@ def _compute_conditional_loss(curve, probability):
     return loss_curve.abscissa_for(probability)
 
 
-def _compute_loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
+def compute_loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
