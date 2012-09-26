@@ -142,8 +142,8 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         self.assertEqual(old_current_ts, cs.current_ts)
 
 
-class MonitorComputeNodesTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.monitor.monitor_compute_nodes()."""
+class CountFailedNodesTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.monitor.count_failed_nodes()."""
 
     job = db_patch = live_patch = db_mock = live_mock = None
 
@@ -161,22 +161,22 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         self.db_patch.stop()
         self.live_patch.stop()
 
-    def test_monitor_compute_nodes_with_zero_nodes(self):
+    def test_count_failed_nodes_with_zero_nodes(self):
         # Result: 0 failed nodes
         self.db_mock.return_value = {}
         self.live_mock.return_value = set()
-        actual = monitor.monitor_compute_nodes(self.job)
+        actual = monitor.count_failed_nodes(self.job)
         self.assertEqual(0, actual)
 
-    def test_monitor_compute_nodes_with_a_node_that_went_offline(self):
+    def test_count_failed_nodes_with_a_node_that_went_offline(self):
         # Result: 1 failed nodes
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
         self.db_mock.return_value = {"N1": cs}
         self.live_mock.return_value = set()
-        actual = monitor.monitor_compute_nodes(self.job)
+        actual = monitor.count_failed_nodes(self.job)
         self.assertEqual(1, actual)
 
-    def test_monitor_compute_nodes_with_failures_during_calculation(self):
+    def test_count_failed_nodes_with_failures_during_calculation(self):
         # Result: 2 node failures, please note that the function under test
         # counts the total number of node failures that occurred during a
         # calculation and *not* the number of currently failed nodes.
@@ -186,7 +186,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
                                 current_status="down", failures=1)
         self.db_mock.return_value = {"N3": n1, "N4": n2}
         self.live_mock.return_value = set(["N5"])
-        actual = monitor.monitor_compute_nodes(self.job)
+        actual = monitor.count_failed_nodes(self.job)
         self.assertEqual(2, actual)
         # Please note also that the new node ("N5") was written to the
         # database
@@ -194,7 +194,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         self.assertEqual("up", n3.current_status)
         self.assertEqual(0, n3.failures)
 
-    def test_monitor_compute_nodes_with_failures_before_calculation(self):
+    def test_count_failed_nodes_with_failures_before_calculation(self):
         # Result: 1 node failure; this simulates the situation where a
         # node has failed from the very beginning and never recovered i.e. it
         # never took on any tasks. Only nodes that were functioning at some
@@ -205,14 +205,14 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
                                current_status="down")
         self.db_mock.return_value = {"N6": n1, "N7": n2}
         self.live_mock.return_value = set()
-        actual = monitor.monitor_compute_nodes(self.job)
+        actual = monitor.count_failed_nodes(self.job)
         self.assertEqual(1, actual)
         # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual("down", n1.current_status)
         self.assertEqual(1, n1.failures)
 
-    def test_monitor_compute_nodes_with_failed_and_recovered_node(self):
+    def test_count_failed_nodes_with_failed_and_recovered_node(self):
         # Result: 1 node failure; the node failed and recovered. Its failures
         # counter is unaffected by the recovery.
         n1 = models.CNodeStats(oq_job=self.job, node="N8", current_status="up")
@@ -226,7 +226,7 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
 
         self.db_mock.return_value = {"N8": n1}
         self.live_mock.return_value = set(["N8"])
-        actual = monitor.monitor_compute_nodes(self.job)
+        actual = monitor.count_failed_nodes(self.job)
         self.assertEqual(1, actual)
         # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)

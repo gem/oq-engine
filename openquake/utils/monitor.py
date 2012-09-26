@@ -27,7 +27,7 @@ from celery.task.control import inspect
 from openquake.db import models
 
 
-def monitor_compute_nodes(job):
+def count_failed_nodes(job):
     """Check compute nodes and return the total number of failures.
 
     Please note that this function counts the total number of node
