@@ -19,16 +19,10 @@ This module defines the functions useful for a scenario-damage
 calculator
 """
 
-
-from __future__ import absolute_import
-
-
 import numpy
-from .fragility_model import damage_states, no_damage
-from .fragility_function import poe
-
-
-EMPTY_CALLBACK = lambda: None
+from risklib.fragility_model import damage_states, no_damage
+from risklib.fragility_function import poe
+from risklib.signals import EMPTY_CALLBACK
 
 
 def compute_damage(sites, assets_getter,
@@ -60,7 +54,7 @@ def compute_damage(sites, assets_getter,
       a function that is called when the damage distribution and the
       collapse map related to an asset has been computed. The callback
       must accept the following params: damage_distribution_asset,
-      collapse_map, asset
+      _collapse_map, asset
 
     :return a dictionary where each key represents a taxonomy and the
     corresponding value is a numpy matrix NxM (damage states x ground
@@ -76,18 +70,18 @@ def compute_damage(sites, assets_getter,
             taxonomy = asset.taxonomy
 
             damage_distribution_asset, fractions = (
-                damage_distribution_per_asset(
+                _damage_distribution_per_asset(
                     asset,
                     (fragility_model, fragility_functions[taxonomy]),
                     ground_motion_field))
 
-            asset_collapse_map = collapse_map(fractions)
+            asset_collapse_map = _collapse_map(fractions)
             on_asset_complete(
                 asset, damage_distribution_asset, asset_collapse_map)
 
             asset_fractions = fractions_per_taxonomy.get(
                 taxonomy,
-                make_damage_distribution_matrix(
+                _make_damage_distribution_matrix(
                     fragility_model, ground_motion_field))
 
             fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
@@ -118,7 +112,7 @@ def damage_distribution_by_taxonomy(set_of_fractions):
 
     for taxonomy in total_fractions:
         means[taxonomy], stddevs[taxonomy] = (
-            damage_distribution_stats(total_fractions[taxonomy]))
+            _damage_distribution_stats(total_fractions[taxonomy]))
 
     return (means, stddevs)
 
@@ -137,17 +131,17 @@ def total_damage_distribution(set_of_fractions):
         for taxonomy in fractions:
             total_fractions += fractions[taxonomy]
 
-    return damage_distribution_stats(total_fractions)
+    return _damage_distribution_stats(total_fractions)
 
 
-def collapse_map(fractions):
+def _collapse_map(fractions):
     # the collapse map needs the fractions
     # for each ground motion value of the
     # last damage state (the last column)
-    return damage_distribution_stats(fractions[:, -1])
+    return _damage_distribution_stats(fractions[:, -1])
 
 
-def damage_distribution_per_asset(asset,
+def _damage_distribution_per_asset(asset,
                                   (fragility_model, fragility_functions),
                                   ground_motion_field):
     """
@@ -181,7 +175,7 @@ def damage_distribution_per_asset(asset,
         (fragility_model, fragility_functions_sorted), ground_motion_field)
     fractions *= asset.number_of_units
 
-    return damage_distribution_stats(fractions), fractions
+    return _damage_distribution_stats(fractions), fractions
 
 
 def _compute_gmf_fractions((fragility_model, funcs), gmf):
@@ -209,7 +203,7 @@ def _compute_gmf_fractions((fragility_model, funcs), gmf):
 
     # we always have a number of damage states
     # which is len(limit states) + 1
-    fractions = make_damage_distribution_matrix(fragility_model, gmf)
+    fractions = _make_damage_distribution_matrix(fragility_model, gmf)
 
     for x, gmv in enumerate(gmf):
         fractions[x] = _compute_gmv_fractions(
@@ -245,7 +239,7 @@ def _compute_gmv_fractions((fragility_model, funcs), gmv):
 
     # we always have a number of damage states
     # which is len(limit states) + 1
-    damage_state_values = make_damage_distribution_matrix(fragility_model)
+    damage_state_values = _make_damage_distribution_matrix(fragility_model)
 
     # when we have a discrete fragility model and
     # the ground motion value is below the lowest
@@ -276,7 +270,8 @@ def _compute_gmv_fractions((fragility_model, funcs), gmv):
     return numpy.array(damage_state_values)
 
 
-def make_damage_distribution_matrix(fragility_model, ground_motion_field=None):
+def _make_damage_distribution_matrix(
+        fragility_model, ground_motion_field=None):
     if ground_motion_field:
         shape = (len(ground_motion_field),
                  len(damage_states(fragility_model)))
@@ -285,6 +280,6 @@ def make_damage_distribution_matrix(fragility_model, ground_motion_field=None):
     return numpy.zeros(shape)
 
 
-def damage_distribution_stats(fractions):
+def _damage_distribution_stats(fractions):
     return (numpy.mean(fractions, axis=0),
             numpy.std(fractions, axis=0, ddof=1))

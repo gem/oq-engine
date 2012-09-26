@@ -16,8 +16,8 @@
 import unittest
 import numpy
 
-from risklib.scenario_damage.functions import _compute_gmv_fractions
-from risklib.scenario_damage.models import (
+from risklib.scenario_damage import _compute_gmv_fractions
+from risklib.models import (
     FragilityModel, FragilityFunctionDiscrete)
 
 
