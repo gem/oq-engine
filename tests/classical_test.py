@@ -18,7 +18,7 @@ import itertools
 from numpy import allclose, array
 
 from risklib.curve import Curve
-from risklib.classical import MemoizeMutable, _compute_lrem, compute_loss_ratio_curve, compute_alpha, _compute_imls, compute_beta, compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po, _compute_pes_from_imls, _split_loss_ratios
+from risklib.classical import MemoizeMutable, _compute_lrem, compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta, _compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po, _split_loss_ratios
 from risklib.vulnerability_function import VulnerabilityFunction
 
 class MemoizerTestCase(unittest.TestCase):
@@ -81,25 +81,25 @@ class ClassicalTestCase(unittest.TestCase):
                                    (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.0,
-            compute_conditional_loss(loss_curve, 0.200))
+            _compute_conditional_loss(loss_curve, 0.200))
 
     def test_ratio_is_max_if_probability_is_too_low(self):
         loss_curve = Curve([(0.21, 0.131), (0.24, 0.108),
                                    (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.30,
-            compute_conditional_loss(loss_curve, 0.050))
+            _compute_conditional_loss(loss_curve, 0.050))
 
     def test_conditional_loss_duplicates(self):
         # we feed _compute_conditional_loss with some duplicated data to see if
         # it's handled correctly
 
-        closs1 = compute_conditional_loss(Curve([(0.21, 0.131),
+        closs1 = _compute_conditional_loss(Curve([(0.21, 0.131),
                                                          (0.24, 0.108), (0.27, 0.089), (0.30, 0.066)]), 0.100)
 
         # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
         #should be skipped
-        closs2 = compute_conditional_loss(Curve([(0.19, 0.131),
+        closs2 = _compute_conditional_loss(Curve([(0.19, 0.131),
                                                          (0.20, 0.131), (0.21, 0.131), (0.24, 0.108), (0.27, 0.089),
                                                          (0.30, 0.066)]), 0.100)
 
@@ -109,7 +109,7 @@ class ClassicalTestCase(unittest.TestCase):
         loss_curve = Curve([(0.21, 0.131), (0.24, 0.108),
                                    (0.27, 0.089), (0.30, 0.066)])
 
-        self.assertAlmostEqual(0.2526, compute_conditional_loss(
+        self.assertAlmostEqual(0.2526, _compute_conditional_loss(
             loss_curve, 0.100), 4)
 
 
@@ -118,7 +118,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
 
-        alphas = [compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
+        alphas = [_compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
                                                              stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
 
@@ -127,7 +127,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
 
-        betas = [compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
+        betas = [_compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
                                                            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
 
@@ -205,20 +205,6 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertTrue(allclose(0.23, lrem_po[8][3], atol=0.005))
         self.assertTrue(allclose(0.00, lrem_po[10][0], atol=0.005))
 
-    def test_pes_from_imls(self):
-        hazard_curve = Curve([
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01)])
-
-        expected_pes = [0.9729, 0.9056, 0.7720, 0.4789, 0.0100]
-        imls = [0.05, 0.15, 0.3, 0.5, 0.7]
-
-        self.assertTrue(allclose(array(expected_pes),
-            _compute_pes_from_imls(hazard_curve, imls),
-            atol=0.00005))
-
     def test_pes_to_pos(self):
         hazard_curve = Curve([
             (0.01, 0.99), (0.08, 0.96),
@@ -287,7 +273,6 @@ class ClassicalTestCase(unittest.TestCase):
                        2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
                        5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
 
-        # testing just the length of the result
         self.assertEqual(
             56, len(_split_loss_ratios(loss_ratios, 5)))
 
