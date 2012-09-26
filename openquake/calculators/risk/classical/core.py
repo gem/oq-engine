@@ -145,9 +145,11 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             job_profile = self.job_ctxt.oq_job_profile
             hazard_curve = self._get_db_curve(
                 hazard_input_site(self.job_ctxt, site))
+            steps = job_profile.lrem_steps_per_interval
+            lrem = risklib.classical.compute_lrem(vuln_function, steps)
             loss_ratio_curve = risklib.classical.compute_loss_ratio_curve(
-                    vuln_function, hazard_curve,
-                    job_profile.lrem_steps_per_interval)
+                    vuln_function, lrem, hazard_curve,
+                    steps)
             return risklib.classical.compute_loss_curve(
                 loss_ratio_curve, asset.value)
 

@@ -701,21 +701,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
                 (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
                 loss_curve)
 
-
-    def test_loss_ratio_curve_is_none_with_unknown_vuln_function(self):
-
-        the_job = helpers.create_job({})
-        calculator = classical_core.ClassicalRiskCalculator(the_job)
-
-        # empty vuln curves
-        vuln_curves = {}
-
-        # "empty" asset
-        asset = models.ExposureData(taxonomy="ID", asset_ref=1)
-
-        self.assertEqual(None, calculator.compute_loss_ratio_curve(
-                         None, asset, None, vuln_curves))
-
     def _compute_risk_classical_psha_setup(self):
         SITE = shapes.Site(1.0, 1.0)
         # deletes all keys from kvs
@@ -790,7 +775,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         block = Block.from_kvs(self.job_id, self.block_id)
 
         # computes the loss curves and puts them in kvs
-        self.assertTrue(calculator.compute_risk(self.block_id))
+        calculator.compute_risk(self.block_id)
 
         for point in block.grid(job_ctxt.region):
             assets = BaseRiskCalculator.assets_for_cell(
