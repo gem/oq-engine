@@ -87,19 +87,6 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
         cs.save(using="job_superv")
 
-    def test_cnode_stats_with_equal_statuses(self):
-        # The previous and the current status must not be the same.
-        cs = models.CNodeStats(oq_job=self.job, node="N2", current_status="up")
-        cs.previous_status = "up"
-        try:
-            cs.save(using="job_superv")
-        except DatabaseError, de:
-            self.assertTrue(
-                'violates check constraint "valid_status"' in de.args[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
-
     def test_cnode_stats_failure_counter_with_up_down_transition(self):
         # The failures counter is incremented in case of a
         #   up -> down transition
@@ -205,7 +192,6 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         # database
         [n3] = models.CNodeStats.objects.filter(oq_job=self.job, node="N5")
         self.assertEqual("up", n3.current_status)
-        self.assertIs(None, n3.previous_status)
         self.assertEqual(0, n3.failures)
 
     def test_monitor_compute_nodes_with_failures_before_calculation(self):
@@ -224,7 +210,6 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual("down", n1.current_status)
-        self.assertEqual("up", n1.previous_status)
         self.assertEqual(1, n1.failures)
 
     def test_monitor_compute_nodes_with_failed_and_recovered_node(self):
@@ -246,5 +231,4 @@ class MonitorComputeNodesTestCase(unittest.TestCase):
         # The failed node has been updated to capture that.
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual("up", n1.current_status)
-        self.assertEqual("down", n1.previous_status)
         self.assertEqual(1, n1.failures)

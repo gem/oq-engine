@@ -631,9 +631,7 @@ CREATE TABLE uiapi.cnode_stats (
         CHECK(current_status IN ('up', 'down')),
     current_ts timestamp without time zone NOT NULL,
     previous_ts timestamp without time zone,
-    failures INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT valid_status
-    CHECK (previous_status IS NULL OR previous_status != current_status)
+    failures INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE uiapi_ts;
 
 
