@@ -44,6 +44,7 @@ from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
+from openquake.utils import monitor
 from openquake.utils import stats
 
 
@@ -191,9 +192,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
-    # Failure counter check delay, translates to 20 seconds with the current
+    # Failure counter check delay, translates to 60 seconds with the current
     # settings.
-    FCC_DELAY = 20
+    FCC_DELAY = 60
 
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
