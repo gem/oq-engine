@@ -477,3 +477,19 @@ class PlanarSurfaceGetTopEdgeDepthTestCase(unittest.TestCase):
                    Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
         surface = PlanarSurface(1, 45, 60, *corners)
         self.assertEqual(surface.get_top_edge_depth(), 8)
+
+
+class PlanarSurfaceGetWidthTestCase(unittest.TestCase):
+    def test_vertical_surface(self):
+        corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
+                   Point(0.05, 0.05, 10), Point(-0.05, -0.05, 10)]
+        surface = PlanarSurface(1, 45, 60, *corners)
+        self.assertAlmostEqual(surface.get_width(), 2.0, places=4)
+
+    def test_inclined_surface(self):
+        corners = [Point(-0.00317958, -0.00449661, 4.64644661),
+                   Point(-0.00317958, 0.00449661, 4.64644661),
+                   Point(0.00317958, 0.00449661, 5.35355339),
+                   Point(0.00317958, -0.00449661, 5.35355339)]
+        surface = PlanarSurface(1, 0.0, 45.0, *corners)
+        self.assertAlmostEqual(surface.get_width(), 1.0, places=3)
