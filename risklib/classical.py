@@ -134,71 +134,6 @@ def _compute_conditional_loss(curve, probability):
 
     return loss_curve.abscissa_for(probability)
 
-
-class Lognorm(object):
-    """ Simple Wrapper to use in a generic way survival functions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.lognorm.sf
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        position = kwargs.get('col')
-
-        vf_loss_ratio = vuln_function.loss_ratios[position]
-
-        stddev = vuln_function.covs[position] * vf_loss_ratio
-
-        variance = stddev ** 2.0
-
-        sigma = sqrt(log((variance / vf_loss_ratio ** 2.0) + 1.0))
-        mu = exp(log(vf_loss_ratio ** 2.0 /
-                     sqrt(variance + vf_loss_ratio ** 2.0)))
-
-        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-
-
-class BetaDistribution(object):
-    """ Simple Wrapper to use in a generic way Beta Distributions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.beta.sf
-
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        col = kwargs.get('col')
-        vf_loss_ratio = vuln_function.loss_ratios[col]
-        stddev = vuln_function.stddevs[col]
-
-        return stats.beta.sf(loss_ratio,
-            _compute_alpha(vf_loss_ratio, stddev),
-            _compute_beta(vf_loss_ratio, stddev))
-
 # Memoize taken from the Python Cookbook that handles also unhashable types
 class MemoizeMutable:
     """ This decorator enables method/function caching in memory """
@@ -293,10 +228,6 @@ def _compute_lrem(vuln_function, steps):
     :param int steps:
         Number of steps between loss ratios.
     """
-
-    dist = {'LN': Lognorm,
-            'BT': BetaDistribution}.get(vuln_function.distribution)
-
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
 
     # LREM has number of rows equal to the number of loss ratios
@@ -305,8 +236,22 @@ def _compute_lrem(vuln_function, steps):
 
     for col, _ in enumerate(vuln_function):
         for row, loss_ratio in enumerate(loss_ratios):
-            lrem[row][col] = dist.survival_function(loss_ratio,
-                col=col, vf=vuln_function)
+            mean_loss_ratio = vuln_function.loss_ratios[col]
+            loss_ratio_stddev = vuln_function.stddevs[col]
+
+            if vuln_function.distribution == "BT":
+                lrem[row][col] = stats.beta.sf(loss_ratio,
+                    _compute_alpha(mean_loss_ratio, loss_ratio_stddev),
+                    _compute_beta(mean_loss_ratio, loss_ratio_stddev))
+            elif vuln_function.distribution == "LN":
+                variance = loss_ratio_stddev ** 2.0
+                sigma = sqrt(log((variance / mean_loss_ratio ** 2.0) + 1.0))
+                mu = exp(log(mean_loss_ratio ** 2.0 /
+                     sqrt(variance + mean_loss_ratio ** 2.0)))
+
+                lrem[row][col] = stats.lognorm.sf(loss_ratio, sigma, scale=mu)
+            else:
+                raise RuntimeError("Only beta or lognormal distributions are supported")
 
     return lrem
 
