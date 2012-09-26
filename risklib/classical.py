@@ -89,6 +89,11 @@ def compute_classical(sites, assets_getter,
                       vulnerability_model, hazard_getter,
                       steps, conditional_loss_poes,
                       on_asset_complete=EMPTY_CALLBACK):
+
+    loss_ratio_exceedance_matrices = dict(
+        [(taxonomy, _compute_lrem(vulnerability_function, steps))
+         for taxonomy, vulnerability_function in vulnerability_model.items()])
+
     for site in sites:
         point, hazard_curve = hazard_getter(site)
         assets = assets_getter(site)
@@ -97,16 +102,17 @@ def compute_classical(sites, assets_getter,
             vulnerability_function = vulnerability_model[asset.taxonomy]
             loss_ratio_curve, loss_curve, loss_conditionals = (
                 compute_classical_per_asset(
-                    asset, vulnerability_function, hazard_curve,
-                    steps, conditional_loss_poes))
+                    asset, vulnerability_function,
+                    loss_ratio_exceedance_matrices[asset.taxonomy],
+                    hazard_curve, steps, conditional_loss_poes))
             on_asset_complete(asset, point, loss_ratio_curve,
                 loss_curve, loss_conditionals)
 
 
-def compute_classical_per_asset(asset, vulnerability_function,
+def compute_classical_per_asset(asset, vulnerability_function, lrem,
                                 hazard_curve, steps, loss_poes):
     loss_ratio_curve = compute_loss_ratio_curve(
-        vulnerability_function, hazard_curve, steps)
+        vulnerability_function, lrem, hazard_curve, steps)
     loss_curve = _compute_loss_curve(loss_ratio_curve, asset.value)
     loss_conditionals = compute_conditional_loss_vector(
         loss_curve, loss_poes)
@@ -134,22 +140,8 @@ def _compute_conditional_loss(curve, probability):
 
     return loss_curve.abscissa_for(probability)
 
-# Memoize taken from the Python Cookbook that handles also unhashable types
-class MemoizeMutable:
-    """ This decorator enables method/function caching in memory """
-    def __init__(self, fun):
-        self.fun = fun
-        self.memo = {}
 
-    def __call__(self, *args, **kwds):
-        key = cPickle.dumps(args, 1) + cPickle.dumps(kwds, 1)
-        if not key in self.memo:
-            self.memo[key] = self.fun(*args, **kwds)
-
-        return self.memo[key]
-
-
-def compute_loss_ratio_curve(vuln_function, hazard_curve, steps):
+def compute_loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
@@ -167,7 +159,6 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve, steps):
         Number of steps between loss ratios.
     """
 
-    lrem = _compute_lrem(vuln_function, steps)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
 
@@ -217,7 +208,6 @@ def _generate_loss_ratios(vuln_function, steps):
     return _split_loss_ratios(loss_ratios, steps)
 
 
-@MemoizeMutable
 def _compute_lrem(vuln_function, steps):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
 

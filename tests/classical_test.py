@@ -19,49 +19,10 @@ from numpy import allclose, array
 
 from risklib.curve import Curve
 from risklib.vulnerability_function import VulnerabilityFunction
-from risklib.classical import (MemoizeMutable, _compute_lrem,
+from risklib.classical import (_compute_lrem,
     compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta,
     _compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po,
     _split_loss_ratios)
-
-
-class MemoizerTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.counter = 0
-
-    def test_non_hashable_types(self):
-        @MemoizeMutable
-        def my_method(*args, **kwargs):
-            self.counter += 1
-            return self.counter
-
-        # not cached
-        my_method([1, 2, 3],
-            {'key1': 'value1', 'key2': 'value2'})
-
-        # cached with return values
-        self.assertEqual(1, my_method([1, 2, 3],
-            {'key1': 'value1', 'key2': 'value2'}))
-
-        # should be called only one time
-        self.assertEqual(self.counter, 1)
-
-    def test_hashable_types(self):
-
-        @MemoizeMutable
-        def my_method(mystring, myint):
-            self.counter += 1
-            return self.counter
-
-        # not cached
-        my_method('bla', 1)
-
-        # cached with return values
-        self.assertEqual(1, my_method('bla', 1))
-
-        # should be called only one time
-        self.assertEqual(self.counter, 1)
 
 
 class ClassicalTestCase(unittest.TestCase):
@@ -279,8 +240,21 @@ class ClassicalTestCase(unittest.TestCase):
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
+        lrem = array(
+            [[1., 1., 1., 1.],
+             [8.90868149e-01, 9.99932030e-01, 1., 1.],
+             [4.06642478e-01, 9.27063668e-01, 1., 1.],
+             [2.14297309e-01, 7.12442306e-01, 9.99999988e-01, 1.],
+             [1.09131851e-01, 4.41652761e-01, 9.99997019e-01, 1.],
+             [7.84971008e-03, 2.00321301e-02, 9.55620783e-01, 1.],
+             [7.59869969e-04, 5.41393717e-04, 4.60560758e-01, 1.],
+             [2.79797605e-05, 1.66547090e-06, 1.59210054e-02, 9.97702369e-01],
+             [1.75697664e-06, 9.04938835e-09, 1.59710253e-04, 4.80110732e-01],
+             [2.89163471e-09, 2.43138842e-14, 6.60395072e-11, 7.56938368e-09],
+             [2.38464803e-11, 0., 1.11022302e-16, 0.]])
+
         loss_ratio_curve = compute_loss_ratio_curve(
-            vulnerability_function, hazard_curve, 2)
+            vulnerability_function, lrem, hazard_curve, 2)
 
         expected_curve = Curve([
             (0.0, 0.96), (0.025, 0.96),
