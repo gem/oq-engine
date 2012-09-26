@@ -20,7 +20,7 @@ from numpy import allclose, array
 from risklib.curve import Curve
 from risklib.vulnerability_function import VulnerabilityFunction
 from risklib.classical import (_compute_lrem,
-    compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta,
+    _compute_loss_ratio_curve, _compute_alpha, _compute_imls, _compute_beta,
     _compute_conditional_loss, _convert_pes_to_pos, _compute_lrem_po,
     _split_loss_ratios)
 
@@ -253,7 +253,7 @@ class ClassicalTestCase(unittest.TestCase):
              [2.89163471e-09, 2.43138842e-14, 6.60395072e-11, 7.56938368e-09],
              [2.38464803e-11, 0., 1.11022302e-16, 0.]])
 
-        loss_ratio_curve = compute_loss_ratio_curve(
+        loss_ratio_curve = _compute_loss_ratio_curve(
             vulnerability_function, lrem, hazard_curve, 2)
 
         expected_curve = Curve([
