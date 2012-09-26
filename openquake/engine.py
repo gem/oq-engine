@@ -944,6 +944,10 @@ def _launch_job(job_ctxt, sections):
         calculator.pre_execute()
 
         _switch_to_job_phase(job_ctxt, job_type, "executing")
+        # Record the time (in seconds since epoch) to allow the supervisor
+        # to make a meaningful "length of time w/o progress" comparison.
+        tstamp = int(datetime.now().strftime("%s"))
+        stats.pk_set(job_ctxt.job_id, "lvr_ts", tstamp)
         calculator.execute()
 
         _switch_to_job_phase(job_ctxt, job_type, "post_executing")

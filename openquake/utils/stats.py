@@ -21,6 +21,7 @@
 Utility functions related to keeping job progress information and statistics.
 """
 
+from datetime import datetime
 from functools import wraps
 import redis
 
@@ -66,6 +67,9 @@ STATS_KEYS = {
 
     # The last "percent complete" figure that was reported to the end user
     "lvr": ("g", "gen:lvr", "t"),
+    # The time (seconds since epoch) at which the last (nhzrd|nrisk)_done
+    # value was written
+    "lvr_ts": ("g", "gen:lvr_ts", "t"),
 
     # The total amount of work for a hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
@@ -308,6 +312,12 @@ class count_progress(object):   # pylint: disable=C0103
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.ctype == "h" else "nrisk_done"
                 pk_inc(job_id, key, num_items)
+
+                # record the time (in seconds since epoch) at which the
+                # progress value was incremented.
+                tstamp = int(datetime.now().strftime("%s"))
+                pk_set(job_id, "lvr_ts", tstamp)
+
                 return result
             except:
                 # Count failure
