@@ -31,7 +31,7 @@ from openquake.calculators.risk.general import (
     hazard_input_site, BaseRiskCalculator)
 
 from collections import defaultdict
-import risklib
+from risklib import classical, curve, benefit_cost_ratio
 
 LOGGER = logs.LOG
 
@@ -83,7 +83,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return risklib.curve.Curve(zip(job.profile().imls, hc.poes))
+        return curve.Curve(zip(job.profile().imls, hc.poes))
 
     def _compute_loss(self, block_id):
         """
@@ -126,7 +126,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             kvs.get_client().set(loss_ratio_key,
                                  loss_ratio_curve.to_json())
 
-        risklib.classical.compute_classical(
+        classical.compute(
             block.sites, assets_getter, vuln_curves, hazard_getter,
             lrem_steps, loss_poes, on_asset_complete)
 
@@ -151,7 +151,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
                   'eal_retrofitted': eal_retrofitted},
                   asset.asset_ref))
 
-        risklib.benefit_cost_ratio.compute_benefit_cost_ratio(
+        benefit_cost_ratio.compute(
             block.sites,
             lambda site: BaseRiskCalculator.assets_at(job_id, site),
             vulnerability.load_vuln_model_from_kvs(job_id),
@@ -164,7 +164,6 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             on_asset_complete)
 
         bcr = result.items()
-
         bcr_block_key = kvs.tokens.bcr_block_key(job_ctxt.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)

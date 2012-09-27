@@ -70,7 +70,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = classical.compute_conditional_loss(loss_curve, loss_poe)
+    loss_conditional = classical._conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
     kvs.get_client().set(key, loss_conditional)
 
@@ -675,13 +675,13 @@ def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
                      asset.asset_ref, loss_curve)
-            eal_original = benefit_cost_ratio._compute_mean_loss(loss_curve)
+            eal_original = benefit_cost_ratio._mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset.taxonomy]
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
                      asset.asset_ref, loss_curve)
-            eal_retrofitted = benefit_cost_ratio._compute_mean_loss(loss_curve)
+            eal_retrofitted = benefit_cost_ratio._mean_loss(loss_curve)
 
             bcr = benefit_cost_ratio._bcr(eal_original, eal_retrofitted,
                               interest_rate, asset_life_expectancy,
