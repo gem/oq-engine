@@ -210,4 +210,7 @@ class SimpleFaultSurface(BaseSurface):
         See
         :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_width`
         """
-        return self.mesh.get_mean_width()
+        # calculate width only along the first mesh column, because
+        # width is uniform for simple faults
+        left_column = self.get_mesh()[:,0:2]
+        return left_column.get_mean_width()
