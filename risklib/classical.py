@@ -19,17 +19,18 @@ from numpy import array, empty
 from numpy import concatenate
 from risklib.curve import Curve
 from risklib.signals import EMPTY_CALLBACK
-from numpy import linspace, mean, subtract
-from collections import OrderedDict
+from risklib.vulnerability_function import _mean_imls
+from numpy import linspace, subtract
 
 
-def compute_classical(sites, assets_getter,
+def compute(sites, assets_getter,
                       vulnerability_model, hazard_getter,
                       steps, conditional_loss_poes,
                       on_asset_complete=EMPTY_CALLBACK):
 
     loss_ratio_exceedance_matrices = dict(
-        [(taxonomy, compute_lrem(vulnerability_function, steps))
+        [(taxonomy,
+          _loss_ratio_exceedance_matrix(vulnerability_function, steps))
          for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     for site in sites:
@@ -39,7 +40,7 @@ def compute_classical(sites, assets_getter,
         for asset in assets:
             vulnerability_function = vulnerability_model[asset.taxonomy]
             loss_ratio_curve, loss_curve, loss_conditionals = (
-                _compute_classical_per_asset(
+                _compute_per_asset(
                     asset, vulnerability_function,
                     loss_ratio_exceedance_matrices[asset.taxonomy],
                     hazard_curve, steps, conditional_loss_poes))
@@ -47,7 +48,7 @@ def compute_classical(sites, assets_getter,
                 loss_curve, loss_conditionals)
 
 
-def compute_lrem(vuln_function, steps):
+def _loss_ratio_exceedance_matrix(vuln_function, steps):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
 
     :param vuln_function:
@@ -57,7 +58,7 @@ def compute_lrem(vuln_function, steps):
     :param int steps:
         Number of steps between loss ratios.
     """
-    loss_ratios = _generate_loss_ratios(vuln_function, steps)
+    loss_ratios = _loss_ratios(vuln_function, steps)
 
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number if imls
@@ -70,8 +71,8 @@ def compute_lrem(vuln_function, steps):
 
             if vuln_function.distribution == "BT":
                 lrem[row][col] = stats.beta.sf(loss_ratio,
-                    _compute_alpha(mean_loss_ratio, loss_ratio_stddev),
-                    _compute_beta(mean_loss_ratio, loss_ratio_stddev))
+                    _alpha_value(mean_loss_ratio, loss_ratio_stddev),
+                    _beta_value(mean_loss_ratio, loss_ratio_stddev))
             elif vuln_function.distribution == "LN":
                 variance = loss_ratio_stddev ** 2.0
                 sigma = sqrt(log((variance / mean_loss_ratio ** 2.0) + 1.0))
@@ -86,22 +87,22 @@ def compute_lrem(vuln_function, steps):
     return lrem
 
 
-def _compute_classical_per_asset(asset, vulnerability_function, lrem,
+def _compute_per_asset(asset, vulnerability_function, lrem,
                                 hazard_curve, steps, loss_poes):
-    loss_ratio_curve = compute_loss_ratio_curve(
+    loss_ratio_curve = _loss_ratio_curve(
         vulnerability_function, lrem, hazard_curve, steps)
-    loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
-    loss_conditionals = _compute_conditional_loss_vector(
+    loss_curve = _loss_curve(loss_ratio_curve, asset.value)
+    loss_conditionals = _conditional_losses(
         loss_curve, loss_poes)
     return loss_ratio_curve, loss_curve, loss_conditionals
 
 
-def _compute_conditional_loss_vector(curve, probabilities):
-    return dict([(poe, compute_conditional_loss(curve, poe))
+def _conditional_losses(curve, probabilities):
+    return dict([(poe, _conditional_loss(curve, poe))
                  for poe in probabilities])
 
 
-def compute_loss_curve(loss_ratio_curve, asset):
+def _loss_curve(loss_ratio_curve, asset):
     """
     Compute the loss curve for the given asset value.
 
@@ -112,7 +113,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     return loss_ratio_curve.rescale_abscissae(asset)
 
 
-def _compute_alpha(mean_loss_ratio, stddev):
+def _alpha_value(mean_loss_ratio, stddev):
     """
     Compute alpha value
 
@@ -130,7 +131,7 @@ def _compute_alpha(mean_loss_ratio, stddev):
             mean_loss_ratio ** 2)
 
 
-def _compute_beta(mean_loss_ratio, stddev):
+def _beta_value(mean_loss_ratio, stddev):
     """
     Compute beta value
 
@@ -147,16 +148,7 @@ def _compute_beta(mean_loss_ratio, stddev):
             (mean_loss_ratio - mean_loss_ratio ** 2))
 
 
-def _remove_ordinate_duplicates(curve):
-    seen = OrderedDict()
-
-    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
-        seen[ordinate] = abscissa
-
-    return zip(seen.values(), seen.keys())
-
-
-def compute_conditional_loss(curve, probability):
+def _conditional_loss(curve, probability):
     """
     Return the loss (or loss ratio) corresponding to the given
     PoE (Probability of Exceendance).
@@ -167,7 +159,7 @@ def compute_conditional_loss(curve, probability):
     Return zero if the given PoE is greater than the
     highest PoE defined.
     """
-    loss_curve = Curve(_remove_ordinate_duplicates(curve))
+    loss_curve = curve.with_unique_ordinates()
 
     if loss_curve.ordinate_out_of_bounds(probability):
         if probability < loss_curve.y_values[-1]:
@@ -178,7 +170,7 @@ def compute_conditional_loss(curve, probability):
     return loss_curve.abscissa_for(probability)
 
 
-def compute_loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
+def _loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
@@ -196,13 +188,14 @@ def compute_loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
         Number of steps between loss ratios.
     """
 
-    lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
-    loss_ratios = _generate_loss_ratios(vuln_function, steps)
+    lrem_po = _loss_ratio_exceedance_matrix_per_poos(
+        vuln_function, lrem, hazard_curve)
+    loss_ratios = _loss_ratios(vuln_function, steps)
 
     return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
 
-def _compute_lrem_po(vuln_function, lrem, hazard_curve):
+def _loss_ratio_exceedance_matrix_per_poos(vuln_function, lrem, hazard_curve):
     """Compute the LREM * PoOs (Probability of Occurence) matrix.
 
     :param vuln_function: the vulnerability function used
@@ -216,17 +209,17 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 
     lrem = array(lrem)
     lrem_po = empty(lrem.shape)
-    imls = _compute_imls(vuln_function)
+    imls = _mean_imls(vuln_function)
 
     if hazard_curve:
-        pos = _convert_pes_to_pos(hazard_curve, imls)
+        pos = _poos(hazard_curve, imls)
         for idx, po in enumerate(pos):
             lrem_po[:, idx] = lrem[:, idx] * po
 
     return lrem_po
 
 
-def _generate_loss_ratios(vuln_function, steps):
+def _loss_ratios(vuln_function, steps):
     """Generate the set of loss ratios used to compute the LREM
     (Loss Ratio Exceedance Matrix).
 
@@ -242,10 +235,10 @@ def _generate_loss_ratios(vuln_function, steps):
     loss_ratios = concatenate(
         (array([0.0]), vuln_function.loss_ratios, array([1.0])))
 
-    return _split_loss_ratios(loss_ratios, steps)
+    return _evenly_spaced_loss_ratios(loss_ratios, steps)
 
 
-def _split_loss_ratios(loss_ratios, steps):
+def _evenly_spaced_loss_ratios(loss_ratios, steps):
     """
     Split the loss ratios, producing a new set of loss ratios.
 
@@ -264,34 +257,7 @@ def _split_loss_ratios(loss_ratios, steps):
         for x, y in zip(loss_ratios, loss_ratios[1:])]), [loss_ratios[-1]]]))
 
 
-def _compute_imls(vulnerability_function):
-    """
-    Compute the mean IMLs (Intensity Measure Level)
-    for the given vulnerability function.
-
-    :param vulnerability_function: the vulnerability function where
-        the IMLs (Intensity Measure Level) are taken from.
-    :type vuln_function:
-       :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
-    """
-
-    imls = vulnerability_function.imls
-
-    # "special" cases for lowest part and highest part of the curve
-    lowest_iml_value = imls[0] - ((imls[1] - imls[0]) / 2)
-
-    # if the calculated lowest_curve_value goes < 0 we have to force the 0
-    # IMLs have to be >= 0
-    if lowest_iml_value < 0:
-        lowest_iml_value = 0
-
-    highest_iml_value = imls[-1] + ((imls[-1] - imls[-2]) / 2)
-    between_iml_values = [mean(x) for x in zip(imls, imls[1:])]
-
-    return [lowest_iml_value] + between_iml_values + [highest_iml_value]
-
-
-def _convert_pes_to_pos(hazard_curve, imls):
+def _poos(hazard_curve, imls):
     """
     For each IML (Intensity Measure Level) compute the
     PoOs (Probability of Occurence) from the PoEs

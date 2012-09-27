@@ -21,21 +21,24 @@ from math import exp
 from risklib.curve import Curve
 from risklib.signals import EMPTY_CALLBACK
 from risklib.classical import (
-    compute_lrem, compute_loss_ratio_curve, compute_loss_curve)
+    _loss_ratio_exceedance_matrix,
+    _loss_ratio_curve, _loss_curve)
 
 
-def compute_benefit_cost_ratio(sites, assets_getter,
-                vulnerability_model, vulnerability_model_retrofitted,
-                hazard_curve_getter, steps,
-                interest_rate, asset_life_expectancy,
-                on_asset_complete=EMPTY_CALLBACK):
+def compute(sites, assets_getter,
+            vulnerability_model, vulnerability_model_retrofitted,
+            hazard_curve_getter, steps,
+            interest_rate, asset_life_expectancy,
+            on_asset_complete=EMPTY_CALLBACK):
 
     loss_ratio_exceedance_matrices = dict(
-        [(taxonomy, compute_lrem(vulnerability_function, steps))
+        [(taxonomy, _loss_ratio_exceedance_matrix(
+            vulnerability_function, steps))
          for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     loss_ratio_exceedance_retrofitted_matrices = dict(
-        [(taxonomy, compute_lrem(vulnerability_function, steps))
+        [(taxonomy, _loss_ratio_exceedance_matrix(
+            vulnerability_function, steps))
          for taxonomy, vulnerability_function
          in vulnerability_model_retrofitted.items()])
 
@@ -45,10 +48,10 @@ def compute_benefit_cost_ratio(sites, assets_getter,
         hazard_curve = hazard_curve_getter(site)
 
         for asset in assets:
-            eal_original = _compute_eal(asset, vulnerability_model,
+            eal_original = _expected_annual_loss(asset, vulnerability_model,
                                         loss_ratio_exceedance_matrices,
                                         hazard_curve, steps)
-            eal_retrofitted = _compute_eal(
+            eal_retrofitted = _expected_annual_loss(
                 asset, vulnerability_model_retrofitted,
                 loss_ratio_exceedance_retrofitted_matrices,
                 hazard_curve, steps)
@@ -58,15 +61,16 @@ def compute_benefit_cost_ratio(sites, assets_getter,
             on_asset_complete(asset, bcr, eal_original, eal_retrofitted)
 
 
-def _compute_eal(asset, vulnerability_model, loss_ratio_exceedance_matrices,
+def _expected_annual_loss(
+        asset, vulnerability_model, loss_ratio_exceedance_matrices,
                  hazard_curve, steps):
     vulnerability_function = vulnerability_model[asset.taxonomy]
-    loss_ratio_curve = compute_loss_ratio_curve(
+    loss_ratio_curve = _loss_ratio_curve(
         vulnerability_function,
         loss_ratio_exceedance_matrices[asset.taxonomy],
         hazard_curve, steps)
-    loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
-    return _compute_mean_loss(loss_curve)
+    loss_curve = _loss_curve(loss_ratio_curve, asset.value)
+    return _mean_loss(loss_curve)
 
 
 def _bcr(eal_original, eal_retrofitted, interest_rate,
@@ -90,17 +94,27 @@ def _bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def _compute_mean_loss(curve):
+def _mean_loss(curve):
     """Compute the mean loss (or loss ratio) for the given curve."""
 
-    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
+    mid_curve = _mean_loss_ratio_curve(curve)
     return sum(i * j for i, j in zip(
             mid_curve.abscissae, mid_curve.ordinates))
 
 
-def _compute_mid_po(loss_ratio_pe_mid_curve):
+def _mean_loss_ratio_curve(loss_ratio_curve):
     """Compute a loss ratio curve that has PoOs
     (Probabilities of Occurrence) as Y values."""
+
+    loss_ratios = loss_ratio_curve.abscissae
+    pes = loss_ratio_curve.ordinates
+
+    ratios = [numpy.mean([x, y])
+              for x, y in zip(loss_ratios, loss_ratios[1:])]
+    mid_pes = [numpy.mean([x, y])
+              for x, y in zip(pes, pes[1:])]
+
+    loss_ratio_pe_mid_curve = Curve(zip(ratios, mid_pes))
 
     loss_ratios = loss_ratio_pe_mid_curve.abscissae
     pes = loss_ratio_pe_mid_curve.ordinates
@@ -111,17 +125,3 @@ def _compute_mid_po(loss_ratio_pe_mid_curve):
     pos = [x - y for x, y in zip(pes, pes[1:])]
 
     return Curve(zip(ratios, pos))
-
-
-def _compute_mid_mean_pe(loss_ratio_curve):
-    """Compute a new loss ratio curve taking the mean values."""
-
-    loss_ratios = loss_ratio_curve.abscissae
-    pes = loss_ratio_curve.ordinates
-
-    ratios = [numpy.mean([x, y])
-              for x, y in zip(loss_ratios, loss_ratios[1:])]
-    mid_pes = [numpy.mean([x, y])
-              for x, y in zip(pes, pes[1:])]
-
-    return Curve(zip(ratios, mid_pes))

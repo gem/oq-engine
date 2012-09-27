@@ -20,18 +20,18 @@ from scipy.interpolate import interp1d
 import math
 
 
-def poe(fragility_function, iml):
+def _poe(fragility_function, iml):
     """
     Compute the Probability of Exceedance (PoE) for the given
     Intensity Measure Level (IML).
     """
     if fragility_function.is_discrete:
-        return poe_discrete(fragility_function, iml)
+        return _poe_discrete(fragility_function, iml)
     else:
-        return poe_continuous(fragility_function, iml)
+        return _poe_continuous(fragility_function, iml)
 
 
-def poe_discrete(fragility_function, iml):
+def _poe_discrete(fragility_function, iml):
     fm = fragility_function.fragility_model
 
     highest_iml = fm.imls[-1]
@@ -48,7 +48,7 @@ def poe_discrete(fragility_function, iml):
     return interp1d(imls, poes)(iml)
 
 
-def poe_continuous(fragility_function, iml):
+def _poe_continuous(fragility_function, iml):
     variance = fragility_function.stddev ** 2.0
     sigma = math.sqrt(math.log(
         (variance / fragility_function.mean ** 2.0) + 1.0))
