@@ -38,8 +38,6 @@ from numpy import linspace
 from numpy import mean
 from numpy import where
 from numpy import zeros
-from scipy import sqrt, log
-from scipy import stats
 
 from openquake.calculators.base import Calculator
 from openquake.db import models
@@ -73,7 +71,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = classical.compute_conditional_loss(loss_curve, loss_poe)
+    loss_conditional = classical._conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
     kvs.get_client().set(key, loss_conditional)
 

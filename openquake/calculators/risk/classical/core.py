@@ -30,7 +30,7 @@ from openquake.calculators.risk.general import (
     ProbabilisticRiskCalculator, compute_risk, Block,
     hazard_input_site, BaseRiskCalculator, compute_bcr_for_block)
 
-import risklib
+from risklib import classical, curve
 
 LOGGER = logs.LOG
 
@@ -82,7 +82,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return risklib.curve.Curve(zip(job.profile().imls, hc.poes))
+        return curve.Curve(zip(job.profile().imls, hc.poes))
 
     def _compute_loss(self, block_id):
         """
@@ -125,7 +125,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             kvs.get_client().set(loss_ratio_key,
                                  loss_ratio_curve.to_json())
 
-        risklib.classical.compute_classical(
+        classical.compute(
             block.sites, assets_getter, vuln_curves, hazard_getter,
             lrem_steps, loss_poes, on_asset_complete)
 
@@ -146,12 +146,11 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             hazard_curve = self._get_db_curve(
                 hazard_input_site(self.job_ctxt, site))
             steps = job_profile.lrem_steps_per_interval
-            lrem = risklib.classical.compute_lrem(vuln_function, steps)
-            loss_ratio_curve = risklib.classical.compute_loss_ratio_curve(
-                    vuln_function, lrem, hazard_curve,
-                    steps)
-            return risklib.classical.compute_loss_curve(
-                loss_ratio_curve, asset.value)
+            lrem = classical._loss_ratio_exceedance_matrix(
+                vuln_function, steps)
+            loss_ratio_curve = classical._loss_ratio_curve(
+                    vuln_function, lrem, hazard_curve, steps)
+            return classical._loss_curve(loss_ratio_curve, asset.value)
 
         bcr = compute_bcr_for_block(job_ctxt, block.sites,
             get_loss_curve, float(job_ctxt.params['INTEREST_RATE']),
