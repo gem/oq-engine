@@ -15,7 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-NO_DAMAGE_STATE = "_no_damage"
+NO_DAMAGE_STATE = "no_damage"
 
 
 def damage_states(fragility_model):
