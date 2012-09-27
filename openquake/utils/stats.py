@@ -25,7 +25,7 @@ from datetime import datetime
 from functools import wraps
 import redis
 
-from openquake.models import JobPhaseStats
+from openquake.db.models import JobPhaseStats
 from openquake.utils import config
 
 
@@ -316,7 +316,7 @@ class count_progress(object):   # pylint: disable=C0103
 
                 # record the time (in seconds since epoch) at which the
                 # progress value was incremented.
-                tstamp = int(datetime.now().strftime("%s"))
+                tstamp = int(datetime.utcnow().strftime("%s"))
                 pk_set(job_id, "lvr_ts", tstamp)
 
                 return result
@@ -404,11 +404,11 @@ def time_since_last_progress(job_id):
         """Convert a datetime object to seconds since epoch"""
         return int(dto.strftime("%s"))
 
-    tstamp = epoch(datetime.now())
+    tstamp = epoch(datetime.utcnow())
     lvr_ts = pk_get(job_id, "lvr_ts")
     if lvr_ts == 0:
         jpss = JobPhaseStats.objects.filter(oq_job__id=job_id,
-                                            ctype="executing")
+                                            job_status="executing")
         [jps] = jpss.order_by("-start_time")[:1]
         lvr_ts = epoch(jps.start_time)
 
