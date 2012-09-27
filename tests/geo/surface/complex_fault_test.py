@@ -159,3 +159,15 @@ class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
         elats = [-2.1, -2., -1.9, -2.]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+
+class ComplexFaultSurfaceGetWidthTestCase(unittest.TestCase):
+    def test_surface_with_variable_width(self):
+        edges = [Line([Point(0.1, 0.1, 0),
+                       Point(0.459729190252, 0.0999980290582, 0.0),
+                       Point(0.819458380482, 0.0999960581553, 0.0)]),
+                 Line([Point(0.1, 0.1, 20.0),
+                       Point(0.459729190252, 0.0999980290582, 20.0),
+                       Point(0.819458380482, 0.0999960581553, 43.0940107676)])]
+        surface = ComplexFaultSurface.from_fault_data(edges, mesh_spacing=5.0)
+        self.assertAlmostEqual(surface.get_width(), 26.0, places=0)

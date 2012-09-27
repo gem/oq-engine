@@ -751,3 +751,25 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         expected_coords = [(-0, 0.2), (0.1, 0.2), (0.1, -0), (-0, -0),
                            (-0, 0.2)]
         self._test(lons, lats, depths, expected_coords)
+
+
+class RectangularMeshGetMeanWidthTestCase(unittest.TestCase):
+    def test_invalid_mesh(self):
+        lons = numpy.array([[0.1]])
+        lats = numpy.array([[0.1]])
+        depths = numpy.array([[2.0]])
+        mesh = RectangularMesh(lons, lats, depths)
+        self.assertRaises(AssertionError, mesh.get_mean_width)
+
+    def test_mesh_width(self):
+        lons = numpy.array([[0.1, 0.1, 0.1, 0.1],
+                            [0.1, 0.1, 0.1, 0.1],
+                            [0.1, 0.1, 0.1, 0.1]])
+        lats = numpy.array([[0.1, 0.10899322, 0.11798643, 0.12697965],
+                            [0.1, 0.10899322, 0.11798643, 0.12697965],
+                            [0.1, 0.10899322, 0.11798643, 0.12697965]])
+        depths = numpy.array([[2.0, 2.0, 2.0, 2.0],
+                              [3.0, 3.0, 3.0, 3.0],
+                              [4.0, 4.0, 4.0, 4.0]])
+        mesh = RectangularMesh(lons, lats, depths)
+        self.assertAlmostEqual(mesh.get_mean_width(), 2.0)

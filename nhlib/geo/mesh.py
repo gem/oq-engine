@@ -714,3 +714,30 @@ class RectangularMesh(Mesh):
         diag = points[:-1, 1:] - points[1:, :-1]
 
         return points, along_azimuth, updip, diag
+
+    def get_mean_width(self):
+        """
+        Calculate and return (weighted) mean width (km) of a mesh surface.
+
+        The length of each mesh column is computed (summing up the cell widths
+        in a same column), and the mean value (weighted by the mean cell
+        length in each column) is returned.
+        """
+        assert not 1 in self.lons.shape, (
+            "mean width is only defined for mesh of more than "
+            "one row and more than one column of points"
+        )
+
+        _, cell_length, cell_width, cell_area = self.get_cell_dimensions()
+
+        # compute widths along each mesh column
+        widths = numpy.sum(cell_width, axis=0)
+
+        # compute (weighted) mean cell length along each mesh column
+        column_areas = numpy.sum(cell_area, axis=0)
+        mean_cell_lengths = numpy.sum(cell_length * cell_area, axis=0) / \
+            column_areas
+
+        # compute and return weighted mean
+        return numpy.sum(widths * mean_cell_lengths) / \
+            numpy.sum(mean_cell_lengths)

@@ -41,6 +41,9 @@ class DummySurface(BaseSurface):
     def get_dip(self):
         raise NotImplementedError()
 
+    def get_width(self):
+        raise NotImplementedError()
+
 
 class GetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
