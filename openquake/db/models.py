@@ -1529,7 +1529,61 @@ class GmfSet(djm.Model):
         """
         Iterator for walking through all child :class:`Gmf` objects.
         """
-        return Gmf.objects.filter(gmf_set=self.id).iterator()
+        job = self.gmf_collection.output.oq_job
+        hc = job.hazard_calculation
+        job_stats = JobStats.objects.get(oq_job=job.id)
+
+        block_size = len(hc.points_to_compute())
+
+        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+
+        for imt, sa_period, sa_damping in imts:
+
+            for task_ordinal in xrange(1, job_stats.num_tasks + 1):
+                gmfs = Gmf.objects.filter(
+                    gmf_set=self.id, imt=imt, sa_period=sa_period,
+                    sa_damping=sa_damping, task_ordinal=task_ordinal)
+                if len(gmfs) == 0:
+                    # This task did not contribute to this GmfSet
+                    continue
+
+                # len of each gmfs == number of sites
+                # need to walk through each columns of gmvs, slicing vertically
+                # extract individual ground motion fields
+                first = gmfs[0]
+                num_ruptures = len(first.gmvs)
+
+                for i in xrange(num_ruptures):
+                    gmf_nodes = []
+                    for x in gmfs:
+                        assert len(x.gmvs) == num_ruptures
+                        # TODO: Rename `iml` to `gmv`,
+                        # in NRML serializer as well
+                        gmf_nodes.append(_GroundMotionFieldNode(
+                            iml=x.gmvs[i], location=x.location))
+                    yield _GroundMotionField(
+                        imt=first.imt, sa_period=first.sa_period,
+                        sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
+                    del gmf_nodes
+
+
+class _GroundMotionField(object):
+
+    def __init__(self, imt, sa_period, sa_damping, gmf_nodes):
+        self.imt = imt
+        self.sa_period = sa_period
+        self.sa_damping = sa_damping
+        self.gmf_nodes = gmf_nodes
+
+    def __iter__(self):
+        return iter(self.gmf_nodes)
+
+
+class _GroundMotionFieldNode(object):
+
+    def __init__(self, iml, location):
+        self.iml = iml
+        self.location = location  # must have x and y attributes
 
 
 class Gmf(djm.Model):
