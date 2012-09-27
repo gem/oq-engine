@@ -20,15 +20,15 @@ calculator
 """
 
 import numpy
-from risklib.fragility_model import damage_states, no_damage
-from risklib.fragility_function import poe
+from risklib.fragility_model import damage_states, _no_damage
+from risklib.fragility_function import _poe
 from risklib.signals import EMPTY_CALLBACK
 
 
-def compute_damage(sites, assets_getter,
-                   (fragility_model, fragility_functions),
-                   ground_motion_field_getter,
-                   on_asset_complete=EMPTY_CALLBACK):
+def compute(sites, assets_getter,
+            (fragility_model, fragility_functions),
+            ground_motion_field_getter,
+            on_asset_complete=EMPTY_CALLBACK):
     """
     Compute the damage distributions and the collapse maps for each
     asset associated with `sites`. Then, it aggregates such results for
@@ -171,14 +171,14 @@ def _damage_distribution_per_asset(asset,
     fragility_functions_sorted = sorted(
         fragility_functions, key=lambda x: x.lsi)
 
-    fractions = _compute_gmf_fractions(
+    fractions = _ground_motion_field_fractions(
         (fragility_model, fragility_functions_sorted), ground_motion_field)
     fractions *= asset.number_of_units
 
     return _damage_distribution_stats(fractions), fractions
 
 
-def _compute_gmf_fractions((fragility_model, funcs), gmf):
+def _ground_motion_field_fractions((fragility_model, funcs), gmf):
     """
     Compute the fractions of each damage state for
     each ground motion value given. `gmf` means Ground Motion Field,
@@ -206,13 +206,13 @@ def _compute_gmf_fractions((fragility_model, funcs), gmf):
     fractions = _make_damage_distribution_matrix(fragility_model, gmf)
 
     for x, gmv in enumerate(gmf):
-        fractions[x] = _compute_gmv_fractions(
+        fractions[x] = _ground_motion_value_fractions(
             (fragility_model, funcs), gmv)
 
     return fractions
 
 
-def _compute_gmv_fractions((fragility_model, funcs), gmv):
+def _ground_motion_value_fractions((fragility_model, funcs), gmv):
     """
     Compute the fractions of each damage state for
     the Ground Motion Value given (a Ground Motion Value
@@ -244,13 +244,13 @@ def _compute_gmv_fractions((fragility_model, funcs), gmv):
     # when we have a discrete fragility model and
     # the ground motion value is below the lowest
     # intensity measure level defined in the model
-    # we simply use 100% no_damage and 0% for the
+    # we simply use 100% _no_damage and 0% for the
     # remaining limit states
-    if no_damage(fragility_model, gmv):
+    if _no_damage(fragility_model, gmv):
         damage_state_values[0] = 1.0
         return numpy.array(damage_state_values)
 
-    first_poe = poe(funcs[0], gmv)
+    first_poe = _poe(funcs[0], gmv)
 
     # first damage state is always 1 - the probability
     # of exceedance of first limit state
@@ -260,13 +260,13 @@ def _compute_gmv_fractions((fragility_model, funcs), gmv):
     # starting from one, the first damage state
     # is already computed...
     for x in xrange(1, len(funcs)):
-        a_poe = poe(funcs[x], gmv)
+        a_poe = _poe(funcs[x], gmv)
         damage_state_values[x] = last_poe - a_poe
         last_poe = a_poe
 
     # last damage state is equal to the probability
     # of exceedance of the last limit state
-    damage_state_values[len(funcs)] = poe(funcs[len(funcs) - 1], gmv)
+    damage_state_values[len(funcs)] = _poe(funcs[len(funcs) - 1], gmv)
     return numpy.array(damage_state_values)
 
 

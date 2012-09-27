@@ -16,7 +16,7 @@
 import unittest
 import numpy
 
-from risklib.scenario_damage import _compute_gmv_fractions
+from risklib.scenario_damage import _ground_motion_value_fractions
 from risklib.models import (
     FragilityModel, FragilityFunctionDiscrete)
 
@@ -38,8 +38,8 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
-        self._close_to(_compute_gmv_fractions((fm, [func]), 0.7),
-            _compute_gmv_fractions((fm, [func]), 0.8))
+        self._close_to(_ground_motion_value_fractions((fm, [func]), 0.7),
+                       _ground_motion_value_fractions((fm, [func]), 0.8))
 
     def test_dda_iml_below_range_damage_limit_undefined(self):
         # corner case where we have a ground motion value
@@ -55,7 +55,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0, 0.0],
-            _compute_gmv_fractions((fm, [func]), 0.05))
+            _ground_motion_value_fractions((fm, [func]), 0.05))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -73,7 +73,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0, 0.0],
-            _compute_gmv_fractions((fm, [func]), 0.02))
+            _ground_motion_value_fractions((fm, [func]), 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -92,7 +92,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         func2 = FragilityFunctionDiscrete(fm, [0.00, 0.05, 0.20, 0.50], 2)
 
         self._close_to([0.975, 0.025, 0.],
-            _compute_gmv_fractions((fm, [func1, func2]), 0.075))
+            _ground_motion_value_fractions((fm, [func1, func2]), 0.075))
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))

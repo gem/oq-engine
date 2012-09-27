@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections import OrderedDict
 import json
 from numpy import empty, allclose
 from scipy.interpolate import interp1d
@@ -137,7 +138,8 @@ class Curve(object):
 
         # inverting the function
         inverted_func = [(ordinate, x_value) for ordinate, x_value in
-                         zip(self.ordinate_for(self.abscissae), self.abscissae)]
+                         zip(self.ordinate_for(self.abscissae),
+                             self.abscissae)]
 
         return Curve(inverted_func).ordinate_for(y_value)
 
@@ -147,6 +149,19 @@ class Curve(object):
         ordinates.sort()
 
         return y_value < ordinates[0] or y_value > ordinates[-1]
+
+    def with_unique_ordinates(self):
+        """
+        Given `curve` return a new curve with unique ordinates. Points
+        are just copied except for points with the same ordinate for
+        which only the last one is kept.
+        """
+        seen = OrderedDict()
+
+        for ordinate, abscissa in zip(self.ordinates, self.abscissae):
+            seen[ordinate] = abscissa
+
+        return self.__class__(zip(seen.values(), seen.keys()))
 
     def to_json(self):
         """Serialize this curve in json format."""

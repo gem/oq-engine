@@ -24,7 +24,7 @@ def damage_states(fragility_model):
 
     For N limit states in the fragility model, we always
     define N+1 damage states. The first damage state
-    should always be 'no_damage'.
+    should always be '_no_damage'.
 
     :param fragility_model A Fragility Model object which support a
       property `lss` containing an iterator over limit states
@@ -36,7 +36,7 @@ def damage_states(fragility_model):
     return dmg_states
 
 
-def no_damage(fragility_model, gmv):
+def _no_damage(fragility_model, gmv):
     """
     There is no damage when ground motions values are less
     than the first iml or when the no damage limit value
