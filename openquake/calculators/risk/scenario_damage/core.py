@@ -199,7 +199,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                             scenario_damage.damage_states(fragility_model),
                 damage_distribution_asset)
 
-        return scenario_damage.compute_damage(block.sites, assets_loader,
+        return scenario_damage.compute(block.sites, assets_loader,
             (fragility_model, frag_functions), ground_motion_field_loader,
             on_asset_complete_cb)
 
