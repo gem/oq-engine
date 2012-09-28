@@ -270,6 +270,8 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER NOT NULL,
+    -- The number of tasks in a job
+    num_tasks INTEGER,
     -- The number of logic tree samples (for hazard jobs of all types except scenario)
     realizations INTEGER
 ) TABLESPACE uiapi_ts;
