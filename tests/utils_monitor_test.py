@@ -24,8 +24,6 @@ Unit tests for the utils.stats module.
 
 import unittest
 
-from django.db import transaction
-from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
 
 from openquake import engine
