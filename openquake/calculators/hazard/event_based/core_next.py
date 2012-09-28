@@ -616,3 +616,5 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             self.initialize_complete_lt_gmf_db_records()
 
         self.initialize_pr_data()
+
+        self.record_init_stats()

@@ -289,6 +289,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             rlz_callbacks=[self.initialize_hazard_curve_progress])
         self.initialize_pr_data()
 
+        self.record_init_stats()
+
     def post_execute(self):
         """
         Create the final output records for hazard curves. This is done by
