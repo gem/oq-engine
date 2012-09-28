@@ -274,9 +274,30 @@ class AbortDueToFailedNodesTestCase(unittest.TestCase):
         self.monitor_patch.stop()
         self.stats_patch.stop()
 
-    def test_abort_due_to_failed_nodes_and_zero_failed_nodes(self):
+    def test_abort_due_to_failed_nodes_with_zero_failures_and_no_timeout(self):
+        # the "no progress" timeout has not been reached and no node failures
+        # have been detected -> return 0
+        self.monitor_mock.return_value = 0
+        self.stats_mock.return_value = (361, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(10))
+
+    def test_abort_due_to_failed_nodes_with_zero_failures_and_timeout(self):
         # the "no progress" timeout is reached but no node failures have been
         # detected -> return 0
         self.monitor_mock.return_value = 0
-        self.stats_mock = (3610, 3600)
+        self.stats_mock.return_value = (3610, 3600)
         self.assertEqual(0, supervisor.abort_due_to_failed_nodes(10))
+
+    def test_abort_due_to_failed_nodes_with_failures_and_no_timeout(self):
+        # the "no progress" timeout has not been reached but there are node
+        # failures  -> return 0
+        self.monitor_mock.return_value = 5
+        self.stats_mock.return_value = (362, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(10))
+
+    def test_abort_due_to_failed_nodes_with_failures_and_timeout(self):
+        # the "no progress" timeout has been reached *and* there are node
+        # failures -> (return value > 0)
+        self.monitor_mock.return_value = 7
+        self.stats_mock.return_value = (4000, 3600)
+        self.assertEqual(7, supervisor.abort_due_to_failed_nodes(10))
