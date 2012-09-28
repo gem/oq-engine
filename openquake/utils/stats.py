@@ -393,7 +393,7 @@ def debug_stats_enabled():
     return config.flag_set("statistics", "debug")
 
 
-def progress_timing_data(job):
+def get_progress_timing_data(job):
     """Get length of time since the last task completed and the timeout.
 
     :param job: The :class:`openquake.db.models.OqJob` instance to use

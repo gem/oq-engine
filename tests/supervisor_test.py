@@ -266,7 +266,8 @@ class AbortDueToFailedNodesTestCase(unittest.TestCase):
     def setUp(self):
         self.monitor_patch = patch(
             "openquake.utils.monitor.count_failed_nodes")
-        self.stats_patch = patch("openquake.utils.stats.progress_timing_data")
+        self.stats_patch = patch(
+            "openquake.utils.stats.get_progress_timing_data")
         self.monitor_mock = self.monitor_patch.start()
         self.stats_mock = self.stats_patch.start()
 

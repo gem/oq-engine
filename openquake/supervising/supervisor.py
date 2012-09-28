@@ -202,7 +202,7 @@ def abort_due_to_failed_nodes(job_id):
     failed_nodes = monitor.count_failed_nodes(job)
 
     if failed_nodes:
-        no_progress_period, timeout = stats.progress_timing_data(job)
+        no_progress_period, timeout = stats.get_progress_timing_data(job)
         if no_progress_period > timeout:
             result = failed_nodes
 

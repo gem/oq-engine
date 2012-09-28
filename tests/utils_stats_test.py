@@ -554,8 +554,8 @@ def approx_equal(expected, actual, tolerance):
     return abs(expected - actual) <= tolerance
 
 
-class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
-    """Tests the behaviour of utils.stats.progress_timing_data()."""
+class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
+    """Tests the behaviour of utils.stats.get_progress_timing_data()."""
 
     job = db_patch = db_mock = None
 
@@ -575,7 +575,7 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
     def setUp(self):
         self.job = engine.prepare_job()
 
-    def test_progress_timing_data_before_first_increment(self):
+    def test_get_progress_timing_data_before_first_increment(self):
         # No "progress counter increment" time stamp exists, the time stamp of
         # the *executing* `JobPhaseStats` record is taken instead.
         five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
@@ -583,11 +583,11 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = five_mins_ago
         jps.save()
-        actual, timeout = stats.progress_timing_data(self.job)
+        actual, timeout = stats.get_progress_timing_data(self.job)
         self.assertTrue(approx_equal(300, actual, 5))
         self.assertEqual(3601, timeout)
 
-    def test_progress_timing_data_no_increment_multiple_rows(self):
+    def test_get_progress_timing_data_no_increment_multiple_rows(self):
         # No progress counter increment time stamp exists, the time stamp of
         # the most recent *executing* `JobPhaseStats` record is taken instead.
         jps_ts = datetime.utcnow() - timedelta(minutes=5)
@@ -600,10 +600,10 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = jps_ts
         jps.save()
-        actual, timeout = stats.progress_timing_data(self.job)
+        actual, timeout = stats.get_progress_timing_data(self.job)
         self.assertTrue(approx_equal(120, actual, 5))
 
-    def test_progress_timing_data_with_increment(self):
+    def test_get_progress_timing_data_with_increment(self):
         # The progress counter increment time stamp exists and is used instead
         # of the time stamp in the *executing* `JobPhaseStats` record since the
         # former is more recent.
@@ -614,10 +614,10 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = tstamp
         jps.save()
-        actual, timeout = stats.progress_timing_data(self.job)
+        actual, timeout = stats.get_progress_timing_data(self.job)
         self.assertTrue(approx_equal(360, actual, 5))
 
-    def test_progress_timing_data_with_stale_increment_ts(self):
+    def test_get_progress_timing_data_with_stale_increment_ts(self):
         # The progress counter increment time stamp exists but is not used
         # since the time stamp in the *executing* `JobPhaseStats` record is
         # more recent.
@@ -628,5 +628,5 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = tstamp
         jps.save()
-        actual, timeout = stats.progress_timing_data(self.job)
+        actual, timeout = stats.get_progress_timing_data(self.job)
         self.assertTrue(approx_equal(480, actual, 5))
