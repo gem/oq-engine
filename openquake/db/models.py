@@ -544,12 +544,12 @@ class JobStats(djm.Model):
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
-    num_sites = djm.IntegerField()
+    num_sites = djm.IntegerField(null=True)
     # The total number of tasks in a job
     num_tasks = djm.IntegerField(null=True)
     # The number of logic tree samples
     # (for hazard jobs of all types except scenario)
-    realizations = djm.IntegerField(null=True)
+    num_realizations = djm.IntegerField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
