@@ -557,7 +557,20 @@ def approx_equal(expected, actual, tolerance):
 class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.progress_timing_data()."""
 
-    job = None
+    job = db_patch = db_mock = None
+
+    @classmethod
+    def setUpClass(cls):
+        class OQJP(object):
+            no_progress_timeout = 3601
+
+        cls.db_patch = helpers.patch("openquake.db.models.profile4job")
+        cls.db_mock = cls.db_patch.start()
+        cls.db_mock.return_value = OQJP()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db_patch.stop()
 
     def setUp(self):
         self.job = engine.prepare_job()
@@ -570,8 +583,9 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = five_mins_ago
         jps.save()
-        actual = stats.progress_timing_data(self.job.id)
+        actual, timeout = stats.progress_timing_data(self.job)
         self.assertTrue(approx_equal(300, actual, 5))
+        self.assertEqual(3601, timeout)
 
     def test_progress_timing_data_no_increment_multiple_rows(self):
         # No progress counter increment time stamp exists, the time stamp of
@@ -586,7 +600,7 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = jps_ts
         jps.save()
-        actual = stats.progress_timing_data(self.job.id)
+        actual, timeout = stats.progress_timing_data(self.job)
         self.assertTrue(approx_equal(120, actual, 5))
 
     def test_progress_timing_data_with_increment(self):
@@ -600,7 +614,7 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = tstamp
         jps.save()
-        actual = stats.progress_timing_data(self.job.id)
+        actual, timeout = stats.progress_timing_data(self.job)
         self.assertTrue(approx_equal(360, actual, 5))
 
     def test_progress_timing_data_with_stale_increment_ts(self):
@@ -614,5 +628,5 @@ class ProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
                             job_status="executing")
         jps.start_time = tstamp
         jps.save()
-        actual = stats.progress_timing_data(self.job.id)
+        actual, timeout = stats.progress_timing_data(self.job)
         self.assertTrue(approx_equal(480, actual, 5))

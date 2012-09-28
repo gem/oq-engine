@@ -25,7 +25,7 @@ from datetime import datetime
 from functools import wraps
 import redis
 
-from openquake.db.models import JobPhaseStats
+from openquake.db import models
 from openquake.utils import config
 
 
@@ -393,12 +393,13 @@ def debug_stats_enabled():
     return config.flag_set("statistics", "debug")
 
 
-def progress_timing_data(job_id):
+def progress_timing_data(job):
     """Get length of time since the last task completed and the timeout.
 
-    :param int job_id: identifier of the job in question
+    :param job: The :class:`openquake.db.models.OqJob` instance to use
     :returns: number of seconds since the last task completed (or the
-        execute phase began)
+        execute phase began) and the value of the `no_progress_timeout`
+        parameter as a 2-tuple
     """
     def epoch(dto):
         """Convert a datetime object to seconds since epoch"""
@@ -407,16 +408,16 @@ def progress_timing_data(job_id):
     tstamp = epoch(datetime.utcnow())
 
     # the "last value recorded time stamp" will be zero if not set in the kvs
-    lvr_ts = pk_get(job_id, "lvr_ts")
+    lvr_ts = pk_get(job.id, "lvr_ts")
 
     # when did the most recent "executing" job phase for this calculation
     # start?
-    jpss = JobPhaseStats.objects.filter(oq_job__id=job_id,
-                                        job_status="executing")
+    jpss = models.JobPhaseStats.objects.filter(oq_job__id=job.id,
+                                               job_status="executing")
     [jps] = jpss.order_by("-start_time")[:1]
     jps_ts = epoch(jps.start_time)
 
     # take the more recent of the two time stamps
     lvr_ts = jps_ts if jps_ts > lvr_ts else lvr_ts
 
-    return tstamp - lvr_ts
+    return (tstamp - lvr_ts, models.profile4job(job.id).no_progress_timeout)
