@@ -17,12 +17,68 @@
 Module :mod:`nhlib.correlation` defines correlation models for spatially-\
 distributed ground-shaking intensities.
 """
+import abc
 import numpy
 
 from nhlib.imt import SA, PGA
 
 
-class JB2009CorrelationModel(object):
+class BaseCorrelationModel(object):
+    """
+    Base class for correlation models for spatially-distributed ground-shaking
+    intensities.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_lower_triangle_correlation_matrix(self, sites, imt):
+        """
+        Get lower-triangle matrix as a result of Cholesky-decomposition
+        of correlation matrix.
+
+        The resulting matrix should have zeros on values above
+        the main diagonal.
+
+        The actual implementations of :class:`BaseCorrelationModel` interface
+        might calculate the matrix considering site collection and IMT (like
+        :class:`JB2009CorrelationModel` does) or might have it pre-constructed
+        for a specific site collection and IMT, in which case they will need
+        to make sure that parameters to this function match parameters that
+        were used to pre-calculate decomposed correlation matrix.
+
+        :param sites:
+            :class:`~nhlib.site.SiteCollection` to create
+            correlation matrix for.
+        :param imt:
+            Intensity measure type object, see :mod:`nhlib.imt`.
+        """
+
+    def apply_correlation(self, sites, imt, residuals):
+        """
+        Apply correlation to randomly sampled residuals.
+
+        :param sites:
+            :class:`~nhlib.site.SiteCollection` residuals were sampled for.
+        :param imt:
+            Intensity measure type object, see :mod:`nhlib.imt`.
+        :param residuals:
+            2d numpy array of sampled residuals, where first dimension
+            represents sites (the length as ``sites`` parameter) and
+            second one represents different realizations (samples).
+        :returns:
+            Array of the same structure and semantics as ``residuals``
+            but with correlations applied.
+        """
+        # intra-event residual for a single relization is a product
+        # of lower-triangle decomposed correlation matrix and vector
+        # of N random numbers (where N is equal to number of sites).
+        # we need to do that multiplication once per realization
+        # with the same matrix and different vectors.
+        corma = self.get_lower_triangle_correlation_matrix(sites, imt)
+        return numpy.dot(corma, residuals)
+
+
+class JB2009CorrelationModel(BaseCorrelationModel):
     """
     "Correlation model for spatially distributed ground-motion intensities"
     by Nirmal Jayaram and Jack W. Baker. Published in Earthquake Engineering
@@ -35,20 +91,17 @@ class JB2009CorrelationModel(object):
     """
     def __init__(self, vs30_clustering):
         self.vs30_clustering = vs30_clustering
+        super(JB2009CorrelationModel, self).__init__()
 
-    def get_correlation_matrix(self, sites, imt):
+    def _get_correlation_matrix(self, sites, imt):
         """
         Calculate correlation matrix for a given sites collection.
 
         Correlation depends on spectral period, Vs 30 clustering behaviour
         and distance between sites.
 
-        :param sites:
-            :class:`~nhlib.site.SiteCollection` to create
-            correlation matrix for.
-        :param imt:
-            Intensity measure type object, an instance of either
-            of :class:`nhlib.imt.SA` or :class:`nhlib.imt.PGA`.
+        Parameters are the same as for
+        :meth:`BaseCorrelationModel.get_lower_triangle_correlation_matrix`.
         """
         if isinstance(imt, SA):
             period = imt.period
@@ -75,10 +128,6 @@ class JB2009CorrelationModel(object):
 
     def get_lower_triangle_correlation_matrix(self, sites, imt):
         """
-        Calculate correlation matrix and return lower triangle matrix
-        as a result of Cholesky decomposition of it.
-
-        Parameters are the same as for :meth:`get_correlation_matrix`.
-        The resulting matrix has zeros on values above the main diagonal.
+        See :meth:`BaseCorrelationModel.get_lower_triangle_correlation_matrix`.
         """
-        return numpy.linalg.cholesky(self.get_correlation_matrix(sites, imt))
+        return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))

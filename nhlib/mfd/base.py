@@ -25,48 +25,11 @@ class BaseMFD(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: The list of parameters' names that are required by actual
-    #: MFD implementation. The property is required to be overridden.
-    #: Those and only those attributes that are listed here are allowed
-    #: and required as constructor's kwargs. See :meth:`set_parameters`.
-    PARAMETERS = abc.abstractproperty()
-
     #: The set of modification type names that are supported by an MFD.
     #: Each modification should have a corresponding method named
     #: ``modify_modificationname()`` where the actual modification
     #: logic resides.
     MODIFICATIONS = abc.abstractproperty()
-
-    def __init__(self, **parameters):
-        self.set_parameters(parameters)
-        self._original_parameters = parameters.copy()
-
-    def set_parameters(self, parameters):
-        """
-        Assign parameters to object's attributes.
-
-        :param parameters:
-            The dictionary of parameters as passed to the constructor.
-        :raises ValueError:
-            If some actual parameters are missing in :attr:`PARAMETERS`
-            or if something from :attr:`PARAMETERS` is missing in actual
-            parameters.
-
-        Calls :meth:`check_constraints` once everything is assigned.
-        """
-        defined = set(parameters)
-        required = set(self.PARAMETERS)
-        unexpected = defined - required
-        missing = required - defined
-        if missing:
-            raise ValueError('These parameters are required but missing: %s'
-                             % ', '.join(sorted(missing)))
-        if unexpected:
-            raise ValueError('These parameters are unexpected: %s'
-                             % ', ' .join(sorted(unexpected)))
-        for param_name in self.PARAMETERS:
-            setattr(self, param_name, parameters[param_name])
-        self.check_constraints()
 
     def modify(self, modification, parameters):
         """
@@ -77,8 +40,6 @@ class BaseMFD(object):
 
         Modifications can be applied one on top of another. The logic
         of stacking modifications is up to a specific MFD implementation.
-        Any number of modifications can be reverted with a single call
-        to :meth:`reset`.
 
         :param modification:
             String name representing the type of modification.
@@ -93,13 +54,6 @@ class BaseMFD(object):
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
         self.check_constraints()
-
-    def reset(self):
-        """
-        Reset an MFD to its original state after any number of :meth:`modify`
-        calls.
-        """
-        self.set_parameters(self._original_parameters)
 
     @abc.abstractmethod
     def check_constraints(self):

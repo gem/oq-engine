@@ -19,6 +19,8 @@ import numpy
 
 from nhlib.geo import geodetic
 
+from tests import SpeedupsTestCase
+
 
 # these points and tests that use them are from
 # http://williams.best.vwh.net/avform.htm#Example
@@ -26,7 +28,7 @@ LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
 
-class TestGeodeticDistance(unittest.TestCase):
+class TestGeodeticDistance(SpeedupsTestCase):
     def test_LAX_to_JFK(self):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
         self.assertAlmostEqual(dist, 0.623585 * geodetic.EARTH_RADIUS,
@@ -122,7 +124,7 @@ class TestAzimuth(unittest.TestCase):
         self.assertTrue(numpy.allclose(az, eazimuths), str(az))
 
 
-class TestDistance(unittest.TestCase):
+class TestDistance(SpeedupsTestCase):
     def test(self):
         p1 = (0, 0, 10)
         p2 = (0.5, -0.3, 5)
@@ -130,11 +132,14 @@ class TestDistance(unittest.TestCase):
         self.assertAlmostEqual(distance, 65.0295143)
 
 
-class MinDistanceTest(unittest.TestCase):
+class MinDistanceTest(SpeedupsTestCase):
     # test relies on geodetic.distance() to work right
     def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
               expected_mpoint_indices):
-        mlons, mlats, mdepths = map(numpy.array, (mlons, mlats, mdepths))
+        mlons, mlats, mdepths = [numpy.array(arr, float)
+                                 for arr in (mlons, mlats, mdepths)]
+        slons, slats, sdepths = [numpy.array(arr, float)
+                                 for arr in (slons, slats, sdepths)]
         actual_indices = geodetic.min_distance(mlons, mlats, mdepths,
                                                slons, slats, sdepths,
                                                indices=True)
@@ -151,6 +156,13 @@ class MinDistanceTest(unittest.TestCase):
         )
         self.assertTrue((dists == expected_distances).all())
 
+        # testing min_geodetic_distance with the same lons and lats
+        min_geod_distance = geodetic.min_geodetic_distance(mlons, mlats,
+                                                           slons, slats)
+        min_geo_distance2 = geodetic.min_distance(mlons, mlats, mdepths * 0,
+                                                  slons, slats, sdepths * 0)
+        numpy.testing.assert_almost_equal(min_geod_distance, min_geo_distance2)
+
     def test_one_point(self):
         mlons = numpy.array([-0.1, 0.0, 0.1])
         mlats = numpy.array([0.0, 0.0, 0.0])
@@ -158,7 +170,7 @@ class MinDistanceTest(unittest.TestCase):
 
         self._test(mlons, mlats, mdepths, -0.05, 0.0, 0,
                    expected_mpoint_indices=0)
-        self._test(mlons, mlats, mdepths, -0.1, 0.0, 20.0,
+        self._test(mlons, mlats, mdepths, [-0.1], [0.0], [20.0],
                    expected_mpoint_indices=1)
 
     def test_several_points(self):

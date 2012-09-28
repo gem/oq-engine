@@ -266,13 +266,11 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
 
         numpy.random.seed(23)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
-        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
-                                                               self.imt1)
+        corma = cormo._get_correlation_matrix(self.sites, self.imt1)
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1], self.gsim,
             truncation_level=None, realizations=6000,
-            lt_correlation_matrices={self.imt1: lt_corma}
+            correlation_model=cormo
         )
 
         sampled_corma = numpy.corrcoef(gmfs[self.imt1])
@@ -292,12 +290,10 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
 
         numpy.random.seed(41)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
-                                                               self.imt1)
         s1_intensity, s2_intensity = ground_motion_fields(
             self.rupture, self.sites, [self.imt1], self.gsim,
             truncation_level=None, realizations=6000,
-            lt_correlation_matrices={self.imt1: lt_corma}
+            correlation_model=cormo,
         )[self.imt1]
 
         self.assertAlmostEqual(s1_intensity.mean(), mean1, delta=1e-3)
@@ -305,24 +301,29 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
         self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
 
-    def test_array_instead_of_matrix(self):
+    def test_rupture_site_filtering(self):
         mean = 10
-        inter = 1e-300
-        intra = 1
-        points = [Point(0, 0), Point(0, 0.23)]
+        inter = 2
+        intra = 3
+        points = [Point(0, 0), Point(0, 0.05)]
         sites = [Site(point, mean, False, inter, intra) for point in points]
         self.sites = SiteCollection(sites)
 
-        numpy.random.seed(43)
+        def rupture_site_filter(rupture_sites):
+            [(rupture, sites)] = rupture_sites
+            yield rupture, sites.filter(sites.mesh.lats == 0)
+
+        self.gsim.expect_same_sitecol = False
+
+        numpy.random.seed(37)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
-        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
-                                                               self.imt1)
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1], self.gsim,
-            truncation_level=None, realizations=6000,
-            lt_correlation_matrices={self.imt1: lt_corma.A}
+            truncation_level=None, realizations=1,
+            correlation_model=cormo,
+            rupture_site_filter=rupture_site_filter
         )
 
-        sampled_corma = numpy.corrcoef(gmfs[self.imt1])
-        assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)
+        s1gmf, s2gmf = gmfs[self.imt1]
+        numpy.testing.assert_array_equal(s2gmf, 0)
+        numpy.testing.assert_array_almost_equal(s1gmf, 11.1852253)

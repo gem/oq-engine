@@ -313,3 +313,53 @@ def normalized(vector):
     length = numpy.sum(vector * vector, axis=-1)
     length = numpy.sqrt(length.reshape(length.shape + (1, )))
     return vector / length
+
+
+def point_to_polygon_distance(polygon, pxx, pyy):
+    """
+    Calculate the distance to polygon for each point of the collection
+    on the 2d Cartesian plane.
+
+    :param polygon:
+        Shapely "Polygon" geometry object.
+    :param pxx:
+        List or numpy array of abscissae values of points to calculate
+        the distance from.
+    :param pyy:
+        Same structure as ``pxx``, but with ordinate values.
+    :returns:
+        Numpy array of distances in units of coordinate system. Points
+        that lie inside the polygon have zero distance.
+    """
+    pxx = numpy.array(pxx)
+    pyy = numpy.array(pyy)
+    assert pxx.shape == pyy.shape
+    if pxx.ndim == 0:
+        pxx = pxx.reshape((1, ))
+        pyy = pyy.reshape((1, ))
+    result = numpy.array([
+        polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
+        for i in xrange(pxx.size)
+    ])
+    return result.reshape(pxx.shape)
+
+
+try:
+    from nhlib.geo import _utils_speedups
+except ImportError:
+    # speedups extension is not available
+    import warnings
+    warnings.warn("geoutils speedups are not available", RuntimeWarning)
+else:
+    from nhlib import speedups
+
+    def _c_point_to_polygon_distance(polygon, pxx, pyy):
+        pxx = numpy.array(pxx, float)
+        pyy = numpy.array(pyy, float)
+        cxx, cyy = numpy.array(polygon.exterior).transpose()
+        return _utils_speedups.point_to_polygon_distance(
+            cxx, cyy, pxx, pyy
+        )
+
+    speedups.register(point_to_polygon_distance, _c_point_to_polygon_distance)
+    del _c_point_to_polygon_distance

@@ -20,6 +20,7 @@ Module :mod:`nhlib.geo.mesh` defines classes :class:`Mesh` and its subclass
 """
 import numpy
 import shapely.geometry
+import shapely.ops
 
 from nhlib.geo.point import Point
 from nhlib.geo import geodetic
@@ -45,6 +46,10 @@ class Mesh(object):
     Mesh object can also be created from a collection of points, see
     :meth:`from_points_list`.
     """
+    #: Tolerance level to be used in various spatial operations when
+    #: approximation is required -- set to 5 meters.
+    DIST_TOLERANCE = 0.005
+
     def __init__(self, lons, lats, depths):
         assert (isinstance(lons, numpy.ndarray)
                 and isinstance(lats, numpy.ndarray)
@@ -155,6 +160,86 @@ class Mesh(object):
         """
         return self._geodetic_min_distance(mesh, indices=False)
 
+    def get_joyner_boore_distance(self, mesh):
+        """
+        Compute and return Joyner-Boore distance to each point of ``mesh``.
+        Point's depth is ignored.
+
+        See
+        :meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
+        for definition of this distance.
+
+        :returns:
+            numpy array of distances in km of the same shape as ``mesh``.
+            Distance value is considered to be zero if a point
+            lies inside the polygon enveloping the projection of the mesh
+            or on one of its edges.
+        """
+        # we perform a hybrid calculation (geodetic mesh-to-mesh distance
+        # and distance on the projection plane for close points). first,
+        # we find the closest geodetic distance for each point of target
+        # mesh to this one. in general that distance is greater than
+        # the exact distance to enclosing polygon of this mesh and it
+        # depends on mesh spacing. but the difference can be neglected
+        # if calculated geodetic distance is over some threshold.
+        distances = geodetic.min_geodetic_distance(self.lons, self.lats,
+                                                   mesh.lons, mesh.lats)
+
+        # here we find the points for which calculated mesh-to-mesh
+        # distance is below a threshold. this threshold is arbitrary:
+        # lower values increase the maximum possible error, higher
+        # values reduce the efficiency of that filtering. the maximum
+        # error is equal to the maximum difference between a distance
+        # from site to two adjacent points of the mesh and distance
+        # from site to the line connecting them. thus the error is
+        # a function of distance threshold and mesh spacing. the error
+        # is maximum when the site lies on a perpendicular to the line
+        # connecting points of the mesh and that passes the middle
+        # point between them. the error then can be calculated as
+        # ``err = trsh - d = trsh - \sqrt(trsh^2 - (ms/2)^2)``, where
+        # ``trsh`` and ``d`` are distance to mesh points (the one
+        # we found on the previous step) and distance to the line
+        # connecting them (the actual distance) and ``ms`` is mesh
+        # spacing. the threshold of 40 km gives maximum error of 314
+        # meters for meshes with spacing of 10 km and 5.36 km for
+        # meshes with spacing of 40 km. if mesh spacing is over
+        # ``(trsh / \sqrt(2)) * 2`` then points lying in the middle
+        # of mesh cells (that is inside the polygon) will be filtered
+        # out by the threshold and have positive distance instead of 0.
+        # so for threshold of 40 km mesh spacing should not be more
+        # than 56 km (typical values are 5 to 10 km).
+
+        [idxs] = (distances < 40).nonzero()
+        if not len(idxs):
+            # no point is close enough, return distances as they are
+            return distances
+
+        # for all the points that are closer than the threshold we need
+        # to recalculate the distance and set it to zero, if point falls
+        # inside the enclosing polygon of the mesh. for doing that we
+        # project both this mesh and the points of the second mesh--selected
+        # by distance threshold--to the same Cartesian space, define
+        # minimum shapely polygon enclosing the mesh and calculate point
+        # to polygon distance, which gives the most accurate value
+        # of distance in km (and that value is zero for points inside
+        # the polygon).
+        proj, polygon = self._get_proj_enclosing_polygon()
+        if not isinstance(polygon, shapely.geometry.Polygon):
+            # either line or point is our enclosing polygon. draw
+            # a square with side of 10 m around in order to have
+            # a proper polygon instead.
+            polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
+        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
+        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
+        distances_2d = geo_utils.point_to_polygon_distance(polygon,
+                                                           mesh_xx, mesh_yy)
+
+        # replace geodetic distance values for points-closer-than-the-threshold
+        # by more accurate point-to-polygon distance values.
+        distances.put(idxs, distances_2d)
+
+        return distances
+
     def get_closest_points(self, mesh):
         """
         Find closest point of this mesh for each one in ``mesh``.
@@ -220,6 +305,41 @@ class Mesh(object):
         )
         return numpy.matrix(distances, copy=False)
 
+    def _get_proj_convex_hull(self):
+        """
+        Create a projection centered in the center of this mesh and define
+        a convex polygon in that projection, enveloping all the points
+        of the mesh.
+
+        :returns:
+            Tuple of two items: projection function and shapely 2d polygon.
+            Note that the result geometry can be line or point depending
+            on number of points in the mesh and their arrangement.
+        """
+        # create a projection centered in the center of points collection
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+        )
+        # project all the points and create a shapely multipoint object.
+        # need to copy an array because otherwise shapely misinterprets it
+        coords = numpy.transpose(proj(self.lons.flatten(),
+                                      self.lats.flatten())).copy()
+        multipoint = shapely.geometry.MultiPoint(coords)
+        # create a 2d polygon from a convex hull around that multipoint.
+        polygon2d = multipoint.convex_hull
+
+        return proj, polygon2d
+
+    def _get_proj_enclosing_polygon(self):
+        """
+        Create a projection centered in the center of this mesh and define
+        a minimum polygon in that projection, enveloping all the points
+        of the mesh.
+
+        In :class:`Mesh` this is equivalent to :meth:`_get_proj_convex_hull`.
+        """
+        return self._get_proj_convex_hull()
+
     def get_convex_hull(self):
         """
         Get a convex polygon object that contains projections of all the points
@@ -232,25 +352,17 @@ class Mesh(object):
             with a side length of 10 meters. If there were only two points,
             resulting polygon is a stripe 10 meters wide.
         """
-        # avoid circular imports
-        from nhlib.geo.polygon import Polygon
-        # create a projection centered in the center of points collection
-        proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
-        )
-        # project all the points and create a shapely multipoint object.
-        # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons, self.lats)).copy()
-        multipoint = shapely.geometry.MultiPoint(coords)
-        # create a 2d polygon from a convex hull around that multipoint
-        polygon2d = multipoint.convex_hull
+        proj, polygon2d = self._get_proj_convex_hull()
         # if mesh had only one point, the convex hull is a point. if there
         # were two, it is a line string. we need to return a convex polygon
         # object, so extend that area-less geometries by some arbitrarily
-        # small distance, like five meters.
+        # small distance.
         if isinstance(polygon2d, (shapely.geometry.LineString,
                                   shapely.geometry.Point)):
-            polygon2d = polygon2d.buffer(0.005, 1)
+            polygon2d = polygon2d.buffer(self.DIST_TOLERANCE, 1)
+
+        # avoid circular imports
+        from nhlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
 
 
@@ -293,110 +405,49 @@ class RectangularMesh(Mesh):
             depths = None
         return cls(lons, lats, depths)
 
-    def _get_bounding_mesh(self, with_depths=True):
+    def _get_proj_enclosing_polygon(self):
         """
-        Create and return a :class:`Mesh` object that contains a subset
-        of points of this mesh. Only those points that lie on the borders
-        of the rectangular mesh are included in the result one.
+        See :meth:`Mesh._get_proj_enclosing_polygon`.
 
-        If the original mesh is purely vertical (with point in all the
-        rows different only by their depths), and ``with_depths == False``,
-        the resulting bounding mesh is filtered from duplicates.
-
-        :param with_depths:
-            If set ``False`` the new mesh will have depths array
-            set to ``None``.
-        """
-        if self.depths is None:
-            with_depths = False
-
-        if 1 in self.lons.shape:
-            # the original mesh either has one row or one column of points.
-            # the result mesh should have the same points.
-            return Mesh(self.lons.flatten(), self.lats.flatten(),
-                        self.depths.flatten() if with_depths else None)
-
-        # if depths are ignored and there is only one row (or the top row
-        # is equal to last one), consider only that top row. this way
-        # we avoid duplicating each point for purely vertical rectangular
-        # meshes.
-        if (not with_depths
-            and (len(self.lons) == 1
-                 or ((self.lons[0] == self.lons[-1]).all()
-                     and (self.lats[0] == self.lats[-1]).all()))):
-            return Mesh(self.lons[0], self.lats[0], None)
-
-        # we need to perform the same operations on all three coordinate
-        # components (lons, lats and depths).
-        components_bounding = []
-        components_all = [self.lons, self.lats]
-        if with_depths:
-            components_all.append(self.depths)
-        for coords in components_all:
-            # the resulting coordinates are composed of four parts:
-            components_bounding.append(numpy.concatenate((
-                # the first row,
-                coords[0],
-                # the last column (excluding two corner points),
-                coords[1:-1, -1],
-                # the last row (in backward direction),
-                coords[-1][::-1],
-                # and the first column (backwards, excluding corner points).
-                coords[-2:0:-1, 0]
-            )))
-        if not with_depths:
-            components_bounding.append(None)
-        return Mesh(*components_bounding)
-
-    def get_joyner_boore_distance(self, mesh):
-        """
-        Compute and return Joyner-Boore distance to each point of ``mesh``.
-        Point's depth is ignored.
-
-        See
-        :meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
-        for definition of this distance.
+        :class:`RectangularMesh` contains an information about relative
+        positions of points, so it allows to define the minimum polygon,
+        containing the projection of the mesh, which doesn't necessarily
+        have to be convex (in contrast to :class:`Mesh` implementation).
 
         :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
-            Distance value is considered to be zero if a point
-            lies inside the polygon enveloping the projection of the mesh
-            or on one of its edges.
+            Same structure as :meth:`Mesh._get_proj_convex_hull`.
         """
-        bounding_mesh = self._get_bounding_mesh(with_depths=False)
-        assert bounding_mesh.depths is None
-        lons, lats = bounding_mesh.lons, bounding_mesh.lats
-        depths = numpy.zeros_like(lons)
-        proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(lons, lats)
-        )
-        xx, yy = proj(lons, lats)
-        mesh_2d = numpy.array([xx, yy], dtype=float).transpose().copy()
-        if len(xx) == 2:
-            mesh_2d = shapely.geometry.LineString(mesh_2d)
-        elif len(xx) == 1:
-            mesh_2d = shapely.geometry.Point(*mesh_2d)
-        elif len(xx) > 2:
-            mesh_2d = shapely.geometry.Polygon(mesh_2d)
-        mesh_lons, mesh_lats = mesh.lons.flatten(), mesh.lats.flatten()
-        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
+        if self.lons.size < 4:
+            # the mesh doesn't contain even a single cell, use :class:`Mesh`
+            # method implementation (which would dilate the point or the line)
+            return super(RectangularMesh, self)._get_proj_enclosing_polygon()
 
-        distances = []
-        for i in xrange(len(mesh_lons)):
-            point_2d = shapely.geometry.Point(mesh_xx[i], mesh_yy[i])
-            dist = mesh_2d.distance(point_2d)
-            if dist < 500:
-                # if the distance is below threshold of 500 kilometers,
-                # consider the distance measured on the projection accurate
-                # enough (an error doesn't exceed half km).
-                distances.append(dist)
-            else:
-                # ... otherwise get the precise distance between bounding mesh
-                # projection and the point projection using pure numerical way
-                distances.append(geodetic.min_distance(
-                    lons, lats, depths, mesh_lons[i], mesh_lats[i], 0
-                ))
-        return numpy.array(distances).reshape(mesh.shape)
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+        )
+        mesh2d = numpy.array(proj(self.lons.transpose(),
+                                  self.lats.transpose())).transpose()
+        lines = iter(mesh2d)
+        # we iterate over horizontal stripes, keeping the "previous"
+        # line of points. we keep it reversed, such that together
+        # with the current line they define the sequence of points
+        # around the stripe.
+        prev_line = lines.next()[::-1]
+        polygons = []
+        for i, line in enumerate(lines):
+            coords = numpy.concatenate((prev_line, line, prev_line[0:1]))
+            # create the shapely polygon object from the stripe
+            # coordinates and simplify it (remove redundant points,
+            # if there are any lying on the straight line).
+            stripe = shapely.geometry.LineString(coords) \
+                                     .simplify(self.DIST_TOLERANCE) \
+                                     .buffer(self.DIST_TOLERANCE, 2)
+            polygons.append(shapely.geometry.Polygon(stripe.exterior))
+            prev_line = line[::-1]
+        # create a final polygon as the union of all the stripe ones
+        polygon = shapely.ops.cascaded_union(polygons) \
+                             .simplify(self.DIST_TOLERANCE)
+        return proj, polygon
 
     def get_middle_point(self):
         """
