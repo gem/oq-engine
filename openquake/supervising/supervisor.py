@@ -185,6 +185,26 @@ class SupervisorLogFileHandler(logging.FileHandler):
         super(SupervisorLogFileHandler, self).emit(record)
 
 
+def abort_due_to_failed_nodes(job_id):
+    """Should the job be aborted due to failed compute nodes?
+
+    :param int job_id: the id of the job in question
+    :returns: the number of failed compute nodes if the job should be aborted
+        zero otherwise.
+    """
+    result = 0
+
+    job = OqJob.objects.get(id=job_id)
+    failed_nodes = monitor.count_failed_nodes(job)
+
+    if failed_nodes:
+        no_progress, timeout = stats.progress_timing_data(job)
+        if no_progress > timeout:
+            result = failed_nodes
+
+    return result
+
+
 class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     """
     Supervise an OpenQuake job by:
@@ -272,18 +292,15 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             # Job process is still running.
             failures = stats.failure_counters(self.job_id)
             if failures:
-                terminate_job(self.job_pid)
                 message = "job terminated with failures: %s" % failures
-                job_failed = True
-            job = OqJob.objects.get(id=self.job_id)
-            failed_nodes = monitor.count_failed_nodes(job)
-            if failed_nodes:
-                no_progress, timeout = stats.progress_timing_data(self.job)
-                if no_progress > timeout:
-                    terminate_job(self.job_pid)
+            else:
+                failed_nodes = abort_due_to_failed_nodes(self.job_id)
+                if failed_nodes:
                     message = ("job terminated due to %s failed nodes" %
                                failed_nodes)
-                    job_failed = True
+            if failures or failed_nodes:
+                terminate_job(self.job_pid)
+                job_failed = True
 
         if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)

@@ -19,6 +19,7 @@ import unittest
 import logging
 from datetime import datetime
 
+from openquake import engine
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
@@ -251,3 +252,31 @@ class SupersupervisorTestCase(unittest.TestCase):
             supersupervisor.main()
             self.assertEqual(process.call_count, 1)
             self.assertEqual(FakeProcess.started, True)
+
+
+class AbortDueToFailedNodesTestCase(unittest.TestCase):
+    """Exercise supervising.supervisor.abort_due_to_failed_nodes()"""
+
+    job = monitor_patch = stats_patch = monitor_mock = stats_mock = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = engine.prepare_job()
+
+    def setUp(self):
+        self.monitor_patch = patch(
+            "openquake.utils.monitor.count_failed_nodes")
+        self.stats_patch = patch("openquake.utils.stats.progress_timing_data")
+        self.monitor_mock = self.monitor_patch.start()
+        self.stats_mock = self.stats_patch.start()
+
+    def tearDown(self):
+        self.monitor_patch.stop()
+        self.stats_patch.stop()
+
+    def test_abort_due_to_failed_nodes_and_zero_failed_nodes(self):
+        # the "no progress" timeout is reached but no node failures have been
+        # detected -> return 0
+        self.monitor_mock.return_value = 0
+        self.stats_mock = (3610, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(10))
