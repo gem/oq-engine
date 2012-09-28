@@ -85,7 +85,7 @@ def _live_cnode_status():
     live_nodes = ins.ping()
     # ping returns a dict like this:
     #   {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
-    return set(live_nodes.keys())
+    return set(live_nodes.keys()) if live_nodes else set()
 
 
 def _db_cnode_status(job):
