@@ -23,6 +23,7 @@ The engine is responsible for instantiating calculators and running jobs.
 import md5
 import os
 import re
+import sys
 
 from datetime import datetime
 from ConfigParser import ConfigParser
@@ -903,7 +904,10 @@ def _switch_to_job_phase(job_ctxt, ctype, status):
     if status == "executing":
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
-        monitor.count_failed_nodes(job)
+        failed_nodes = monitor.count_failed_nodes(job)
+        if failed_nodes == -1:
+            logs.LOG.critical("No live compute nodes, aborting calculation")
+            sys.exit(1)
 
 
 def _launch_job(job_ctxt, sections):
