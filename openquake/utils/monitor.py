@@ -41,6 +41,11 @@ def count_failed_nodes(job):
     live_nodes = _live_cnode_status()
     db_stats = _db_cnode_status(job)
 
+    if not live_nodes and not db_stats:
+        # No live compute nodes and nothing stored in the database; this will
+        # never work -> indicate failure
+        return -1
+
     def set_status(node, status):
         """Update the status of the given node in the database."""
         cs = db_stats[node]

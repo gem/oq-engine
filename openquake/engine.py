@@ -65,6 +65,7 @@ from openquake.job.params import PATH_PARAMS
 from openquake.kvs import mark_job_as_current
 from openquake.supervising import supervisor
 from openquake.utils import config as utils_config
+from openquake.utils import monitor
 from openquake.utils import stats
 
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
@@ -899,6 +900,10 @@ def _switch_to_job_phase(job_ctxt, ctype, status):
     job = OqJob.objects.get(id=job_ctxt.job_id)
     JobPhaseStats.objects.create(oq_job=job, ctype=ctype, job_status=status)
     logs.log_progress("%s (%s)" % (status, ctype), 1)
+    if status == "executing":
+        # Record the compute nodes that were available at the beginning of the
+        # execute phase so we can detect failed nodes later.
+        monitor.count_failed_nodes(job)
 
 
 def _launch_job(job_ctxt, sections):
