@@ -1531,15 +1531,14 @@ class GmfSet(djm.Model):
         """
         job = self.gmf_collection.output.oq_job
         hc = job.hazard_calculation
-        job_stats = JobStats.objects.get(oq_job=job.id)
 
-        block_size = len(hc.points_to_compute())
+        num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
 
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
 
         for imt, sa_period, sa_damping in imts:
 
-            for task_ordinal in xrange(1, job_stats.num_tasks + 1):
+            for task_ordinal in xrange(1, num_tasks + 1):
                 gmfs = Gmf.objects.filter(
                     gmf_set=self.id, imt=imt, sa_period=sa_period,
                     sa_damping=sa_damping, task_ordinal=task_ordinal)
