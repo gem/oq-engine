@@ -269,11 +269,11 @@ CREATE TABLE uiapi.job_stats (
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
-    num_sites INTEGER NOT NULL,
+    num_sites INTEGER,
     -- The number of tasks in a job
     num_tasks INTEGER,
-    -- The number of logic tree samples (for hazard jobs of all types except scenario)
-    realizations INTEGER
+    -- The number of logic tree samples
+    num_realizations INTEGER
 ) TABLESPACE uiapi_ts;
 
 
