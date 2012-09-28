@@ -545,6 +545,8 @@ class JobStats(djm.Model):
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = djm.IntegerField()
+    # The total number of tasks in a job
+    num_tasks = djm.IntegerField(null=True)
     # The number of logic tree samples
     # (for hazard jobs of all types except scenario)
     realizations = djm.IntegerField(null=True)
