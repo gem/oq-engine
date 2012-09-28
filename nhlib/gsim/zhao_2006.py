@@ -89,13 +89,13 @@ class ZhaoEtAl2006Asc(GMPE):
         # interface and intraslab terms (that is SI, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 pag 909).
-        mean = self._compute_magnitude_term(C, rup) +\
-            self._compute_distance_term(C, rup, dists) +\
-            self._compute_focal_depth_term(C, rup) +\
-            self._compute_faulting_style_term(C, rup) +\
-            self._compute_site_class_term(C, sites) +\
+        mean = self._compute_magnitude_term(C, rup.mag) +\
+            self._compute_distance_term(C, rup.mag, dists.rrup) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_faulting_style_term(C, rup.rake) +\
+            self._compute_site_class_term(C, sites.vs30) +\
             self._compute_magnitude_squared_term(P=0.0, M=6.3, Q=C['QC'],
-                                                 W=C['WC'], rup=rup)
+                                                 W=C['WC'], mag=rup.mag)
 
         # convert from cm/s**2 to g
         mean = np.log(np.exp(mean) * 1e-2 / g)
@@ -121,27 +121,27 @@ class ZhaoEtAl2006Asc(GMPE):
                 stddevs.append(tau + np.zeros(num_sites))
         return stddevs
 
-    def _compute_magnitude_term(self, C, rup):
+    def _compute_magnitude_term(self, C, mag):
         """
         Compute first term in equation 1, pag 901.
         """
-        return C['a'] * rup.mag
+        return C['a'] * mag
 
-    def _compute_distance_term(self, C, rup, dists):
+    def _compute_distance_term(self, C, mag, rrup):
         """
         Compute second and third terms in equation 1, pag 901.
         """
-        term1 = C['b'] * dists.rrup
-        term2 = - np.log(dists.rrup + C['c'] * np.exp(C['d'] * rup.mag))
+        term1 = C['b'] * rrup
+        term2 = - np.log(rrup + C['c'] * np.exp(C['d'] * mag))
 
         return term1 + term2
 
-    def _compute_focal_depth_term(self, C, rup):
+    def _compute_focal_depth_term(self, C, hypo_depth):
         """
         Compute fourth term in equation 1, pag 901.
         """
         # pag 901. "(i.e, depth is capped at 125 km)".
-        focal_depth = rup.hypo_depth
+        focal_depth = hypo_depth
         if focal_depth > 125.0:
             focal_depth = 125.0
 
@@ -153,44 +153,44 @@ class ZhaoEtAl2006Asc(GMPE):
         # effect ...". The next sentence specifies h>=hc.
         return float(focal_depth >= hc) * C['e'] * (focal_depth - hc)
 
-    def _compute_faulting_style_term(self, C, rup):
+    def _compute_faulting_style_term(self, C, rake):
         """
         Compute fifth term in equation 1, pag 901.
         """
         # pag 900. "The differentiation in focal mechanism was
         # based on a rake angle criterion, with a rake of +/- 45
         # as demarcation between dip-slip and strike-slip."
-        return float(rup.rake > 45.0 and rup.rake < 135.0) * C['FR']
+        return float(rake > 45.0 and rake < 135.0) * C['FR']
 
-    def _compute_site_class_term(self, C, sites):
+    def _compute_site_class_term(self, C, vs30):
         """
         Compute nine-th term in equation 1, pag 901.
         """
         # map vs30 value to site class, see table 2, pag 901.
-        site_term = np.zeros(len(sites.vs30))
+        site_term = np.zeros(len(vs30))
 
         # hard rock
-        site_term[sites.vs30 > 1100.0] = C['CH']
+        site_term[vs30 > 1100.0] = C['CH']
 
         # rock
-        site_term[(sites.vs30 > 600) & (sites.vs30 <= 1100)] = C['C1']
+        site_term[(vs30 > 600) & (vs30 <= 1100)] = C['C1']
 
         # hard soil
-        site_term[(sites.vs30 > 300) & (sites.vs30 <= 600)] = C['C2']
+        site_term[(vs30 > 300) & (vs30 <= 600)] = C['C2']
 
         # medium soil
-        site_term[(sites.vs30 > 200) & (sites.vs30 <= 300)] = C['C3']
+        site_term[(vs30 > 200) & (vs30 <= 300)] = C['C3']
 
         # soft soil
-        site_term[sites.vs30 <= 200] = C['C4']
+        site_term[vs30 <= 200] = C['C4']
 
         return site_term
 
-    def _compute_magnitude_squared_term(self, P, M, Q, W, rup):
+    def _compute_magnitude_squared_term(self, P, M, Q, W, mag):
         """
         Compute magnitude squared term, equation 5, pag 909.
         """
-        return P * (rup.mag - M) + Q * (rup.mag - M) ** 2 + W
+        return P * (mag - M) + Q * (mag - M) ** 2 + W
 
     #: Coefficient table obtained by joining table 4 (except columns for
     #: SI, SS, SSL), table 5 (both at pag 903) and table 6 (only columns for
@@ -253,13 +253,14 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 pag 909)
-        mean = self._compute_magnitude_term(C, rup) +\
-            self._compute_distance_term(C, rup, dists) +\
-            self._compute_focal_depth_term(C, rup) +\
-            self._compute_site_class_term(C, sites) + \
+        mean = self._compute_magnitude_term(C, rup.mag) +\
+            self._compute_distance_term(C, rup.mag, dists.rrup) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_site_class_term(C, sites.vs30) + \
             self._compute_magnitude_squared_term(P=0.0, M=6.3,
                                                  Q=C_SINTER['QI'],
-                                                 W=C_SINTER['WI'], rup=rup) +\
+                                                 W=C_SINTER['WI'],
+                                                 mag=rup.mag) +\
             C_SINTER['SI']
 
         # convert from cm/s**2 to g
@@ -327,28 +328,24 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         C = self.COEFFS_ASC[imt]
         C_SSLAB = self.COEFFS_SSLAB[imt]
 
+        # to avoid singularity at 0.0 (in the calculation of the
+        # slab correction term), replace 0 values with 0.1
+        d = dists.rrup
+        d[d == 0.0] = 0.1
+
         # mean value as given by equation 1, pag 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 pag 909)
-        print 'magnitude term: ', self._compute_magnitude_term(C, rup)
-        print 'distance term: ', self._compute_distance_term(C, rup, dists)
-        print 'focal depth term: ', self._compute_focal_depth_term(C, rup)
-        print 'site class term: ', self._compute_site_class_term(C, sites)
-        print 'magnitude square term: ', self._compute_magnitude_squared_term(
-                                             P=C_SSLAB['PS'], M=6.5,
-                                             Q=C_SSLAB['QS'],
-                                             W=C_SSLAB['WS'], rup=rup)
-        print 'subduction slab term: ', C_SSLAB['SS']
-        print 'slab correction term: ', self._compute_slab_correction_term(C_SSLAB, dists)
-        mean = self._compute_magnitude_term(C, rup) +\
-            self._compute_distance_term(C, rup, dists) +\
-            self._compute_focal_depth_term(C, rup) +\
-            self._compute_site_class_term(C, sites) +\
+        mean = self._compute_magnitude_term(C, rup.mag) +\
+            self._compute_distance_term(C, rup.mag, d) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_site_class_term(C, sites.vs30) +\
             self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
                                                  Q=C_SSLAB['QS'],
-                                                 W=C_SSLAB['WS'], rup=rup) +\
-            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, dists)
+                                                 W=C_SSLAB['WS'],
+                                                 mag=rup.mag) +\
+            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
 
         # convert from cm/s**2 to g
         mean = np.log(np.exp(mean) * 1e-2 / g)
@@ -358,22 +355,12 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
 
         return mean, stddevs
 
-    def _compute_slab_correction_term(self, C, dists):
+    def _compute_slab_correction_term(self, C, rrup):
         """
         Compute path modification term for slab events, that is
         the 8-th term in equation 1, pag 901.
         """
-        #slab_term = np.zeros(len(dists.rrup))
-
-        # pag 902. "The modification factor for slab events applies only
-        # to a source distance of about 40 km or larger."
-        #idx = dists.rrup >= 40.0
-        #slab_term[idx] = C['SSL'] * np.log(dists.rrup[idx])
-        
-        #SFD=alog(SQRT(dist*dist+Ra*Ra))-alog(Rc) dove Ra = 0 e RC = 125
-        Ra = 0.0
-        Rc = 125.0
-        slab_term = C['SSL'] * (np.log(dists.rrup) - np.log(Rc))
+        slab_term = C['SSL'] * np.log(rrup)
 
         return slab_term
 
