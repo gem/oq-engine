@@ -1159,9 +1159,9 @@ CREATE TABLE uiapi.oq_job_profile (
     -- TODO: remove me when nhlib integration is complete
     workaround_1027041 BOOLEAN DEFAULT FALSE,
 
-    -- what time period w/o any progress is acceptable for hazard calculations?
+    -- what time period w/o any progress is acceptable for calculations?
     -- The timeout is stored in seconds and is 1 hour by default.
-    hazard_no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
+    no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
 
     -- timestamp
     last_update timestamp without time zone

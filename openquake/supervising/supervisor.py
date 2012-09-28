@@ -275,13 +275,15 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 terminate_job(self.job_pid)
                 message = "job terminated with failures: %s" % failures
                 job_failed = True
-            failed_nodes = monitor.count_failed_nodes(
-                OqJob.objects.get(id=self.job_id))
+            job = OqJob.objects.get(id=self.job_id)
+            failed_nodes = monitor.count_failed_nodes(job)
             if failed_nodes:
-                terminate_job(self.job_pid)
-                message = ("job terminated due to %s failed nodes" %
-                           failed_nodes)
-                job_failed = True
+                no_progress = stats.time_since_last_progress(self.job_id)
+                if no_progress > XXX:
+                    terminate_job(self.job_pid)
+                    message = ("job terminated due to %s failed nodes" %
+                               failed_nodes)
+                    job_failed = True
 
         if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)

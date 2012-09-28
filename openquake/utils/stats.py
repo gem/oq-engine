@@ -393,8 +393,8 @@ def debug_stats_enabled():
     return config.flag_set("statistics", "debug")
 
 
-def time_since_last_progress(job_id):
-    """Get length of time since the last task completed.
+def progress_timing_data(job_id):
+    """Get length of time since the last task completed and the timeout.
 
     :param int job_id: identifier of the job in question
     :returns: number of seconds since the last task completed (or the
