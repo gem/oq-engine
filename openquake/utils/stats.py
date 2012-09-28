@@ -405,11 +405,18 @@ def time_since_last_progress(job_id):
         return int(dto.strftime("%s"))
 
     tstamp = epoch(datetime.utcnow())
+
+    # the "last value recorded time stamp" will be zero if not set in the kvs
     lvr_ts = pk_get(job_id, "lvr_ts")
-    if lvr_ts == 0:
-        jpss = JobPhaseStats.objects.filter(oq_job__id=job_id,
-                                            job_status="executing")
-        [jps] = jpss.order_by("-start_time")[:1]
-        lvr_ts = epoch(jps.start_time)
+
+    # when did the most recent "executing" job phase for this calculation
+    # start?
+    jpss = JobPhaseStats.objects.filter(oq_job__id=job_id,
+                                        job_status="executing")
+    [jps] = jpss.order_by("-start_time")[:1]
+    jps_ts = epoch(jps.start_time)
+
+    # take the more recent of the two time stamps
+    lvr_ts = jps_ts if jps_ts > lvr_ts else lvr_ts
 
     return tstamp - lvr_ts
