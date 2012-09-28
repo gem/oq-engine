@@ -188,6 +188,10 @@ class SupervisorLogFileHandler(logging.FileHandler):
 def abort_due_to_failed_nodes(job_id):
     """Should the job be aborted due to failed compute nodes?
 
+    The job should be aborted when the following conditions coincide:
+        - we observed failed compute nodes
+        - the "no progress" timeout has been exceeded
+
     :param int job_id: the id of the job in question
     :returns: the number of failed compute nodes if the job should be aborted
         zero otherwise.
@@ -198,8 +202,8 @@ def abort_due_to_failed_nodes(job_id):
     failed_nodes = monitor.count_failed_nodes(job)
 
     if failed_nodes:
-        no_progress, timeout = stats.progress_timing_data(job)
-        if no_progress > timeout:
+        no_progress_period, timeout = stats.progress_timing_data(job)
+        if no_progress_period > timeout:
             result = failed_nodes
 
     return result
