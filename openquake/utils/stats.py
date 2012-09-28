@@ -412,7 +412,7 @@ def progress_timing_data(job):
 
     # when did the most recent "executing" job phase for this calculation
     # start?
-    jpss = models.JobPhaseStats.objects.filter(oq_job__id=job.id,
+    jpss = models.JobPhaseStats.objects.filter(oq_job=job,
                                                job_status="executing")
     [jps] = jpss.order_by("-start_time")[:1]
     jps_ts = epoch(jps.start_time)
