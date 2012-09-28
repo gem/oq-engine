@@ -304,11 +304,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 message = "job terminated with failures: %s" % failures
             else:
                 failed_nodes = abort_due_to_failed_nodes(self.job_id)
-                if failed_nodes > 0:
+                if failed_nodes:
                     message = ("job terminated due to %s failed nodes" %
                                failed_nodes)
-                elif failed_nodes == -1:
-                    message = "No live compute nodes, job aborted"
             if failures or failed_nodes:
                 terminate_job(self.job_pid)
                 job_failed = True
