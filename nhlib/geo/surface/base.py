@@ -189,5 +189,5 @@ class BaseSurface(object):
         Return surface's width (that is surface extension along the
         dip direction) in km.
 
-        The actual definition of width might depend on surface geometry.
+        The actual definition depends on the type of surface geometry.
         """
