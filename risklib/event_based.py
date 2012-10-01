@@ -96,19 +96,21 @@ class EpsilonProvider(object):
         self._samples = dict()
         self._correlation_type = correlation_type or UNCORRELATED
         self._seed = seed
+        self.rnd = None
 
         if correlation_type == PERFECTLY_CORRELATED:
-            self.rnd = random.Random()
-            if seed is not None:
-                self.rnd.seed(int(self._seed))
-
+            self._setup_rnd()
             for taxonomy in taxonomies:
                 self._samples[taxonomy] = self._generate()
 
-    def _generate(self):
+    def _setup_rnd(self):
         self.rnd = random.Random()
         if self._seed is not None:
             self.rnd.seed(int(self._seed))
+
+    def _generate(self):
+        if self.rnd is None:
+            self._setup_rnd()
 
         return self.rnd.normalvariate(0, 1)
 
