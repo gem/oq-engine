@@ -31,6 +31,7 @@ from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
 from openquake.utils.tasks import distribute
+from risklib import event_based
 
 LOGGER = logs.LOG
 
@@ -182,7 +183,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         vuln_model = kwargs["vuln_model"]
         insured_losses = kwargs["insured_losses"]
-        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
+        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         block_losses = []
@@ -199,12 +200,12 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 
-                loss_ratios = general.compute_loss_ratios(
+                loss_ratios = event_based._compute_loss_ratios(
                     vuln_function, gmvs, epsilon_provider, asset)
                 losses = loss_ratios * asset.value
 
                 if insured_losses:
-                    losses = general.compute_insured_losses(asset, losses)
+                    losses = event_based._compute_insured_losses(asset, losses)
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 

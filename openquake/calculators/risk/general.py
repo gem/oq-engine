@@ -20,29 +20,17 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 
-import math
 import os
-import random
 
 from collections import defaultdict
-from collections import OrderedDict
 
 from celery.task import task
 
 from django.contrib.gis import geos
 
-from numpy import array
-from numpy import histogram
-from numpy import linspace
-from numpy import mean
-from numpy import where
-from numpy import zeros
-
 from openquake.calculators.base import Calculator
 from openquake.db import models
-from openquake import kvs
-from openquake import logs
-from openquake import shapes
+from openquake import logs, kvs, shapes
 from openquake.input import exposure as exposure_input
 from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
@@ -51,7 +39,7 @@ from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
-from risklib import classical, benefit_cost_ratio
+from risklib import classical, benefit_cost_ratio, curve
 
 
 LOG = logs.LOG
@@ -332,15 +320,15 @@ class BaseRiskCalculator(Calculator):
                         job_id, point.row, point.column, asset.asset_ref))
 
                 if loss_curve:
-                    loss_curve = shapes.Curve.from_json(loss_curve)
+                    loss_curve = curve.Curve.from_json(loss_curve)
                     loss_curves.append((site, (loss_curve, asset)))
 
                 if loss_ratio_curve:
-                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                    loss_ratio_curve = curve.Curve.from_json(loss_ratio_curve)
                     loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
                 if insured_loss_curve:
-                    insured_loss_curve = shapes.Curve.from_json(
+                    insured_loss_curve = curve.Curve.from_json(
                         insured_loss_curve)
 
                     insured_loss_curves.append((site,
@@ -494,57 +482,6 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
 
         writer.serialize([metadata] + self.asset_bcr_per_site())
         LOG.info('BCR Map is at: %s' % path)
-
-
-class EpsilonProvider(object):
-    """
-    Simple class for combining job configuration parameters and an `epsilon`
-    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
-    """
-
-    def __init__(self, params):
-        """
-        :param params: configuration parameters from the job configuration
-        :type params: dict
-        """
-        self.__dict__.update(params)
-        self.samples = None
-
-        self.rnd = random.Random()
-        eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
-        if eps_rnd_seed is not None:
-            self.rnd.seed(int(eps_rnd_seed))
-
-    def epsilon(self, asset):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        taxonomy is the same. The asset's `taxonomy` is only needed for
-        correlated jobs and unlikely to be available for uncorrelated ones.
-        """
-        correlation = getattr(self, "ASSET_CORRELATION", None)
-
-        if correlation is None or correlation == 'uncorrelated':
-            # Sample per asset
-            return self.rnd.normalvariate(0, 1)
-        elif correlation == 'perfect':
-            # Sample per building typology
-            samples = getattr(self, "samples", None)
-            if samples is None:
-                # These are two references for the same dictionary.
-                samples = self.samples = dict()
-
-            if asset.taxonomy not in samples:
-                samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
-            return samples[asset.taxonomy]
-        else:
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
 class Block(object):
@@ -701,381 +638,6 @@ def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
     return result.items()
 
 
-def compute_loss_curve(loss_ratio_curve, asset):
-    """Compute the loss curve for the given asset value.
-
-    A loss curve is obtained from a loss ratio curve by
-    multiplying each X value (loss ratio) for the given asset.
-    """
-
-    if not asset:
-        return shapes.EMPTY_CURVE
-
-    return loss_ratio_curve.rescale_abscissae(asset)
-
-
-
-def loop(elements, func, *args):
-    """Loop over the given elements, yielding func(current, next, *args)."""
-    for idx in xrange(elements.size - 1):
-        yield func(elements[idx], elements[idx + 1], *args)
-
-
-def collect(iterator):
-    """Simply collect the data taken from the given iterator."""
-    data = []
-
-    for element in iterator:
-        data.append(element)
-
-    return data
-
-
-def unique_curve(curve):
-    """ extracts unique values from a curve """
-    seen = OrderedDict()
-
-    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
-        seen[ordinate] = abscissa
-
-    return zip(seen.values(), seen.keys())
-
-
-def compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the set of loss ratios using the set of
-    ground motion fields passed.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    if vuln_function.is_empty:
-        return array([])
-
-    all_covs_are_zero = (vuln_function.covs <= 0.0).all()
-
-    if all_covs_are_zero:
-        return _mean_based(vuln_function, gmf_set)
-    else:
-        return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
-
-
-def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the set of loss ratios when at least one CV
-    (Coefficent of Variation) defined in the vulnerability function
-    is greater than zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    loss_ratios = []
-
-    for ground_motion_field in gmf_set["IMLs"]:
-        if ground_motion_field < vuln_function.imls[0]:
-            loss_ratios.append(0.0)
-        else:
-            if ground_motion_field > vuln_function.imls[-1]:
-                ground_motion_field = vuln_function.imls[-1]
-
-            mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
-
-            cov = vuln_function.cov_for(ground_motion_field)
-            variance = (mean_ratio * cov) ** 2.0
-
-            epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(
-                math.log((variance / mean_ratio ** 2.0) + 1.0))
-
-            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                variance + mean_ratio ** 2.0))
-
-            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
-
-    return array(loss_ratios)
-
-
-def _mean_based(vuln_function, gmf_set):
-    """Compute the set of loss ratios when the vulnerability function
-    has all the CVs (Coefficent of Variation) set to zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    """
-
-    loss_ratios = []
-    retrieved = {}
-    imls = vuln_function.imls
-
-    # seems like with numpy you can only specify a single fill value
-    # if the x_new is outside the range. Here we need two different values,
-    # depending if the x_new is below or upon the defined values
-    for ground_motion_field in gmf_set["IMLs"]:
-        if ground_motion_field < imls[0]:
-            loss_ratios.append(0.0)
-        elif ground_motion_field > imls[-1]:
-            loss_ratios.append(vuln_function.loss_ratios[-1])
-        else:
-            # The actual value is computed later
-            mark = len(loss_ratios)
-            retrieved[mark] = gmf_set['IMLs'][mark]
-            loss_ratios.append(0.0)
-
-    means = vuln_function.loss_ratio_for(retrieved.values())
-
-    for mark, mean_ratio in zip(retrieved.keys(), means):
-        loss_ratios[mark] = mean_ratio
-
-    return array(loss_ratios)
-
-
-def _compute_loss_ratios_range(loss_ratios, loss_histogram_bins):
-    """Compute the range of loss ratios used to build the loss ratio curve.
-
-    The range is obtained by computing the set of evenly spaced numbers
-    over the interval [min_loss_ratio, max_loss_ratio].
-
-    :param loss_ratios: the set of loss ratios used.
-    :type loss_ratios: numpy.ndarray
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
-    """
-    return linspace(loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
-
-
-def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
-    "Compute the cumulative histogram."
-
-    # ruptures (earthquake) occured but probably due to distance,
-    # magnitude and soil conditions, no ground motion was felt at that location
-    if (loss_ratios <= 0.0).all():
-        return zeros(loss_ratios_range.size - 1)
-
-    invalid_ratios = lambda ratios: where(array(ratios) <= 0.0)[0].size
-
-    hist = histogram(loss_ratios, bins=loss_ratios_range)
-    hist = hist[0][::-1].cumsum()[::-1]
-
-    # ratios with value 0.0 must be deleted on the first bin
-    hist[0] = hist[0] - invalid_ratios(loss_ratios)
-    return hist
-
-
-def _compute_rates_of_exceedance(cum_histogram, tses):
-    """Compute the rates of exceedance for the given cumulative histogram
-    using the given tses (tses is time span * number of realizations)."""
-
-    if tses <= 0:
-        raise ValueError("TSES is not supposed to be less than zero!")
-
-    return (array(cum_histogram).astype(float) / tses)
-
-
-def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
-    """Compute the probabilities of exceedance using the given rates of
-    exceedance and the given time span."""
-
-    poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
-    return array([poe(rate) for rate in rates_of_exceedance])
-
-
-def compute_alpha(mean_loss_ratio, stddev):
-    """
-    Compute alpha value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed alpha value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-                mean_loss_ratio ** 2)
-
-
-def compute_beta(mean_loss_ratio, stddev):
-    """
-    Compute beta value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed beta value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-        (mean_loss_ratio - mean_loss_ratio ** 2))
-
-
-def compute_loss_ratio_curve(vuln_function, gmf_set,
-        epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
-    """Compute a loss ratio curve using the probabilistic event based approach.
-
-    A loss ratio curve is a function that has loss ratios as X values
-    and PoEs (Probabilities of Exceendance) as Y values.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
-    """
-
-    # with no gmfs (no earthquakes), an empty curve is enough
-    if not gmf_set["IMLs"]:
-        return shapes.EMPTY_CURVE
-
-    if loss_ratios is None:
-        loss_ratios = compute_loss_ratios(
-            vuln_function, gmf_set, epsilon_provider, asset)
-
-    loss_ratios_range = _compute_loss_ratios_range(
-            loss_ratios, loss_histogram_bins)
-
-    probs_of_exceedance = _compute_probs_of_exceedance(
-            _compute_rates_of_exceedance(_compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), gmf_set["TSES"]),
-            gmf_set["TimeSpan"])
-
-    return _generate_curve(loss_ratios_range, probs_of_exceedance)
-
-
-def compute_insured_loss_curve(asset, loss_curve):
-    """
-    Compute an insured loss curve.
-    :param asset: the asset used to compute the insured loss curve.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param loss_curve: a loss curve.
-    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
-    """
-    insured_losses = compute_insured_losses(asset, loss_curve.x_values)
-
-    return shapes.Curve(zip(insured_losses, loss_curve.y_values))
-
-
-def _generate_curve(losses, probs_of_exceedance):
-    """Generate a loss ratio (or loss) curve, given a set of losses
-    and corresponding PoEs (Probabilities of Exceedance).
-
-    This function is intended to be used internally.
-    """
-
-    mean_losses = collect(loop(losses, lambda x, y: mean([x, y])))
-    return shapes.Curve(zip(mean_losses, probs_of_exceedance))
-
-
-class AggregateLossCurve(object):
-    """Aggregate a set of losses and produce the resulting loss curve."""
-
-    def __init__(self):
-        self.losses = None
-
-    def append(self, losses):
-        """
-        Accumulate losses into a single sum.
-
-        :param losses: an array of loss values.
-        :type losses: 1-dimensional :py:class:`numpy.ndarray`
-        """
-
-        if self.losses is None:
-            # initialize the losses with the shape
-            # we are using in the computation
-            self.losses = zeros(losses.shape)
-
-        assert self.losses.shape == losses.shape
-
-        self.losses = self.losses + losses
-
-    @property
-    def empty(self):
-        """
-        Return true is this aggregate curve has no losses
-        associated, false otherwise.
-        """
-
-        return self.losses is None or len(self.losses) == 0
-
-    def compute(self, tses, time_span, loss_histogram_bins):
-        """
-        Compute the aggregate loss curve.
-
-        :param tses: time representative of the Stochastic Event Set.
-        :type tses: float
-        :param time_span: time span parameter.
-        :type time_span: float
-        :param int loss_histogram_bins:
-            The number of bins to use in the computed loss histogram.
-        :type loss_histogram_bins: integer
-        """
-
-        if self.empty:
-            return shapes.EMPTY_CURVE
-
-        loss_range = _compute_loss_ratios_range(
-            self.losses, loss_histogram_bins)
-
-        probs_of_exceedance = _compute_probs_of_exceedance(
-                _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                self.losses, loss_range), tses), time_span)
-
-        return _generate_curve(loss_range, probs_of_exceedance)
-
-
 def load_gmvs_at(job_id, site):
     """
     From the KVS, load all the ground motion values for the given site. We
@@ -1120,39 +682,3 @@ def hazard_input_site(job_ctxt, site):
         return site
     else:
         return job_ctxt.region.grid.point_at(site).site
-
-
-def insurance_boundaries_defined(asset):
-    """
-    Check if limit and deductibles values have been defined for the asset.
-
-    :param asset: the asset used to compute the losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    if (asset.ins_limit >= 0 and asset.deductible >= 0):
-        return True
-    else:
-        raise RuntimeError('Insurance boundaries for asset %s are not defined'
-        % asset.asset_ref)
-
-
-def compute_insured_losses(asset, losses):
-    """
-    Compute insured losses for the given asset using the related set of ground
-    motion values and vulnerability function.
-
-    :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
-    :param losses: an array of loss values multiplied by the asset value.
-    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
-    """
-
-    if insurance_boundaries_defined(asset):
-        for i, value in enumerate(losses):
-            if value < asset.deductible:
-                losses[i] = 0
-            else:
-                if value > asset.ins_limit:
-                    losses[i] = asset.ins_limit
-    return losses

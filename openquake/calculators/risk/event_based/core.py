@@ -27,6 +27,7 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
+from risklib import event_based
 
 LOGGER = logs.LOG
 
@@ -45,7 +46,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     def execute(self):
         """Execute the job."""
 
-        aggregate_curve = general.AggregateLossCurve()
+        aggregate_curve = event_based.AggregateLossCurve()
 
         tasks = []
         for block_id in self.job_ctxt.blocks_keys:
@@ -109,7 +110,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """Return the time representative of the Stochastic Event Set
         specified for this job."""
 
-        # TODO (ac): Confirm this works regardless of the method of hazard calc
         histories = int(
             self.job_ctxt.params["NUMBER_OF_SEISMICITY_HISTORIES"])
         realizations = int(
@@ -155,7 +155,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         # aggregate the losses for this block
-        aggregate_curve = general.AggregateLossCurve()
+        aggregate_curve = event_based.AggregateLossCurve()
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
@@ -188,7 +188,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                 point.row, loss_curve, asset, loss_poe)
 
                     if self.job_ctxt.params.get("INSURED_LOSSES"):
-                        insured_curve = general.compute_insured_loss_curve(
+                        insured_curve = event_based._compute_insured_loss_curve(
                             asset, loss_curve)
                         key = kvs.tokens.insured_loss_curve_key(
                             self.job_ctxt.job_id, point.row, point.column,
@@ -207,9 +207,10 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """
 
         # aggregate the losses for this block
-        aggregate_curve = general.AggregateLossCurve()
+        # TODO: remove the aggregation, it doesn't make any sense in the bcr
+        aggregate_curve = event_based.AggregateLossCurve()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
+        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
 
         def get_loss_curve(site, vuln_function, asset):
             "Compute loss curve basing on GMF data"
@@ -219,9 +220,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             gmf_slice = {"IMLs": gmvs, "TSES": self._tses(),
                     "TimeSpan": self._time_span()}
 
-            loss_ratios = general.compute_loss_ratios(
+            loss_ratios = event_based._compute_loss_ratios(
                 vuln_function, gmf_slice, epsilon_provider, asset)
-            loss_ratio_curve = general.compute_loss_ratio_curve(
+            loss_ratio_curve = event_based._compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self.job_ctxt.oq_job_profile.loss_histogram_bins,
                 loss_ratios=loss_ratios)
@@ -247,7 +248,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         the loss ratios used to obtain the related loss ratio curve
         and aggregate loss curve."""
 
-        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
+        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
 
         vuln_function = self.vuln_curves.get(asset.taxonomy, None)
 
@@ -256,7 +257,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                          % (asset.taxonomy, asset.asset_ref))
             return None
 
-        return general.compute_loss_ratios(vuln_function, gmf_slice,
+        return event_based._compute_loss_ratios(vuln_function, gmf_slice,
                                            epsilon_provider, asset)
 
     def compute_loss_ratio_curve(self, col, row, asset, gmf_slice,
@@ -275,10 +276,10 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                          % (asset.taxonomy, asset.asset_ref))
             return None
 
-        epsilon_provider = general.EpsilonProvider(job_ctxt.params)
+        epsilon_provider = event_based.EpsilonProvider(job_ctxt.params)
 
         loss_histogram_bins = job_ctxt.oq_job_profile.loss_histogram_bins
-        loss_ratio_curve = general.compute_loss_ratio_curve(
+        loss_ratio_curve = event_based._compute_loss_ratio_curve(
             vuln_function, gmf_slice, epsilon_provider, asset,
             loss_histogram_bins, loss_ratios=loss_ratios)
 

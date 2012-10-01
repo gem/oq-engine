@@ -31,6 +31,7 @@ from openquake.calculators.risk.general import Block
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.parser import exposure
+from risklib import curve
 
 from tests.utils import helpers
 
@@ -353,7 +354,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
         job_id = "1"
         row = 0
         col = 1
-        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
+        loss_curve = curve.Curve([(0.21, 0.131), (0.24, 0.108),
                                    (0.27, 0.089), (0.30, 0.066)])
 
         # should set in kvs the conditional loss
