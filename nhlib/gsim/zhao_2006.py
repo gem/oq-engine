@@ -38,12 +38,12 @@ class ZhaoEtAl2006Asc(GMPE):
     (that's why the class name ends with 'Asc').
     """
     #: Supported tectonic region type is active shallow crust, this means
-    #: that factors SI, SS and SSL are assumed 0 in equation 1, pag. 901.
+    #: that factors SI, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see paragraph 'Development of Base Model'
-    #: pag. 901.
+    #: p. 901.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         SA
@@ -52,11 +52,11 @@ class ZhaoEtAl2006Asc(GMPE):
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
     #: attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
-    #: 'Development of Base Model', page 901.
+    #: 'Development of Base Model', p. 901.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see equation 3, pag 902.
+    #: and total, see equation 3, p. 902.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -64,15 +64,15 @@ class ZhaoEtAl2006Asc(GMPE):
     ])
 
     #: Required site parameters is Vs30.
-    #: See table 2, pag 901.
+    #: See table 2, p. 901.
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude, rake, and focal depth.
-    #: See paragraph 'Development of Base Model', pag 901.
+    #: See paragraph 'Development of Base Model', p. 901.
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
 
     #: Required distance measure is Rrup.
-    #: See paragraph 'Development of Base Model', pag 902.
+    #: See paragraph 'Development of Base Model', p. 902.
     REQUIRES_DISTANCES = set(('rrup', ))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -88,7 +88,7 @@ class ZhaoEtAl2006Asc(GMPE):
         # mean value as given by equation 1, pag 901, without considering the
         # interface and intraslab terms (that is SI, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 pag 909).
+        # correction factor (equation 5 p. 909).
         mean = self._compute_magnitude_term(C, rup.mag) +\
             self._compute_distance_term(C, rup.mag, dists.rrup) +\
             self._compute_focal_depth_term(C, rup.hypo_depth) +\
@@ -123,13 +123,13 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _compute_magnitude_term(self, C, mag):
         """
-        Compute first term in equation 1, pag 901.
+        Compute first term in equation 1, p. 901.
         """
         return C['a'] * mag
 
     def _compute_distance_term(self, C, mag, rrup):
         """
-        Compute second and third terms in equation 1, pag 901.
+        Compute second and third terms in equation 1, p. 901.
         """
         term1 = C['b'] * rrup
         term2 = - np.log(rrup + C['c'] * np.exp(C['d'] * mag))
@@ -138,7 +138,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _compute_focal_depth_term(self, C, hypo_depth):
         """
-        Compute fourth term in equation 1, pag 901.
+        Compute fourth term in equation 1, p. 901.
         """
         # pag 901. "(i.e, depth is capped at 125 km)".
         focal_depth = hypo_depth
@@ -155,7 +155,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _compute_faulting_style_term(self, C, rake):
         """
-        Compute fifth term in equation 1, pag 901.
+        Compute fifth term in equation 1, p. 901.
         """
         # pag 900. "The differentiation in focal mechanism was
         # based on a rake angle criterion, with a rake of +/- 45
@@ -164,7 +164,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _compute_site_class_term(self, C, vs30):
         """
-        Compute nine-th term in equation 1, pag 901.
+        Compute nine-th term in equation 1, p. 901.
         """
         # map vs30 value to site class, see table 2, pag 901.
         site_term = np.zeros(len(vs30))
@@ -188,13 +188,13 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _compute_magnitude_squared_term(self, P, M, Q, W, mag):
         """
-        Compute magnitude squared term, equation 5, pag 909.
+        Compute magnitude squared term, equation 5, p. 909.
         """
         return P * (mag - M) + Q * (mag - M) ** 2 + W
 
     #: Coefficient table obtained by joining table 4 (except columns for
-    #: SI, SS, SSL), table 5 (both at pag 903) and table 6 (only columns for
-    #: QC WC TauC), pag 907.
+    #: SI, SS, SSL), table 5 (both at p. 903) and table 6 (only columns for
+    #: QC WC TauC), p. 907.
     COEFFS_ASC = CoeffsTable(sa_damping=5, table="""\
     IMT    a     b         c       d      e        FR     CH     C1     C2     C3     C4     sigma   QC      WC      tauC
     pga    1.101 -0.00564  0.0055  1.080  0.01412  0.251  0.293  1.111  1.344  1.355  1.420  0.604   0.0     0.0     0.303
@@ -235,7 +235,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     adding a subduction interface term.
     """
     #: Supported tectonic region type is subduction interface, this means
-    #: that factors FR, SS and SSL are assumed 0 in equation 1, pag. 901.
+    #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -252,7 +252,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
         # mean value as given by equation 1, pag 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 pag 909)
+        # correction factor (equation 5 p. 909)
         mean = self._compute_magnitude_term(C, rup.mag) +\
             self._compute_distance_term(C, rup.mag, dists.rrup) +\
             self._compute_focal_depth_term(C, rup.hypo_depth) +\
@@ -272,7 +272,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
         return mean, stddevs
 
     #: Coefficient table containing subduction interface coefficients,
-    #: taken from table 4, pag 903 (only column SI), and table 6, pag 907
+    #: taken from table 4, pag 903 (only column SI), and table 6, p. 907
     #: (only columns QI, WI, TauI)
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
         IMT    SI     QI      WI      tauI
@@ -314,7 +314,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     adding subduction slab terms.
     """
     #: Supported tectonic region type is subduction interface, this means
-    #: that factors FR, SS and SSL are assumed 0 in equation 1, pag. 901.
+    #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -336,7 +336,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         # mean value as given by equation 1, pag 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
-        # correction factor (equation 5 pag 909)
+        # correction factor (equation 5 p. 909)
         mean = self._compute_magnitude_term(C, rup.mag) +\
             self._compute_distance_term(C, rup.mag, d) +\
             self._compute_focal_depth_term(C, rup.hypo_depth) +\
@@ -358,14 +358,14 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     def _compute_slab_correction_term(self, C, rrup):
         """
         Compute path modification term for slab events, that is
-        the 8-th term in equation 1, pag 901.
+        the 8-th term in equation 1, p. 901.
         """
         slab_term = C['SSL'] * np.log(rrup)
 
         return slab_term
 
     #: Coefficient table containing subduction slab coefficients taken from
-    #: table 4, pag 903 (only columns for SS and SSL), and table 6, pag 907
+    #: table 4, pag 903 (only columns for SS and SSL), and table 6, p. 907
     #: (only columns for PS, QS, WS, TauS)
     COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
         IMT    SS     SSL     PS      QS       WS      tauS
