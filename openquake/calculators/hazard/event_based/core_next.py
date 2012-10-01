@@ -135,7 +135,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
         if hc.ground_motion_correlation_model is not None:
             correl_model = _get_correl_model(hc)
 
-
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -205,10 +204,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
                 logs.LOG.debug('< done computing ground motion fields')
 
                 # update the gmf cache:
-                for k, v in gmf_dict.iteritems():
+                for k, _ in gmf_dict.iteritems():
                     gmf_cache[k] = numpy.append(
                         gmf_cache[k], gmf_dict[k], axis=1)
-
 
         logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
@@ -349,6 +347,24 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
 
 @transaction.commit_on_success(using='reslt_writer')
 def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
+    """
+    Helper method to save computed GMF data to the database.
+
+    :param gmf_set:
+        A :class:`openquake.db.models.GmfSet` instance, which will be the
+        "container" for these GMFs.
+    :param dict gmf_dict:
+        The dict use to cache/buffer up GMF results during the calculation.
+        See :func:`_create_gmf_cache`.
+    :param points_to_compute:
+        An :class:`nhlib.geo.mesh.Mesh` object, representing all of the points
+        of interest for a calculation.
+    :param int task_ordinal:
+        The sequence number (1 to N) of the task which computed these results.
+
+        A calculation consists of N tasks, so this tells us which task computed
+        the data.
+    """
     inserter = writer.BulkInserter(models.Gmf)
 
     # import nose; nose.tools.set_trace()
