@@ -185,7 +185,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
 
         hc = self.job.hazard_calculation
-        num_sites = len(hc.points_to_compute())
 
         rlz1, rlz2 = models.LtRealization.objects.filter(
             hazard_calculation=hc.id)
