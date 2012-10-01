@@ -183,33 +183,32 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         vuln_model = kwargs["vuln_model"]
         insured_losses = kwargs["insured_losses"]
+        seed, correlation_type = self._get_correlation_type()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        block_losses = []
         loss_map_data = {}
 
-        scenario.compute(
+        def on_asset_complete(asset, mean_loss, std_loss):
+            asset_site = shapes.Site(asset.site.x, asset.site.y)
+            collect_block_data(loss_map_data, asset_site,
+                               ({
+                                   "mean_loss": mean_loss,
+                                   "stddev_loss": std_loss}, {
+                                       "assetID": asset.asset_ref
+                                       }))
+
+        sum_block_losses = scenario.compute(
             block.sites,
             lambda site: general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site),
+            vuln_model,
             lambda site: general.load_gmvs_at(
                 self.job_ctxt.job_id, general.hazard_input_site(
                     self.job_ctxt, site)),
             insured_losses,
-            
+            seed, correlation_type,
+            on_asset_complete)
 
-                block_losses.append(losses)
-
-                loss = ({
-                    "mean_loss": numpy.mean(losses),
-                    "stddev_loss": numpy.std(losses, ddof=1)}, {
-                    "assetID": asset.asset_ref
-                })
-
-                asset_site = shapes.Site(asset.site.x, asset.site.y)
-                collect_block_data(loss_map_data, asset_site, loss)
-
-        sum_block_losses = sum(block_losses)
         return sum_block_losses, loss_map_data
 
 
@@ -233,4 +232,3 @@ def collect_block_data(loss_data, asset_site, asset_data):
     data = loss_data.get(asset_site, [])
     data.append(asset_data)
     loss_data[asset_site] = data
-

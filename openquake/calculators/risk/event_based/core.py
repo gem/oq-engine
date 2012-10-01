@@ -259,15 +259,3 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
 
         return True
-
-    def _get_correlation_type(self):
-        vuln_curves = vulnerability.load_vuln_model_from_kvs(
-            self.job_ctxt.job_id)
-        seed = self.job_ctxt["EPSILON_RANDOM_SEED"]
-        correlation_types = dict(
-            uncorrelated=event_based.UNCORRELATED,
-            perfect=event_based.PERFECTLY_CORRELATED)
-        correlation_type = correlation_types.get(
-            self.job_ctxt["ASSET_CORRELATION"], event_based.UNCORRELATED)
-
-        return seed, correlation_type
