@@ -161,9 +161,11 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
         if hc.ground_motion_fields:
-            # Initialize a cache to hold all gmf data for this stochastic event set.
+            # Initialize a cache to hold all gmf data for this stochastic event
+            # set.
             # This includes GMFs for all ruptures in this SES,
-            # and each GMF includes ground motion values for each point of interest.
+            # and each GMF includes ground motion values for each point of
+            # interest.
             gmf_cache = _create_gmf_cache(len(points_to_compute), imts)
 
             logs.LOG.debug('> computing also ground motion fields')
@@ -182,7 +184,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
 
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
-            _save_ses_rupture(ses, rupture, cmplt_lt_ses, task_ordinal, rupture_ordinal)
+            _save_ses_rupture(
+                ses, rupture, cmplt_lt_ses, task_ordinal, rupture_ordinal)
             logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
@@ -209,19 +212,21 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
 
                 # update the gmf cache:
                 for k, v in gmf_dict.iteritems():
-                    gmf_cache[k] = numpy.append(gmf_cache[k], gmf_dict[k], axis=1)
+                    gmf_cache[k] = numpy.append(
+                        gmf_cache[k], gmf_dict[k], axis=1)
 
 
         logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
-                       % (rupture_ordinal, ses_rlz_n, hc.ses_per_logic_tree_path))
+                       % (rupture_ordinal, ses_rlz_n,
+                          hc.ses_per_logic_tree_path))
         logs.LOG.debug('< done computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
         if hc.ground_motion_fields:
             # save the GMFs to the DB
             logs.LOG.debug('> saving GMF results to DB')
-            _save_gmfs(gmf_set, gmf_cache, points_to_compute, task_ordinal)  # TODO: deal with complete lt GMF
+            _save_gmfs(gmf_set, gmf_cache, points_to_compute, task_ordinal)
             logs.LOG.debug('< done saving GMF results to DB')
 
     logs.LOG.debug('< task complete, signalling completion')
@@ -229,6 +234,18 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
 
 
 def _create_gmf_cache(n_sites, imts):
+    """
+    Create a `dict` to cache GMF data during the course of a computation.
+
+    The `dict` is keyed by IMTs (which are IMT objects from :mod:`nhlib.imt`).
+    Each value is initialized to a numpy array with a shape of (n, 0), where n
+    is `n_sites`.
+
+    :param int n_sites:
+        The number of sites in the calculation.
+    :param imts:
+        A `list` or other sequence of :mod:`nhlib.imt` IMT objects.
+    """
     cache = dict()
 
     for imt in imts:
