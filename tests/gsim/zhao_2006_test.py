@@ -25,6 +25,12 @@ import numpy
 
 # Test data generated from Fortran implementation
 # provided by John Zhao
+# For the case Vs30 > 1100, test data have been
+# generated from Matlab implementation taken from:
+# http://www.stanford.edu/~bakerjw/Epsilon/Zhao_2006.m
+# (this because the original code provided by Zhao
+# does not include this case, even if it is described
+# in the original paper)
 
 
 class ZhaoEtAl2006AscTestCase(BaseGSIMTestCase):
@@ -47,11 +53,6 @@ class ZhaoEtAl2006AscTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_mean_vs30_greater_than_1100(self):
-        # this test is needed because the original code provided by Zhao
-        # does not include the case vs30 > 1100, even if this case is
-        # described in the original paper. The table has been generated
-        # using the Matlab implementation that can be downloaded from:
-        # http://www.stanford.edu/~bakerjw/Epsilon/Zhao_2006.m
         self.check('ZHAO06/Z06Asc_MEAN_Vs30_1200.csv',
                    max_discrep_percentage=0.4)
 
@@ -75,6 +76,10 @@ class ZhaoEtAl2006SInterTestCase(BaseGSIMTestCase):
         self.check('ZHAO06/Z06SInter_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
+    def test_mean_vs30_greater_than_1100(self):
+        self.check('ZHAO06/Z06SInter_MEAN_Vs30_1200.csv',
+                   max_discrep_percentage=0.4)
+
 
 class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ZhaoEtAl2006SSlab
@@ -94,6 +99,10 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('ZHAO06/Z06SSlab_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
+    def test_mean_vs30_greater_than_1100(self):
+        self.check('ZHAO06/Z06SSlab_MEAN_Vs30_1200.csv',
+                   max_discrep_percentage=0.4)
 
     def test_zero_distance(self):
         # test the calculation in case of zero rrup distance (for rrup=0
