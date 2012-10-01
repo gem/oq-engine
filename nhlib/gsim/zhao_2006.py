@@ -85,7 +85,7 @@ class ZhaoEtAl2006Asc(GMPE):
         # intensity measure type.
         C = self.COEFFS_ASC[imt]
 
-        # mean value as given by equation 1, pag 901, without considering the
+        # mean value as given by equation 1, p. 901, without considering the
         # interface and intraslab terms (that is SI, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 p. 909).
@@ -107,7 +107,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
     def _get_stddevs(self, sigma, tau, stddev_types, num_sites):
         """
-        Return standard deviations as defined in equation 3 pag 902.
+        Return standard deviations as defined in equation 3 p. 902.
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -140,16 +140,16 @@ class ZhaoEtAl2006Asc(GMPE):
         """
         Compute fourth term in equation 1, p. 901.
         """
-        # pag 901. "(i.e, depth is capped at 125 km)".
+        # p. 901. "(i.e, depth is capped at 125 km)".
         focal_depth = hypo_depth
         if focal_depth > 125.0:
             focal_depth = 125.0
 
-        # pag 902. "We used the value of 15 km for the
+        # p. 902. "We used the value of 15 km for the
         # depth coefficient hc ...".
         hc = 15.0
 
-        # pag 901. "When h is larger than hc, the depth terms takes
+        # p. 901. "When h is larger than hc, the depth terms takes
         # effect ...". The next sentence specifies h>=hc.
         return float(focal_depth >= hc) * C['e'] * (focal_depth - hc)
 
@@ -157,7 +157,7 @@ class ZhaoEtAl2006Asc(GMPE):
         """
         Compute fifth term in equation 1, p. 901.
         """
-        # pag 900. "The differentiation in focal mechanism was
+        # p. 900. "The differentiation in focal mechanism was
         # based on a rake angle criterion, with a rake of +/- 45
         # as demarcation between dip-slip and strike-slip."
         return float(rake > 45.0 and rake < 135.0) * C['FR']
@@ -166,7 +166,7 @@ class ZhaoEtAl2006Asc(GMPE):
         """
         Compute nine-th term in equation 1, p. 901.
         """
-        # map vs30 value to site class, see table 2, pag 901.
+        # map vs30 value to site class, see table 2, p. 901.
         site_term = np.zeros(len(vs30))
 
         # hard rock
@@ -249,7 +249,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
         C = self.COEFFS_ASC[imt]
         C_SINTER = self.COEFFS_SINTER[imt]
 
-        # mean value as given by equation 1, pag 901, without considering the
+        # mean value as given by equation 1, p. 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 p. 909)
@@ -272,7 +272,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
         return mean, stddevs
 
     #: Coefficient table containing subduction interface coefficients,
-    #: taken from table 4, pag 903 (only column SI), and table 6, p. 907
+    #: taken from table 4, p. 903 (only column SI), and table 6, p. 907
     #: (only columns QI, WI, TauI)
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
         IMT    SI     QI      WI      tauI
@@ -333,7 +333,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         d = dists.rrup
         d[d == 0.0] = 0.1
 
-        # mean value as given by equation 1, pag 901, without considering the
+        # mean value as given by equation 1, p. 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
         # inter and intra event terms, plus the magnitude-squared term
         # correction factor (equation 5 p. 909)
@@ -365,7 +365,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         return slab_term
 
     #: Coefficient table containing subduction slab coefficients taken from
-    #: table 4, pag 903 (only columns for SS and SSL), and table 6, p. 907
+    #: table 4, p. 903 (only columns for SS and SSL), and table 6, p. 907
     #: (only columns for PS, QS, WS, TauS)
     COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
         IMT    SS     SSL     PS      QS       WS      tauS
