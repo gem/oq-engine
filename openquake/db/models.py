@@ -1612,12 +1612,6 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
-    def __iter__(self):
-        """
-        Iterator for walking through all child :class:`Gmf` objects.
-        """
-        return GmfNode.objects.filter(gmf=self.id).iterator()
-
 
 class GmfData(djm.Model):
     '''
