@@ -419,12 +419,13 @@ class SESRuptureTestCase(unittest.TestCase):
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=True, lons=self.mesh_lons,
-            lats=self.mesh_lats, depths=self.mesh_depths)
+            lats=self.mesh_lats, depths=self.mesh_depths, task_ordinal=1,
+            rupture_ordinal=1)
         self.source_rupture = models.SESRupture.objects.create(
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=False, lons=self.ps_lons, lats=self.ps_lats,
-            depths=self.ps_depths)
+            depths=self.ps_depths, task_ordinal=1, rupture_ordinal=2)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
