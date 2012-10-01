@@ -39,7 +39,7 @@ from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
-from risklib import curve
+from risklib import curve, event_based
 
 
 LOG = logs.LOG
@@ -93,6 +93,16 @@ class BaseRiskCalculator(Calculator):
         self.store_exposure_assets()
         self.store_vulnerability_model()
         self.partition()
+
+    def _get_correlation_type(self):
+        seed = self.job_ctxt["EPSILON_RANDOM_SEED"]
+        correlation_types = dict(
+            uncorrelated=event_based.UNCORRELATED,
+            perfect=event_based.PERFECTLY_CORRELATED)
+        correlation_type = correlation_types.get(
+            self.job_ctxt["ASSET_CORRELATION"], event_based.UNCORRELATED)
+
+        return seed, correlation_type
 
     @staticmethod
     def _cell_to_polygon(center, cell_size):

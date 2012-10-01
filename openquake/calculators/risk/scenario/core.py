@@ -183,7 +183,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         vuln_model = kwargs["vuln_model"]
         insured_losses = kwargs["insured_losses"]
-        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
+        seed, correlation_type = self._get_correlation_type()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         block_losses = []
@@ -201,7 +201,8 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 vuln_function = vuln_model[asset.taxonomy]
 
                 loss_ratios = event_based._compute_loss_ratios(
-                    vuln_function, gmvs, epsilon_provider, asset)
+                    vuln_function, gmvs, asset,
+                    seed, correlation_type, vuln_model.keys())
                 losses = loss_ratios * asset.value
 
                 if insured_losses:
@@ -242,4 +243,3 @@ def collect_block_data(loss_data, asset_site, asset_data):
     data = loss_data.get(asset_site, [])
     data.append(asset_data)
     loss_data[asset_site] = data
-
