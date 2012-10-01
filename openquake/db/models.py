@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import itertools
 import os
 import re
 
@@ -1531,39 +1532,47 @@ class GmfSet(djm.Model):
         """
         job = self.gmf_collection.output.oq_job
         hc = job.hazard_calculation
+        if self.complete_logic_tree_gmf:
+            # Get all of the GmfSets associated with a logic tree realization,
+            # for this calculation.
+            lt_gmf_sets = GmfSet.objects.filter(
+                gmf_collection__output__oq_job=job,
+                gmf_collection__lt_realization__isnull=False)
+            for gmf in itertools.chain(*lt_gmf_sets):
+                yield gmf
+        else:
+            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
 
-        num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
+            imts = [parse_imt(x) for x in hc.intensity_measure_types]
 
-        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+            for imt, sa_period, sa_damping in imts:
 
-        for imt, sa_period, sa_damping in imts:
+                for task_ordinal in xrange(1, num_tasks + 1):
+                    gmfs = Gmf.objects.filter(
+                        gmf_set=self.id, imt=imt, sa_period=sa_period,
+                        sa_damping=sa_damping, task_ordinal=task_ordinal)
+                    if len(gmfs) == 0:
+                        # This task did not contribute to this GmfSet
+                        continue
 
-            for task_ordinal in xrange(1, num_tasks + 1):
-                gmfs = Gmf.objects.filter(
-                    gmf_set=self.id, imt=imt, sa_period=sa_period,
-                    sa_damping=sa_damping, task_ordinal=task_ordinal)
-                if len(gmfs) == 0:
-                    # This task did not contribute to this GmfSet
-                    continue
+                    # len of each gmfs == number of sites
+                    # need to walk through each columns of gmvs, slicing vertically
+                    # extract individual ground motion fields
+                    first = gmfs[0]
+                    num_ruptures = len(first.gmvs)
 
-                # len of each gmfs == number of sites
-                # need to walk through each columns of gmvs, slicing vertically
-                # extract individual ground motion fields
-                first = gmfs[0]
-                num_ruptures = len(first.gmvs)
-
-                for i in xrange(num_ruptures):
-                    gmf_nodes = []
-                    for x in gmfs:
-                        assert len(x.gmvs) == num_ruptures
-                        # TODO: Rename `iml` to `gmv`,
-                        # in NRML serializer as well
-                        gmf_nodes.append(_GroundMotionFieldNode(
-                            iml=x.gmvs[i], location=x.location))
-                    yield _GroundMotionField(
-                        imt=first.imt, sa_period=first.sa_period,
-                        sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
-                    del gmf_nodes
+                    for i in xrange(num_ruptures):
+                        gmf_nodes = []
+                        for gmf in gmfs:
+                            assert len(gmf.gmvs) == num_ruptures
+                            # TODO: Rename `iml` to `gmv`,
+                            # in NRML serializer as well
+                            gmf_nodes.append(_GroundMotionFieldNode(
+                                iml=gmf.gmvs[i], location=gmf.location))
+                        yield _GroundMotionField(
+                            imt=first.imt, sa_period=first.sa_period,
+                            sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
+                        del gmf_nodes
 
 
 class _GroundMotionField(object):
