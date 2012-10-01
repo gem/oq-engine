@@ -1526,6 +1526,8 @@ class GmfSet(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
 
+    # Disabling pylint for 'Too many local variables'
+    # pylint: disable=R0914
     def __iter__(self):
         """
         Iterator for walking through all child :class:`Gmf` objects.
