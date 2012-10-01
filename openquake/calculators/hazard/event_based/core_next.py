@@ -107,12 +107,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
             ses_collection__output__oq_job=job_id,
             complete_logic_tree_ses=True)
 
-    cmplt_lt_gmf = None
-    if hc.complete_logic_tree_gmf:
-        cmplt_lt_gmf = models.GmfSet.objects.get(
-            gmf_collection__output__oq_job=job_id,
-            complete_logic_tree_gmf=True)
-
     if hc.ground_motion_fields:
         # For ground motion field calculation, we need the points of interest
         # for the calculation.
