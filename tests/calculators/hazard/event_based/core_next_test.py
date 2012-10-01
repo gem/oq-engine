@@ -288,16 +288,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertIsNone(complete_lt_ses.ordinal)
 
-        # Check the complete logic tree GMF set and make sure it contains
-        # all of the GMFs.
-        complete_lt_gmf = models.GmfSet.objects.get(
-            gmf_collection__output__oq_job=self.job.id,
-            gmf_collection__output__output_type='complete_lt_gmf',
-            complete_logic_tree_gmf=True)
-
-        clt_gmfs = models.GmfNode.objects.filter(
-            gmf__gmf_set=complete_lt_gmf.id)
-        self.assertEqual(expected_gmfs1 + expected_gmfs2, clt_gmfs.count())
-
-        self.assertEqual(500.0, complete_lt_gmf.investigation_time)
-        self.assertIsNone(complete_lt_gmf.ses_ordinal)
+        # TODO: Test the complete logic tree GMF
+        # The `complete logic tree GMF` collection is computed as an aggregate
+        # of all the GMFs for a calculation.
+        # Because GMFs take up a lot of space, we don't store a copy of this
+        # as we do with SES.
