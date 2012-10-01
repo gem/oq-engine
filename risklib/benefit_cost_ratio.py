@@ -23,6 +23,65 @@ from risklib.signals import EMPTY_CALLBACK
 from risklib.classical import (
     _loss_ratio_exceedance_matrix,
     _loss_ratio_curve, _loss_curve)
+from risklib import event_based
+
+
+def compute_probabilistic(
+        sites, assets_getter,
+        vulnerability_model, vulnerability_model_retrofitted,
+        hazard_getter,
+        interest_rate, asset_life_expectancy,
+        loss_histogram_bins,
+        seed=None, correlation_type=None,
+        on_asset_complete=EMPTY_CALLBACK):
+
+    taxonomies = vulnerability_model.keys()
+
+    for site in sites:
+        assets = assets_getter(site)
+
+        # contains IMLs, TSES, TimeSpan
+        hazard_dict = hazard_getter(site)
+
+        for asset in assets:
+            vulnerability_function = vulnerability_model[asset.taxonomy]
+
+            loss_ratios = event_based._compute_loss_ratios(
+                vulnerability_function, hazard_dict, asset,
+                seed, correlation_type, taxonomies)
+
+            loss_ratio_curve = event_based._compute_loss_ratio_curve(
+                vulnerability_function, hazard_dict,
+                asset,
+                loss_histogram_bins,
+                loss_ratios,
+                seed, correlation_type, taxonomies)
+
+            loss_curve = _loss_curve(loss_ratio_curve, asset.value)
+            eal_original = _mean_loss(loss_curve)
+
+            vulnerability_function_retrofitted = (
+                vulnerability_model_retrofitted[asset.taxonomy])
+
+            loss_ratios = event_based._compute_loss_ratios(
+                vulnerability_function_retrofitted, hazard_dict, asset,
+                seed, correlation_type, taxonomies)
+
+            loss_ratio_curve = event_based._compute_loss_ratio_curve(
+                vulnerability_function_retrofitted, hazard_dict,
+                asset,
+                loss_histogram_bins,
+                loss_ratios,
+                seed, correlation_type, taxonomies)
+
+            loss_curve = _loss_curve(loss_ratio_curve, asset.value)
+            eal_retrofitted = _mean_loss(loss_curve)
+
+            bcr = _bcr(eal_original, eal_retrofitted,
+                       interest_rate, asset_life_expectancy,
+                       asset.retrofitting_cost)
+
+            on_asset_complete(asset, bcr, eal_original, eal_retrofitted)
 
 
 def compute(sites, assets_getter,

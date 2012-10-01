@@ -20,6 +20,65 @@ import numpy
 import random
 
 from risklib import curve
+from risklib.signals import EMPTY_CALLBACK
+from risklib import classical
+
+UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
+
+
+def compute(sites, assets_getter,
+            vulnerability_model,
+            hazard_getter,
+            loss_histogram_bins,
+            conditional_loss_poes,
+            compute_insured_curve,
+            seed, correlation_type,
+            on_asset_complete=EMPTY_CALLBACK):
+
+    aggregate_losses = None
+
+    taxonomies = vulnerability_model.keys()
+
+    for site in sites:
+        assets = assets_getter(site)
+
+        # the dict contains IMLs, TSES, TimeSpan
+        point, hazard_dict = hazard_getter(site)
+
+        if aggregate_losses is None:
+            aggregate_losses = numpy.zeros(len(hazard_dict["IMLs"]))
+
+        for asset in assets:
+            vulnerability_function = vulnerability_model[asset.taxonomy]
+
+            loss_ratios = _compute_loss_ratios(
+                vulnerability_function, hazard_dict,
+                asset,
+                seed, correlation_type, taxonomies)
+            loss_ratio_curve = _compute_loss_ratio_curve(
+                vulnerability_function, hazard_dict,
+                asset,
+                loss_histogram_bins, loss_ratios,
+                seed, correlation_type, taxonomies)
+
+            loss_curve = classical._loss_curve(loss_ratio_curve, asset.value)
+
+            loss_conditionals = dict([
+                (loss_poe, classical._conditional_loss(loss_curve, loss_poe))
+                for loss_poe in conditional_loss_poes])
+
+            if compute_insured_curve:
+                insured_curve = _compute_insured_loss_curve(asset, loss_curve)
+            else:
+                insured_curve = None
+
+            on_asset_complete(
+                asset, point, loss_ratio_curve,
+                loss_curve, loss_conditionals, insured_curve)
+
+            aggregate_losses += loss_ratios * asset.value
+
+    return aggregate_losses
 
 
 class EpsilonProvider(object):
@@ -28,18 +87,30 @@ class EpsilonProvider(object):
     method. See :py:meth:`EpsilonProvider.epsilon` for more information.
     """
 
-    def __init__(self, params):
+    def __init__(self, seed=None,
+                 correlation_type=UNCORRELATED, taxonomies=None):
         """
         :param params: configuration parameters from the job configuration
         :type params: dict
         """
-        self.__dict__.update(params)
-        self.samples = None
+        self._samples = dict()
+        self._correlation_type = correlation_type or UNCORRELATED
+        self._seed = seed
 
+        if correlation_type == PERFECTLY_CORRELATED:
+            self.rnd = random.Random()
+            if seed is not None:
+                self.rnd.seed(int(self._seed))
+
+            for taxonomy in taxonomies:
+                self._samples[taxonomy] = self._generate()
+
+    def _generate(self):
         self.rnd = random.Random()
-        eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
-        if eps_rnd_seed is not None:
-            self.rnd.seed(int(eps_rnd_seed))
+        if self._seed is not None:
+            self.rnd.seed(int(self._seed))
+
+        return self.rnd.normalvariate(0, 1)
 
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
@@ -54,26 +125,21 @@ class EpsilonProvider(object):
         taxonomy is the same. The asset's `taxonomy` is only needed for
         correlated jobs and unlikely to be available for uncorrelated ones.
         """
-        correlation = getattr(self, "ASSET_CORRELATION", None)
 
-        if correlation is None or correlation == 'uncorrelated':
-            # Sample per asset
-            return self.rnd.normalvariate(0, 1)
-        elif correlation == 'perfect':
-            # Sample per building typology
-            samples = getattr(self, "samples", None)
-            if samples is None:
-                # These are two references for the same dictionary.
-                samples = self.samples = dict()
-
-            if asset.taxonomy not in samples:
-                samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
-            return samples[asset.taxonomy]
+        if self._correlation_type == UNCORRELATED:
+            return self._generate()
+        elif self._correlation_type == PERFECTLY_CORRELATED:
+            return self._samples[asset.taxonomy]
         else:
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' %
+                             self._correlation_type)
 
 
-def _compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
+def _compute_loss_ratios(vuln_function, gmf_set,
+                         asset,
+                         seed=None,
+                         correlation_type=None,
+                         taxonomies=None):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
 
@@ -86,8 +152,12 @@ def _compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
         **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
+    :param seed:
+      the seed used for the rnd generator
+    :param correlation_type
+      UNCORRELATED or PERFECTLY_CORRELATED
+    :param taxonomies
+      a list of considered taxonomies
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
@@ -101,6 +171,7 @@ def _compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
     if all_covs_are_zero:
         return _mean_based(vuln_function, gmf_set)
     else:
+        epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
         return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
 
 
@@ -255,7 +326,9 @@ def _generate_curve(losses, probs_of_exceedance):
 
 
 def _compute_loss_ratio_curve(vuln_function, gmf_set,
-                             epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
+                             asset, loss_histogram_bins, loss_ratios=None,
+                             seed=None, correlation_type=None,
+                             taxonomies=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -271,9 +344,12 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
         **TSES** - Time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
+    :param seed:
+      the seed used for the rnd generator
+    :param correlation_type
+      UNCORRELATED or PERFECTLY_CORRELATED
+    :param taxonomies
+      a list of considered taxonomies
     :param asset: the asset used to compute the loss ratios.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposureModelFile`
@@ -287,7 +363,8 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
 
     if loss_ratios is None:
         loss_ratios = _compute_loss_ratios(
-            vuln_function, gmf_set, epsilon_provider, asset)
+            vuln_function, gmf_set, asset,
+            seed, correlation_type, taxonomies)
 
     loss_ratios_range = _compute_loss_ratios_range(
         loss_ratios, loss_histogram_bins)
