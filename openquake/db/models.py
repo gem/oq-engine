@@ -1556,8 +1556,8 @@ class GmfSet(djm.Model):
                         continue
 
                     # len of each gmfs == number of sites
-                    # need to walk through each columns of gmvs, slicing vertically
-                    # extract individual ground motion fields
+                    # need to walk through each columns of gmvs, slicing
+                    # vertically to extract individual ground motion fields
                     first = gmfs[0]
                     num_ruptures = len(first.gmvs)
 
