@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+    # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,5 +53,8 @@ class FragilityModel(object):
 
 class Asset(object):
 
-    def __init__(self, number_of_units):
+    def __init__(self, number_of_units, ins_limit, deductible, asset_ref):
+        self.ins_limit = ins_limit
+        self.asset_ref = asset_ref
+        self.deductible = deductible
         self.number_of_units = number_of_units

@@ -33,6 +33,20 @@ class ClassicalTestCase(unittest.TestCase):
         self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
         self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
 
+    def test_alpha_value(self):
+        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
+        alphas = [_alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
+            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+
+        self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
+
+    def test_beta_value(self):
+        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
+        betas = [_beta_value(mean_loss_ratio, stddev) for mean_loss_ratio,
+            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+
+        self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
+
     def test_loss_is_zero_if_probability_is_too_high(self):
         loss_curve = Curve([
             (0.21, 0.131), (0.24, 0.108),
@@ -75,21 +89,6 @@ class ClassicalTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0.2526, _conditional_loss(
             loss_curve, 0.100), 4)
-
-    def test_compute_alphas(self):
-        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-        alphas = [_alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
-            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-
-        self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
-
-    def test_compute_betas(self):
-        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
-        betas = [_beta_value(mean_loss_ratio, stddev)
-                 for mean_loss_ratio,
-                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-
-        self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
 
     def test_compute_lrem_using_beta_distribution(self):
         expected_lrem = [
