@@ -251,3 +251,21 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         elats = [-2.1, -2., -1.9, -2.]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+
+class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
+    def test_vertical_planar_surface(self):
+        p1 = Point(0.1, 0.1, 0.0)
+        p2 = Point(0.1, 0.126979648178, 0.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
+                                                     2.0, 4.0, 90.0, 1.0)
+        self.assertAlmostEqual(surface.get_width(), 2.0)
+
+    def test_inclined_non_planar_surface(self):
+        p1 = Point(0.1, 0.1, 0.0)
+        p2 = Point(0.1, 0.117986432118, 0.0)
+        p3 = Point(0.117986470254, 0.117986426305, 0.0)
+        p4 = Point(0.117986470254, 0.0999999941864, 0.0)
+        surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
+                                                     2.0, 4.0, 30.0, 1.0)
+        self.assertAlmostEqual(surface.get_width(), 4.0, places=2)

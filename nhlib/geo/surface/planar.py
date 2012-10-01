@@ -492,3 +492,10 @@ class PlanarSurface(BaseSurface):
             # default -- case "IV"
             default=0
         )
+
+    def get_width(self):
+        """
+        Return surface's width value (in km) as computed in the constructor
+        (that is mean value of left and right surface sides).
+        """
+        return self.width

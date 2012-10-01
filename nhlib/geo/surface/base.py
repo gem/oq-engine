@@ -182,3 +182,12 @@ class BaseSurface(object):
 
         The actual definition of the dip might depend on surface geometry.
         """
+
+    @abc.abstractmethod
+    def get_width(self):
+        """
+        Return surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The actual definition depends on the type of surface geometry.
+        """
