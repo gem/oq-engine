@@ -39,13 +39,14 @@ def compute(sites, assets_getter,
         ground_motion_values = hazard_getter(site)
 
         if aggregate_losses is None:
-            aggregate_losses = numpy.array(len(ground_motion_values))
+            aggregate_losses = numpy.zeros(len(ground_motion_values))
 
         for asset in assets:
             vulnerability_function = vulnerability_model[asset.taxonomy]
 
             loss_ratios = event_based._compute_loss_ratios(
-                vulnerability_function, ground_motion_values, asset,
+                vulnerability_function, {'IMLs': ground_motion_values},
+                asset,
                 seed, correlation_type, taxonomies)
             losses = loss_ratios * asset.value
 
