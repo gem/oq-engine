@@ -200,3 +200,17 @@ class SimpleFaultSurface(BaseSurface):
         lons = numpy.array(lons, float)
         lats = numpy.array(lats, float)
         return Mesh(lons, lats, depths=None).get_convex_hull()
+
+    def get_width(self):
+        """
+        Return surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The width is computed as the average width along the surface.
+        See
+        :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_width`
+        """
+        # calculate width only along the first mesh column, because
+        # width is uniform for simple faults
+        left_column = self.get_mesh()[:,0:2]
+        return left_column.get_mean_width()

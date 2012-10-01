@@ -347,6 +347,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
         top_edge_depth = 30
+        width = 15
 
         class FakeSurface(object):
             call_counts = collections.Counter()
@@ -382,6 +383,10 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             def get_top_edge_depth(fake_surface):
                 fake_surface.call_counts['get_top_edge_depth'] += 1
                 return top_edge_depth
+
+            def get_width(fake_surface):
+                fake_surface.call_counts['get_width'] += 1
+                return width
 
         self.rupture_hypocenter = Point(2, 3, 40)
         self.rupture = Rupture(
@@ -419,7 +424,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'rjb rx rrup repi rhypo'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip ztor hypo_depth'.split()
+            'mag rake dip ztor hypo_depth width'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -434,6 +439,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.dip, 45.4545)
         self.assertEqual(rctx.ztor, 30)
         self.assertEqual(rctx.hypo_depth, 40)
+        self.assertEqual(rctx.width, 15)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
@@ -448,7 +454,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
-                          'get_min_distance': 1})
+                          'get_min_distance': 1, 'get_width': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
@@ -465,6 +471,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
         self.assertFalse(hasattr(dctx, 'ztor'))
+        self.assertFalse(hasattr(dctx, 'width'))
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1})
