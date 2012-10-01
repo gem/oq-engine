@@ -31,7 +31,7 @@ from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
 from openquake.utils.tasks import distribute
-from risklib import event_based
+from risklib import scenario
 
 LOGGER = logs.LOG
 
@@ -183,31 +183,22 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         vuln_model = kwargs["vuln_model"]
         insured_losses = kwargs["insured_losses"]
-        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         block_losses = []
         loss_map_data = {}
 
-        for site in block.sites:
-            gmvs = {"IMLs": general.load_gmvs_at(
-                    self.job_ctxt.job_id, general.hazard_input_site(
-                    self.job_ctxt, site))}
+        scenario.compute(
+            block.sites,
+            lambda site: general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site),
+            lambda site: general.load_gmvs_at(
+                self.job_ctxt.job_id, general.hazard_input_site(
+                    self.job_ctxt, site)),
+            insured_losses,
+            
 
-            assets = general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
-
-            for asset in assets:
-                vuln_function = vuln_model[asset.taxonomy]
-
-                loss_ratios = event_based._compute_loss_ratios(
-                    vuln_function, gmvs, epsilon_provider, asset)
-                losses = loss_ratios * asset.value
-
-                if insured_losses:
-                    losses = event_based._compute_insured_losses(asset, losses)
-
-                asset_site = shapes.Site(asset.site.x, asset.site.y)
+                block_losses.append(losses)
 
                 loss = ({
                     "mean_loss": numpy.mean(losses),
@@ -215,10 +206,10 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                     "assetID": asset.asset_ref
                 })
 
-                block_losses.append(losses)
+                asset_site = shapes.Site(asset.site.x, asset.site.y)
                 collect_block_data(loss_map_data, asset_site, loss)
 
-        sum_block_losses = reduce(lambda x, y: x + y, block_losses)
+        sum_block_losses = sum(block_losses)
         return sum_block_losses, loss_map_data
 
 
