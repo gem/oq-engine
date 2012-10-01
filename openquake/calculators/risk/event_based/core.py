@@ -20,6 +20,7 @@
 """Core functionality for Event-Based Risk calculations."""
 
 import geohash
+from collections import defaultdict
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
@@ -27,7 +28,7 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
-from risklib import event_based
+from risklib import event_based, benefit_cost_ratio
 
 LOGGER = logs.LOG
 
@@ -60,14 +61,16 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             try:
                 task.wait()
 
-                aggregate_curve.append(task.result)
+                if not self.is_benefit_cost_ratio_mode():
+                    aggregate_curve.append(task.result)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
 
-        self.agg_curve = aggregate_curve.compute(
-            self._tses(), self._time_span(),
-            self.job_ctxt.oq_job_profile.loss_histogram_bins)
+        if not self.is_benefit_cost_ratio_mode():
+            self.agg_curve = aggregate_curve.compute(
+                self._tses(), self._time_span(),
+                self.job_ctxt.oq_job_profile.loss_histogram_bins)
 
     def post_execute(self):
         """Perform the following post-execution actions:
@@ -153,49 +156,59 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             self.job_ctxt.job_id)
 
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
+        seed, correlation_type = self._get_correlation_type()
 
-        # aggregate the losses for this block
-        aggregate_curve = event_based.AggregateLossCurve()
+        job_id = self.job_ctxt.job_id
 
-        for site in block.sites:
+        def hazard_getter(site):
             point = self.job_ctxt.region.grid.point_at(site)
             gmvs = self._get_gmvs_at(general.hazard_input_site(
                     self.job_ctxt, site))
             gmf = {"IMLs": gmvs, "TSES": self._tses(),
                     "TimeSpan": self._time_span()}
-            assets = general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
+            return point, gmf
 
-            for asset in assets:
-                # loss ratios, used both to produce the curve
-                # and to aggregate the losses
-                loss_ratios = self.compute_loss_ratios(asset, gmf)
+        def on_asset_complete(asset, point, loss_ratio_curve,
+                              loss_curve, loss_conditionals, insured_curve):
+            key = kvs.tokens.loss_ratio_key(
+                self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
 
-                loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point.column, point.row, asset, gmf, loss_ratios)
+            kvs.get_client().set(key, loss_ratio_curve.to_json())
 
-                aggregate_curve.append(loss_ratios * asset.value)
+            LOGGER.debug("Loss ratio curve is %s, write to key %s" %
+                         (loss_ratio_curve, key))
 
-                if loss_ratio_curve:
-                    loss_curve = self.compute_loss_curve(
-                        point.column, point.row, loss_ratio_curve, asset)
+            key = kvs.tokens.loss_curve_key(
+                self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
 
-                    for loss_poe in general.conditional_loss_poes(
-                        self.job_ctxt.params):
+            LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
+            kvs.get_client().set(key, loss_curve.to_json())
 
-                        general.compute_conditional_loss(
-                                self.job_ctxt.job_id, point.column,
-                                point.row, loss_curve, asset, loss_poe)
+            for loss_poe, loss_conditional in loss_conditionals.items():
+                key = kvs.tokens.loss_key(job_id,
+                                          point.row, point.column,
+                                          asset.asset_ref, loss_poe)
+                kvs.get_client().set(key, loss_conditional)
 
-                    if self.job_ctxt.params.get("INSURED_LOSSES"):
-                        insured_curve = event_based._compute_insured_loss_curve(
-                            asset, loss_curve)
-                        key = kvs.tokens.insured_loss_curve_key(
-                            self.job_ctxt.job_id, point.row, point.column,
-                            asset.asset_ref)
-                        kvs.get_client().set(key, insured_curve.to_json())
+            if self.job_ctxt.params.get("INSURED_LOSSES"):
+                key = kvs.tokens.insured_loss_curve_key(
+                    self.job_ctxt.job_id, point.row, point.column,
+                    asset.asset_ref)
+                kvs.get_client().set(key, insured_curve.to_json())
 
-        return aggregate_curve.losses
+        losses = event_based.compute(
+            block.sites,
+            lambda site: general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site),
+            self.vuln_curves,
+            hazard_getter,
+            self.job_ctxt.oq_job_profile.loss_histogram_bins,
+            general.conditional_loss_poes(self.job_ctxt.params),
+            self.job_ctxt.params.get("INSURED_LOSSES"),
+            seed, correlation_type,
+            on_asset_complete)
+
+        return losses
 
     def _compute_bcr(self, block_id):
         """
@@ -206,109 +219,55 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         data structure spec.
         """
 
-        # aggregate the losses for this block
-        # TODO: remove the aggregation, it doesn't make any sense in the bcr
-        aggregate_curve = event_based.AggregateLossCurve()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
+        seed, correlation_type = self._get_correlation_type()
 
-        def get_loss_curve(site, vuln_function, asset):
+        def hazard_getter(site):
             "Compute loss curve basing on GMF data"
             gmvs = self._get_gmvs_at(general.hazard_input_site(
                     self.job_ctxt, site))
 
-            gmf_slice = {"IMLs": gmvs, "TSES": self._tses(),
+            return {"IMLs": gmvs, "TSES": self._tses(),
                     "TimeSpan": self._time_span()}
 
-            loss_ratios = event_based._compute_loss_ratios(
-                vuln_function, gmf_slice, epsilon_provider, asset)
-            loss_ratio_curve = event_based._compute_loss_ratio_curve(
-                vuln_function, gmf_slice, epsilon_provider, asset,
-                self.job_ctxt.oq_job_profile.loss_histogram_bins,
-                loss_ratios=loss_ratios)
+        result = defaultdict(list)
 
-            aggregate_curve.append(loss_ratios * asset.value)
+        def on_asset_complete(asset, bcr, eal_original, eal_retrofitted):
+            result[(asset.site.x, asset.site.y)].append(
+                ({'bcr': bcr,
+                  'eal_original': eal_original,
+                  'eal_retrofitted': eal_retrofitted},
+                  asset.asset_ref))
 
-            return loss_ratio_curve.rescale_abscissae(asset.value)
+        job_id = self.job_ctxt.job_id
 
-        result = general.compute_bcr_for_block(self.job_ctxt, block.sites,
-            get_loss_curve, float(self.job_ctxt.params['INTEREST_RATE']),
-            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY']))
+        benefit_cost_ratio.compute_probabilistic(
+            block.sites,
+            lambda site: general.BaseRiskCalculator.assets_at(job_id, site),
+            vulnerability.load_vuln_model_from_kvs(job_id),
+            vulnerability.load_vuln_model_from_kvs(job_id, retrofitted=True),
+            hazard_getter,
+            float(self.job_ctxt.params['INTEREST_RATE']),
+            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY']),
+            self.job_ctxt.oq_job_profile.loss_histogram_bins,
+            seed, correlation_type, on_asset_complete)
 
         bcr_block_key = kvs.tokens.bcr_block_key(
             self.job_ctxt.job_id, block_id)
-
+        result = result.items()
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
 
-        return aggregate_curve.losses
+        return True
 
-    def compute_loss_ratios(self, asset, gmf_slice):
-        """For a given asset and ground motion field, computes
-        the loss ratios used to obtain the related loss ratio curve
-        and aggregate loss curve."""
+    def _get_correlation_type(self):
+        vuln_curves = vulnerability.load_vuln_model_from_kvs(
+            self.job_ctxt.job_id)
+        seed = self.job_ctxt["EPSILON_RANDOM_SEED"]
+        correlation_types = dict(
+            uncorrelated=event_based.UNCORRELATED,
+            perfect=event_based.PERFECTLY_CORRELATED)
+        correlation_type = correlation_types.get(
+            self.job_ctxt["ASSET_CORRELATION"], event_based.UNCORRELATED)
 
-        epsilon_provider = event_based.EpsilonProvider(self.job_ctxt.params)
-
-        vuln_function = self.vuln_curves.get(asset.taxonomy, None)
-
-        if not vuln_function:
-            LOGGER.error("Unknown vulnerability function %s for asset %s"
-                         % (asset.taxonomy, asset.asset_ref))
-            return None
-
-        return event_based._compute_loss_ratios(vuln_function, gmf_slice,
-                                           epsilon_provider, asset)
-
-    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice,
-                                 loss_ratios):
-        """Compute the loss ratio curve for a single asset.
-
-        :param asset: the asset used to compute loss
-        :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-        """
-        job_ctxt = self.job_ctxt
-
-        vuln_function = self.vuln_curves.get(asset.taxonomy, None)
-
-        if not vuln_function:
-            LOGGER.error("Unknown vulnerability function %s for asset %s"
-                         % (asset.taxonomy, asset.asset_ref))
-            return None
-
-        epsilon_provider = event_based.EpsilonProvider(job_ctxt.params)
-
-        loss_histogram_bins = job_ctxt.oq_job_profile.loss_histogram_bins
-        loss_ratio_curve = event_based._compute_loss_ratio_curve(
-            vuln_function, gmf_slice, epsilon_provider, asset,
-            loss_histogram_bins, loss_ratios=loss_ratios)
-
-        # NOTE (jmc): Early exit if the loss ratio is all zeros
-        if not False in (loss_ratio_curve.ordinates == 0.0):
-            return None
-
-        key = kvs.tokens.loss_ratio_key(
-            self.job_ctxt.job_id, row, col, asset.asset_ref)
-
-        kvs.get_client().set(key, loss_ratio_curve.to_json())
-
-        LOGGER.debug("Loss ratio curve is %s, write to key %s" %
-                (loss_ratio_curve, key))
-
-        return loss_ratio_curve
-
-    def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
-        """Compute the loss curve for a single asset."""
-
-        if asset is None:
-            return None
-
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
-
-        key = kvs.tokens.loss_curve_key(
-            self.job_ctxt.job_id, row, column, asset.asset_ref)
-
-        LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
-        kvs.get_client().set(key, loss_curve.to_json())
-
-        return loss_curve
+        return seed, correlation_type

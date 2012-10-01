@@ -39,7 +39,7 @@ from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
-from risklib import classical, benefit_cost_ratio, curve
+from risklib import curve
 
 
 LOG = logs.LOG
@@ -52,15 +52,6 @@ def conditional_loss_poes(params):
 
     return [float(x) for x in params.get(
         "CONDITIONAL_LOSS_POE", "").split()]
-
-
-def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
-    """Compute the conditional loss for a loss curve and Probability of
-    Exceedance (PoE)."""
-
-    loss_conditional = classical._conditional_loss(loss_curve, loss_poe)
-    key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
-    kvs.get_client().set(key, loss_conditional)
 
 
 @task
@@ -576,66 +567,6 @@ def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
     for block_id, i in enumerate(xrange(0, len(sites), block_size)):
         yield Block(job_id, block_id=block_id,
                     sites=sites[i:i + block_size])
-
-
-def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
-                          interest_rate, asset_life_expectancy):
-    """
-    Compute and return Benefit-Cost Ratio data for a number of sites.
-
-    :param get_loss_curve:
-        Function that takes three positional arguments: point object,
-        vulnerability function object and asset object and is supposed
-        to return a loss curve.
-    :return:
-        A list of tuples::
-
-            [((site_lat, site_lon), [
-                ({'bcr': 1, 'eal_retrofitted': 2, 'eal_original': 3}, assetID),
-                ({'bcr': 3, 'eal_retrofitted': 4, 'eal_original': 5}, assetID),
-                ...]),
-             ...]
-    """
-    # too many local vars (16/15) -- pylint: disable=R0914
-    result = defaultdict(list)
-    job_id = job_ctxt.job_id
-
-    vuln_curves = vulnerability.load_vuln_model_from_kvs(job_id)
-    vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
-        job_id, retrofitted=True)
-
-    for site in sites:
-        assets = BaseRiskCalculator.assets_at(job_id, site)
-
-        for asset in assets:
-            vuln_function = vuln_curves[asset.taxonomy]
-            loss_curve = get_loss_curve(site, vuln_function, asset)
-            LOG.info('for asset %s loss_curve = %s',
-                     asset.asset_ref, loss_curve)
-            eal_original = benefit_cost_ratio._mean_loss(loss_curve)
-
-            vuln_function = vuln_curves_retrofitted[asset.taxonomy]
-            loss_curve = get_loss_curve(site, vuln_function, asset)
-            LOG.info('for asset %s loss_curve retrofitted = %s',
-                     asset.asset_ref, loss_curve)
-            eal_retrofitted = benefit_cost_ratio._mean_loss(loss_curve)
-
-            bcr = benefit_cost_ratio._bcr(eal_original, eal_retrofitted,
-                              interest_rate, asset_life_expectancy,
-                              asset.retrofitting_cost)
-
-            LOG.info('for asset %s EAL original = %f, '
-                     'EAL retrofitted = %f, BCR = %f',
-                     asset.asset_ref, eal_original, eal_retrofitted, bcr)
-
-            key = (asset.site.x, asset.site.y)
-
-            result[key].append(({'bcr': bcr,
-                                 'eal_original': eal_original,
-                                 'eal_retrofitted': eal_retrofitted},
-                                asset.asset_ref))
-
-    return result.items()
 
 
 def load_gmvs_at(job_id, site):
