@@ -329,7 +329,7 @@ class SetJavaSiteParamsTestCase(unittest.TestCase):
             800.0, jsite.getParameter('Vs30').getValue().value
         )
         self.assertEqual(
-            'measured', jsite.getParameter('Vs30 Type').getValue()
+            'Measured', jsite.getParameter('Vs30 Type').getValue()
         )
         self.assertEqual(
             10.0, jsite.getParameter('Depth 1.0 km/sec').getValue().value

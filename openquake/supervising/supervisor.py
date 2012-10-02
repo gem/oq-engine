@@ -44,6 +44,7 @@ from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
+from openquake.utils import monitor
 from openquake.utils import stats
 
 
@@ -184,6 +185,35 @@ class SupervisorLogFileHandler(logging.FileHandler):
         super(SupervisorLogFileHandler, self).emit(record)
 
 
+def abort_due_to_failed_nodes(job_id):
+    """Should the job be aborted due to failed compute nodes?
+
+    The job should be aborted when the following conditions coincide:
+        - we observed failed compute nodes
+        - the "no progress" timeout has been exceeded
+
+    :param int job_id: the id of the job in question
+    :returns: the number of failed compute nodes if the job should be aborted
+        zero otherwise.
+    """
+    logging.debug("> abort_due_to_failed_nodes")
+    result = 0
+
+    job = OqJob.objects.get(id=job_id)
+    failed_nodes = monitor.count_failed_nodes(job)
+    logging.debug(">> failed_nodes: %s" % failed_nodes)
+
+    if failed_nodes:
+        no_progress_period, timeout = stats.get_progress_timing_data(job)
+        logging.debug(">> no_progress_period: %s" % no_progress_period)
+        logging.debug(">> timeout: %s" % timeout)
+        if no_progress_period > timeout:
+            result = failed_nodes
+
+    logging.debug("< abort_due_to_failed_nodes")
+    return result
+
+
 class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     """
     Supervise an OpenQuake job by:
@@ -191,9 +221,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
-    # Failure counter check delay, translates to 20 seconds with the current
+    # Failure counter check delay, translates to 60 seconds with the current
     # settings.
-    FCC_DELAY = 20
+    FCC_DELAY = 60
 
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
@@ -271,8 +301,14 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             # Job process is still running.
             failures = stats.failure_counters(self.job_id)
             if failures:
-                terminate_job(self.job_pid)
                 message = "job terminated with failures: %s" % failures
+            else:
+                failed_nodes = abort_due_to_failed_nodes(self.job_id)
+                if failed_nodes:
+                    message = ("job terminated due to %s failed nodes" %
+                               failed_nodes)
+            if failures or failed_nodes:
+                terminate_job(self.job_pid)
                 job_failed = True
 
         if job_failed or process_stopped:
