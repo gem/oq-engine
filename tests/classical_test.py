@@ -131,12 +131,12 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertTrue(allclose(expected_lrem, lrem, rtol=0.0, atol=0.0005))
 
     def test_lrem_po_computation(self):
-        hazard_curve = Curve([
+        hazard_curve = [
             (0.01, 0.99), (0.08, 0.96),
             (0.17, 0.89), (0.26, 0.82),
             (0.36, 0.70), (0.55, 0.40),
             (0.70, 0.01),
-        ])
+        ]
 
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
@@ -157,12 +157,12 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertTrue(allclose(0.00, lrem_po[10][0], atol=0.005))
 
     def test_poos(self):
-        hazard_curve = Curve([
+        hazard_curve = [
             (0.01, 0.99), (0.08, 0.96),
             (0.17, 0.89), (0.26, 0.82),
             (0.36, 0.70), (0.55, 0.40),
             (0.70, 0.01),
-        ])
+        ]
 
         expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
         pes = [0.05, 0.15, 0.3, 0.5, 0.7]
@@ -183,7 +183,6 @@ class ClassicalTestCase(unittest.TestCase):
 
         self.assertTrue(allclose(expected_steps,
             _mean_imls(vulnerability_function)))
-
 
     def test_split_with_real_values_from_turkey(self):
         loss_ratios = [
@@ -227,11 +226,11 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertEqual(56, len(_evenly_spaced_loss_ratios(loss_ratios, 5)))
 
     def test_compute_loss_ratio_curve(self):
-        hazard_curve = Curve([
+        hazard_curve = [
             (0.01, 0.99), (0.08, 0.96),
             (0.17, 0.89), (0.26, 0.82),
             (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01)])
+            (0.70, 0.01)]
 
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
