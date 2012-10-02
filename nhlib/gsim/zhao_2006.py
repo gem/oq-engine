@@ -229,8 +229,8 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     Seismological Society of America, Volume 96, No. 3, pages 898-913).
     This class implements the equations for 'Subduction Interface'
     (that's why the class name ends with 'SInter').
-    This class extends the :class:`nhlib.gsim.ZhaoEtAl2006Asc` because
-    the equation for subduction interface is obtained from the equation
+    This class extends the :class:`nhlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction interface is obtained from the equation
     for active shallow crust, by removing the faulting style term and
     adding a subduction interface term.
     """
@@ -308,8 +308,8 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     Seismological Society of America, Volume 96, No. 3, pages 898-913).
     This class implements the equations for 'Subduction Slab'.
     (that's why the class name ends with 'SSlab').
-    This class extends the :class:`nhlib.gsim.ZhaoEtAl2006Asc` because
-    the equation for subduction slab is obtained from the equation
+    This class extends the :class:`nhlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction slab is obtained from the equation
     for active shallow crust, by removing the faulting style term and
     adding subduction slab terms.
     """
