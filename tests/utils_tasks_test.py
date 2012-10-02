@@ -237,7 +237,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
         self.assertEqual(False, bool(result))
 
         # Give the tasks a bit of time to complete.
-        time.sleep(0.1)
+        time.sleep(0.25)
 
         for key, value in data:
             self.assertEqual(value, TestStore.get(key))
