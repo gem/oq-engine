@@ -379,7 +379,7 @@ def set_java_site_parameters(jsite, sm_data):
     vs30_param.setValue(sm_data.vs30)
 
     vs30_type_param = java.jclass("StringParameter")("Vs30 Type")
-    vs30_type_param.setValue(sm_data.vs30_type)
+    vs30_type_param.setValue(sm_data.vs30_type.capitalize())
 
     z1pt0_param = java.jclass("DoubleParameter")("Depth 1.0 km/sec")
     z1pt0_param.setValue(sm_data.z1pt0)
@@ -512,7 +512,7 @@ class BaseHazardCalculator(Calculator):
             vs30_param.setValue(job_profile.reference_vs30_value)
 
             vs30_type_param = java.jclass("StringParameter")("Vs30 Type")
-            vs30_type_param.setValue(job_profile.vs30_type)
+            vs30_type_param.setValue(job_profile.vs30_type.capitalize())
 
             z1pt0_param = java.jclass("DoubleParameter")("Depth 1.0 km/sec")
             z1pt0_param.setValue(job_profile.depth_to_1pt_0km_per_sec)
