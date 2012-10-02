@@ -15,18 +15,17 @@
 
 from math import exp
 from scipy import sqrt, log, stats
-from numpy import array, empty
-from numpy import concatenate
+from numpy import array, empty, concatenate, linspace, subtract
+
 from risklib.curve import Curve
 from risklib.signals import EMPTY_CALLBACK
 from risklib.vulnerability_function import _mean_imls
-from numpy import linspace, subtract
 
 
 def compute(sites, assets_getter,
-                      vulnerability_model, hazard_getter,
-                      steps, conditional_loss_poes,
-                      on_asset_complete=EMPTY_CALLBACK):
+            vulnerability_model, hazard_getter,
+            steps, conditional_loss_poes,
+            on_asset_complete=EMPTY_CALLBACK):
 
     loss_ratio_exceedance_matrices = dict(
         [(taxonomy,
@@ -34,7 +33,7 @@ def compute(sites, assets_getter,
          for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     for site in sites:
-        point, hazard_curve = hazard_getter(site)
+        point, hazard_curve_values = hazard_getter(site)
         assets = assets_getter(site)
 
         for asset in assets:
@@ -43,7 +42,7 @@ def compute(sites, assets_getter,
                 _compute_per_asset(
                     asset, vulnerability_function,
                     loss_ratio_exceedance_matrices[asset.taxonomy],
-                    hazard_curve, steps, conditional_loss_poes))
+                    hazard_curve_values, steps, conditional_loss_poes))
             on_asset_complete(asset, point, loss_ratio_curve,
                 loss_curve, loss_conditionals)
 
@@ -88,9 +87,9 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
 
 
 def _compute_per_asset(asset, vulnerability_function, lrem,
-                                hazard_curve, steps, loss_poes):
+                                hazard_curve_values, steps, loss_poes):
     loss_ratio_curve = _loss_ratio_curve(
-        vulnerability_function, lrem, hazard_curve, steps)
+        vulnerability_function, lrem, hazard_curve_values, steps)
     loss_curve = _loss_curve(loss_ratio_curve, asset.value)
     loss_conditionals = _conditional_losses(
         loss_curve, loss_poes)
@@ -170,7 +169,7 @@ def _conditional_loss(curve, probability):
     return loss_curve.abscissa_for(probability)
 
 
-def _loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
+def _loss_ratio_curve(vuln_function, lrem, hazard_curve_values, steps):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
@@ -182,27 +181,30 @@ def _loss_ratio_curve(vuln_function, lrem, hazard_curve, steps):
     :param vuln_function: the vulnerability function used
         to compute the curve.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param hazard_curve: the hazard curve used to compute the curve.
-    :type hazard_curve: :py:class:`openquake.shapes.Curve`
+    :param hazard_curve_values: the hazard curve used to compute the curve.
+    :type hazard_curve_values: an association list with the
+    imls/values of the hazard curve
     :param int steps:
         Number of steps between loss ratios.
     """
 
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
-        vuln_function, lrem, hazard_curve)
+        vuln_function, lrem, hazard_curve_values)
     loss_ratios = _loss_ratios(vuln_function, steps)
 
     return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
 
-def _loss_ratio_exceedance_matrix_per_poos(vuln_function, lrem, hazard_curve):
+def _loss_ratio_exceedance_matrix_per_poos(
+        vuln_function, lrem, hazard_curve_values):
     """Compute the LREM * PoOs (Probability of Occurence) matrix.
 
     :param vuln_function: the vulnerability function used
         to compute the matrix.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param hazard_curve: the hazard curve used to compute the matrix.
-    :type hazard_curve: :py:class:`openquake.shapes.Curve`
+    :type hazard_curve_values: an association list with the hazard
+    curve imls/values
     :param lrem: the LREM used to compute the matrix.
     :type lrem: 2-dimensional :py:class:`numpy.ndarray`
     """
@@ -211,8 +213,8 @@ def _loss_ratio_exceedance_matrix_per_poos(vuln_function, lrem, hazard_curve):
     lrem_po = empty(lrem.shape)
     imls = _mean_imls(vuln_function)
 
-    if hazard_curve:
-        pos = _poos(hazard_curve, imls)
+    if hazard_curve_values:
+        pos = _poos(hazard_curve_values, imls)
         for idx, po in enumerate(pos):
             lrem_po[:, idx] = lrem[:, idx] * po
 
@@ -257,18 +259,19 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps):
         for x, y in zip(loss_ratios, loss_ratios[1:])]), [loss_ratios[-1]]]))
 
 
-def _poos(hazard_curve, imls):
+def _poos(hazard_curve_values, imls):
     """
     For each IML (Intensity Measure Level) compute the
     PoOs (Probability of Occurence) from the PoEs
     (Probability of Exceendance) defined in the given hazard curve.
 
-    :param hazard_curve: the hazard curve used to compute the PoOs.
-    :type hazard_curve: :py:class:`risklib.curve.Curve`
+    :param hazard_curve_values: the hazard curve used to compute the PoOs.
+    :type hazard_curve_values: an association list with imls and poes
     :param imls: the IMLs (Intensity Measure Level) of the
         vulnerability function used to interpolate the hazard curve.
     :type imls: list of floats
     """
 
+    hazard_curve = Curve(hazard_curve_values)
     poes = hazard_curve.ordinate_for(imls)
     return [subtract(x, y) for x, y in zip(poes, poes[1:])]
