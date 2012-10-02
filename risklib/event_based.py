@@ -81,6 +81,35 @@ def compute(sites, assets_getter,
     return aggregate_losses
 
 
+def aggregate_loss_curve(set_of_losses, tses, time_span, histogram_bins):
+    """
+    Compute the aggregate loss curve obtained by summing the given
+    set of losses.
+
+    :param set_of_losses: the set of losses.
+    :type set_of_losses: list of 1d `numpy.array`
+    :param tses: time representative of the stochastic event set.
+    :type tses: float
+    :param time_span: time span in which the ground motion fields (used
+        to generate the given set of losses) are generated.
+    :type time_span: float
+    :param histogram_bins: number of bins used when building the
+        histogram of losses.
+    :type histogram_bins: int
+    :returns: the aggregate loss curve.
+    :rtype: an instance of `risklib.curve.Curve`
+    """
+
+    losses = sum(set_of_losses)
+    loss_ratios_range = _compute_loss_ratios_range(losses, histogram_bins)
+
+    probs_of_exceedance = _compute_probs_of_exceedance(
+        _compute_rates_of_exceedance(_compute_cumulative_histogram(
+        losses, loss_ratios_range), tses), time_span)
+
+    return _generate_curve(loss_ratios_range, probs_of_exceedance)
+
+
 class EpsilonProvider(object):
     """
     Simple class for combining job configuration parameters and an `epsilon`
@@ -377,64 +406,6 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
         gmf_set["TimeSpan"])
 
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
-
-
-class AggregateLossCurve(object):
-    """Aggregate a set of losses and produce the resulting loss curve."""
-
-    def __init__(self):
-        self.losses = None
-
-    def append(self, losses):
-        """
-        Accumulate losses into a single sum.
-
-        :param losses: an array of loss values.
-        :type losses: 1-dimensional :py:class:`numpy.ndarray`
-        """
-
-        if self.losses is None:
-            # initialize the losses with the shape
-            # we are using in the computation
-            self.losses = numpy.zeros(losses.shape)
-
-        assert self.losses.shape == losses.shape
-
-        self.losses = self.losses + losses
-
-    @property
-    def empty(self):
-        """
-        Return true is this aggregate curve has no losses
-        associated, false otherwise.
-        """
-
-        return self.losses is None or len(self.losses) == 0
-
-    def compute(self, tses, time_span, loss_histogram_bins):
-        """
-        Compute the aggregate loss curve.
-
-        :param tses: time representative of the Stochastic Event Set.
-        :type tses: float
-        :param time_span: time span parameter.
-        :type time_span: float
-        :param int loss_histogram_bins:
-            The number of bins to use in the computed loss histogram.
-        :type loss_histogram_bins: integer
-        """
-
-        if self.empty:
-            return curve.EMPTY_CURVE
-
-        loss_range = _compute_loss_ratios_range(
-            self.losses, loss_histogram_bins)
-
-        probs_of_exceedance = _compute_probs_of_exceedance(
-            _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                self.losses, loss_range), tses), time_span)
-
-        return _generate_curve(loss_range, probs_of_exceedance)
 
 
 def _compute_insured_loss_curve(asset, loss_curve):
