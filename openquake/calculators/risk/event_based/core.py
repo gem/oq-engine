@@ -21,20 +21,17 @@
 
 import geohash
 from collections import defaultdict
-from celery.exceptions import TimeoutError
 
 from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
+from openquake.utils.tasks import distribute
 from openquake.calculators.risk import general
 from risklib import event_based, benefit_cost_ratio
 
 LOGGER = logs.LOG
 
-
-# Too many public methods
-# pylint: disable=R0904
 
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
@@ -47,29 +44,13 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     def execute(self):
         """Execute the job."""
 
-        aggregate_curve = event_based.AggregateLossCurve()
-
-        tasks = []
-        for block_id in self.job_ctxt.blocks_keys:
-            LOGGER.debug("Starting task block, block_id = %s of %s"
-                    % (block_id, len(self.job_ctxt.blocks_keys)))
-
-            tasks.append(general.compute_risk.delay(self.job_ctxt.job_id,
-                                                    block_id))
-
-        for task in tasks:
-            try:
-                task.wait()
-
-                if not self.is_benefit_cost_ratio_mode():
-                    aggregate_curve.append(task.result)
-            except TimeoutError:
-                # TODO(jmc): Cancel and respawn this task
-                return
+        region_losses = distribute(
+            general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
+            tf_args=dict(job_id=self.job_ctxt.job_id))
 
         if not self.is_benefit_cost_ratio_mode():
-            self.agg_curve = aggregate_curve.compute(
-                self._tses(), self._time_span(),
+            self.agg_curve = event_based.aggregate_loss_curve(
+                region_losses, self._tses(), self._time_span(),
                 self.job_ctxt.oq_job_profile.loss_histogram_bins)
 
     def post_execute(self):
