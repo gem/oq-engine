@@ -32,8 +32,7 @@ from risklib import event_based, benefit_cost_ratio
 
 LOGGER = logs.LOG
 
-# Too many public methods
-# pylint: disable=R0904
+
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
