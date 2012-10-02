@@ -30,7 +30,7 @@ from openquake.calculators.risk.general import (
     ProbabilisticRiskCalculator, compute_risk, Block,
     hazard_input_site, BaseRiskCalculator, compute_bcr_for_block)
 
-from risklib import classical, curve
+from risklib import classical
 
 LOGGER = logs.LOG
 
@@ -82,7 +82,7 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return curve.Curve(zip(job.profile().imls, hc.poes))
+        return zip(job.profile().imls, hc.poes)
 
     def _compute_loss(self, block_id):
         """
