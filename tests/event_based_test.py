@@ -26,8 +26,7 @@ from risklib.event_based import (
     _compute_insured_loss_curve, _compute_loss_ratios,
     _compute_loss_ratios_range, _compute_cumulative_histogram,
     _compute_rates_of_exceedance, _compute_probs_of_exceedance,
-    _compute_loss_ratio_curve, AggregateLossCurve, EpsilonProvider,
-    PERFECTLY_CORRELATED)
+    _compute_loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
 
 
 class InsuredLossesTestCase(unittest.TestCase):
@@ -531,21 +530,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, _compute_loss_ratio_curve(
             self.vulnerability_function1, gmfs, None, 25))
-
-    def test_empty_aggregate_curve_with_no_earthquakes(self):
-        """
-        With no earthquakes (that means no losses added or empty
-        arrays filled), the aggregate is an empty curve.
-        """
-
-        self.assertEqual(EMPTY_CURVE,
-            AggregateLossCurve().compute(0, 0, 0))
-
-        aggregate = AggregateLossCurve()
-        aggregate.append(numpy.array([]))
-        aggregate.append(numpy.array([]))
-
-        self.assertEqual(EMPTY_CURVE, aggregate.compute(0, 0, 0))
 
 
 class EpsilonProviderTestCase(unittest.TestCase):
