@@ -21,7 +21,6 @@ event based approach.
 """
 
 
-import numpy
 import os
 
 from openquake import logs
@@ -48,7 +47,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # sum of the assets losses of the
         # whole computation
-        self._sum_region_losses = None
+        self._region_losses = []
 
         # mean and standard deviation
         # loss of each asset
@@ -85,11 +84,9 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Mean region loss value: %s" % numpy.mean(
-            self._sum_region_losses)
-
-        print "Standard deviation region loss value: %s" % numpy.std(
-            self._sum_region_losses, ddof=1)
+        mean, stddev = scenario.aggregate_losses(self._region_losses)
+        print "Mean region loss value: %s" % mean
+        print "Standard deviation region loss value: %s" % stddev
 
     def execute(self):
         """
@@ -103,19 +100,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         vuln_model = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
-        region_losses = []
         region_loss_map_data = {}
 
-        region_data = distribute(
+        region_losses = distribute(
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
             tf_args=dict(job_id=self.job_ctxt.job_id,
             vuln_model=vuln_model, insured_losses=self._insured_losses))
 
-        for block_data in region_data:
-            region_losses.append(block_data[0])
+        for block_data in region_losses:
+            self._region_losses.append(block_data[0])
             collect_region_data(block_data[1], region_loss_map_data)
-
-        self._sum_region_losses = reduce(lambda x, y: x + y, region_losses)
 
         self._loss_map_data = [(site, data)
                 for site, data in region_loss_map_data.iteritems()]
