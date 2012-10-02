@@ -60,3 +60,8 @@ def compute(sites, assets_getter,
                               numpy.std(losses, ddof=1))
 
     return aggregate_losses
+
+
+def aggregate_losses(set_of_losses):
+    total_losses = sum(set_of_losses)
+    return numpy.mean(total_losses), numpy.std(total_losses, ddof=1)
