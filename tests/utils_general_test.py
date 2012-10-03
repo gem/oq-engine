@@ -124,3 +124,29 @@ class BlockSplitterTestCase(unittest.TestCase):
     def test_block_splitter_block_size_lt_zero(self):
         gen = block_splitter(self.DATA, -1)
         self.assertRaises(ValueError, gen.next)
+
+    def test_block_splitter_with_generator(self):
+        # Test the block with a data set of unknown length
+        # (such as a generator)
+        data = xrange(10)
+        expected = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9],
+        ]
+        actual = [x for x in block_splitter(data, 3)]
+        self.assertEqual(expected, actual)
+
+    def test_block_splitter_with_iter(self):
+        # Test the block with a data set of unknown length
+        # (such as a generator)
+        data = iter(range(10))
+        expected = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9],
+        ]
+        actual = [x for x in block_splitter(data, 3)]
+        self.assertEqual(expected, actual)
