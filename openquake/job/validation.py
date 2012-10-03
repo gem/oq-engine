@@ -278,8 +278,19 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
         hc = self.instance
 
         # contextual validation
-        # for the case where the user has requested to post-process GMFs into
-        # hazard curves
+
+        # It doesn't make sense to capture/export the `complete_logic_tree_gmf`
+        # when we're doing end-branch enumeration:
+        if (hc.number_of_logic_tree_samples == 0
+            and hc.complete_logic_tree_gmf is True):
+
+            msg = '`%s` is not available with end branch enumeration'
+            msg %= 'complete_logic_tree_gmf'
+            self._add_error('complete_logic_tree_gmf', msg)
+            all_valid = False
+
+        # For the case where the user has requested to post-process GMFs into
+        # hazard curves:
         if hc.hazard_curves_from_gmfs is True:
             # 1) We need to make sure `intensity_measure_types_and_levels` is
             #    defined (and valid)
