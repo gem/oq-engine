@@ -33,15 +33,30 @@ Typical values for M are about 10.
 
 * Considering maximum for both P and R is an extreme case.
 
-S * P * M = 100,000 * 1,000 * 10 = 1 Billion queries, in the extreme case
+P * R * M = 100,000 * 1,000 * 10 = 1 Billion queries, in the extreme case
 
 This could be the target for future optimizations.
 """
 
+import itertools
 
-def gmf_to_hazard_curve(job):
+import numpy
+
+from openquake.db import models
+from openquake.utils import config
+from openquake.utils import tasks as utils_tasks
+from openquake.utils.general import block_splitter
+
+
+def gmf_post_process_arg_gen(job):
     hc = job.hazard_calculation
     points = hc.points_to_compute()
+
+    lt_realizations = models.LtRealization.objects.filter(
+        hazard_calculation=hc.id)
+
+    invest_time = hc.investigation_time
+    duration = hc.ses_per_logic_tree_path * invest_time
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
         imt, sa_period, sa_damping = models.parse_imt(imt)
@@ -62,14 +77,61 @@ def gmf_to_hazard_curve(job):
             for point in points:
                 # yield args for tasks
                 yield (job.id, point, lt_rlz.id, imt, sa_period, sa_damping,
-                       imls, hc_coll.id)
+                       imls, hc_coll.id, invest_time, duration)
 
 
 @utils_tasks.oqtask
 def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, sa_period,
-                             sa_damping, imls, hc_coll_id):
+                             sa_damping, imls, hc_coll_id, invest_time,
+                             duration):
 
-    gmfs = get_gmfs(point, rlz, imt)  # TODO: query GMFs
-    haz_curve = compute_haz_curve(gmfs, imls, t/t0)  # see bug desc
-    save_haz_curve_to_db(
-        haz_curve, point, imt, sa_period, sa_damping, imls, hc_coll)
+    gmfs = models.Gmf.objects.filter(
+        gmf_set__gmf_collection__lt_realization=lt_rlz_id,
+        imt=imt,
+        sa_period=sa_period,
+        sa_damping=sa_damping,
+        location=point.wkt2d)
+
+    gmvs = itertools.chain(*(g.gmvs for g in gmfs))
+    hc_poes = gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+    # TODO: save the curve to the DB.
+
+
+def do_post_process(job):
+    logs.LOG.debug('> Post-processing - GMFs to Hazard Curves')
+    block_size = config.get('hazard', 'concurrent_tasks')
+    block_gen = block_splitter(gmf_post_process_arg_gen(job), block_size)
+
+    total_blocks = math.ceil((n_imts * n_sites * n_rlzs) / block_size)
+
+    for i, block in enumerate(block_gen):
+        logs.LOG.debug('> GMF post-processing block, %s of %s'
+                       % (i + 1, total_blocks))
+        tasks = []
+        for args in block:
+            tasks.append(gmf_to_hazard_curve_task.subtask(*args))
+        results = TaskSet(tasks=tasks).apply_async()
+
+        # Check for Exceptions in the results and raise
+        utils_tasks._check_exception(results)
+
+        logs.LOG.debug('> Done GMF post-processing block, %s of %s'
+                       % (i + 1, total_blocks))
+    logs.LOG.debug('< Done post-processing - GMFs to Hazard Curves')
+
+
+def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+    """
+    :returns:
+        List of PoEs (probabilities of exceedence).
+    """
+    gmvs = numpy.array(gmvs)
+    # convert to numpy arrary and redimension so that it can be broadcast with
+    # the gmvs for computing PoE values
+    imls = numpy.array(imls).reshape((len(imls), 1))
+
+    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
+
+    poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
+
+    return poes
