@@ -31,6 +31,10 @@ class AtkinsonBoore2006(GMPE):
     and published as "Earthquake Ground-Motion Prediction Equations
     for Eastern North America" (2006, Bulletin of the Seismological
     Society of America, Volume 96, No. 6, pages 2181-2205).
+    This class implements only the equations for stress parameter of
+    140 bars. The correction described in 'Adjustment of Equations
+    to Consider Alternative Stress Parameters', pag 2198, is not
+    implemented.
     It also implements the correction as described in the 'Erratum'
     (2007, Bulletin of the Seismological Society of America,
     Volume 97, No. 3, page 1032).
@@ -61,17 +65,15 @@ class AtkinsonBoore2006(GMPE):
 
     #: Required site parameters is Vs30. 
     #: See paragraph 'Equations for soil sites', pag 2200
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
-    #: Required rupture parameters are magnitude (see
-    #: paragraph 'Methodology and Model Parameters', pag 2182) 
-    #: and stress drop (see paragraph 'Adjustment of Equations
-    #: to Consider Alternative Stress Parameters', pag 2198)
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'stress_drop'))
+    #: Required rupture parameter is magnitude (see
+    #: paragraph 'Methodology and Model Parameters', pag 2182)
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
 
     #: Required distance measure is Rrup.
     #: See paragraph 'Methodology and Model Parameters', pag 2182
-    REQUIRES_DISTANCES = set(('rrup'))
+    REQUIRES_DISTANCES = set(('rrup', ))
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
