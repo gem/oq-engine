@@ -59,14 +59,16 @@ def str2bool(value):
 
 
 def block_splitter(data, block_size):
-    """Given a list of objects and a ``block_size``, generate slices from the
+    """
+    Given a sequence of objects and a ``block_size``, generate slices from the
     list. Each slice has a maximum size of ``block_size``.
 
     If ``block_size`` is greater than the length of ``data``, this simply
     yields the entire list.
 
     :param data:
-        A list of any type of object.
+        Any iterable sequence of data (including lists, iterators, and
+        generators).
     :param int block_size:
         Maximum size for each slice. Must be greater than 0.
     :raises:
@@ -77,5 +79,11 @@ def block_splitter(data, block_size):
             'Invalid block size: %s. Value must be greater than 0.'
             % block_size)
 
-    for i in xrange(0, len(data), block_size):
-        yield data[i:i + block_size]
+    block_buffer = []
+    for d in data:
+        block_buffer.append(d)
+        if len(block_buffer) == block_size:
+            yield block_buffer
+            block_buffer = []
+    if len(block_buffer) > 0:
+        yield block_buffer
