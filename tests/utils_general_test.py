@@ -140,7 +140,6 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def test_block_splitter_with_iter(self):
         # Test the block with a data set of unknown length
-        # (such as a generator)
         data = iter(range(10))
         expected = [
             [0, 1, 2],
