@@ -34,11 +34,11 @@ class PointSource(SeismicSource):
     :param lower_seismogenic_depth:
         Maximum depth an earthquake rupture can reach, in km.
     :param location:
-        :class:`~nhlib.geo.Point` object representing the location
+        :class:`~nhlib.geo.point.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
         :class:`~nhlib.pmf.PMF` object with values that are instances
-        of :class:`nhlib.source.nodalplane.NodalPlane`. Shows the distribution
+        of :class:`nhlib.geo.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
         :class:`~nhlib.pmf.PMF` with values being float numbers in km
@@ -197,7 +197,7 @@ class PointSource(SeismicSource):
         for given magnitude ``mag`` and nodal plane.
 
         :param nodal_plane:
-            Instance of :class:`nhlib.source.nodalplane.NodalPlane`.
+            Instance of :class:`nhlib.geo.nodalplane.NodalPlane`.
         :returns:
             Tuple of two items: rupture length in width in km.
 
@@ -236,7 +236,7 @@ class PointSource(SeismicSource):
             Magnitude value, used to calculate rupture dimensions,
             see :meth:`_get_rupture_dimensions`.
         :param nodal_plane:
-            Instance of :class:`nhlib.source.nodalplane.NodalPlane`
+            Instance of :class:`nhlib.geo.nodalplane.NodalPlane`
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.

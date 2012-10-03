@@ -2,5 +2,5 @@
 Various utilities
 =================
 
-.. automodule:: nhlib.geo._utils
+.. automodule:: nhlib.geo.utils
     :members:

@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package-private module :mod:`nhlib.geo._utils` contains functions that are
-common to several geographical primitives.
+Module :mod:`nhlib.geo.utils` contains functions that are common to several
+geographical primitives and some other low-level spatial operations.
 """
 import numpy
 import shapely.geometry
@@ -49,11 +49,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     longitudes and latitudes (depth is not taken into account).
 
     :param closed_shape:
-        If ``True`` the line will be checked twice: first time with its
-        original shape and second time with the points sequence being
-        shifted by one point (the last point becomes first, the first
-        turns second and so on). This is useful for checking that
-        the sequence of points defines a valid :class:`Polygon`.
+        If ``True`` the line will be checked twice: first time with
+        its original shape and second time with the points sequence
+        being shifted by one point (the last point becomes first,
+        the first turns second and so on). This is useful for
+        checking that the sequence of points defines a valid
+        :class:`~nhlib.geo.polygon.Polygon`.
     """
     assert len(lons) == len(lats)
 
@@ -88,12 +89,7 @@ def get_longitudinal_extent(lon1, lon2):
         otherwise. Absolute value of the result doesn't exceed 180 for
         valid parameters values.
     """
-    extent = lon2 - lon1
-    if extent > 180:
-        extent = -360 + extent
-    elif extent < -180:
-        extent = 360 + extent
-    return extent
+    return (lon2 - lon1 + 180) % 360 - 180
 
 
 def get_spherical_bounding_box(lons, lats):
@@ -165,10 +161,10 @@ def get_orthographic_projection(west, east, north, south):
     This projection is prone to distance, area and angle distortions
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
-    :func:`_line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`Polygon.discretize`). It can be also used for measuring
-    distance to an extent of around 700 kilometers (error doesn't exceed
-    1 km up until then).
+    :func:`line_intersects_itself`) or if point is inside of a polygon
+    (like in :meth:`nhlib.geo.polygon.Polygon.discretize`). It can be also
+    used for measuring distance to an extent of around 700 kilometers (error
+    doesn't exceed 1 km up until then).
     """
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
     cos_phi0 = numpy.cos(phi0)
@@ -317,3 +313,53 @@ def normalized(vector):
     length = numpy.sum(vector * vector, axis=-1)
     length = numpy.sqrt(length.reshape(length.shape + (1, )))
     return vector / length
+
+
+def point_to_polygon_distance(polygon, pxx, pyy):
+    """
+    Calculate the distance to polygon for each point of the collection
+    on the 2d Cartesian plane.
+
+    :param polygon:
+        Shapely "Polygon" geometry object.
+    :param pxx:
+        List or numpy array of abscissae values of points to calculate
+        the distance from.
+    :param pyy:
+        Same structure as ``pxx``, but with ordinate values.
+    :returns:
+        Numpy array of distances in units of coordinate system. Points
+        that lie inside the polygon have zero distance.
+    """
+    pxx = numpy.array(pxx)
+    pyy = numpy.array(pyy)
+    assert pxx.shape == pyy.shape
+    if pxx.ndim == 0:
+        pxx = pxx.reshape((1, ))
+        pyy = pyy.reshape((1, ))
+    result = numpy.array([
+        polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
+        for i in xrange(pxx.size)
+    ])
+    return result.reshape(pxx.shape)
+
+
+try:
+    from nhlib.geo import _utils_speedups
+except ImportError:
+    # speedups extension is not available
+    import warnings
+    warnings.warn("geoutils speedups are not available", RuntimeWarning)
+else:
+    from nhlib import speedups
+
+    def _c_point_to_polygon_distance(polygon, pxx, pyy):
+        pxx = numpy.array(pxx, float)
+        pyy = numpy.array(pyy, float)
+        cxx, cyy = numpy.array(polygon.exterior).transpose()
+        return _utils_speedups.point_to_polygon_distance(
+            cxx, cyy, pxx, pyy
+        )
+
+    speedups.register(point_to_polygon_distance, _c_point_to_polygon_distance)
+    del _c_point_to_polygon_distance

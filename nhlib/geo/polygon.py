@@ -21,7 +21,7 @@ import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as utils
+from nhlib.geo import utils
 
 
 #: Polygon upsampling step for long edges, in kilometers.
@@ -34,10 +34,10 @@ class Polygon(object):
     Polygon objects represent an area on the Earth surface.
 
     :param points:
-        The list of :class:`Point` objects defining the polygon vertices.
-        The points are connected by great circle arcs in order of appearance.
-        Polygon segment should not cross another polygon segment. At least
-        three points must be defined.
+        The list of :class:`~nhlib.geo.point.Point` objects defining the
+        polygon vertices. The points are connected by great circle arcs
+        in order of appearance. Polygon segment should not cross another
+        polygon segment. At least three points must be defined.
     :raises ValueError:
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
@@ -59,6 +59,22 @@ class Polygon(object):
         self._bbox = None
         self._projection = None
         self._polygon2d = None
+
+    @property
+    def wkt(self):
+        """
+        Generate WKT (Well-Known Text) to represent this polygon.
+        """
+        pairs = []
+        for i, lon in enumerate(self.lons):
+            lat = self.lats[i]
+            pairs.append('%s %s' % (lon, lat))
+
+        # The polygon must form a closed loop; first and last coord pairs are
+        # the same.
+        pairs.append(pairs[0])
+
+        return 'POLYGON((%s))' % ', '.join(pairs)
 
     @classmethod
     def _from_2d(cls, polygon2d, proj):
@@ -134,7 +150,7 @@ class Polygon(object):
 
     def intersects(self, mesh):
         """
-        Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
+        Check for intersection with each point of the ``mesh``.
 
         Mesh coordinate values are in decimal degrees.
 
@@ -147,17 +163,8 @@ class Polygon(object):
             for points that neither lie inside nor touch the boundary.
         """
         self._init_polygon2d()
-        xx, yy = self._projection(mesh.lons, mesh.lats)
-
-        result = numpy.empty(mesh.lons.shape, dtype=bool)
-
-        for i in xrange(mesh.lons.size):
-            intersects = self._polygon2d.intersects(
-                shapely.geometry.Point(xx.item(i), yy.item(i))
-            )
-            result.itemset(i, intersects)
-
-        return result
+        pxx, pyy = self._projection(mesh.lons, mesh.lats)
+        return utils.point_to_polygon_distance(self._polygon2d, pxx, pyy) == 0
 
     def discretize(self, mesh_spacing):
         """

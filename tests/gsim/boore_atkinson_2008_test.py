@@ -20,24 +20,31 @@ from tests.gsim.utils import BaseGSIMTestCase
 
 class BooreAtkinson2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreAtkinson2008
+    
+    # Test data were adapted from OpenSHA test tables.
+    # Extra tables for inter and intra event standard deviations
+    # were generated from the OpenSHA implementation.
 
-    # test data were generated using opensha implementation of GMPE
-    # corrected for pga4nl calculation (using Mref = 5.0 instead of
-    # Mref = 1.0) as described in caption to table 6 (pag 119) of
-    # BA2008 paper
-
-    def test_mean(self):
-        self.check('BA08/BA08_MEAN.csv',
-                    max_discrep_percentage=0.1)
+    def test_mean_normal(self):
+        self.check('NGA/BA08/BA08_MEDIAN_NM.csv',
+                    max_discrep_percentage=0.6)
+                    
+    def test_mean_reverse(self):
+        self.check('NGA/BA08/BA08_MEDIAN_RV.csv',
+                    max_discrep_percentage=0.6)
+                    
+    def test_mean_strike_slip(self):
+        self.check('NGA/BA08/BA08_MEDIAN_SS.csv',
+                    max_discrep_percentage=0.6)
                     
     def test_std_intra(self):
-        self.check('BA08/BA08_STD_INTRA.csv',
+        self.check('NGA/BA08/BA08_STD_INTRA.csv',
                     max_discrep_percentage=0.1)
                     
     def test_std_inter(self):
-        self.check('BA08/BA08_STD_INTER.csv',
+        self.check('NGA/BA08/BA08_STD_INTER.csv',
                     max_discrep_percentage=0.1)
                     
-    def test_std_total(self):
-        self.check('BA08/BA08_STD_TOTAL.csv',
+    def test_std_total_strike_slip(self):
+        self.check('NGA/BA08/BA08_SIGTM_SS.csv',
                     max_discrep_percentage=0.1)

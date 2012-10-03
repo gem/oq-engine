@@ -19,6 +19,7 @@ Truncated Gutenberg-Richter
 
 .. automodule:: nhlib.mfd.truncated_gr
     :members:
+    :private-members:
 
 
 

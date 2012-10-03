@@ -16,10 +16,11 @@
 """
 Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
+import numpy
 import shapely.geometry
 
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class Point(object):
@@ -59,6 +60,14 @@ class Point(object):
         self.depth = depth
         self.latitude = latitude
         self.longitude = longitude
+
+    @property
+    def wkt2d(self):
+        """
+        Generate WKT (Well-Known Text) to represent this point in 2 dimensions
+        (ignoring depth).
+        """
+        return 'POINT(%s %s)' % (self.longitude, self.latitude)
 
     def point_at(self, horizontal_distance, vertical_increment, azimuth):
         """
@@ -125,6 +134,33 @@ class Point(object):
         """
         return geodetic.distance(self.longitude, self.latitude, self.depth,
                                  point.longitude, point.latitude, point.depth)
+
+    def distance_to_mesh(self, mesh, with_depths=True):
+        """
+        Compute distance (in km) between this point and each point of ``mesh``.
+
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to calculate distance to.
+        :param with_depths:
+            If ``True`` (by default), distance is calculated between actual
+            point and the mesh, geodetic distance of projections is combined
+            with vertical distance (difference of depths). If this is set
+            to ``False``, only geodetic distance between projections
+            is calculated.
+        :returns:
+            Numpy array of floats of the same shape as ``mesh`` with distance
+            values in km in respective indices.
+        """
+        if with_depths:
+            if mesh.depths is None:
+                mesh_depths = numpy.zeros_like(mesh.lons)
+            else:
+                mesh_depths = mesh.depths
+            return geodetic.distance(self.longitude, self.latitude, self.depth,
+                                     mesh.lons, mesh.lats, mesh_depths)
+        else:
+            return geodetic.geodetic_distance(self.longitude, self.latitude,
+                                              mesh.lons, mesh.lats)
 
     def __str__(self):
         """

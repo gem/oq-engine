@@ -23,7 +23,7 @@ import numpy
 
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -116,10 +116,9 @@ class SimpleFaultSurface(BaseSurface):
         """
         Create and return a fault surface using fault source data.
 
-        :param fault_trace:
+        :param nhlib.geo.line.Line fault_trace:
             Geographical line representing the intersection between
-            the fault surface and the earth surface, an instance
-            of :class:`nhlib.Line`.
+            the fault surface and the earth surface.
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -201,3 +200,17 @@ class SimpleFaultSurface(BaseSurface):
         lons = numpy.array(lons, float)
         lats = numpy.array(lats, float)
         return Mesh(lons, lats, depths=None).get_convex_hull()
+
+    def get_width(self):
+        """
+        Return surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The width is computed as the average width along the surface.
+        See
+        :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_width`
+        """
+        # calculate width only along the first mesh column, because
+        # width is uniform for simple faults
+        left_column = self.get_mesh()[:,0:2]
+        return left_column.get_mean_width()

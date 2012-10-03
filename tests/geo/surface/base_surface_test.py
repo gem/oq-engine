@@ -41,6 +41,9 @@ class DummySurface(BaseSurface):
     def get_dip(self):
         raise NotImplementedError()
 
+    def get_width(self):
+        raise NotImplementedError()
+
 
 class GetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
@@ -79,11 +82,11 @@ class GetMinDistanceTestCase(unittest.TestCase):
 
 class GetJoynerBooreDistanceTestCase(unittest.TestCase):
     def test_point_inside(self):
-        corners = [[(-1, -1, 1), (1, -1, 1)],
-                   [(-1, 1, 2), (1, 1, 2)]]
+        corners = [[(-0.1, -0.1, 1), (0.1, -0.1, 1)],
+                   [(-0.1, 0.1, 2), (0.1, 0.1, 2)]]
         surface = DummySurface(corners)
         sites = Mesh.from_points_list([Point(0, 0), Point(0, 0, 20),
-                                       Point(0.1, 0.3)])
+                                       Point(0.01, 0.03)])
         dists = surface.get_joyner_boore_distance(sites)
         expected_dists = [0] * 3
         self.assertTrue(numpy.allclose(dists, expected_dists))

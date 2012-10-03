@@ -19,6 +19,8 @@ import numpy
 
 from nhlib.geo import geodetic
 
+from tests import SpeedupsTestCase
+
 
 # these points and tests that use them are from
 # http://williams.best.vwh.net/avform.htm#Example
@@ -26,7 +28,7 @@ LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
 
-class TestGeodeticDistance(unittest.TestCase):
+class TestGeodeticDistance(SpeedupsTestCase):
     def test_LAX_to_JFK(self):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
         self.assertAlmostEqual(dist, 0.623585 * geodetic.EARTH_RADIUS,
@@ -122,7 +124,7 @@ class TestAzimuth(unittest.TestCase):
         self.assertTrue(numpy.allclose(az, eazimuths), str(az))
 
 
-class TestDistance(unittest.TestCase):
+class TestDistance(SpeedupsTestCase):
     def test(self):
         p1 = (0, 0, 10)
         p2 = (0.5, -0.3, 5)
@@ -130,16 +132,23 @@ class TestDistance(unittest.TestCase):
         self.assertAlmostEqual(distance, 65.0295143)
 
 
-class MinDistanceTest(unittest.TestCase):
+class MinDistanceTest(SpeedupsTestCase):
     # test relies on geodetic.distance() to work right
     def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
-              expected_mpoint_indexes):
-        mlons, mlats, mdepths = map(numpy.array, (mlons, mlats, mdepths))
+              expected_mpoint_indices):
+        mlons, mlats, mdepths = [numpy.array(arr, float)
+                                 for arr in (mlons, mlats, mdepths)]
+        slons, slats, sdepths = [numpy.array(arr, float)
+                                 for arr in (slons, slats, sdepths)]
+        actual_indices = geodetic.min_distance(mlons, mlats, mdepths,
+                                               slons, slats, sdepths,
+                                               indices=True)
+        numpy.testing.assert_equal(actual_indices, expected_mpoint_indices)
         dists = geodetic.min_distance(mlons, mlats, mdepths,
                                       slons, slats, sdepths)
-        expected_closest_mlons = mlons[expected_mpoint_indexes]
-        expected_closest_mlats = mlats[expected_mpoint_indexes]
-        expected_closest_mdepths = mdepths[expected_mpoint_indexes]
+        expected_closest_mlons = mlons.flat[expected_mpoint_indices]
+        expected_closest_mlats = mlats.flat[expected_mpoint_indices]
+        expected_closest_mdepths = mdepths.flat[expected_mpoint_indices]
         expected_distances = geodetic.distance(
             expected_closest_mlons, expected_closest_mlats,
             expected_closest_mdepths,
@@ -147,25 +156,37 @@ class MinDistanceTest(unittest.TestCase):
         )
         self.assertTrue((dists == expected_distances).all())
 
+        # testing min_geodetic_distance with the same lons and lats
+        min_geod_distance = geodetic.min_geodetic_distance(mlons, mlats,
+                                                           slons, slats)
+        min_geo_distance2 = geodetic.min_distance(mlons, mlats, mdepths * 0,
+                                                  slons, slats, sdepths * 0)
+        numpy.testing.assert_almost_equal(min_geod_distance, min_geo_distance2)
+
     def test_one_point(self):
         mlons = numpy.array([-0.1, 0.0, 0.1])
         mlats = numpy.array([0.0, 0.0, 0.0])
         mdepths = numpy.array([0.0, 10.0, 20.0])
 
         self._test(mlons, mlats, mdepths, -0.05, 0.0, 0,
-                   expected_mpoint_indexes=0)
-        self._test(mlons, mlats, mdepths, -0.1, 0.0, 20.0,
-                   expected_mpoint_indexes=1)
+                   expected_mpoint_indices=0)
+        self._test(mlons, mlats, mdepths, [-0.1], [0.0], [20.0],
+                   expected_mpoint_indices=1)
 
     def test_several_points(self):
         self._test(mlons=[10., 11.], mlats=[-40, -41], mdepths=[10., 20.],
                    slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
-                   expected_mpoint_indexes=[0, 1])
+                   expected_mpoint_indices=[0, 1])
 
     def test_different_shapes(self):
         self._test(mlons=[0.5, 0.7], mlats=[0.7, 0.9], mdepths=[13., 17.],
                    slons=[-0.5] * 3, slats=[0.6] * 3, sdepths=[0.1] * 3,
-                   expected_mpoint_indexes=[0, 0, 0])
+                   expected_mpoint_indices=[0, 0, 0])
+
+    def test_rect_mesh(self):
+        self._test(mlons=[[10., 11.]], mlats=[[-40, -41]], mdepths=[[1., 2.]],
+                   slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
+                   expected_mpoint_indices=[0, 1])
 
 
 class DistanceToArcTest(unittest.TestCase):

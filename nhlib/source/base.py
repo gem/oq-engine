@@ -18,8 +18,6 @@ Module :mod:`nhlib.source.base` defines a base class for seismic sources.
 """
 import abc
 
-from nhlib import const
-
 
 class SeismicSource(object):
     """
@@ -32,7 +30,7 @@ class SeismicSource(object):
     :param name:
         String, a human-readable name of the source.
     :param tectonic_region_type:
-        Source's tectonic regime. See :class:`const.TRT`.
+        Source's tectonic regime. See :class:`nhlib.const.TRT`.
     :param mfd:
         Magnitude-Frequency distribution for the source. See :mod:`nhlib.mfd`.
     :param rupture_mesh_spacing:
@@ -178,18 +176,20 @@ class SeismicSource(object):
         distance from the rupture's surface projection along the great
         circle arc (this is known as :meth:`Joyner-Boore distance
         <nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`).
-        Since general-purpose Joyner-Boore distance calculator takes
-        significant time, the base class implementation performs no filtering
-        and just returns ``sites`` parameter unchanged.
+
+        Base class implementation performs Joyner-Boore distance calculation
+        (:meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`)
+        and filters out sites that are farther than ``integration_distance``.
         """
-        return sites
+        jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
+        return sites.filter(jb_dist <= integration_distance)
 
     def get_annual_occurrence_rates(self, min_rate=0):
         """
         Get a list of pairs "magnitude -- annual occurrence rate".
 
         The list is taken from assigned MFD object
-        (see :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rate`)
+        (see :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:

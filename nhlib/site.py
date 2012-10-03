@@ -36,7 +36,7 @@ class Site(object):
         and ``False`` if it was inferred.
     :param z1pt0:
         Vertical distance from earth surface to the layer where seismic waves
-        start to propagate with a speed above 1.0 km/sec, in km.
+        start to propagate with a speed above 1.0 km/sec, in meters.
     :param z2pt5:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.

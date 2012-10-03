@@ -45,9 +45,9 @@ class SimpleFaultSource(SeismicSource):
     parameters.
 
     :raises ValueError:
-        If :meth:`SimpleFaultSurface.check_fault_data` fails, if rake value
-        is invalid and if rupture mesh spacing is too low for the lowest
-        magnitude value.
+        If :meth:`~nhlib.geo.surface.simple_fault.SimpleFaultSurface.check_fault_data`
+        fails, if rake value is invalid and if rupture mesh spacing is too high
+        for the lowest magnitude value.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -116,8 +116,8 @@ class SimpleFaultSource(SeismicSource):
         )
         whole_fault_mesh = whole_fault_surface.get_mesh()
         mesh_rows, mesh_cols = whole_fault_mesh.shape
-        fault_length = (mesh_cols - 1) * self.rupture_mesh_spacing
-        fault_width = (mesh_rows - 1) * self.rupture_mesh_spacing
+        fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
+        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
 
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
@@ -165,10 +165,9 @@ class SimpleFaultSource(SeismicSource):
         rup_length = math.sqrt(area * self.rupture_aspect_ratio)
         rup_width = area / rup_length
 
-        # clip rupture's length and width to
-        # fault's length and width if both rupture
-        # dimensions are greater than fault dimensions
-        if rup_length > fault_length and rup_width > fault_width:
+        # clip rupture's length and width to fault's length and width
+        # if there is no way to fit the rupture otherwise
+        if area >= fault_length * fault_width:
             rup_length = fault_length
             rup_width = fault_width
         # reshape rupture (conserving area) if its length or width

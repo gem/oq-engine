@@ -32,7 +32,7 @@ def hazard_curves_poissonian(
     and a set of ground shaking intensity models (one per tectonic region type
     considered in the seismic sources).
 
-    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonianTOM>`
+    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonTOM>`
     temporal occurrence model.
 
     The calculator computes probability of ground motion exceedance according
@@ -83,7 +83,7 @@ def hazard_curves_poissonian(
         ruptures_sites = ((rupture, s_sites)
                           for rupture in source.iter_ruptures(tom))
         for rupture, r_sites in rupture_site_filter(ruptures_sites):
-            prob = rupture.get_probability()
+            prob = rupture.get_probability_one_or_more_occurrences()
             gsim = gsims[rupture.tectonic_region_type]
             sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
             for imt in imts:

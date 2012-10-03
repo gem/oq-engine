@@ -21,10 +21,10 @@ import numpy
 
 from nhlib.geo import Point
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo import geodetic
 from nhlib.geo.nodalplane import NodalPlane
-from nhlib.geo import _utils as geo_utils
+from nhlib.geo import utils as geo_utils
 
 
 class PlanarSurface(BaseSurface):
@@ -160,6 +160,8 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
+        # but do call BaseSurface's one
+        BaseSurface.__init__(nsurf)
         nsurf.mesh_spacing = self.mesh_spacing
         nsurf.dip = self.dip
         nsurf.strike = self.strike
@@ -194,7 +196,7 @@ class PlanarSurface(BaseSurface):
 
     def _create_mesh(self):
         """
-        See :meth:`nhlib.surface.base.BaseSurface._create_mesh`.
+        See :meth:`nhlib.geo.surface.base.BaseSurface._create_mesh`.
         """
         llons, llats, ldepths = geodetic.intervals_between(
             self.top_left.longitude, self.top_left.latitude,
@@ -259,10 +261,27 @@ class PlanarSurface(BaseSurface):
         yy = (vectors2d * self.uv2).sum(axis=-1)
         return dists, xx, yy
 
+    def _project_back(self, dists, xx, yy):
+        """
+        Convert coordinates in plane's Cartesian space back to spherical
+        coordinates.
+
+        Parameters are numpy arrays, as returned from :meth:`_project`, which
+        this method does the opposite to.
+
+        :return:
+            Tuple of longitudes, latitudes and depths numpy arrays.
+        """
+        vectors = self.zero_zero \
+                  + self.uv1 * xx.reshape(xx.shape + (1, )) \
+                  + self.uv2 * yy.reshape(yy.shape + (1, )) \
+                  + self.normal * dists.reshape(dists.shape + (1, ))
+        return geo_utils.cartesian_to_spherical(vectors)
+
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <nhlib.geo.surface.base.get_min_distance>`.
+        <nhlib.geo.surface.base.BaseSurface.get_min_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -344,10 +363,25 @@ class PlanarSurface(BaseSurface):
         # with a distance to a plane
         return numpy.sqrt(dists ** 2 + dists2d_squares)
 
+    def get_closest_points(self, mesh):
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.BaseSurface.get_closest_points>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
+        mxx = xx.clip(0, self.length)
+        myy = yy.clip(0, self.width)
+        dists.fill(0)
+        lons, lats, depths = self._project_back(dists, mxx, myy)
+        return Mesh(lons, lats, depths)
+
     def _get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <nhlib.geo.surface.BaseSurface._get_top_edge_centroid>`
+        <nhlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
@@ -359,7 +393,7 @@ class PlanarSurface(BaseSurface):
     def get_top_edge_depth(self):
         """
         Overrides :meth:`superclass' method
-        <nhlib.geo.surface.BaseSurface.get_top_edge_depth>`
+        <nhlib.geo.surface.base.BaseSurface.get_top_edge_depth>`
         in order to avoid creating a mesh.
         """
         return self.corner_depths[0]
@@ -367,7 +401,7 @@ class PlanarSurface(BaseSurface):
     def get_joyner_boore_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <nhlib.geo.surface.base.get_joyner_boore_distance>`.
+        <nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -418,9 +452,9 @@ class PlanarSurface(BaseSurface):
         # ... and distances from all the target points to each of surface's
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
-        dists_to_corners = geodetic.geodetic_distance(
-            self.corner_lons, self.corner_lats, mesh_lons, mesh_lats
-        ).min(axis=-1)
+        dists_to_corners = geodetic.min_geodetic_distance(
+            self.corner_lons, self.corner_lats, mesh.lons, mesh.lats
+        )
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means
@@ -458,3 +492,10 @@ class PlanarSurface(BaseSurface):
             # default -- case "IV"
             default=0
         )
+
+    def get_width(self):
+        """
+        Return surface's width value (in km) as computed in the constructor
+        (that is mean value of left and right surface sides).
+        """
+        return self.width

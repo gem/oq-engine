@@ -23,6 +23,7 @@ import abc
 import math
 
 import scipy.stats
+from scipy.special import ndtr
 import numpy
 
 from nhlib import const
@@ -216,15 +217,11 @@ class GroundShakingIntensityModel(object):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if not issubclass(type(imt), imt_module._IMT):
-            raise ValueError('imt must be an instance of IMT subclass')
-        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            raise ValueError('imt %s is not supported by %s' %
-                             (type(imt).__name__, type(self).__name__))
+        self._check_imt(imt)
 
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
-            imls = self._convert_imls(imls)
+            imls = self.to_distribution_values(imls)
             mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
             return (imls <= mean).astype(float)
@@ -232,24 +229,108 @@ class GroundShakingIntensityModel(object):
             # use real normal distribution
             assert (const.StdDev.TOTAL
                     in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            if truncation_level is None:
-                distribution = scipy.stats.norm()
-            else:
-                distribution = scipy.stats.truncnorm(- truncation_level,
-                                                     truncation_level)
-            imls = self._convert_imls(imls)
+            imls = self.to_distribution_values(imls)
             mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
             stddev = stddev.reshape(stddev.shape + (1, ))
-            return distribution.sf((imls - mean) / stddev)
+            values = (imls - mean) / stddev
+            if truncation_level is None:
+                return _norm_sf(values)
+            else:
+                return _truncnorm_sf(truncation_level, values)
+
+    def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
+                         truncation_level, n_epsilons):
+        """
+        Disaggregate (separate) PoE of ``iml`` in different contributions
+        each coming from ``n_epsilons`` distribution bins.
+
+        If ``truncation_level = 3``, ``n_epsilons = 3``, bin edges are
+        ``-3 .. -1``, ``-1 .. +1`` and ``+1 .. +3``.
+
+        :param n_epsilons:
+            Integer number of bins to split truncated Gaussian distribution to.
+
+        Other parameters are the same as for :meth:`get_poes`, with
+        differences that ``iml`` is only one single intensity level
+        and ``truncation_level`` is required to be positive.
+
+        :returns:
+            Contribution to probability of exceedance of ``iml`` coming
+            from different sigma bands in a form of 1d numpy array with
+            ``n_epsilons`` floats between 0 and 1.
+        """
+        if not truncation_level > 0:
+            raise ValueError('truncation level must be positive')
+        self._check_imt(imt)
+
+        # compute mean and standard deviations
+        mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                   [const.StdDev.TOTAL])
+
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        iml = self.to_distribution_values(iml)
+        standard_imls = (iml - mean) / stddev
+
+        distribution = scipy.stats.truncnorm(- truncation_level,
+                                             truncation_level)
+        epsilons = numpy.linspace(- truncation_level, truncation_level,
+                                  n_epsilons + 1)
+        # compute epsilon bins contributions
+        contribution_by_bands = distribution.cdf(epsilons[1:]) \
+                                - distribution.cdf(epsilons[:-1])
+
+        # take the minimum epsilon larger than standard_iml
+        iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
+
+        return numpy.array([
+            # take full disaggregated distribution for the case of
+            # ``iml <= mean - truncation_level * stddev``
+            contribution_by_bands
+            if idx <= 0 else
+
+            # take zeros if ``iml >= mean + truncation_level * stddev``
+            numpy.zeros(n_epsilons)
+            if idx >= n_epsilons else
+
+            # for other cases (when ``iml`` falls somewhere in the
+            # histogram):
+            numpy.concatenate((
+                # take zeros for bins that are on the left hand side
+                # from the bin ``iml`` falls into,
+                numpy.zeros(idx - 1),
+                # ... area of the portion of the bin containing ``iml``
+                # (the portion is limited on the left hand side by
+                # ``iml`` and on the right hand side by the bin edge),
+                [distribution.sf(standard_imls[i])
+                 - contribution_by_bands[idx:].sum()],
+                # ... and all bins on the right go unchanged.
+                contribution_by_bands[idx:]
+            ))
+
+            for i, idx in enumerate(iml_bin_indices)
+        ])
 
     @abc.abstractmethod
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Convert a list of IML values to a numpy array and convert the actual
-        values with respect to intensity measure distribution (like taking
-        the natural logarithm for :class:`GMPE`).
+        Convert a list or array of values in units of IMT to a numpy array
+        of values of intensity measure distribution (like taking the natural
+        logarithm for :class:`GMPE`).
+
+        This method is implemented by both :class:`GMPE` and :class:`IPE`
+        so there is no need to override it in actual GSIM implementations.
+        """
+
+    @abc.abstractmethod
+    def to_imt_unit_values(self, values):
+        """
+        Convert a list or array of values of intensity measure distribution
+        (like ones returned from :meth:`get_mean_and_stddevs`) to values
+        in units of IMT. This is the opposite operation
+        to :meth:`to_distribution_values`.
 
         This method is implemented by both :class:`GMPE` and :class:`IPE`
         so there is no need to override it in actual GSIM implementations.
@@ -286,6 +367,14 @@ class GroundShakingIntensityModel(object):
                 dist = rupture.surface.get_joyner_boore_distance(
                     site_collection.mesh
                 )
+            elif param == 'rhypo':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh
+                )
+            elif param == 'repi':
+                dist = rupture.hypocenter.distance_to_mesh(
+                    site_collection.mesh, with_depths=False
+                )
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -310,12 +399,95 @@ class GroundShakingIntensityModel(object):
                 value = rupture.rake
             elif param == 'ztor':
                 value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_depth':
+                value = rupture.hypocenter.depth
+            elif param == 'width':
+                value = rupture.surface.get_width()
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(rctx, param, value)
 
         return sctx, rctx, dctx
+
+    def _check_imt(self, imt):
+        """
+        Make sure that ``imt`` is valid and is supported by this GSIM.
+        """
+        if not issubclass(type(imt), imt_module._IMT):
+            raise ValueError('imt must be an instance of IMT subclass')
+        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            raise ValueError('imt %s is not supported by %s' %
+                             (type(imt).__name__, type(self).__name__))
+
+
+def _truncnorm_sf(truncation_level, values):
+    """
+    Survival function for truncated normal distribution.
+
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation.
+
+    :param truncation_level:
+        Positive float number representing the truncation on both sides
+        around the mean, in units of sigma.
+    :param values:
+        Numpy array of values as input to a survival function for the given
+        distribution.
+    :returns:
+        Numpy array of survival function results in a range between 0 and 1.
+
+    >>> from scipy.stats import truncnorm
+    >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
+    True
+    """
+    # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
+    # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
+
+    # "CDF" in comments refers to cumulative distribution function
+    # of non-truncated distribution with that mu and sigma values.
+
+    # assume symmetric truncation, that is ``a = - truncation_level``
+    # and ``b = + truncation_level``.
+
+    # calculate CDF of b
+    phi_b = ndtr(truncation_level)
+
+    # calculate Z as ``Z = CDF(b) - CDF(a)``, here we assume that
+    # ``CDF(a) == CDF(- truncation_level) == 1 - CDF(b)``
+    z = phi_b * 2 - 1
+
+    # calculate the result of survival function of ``values``,
+    # and restrict it to the interval where probability is defined --
+    # 0..1. here we use some transformations of the original formula
+    # that is ``SF(x) = 1 - (CDF(x) - CDF(a)) / Z`` in order to minimize
+    # number of arithmetic operations and function calls:
+    # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
+    # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
+    return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
+
+
+def _norm_sf(values):
+    """
+    Survival function for normal distribution.
+
+    Assumes zero mean and standard deviation equal to one.
+
+    ``values`` parameter and the return value are the same
+    as in :func:`_truncnorm_sf`.
+
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _norm_sf(0.12345)
+    True
+    """
+    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
+    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
+    # that the normal distribution is symmetric with respect to 0)
+    # the integral between ``[x, +infinity]`` (that is the survival
+    # function) is equal to the integral between ``[-infinity, -x]``
+    # (that is the CDF at ``- x``).
+    return ndtr(- values)
 
 
 class GMPE(GroundShakingIntensityModel):
@@ -328,11 +500,17 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Returns numpy array of natural logarithms of ``imls``.
+        Returns numpy array of natural logarithms of ``values``.
         """
-        return numpy.log(imls)
+        return numpy.log(values)
+
+    def to_imt_unit_values(self, values):
+        """
+        Returns numpy array of exponents of ``values``.
+        """
+        return numpy.exp(values)
 
 
 class IPE(GroundShakingIntensityModel):
@@ -342,11 +520,17 @@ class IPE(GroundShakingIntensityModel):
     intensity measures that are normally distributed. In particular,
     for :class:`~nhlib.imt.MMI`.
     """
-    def _convert_imls(self, imls):
+    def to_distribution_values(self, values):
         """
-        Returns numpy array of ``imls`` without any conversion.
+        Returns numpy array of ``values`` without any conversion.
         """
-        return numpy.array(imls, dtype=float)
+        return numpy.array(values, dtype=float)
+
+    def to_imt_unit_values(self, values):
+        """
+        Returns numpy array of ``values`` without any conversion.
+        """
+        return numpy.array(values, dtype=float)
 
 
 class SitesContext(object):
@@ -376,7 +560,7 @@ class DistancesContext(object):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi')
 
 
 class RuptureContext(object):
@@ -391,7 +575,7 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'dip', 'rake', 'ztor')
+    __slots__ = ('mag', 'dip', 'rake', 'ztor', 'hypo_depth', 'width')
 
 
 class CoeffsTable(object):

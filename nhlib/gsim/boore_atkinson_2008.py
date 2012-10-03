@@ -28,12 +28,12 @@ from nhlib.imt import PGA, PGV, SA
 class BooreAtkinson2008(GMPE):
     """
     Implements GMPE developed by David M. Boore and Gail M. Atkinson
-    and published as "Ground-Motion Prediction Equations for the 
-    Average Horizontal Component of PGA, PGV, and 5%-Damped PSA 
+    and published as "Ground-Motion Prediction Equations for the
+    Average Horizontal Component of PGA, PGV, and 5%-Damped PSA
     at Spectral Periods between 0.01 and 10.0 s" (2008, Earthquake Spectra,
     Volume 24, No. 1, pages 99-138).
     """
-    #: Supported tectonic region type is active shallow crust, see 
+    #: Supported tectonic region type is active shallow crust, see
     #: paragraph 'Introduction', page 99.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -47,7 +47,7 @@ class BooreAtkinson2008(GMPE):
     ])
 
     #: Supported intensity measure component is orientation-independent
-    #: measure :attr:`~nhlib.const.IMC.GMRotI50`, see paragraph 
+    #: measure :attr:`~nhlib.const.IMC.GMRotI50`, see paragraph
     #: 'Response Variables', page 100 and table 8, pag 121.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
 
@@ -59,9 +59,9 @@ class BooreAtkinson2008(GMPE):
         const.StdDev.INTRA_EVENT
     ])
 
-    #: Required site parameters is Vs30. 
+    #: Required site parameters is Vs30.
     #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude, and rake.
     #: See paragraph 'Predictor Variables', pag 103
@@ -69,33 +69,33 @@ class BooreAtkinson2008(GMPE):
 
     #: Required distance measure is Rjb.
     #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_DISTANCES = set(('rjb'))
-    
+    REQUIRES_DISTANCES = set(('rjb', ))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        #: extracting dictionary of coefficients specific to required
-        #: intensity measure type.
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
         C = self.COEFFS[imt]
-        
-        #: equation 1, pag 106, without sigma term, that is only the first 3 terms.
-        #: the third term (site amplification) is computed as given in equation (6), 
-        #: that is the sum of a linear term - equation (7) - and a non-linear one 
-        #: - equations (8a) to (8c).
-        #: Mref, Rref values are given in the caption to table 6, pag 119.
-        mean =  self._compute_magnitude_scaling(rup,C) +\
-                self._compute_distance_scaling(rup,dists,C,Mref=4.5,Rref=1.0) +\
-                self._get_site_amplification_linear(sites,C) +\
-                self._get_site_amplification_non_linear(sites,rup,dists,C)
-                
-        stddevs = self._get_stddevs(C,stddev_types,num_sites=len(sites.vs30))
-        
+
+        # equation 1, pag 106, without sigma term, that is only the first 3
+        # terms. The third term (site amplification) is computed as given in
+        # equation (6), that is the sum of a linear term - equation (7) - and
+        # a non-linear one - equations (8a) to (8c).
+        # Mref, Rref values are given in the caption to table 6, pag 119.
+        mean = self._compute_magnitude_scaling(rup, C) + \
+            self._compute_distance_scaling(rup, dists, C) + \
+            self._get_site_amplification_linear(sites, C) + \
+            self._get_site_amplification_non_linear(sites, rup, dists, C)
+
+        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+
         return mean, stddevs
-                
-    def _get_stddevs(self,C,stddev_types,num_sites):
+
+    def _get_stddevs(self, C, stddev_types, num_sites):
         """
         Return standard deviations as defined in table 8, pag 121.
         """
@@ -103,34 +103,37 @@ class BooreAtkinson2008(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['std']+np.zeros(num_sites))
+                stddevs.append(C['std'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma']+np.zeros(num_sites))
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau']+np.zeros(num_sites))
+                stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
-        
-    def _compute_distance_scaling(self,rup,dists,C,Mref,Rref):
+
+    def _compute_distance_scaling(self, rup, dists, C):
         """
         Compute distance-scaling term, equations (3) and (4), pag 107.
         """
-        R = np.sqrt(dists.rjb**2 + C['h']**2)
+        Mref = 4.5
+        Rref = 1.0
+        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
         return (C['c1'] + C['c2'] * (rup.mag - Mref)) * np.log(R / Rref) + \
-                                                    C['c3'] * (R - Rref)
-                                                    
-    def _compute_magnitude_scaling(self,rup,C):
+            C['c3'] * (R - Rref)
+
+    def _compute_magnitude_scaling(self, rup, C):
         """
         Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
         """
-        U,SS,NS,RS = self._get_fault_type_dummy_variables(rup)
+        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
         if rup.mag <= C['Mh']:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS +\
-                    C['e5'] * (rup.mag - C['Mh']) + C['e6'] * (rup.mag - C['Mh'])**2
+            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
+                C['e5'] * (rup.mag - C['Mh']) + \
+                C['e6'] * (rup.mag - C['Mh']) ** 2
         else:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS +\
-                    C['e7'] * (rup.mag - C['Mh'])
-        
-    def _get_fault_type_dummy_variables(self,rup):
+            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
+                C['e7'] * (rup.mag - C['Mh'])
+
+    def _get_fault_type_dummy_variables(self, rup):
         """
         Get fault type dummy variables, see Table 2, pag 107.
         Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -142,7 +145,7 @@ class BooreAtkinson2008(GMPE):
         Note that the 'Unspecified' case is not considered,
         because rake is always given.
         """
-        U,SS,NS,RS = 0,0,0,0
+        U, SS, NS, RS = 0, 0, 0, 0
         if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
             SS = 1
@@ -152,37 +155,43 @@ class BooreAtkinson2008(GMPE):
         else:
             # normal
             NS = 1
-            
+
         return U, SS, NS, RS
-        
-    def _get_site_amplification_linear(self,sites,C):
+
+    def _get_site_amplification_linear(self, sites, C):
         """
         Compute site amplification linear term,
         equation (7), pag 107.
         """
         return C['blin'] * np.log(sites.vs30 / 760.0)
-        
-    def _get_site_amplification_non_linear(self,sites,rup,dists,C):
+
+    def _get_site_amplification_non_linear(self, sites, rup, dists, C):
         """
         Compute site amplification non-linear term,
         equations (8a) to (13d), pag 108-109.
         """
-        
-        #: Median PGA in g for Vref = 760.0, without site amplification,
-        #: that is equation (1) pag 106, without the third and fourth terms
-        #: Mref and Rref values are given in the caption to table 6, pag 119
-        #: Note that Rref = 5.0 km
+
+        # Median PGA in g for Vref = 760.0, without site amplification,
+        # that is equation (1) pag 106, without the third and fourth terms
+        # Mref and Rref values are given in the caption to table 6, pag 119
+        # Note that in the original paper, the caption reads:
+        # "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all
+        # periods, except Rref=5.0 km for pga4nl)". However this is a mistake
+        # as reported in http://www.daveboore.com/pubs_online.php:
+        # ERRATUM: 27 August 2008. Tom Blake pointed out that the caption to
+        # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
+        # Rref=1.0 km for all periods)".
         C_pga = self.COEFFS[PGA()]
-        pga4nl = np.exp(self._compute_magnitude_scaling(rup,C_pga) +\
-                    self._compute_distance_scaling(rup,dists,C_pga,Mref=4.5,Rref=5.0))
-                    
-        #: non linear slope
-        bnl = self._compute_non_linear_slope(sites,C)
-        
-        #: compute the actual non-linear term
-        return self._compute_non_linear_term(pga4nl,bnl)
-        
-    def _compute_non_linear_slope(self,sites,C):
+        pga4nl = np.exp(self._compute_magnitude_scaling(rup, C_pga) +
+                        self._compute_distance_scaling(rup, dists, C_pga))
+
+        # non linear slope
+        bnl = self._compute_non_linear_slope(sites, C)
+
+        # compute the actual non-linear term
+        return self._compute_non_linear_term(pga4nl, bnl)
+
+    def _compute_non_linear_slope(self, sites, C):
         """
         Compute non-linear slope factor,
         equations (13a) to (13d), pag 108-109.
@@ -190,68 +199,68 @@ class BooreAtkinson2008(GMPE):
         V1 = 180.0
         V2 = 300.0
         Vref = 760.0
-        
-        #: equation (13d), values are zero for vs30 >= Vref = 760.0
+
+        # equation (13d), values are zero for vs30 >= Vref = 760.0
         bnl = np.zeros(len(sites.vs30))
-        
-        #: equation (13a)
+
+        # equation (13a)
         idx = sites.vs30 <= V1
         bnl[idx] = C['b1']
-        
-        #: equation (13b)
-        idx1 = np.where(sites.vs30 > V1)
-        idx2 = np.where(sites.vs30 <= V2)
-        idx = np.intersect1d(idx1[0],idx2[0])
-        bnl[idx] = (C['b1'] - C['b2']) * np.log(sites.vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
-        
-        #: equation (13c)
-        idx1 = np.where(sites.vs30 > V2)
-        idx2 = np.where(sites.vs30 < Vref)
-        idx = np.intersect1d(idx1[0],idx2[0])
+
+        # equation (13b)
+        idx = np.where((sites.vs30 > V1) & (sites.vs30 <= V2))
+        bnl[idx] = (C['b1'] - C['b2']) * \
+            np.log(sites.vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+
+        # equation (13c)
+        idx = np.where((sites.vs30 > V2) & (sites.vs30 < Vref))
         bnl[idx] = C['b2'] * np.log(sites.vs30[idx] / Vref) / np.log(V2 / Vref)
-        
+
         return bnl
-        
-    def _compute_non_linear_term(self,pga4nl,bnl):
+
+    def _compute_non_linear_term(self, pga4nl, bnl):
         """
         Compute non-linear term,
         equation (8a) to (8c), pag 108.
         """
-        
+
         fnl = np.zeros(len(pga4nl))
         a1 = 0.03
         a2 = 0.09
         pga_low = 0.06
-        
-        #: equation (8a)
+
+        # equation (8a)
         idx = pga4nl <= a1
         fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
-        
-        #: equation (8b)
-        idx1 = np.where(pga4nl > a1)
-        idx2 = np.where(pga4nl <= a2)
-        idx = np.intersect1d(idx1[0],idx2[0])
-        delta_x = np.log(a2/a1)
+
+        # equation (8b)
+        idx = np.where((pga4nl > a1) & (pga4nl <= a2))
+        delta_x = np.log(a2 / a1)
         delta_y = bnl[idx] * np.log(a2 / pga_low)
-        c = (3 * delta_y - bnl[idx] * delta_x) / delta_x**2
-        d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x**3
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) + c * (np.log(pga4nl[idx] / a1)**2) + d * (np.log(pga4nl[idx] / a1)**3)
-        
-        #: equation (8c)
+        c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
+        d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
+        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
+            c * (np.log(pga4nl[idx] / a1) ** 2) + \
+            d * (np.log(pga4nl[idx] / a1) ** 3)
+
+        # equation (8c)
         idx = pga4nl > a2
         fnl[idx] = bnl[idx] * np.log(pga4nl[idx] / 0.1)
-        
+
         return fnl
-        
-    #: Coefficient tables are constructed from values in tables 3, 6, 7 and 8
+
+    #: Coefficient table is constructed from values in tables 3, 6, 7 and 8
     #: (pages 110, 119, 120, 121). Spectral acceleration is defined for damping
     #: of 5%, see 'Response Variables' page 100.
-    #: blin, b1, b2 are the period-dependent site-amplification coefficients
-    #: c1, c2, c3, h are the period-dependent distance scaling coefficients
-    #: e1, e2, e3, e4, e5, e6, e7, Mh are the period-dependent magnitude-scaling coefficients
-    #: sigma, tau, std are the intra-event uncertainty, inter-event uncertainty, and total standard deviation, respectively
-    #: Note that only the inter-event and total standard deviation for 'specified' fault type are
-    #: considered (because rake angle is always specified)
+    #: blin, b1, b2 are the period-dependent site-amplification coefficients.
+    #: c1, c2, c3, h are the period-dependent distance scaling coefficients.
+    #: e1, e2, e3, e4, e5, e6, e7, Mh are the period-dependent magnitude-
+    # scaling coefficients.
+    #: sigma, tau, std are the intra-event uncertainty, inter-event
+    #: uncertainty, and total standard deviation, respectively.
+    #: Note that only the inter-event and total standard deviation for
+    #: 'specified' fault type are considered (because rake angle is always
+    #: specified)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT    blin   b1      b2    c1       c2       c3      h     e1       e2       e3       e4      e5       e6      e7      Mh   sigma tau   std
     pgv    -0.600 -0.500 -0.06 -0.87370  0.10060 -0.00334 2.54  5.00121  5.04727  4.63188  5.08210 0.18322 -0.12736 0.00000 8.50 0.500 0.256 0.560

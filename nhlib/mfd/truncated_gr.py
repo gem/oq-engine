@@ -43,7 +43,7 @@ class TruncatedGRMFD(BaseMFD):
 
     :param min_mag:
         The lowest possible magnitude for this MFD. The first bin in the
-        :meth:`result histogram <get_annual_occurence_rates>` will be aligned
+        :meth:`result histogram <get_annual_occurrence_rates>` will be aligned
         to make its left border match this value.
     :param max_mag:
         The highest possible magnitude. The same as for ``min_mag``: the last
@@ -57,13 +57,19 @@ class TruncatedGRMFD(BaseMFD):
     both are divisible by ``bin_width`` just before converting a function
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
-
-    PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
-
     MODIFICATIONS = set(('increment_max_mag',
                          'set_max_mag',
                          'increment_b',
                          'set_ab'))
+
+    def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
+        self.min_mag = min_mag
+        self.max_mag = max_mag
+        self.bin_width = bin_width
+        self.a_val = a_val
+        self.b_val = b_val
+
+        self.check_constraints()
 
     def check_constraints(self):
         """
@@ -142,7 +148,7 @@ class TruncatedGRMFD(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See :meth:`nhlib.mfd.BaseMFD.get_annual_occurrence_rates`.
+            See :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []

@@ -7,7 +7,7 @@ Norman Abrahamson, see
 from nhlib.geo import Polygon, Point, Line
 from nhlib.site import Site
 from nhlib.imt import PGA
-from nhlib.mfd import TruncatedGRMFD
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
 
 IMT = PGA()
@@ -181,9 +181,28 @@ SET1_CASE11_SITE4_POES = [
     0
 ]
 
-# page 13
-SET1_CASE2_MFD = TruncatedGRMFD(a_val=3.2828, b_val=0.9, min_mag=5.95,
-                                max_mag=6.05, bin_width=0.1)
+# Starting from the input data as defined in the PEER Report page 13:
+#
+# magnitude = 6.0
+# b_value = -0.9
+# slip_rate = 2e-3 # m/year
+# rigidity = 3e10 # N/m^2
+# fault_length = 25.0 * 1e3 # m
+# fault_width = 12.0 * 1e3 # m
+#
+# The total seismic moment rate can be computed as:
+#
+# seismic_moment_rate = rigidity * fault_length * fault_width * slip_rate
+#
+# From which we can derived the incremental a value:
+#
+# a_incremental = log10(seismic_moment_rate) - (1.5 + b_value) * magnitude - 9.05
+#
+# and finally the rate:
+#
+# rate = 10 ** (a_incremental + b_value * magnitude)
+SET1_CASE2_MFD = EvenlyDiscretizedMFD(min_mag=6.0, bin_width=0.01,
+                                      occurrence_rates=[0.0160425168864])
 SET1_CASE1TO9_RAKE = 0
 
 # page A-3

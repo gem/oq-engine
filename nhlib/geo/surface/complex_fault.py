@@ -163,3 +163,14 @@ class ComplexFaultSurface(BaseSurface):
              for edge in edges], dtype=float
         ).reshape((-1, 2)).transpose()
         return Mesh(lons, lats, depths=None).get_convex_hull()
+
+    def get_width(self):
+        """
+        Return surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The width is computed as the average width along the surface.
+        See
+        :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_width`
+        """
+        return self.mesh.get_mean_width()

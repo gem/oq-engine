@@ -57,6 +57,22 @@ class BaseSurface(object):
         """
         return self.get_mesh().get_min_distance(mesh)
 
+    def get_closest_points(self, mesh):
+        """
+        For each point from ``mesh`` find a closest point belonging to surface.
+
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to find closest points to.
+        :returns:
+            :class:`~nhlib.geo.mesh.Mesh` of the same shape as ``mesh`` with
+            closest surface's points on respective indices.
+
+        Base class implementation calls the :meth:`corresponding
+        <nhlib.geo.mesh.Mesh.get_closest_points>` method of the
+        surface's :meth:`mesh <get_mesh>`.
+        """
+        return self.get_mesh().get_closest_points(mesh)
+
     def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore (also known as ``Rjb``) distance
@@ -70,7 +86,7 @@ class BaseSurface(object):
             and each point of the ``mesh`` to the earth surface.
 
         Base class calls surface mesh's method
-        :meth:`~nhlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
+        :meth:`~nhlib.geo.mesh.Mesh.get_joyner_boore_distance`.
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
@@ -165,4 +181,13 @@ class BaseSurface(object):
         Return surface's dip as decimal degrees in a range ``(0, 90]``.
 
         The actual definition of the dip might depend on surface geometry.
+        """
+
+    @abc.abstractmethod
+    def get_width(self):
+        """
+        Return surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The actual definition depends on the type of surface geometry.
         """

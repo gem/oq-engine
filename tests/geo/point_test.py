@@ -18,7 +18,7 @@ import unittest
 import numpy
 
 from nhlib import geo
-from nhlib.geo._utils import EARTH_RADIUS, spherical_to_cartesian
+from nhlib.geo.utils import EARTH_RADIUS, spherical_to_cartesian
 
 
 class PointPointAtTestCase(unittest.TestCase):
@@ -239,3 +239,54 @@ class PointCloserThanTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(closer, [0, 0, 0, 0, 0, 0])
         closer = p.closer_than(mesh, 60)
         numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 1])
+
+
+class PointWktTestCase(unittest.TestCase):
+    def test_point_wkt2d(self):
+        pt = geo.Point(13.5, 17.8)
+        self.assertEqual('POINT(13.5 17.8)', pt.wkt2d)
+
+        # Test a point with depth; the 2d wkt should be the same
+        pt = geo.Point(13.5, 17.8, 1.5)
+        self.assertEqual('POINT(13.5 17.8)', pt.wkt2d)
+
+
+class DistanceToMeshTestCase(unittest.TestCase):
+    def test_no_depths(self):
+        p = geo.Point(20, 30)
+        mesh = geo.Mesh(numpy.array([[18., 19., 20.,]] * 3),
+                        numpy.array([[29.] * 3, [30.] * 3, [31.] * 3]),
+                        depths=None)
+        distances = p.distance_to_mesh(mesh, with_depths=False)
+        ed = [[223.21812393, 147.4109544,  111.19492664],
+              [192.59281778,  96.29732568,   0],
+              [221.53723588, 146.77568123, 111.19492664]]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
+    def test_point_depth(self):
+        p = geo.Point(0, 0, 10)
+        mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
+                        numpy.array([0., 0., 0., 0.]),
+                        depths=None)
+        distances = p.distance_to_mesh(mesh)
+        ed = [14.95470217, 24.38385672, 34.82510666, 45.58826465]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
+    def test_mesh_depth(self):
+        p = geo.Point(0.5, -0.5)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([0., 1., 2., 3.]))
+        distances = p.distance_to_mesh(mesh)
+        ed = [0, 1, 2, 3]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
+    def test_both_depths(self):
+        p = geo.Point(3, 7, 9)
+        mesh = geo.Mesh(numpy.array([2.9, 2.9, 3., 3., 3.1, 3.1]),
+                        numpy.array([7., 7.1, 6.9, 7.1, 6.8, 7.2]),
+                        numpy.array([20., 30., 10., 20., 40., 50.]))
+        distances = p.distance_to_mesh(mesh)
+        ed = [15.58225761, 26.19968783, 11.16436819, 15.64107148,
+              39.71688472, 47.93043417]
+        numpy.testing.assert_array_almost_equal(distances, ed)

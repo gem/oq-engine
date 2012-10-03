@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import numpy
+
 from nhlib import const
 from nhlib.geo import Point
 from nhlib.geo.surface.planar import PlanarSurface
@@ -80,8 +82,29 @@ class RuptureCreationTestCase(unittest.TestCase):
 
 
 class ProbabilisticRuptureTestCase(unittest.TestCase):
-    def test_get_probability(self):
+    def test_get_probability_one_or_more(self):
         rupture = make_rupture(ProbabilisticRupture,
                                occurrence_rate=1e-2,
                                temporal_occurrence_model=PoissonTOM(10))
-        self.assertAlmostEqual(rupture.get_probability(), 0.0951626)
+        self.assertAlmostEqual(
+            rupture.get_probability_one_or_more_occurrences(), 0.0951626
+        )
+
+    def test_get_probability_one_occurrence(self):
+        rupture = make_rupture(ProbabilisticRupture,
+                               occurrence_rate=0.4,
+                               temporal_occurrence_model=PoissonTOM(10))
+        self.assertAlmostEqual(rupture.get_probability_one_occurrence(),
+                               0.0732626)
+
+    def test_sample_number_of_occurrences(self):
+        time_span = 20
+        rate = 0.01
+        num_samples = 2000
+        tom = PoissonTOM(time_span)
+        rupture = make_rupture(ProbabilisticRupture, occurrence_rate=rate,
+                               temporal_occurrence_model=tom)
+        numpy.random.seed(37)
+        mean = sum(rupture.sample_number_of_occurrences()
+                   for i in xrange(num_samples)) / float(num_samples)
+        self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)

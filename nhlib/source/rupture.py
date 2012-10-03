@@ -17,7 +17,6 @@
 Module :mod:`nhlib.source.rupture` defines classes :class:`Rupture`
 and its subclass :class:`ProbabilisticRupture`.
 """
-from nhlib import const
 from nhlib.geo.nodalplane import NodalPlane
 
 
@@ -89,13 +88,38 @@ class ProbabilisticRupture(Rupture):
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
 
-    def get_probability(self):
+    def get_probability_one_or_more_occurrences(self):
         """
-        Return the probability of this rupture to occur.
+        Return the probability of this rupture to occur one or more times.
 
-        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability` of an assigned
-        temporal occurrence model.
+        Uses
+        :meth:`~nhlib.tom.PoissonTOM.get_probability_one_or_more_occurrences`
+        of an assigned temporal occurrence model.
         """
-        return self.temporal_occurrence_model.get_probability(
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_one_or_more_occurrences(rate)
+
+    def get_probability_one_occurrence(self):
+        """
+        Return the probability of this rupture to occur exactly one time.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability_one_occurrence`
+        of an assigned temporal occurrence model.
+        """
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_one_occurrence(rate)
+
+
+    def sample_number_of_occurrences(self):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.sample_number_of_occurrences`
+        of an assigned temporal occurrence model.
+        """
+        return self.temporal_occurrence_model.sample_number_of_occurrences(
             self.occurrence_rate
         )
