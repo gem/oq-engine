@@ -81,15 +81,27 @@ class BooreAtkinson2008(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
 
+        # compute PGA on rock conditions - needed to compute non-linear
+        # site amplification term
+        pga4nl = self._get_pga_on_rock(rup, dists, C)
+
         # equation 1, pag 106, without sigma term, that is only the first 3
         # terms. The third term (site amplification) is computed as given in
         # equation (6), that is the sum of a linear term - equation (7) - and
         # a non-linear one - equations (8a) to (8c).
         # Mref, Rref values are given in the caption to table 6, pag 119.
-        mean = self._compute_magnitude_scaling(rup, C) + \
-            self._compute_distance_scaling(rup, dists, C) + \
-            self._get_site_amplification_linear(sites, C) + \
-            self._get_site_amplification_non_linear(sites, rup, dists, C)
+        if imt == PGA():
+            # avoid recomputing PGA on rock, just add site terms
+            mean = np.log(pga4nl) + \
+                self._get_site_amplification_linear(sites, C) + \
+                self._get_site_amplification_non_linear(sites, rup, dists,
+                                                        pga4nl, C)
+        else:
+            mean = self._compute_magnitude_scaling(rup, C) + \
+                self._compute_distance_scaling(rup, dists, C) + \
+                self._get_site_amplification_linear(sites, C) + \
+                self._get_site_amplification_non_linear(sites, rup, dists,
+                                                        pga4nl, C)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
@@ -165,12 +177,11 @@ class BooreAtkinson2008(GMPE):
         """
         return C['blin'] * np.log(sites.vs30 / 760.0)
 
-    def _get_site_amplification_non_linear(self, sites, rup, dists, C):
+    def _get_pga_on_rock(self, rup, dists, C):
         """
-        Compute site amplification non-linear term,
-        equations (8a) to (13d), pag 108-109.
+        Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
+        This is needed to compute non-linear site amplification term
         """
-
         # Median PGA in g for Vref = 760.0, without site amplification,
         # that is equation (1) pag 106, without the third and fourth terms
         # Mref and Rref values are given in the caption to table 6, pag 119
@@ -185,6 +196,13 @@ class BooreAtkinson2008(GMPE):
         pga4nl = np.exp(self._compute_magnitude_scaling(rup, C_pga) +
                         self._compute_distance_scaling(rup, dists, C_pga))
 
+        return pga4nl
+
+    def _get_site_amplification_non_linear(self, sites, rup, dists, pga4nl, C):
+        """
+        Compute site amplification non-linear term,
+        equations (8a) to (13d), pag 108-109.
+        """
         # non linear slope
         bnl = self._compute_non_linear_slope(sites, C)
 
