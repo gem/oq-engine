@@ -100,8 +100,9 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 2 SESs, 1 complete logic tree SES, and 1 complete LT GMF
-            self.assertEqual(6, len(outputs))
+            # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
+            # and 4 hazard curve collections
+            self.assertEqual(10, len(outputs))
 
             #######
             # SESs:
@@ -116,9 +117,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             self.assertEqual(2, len(exported_files))
 
             for f in exported_files:
-                self.assertTrue(os.path.exists(f))
-                self.assertTrue(os.path.isabs(f))
-                self.assertTrue(os.path.getsize(f) > 0)
+                self._test_exported_file(exported_file)
 
             ##################
             # Complete LT SES:
@@ -126,9 +125,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
 
             [exported_file] = hazard.export(complete_lt_ses.id, target_dir)
 
-            self.assertTrue(os.path.exists(exported_file))
-            self.assertTrue(os.path.isabs(exported_file))
-            self.assertTrue(os.path.getsize(exported_file) > 0)
+            self._test_exported_file(exported_file)
 
             #######
             # GMFs:
@@ -144,9 +141,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             # Check the file paths exist, are absolute, and the files aren't
             # empty.
             for f in exported_files:
-                self.assertTrue(os.path.exists(f))
-                self.assertTrue(os.path.isabs(f))
-                self.assertTrue(os.path.getsize(f) > 0)
+                self._test_exported_file(exported_file)
 
             ##################
             # Complete LT GMF:
@@ -154,12 +149,23 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
 
             [exported_file] = hazard.export(complete_lt_gmf.id, target_dir)
 
-            self.assertTrue(os.path.exists(exported_file))
-            self.assertTrue(os.path.isabs(exported_file))
-            self.assertTrue(os.path.getsize(exported_file) > 0)
+            self._test_exported_file(exported_file)
 
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(exported_file)
             self.assertEqual(420, _number_of('nrml:gmf', tree))
+
+            ################
+            # Hazard curves:
+            haz_curves = outputs.filter(output_type='hazard_curve')
+            for curve in haz_curves:
+                exported_file = hazard.export(curve.id, target_dir)
+                self._test_exported_file(exported_file)
+
         finally:
             shutil.rmtree(target_dir)
+
+    def _test_exported_file(self, filename):
+        self.assertTrue(os.path.exists(filename))
+        self.assertTrue(os.path.isabs(filename))
+        self.assertTrue(os.path.getsize(filename) > 0)
