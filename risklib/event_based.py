@@ -306,7 +306,8 @@ def _compute_loss_ratios_range(loss_ratios, loss_histogram_bins):
     :param int loss_histogram_bins:
         The number of bins to use in the computed loss histogram.
     """
-    return numpy.linspace(loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
+    return numpy.linspace(
+        loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
 
 
 def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
@@ -317,7 +318,8 @@ def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     if (loss_ratios <= 0.0).all():
         return numpy.zeros(loss_ratios_range.size - 1)
 
-    invalid_ratios = lambda ratios: numpy.where(numpy.array(ratios) <= 0.0)[0].size
+    invalid_ratios = lambda ratios: numpy.where(
+        numpy.array(ratios) <= 0.0)[0].size
 
     hist = numpy.histogram(loss_ratios, bins=loss_ratios_range)
     hist = hist[0][::-1].cumsum()[::-1]

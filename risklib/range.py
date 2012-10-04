@@ -16,6 +16,7 @@
 
 import numpy
 
+
 def range_clip(val, val_range):
     """
     'Clip' a value (or sequence of values) to the
@@ -47,8 +48,9 @@ def range_clip(val, val_range):
         clipped values.
     """
     assert len(val_range) >= 2, "val_range must contain at least 2 elements"
-    assert list(val_range) == sorted(set(val_range)),\
-    "val_range must be arranged in ascending order with no duplicates"
+
+    # val_range must be arranged in ascending order with no duplicates
+    assert list(val_range) == sorted(set(val_range))
 
     if isinstance(val, (list, tuple, numpy.ndarray)):
         # convert to numpy.array so we can use numpy.putmask:
