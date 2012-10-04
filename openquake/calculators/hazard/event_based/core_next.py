@@ -46,6 +46,7 @@ from nhlib.calc import stochastic
 from openquake import logs
 from openquake import writer
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.event_based import post_processing
 from openquake.db import models
 from openquake.input import logictree
 from openquake.job.validation import MAX_SINT_32
@@ -655,3 +656,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.initialize_pr_data()
 
         self.record_init_stats()
+
+    def post_process(self):
+        """
+        If requested, perform additional processing of GMFs to produce hazard
+        curves.
+        """
+        if self.job.hazard_calculation.hazard_curves_from_gmfs:
+            post_processing.do_post_process(self.job)
