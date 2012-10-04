@@ -117,7 +117,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             self.assertEqual(2, len(exported_files))
 
             for f in exported_files:
-                self._test_exported_file(exported_file)
+                self._test_exported_file(f)
 
             ##################
             # Complete LT SES:
@@ -141,7 +141,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             # Check the file paths exist, are absolute, and the files aren't
             # empty.
             for f in exported_files:
-                self._test_exported_file(exported_file)
+                self._test_exported_file(f)
 
             ##################
             # Complete LT GMF:
@@ -159,7 +159,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             # Hazard curves:
             haz_curves = outputs.filter(output_type='hazard_curve')
             for curve in haz_curves:
-                exported_file = hazard.export(curve.id, target_dir)
+                [exported_file] = hazard.export(curve.id, target_dir)
                 self._test_exported_file(exported_file)
 
         finally:
