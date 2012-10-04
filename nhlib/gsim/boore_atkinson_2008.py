@@ -94,14 +94,12 @@ class BooreAtkinson2008(GMPE):
             # avoid recomputing PGA on rock, just add site terms
             mean = np.log(pga4nl) + \
                 self._get_site_amplification_linear(sites, C) + \
-                self._get_site_amplification_non_linear(sites, rup, dists,
-                                                        pga4nl, C)
+                self._get_site_amplification_non_linear(sites, pga4nl, C)
         else:
             mean = self._compute_magnitude_scaling(rup, C) + \
                 self._compute_distance_scaling(rup, dists, C) + \
                 self._get_site_amplification_linear(sites, C) + \
-                self._get_site_amplification_non_linear(sites, rup, dists,
-                                                        pga4nl, C)
+                self._get_site_amplification_non_linear(sites, pga4nl, C)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
@@ -198,7 +196,7 @@ class BooreAtkinson2008(GMPE):
 
         return pga4nl
 
-    def _get_site_amplification_non_linear(self, sites, rup, dists, pga4nl, C):
+    def _get_site_amplification_non_linear(self, sites, pga4nl, C):
         """
         Compute site amplification non-linear term,
         equations (8a) to (13d), pag 108-109.
