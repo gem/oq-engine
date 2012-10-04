@@ -39,16 +39,49 @@ This could be the target for future optimizations.
 """
 
 import itertools
+import math
 
 import numpy
 
+from celery.task.sets import TaskSet
+
+from openquake import logs
 from openquake.db import models
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter
 
 
+HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
+
+
 def gmf_post_process_arg_gen(job):
+    """
+    Generate a sequence of args for the GMF to hazard curve post-processing job
+    for a given ``job``. These are task args.
+
+    Yielded arguments are as follows:
+
+    * job ID
+    * point geometry
+    * logic tree realization ID
+    * IMT
+    * IMLs
+    * hazard curve "collection" ID
+    * investigation time
+    * duration
+    * SA period
+    * SA damping
+
+    See :func:`gmf_to_hazard_curve_task` for more information about these
+    arguments.
+
+    As a side effect, :class:`openquake.db.models.HazardCurve` records are
+    created for each :class:`openquake.db.models.LtRealization` and IMT.
+
+    :param job:
+        :class:`openquake.db.models.OqJob` instance.
+    """
     hc = job.hazard_calculation
     points = hc.points_to_compute()
 
@@ -58,33 +91,73 @@ def gmf_post_process_arg_gen(job):
     invest_time = hc.investigation_time
     duration = hc.ses_per_logic_tree_path * invest_time
 
-    for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        imt, sa_period, sa_damping = models.parse_imt(imt)
+    for raw_imt, imls in hc.intensity_measure_types_and_levels.iteritems():
+        imt, sa_period, sa_damping = models.parse_imt(raw_imt)
 
-        for lt_rlz in lt_realizations:  # TODO:
-
+        for lt_rlz in lt_realizations:
             hc_output = models.Output.objects.create_output(
-                job, 'disp_name', 'hazard_curve')  # TODO: not a fake disp name
+                job,
+                HAZ_CURVE_DISP_NAME_FMT % dict(imt=raw_imt, rlz=lt_rlz.id),
+                'hazard_curve')
 
-            # create the hazard curve collection
+            # Create the hazard curve "collection":
             hc_coll = models.HazardCurve.objects.create(
                 output=hc_output,
                 lt_realization=lt_rlz,
+                investigation_time=invest_time,
                 imt=imt,
+                imls=imls,
                 sa_period=sa_period,
                 sa_damping=sa_damping)
 
             for point in points:
-                # yield args for tasks
-                yield (job.id, point, lt_rlz.id, imt, sa_period, sa_damping,
-                       imls, hc_coll.id, invest_time, duration)
+                yield (job.id, point, lt_rlz.id, imt, imls, hc_coll.id,
+                       invest_time, duration, sa_period, sa_damping)
 
 
 @utils_tasks.oqtask
-def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, sa_period,
-                             sa_damping, imls, hc_coll_id, invest_time,
-                             duration):
+def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
+                             invest_time, duration, sa_period=None,
+                             sa_damping=None):
+    """
+    For a given job, point, realization, and IMT, compute a hazard curve and
+    save it to the database. The hazard curve will be computed from all
+    available ground motion data for the specified point and realization.
 
+    :param int job_id:
+        ID of a currently running :class:`openquake.db.models.OqJob`.
+    :param point:
+        A :class:`nhlib.geo.point.Point` instance.
+    :param int lt_rlz_id:
+        ID of a :class:`openquake.db.models.LtRealization` for the current
+        calculation.
+    :param str imt:
+        Intensity Measure Type (PGA, SA, PGV, etc.)
+    :param imls:
+        List of Intensity Measure Levels. These will serve as the abscissae for
+        the computed hazard curve.
+    :param int hc_coll_id:
+        ID of a :class:`openquake.db.models.HazardCurve`, which will be the
+        'container' for the computed hazard curve.
+    :param float invest_time:
+        Investigation time, in years. It is with this time span that we compute
+        probabilities of exceedance.
+
+        Another way to put it is the following. When computing a hazard curve,
+        we want to answer the question: What is the probability of ground
+        motion meeting or exceeding the specified levels (``imls``) in a given
+        time span (``invest_time``).
+    :param float duration:
+        Time window during which GMFs occur. Another was to say it is, the
+        period of time over which we simulate ground motion occurrences.
+
+        NOTE: Duration is computed as the calculation investigation time
+        multiplied by the number of stochastic event sets.
+    :param float sa_period:
+        Spectral Acceleration period. Used only with ``imt`` of 'SA'.
+    :param float sa_damping:
+        Spectral Acceleration damping. Used only with ``imt`` of 'SA'.
+    """
     gmfs = models.Gmf.objects.filter(
         gmf_set__gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
@@ -92,24 +165,45 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, sa_period,
         sa_damping=sa_damping,
         location=point.wkt2d)
 
-    gmvs = itertools.chain(*(g.gmvs for g in gmfs))
+    # Collect all of the ground motion values:
+    gmvs = list(itertools.chain(*(g.gmvs for g in gmfs)))
+    # Compute the hazard curve PoEs:
     hc_poes = gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
-    # TODO: save the curve to the DB.
+
+    # Save:
+    models.HazardCurveData.objects.create(
+        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d)
+gmf_to_hazard_curve_task.ignore_result = False
 
 
 def do_post_process(job):
+    """
+    Run the GMF to hazard curve post-processing tasks for the given ``job``.
+
+    :param job:
+        A :class:`openquake.db.models.OqJob` instance.
+    """
     logs.LOG.debug('> Post-processing - GMFs to Hazard Curves')
-    block_size = config.get('hazard', 'concurrent_tasks')
+    block_size = int(config.get('hazard', 'concurrent_tasks'))
     block_gen = block_splitter(gmf_post_process_arg_gen(job), block_size)
 
-    total_blocks = math.ceil((n_imts * n_sites * n_rlzs) / block_size)
+    hc = job.hazard_calculation
+
+    # Stats for debug logging:
+    n_imts = len(hc.intensity_measure_types_and_levels)
+    job_stats = models.JobStats.objects.get(oq_job=job.id)
+    total_blocks = int(math.ceil(
+        (n_imts * job_stats.num_sites * job_stats.num_realizations)
+        / block_size))
 
     for i, block in enumerate(block_gen):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
+
+        # Run the tasks in blocks, to avoid overqueueing:
         tasks = []
-        for args in block:
-            tasks.append(gmf_to_hazard_curve_task.subtask(*args))
+        for the_args in block:
+            tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
         results = TaskSet(tasks=tasks).apply_async()
 
         # Check for Exceptions in the results and raise
@@ -122,8 +216,30 @@ def do_post_process(job):
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     """
+    Given a set of ground motion values (``gmvs``) and intensity measure levels
+    (``imls``), compute hazard curve probabilities of exceedance.
+
+    :param gmvs:
+        A list of ground motion values, as floats.
+    :param imls:
+        A list of intensity measure levels, as floats.
+    :param float invest_time:
+        Investigation time, in years. It is with this time span that we compute
+        probabilities of exceedance.
+
+        Another way to put it is the following. When computing a hazard curve,
+        we want to answer the question: What is the probability of ground
+        motion meeting or exceeding the specified levels (``imls``) in a given
+        time span (``invest_time``).
+    :param float duration:
+        Time window during which GMFs occur. Another was to say it is, the
+        period of time over which we simulate ground motion occurrences.
+
+        NOTE: Duration is computed as the calculation investigation time
+        multiplied by the number of stochastic event sets.
+
     :returns:
-        List of PoEs (probabilities of exceedence).
+        Numpy array of PoEs (probabilities of exceedence).
     """
     gmvs = numpy.array(gmvs)
     # convert to numpy arrary and redimension so that it can be broadcast with
