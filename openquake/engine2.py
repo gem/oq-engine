@@ -293,11 +293,6 @@ def run_hazard(job, log_level, log_file, exports):
         # calculation executor process
         try:
             logs.init_logs_amqp_send(level=log_level, job_id=job.id)
-            # record initial job stats
-            hc = job.hazard_calculation
-            models.JobStats.objects.create(
-                oq_job=job, num_sites=len(hc.points_to_compute()),
-                realizations=hc.number_of_logic_tree_samples)
             # run the job
             job.is_running = True
             job.save()
