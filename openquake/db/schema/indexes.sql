@@ -49,7 +49,7 @@ CREATE INDEX hzrdr_gmf_collection_output_id_idx on hzrdr.gmf_collection(output_i
 CREATE INDEX hzrdr_gmf_collection_lt_realization_idx on hzrdr.gmf_collection(lt_realization_id);
 CREATE INDEX hzrdr_gmf_set_gmf_collection_idx on hzrdr.gmf_set(gmf_collection_id);
 CREATE INDEX hzrdr_gmf_gmf_set_idx on hzrdr.gmf(gmf_set_id);
-CREATE INDEX hzrdr_gmf_node_gmf_idx on hzrdr.gmf_node(gmf_id);
+CREATE INDEX hzrdr_gmf_location_idx on hzrdr.gmf using gist(location);
 -- uhs
 CREATE INDEX hzrdr_uh_spectra_output_id_idx on hzrdr.uh_spectra(output_id);
 CREATE INDEX hzrdr_uh_spectrum_uh_spectra_id_idx on hzrdr.uh_spectrum(uh_spectra_id);

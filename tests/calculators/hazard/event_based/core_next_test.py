@@ -185,7 +185,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job.save()
 
         hc = self.job.hazard_calculation
-        num_sites = len(hc.points_to_compute())
 
         rlz1, rlz2 = models.LtRealization.objects.filter(
             hazard_calculation=hc.id)
@@ -234,19 +233,39 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             ses__ses_collection__lt_realization=rlz2)
         self.assertEqual(92, ruptures2.count())
 
-        # Check that we saved the right number of GMFs to the DB.
-        # The correct number of GMFs for each realization is
-        # num_ruptures * num_sites * num_imts
+        # Check that we have the right number of gmf_sets.
+        # The correct number is (num_realizations * ses_per_logic_tree_path).
+        gmf_sets = models.GmfSet.objects.filter(
+            gmf_collection__output__oq_job=self.job.id,
+            complete_logic_tree_gmf=False)
+        # 2 realizations, 5 ses_per_logic_tree_path
+        self.assertEqual(10, gmf_sets.count())
 
-        expected_gmfs1 = 118 * num_sites * 2  # we have 2 imts: PGA and SA(0.1)
-        gmfs1 = models.GmfNode.objects.filter(
-            gmf__gmf_set__gmf_collection__lt_realization=rlz1)
-        self.assertEqual(expected_gmfs1, gmfs1.count())
+        for imt in hc.intensity_measure_types:
+            imt, sa_period, sa_damping = models.parse_imt(imt)
+            # Now check that we have the right number of GMFs in the DB.
+            for gmf_set in gmf_sets:
 
-        expected_gmfs2 = 92 * num_sites * 2
-        gmfs2 = models.GmfNode.objects.filter(
-            gmf__gmf_set__gmf_collection__lt_realization=rlz2)
-        self.assertEqual(expected_gmfs2, gmfs2.count())
+                # For each gmf_set, we should have a number of GMF records
+                # equal to the numbers of sites in the calculation, _per_ IMT.
+                # In this case, that's 121.
+                gmfs = models.Gmf.objects.filter(
+                    gmf_set=gmf_set, imt=imt, sa_period=sa_period,
+                    sa_damping=sa_damping)
+
+                # Sanity check: make sure they all came from the same task:
+                task_ord = gmfs[0].result_grp_ordinal
+                self.assertTrue(
+                    all(x.result_grp_ordinal == task_ord for x in gmfs))
+
+                # Expected number of ruptures:
+                exp_n_rups = models.SESRupture.objects.filter(
+                    ses__ses_collection__output__oq_job=self.job.id,
+                    ses__ordinal=gmf_set.ses_ordinal,
+                    result_grp_ordinal=task_ord).count()
+
+                self.assertEqual(121, gmfs.count())
+                self.assertTrue(all(len(x.gmvs) == exp_n_rups for x in gmfs))
 
         # TODO: At some point, we'll need to test the actual values of these
         # ruptures. We'll need to collect QA test data for this.
@@ -269,16 +288,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertIsNone(complete_lt_ses.ordinal)
 
-        # Check the complete logic tree GMF set and make sure it contains
-        # all of the GMFs.
-        complete_lt_gmf = models.GmfSet.objects.get(
-            gmf_collection__output__oq_job=self.job.id,
-            gmf_collection__output__output_type='complete_lt_gmf',
-            complete_logic_tree_gmf=True)
-
-        clt_gmfs = models.GmfNode.objects.filter(
-            gmf__gmf_set=complete_lt_gmf.id)
-        self.assertEqual(expected_gmfs1 + expected_gmfs2, clt_gmfs.count())
-
-        self.assertEqual(500.0, complete_lt_gmf.investigation_time)
-        self.assertIsNone(complete_lt_gmf.ses_ordinal)
+        # TODO: Test the complete logic tree GMF
+        # The `complete logic tree GMF` collection is computed as an aggregate
+        # of all the GMFs for a calculation.
+        # Because GMFs take up a lot of space, we don't store a copy of this
+        # as we do with SES.
