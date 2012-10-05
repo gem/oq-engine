@@ -1439,7 +1439,7 @@ class SESRupture(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
-    task_ordinal = djm.IntegerField()
+    result_grp_ordinal = djm.IntegerField()
     rupture_ordinal = djm.IntegerField()
 
     class Meta:
@@ -1549,10 +1549,13 @@ class GmfSet(djm.Model):
 
             for imt, sa_period, sa_damping in imts:
 
-                for task_ordinal in xrange(1, num_tasks + 1):
+                for result_grp_ordinal in xrange(1, num_tasks + 1):
                     gmfs = Gmf.objects.filter(
-                        gmf_set=self.id, imt=imt, sa_period=sa_period,
-                        sa_damping=sa_damping, task_ordinal=task_ordinal)
+                        gmf_set=self.id,
+                        imt=imt,
+                        sa_period=sa_period,
+                        sa_damping=sa_damping,
+                        result_grp_ordinal=result_grp_ordinal)
                     if len(gmfs) == 0:
                         # This task did not contribute to this GmfSet
                         continue
@@ -1607,7 +1610,7 @@ class Gmf(djm.Model):
     sa_damping = djm.FloatField(null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    task_ordinal = djm.IntegerField()
+    result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
 
