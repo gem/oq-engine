@@ -204,9 +204,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                 logs.LOG.debug('< done computing ground motion fields')
 
                 # update the gmf cache:
-                for k, _ in gmf_dict.iteritems():
+                for k, v in gmf_dict.iteritems():
                     gmf_cache[k] = numpy.append(
-                        gmf_cache[k], gmf_dict[k], axis=1)
+                        gmf_cache[k], v, axis=1)
 
         logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
