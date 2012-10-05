@@ -18,6 +18,7 @@
 
 """Common code for the hazard calculators."""
 
+import math
 import os
 import random
 import re
@@ -1124,3 +1125,28 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         logs.LOG.debug('< done with exports')
 
         return exported_files
+
+    def record_init_stats(self):
+        """
+        Record some basic job stats, including the number of sites,
+        realizations (end branches), and total number of tasks for the job.
+
+        This should be run between the `pre-execute` and `execute` phases, once
+        the job has been fully initialized.
+        """
+        # Record num sites, num realizations, and num tasks.
+        hc = self.job.hazard_calculation
+        num_sites = len(hc.points_to_compute())
+        num_rlzs = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id).count()
+
+        # Compute the number of tasks.
+        [source_input] = models.inputs4hcalc(hc.id, input_type='source')
+        num_sources = models.ParsedSource.objects.filter(
+            input=source_input.id).count()
+        block_size = int(config.get('hazard', 'block_size'))
+        num_tasks = num_rlzs * math.ceil(float(num_sources) / block_size)
+
+        models.JobStats.objects.filter(oq_job=self.job.id).update(
+            num_sites=num_sites, num_tasks=num_tasks,
+            num_realizations=num_rlzs)
