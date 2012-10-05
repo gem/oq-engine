@@ -81,7 +81,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
 class EventBasedGMFExportTestCase(unittest.TestCase):
 
     @attr('slow')
-    def test_export_ses_and_gmf(self):
+    def test_export_for_event_based(self):
         # Run an event-based hazard calculation to compute SESs and GMFs
         # Call the exporters for both SES and GMF results  and verify that
         # files were created
@@ -102,7 +102,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
             # and 4 hazard curve collections
-            self.assertEqual(10, len(outputs))
+            self.assertEqual(18, len(outputs))
 
             #######
             # SESs:
