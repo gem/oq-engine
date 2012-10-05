@@ -116,6 +116,13 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         # for the calculation.
         points_to_compute = hc.points_to_compute()
 
+        imts = [haz_general.imt_to_nhlib(x)
+                for x in hc.intensity_measure_types]
+
+        correl_model = None
+        if hc.ground_motion_correlation_model is not None:
+            correl_model = _get_correl_model(hc)
+
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
 
@@ -130,14 +137,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     logs.LOG.debug('> creating site collection')
     site_coll = haz_general.get_site_collection(hc)
     logs.LOG.debug('< done creating site collection')
-
-    if hc.ground_motion_fields:
-        imts = [haz_general.imt_to_nhlib(x)
-                for x in hc.intensity_measure_types]
-
-        correl_model = None
-        if hc.ground_motion_correlation_model is not None:
-            correl_model = _get_correl_model(hc)
 
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
