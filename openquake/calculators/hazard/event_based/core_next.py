@@ -66,7 +66,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
+def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -94,6 +94,10 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
+    :param int result_grp_ordinal:
+        The result group in which the calculation results will be placed.
+        This ID basically corresponds to the sequence number of the task,
+        in the context of the entire calculation.
     """
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
@@ -178,7 +182,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
             _save_ses_rupture(
-                ses, rupture, cmplt_lt_ses, task_ordinal, rupture_ordinal)
+                ses, rupture, cmplt_lt_ses, result_grp_ordinal,
+                rupture_ordinal)
             logs.LOG.debug('> done saving SES rupture to DB')
 
             # Compute ground motion fields (if requested)
@@ -218,7 +223,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, task_ordinal):
         if hc.ground_motion_fields:
             # save the GMFs to the DB
             logs.LOG.debug('> saving GMF results to DB')
-            _save_gmfs(gmf_set, gmf_cache, points_to_compute, task_ordinal)
+            _save_gmfs(
+                gmf_set, gmf_cache, points_to_compute, result_grp_ordinal)
             logs.LOG.debug('< done saving GMF results to DB')
 
     logs.LOG.debug('< task complete, signalling completion')
@@ -267,8 +273,8 @@ def _get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
-                      rupture_ordinal):
+def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
+                      result_grp_ordinal, rupture_ordinal):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -281,6 +287,13 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
         :class:`openquake.db.models.SES` representing the `complete logic tree`
         stochastic event set.
         If not None, save a copy of the input `rupture` to this SES.
+    :param int result_grp_ordinal:
+        The result group in which the calculation results will be placed.
+        This ID basically corresponds to the sequence number of the task,
+        in the context of the entire calculation.
+    :param int rupture_ordinal:
+        The ordinal of a rupture with a given result group (inidicated by
+        ``result_grp_ordinal``).
     """
     is_from_fault_source = rupture.source_typology in (
         nhlib.source.ComplexFaultSource,
@@ -325,7 +338,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
         lons=lons,
         lats=lats,
         depths=depths,
-        task_ordinal=task_ordinal,
+        result_grp_ordinal=result_grp_ordinal,
         rupture_ordinal=rupture_ordinal,
     )
     if complete_logic_tree_ses is not None:
@@ -340,13 +353,13 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses, task_ordinal,
             lons=lons,
             lats=lats,
             depths=depths,
-            task_ordinal=task_ordinal,
+            result_grp_ordinal=result_grp_ordinal,
             rupture_ordinal=rupture_ordinal,
         )
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
+def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     """
     Helper method to save computed GMF data to the database.
 
@@ -359,7 +372,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
     :param points_to_compute:
         An :class:`nhlib.geo.mesh.Mesh` object, representing all of the points
         of interest for a calculation.
-    :param int task_ordinal:
+    :param int result_grp_ordinal:
         The sequence number (1 to N) of the task which computed these results.
 
         A calculation consists of N tasks, so this tells us which task computed
@@ -389,7 +402,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
                 sa_damping=sa_damping,
                 location=location.wkt2d,
                 gmvs=gmfs[i].tolist(),
-                task_ordinal=task_ordinal,
+                result_grp_ordinal=result_grp_ordinal,
             )
 
     inserter.flush()
@@ -447,7 +460,7 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
     realizations = models.LtRealization.objects.filter(
             hazard_calculation=hc, is_complete=False)
 
-    task_ordinal = 1
+    result_grp_ordinal = 1
     for lt_rlz in realizations:
         source_progress = models.SourceProgress.objects.filter(
                 is_complete=False, lt_realization=lt_rlz).order_by('id')
@@ -460,9 +473,9 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
             # positive (since numpy will convert it to a unsigned long).
             task_seed = rnd.randint(0, MAX_SINT_32)
             task_args = (job.id, source_ids[offset:offset + sources_per_task],
-                         lt_rlz.id, task_seed, task_ordinal)
+                         lt_rlz.id, task_seed, result_grp_ordinal)
             yield task_args
-            task_ordinal += 1
+            result_grp_ordinal += 1
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
