@@ -38,6 +38,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.EventBasedHazardCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation
@@ -173,6 +174,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         sources_per_task = 4
 
         self.calc.pre_execute()
+        # Test the job stats:
+        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        self.assertEqual(2, job_stats.num_tasks)
+        self.assertEqual(121, job_stats.num_sites)
+        self.assertEqual(2, job_stats.num_realizations)
+
         self.job.is_running = True
         self.job.status = 'executing'
         self.job.save()
