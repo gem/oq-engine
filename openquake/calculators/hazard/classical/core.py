@@ -378,18 +378,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                              quantile_curves=QuantileCurveWriter))
 
             utils_tasks.distribute(
-                    do_post_process, ("post_processing_task", tasks),
+                    post_processing.do_post_process,
+                    ("post_processing_task", tasks),
                     tf_args=dict(job_id=self.job.id))
 
         logs.LOG.debug('< done with post processing')
-
-
-@utils_tasks.oqtask
-def do_post_process(job_id, post_processing_task):
-    func_key, func_args = post_processing_task
-    func = post_processing.get_post_processing_fn(func_key)
-    func(*func_args)
-do_post_process.ignore_result = False
 
 
 def update_result_matrix(current, new):
