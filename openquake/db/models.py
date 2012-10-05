@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import itertools
 import os
 import re
 
@@ -1438,6 +1439,16 @@ class SESRupture(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
+    result_grp_ordinal = djm.IntegerField()
+    # NOTE(LB): The ordinal of a rupture within a given result group (indicated
+    # by ``result_grp_ordinal``). This rupture correspond indices of the
+    # ``gmvs`` field in Gmf. Thus, if you join SESRupture and Gmf records on
+    # the ``result_grp_ordinal``, you can extract ground motion values for a
+    # specific rupture.
+    # At the moment this functionality is not directly used, but in the future
+    # we will need to provide some way of tracing ground motion to the original
+    # rupture.
+    rupture_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1523,11 +1534,79 @@ class GmfSet(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
 
+    # Disabling pylint for 'Too many local variables'
+    # pylint: disable=R0914
     def __iter__(self):
         """
         Iterator for walking through all child :class:`Gmf` objects.
         """
-        return Gmf.objects.filter(gmf_set=self.id).iterator()
+        job = self.gmf_collection.output.oq_job
+        hc = job.hazard_calculation
+        if self.complete_logic_tree_gmf:
+            # Get all of the GmfSets associated with a logic tree realization,
+            # for this calculation.
+            lt_gmf_sets = GmfSet.objects.filter(
+                gmf_collection__output__oq_job=job,
+                gmf_collection__lt_realization__isnull=False)
+            for gmf in itertools.chain(*lt_gmf_sets):
+                yield gmf
+        else:
+            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
+
+            imts = [parse_imt(x) for x in hc.intensity_measure_types]
+
+            for imt, sa_period, sa_damping in imts:
+
+                for result_grp_ordinal in xrange(1, num_tasks + 1):
+                    gmfs = Gmf.objects\
+                        .filter(
+                            gmf_set=self.id,
+                            imt=imt,
+                            sa_period=sa_period,
+                            sa_damping=sa_damping,
+                            result_grp_ordinal=result_grp_ordinal)\
+                        .order_by('location')
+                    if len(gmfs) == 0:
+                        # This task did not contribute to this GmfSet
+                        continue
+
+                    # len of each gmfs == number of sites
+                    # need to walk through each columns of gmvs, slicing
+                    # vertically to extract individual ground motion fields
+                    first = gmfs[0]
+                    num_ruptures = len(first.gmvs)
+
+                    for i in xrange(num_ruptures):
+                        gmf_nodes = []
+                        for gmf in gmfs:
+                            assert len(gmf.gmvs) == num_ruptures
+                            # TODO: Rename `iml` to `gmv`,
+                            # in NRML serializer as well
+                            gmf_nodes.append(_GroundMotionFieldNode(
+                                iml=gmf.gmvs[i], location=gmf.location))
+                        yield _GroundMotionField(
+                            imt=first.imt, sa_period=first.sa_period,
+                            sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
+                        del gmf_nodes
+
+
+class _GroundMotionField(object):
+
+    def __init__(self, imt, sa_period, sa_damping, gmf_nodes):
+        self.imt = imt
+        self.sa_period = sa_period
+        self.sa_damping = sa_damping
+        self.gmf_nodes = gmf_nodes
+
+    def __iter__(self):
+        return iter(self.gmf_nodes)
+
+
+class _GroundMotionFieldNode(object):
+
+    def __init__(self, iml, location):
+        self.iml = iml
+        self.location = location  # must have x and y attributes
 
 
 class Gmf(djm.Model):
@@ -1539,28 +1618,14 @@ class Gmf(djm.Model):
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    result_grp_ordinal = djm.IntegerField()
+
+    objects = djm.GeoManager()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
-
-    def __iter__(self):
-        """
-        Iterator for walking through all child :class:`Gmf` objects.
-        """
-        return GmfNode.objects.filter(gmf=self.id).iterator()
-
-
-class GmfNode(djm.Model):
-    """
-    An indiviual node of a ground motion field, consisting of a ground motion
-    value/intensity measure level and a point geometry.
-    """
-    gmf = djm.ForeignKey('Gmf')
-    location = djm.PointField(srid=DEFAULT_SRID)
-    iml = djm.FloatField()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_node'
 
 
 class GmfData(djm.Model):
