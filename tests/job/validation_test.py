@@ -616,7 +616,10 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             complete_logic_tree_ses=False,
             complete_logic_tree_gmf=True,
             ground_motion_fields=True,
-            hazard_curves_from_gmfs=False,
+            hazard_curves_from_gmfs=True,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.5, 0.95],
+            poes_hazard_maps=[0.1, 0.2],
         )
         form = validation.EventBasedHazardCalculationForm(
             instance=hc, files=None
