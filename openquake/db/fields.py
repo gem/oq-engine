@@ -53,6 +53,9 @@ class StringArrayFormField(forms.Field):
         floats. If unsuccessful, raise a
         :exc:`django.forms.ValidationError`
         """
+        if value is None:
+            return None
+
         if isinstance(value, (tuple, list)):
             try:
                 value = [self.cast(x) for x in value]
