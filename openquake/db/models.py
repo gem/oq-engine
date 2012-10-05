@@ -1440,6 +1440,14 @@ class SESRupture(djm.Model):
     lats = fields.PickleField()
     depths = fields.PickleField()
     result_grp_ordinal = djm.IntegerField()
+    # NOTE(LB): The ordinal of a rupture within a given result group (indicated
+    # by ``result_grp_ordinal``). This rupture correspond indices of the
+    # ``gmvs`` field in Gmf. Thus, if you join SESRupture and Gmf records on
+    # the ``result_grp_ordinal``, you can extract ground motion values for a
+    # specific rupture.
+    # At the moment this functionality is not directly used, but in the future
+    # we will need to provide some way of tracing ground motion to the original
+    # rupture.
     rupture_ordinal = djm.IntegerField()
 
     class Meta:
