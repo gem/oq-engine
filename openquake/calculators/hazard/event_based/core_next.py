@@ -367,15 +367,12 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
     """
     inserter = writer.BulkInserter(models.Gmf)
 
-    # import nose; nose.tools.set_trace()
     for imt, gmfs in gmf_dict.iteritems():
 
         # ``gmfs`` comes in as a numpy.matrix
         # we want it is an array; it handles subscripting
         # in the way that we want
-        # import nose; nose.tools.set_trace()
         gmfs = numpy.array(gmfs)
-        # import nose; nose.tools.set_trace()
 
         sa_period = None
         sa_damping = None
@@ -385,7 +382,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
         imt_name = imt.__class__.__name__
 
         for i, location in enumerate(points_to_compute):
-            # import nose; nose.tools.set_trace()
             inserter.add_entry(
                 gmf_set_id=gmf_set.id,
                 imt=imt_name,
