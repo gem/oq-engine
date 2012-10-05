@@ -24,6 +24,8 @@ E.g. mean and quantile curves.
 import numpy
 from scipy.stats import mstats
 
+from openquake.utils import tasks as utils_tasks
+
 
 # Number of locations considered by each task
 DEFAULT_LOCATIONS_PER_TASK = 1000
@@ -259,3 +261,11 @@ def quantile_curves_weighted(poe_matrix, weights, quantile):
                 numpy.interp(quantile, cum_weights, sorted_poes))
         ret.append(result_curve)
     return numpy.array(ret).transpose()
+
+
+@utils_tasks.oqtask
+def do_post_process(job_id, post_processing_task):
+    func_key, func_args = post_processing_task
+    func = get_post_processing_fn(func_key)
+    func(*func_args)
+do_post_process.ignore_result = False

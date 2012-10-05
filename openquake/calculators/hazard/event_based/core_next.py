@@ -46,12 +46,17 @@ from nhlib.calc import stochastic
 from openquake import logs
 from openquake import writer
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.classical import (
+    post_processing as cls_post_processing)
 from openquake.calculators.hazard.event_based import post_processing
 from openquake.db import models
+from openquake.db.aggregate_result_writer import MeanCurveWriter
+from openquake.db.aggregate_result_writer import QuantileCurveWriter
 from openquake.input import logictree
 from openquake.job.validation import MAX_SINT_32
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+
 
 #: Ground motion correlation model map
 GM_CORRELATION_MODEL_MAP = {
@@ -662,5 +667,26 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-        if self.job.hazard_calculation.hazard_curves_from_gmfs:
+        logs.LOG.debug('> starting post processing')
+
+        hc = self.job.hazard_calculation
+        if hc.hazard_curves_from_gmfs:
             post_processing.do_post_process(self.job)
+
+            # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
+            # has some value (not an empty list), do this additional
+            # post-processing.
+            if hc.mean_hazard_curves or hc.quantile_hazard_curves:
+                tasks = cls_post_processing.setup_tasks(
+                    self.job, self.job.hazard_calculation,
+                    curve_finder=models.HazardCurveData.objects,
+                    writers=dict(mean_curves=MeanCurveWriter,
+                                 quantile_curves=QuantileCurveWriter))
+
+                utils_tasks.distribute(
+                        cls_post_processing.do_post_process,
+                        ("post_processing_task", tasks),
+                        tf_args=dict(job_id=self.job.id))
+
+
+        logs.LOG.debug('< done with post processing')
