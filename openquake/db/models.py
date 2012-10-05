@@ -1558,12 +1558,14 @@ class GmfSet(djm.Model):
             for imt, sa_period, sa_damping in imts:
 
                 for result_grp_ordinal in xrange(1, num_tasks + 1):
-                    gmfs = Gmf.objects.filter(
-                        gmf_set=self.id,
-                        imt=imt,
-                        sa_period=sa_period,
-                        sa_damping=sa_damping,
-                        result_grp_ordinal=result_grp_ordinal)
+                    gmfs = Gmf.objects\
+                        .filter(
+                            gmf_set=self.id,
+                            imt=imt,
+                            sa_period=sa_period,
+                            sa_damping=sa_damping,
+                            result_grp_ordinal=result_grp_ordinal)\
+                        .order_by('location')
                     if len(gmfs) == 0:
                         # This task did not contribute to this GmfSet
                         continue
