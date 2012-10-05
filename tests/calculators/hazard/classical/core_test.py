@@ -36,6 +36,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job, self.calc = self._setup_a_new_calculator()
+        models.JobStats.objects.create(oq_job=self.job)
 
     def _setup_a_new_calculator(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
@@ -54,7 +55,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch)
+        record_stats_patch = helpers.patch(
+            '%s.%s' % (base_path, 'record_init_stats'))
+        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
+                   record_stats_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -234,6 +238,11 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
+        # Test the job stats:
+        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        self.assertEqual(16, job_stats.num_tasks)
+        self.assertEqual(120, job_stats.num_sites)
+        self.assertEqual(2, job_stats.num_realizations)
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True
