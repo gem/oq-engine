@@ -267,8 +267,11 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
             'complete_logic_tree_ses',
             'complete_logic_tree_gmf',
             'ground_motion_fields',
-            'export_dir',
             'hazard_curves_from_gmfs',
+            'mean_hazard_curves',
+            'quantile_hazard_curves',
+            'poes_hazard_maps',
+            'export_dir',
         )
 
     def is_valid(self):
