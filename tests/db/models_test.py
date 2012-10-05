@@ -21,6 +21,7 @@ import unittest
 import numpy
 
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from django.contrib.gis.geos.point import Point
 
 from openquake import engine
 from openquake import engine2
@@ -487,3 +488,100 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual("PGA", hc_im_type)
         self.assertEqual(None, sa_period)
         self.assertEqual(None, sa_damping)
+
+
+class FakeGmfSet(object):
+
+    def __init__(self, complete_logic_tree_gmf, ses_ordinal,
+                 investigation_time, gmfs):
+        self.complete_logic_tree_gmf = complete_logic_tree_gmf
+        self.ses_ordinal = ses_ordinal
+        self.investigation_time = investigation_time
+        self.gmfs = gmfs
+
+    def __iter__(self):
+        return iter(self.gmfs)
+
+
+class GmfSetIterTestCase(unittest.TestCase):
+    """
+    Tests for the `__iter__` of :class:`openquake.db.models.GmfSet`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Run a very small job to produce some sample GMF results,
+        # which we can use for both test cases (gmf_set iter and complete logic
+        # tree iter).
+        cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
+        helpers.run_hazard_job(cfg, silence=True)
+
+    def test_complete_logic_tree_gmf_iter(self):
+        job = models.OqJob.objects.latest('id')
+        pass
+
+    def test_iter(self):
+        # GMFs, GmfSet 0
+        GmfNode = models._GroundMotionFieldNode
+        gmfs_gmf_set_0 = [
+            models._GroundMotionField(
+                imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
+                    GmfNode(iml=0.00894558476907964, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.252294938306868, location=Point(0.0, 0.0)),
+                ]),
+            models._GroundMotionField(
+                imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
+                    GmfNode(iml=0.0223682586083474, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.11131854911474, location=Point(0.0, 0.0)),
+                ]),
+            models._GroundMotionField(
+                imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
+                    GmfNode(iml=0.0297621082302423, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.290360150438584, location=Point(0.0, 0.0)),
+                ]),
+            models._GroundMotionField(
+                imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
+                    GmfNode(iml=0.0141248596268433, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.729799582246203, location=Point(0.0, 0.0)),
+                ]),
+            models._GroundMotionField(
+                imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
+                    GmfNode(iml=0.040131916333975, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.837385087379053, location=Point(0.0, 0.0)),
+                ]),
+            models._GroundMotionField(
+                imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
+                    GmfNode(iml=0.0319336733732103, location=Point(0.0, 0.5)),
+                    GmfNode(iml=0.328400636644465, location=Point(0.0, 0.0)),
+                ]),
+        ]
+
+        exp_gmf_sets = [
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+                       investigation_time=10.0, gmfs=gmfs_gmf_set_0),
+            #FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+            #           investigation_time=10.0),
+            #FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+            #           investigation_time=10.0),
+            #FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+            #           investigation_time=10.0),
+            #FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+            #           investigation_time=10.0),
+            #FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+            #           investigation_time=10.0),
+        ]
+
+        job = models.OqJob.objects.latest('id')
+
+        gmf_sets = models.GmfSet.objects\
+            .filter(gmf_collection__output__oq_job=job.id,
+                    gmf_collection__lt_realization__isnull=False)\
+            .order_by('gmf_collection', 'ses_ordinal')
+
+
+        for i, exp in enumerate(exp_gmf_sets[0]):
+            act = list(gmf_sets[0])[i]
+
+            equal, error = helpers.deep_eq(exp, act)
+
+            self.assertTrue(equal, error)
