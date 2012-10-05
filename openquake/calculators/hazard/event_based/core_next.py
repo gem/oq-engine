@@ -387,7 +387,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, task_ordinal):
                 imt=imt_name,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
-                # TODO:
                 location=location.wkt2d,
                 gmvs=gmfs[i].tolist(),
                 task_ordinal=task_ordinal,
