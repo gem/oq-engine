@@ -21,12 +21,14 @@ import unittest
 import numpy
 
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from nose.plugins.attrib import attr
 
 from openquake import engine
 from openquake import engine2
 from openquake.db import models
 
 from tests.utils import helpers
+from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
 
 
 class ModelEqualsTestCase(unittest.TestCase):
@@ -419,12 +421,13 @@ class SESRuptureTestCase(unittest.TestCase):
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=True, lons=self.mesh_lons,
-            lats=self.mesh_lats, depths=self.mesh_depths)
+            lats=self.mesh_lats, depths=self.mesh_depths, result_grp_ordinal=1,
+            rupture_ordinal=1)
         self.source_rupture = models.SESRupture.objects.create(
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=False, lons=self.ps_lons, lats=self.ps_lats,
-            depths=self.ps_depths)
+            depths=self.ps_depths, result_grp_ordinal=1, rupture_ordinal=2)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -486,3 +489,111 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual("PGA", hc_im_type)
         self.assertEqual(None, sa_period)
         self.assertEqual(None, sa_damping)
+
+
+class FakeGmfSet(object):
+
+    def __init__(self, complete_logic_tree_gmf, ses_ordinal,
+                 investigation_time, gmfs):
+        self.complete_logic_tree_gmf = complete_logic_tree_gmf
+        self.ses_ordinal = ses_ordinal
+        self.investigation_time = investigation_time
+        self.gmfs = gmfs
+
+    def __iter__(self):
+        return iter(self.gmfs)
+
+
+class GmfSetIterTestCase(unittest.TestCase):
+    """
+    Tests for the `__iter__` of :class:`openquake.db.models.GmfSet`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Run a very small job to produce some sample GMF results,
+        # which we can use for both test cases (gmf_set iter and complete logic
+        # tree iter).
+        cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
+        helpers.run_hazard_job(cfg, silence=True)
+
+    @attr('slow')
+    def test_complete_logic_tree_gmf_iter(self):
+        job = models.OqJob.objects.latest('id')
+        # Test data:
+        td = gmf_set_iter_test_data
+
+        exp_gmfs = itertools.chain(
+            td.GMFS_GMF_SET_0, td.GMFS_GMF_SET_1, td.GMFS_GMF_SET_2,
+            td.GMFS_GMF_SET_3, td.GMFS_GMF_SET_4, td.GMFS_GMF_SET_5)
+        exp_gmf_set = FakeGmfSet(complete_logic_tree_gmf=True,
+                                 ses_ordinal=None,
+                                 investigation_time=60.0,
+                                 gmfs=exp_gmfs)
+
+        [act_gmf_set] = models.GmfSet.objects\
+            .filter(gmf_collection__output__oq_job=job.id,
+                    gmf_collection__lt_realization__isnull=True)\
+            .order_by('gmf_collection', 'ses_ordinal')
+
+        self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
+                         act_gmf_set.complete_logic_tree_gmf)
+        self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
+        self.assertEqual(exp_gmf_set.investigation_time,
+                         act_gmf_set.investigation_time)
+
+        for i, exp_gmf in enumerate(exp_gmf_set):
+            act_gmf = list(act_gmf_set)[i]
+
+            equal, error = helpers.deep_eq(exp_gmf, act_gmf)
+
+            self.assertTrue(equal, error)
+
+
+    @attr('slow')
+    def test_iter(self):
+        # Test data
+        td = gmf_set_iter_test_data
+
+        exp_gmf_sets = [
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_0),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_1),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_2),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_3),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_4),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_5),
+        ]
+
+        job = models.OqJob.objects.latest('id')
+
+        gmf_sets = models.GmfSet.objects\
+            .filter(gmf_collection__output__oq_job=job.id,
+                    gmf_collection__lt_realization__isnull=False)\
+            .order_by('gmf_collection', 'ses_ordinal')
+
+        for i, exp_gmf_set in enumerate(exp_gmf_sets):
+            act_gmf_set = gmf_sets[i]
+            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
+                             act_gmf_set.complete_logic_tree_gmf)
+            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
+            self.assertEqual(exp_gmf_set.investigation_time,
+                             act_gmf_set.investigation_time)
+
+            for j, exp_gmf in enumerate(exp_gmf_set):
+                act_gmf = list(act_gmf_set)[j]
+
+                equal, error = helpers.deep_eq(exp_gmf, act_gmf)
+
+                self.assertTrue(equal, error)
