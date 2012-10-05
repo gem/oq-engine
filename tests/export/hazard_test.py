@@ -19,6 +19,9 @@ import shutil
 import tempfile
 import unittest
 
+import nrml
+
+from lxml import etree
 from nose.plugins.attrib import attr
 
 from openquake.db import models
@@ -26,6 +29,15 @@ from openquake.export import core as export_core
 from openquake.export import hazard
 
 from tests.utils import helpers
+
+
+def _number_of(elem_name, tree):
+    """
+    Given an element name (including the namespaces prefix, if applicable),
+    return the number of occurrences of the element in a given XML document.
+    """
+    expr = '//%s' % elem_name
+    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
 
 
 class HazardCurveExportTestCase(unittest.TestCase):
@@ -145,5 +157,9 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             self.assertTrue(os.path.exists(exported_file))
             self.assertTrue(os.path.isabs(exported_file))
             self.assertTrue(os.path.getsize(exported_file) > 0)
+
+            # Check for the correct number of GMFs in the file:
+            tree = etree.parse(exported_file)
+            self.assertEqual(420, _number_of('nrml:gmf', tree))
         finally:
             shutil.rmtree(target_dir)
