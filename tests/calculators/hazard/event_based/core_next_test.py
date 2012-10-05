@@ -254,14 +254,15 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                     sa_damping=sa_damping)
 
                 # Sanity check: make sure they all came from the same task:
-                task_ord = gmfs[0].task_ordinal
-                self.assertTrue(all(x.task_ordinal == task_ord for x in gmfs))
+                task_ord = gmfs[0].result_grp_ordinal
+                self.assertTrue(
+                    all(x.result_grp_ordinal == task_ord for x in gmfs))
 
                 # Expected number of ruptures:
                 exp_n_rups = models.SESRupture.objects.filter(
                     ses__ses_collection__output__oq_job=self.job.id,
                     ses__ordinal=gmf_set.ses_ordinal,
-                    task_ordinal=task_ord).count()
+                    result_grp_ordinal=task_ord).count()
 
                 self.assertEqual(121, gmfs.count())
                 self.assertTrue(all(len(x.gmvs) == exp_n_rups for x in gmfs))
