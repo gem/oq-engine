@@ -1099,9 +1099,8 @@ CREATE TABLE hzrdr.ses_rupture (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
-    task_ordinal INTEGER NOT NULL,
-    -- The sequence number of the rupture within a given task.
-    -- TODO: unique constraint on task_ordinal, rupture_ordinal?
+    result_grp_ordinal INTEGER NOT NULL,
+    -- The sequence number of the rupture within a given task/result group
     rupture_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
@@ -1152,8 +1151,7 @@ CREATE TABLE hzrdr.gmf (
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
-    -- TODO: unique constraint on gmf_set_id and task_ordinal?
-    task_ordinal INTEGER NOT NULL
+    result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
 
