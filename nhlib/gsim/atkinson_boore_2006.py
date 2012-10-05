@@ -19,25 +19,30 @@ Module exports :class:`AtkinsonBoore2006`.
 from __future__ import division
 
 import numpy as np
+# standard acceleration of gravity in m/s**2
+from scipy.constants import g
 
-from nhlib.gsim.base import GMPE, CoeffsTable
+from nhlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from nhlib.gsim.base import CoeffsTable
 from nhlib import const
 from nhlib.imt import PGA, PGV, SA
 
 
-class AtkinsonBoore2006(GMPE):
+class AtkinsonBoore2006(BooreAtkinson2008):
     """
-    Implements GMPE developed by Gail M. Atkinson and David M. Boore
-    and published as "Earthquake Ground-Motion Prediction Equations
-    for Eastern North America" (2006, Bulletin of the Seismological
-    Society of America, Volume 96, No. 6, pages 2181-2205).
-    This class implements only the equations for stress parameter of
-    140 bars. The correction described in 'Adjustment of Equations
-    to Consider Alternative Stress Parameters', pag 2198, is not
-    implemented.
-    It also implements the correction as described in the 'Erratum'
-    (2007, Bulletin of the Seismological Society of America,
-    Volume 97, No. 3, page 1032).
+    Implements GMPE developed by Gail M. Atkinson and David M. Boore and
+    published as "Earthquake Ground-Motion Prediction Equations for Eastern
+    North America" (2006, Bulletin of the Seismological Society of America,
+    Volume 96, No. 6, pages 2181-2205). This class implements only the 
+    equations for stress parameter of 140 bars. The correction described in
+    'Adjustment of Equations to Consider Alternative Stress Parameters',
+    p. 2198, is not implemented.
+    This class extends the BooreAtkinson2008 because it uses the same soil
+    amplification function. Note that in the paper, the reported soil
+    amplification function is the one used in a preliminary version of the
+    Boore and Atkinson 2008 GMPE, while the one that should be used is the
+    one described in the final paper. See comment in:
+    http://www.daveboore.com/pubs_online/ab06_gmpes_programs_and_tables.pdf
     """
     #: Supported tectonic region type is stable continental, given
     #: that the equations have been derived for Eastern North America
@@ -45,7 +50,7 @@ class AtkinsonBoore2006(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see paragraph
-    #: 'Methodology and Model Parameters', pag 2182
+    #: 'Methodology and Model Parameters', p. 2182
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
@@ -54,25 +59,25 @@ class AtkinsonBoore2006(GMPE):
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~nhlib.const.IMC.HORIZONTAL`, see paragraph 'Results', 
-    #: pag 2190, and caption to table 6, pag 2192
+    #: pag 2190, and caption to table 6, p. 2192
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type is total, see table 6
-    #: and 9, pag 2192 and 2202, respectively.
+    #: and 9, p. 2192 and 2202, respectively.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])
 
     #: Required site parameters is Vs30. 
-    #: See paragraph 'Equations for soil sites', pag 2200
+    #: See paragraph 'Equations for soil sites', p. 2200
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameter is magnitude (see
-    #: paragraph 'Methodology and Model Parameters', pag 2182)
+    #: paragraph 'Methodology and Model Parameters', p. 2182)
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
 
     #: Required distance measure is Rrup.
-    #: See paragraph 'Methodology and Model Parameters', pag 2182
+    #: See paragraph 'Methodology and Model Parameters', p. 2182
     REQUIRES_DISTANCES = set(('rrup', ))
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -81,83 +86,126 @@ class AtkinsonBoore2006(GMPE):
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        # extract dictionaries of coefficients specific to required
+        # intensity measure type.
+        C_HR = self.COEFFS_HARD_ROCK[imt]
+        C_BC = self.COEFFS_BC[imt]
+        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
+
+        # clip distances to avoid singularity at 0
+        rrup = self._clip_distances(dists)
+
+        # compute factors required for mean value calculation
+        f0 = self._compute_f0_factor(rrup)
+        f1 = self._compute_f1_factor(rrup)
+        f2 = self._compute_f2_factor(rrup)
+
+        # compute pga for BC boundary (required for soil amplification
+        # calculation on non-hard-rock sites)
+        pga_bc = np.zeros_like(sites.vs30)
+        self._compute_mean(self.COEFFS_BC[PGA()], f0, f1, f2, rup.mag,
+                                    rrup, sites, sites.vs30 < 2000.0, pga_bc)
+        pga_bc = (10**pga_bc) * 1e-2 / g
+
+        # compute mean values for hard-rock sites (vs30 >= 2000),
+        # and non-hard-rock sites (vs30 < 2000)
+        mean = np.zeros_like(sites.vs30)
+        self._compute_mean(C_HR, f0, f1, f2, rup.mag, rrup, sites,
+                           sites.vs30 >= 2000.0, mean)
+        self._compute_mean(C_BC, f0, f1, f2, rup.mag, rrup, sites,
+                           sites.vs30 < 2000.0, mean)
+        self._compute_soil_amplification(C_SR, sites, pga_bc, mean)
+
+        # convert from base 10 to base e
+        if imt == PGV():
+            mean = np.log(10**mean)
+        else:
+            # convert from cm/s**2 to g
+            mean = np.log((10**mean) * 1e-2 / g)
+
+        stddevs = self._get_stddevs(stddev_types, num_sites=len(sites.vs30))
+
+        return mean, stddevs
+
+    def _clip_distances(self, dists):
+        """
+        Return array of distances with values clipped to 1. See end of
+        paragraph 'Methodology and Model Parameters', p. 2182. The equations
+        have a singularity for distance = 0, so that's why distances are
+        clipped to 1.
+        """
+        rrup = dists.rrup
+        rrup[rrup < 1] = 1
+
+        return rrup
+
+    def _compute_f0_factor(self, rrup):
+        """
+        Compute and return factor f0 - see equation (5), 6th term, p. 2191.
+        """
+        # f0 = max(log10(R0/rrup),0)
+        f0 = np.log10(self.COEFFS_IMT_INDEPENDENT['R0'] / rrup)
+        f0[f0 < 0] = 0.0
+
+        return f0
+
+    def _compute_f1_factor(self, rrup):
+        """
+        Compute and return factor f1 - see equation (5), 4th term, p. 2191
+        """
+        # f1 = min(log10(rrup),log10(R1))
+        f1 = np.log10(rrup)
+        logR1 = np.log10(self.COEFFS_IMT_INDEPENDENT['R1'])
+        f1[f1 > logR1] = logR1
+
+        return f1
+
+    def _compute_f2_factor(self, rrup):
+        """
+        Compute and return factor f2, see equation (5), 5th term, pag 2191
+        """
+        # f2 = max(log10(rrup/R2),0)
+        f2 = np.log10(rrup / self.COEFFS_IMT_INDEPENDENT['R2'])
+        f2[f2 < 0] = 0.0
+
+        return f2
+
+    def _compute_mean(self, C, f0, f1, f2, mag, rrup, sites, idxs, mean):
+        """
+        Compute mean value (for a set of indexes) without site amplification
+        terms. This is equation (5), p. 2191, without S term.
+        """
+        mean[idxs] = \
+            C['c1'] + \
+            C['c2'] * mag + \
+            C['c3'] * (mag ** 2) + \
+            (C['c4'] + C['c5'] * mag) * f1[idxs] + \
+            (C['c6'] + C['c7'] * mag) * f2[idxs] + \
+            (C['c8'] + C['c9'] * mag) * f0[idxs] + \
+            C['c10'] * rrup[idxs]
+
+    def _compute_soil_amplification(self, C, sites, pga_bc, mean):
+        """
+        Compute soil amplification, that is S term in equation (5), p. 2191,
+        and add to mean values for non hard rock sites.
+        """
+        sal = self._get_site_amplification_linear(sites, C)
+        sanl = self._get_site_amplification_non_linear(sites, pga_bc, C)
+
+        idxs = sites.vs30 < 2000.0
+        mean[idxs] = sal[idxs] + sanl[idxs]
+
+    def _get_stddevs(self, stddev_types, num_sites):
+        """
+        Return total standard deviation (see table 6, p. 2192).
+        """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
-                   
-        #: Total sigma is constant for all frequencies
-        stddevs = [np.zeros_like(sites.vs30) + COEFFS_IMT_INDEPENDENT['std_total'] for _ in stddev_types]
-        means = np.zeros_like(sites.vs30)
-        
-        #: extracting dictionaries of coefficients specific to required
-        #: intensity measure type.
-        C_HARD_ROCK = self.COEFFS_HARD_ROCK[imt]
-        C_ROCK = self.COEFFS_ROCK[imt]
-        C_STRESS = self.COEFFS_STRESS[imt]
-        C_SOIL_RESPONSE = self.COEFFS_SOIL_RESPONSE[imt]
-        
-        #: minimum allowed distance is 1 km. See end of
-        #: paragraph 'Methodology and Model Parameters',
-        #: pag 2182
-        #: the equations have a singularity for distance = 0,
-        #: so that's why distances are clipped to 1.
-        dists = rup.rrup
-        dists[dists < 1] = 1
-        
-        #: compute factor f0, see equation (5), pag 2191
-        #: f0 = max(log(R0/rrup),0)
-        f0 = np.log(COEFFS_IMT_INDEPENDENT['R0'] / dists)
-        f0[f0 < 0] = 0.0
-        
-        #: compute factor f1, see equation (5), pag 2191
-        #: f1 = min(log(rrup),log(R1))
-        f1 = np.log(dists)
-        logR1 = np.log(COEFFS_IMT_INDEPENDENT['R1'])
-        f1[f1 > logR1] = logR1
-        
-        #: compute factor f2, see equation (5), pag 2191
-        #: f2 = max(log(rrup/R2),0)
-        f2 = np.log(dists / COEFFS_IMT_INDEPENDENT['R2'])
-        f2[f2 < 0] = 0.0
-        
-        #: compute mean value for hard rock sites (Vs30 >= 2000),
-        #: see paragraph 'Conclusions', pag 2203
-        #: equation (5), pag 2191, with last term S = 0
-        idx = sites.vs30 >= 2000.0
-        means[idx] = C_HARD_ROCK['c1'] + C_HARD_ROCK['c2'] * rup.mag + C_HARD_ROCK['c3'] * (rup.mag ** 2) +\
-                    (C_HARD_ROCK['c4'] + C_HARD_ROCK['c5'] * rup.mag) * f1[idx] +\
-                    (C_HARD_ROCK['c6'] + C_HARD_ROCK['c7'] * rup.mag) * f2[idx] +\
-                    (C_HARD_ROCK['c8'] + C_HARD_ROCK['c9'] * rup.mag) * f0[idx] +\
-                    C_HARD_ROCK['c10'] * dists[idx]
-                    
-        #: compute mean value for non-hard rock sites
-        #: equation (5), pag 2191, with last term S
-        #: given by equations (7a) (7b), pag 2200
-        idx = sites.vs30 <= 2000.0
-        
-        # compute soil amplification
-        
-        #: compute non-linear slope, equations (8a) to (8d), pag 2200
-        
-        #: equation (8d), bnl has zero value for vs30 > Vref = 760.0
-        bnl = np.zeros_like(sites.vs30)
-        
-        #: equation (8a)
-        bnl[sites.vs30 <= COEFFS_IMT_INDEPENDENT['v1']] = C_SOIL_RESPONSE['b1']
-        
-        #: equation (8b)
-        idx1 = sites.vs30
-        
-        
-        
-        
-        
-        
-        means[idx] = COEFFS_ROCK['c1'] + COEFFS_ROCK['c2'] * rup.mag + COEFFS_ROCK['c3'] * (rup.mag ** 2) +\
-                    (COEFFS_ROCK['c4'] + COEFFS_ROCK['c5'] * rup.mag) * f1[idx] +\
-                    (COEFFS_ROCK['c6'] + COEFFS_ROCK['c7'] * rup.mag) * f2[idx] +\
-                    (COEFFS_ROCK['c8'] + COEFFS_ROCK['c9'] * rup.mag) * f0[idx] +\
-                    COEFFS_ROCK['c10'] * dists[idx]
-        
+        stddevs = [np.zeros(num_sites) + \
+                   self.COEFFS_IMT_INDEPENDENT['std_total']
+                   for _ in stddev_types]
+        return stddevs
+
     #: Hard rock coefficents, table 6, pag 2192,
     COEFFS_HARD_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT     c1        c2         c3         c4        c5         c6        c7         c8         c9         c10
@@ -188,9 +236,9 @@ class AtkinsonBoore2006(GMPE):
     pga     9.07E-01  9.83E-01  -6.60E-02  -2.70E+00  1.59E-01  -2.80E+00  2.12E-01  -3.01E-01  -6.53E-02  -4.48E-04
     pgv    -1.44E+00  9.91E-01  -5.85E-02  -2.70E+00  2.16E-01  -2.44E+00  2.66E-01   8.48E-02  -6.93E-02  -3.73E-04
     """)
-    
+
     #: Coefficients for NEHRP BC boundary (Vs30 = 760 m/s), table 9, pag 2202
-    COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c1        c2         c3         c4        c5         c6        c7         c8         c9         c10
     5.00   -4.85E+00  1.58E+00  -8.07E-02  -2.53E+00  2.22E-01  -1.43E+00  1.36E-01   6.34E-01  -1.41E-01  -1.61E-04
     4.00   -5.26E+00  1.79E+00  -9.79E-02  -2.44E+00  2.07E-01  -1.31E+00  1.21E-01   7.34E-01  -1.56E-01  -1.96E-04
@@ -219,40 +267,8 @@ class AtkinsonBoore2006(GMPE):
     pga     5.23E-01  9.69E-01  -6.20E-02  -2.44E+00  1.47E-01  -2.34E+00  1.91E-01  -8.70E-02  -8.29E-02  -6.30E-04
     pgv    -1.66E+00  1.05E+00  -6.04E-02  -2.50E+00  1.84E-01  -2.30E+00  2.50E-01   1.27E-01  -8.70E-02  -4.27E-04
     """)
-    
-    #: Stress adjustment factors coefficients, table 7, pag 2201,
-    COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""\
-    IMT     delta  Ml    Mh
-    5.00    0.15   6.00  8.50
-    4.00    0.15   5.75  8.37
-    3.13    0.15   5.50  8.25
-    2.50    0.15   5.25  8.12
-    2.00    0.15   5.00  8.00
-    1.59    0.15   4.84  7.70
-    1.25    0.15   4.67  7.45
-    1.00    0.15   4.50  7.20
-    0.794   0.15   4.34  6.95
-    0.629   0.15   4.17  6.70
-    0.500   0.15   4.00  6.50
-    0.397   0.15   3.65  6.37
-    0.315   0.15   3.30  6.25
-    0.251   0.15   2.90  6.12
-    0.199   0.15   2.50  6.00
-    0.158   0.15   1.85  5.84
-    0.125   0.15   1.15  5.67
-    0.100   0.15   0.50  5.50
-    0.079   0.15   0.34  5.34
-    0.063   0.15   0.17  5.17
-    0.050   0.15   0.00  5.00
-    0.040   0.15   0.00  5.00
-    0.031   0.15   0.00  5.00
-    0.025   0.15   0.00  5.00
-    pga     0.15   0.50  5.50
-    pgv     0.11   2.00  5.50
-    """)
-    
-    
-    #: Soil response coefficients, table 8, pag 2201.
+
+    # Soil response coefficients, table 8, pag 2201.
     COEFFS_SOIL_RESPONSE = CoeffsTable(sa_damping=5, table="""\
     IMT     blin    b1      b2
     5.00   -0.752  -0.300   0
@@ -280,14 +296,12 @@ class AtkinsonBoore2006(GMPE):
     pga    -0.361  -0.641  -0.144
     pgv    -0.600  -0.495  -0.060
     """)
-    
-    #: IMT-independent coefficients
-    #: std is the total standard deviation
-    #: see Table 6, pag 2192 and Table 9, pag 2202.
-    #: R0, R1, R2 are required coefficients
-    #: for mean calculation - see equation (5) pag 2191.
-    #: v1, v2, Vref are coefficients for soil response calculation
-    #: see table 8, pag 2201
+
+    #: IMT-independent coefficients. std_total is the total standard deviation,
+    #: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
+    #: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
+    #: are coefficients required for soil response calculation, see table 8,
+    #: p. 2201
     COEFFS_IMT_INDEPENDENT = {
         'std_total': 0.30,
         'R0': 10.0,
