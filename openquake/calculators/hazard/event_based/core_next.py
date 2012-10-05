@@ -158,11 +158,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
         if hc.ground_motion_fields:
-            # Initialize a cache to hold all gmf data for this stochastic event
-            # set.
-            # This includes GMFs for all ruptures in this SES,
-            # and each GMF includes ground motion values for each point of
-            # interest.
             gmf_cache = _create_gmf_cache(len(points_to_compute), imts)
 
             logs.LOG.debug('> computing also ground motion fields')
