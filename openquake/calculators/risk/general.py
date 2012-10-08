@@ -1159,8 +1159,8 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
 
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
 
-
-def compute_insured_loss_curve(asset, loss_curve):
+# TO BE REMOVED
+def compute_insured_loss_curve(asset, y_values, losses):
     """
     Compute an insured loss curve.
     :param asset: the asset used to compute the insured loss curve.
@@ -1169,45 +1169,11 @@ def compute_insured_loss_curve(asset, loss_curve):
     :param loss_curve: a loss curve.
     :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
     """
-    LOG.debug('ASSET VALUE')
-    LOG.debug(asset.value)
-    LOG.debug('ASSET DEDUCTIBLE')
-    LOG.debug(asset.deductible)
-    LOG.debug('ASSET LIMIT')
-    LOG.debug(asset.ins_limit)
 
-    insured_losses = compute_insured_losses(asset, loss_curve.x_values)
+    insured_losses = compute_insured_losses(asset, losses)
 
-    a = shapes.Curve(zip(insured_losses, loss_curve.y_values))
-    LOG.debug('COMPUTE_INUSURED_LOSS_CURVE')
-    LOG.debug('X values')
-    LOG.debug(' '.join([str(x) for x in a.x_values]))
-    LOG.debug('Y values')
-    LOG.debug(' '.join([str(x) for x in a.y_values]))
-    return a
+    return shapes.Curve(zip(insured_losses, y_values))
 
-
-def compute_insured_loss_rat_curve(asset, insured_curve):
-    """
-    Compute an insured loss ratio curve
-    :param asset: the asset used to compute the insured loss ratio curve.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param insured_curve: an insured loss curve
-    :return: loss_ratio_curve: a :py:class:`openquake.shapes.Curve` instance.
-    """
-
-    LOG.debug('COMPUTE_INUSURED_LOSS_RATIO_CURVE')
-    a = shapes.Curve(zip(insured_curve.x_values / float(asset.value),
-        insured_curve.y_values))
-
-
-
-    LOG.debug('X values')
-    LOG.debug(' '.join([str(x) for x in a.x_values]))
-    LOG.debug('Y values')
-    LOG.debug(' '.join([str(x) for x in a.y_values]))
-    return a
 
 
 def _generate_curve(losses, probs_of_exceedance):
@@ -1351,9 +1317,6 @@ def compute_insured_losses(asset, losses):
     :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
     """
 
-    LOG.debug("UNINSURED LOSSES")
-    LOG.debug(" ".join([str(x) for x in losses]))
-
     if insurance_boundaries_defined(asset):
         for i, value in enumerate(losses):
             if value < asset.deductible:
@@ -1361,8 +1324,4 @@ def compute_insured_losses(asset, losses):
             else:
                 if value > asset.ins_limit:
                     losses[i] = asset.ins_limit
-    a = losses
-
-    LOG.debug("INSURED LOSSES")
-    LOG.debug(" ".join([str(x) for x in a]))
-    return a
+    return losses

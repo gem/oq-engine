@@ -29,7 +29,8 @@ from tests.utils import helpers
 
 from qa_tests.data.probabilistic_event_based_risk.test_data import (
     EXPECTED_LOSS_A1_MB, EXPECTED_LOSS_A2_MB, EXPECTED_LOSS_A3_MB,
-    LOSS_CURVES_MB, LOSS_RATIOS_CURVES_MB, AGGREGATE_CURVE)
+    LOSS_CURVES_MB, LOSS_RATIOS_CURVES_MB, AGGREGATE_CURVE,
+    LOSS_CURVES_MB_IL, LOSS_RATIOS_CURVES_MB_IL)
 
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
@@ -88,14 +89,39 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
 
-    @unittest.skip
+
     def test_insured_loss_mean_based(self):
         try:
             cfg = helpers.qa_file(
                 "probabilistic_event_based_risk/m_il_config.gem")
             self._run_job(cfg)
+            job_id = OqJob.objects.latest('id').id
+
+            [output] = Output.objects.filter(
+                oq_job=job_id,
+                output_type="agg_loss_curve")
+            export_agg_loss_curve(output, QA_OUTPUT_DIR)
+            expected_files = [
+                "%s/loss_curves-block-#%s-block#0.xml" % (QA_OUTPUT_DIR,
+                                                          job_id),
+                "%s/loss_curves-loss-block-#%s-block#0.xml" % (QA_OUTPUT_DIR,
+                                                               job_id),
+                "%s/insured_loss_curves-insured-loss-block=#%s-block#0.xml" % (
+                    QA_OUTPUT_DIR, job_id),
+
+                "%s/loss_curves-insured-block=#%s-block#0.xml" % (
+                    QA_OUTPUT_DIR, job_id),
+
+                "%s/losses_at-0.99.xml" % QA_OUTPUT_DIR,
+
+                "%s/aggregate_loss_curve.xml" % QA_OUTPUT_DIR
+            ]
+            self._verify_job_succeeded(expected_files)
+            self._verify_loss_ratio_curves(expected_files[3],
+                LOSS_RATIOS_CURVES_MB_IL)
+            self._verify_loss_curves(expected_files[2], LOSS_CURVES_MB_IL)
         finally:
-            print 'pippo'
+            rmtree(QA_OUTPUT_DIR)
 
 
     #TODO After PEB sample based has been fixed.
@@ -180,7 +206,6 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertEqual("succeeded", job.status)
 
         for f in expected_files:
-            print f
             self.assertTrue(os.path.exists(f))
 
     def _verify_loss_maps(self, filename, *expected_losses):

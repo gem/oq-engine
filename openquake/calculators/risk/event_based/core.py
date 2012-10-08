@@ -26,6 +26,7 @@ from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
+from openquake.shapes import Curve
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
@@ -174,7 +175,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point.column, point.row, asset, gmf, loss_ratios)
 
-                aggregate_curve.append(loss_ratios * asset.value)
+                losses = loss_ratios * asset.value
+
+                aggregate_curve.append(losses)
 
                 if loss_ratio_curve:
                     loss_curve = self.compute_loss_curve(
@@ -188,21 +191,30 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                 point.row, loss_curve, asset, loss_poe)
 
                     if self.job_ctxt.params.get("INSURED_LOSSES"):
-                        insured_curve = general.compute_insured_loss_curve(
-                            asset, loss_curve)
-                        insured_loss_ratio_curve = general\
-                            .compute_insured_loss_rat_curve(asset,
-                                insured_curve)
+                        insured_losses = general.compute_insured_losses(
+                            asset, losses)
+
+                        insured_lrc = self.compute_loss_ratio_curve(
+                            point.column, point.row, asset,
+                            gmf, insured_losses, kvs_save=False)
+
+                        insured_lrc.x_values = (
+                           insured_lrc.x_values / asset.value)
+
+                        insured_lc = self.compute_loss_curve(
+                            point.column, point.row, insured_lrc, asset,
+                            kvs_save=False)
+
                         key_ic = kvs.tokens.insured_loss_curve_key(
                             self.job_ctxt.job_id, point.row, point.column,
                             asset.asset_ref)
-                        kvs.get_client().set(key_ic, insured_curve.to_json())
+                        kvs.get_client().set(key_ic, insured_lc.to_json())
 
                         key_irc = kvs.tokens.insured_loss_ratio_curve_key(
                             self.job_ctxt.job_id, point.row, point.column,
                             asset.asset_ref)
                         kvs.get_client().set(key_irc,
-                            insured_loss_ratio_curve.to_json())
+                            insured_lrc.to_json())
 
         return aggregate_curve.losses
 
@@ -269,7 +281,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                            epsilon_provider, asset)
 
     def compute_loss_ratio_curve(self, col, row, asset, gmf_slice,
-                                 loss_ratios):
+                                 loss_ratios, kvs_save=True):
         """Compute the loss ratio curve for a single asset.
 
         :param asset: the asset used to compute loss
@@ -295,17 +307,18 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
 
-        key = kvs.tokens.loss_ratio_key(
-            self.job_ctxt.job_id, row, col, asset.asset_ref)
+        if kvs_save:
+            key = kvs.tokens.loss_ratio_key(
+                self.job_ctxt.job_id, row, col, asset.asset_ref)
+            kvs.get_client().set(key, loss_ratio_curve.to_json())
 
-        kvs.get_client().set(key, loss_ratio_curve.to_json())
-
-        LOGGER.debug("Loss ratio curve is %s, write to key %s" %
-                (loss_ratio_curve, key))
+            LOGGER.debug("Loss ratio curve is %s, write to key %s" %
+                    (loss_ratio_curve, key))
 
         return loss_ratio_curve
 
-    def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
+    def compute_loss_curve(self, column, row, loss_ratio_curve, asset,
+                           kvs_save=True):
         """Compute the loss curve for a single asset."""
 
         if asset is None:
@@ -313,10 +326,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
-        key = kvs.tokens.loss_curve_key(
-            self.job_ctxt.job_id, row, column, asset.asset_ref)
+        if kvs_save:
+            key = kvs.tokens.loss_curve_key(
+                self.job_ctxt.job_id, row, column, asset.asset_ref)
+            kvs.get_client().set(key, loss_curve.to_json())
 
-        LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
-        kvs.get_client().set(key, loss_curve.to_json())
+            LOGGER.debug("Loss curve is %s, write to key %s" %
+                         (loss_curve, key))
 
         return loss_curve
