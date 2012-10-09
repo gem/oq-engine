@@ -1159,22 +1159,6 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
 
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
 
-# TO BE REMOVED
-def compute_insured_loss_curve(asset, y_values, losses):
-    """
-    Compute an insured loss curve.
-    :param asset: the asset used to compute the insured loss curve.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param loss_curve: a loss curve.
-    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
-    """
-
-    insured_losses = compute_insured_losses(asset, losses)
-
-    return shapes.Curve(zip(insured_losses, y_values))
-
-
 
 def _generate_curve(losses, probs_of_exceedance):
     """Generate a loss ratio (or loss) curve, given a set of losses
