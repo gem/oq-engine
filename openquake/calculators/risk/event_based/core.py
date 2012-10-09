@@ -26,7 +26,6 @@ from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
-from openquake.shapes import Curve
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG

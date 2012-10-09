@@ -39,7 +39,6 @@ from openquake.xml import NRML_NS
 from openquake.xml import NSMAP
 
 
-
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
