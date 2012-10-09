@@ -23,13 +23,9 @@ Copyright (C) 2012 GEM Foundation.
 """
 from setuptools import setup, find_packages
 
-import numpy
-
 
 version = "0.01"
 url = "http://github.com/gem/oq-risklib"
-
-include_dirs = [numpy.get_include()]
 
 
 setup(
@@ -43,7 +39,6 @@ setup(
         'numpy',
         'scipy'
     ],
-    include_dirs=include_dirs,
     maintainer='GEM',
     maintainer_email='info@openquake.org',
     classifiers=(
