@@ -81,10 +81,6 @@ class BooreAtkinson2008(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
 
-        # compute median PGA on rock, needed to compute non-linear site
-        # amplification
-        pga4nl = self._get_pga_for_rock(rup, dists)
-
         # equation 1, pag 106, without sigma term, that is only the first 3
         # terms. The third term (site amplification) is computed as given in
         # equation (6), that is the sum of a linear term - equation (7) - and
@@ -93,8 +89,7 @@ class BooreAtkinson2008(GMPE):
         mean = self._compute_magnitude_scaling(rup, C) + \
             self._compute_distance_scaling(rup, dists, C) + \
             self._get_site_amplification_linear(sites, C) + \
-            self._get_site_amplification_non_linear(sites, rup, dists, C,
-                                                    pga4nl)
+            self._get_site_amplification_non_linear(sites, rup, dists, C)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
@@ -163,10 +158,19 @@ class BooreAtkinson2008(GMPE):
 
         return U, SS, NS, RS
 
-    def _get_pga_for_rock(self, rup, dists):
+    def _get_site_amplification_linear(self, sites, C):
         """
-        Compute and return median PGA for rock conditions (Vs30=760.0).
+        Compute site amplification linear term,
+        equation (7), pag 107.
         """
+        return C['blin'] * np.log(sites.vs30 / 760.0)
+
+    def _get_site_amplification_non_linear(self, sites, rup, dists, C):
+        """
+        Compute site amplification non-linear term,
+        equations (8a) to (13d), pag 108-109.
+        """
+
         # Median PGA in g for Vref = 760.0, without site amplification,
         # that is equation (1) pag 106, without the third and fourth terms
         # Mref and Rref values are given in the caption to table 6, pag 119
@@ -178,21 +182,9 @@ class BooreAtkinson2008(GMPE):
         # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
         # Rref=1.0 km for all periods)".
         C_pga = self.COEFFS[PGA()]
-        return np.exp(self._compute_magnitude_scaling(rup, C_pga) +
-                      self._compute_distance_scaling(rup, dists, C_pga))
+        pga4nl = np.exp(self._compute_magnitude_scaling(rup, C_pga) +
+                        self._compute_distance_scaling(rup, dists, C_pga))
 
-    def _get_site_amplification_linear(self, sites, C):
-        """
-        Compute site amplification linear term,
-        equation (7), pag 107.
-        """
-        return C['blin'] * np.log(sites.vs30 / 760.0)
-
-    def _get_site_amplification_non_linear(self, sites, rup, dists, C, pga4nl):
-        """
-        Compute site amplification non-linear term,
-        equations (8a) to (13d), pag 108-109.
-        """
         # non linear slope
         bnl = self._compute_non_linear_slope(sites, C)
 
