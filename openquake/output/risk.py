@@ -37,6 +37,7 @@ from openquake.xml import GML_NS
 from openquake.xml import NRML
 from openquake.xml import NRML_NS
 from openquake.xml import NSMAP
+from openquake import logs
 
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
@@ -519,7 +520,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, scenario):
         :py:class:`output.risk.LossMapNonScenarioXMLWriter`
     """
     writers = []
-
+    logs.LOG.debug("I'VE BEEN CALLED")
     if 'db' in serialize_to:
         writers.append(LossMapDBWriter(nrml_path, job_id))
 
