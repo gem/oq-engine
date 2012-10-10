@@ -52,11 +52,13 @@ class FragilityModel(object):
 
 
 class Asset(object):
-    def __init__(self, taxonomy,
-                 number_of_units=None,
-                 ins_limit=None, deductible=None, asset_ref=None):
-        self.ins_limit = ins_limit
+
+    def __init__(self, taxonomy, value, asset_ref, number_of_units=None,
+        ins_limit=None, deductible=None, ):
+
+        self.value = value
+        self.taxonomy = taxonomy
         self.asset_ref = asset_ref
+        self.ins_limit = ins_limit
         self.deductible = deductible
         self.number_of_units = number_of_units
-        self.taxonomy = taxonomy
