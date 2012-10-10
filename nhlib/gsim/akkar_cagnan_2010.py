@@ -84,35 +84,35 @@ class AkkarCagnan2010(BooreAtkinson2008):
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type from the Akkar Cagnan 2010 table
-        C_AC = self.COEFFS_AC10[imt]
+        # extracting dictionary of coefficients (for soil amplification)
+        # specific to required intensity measure type
+        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type from the Boore Atkinson 2008 table
-        C_BA = self.COEFFS[imt]
-
-        # compute median PGA on rock, needed to compute non-linear site
+        # compute median PGA on rock (in g), needed to compute non-linear site
         # amplification
-        pga4nl = self._compute_pga_for_rock(rup.mag, dists.rjb, rup.rake)
-        print 'pga4nl', pga4nl
+        C = self.COEFFS_AC10[PGA()]
+        pga4nl = np.exp(
+            self._compute_mean(C, rup.mag, dists.rjb, rup.rake)) * 1e-2 / g
 
-        # mean value as given in equations (1a) and (1b),
-        # pages 2981 and 2982, respectively
-        mean = C_AC['a1'] + \
-               self._compute_linear_magnitude_term(C_AC, rup.mag) + \
-               self._compute_quadratic_magnitude_term(C_AC, rup.mag) + \
-               self._compute_logarithmic_distance_term(C_AC, rup.mag, dists.rjb) + \
-               self._compute_faulting_style_term(C_AC, rup.rake) + \
-               self._get_site_amplification_linear(sites, C_BA) + \
-               self._get_site_amplification_non_linear(sites, rup, dists, C_BA,
-                                                       pga4nl)
+        # compute full mean value by adding site amplification terms
+        # (but avoiding recomputing mean on rock for PGA)
+        if imt == PGA():
+            mean = \
+                np.log(pga4nl) + \
+                self._get_site_amplification_linear(sites, C_SR) + \
+                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
+        else:
+            C = self.COEFFS_AC10[imt]
+            mean = \
+                self._compute_mean(C, rup.mag, dists.rjb, rup.rake) + \
+                self._get_site_amplification_linear(sites, C_SR) + \
+                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
 
-        # convert from cm/s**2 to g
-        if imt is not PGV():
+        # convert from cm/s**2 to g for SA (PGA is already computed in g)
+        if isinstance(imt, SA):
             mean = np.log(np.exp(mean) * 1e-2 / g)
 
-        stddevs = self._get_stddevs(C_AC, stddev_types, num_sites=len(sites.vs30))
+        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         return mean, stddevs
 
@@ -157,7 +157,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
         and (1b), pages 2981 and 2982, respectively.
         """
         return (C['a5'] + C['a6'] * (mag - self.c1)) * \
-                np.log(np.sqrt(rjb**2 + C['a7']**2))
+            np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2))
 
     def _compute_faulting_style_term(self, C, rake):
         """
@@ -169,18 +169,19 @@ class AkkarCagnan2010(BooreAtkinson2008):
 
         return C['a8'] * Fn + C['a9'] * Fr
 
-    def _compute_pga_for_rock(self, mag, rjb, rake):
+    def _compute_mean(self, C, mag, rjb, rake):
         """
-        Compute and return median PGA (in g) for rock conditions (Vs30=760.0).
+        Compute and return mean value without site conditions,
+        that is equations (1a) and (1b), p.2981-2982.
         """
-        C_pga = self.COEFFS_AC10[PGA()]
-        logPGA = C_pga['a1'] + \
-                 self._compute_linear_magnitude_term(C_pga, mag) + \
-                 self._compute_quadratic_magnitude_term(C_pga, mag) + \
-                 self._compute_logarithmic_distance_term(C_pga, mag, rjb) + \
-                 self._compute_faulting_style_term(C_pga, rake)
+        mean = \
+            C['a1'] + \
+            self._compute_linear_magnitude_term(C, mag) + \
+            self._compute_quadratic_magnitude_term(C, mag) + \
+            self._compute_logarithmic_distance_term(C, mag, rjb) + \
+            self._compute_faulting_style_term(C, rake)
 
-        return np.exp(logPGA) * 1e-2 / g
+        return mean
 
     # c1 is the reference magnitude, fixed to 6.5
     # see paragraph 'Functional Form', p. 2982
