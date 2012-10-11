@@ -43,6 +43,7 @@ logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 # In degrees
 DEFAULT_REGION_CELL_SIZE = 0.1
 
+
 class Region(object):
     """A container of polygons, used for bounds checking."""
 

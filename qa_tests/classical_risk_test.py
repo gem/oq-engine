@@ -29,8 +29,18 @@ from openquake.xml import NRML_NS
 
 from tests.utils import helpers
 
+from qa_tests.data.classical_risk_test.test_data import (
+    EXPECTED_CLOSS_01, EXPECTED_CLOSS_02, EXPECTED_POES_LRC,
+    EXPECTED_LOSS_RATIOS_LRC, EXPECTED_POES_LC, EXPECTED_LOSSES_LC)
+
+from qa_tests.data.classical_risk_test.beta_distributions.test_data import (
+    B_EXPECTED_CLOSS, B_EXPECTED_POES_LC_LRC, B_EXPECTED_LOSSES_LC,
+    B_EXPECTED_LOSS_RATIOS_LRC)
+
 OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
-QA_OUTPUT_DIR = helpers.qa_file('classical_psha_based_risk/computed_output')
+QA_OUTPUT_DIR = helpers.qa_file('classical_risk_test/computed_output')
+OUTPUT_BETA_DIR = helpers.qa_file(
+    'classical_risk_test/beta_distributions/computed_output')
 
 
 class ClassicalRiskQATestCase(unittest.TestCase):
@@ -41,39 +51,85 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'classical_psha_based_risk/config.gem')
 
         self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
 
-        self._verify_loss_curve()
-        self._verify_loss_ratio_curve()
-        self._verify_loss_maps()
+        job_id = OqJob.objects.latest('id').id
+        expected_files = [
+            'hazardcurve-0.xml',
+            'hazardcurve-mean.xml',
+            'losscurves-block-#%s-block#0.xml' % job_id,
+            'losscurves-loss-block-#%s-block#0.xml' % job_id,
+            'losses_at-0.01.xml',
+            'losses_at-0.02.xml',
+            'losses_at-0.05.xml'
+        ]
+
+        self._verify_job_succeeded(OUTPUT_DIR, expected_files)
+        self._verify_loss_curve(job_id, EXPECTED_POES_LC, EXPECTED_LOSSES_LC,
+            0.0, OUTPUT_DIR)
+        self._verify_loss_ratio_curve(job_id, EXPECTED_POES_LRC,
+            EXPECTED_LOSS_RATIOS_LRC, 0.0, OUTPUT_DIR)
+        self._verify_loss_maps(OUTPUT_DIR, EXPECTED_CLOSS_01,
+            EXPECTED_CLOSS_02)
+
+    def test_classical_beta_distrib(self):
+        try:
+            cfg = helpers.qa_file(
+                'classical_risk_test/beta_distributions/config_risk.gem')
+
+            self._run_job(cfg)
+
+            job_id = OqJob.objects.latest('id').id
+            expected_files = [
+                'hazardcurve-0.xml',
+                'hazardcurve-mean.xml',
+                'losscurves-block-#%s-block#0.xml' % job_id,
+                'losscurves-loss-block-#%s-block#0.xml' % job_id,
+                'losses_at-0.01.xml',
+            ]
+            self._verify_job_succeeded(OUTPUT_BETA_DIR, expected_files)
+
+            self._verify_loss_curve(job_id, B_EXPECTED_POES_LC_LRC,
+                B_EXPECTED_LOSSES_LC, 0.05, OUTPUT_BETA_DIR)
+
+            self._verify_loss_ratio_curve(job_id, B_EXPECTED_POES_LC_LRC,
+                B_EXPECTED_LOSS_RATIOS_LRC, 0.05, OUTPUT_BETA_DIR)
+
+            self._verify_loss_maps(OUTPUT_BETA_DIR, B_EXPECTED_CLOSS)
+
+        finally:
+            # Cleaning generated results file.
+            rmtree(OUTPUT_BETA_DIR)
+
 
     @attr('slow')
     def test_verify_output_per_asset(self):
-        cfg = helpers.qa_file(
-            'classical_psha_based_risk/qa_config.gem')
-        self._run_job(cfg)
+        try:
+            cfg = helpers.qa_file(
+                'classical_risk_test/qa_config.gem')
+            self._run_job(cfg)
 
-        exp_num_items = 3815
-        job = OqJob.objects.latest('id')
+            exp_num_items = 3815
+            job = OqJob.objects.latest('id')
 
-        lc_block_pattern = "%s/losscurves-block-#%s-block#*.xml" % (
-            QA_OUTPUT_DIR, job.id)
-        lc_lblock_pattern = "%s/losscurves-loss-block-#%s-block#*.xml" % (
-            QA_OUTPUT_DIR, job.id)
-        losses_at = "%s/losses_at-0.1.xml" % (QA_OUTPUT_DIR)
+            lc_block_pattern = "%s/losscurves-block-#%s-block#*.xml" % (
+                QA_OUTPUT_DIR, job.id)
+            lc_lblock_pattern = "%s/losscurves-loss-block-#%s-block#*.xml" % (
+                QA_OUTPUT_DIR, job.id)
+            losses_at = "%s/losses_at-0.1.xml" % (QA_OUTPUT_DIR)
 
-        num_assets_lc_block_files = self._compute_sum_items(
-            'asset', lc_block_pattern)
-        num_assets_lc_lblock_files = self._compute_sum_items(
-            'asset', lc_lblock_pattern)
-        num_losses = self._compute_sum_items('loss', losses_at)
+            num_assets_lc_block_files = self._compute_sum_items(
+                'asset', lc_block_pattern)
+            num_assets_lc_lblock_files = self._compute_sum_items(
+                'asset', lc_lblock_pattern)
+            num_losses = self._compute_sum_items('loss', losses_at)
 
-        self.assertEqual(exp_num_items, num_assets_lc_block_files)
-        self.assertEqual(exp_num_items, num_assets_lc_lblock_files)
-        self.assertEqual(exp_num_items, num_losses)
+            self.assertEqual(exp_num_items, num_assets_lc_block_files)
+            self.assertEqual(exp_num_items, num_assets_lc_lblock_files)
+            self.assertEqual(exp_num_items, num_losses)
 
-        # Cleaning generated results file.
-        rmtree(QA_OUTPUT_DIR)
+        finally:
+            # Cleaning generated results file.
+            rmtree(QA_OUTPUT_DIR)
 
     def _compute_sum_items(self, item, pattern):
         fun = self._count_num_items_in_filename
@@ -98,41 +154,31 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         cfg = helpers.demo_file(
             "classical_psha_based_risk/config_hzr_exposure.gem")
 
+        job_id = OqJob.objects.latest('id').id
+        expected_files = ['hazardcurve-0.xml', 'hazardcurve-mean.xml',
+                          'losscurves-block-#%s-block#0.xml' % job_id,
+                          'losscurves-loss-block-#%s-block#0.xml' % job_id,
+                          'losses_at-0.01.xml', 'losses_at-0.02.xml',
+                          'losses_at-0.05.xml']
+
         self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
+        self._verify_job_succeeded(OUTPUT_DIR, expected_files)
 
-    def _verify_loss_maps(self):
-        filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
-        expected_closs = 0.264530582
+    def _verify_loss_maps(self, output_dir, *expected_closses):
+        for i, exp_closs in enumerate(expected_closses, start=1):
+            filename = "%s/losses_at-0.0%s.xml" % (output_dir, i)
+            closs = float(self._get(filename, "//nrml:value"))
 
-        closs = float(self._get(filename, "//nrml:value"))
+            self.assertTrue(numpy.allclose(
+                    closs, exp_closs, atol=0.0, rtol=0.05))
 
-        self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
-
-        filename = "%s/losses_at-0.02.xml" % OUTPUT_DIR
-        expected_closs = 0.143009004
-
-        closs = float(self._get(filename, "//nrml:value"))
-
-        self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
-
-    def _verify_loss_ratio_curve(self):
-        job = OqJob.objects.latest('id')
+    def _verify_loss_ratio_curve(self, job_id, expected_poes,
+                                 expected_loss_ratios, tol, output_dir):
 
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
-                OUTPUT_DIR, job.id)
+                output_dir, job_id)
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
-
-        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
-                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
-                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
-                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
-                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
-                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
-                0.00002461, 0.00000904]
 
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.0, rtol=0.05))
@@ -140,55 +186,28 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         loss_ratios = [float(x) for x in self._get(
             filename, "//nrml:lossRatio").split()]
 
-        expected_loss_ratios = [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
-                0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.24, 0.28,
-                0.32, 0.36, 0.40, 0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
-                0.92, 0.96, 1.00]
+        self.assertTrue(numpy.allclose(expected_loss_ratios, loss_ratios,
+            atol=0.0, rtol=tol))
 
-        self.assertTrue(numpy.allclose(expected_loss_ratios, loss_ratios))
-
-    def _verify_loss_curve(self):
-        job = OqJob.objects.latest('id')
+    def _verify_loss_curve(self, job_id, expected_poes, expected_losses, tol,
+                           output_dir):
 
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
-                OUTPUT_DIR, job.id)
+                output_dir, job_id)
 
         poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
-
-        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
-                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
-                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
-                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
-                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
-                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
-                0.00002461, 0.00000904]
 
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         losses = [float(x) for x in self._get(filename, "//nrml:loss").split()]
 
-        expected_losses = [0.00, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16,
-                0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.48, 0.56,
-                0.64, 0.72, 0.80, 0.96, 1.12, 1.28, 1.44, 1.60, 1.68,
-                1.76, 1.84, 1.92, 2.00]
+        self.assertTrue(numpy.allclose(expected_losses, losses, atol=0.0,
+            rtol=tol))
 
-        self.assertTrue(numpy.allclose(expected_losses, losses))
-
-    def _verify_job_succeeded(self, dir):
+    def _verify_job_succeeded(self, dir, expected_files):
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
-
-        expected_files = [
-            'hazardcurve-0.xml',
-            'hazardcurve-mean.xml',
-            'losscurves-block-#%s-block#0.xml' % job.id,
-            'losscurves-loss-block-#%s-block#0.xml' % job.id,
-            'losses_at-0.01.xml',
-            'losses_at-0.02.xml',
-            'losses_at-0.05.xml'
-        ]
-
         for f in expected_files:
             self.assertTrue(os.path.exists(os.path.join(dir, f)))
 

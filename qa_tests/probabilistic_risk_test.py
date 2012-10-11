@@ -26,9 +26,7 @@ from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
 
-from qa_tests.data.probabilistic_event_based_risk.ins_loss_data import (
-    TOTAL_LOSS_PRECISION, LOSSMAP_PRECISION, LOSS_MAP_MB, MEAN_INS_LOSS_MB,
-    STDDEV_INS_LOSS_MB, LOSS_MAP_SB, MEAN_INS_LOSS_SB, STDDEV_INS_LOSS_SB)
+from qa_tests.data.probabilistic_event_based_risk import test_data
 
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
@@ -49,13 +47,13 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 "probabilistic_event_based_risk/m_config.gem")
 
             self._run_job(cfg)
-            self._verify_job_succeeded(QA_OUTPUT_DIR)
+            self._verify_job_succeeded()
 
             expected_loss_map["a1"] = 78.1154725900
             expected_loss_map["a2"] = 36.2507008221
             expected_loss_map["a3"] = 23.4782545574
 
-            self._verify_loss_maps(expected_loss_map, QA_OUTPUT_DIR, 0.05)
+            self._verify_loss_map(expected_loss_map, QA_OUTPUT_DIR, 0.05)
 
             expected_poes["a1"] = [
                 1.0000000000, 1.0000000000, 0.9975213575,
@@ -147,13 +145,13 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 "probabilistic_event_based_risk/config_beta_qa.gem")
 
             self._run_job(cfg)
-            self._verify_job_succeeded(QA_OUTPUT_DIR)
+            self._verify_job_succeeded()
 
             expected_loss_map["a1"] = 73.8279109206
             expected_loss_map["a2"] = 25.2312514028
             expected_loss_map["a3"] = 29.7790495007
 
-            self._verify_loss_maps(expected_loss_map, QA_OUTPUT_DIR, 0.05)
+            self._verify_loss_map(expected_loss_map, QA_OUTPUT_DIR, 0.05)
 
             expected_poes["a1"] = [
                 1.0, 0.601480958915, 0.147856211034,
@@ -237,89 +235,95 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
     @unittest.skip
     def test_sampled_based(self):
-        cfg = helpers.qa_file(
-            "probabilistic_event_based_risk/config_qa.gem")
+        pass
 
-        self._run_job(cfg)
-        self._verify_job_succeeded(QA_OUTPUT_DIR)
-        self._verify_loss_maps(QA_OUTPUT_DIR, 0.05)
-        self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.10)
-        self._verify_loss_curves(QA_OUTPUT_DIR, 0.10)
-        self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.05)
-
-        rmtree(QA_OUTPUT_DIR)
-
-    @unittest.skip
     def test_insured_loss_mean_based(self):
-        cfg = helpers.qa_file(
-            "probabilistic_event_based_risk/m_config.gem")
+        try:
+            cfg = helpers.qa_file(
+                "probabilistic_event_based_risk/m_il_config.gem")
 
-        result = helpers.run_job(cfg, ['--output-type=xml'],
-            check_output=True)
+            self._run_job(cfg)
+            job_id = OqJob.objects.latest("id").id
 
-        job = OqJob.objects.latest('id')
-        self.assertEqual('succeeded', job.status)
+            [output] = Output.objects.filter(oq_job=job_id,
+                output_type="agg_loss_curve")
 
-        expected_loss_map_file = helpers.qa_file(
-            'probabilistic_event_based_risk/computed_output/insured-loss-map%s'
-            '.xml' % job.id)
+            export_agg_loss_curve(output, QA_OUTPUT_DIR)
 
-        self.assertTrue(os.path.exists(expected_loss_map_file))
+            expected_files = [
+                "loss_curves-block-#%s-block#0.xml" % job_id,
+                "loss_curves-loss-block-#%s-block#0.xml" % job_id,
+                "loss_curves-insured-block=#%s-block#0.xml" % job_id,
+                "losses_at-0.99.xml",
+                "aggregate_loss_curve.xml",
+                "insured_loss_curves-insured-loss-block=#%s-block#0.xml" %
+                    job_id]
 
-        helpers.verify_loss_map(self, expected_loss_map_file, LOSS_MAP_MB,
-            LOSSMAP_PRECISION)
+            self._verify_job_succeeded()
+            self._verify_outputs(QA_OUTPUT_DIR, expected_files)
 
-        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
+            expected_poes = {}
+            expected_losses = {}
 
-        self.assertAlmostEqual(MEAN_INS_LOSS_MB, actual_mean,
-            places=TOTAL_LOSS_PRECISION)
-        self.assertAlmostEqual(STDDEV_INS_LOSS_MB, actual_stddev,
-            places=TOTAL_LOSS_PRECISION)
+            expected_poes["a1"] = test_data.EXPECTED_POES_LR_A1_MB_IL
+            expected_poes["a2"] = test_data.EXPECTED_POES_LR_A2_MB_IL
+            expected_poes["a3"] = test_data.EXPECTED_POES_LR_A3_MB_IL
 
-        rmtree(QA_OUTPUT_DIR)
+            expected_losses["a1"] = test_data.EXPECTED_LOSS_RATIOS_A1_MB_IL
+            expected_losses["a2"] = test_data.EXPECTED_LOSS_RATIOS_A2_MB_IL
+            expected_losses["a3"] = test_data.EXPECTED_LOSS_RATIOS_A3_MB_IL
 
+            self._verify_loss_ratio_curves(expected_poes, expected_losses,
+                QA_OUTPUT_DIR, 0.05,
+                "%s/loss_curves-insured-block=#%s-block#0.xml")
+
+            expected_poes["a1"] = test_data.EXPECTED_POES_LC_A1_MB_IL
+            expected_poes["a2"] = test_data.EXPECTED_POES_LC_A2_MB_IL
+            expected_poes["a3"] = test_data.EXPECTED_POES_LC_A3_MB_IL
+
+            expected_losses["a1"] = test_data.EXPECTED_LOSSES_A1_MB_IL
+            expected_losses["a2"] = test_data.EXPECTED_LOSSES_A2_MB_IL
+            expected_losses["a3"] = test_data.EXPECTED_LOSSES_A3_MB_IL
+
+            self._verify_loss_curves(expected_poes, expected_losses,
+                QA_OUTPUT_DIR, 0.05,
+                "%s/insured_loss_curves-insured-loss-block=#%s-block#0.xml")
+
+        finally:
+            rmtree(QA_OUTPUT_DIR)
+
+    # TODO After PEB sample based has been fixed
     @unittest.skip
     def test_insured_loss_sample_based(self):
-        cfg = helpers.qa_file(
-            "probabilistic_event_based_risk/config_insloss_sb.gem")
-
-        result = helpers.run_job(cfg, ['--output-type=xml'],
-            check_output=True)
-
-        job = OqJob.objects.latest('id')
-        self.assertEqual('succeeded', job.status)
-
-        expected_loss_map_file = helpers.qa_file(
-            'scenario_risk_insured_losses/computed_output/insured-loss-map%s'
-            '.xml' % job.id)
-
-        self.assertTrue(os.path.exists(expected_loss_map_file))
-
-        helpers.verify_loss_map(self, expected_loss_map_file, LOSS_MAP_SB,
-            LOSSMAP_PRECISION)
-
-        actual_mean, actual_stddev = helpers.mean_stddev_from_result_line(result)
-
-        self.assertAlmostEqual(MEAN_INS_LOSS_SB, actual_mean,
-            places=TOTAL_LOSS_PRECISION)
-        self.assertAlmostEqual(STDDEV_INS_LOSS_SB, actual_stddev,
-            places=TOTAL_LOSS_PRECISION)
-
-        rmtree(QA_OUTPUT_DIR)
+        pass
 
     def test_hazard_computed_on_exposure_sites(self):
         # here we compute the hazard on locations
         # defined in the exposure file. For now, we just
         # check the job completes correctly.
 
-        cfg = helpers.demo_file(
-            "probabilistic_event_based_risk/config_hzr_exposure.gem")
+        try:
+            cfg = helpers.demo_file(
+                "probabilistic_event_based_risk/config_hzr_exposure.gem")
 
-        self._run_job(cfg)
-        self._verify_job_succeeded(OUTPUT_DIR)
+            self._run_job(cfg)
+            self._verify_job_succeeded()
+            job_id = OqJob.objects.latest("id").id
+
+            expected_files = [
+                "losses_at-0.99.xml",
+                "loss_curves-block-#%s-block#0.xml" % job_id,
+                "loss_curves-loss-block-#%s-block#0.xml" % job_id
+            ]
+
+            self._verify_outputs(OUTPUT_DIR, expected_files)
+
+        finally:
+            rmtree(OUTPUT_DIR)
 
     def _verify_loss_curves(self, expected_poes,
-                            expected_losses, output_dir, tol):
+        expected_losses, output_dir, tol,
+        file_pattern="%s/loss_curves-loss-block-#%s-block#0.xml"):
 
         def xpath_poes(asset_ref):
             return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
@@ -328,10 +332,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:loss")
 
         job = OqJob.objects.latest("id")
-
-        filename = "%s/loss_curves-loss-block-#%s-block#0.xml" % (
-            output_dir, job.id)
-
+        filename = file_pattern % (output_dir, job.id)
         root = self._root(filename)
 
         for asset_ref in expected_poes.keys():
@@ -349,20 +350,17 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 atol=0.0, rtol=tol))
 
     def _verify_loss_ratio_curves(self, expected_poes, expected_loss_ratios,
-                                  output_dir, tol):
+        output_dir, tol, file_pattern="%s/loss_curves-block-#%s-block#0.xml"):
 
         def xpath_poes(asset_ref):
             return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
 
         def xpath_ratios(asset_ref):
             return ("//nrml:asset[@gml:id='"
-                    + asset_ref + "']//nrml:lossRatio")
+                + asset_ref + "']//nrml:lossRatio")
 
         job = OqJob.objects.latest("id")
-
-        filename = "%s/loss_curves-block-#%s-block#0.xml" % (
-            output_dir, job.id)
-
+        filename = file_pattern % (output_dir, job.id)
         root = self._root(filename)
 
         for asset_ref in expected_poes.keys():
@@ -379,20 +377,15 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 loss_ratios, expected_loss_ratios[asset_ref],
                 atol=0.0, rtol=tol))
 
-    def _verify_job_succeeded(self, output_dir):
+    def _verify_job_succeeded(self):
         job = OqJob.objects.latest("id")
         self.assertEqual("succeeded", job.status)
 
-        expected_files = [
-            "loss_curves-block-#%s-block#0.xml" % job.id,
-            "loss_curves-loss-block-#%s-block#0.xml" % job.id,
-            "losses_at-0.99.xml"
-        ]
-
+    def _verify_outputs(self, output_dir, expected_files):
         for f in expected_files:
             self.assertTrue(os.path.exists(os.path.join(output_dir, f)))
 
-    def _verify_loss_maps(self, expected_losses, output_dir, tol):
+    def _verify_loss_map(self, expected_losses, output_dir, tol):
 
         def xpath(asset_ref):
             return ("//nrml:loss[@assetRef='" + asset_ref + "']//nrml:value")
@@ -407,13 +400,12 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 loss, expected_losses[asset_ref], atol=0.0, rtol=tol))
 
     def _verify_aggregate_curve(self, expected_poes,
-                                expected_losses, output_dir, tol):
+        expected_losses, output_dir, tol):
 
         job = OqJob.objects.latest("id")
 
         [output] = Output.objects.filter(
-            oq_job=job.id,
-            output_type="agg_loss_curve")
+            oq_job=job.id, output_type="agg_loss_curve")
 
         export_agg_loss_curve(output, output_dir)
         filename = "%s/aggregate_loss_curve.xml" % output_dir
@@ -423,13 +415,13 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         poes = [float(x) for x in self._get(root, xpath).split()]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=tol))
+            poes, expected_poes, atol=0.0, rtol=tol))
 
         xpath = "//nrml:aggregateLossCurve//nrml:loss"
         losses = [float(x) for x in self._get(root, xpath).split()]
 
         self.assertTrue(numpy.allclose(
-                losses, expected_losses, atol=0.0, rtol=tol))
+            losses, expected_losses, atol=0.0, rtol=0.05))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ["--output-type=xml"])
