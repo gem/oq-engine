@@ -43,6 +43,7 @@ logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 # In degrees
 DEFAULT_REGION_CELL_SIZE = 0.1
 
+
 class Region(object):
     """A container of polygons, used for bounds checking."""
 
@@ -657,6 +658,14 @@ class VulnerabilityFunction(object):
         The probabilistic distribution related to this function.
         """
         return self._distribution
+
+    @property
+    def is_beta(self):
+        """
+        True if this vulnerability function is defined with
+        a beta distribution.
+        """
+        return self.distribution == "BT"
 
     @property
     def imls(self):
