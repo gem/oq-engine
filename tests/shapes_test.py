@@ -607,6 +607,13 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         self.assertEqual(expected, actual)
 
+    def test_is_beta(self):
+        log_normal = shapes.VulnerabilityFunction([], [], [], "LN")
+        self.assertFalse(log_normal.is_beta)
+
+        beta = shapes.VulnerabilityFunction([], [], [], "BT")
+        self.assertTrue(beta.is_beta)
+
 
 class SiteTestCase(unittest.TestCase):
     """
