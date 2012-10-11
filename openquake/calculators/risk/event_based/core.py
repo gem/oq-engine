@@ -306,6 +306,18 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             return None
         return loss_ratio_curve.rescale_abscissae(asset.value)
 
+    def _compute_insured_loss_ratio_curve(self, insured_losses, asset, gmf):
+        """
+        Generates an insured loss ratio curve
+        """
+        insured_loss_ratio_curve = self._compute_loss_ratio_curve(asset, gmf,
+            insured_losses)
+
+        insured_loss_ratio_curve.x_values = (
+            insured_loss_ratio_curve.x_values / asset.value)
+
+        return insured_loss_ratio_curve
+
     def _loss_curve_on_kvs(self, column, row, loss_curve, asset):
         """
         Put the loss curve on kvs.
@@ -350,3 +362,5 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 row, column, asset.asset_ref)
 
         kvs.get_client().set(key, insured_loss_ratio_curve.to_json())
+
+
