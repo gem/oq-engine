@@ -21,11 +21,15 @@
 Unit tests for the utils.stats module.
 """
 
+from datetime import datetime
+from datetime import timedelta
 import itertools
 import string
 import sys
 import unittest
 
+from openquake import engine
+from openquake.db.models import JobPhaseStats
 from openquake.utils import stats
 
 from tests.utils import helpers
@@ -543,3 +547,86 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         value = stats.pk_get(job_id, _COUNTER[ctype])
         self.assertEqual(result, (value - previous_value))
+
+
+def approx_equal(expected, actual, tolerance):
+    """True if actual value equals the expected one within the tolerance."""
+    return abs(expected - actual) <= tolerance
+
+
+class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
+    """Tests the behaviour of utils.stats.get_progress_timing_data()."""
+
+    job = db_patch = db_mock = None
+
+    @classmethod
+    def setUpClass(cls):
+        class OQJP(object):
+            no_progress_timeout = 3601
+
+        cls.db_patch = helpers.patch("openquake.db.models.profile4job")
+        cls.db_mock = cls.db_patch.start()
+        cls.db_mock.return_value = OQJP()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db_patch.stop()
+
+    def setUp(self):
+        self.job = engine.prepare_job()
+
+    def test_get_progress_timing_data_before_first_increment(self):
+        # No "progress counter increment" time stamp exists, the time stamp of
+        # the *executing* `JobPhaseStats` record is taken instead.
+        five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
+        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
+                            job_status="executing")
+        jps.start_time = five_mins_ago
+        jps.save()
+        actual, timeout = stats.get_progress_timing_data(self.job)
+        self.assertTrue(approx_equal(300, actual, 5))
+        self.assertEqual(3601, timeout)
+
+    def test_get_progress_timing_data_no_increment_multiple_rows(self):
+        # No progress counter increment time stamp exists, the time stamp of
+        # the most recent *executing* `JobPhaseStats` record is taken instead.
+        jps_ts = datetime.utcnow() - timedelta(minutes=5)
+        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
+                            job_status="executing")
+        jps.start_time = jps_ts
+        jps.save()
+        jps_ts = datetime.utcnow() - timedelta(minutes=2)
+        jps = JobPhaseStats(oq_job=self.job, ctype="risk",
+                            job_status="executing")
+        jps.start_time = jps_ts
+        jps.save()
+        actual, timeout = stats.get_progress_timing_data(self.job)
+        self.assertTrue(approx_equal(120, actual, 5))
+
+    def test_get_progress_timing_data_with_increment(self):
+        # The progress counter increment time stamp exists and is used instead
+        # of the time stamp in the *executing* `JobPhaseStats` record since the
+        # former is more recent.
+        tstamp = datetime.utcnow() - timedelta(minutes=6)
+        stats.pk_set(self.job.id, "lvr_ts", tstamp.strftime("%s"))
+        tstamp = datetime.utcnow() - timedelta(minutes=7)
+        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
+                            job_status="executing")
+        jps.start_time = tstamp
+        jps.save()
+        actual, timeout = stats.get_progress_timing_data(self.job)
+        self.assertTrue(approx_equal(360, actual, 5))
+
+    def test_get_progress_timing_data_with_stale_increment_ts(self):
+        # The progress counter increment time stamp exists but is not used
+        # since the time stamp in the *executing* `JobPhaseStats` record is
+        # more recent.
+        tstamp = datetime.utcnow() - timedelta(minutes=9)
+        stats.pk_set(self.job.id, "lvr_ts", tstamp.strftime("%s"))
+        tstamp = datetime.utcnow() - timedelta(minutes=8)
+        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
+                            job_status="executing")
+        jps.start_time = tstamp
+        jps.save()
+        actual, timeout = stats.get_progress_timing_data(self.job)
+        self.assertTrue(approx_equal(480, actual, 5))

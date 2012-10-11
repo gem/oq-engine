@@ -897,8 +897,8 @@ class ParameterizeSitesTestCase(unittest.TestCase):
             self.assertEqual(
                 exp_vs30, jsite.getParameter('Vs30').getValue().value
             )
-            self.assertEqual(
-                exp_vs30_type, jsite.getParameter('Vs30 Type').getValue()
+            self.assertEqual(exp_vs30_type.capitalize(),
+                             jsite.getParameter('Vs30 Type').getValue()
             )
             self.assertEqual(
                 exp_z1pt0,
