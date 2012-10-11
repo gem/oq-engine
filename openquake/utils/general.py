@@ -38,21 +38,6 @@ def singleton(cls):
     return getinstance
 
 
-# Memoize taken from the Python Cookbook that handles also unhashable types
-class MemoizeMutable:
-    """ This decorator enables method/function caching in memory """
-    def __init__(self, fun):
-        self.fun = fun
-        self.memo = {}
-
-    def __call__(self, *args, **kwds):
-        key = cPickle.dumps(args, 1) + cPickle.dumps(kwds, 1)
-        if not key in self.memo:
-            self.memo[key] = self.fun(*args, **kwds)
-
-        return self.memo[key]
-
-
 def str2bool(value):
     """Convert a string representation of a boolean value to a bool."""
     return value.lower() in ("true", "yes", "t", "1")
