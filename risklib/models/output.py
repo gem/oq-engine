@@ -31,3 +31,12 @@ class ClassicalAssetOutput(AssetOutput):
         self.loss_curve = loss_curve
         self.loss_ratio_curve = loss_ratio_curve
         self.conditional_losses = conditional_losses
+
+    def __eq__(self, other):
+        return (self.asset == other.asset and
+            self.loss_ratio_curve == other.loss_ratio_curve and
+            self.loss_curve == other.loss_curve and
+            self.conditional_losses == other.conditional_losses)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

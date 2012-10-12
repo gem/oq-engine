@@ -48,9 +48,9 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         sites = [(1.0, 1.0)]
 
         assets = [
-            input.Asset("a1", None, 1.0, None),
-            input.Asset("a2", None, 2.0, None),
-            input.Asset("a3", None, 3.0, None),
+            input.Asset("a1", None, None, None),
+            input.Asset("a2", None, None, None),
+            input.Asset("a3", None, None, None),
         ]
 
         calculator = mock.Mock()
@@ -70,9 +70,9 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
     def test_compute_on_assets(self):
         assets = [
-            input.Asset("a1", None, 1.0, (1.0, 1.0)),
-            input.Asset("a2", None, 2.0, (2.0, 2.0)),
-            input.Asset("a3", None, 3.0, (3.0, 3.0)),
+            input.Asset("a1", None, None, (1.0, 1.0)),
+            input.Asset("a2", None, None, (2.0, 2.0)),
+            input.Asset("a3", None, None, (3.0, 3.0)),
         ]
 
         calculator = mock.Mock()
@@ -94,8 +94,10 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses(self):
-        asset = input.Asset("a1", None, 1.0, None)
-        asset_output = output.ClassicalAssetOutput(asset, None, (1.0, 1.0))
+        asset = input.Asset("a1", None, None, None)
+        asset_output = output.ClassicalAssetOutput(
+            asset, (2.0, 2.0), (1.0, 1.0))
+
         loss_curve_calculator = mock.Mock(return_value=asset_output)
 
         with mock.patch("risklib.classical._conditional_losses") as stub:
@@ -106,8 +108,12 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
             loss_curve_calculator.assert_called_with(asset, 1.0)
 
-            self.assertEquals({0.1: 0.5, 0.2: 0.5},
-                asset_output.conditional_losses)
+            expected_output = output.ClassicalAssetOutput(
+                asset, (2.0, 2.0), (1.0, 1.0), {0.1: 0.5, 0.2: 0.5})
+
+            # as output we have the output from the given loss curve
+            # calculator, plus the conditional losses
+            self.assertEquals(expected_output, asset_output)
 
 
 class ClassicalCalculatorTestCase(unittest.TestCase):
@@ -123,5 +129,8 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         asset_output = api.classical(vulnerability_model)(asset, hazard_curve)
 
         self.assertEquals(asset, asset_output.asset)
+
+        # here we just verify the outputs are stored,
+        # because the scientific logic is tested elsewhere
         self.assertIsNotNone(asset_output.loss_curve)
         self.assertIsNotNone(asset_output.loss_ratio_curve)
