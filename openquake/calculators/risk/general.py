@@ -262,6 +262,11 @@ class BaseRiskCalculator(Calculator):
                 'insured_loss_curves',
                 self.job_ctxt.job_id,
                 block_id)
+        elif kwargs['curve_mode'] == 'insured_loss_ratio_curve':
+            serialize_filename = "%s-insured-block=#%s-block#%s.xml" % (
+                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                self.job_ctxt.job_id,
+                block_id)
 
         serialize_path = os.path.join(self.job_ctxt.base_path,
             self.job_ctxt.params['OUTPUT_DIR'],
@@ -300,6 +305,7 @@ class BaseRiskCalculator(Calculator):
         loss_curves = []
         loss_ratio_curves = []
         insured_loss_curves = []
+        insured_loss_ratio_curves = []
 
         block = Block.from_kvs(job_id, block_id)
 
@@ -320,6 +326,10 @@ class BaseRiskCalculator(Calculator):
                     kvs.tokens.insured_loss_curve_key(
                         job_id, point.row, point.column, asset.asset_ref))
 
+                insured_loss_ratio_curve = kvs.get_client().get(
+                    kvs.tokens.insured_loss_ratio_curve_key(
+                        job_id, point.row, point.column, asset.asset_ref))
+
                 if loss_curve:
                     loss_curve = curve.Curve.from_json(loss_curve)
                     loss_curves.append((site, (loss_curve, asset)))
@@ -332,8 +342,16 @@ class BaseRiskCalculator(Calculator):
                     insured_loss_curve = curve.Curve.from_json(
                         insured_loss_curve)
 
-                    insured_loss_curves.append((site,
-                        (insured_loss_curve, asset)))
+                    insured_loss_curves.append((site, (insured_loss_curve,
+                                                       asset)))
+
+                if insured_loss_ratio_curve:
+                    insured_loss_ratio_curve = shapes.Curve.from_json(
+                        insured_loss_ratio_curve)
+
+                    insured_loss_ratio_curves.append((site,
+                                                (insured_loss_ratio_curve,
+                                                asset)))
 
         results = self._serialize(block_id, curves=loss_ratio_curves,
                 curve_mode="loss_ratio")
@@ -348,6 +366,13 @@ class BaseRiskCalculator(Calculator):
                 block_id, curves=insured_loss_curves,
                 curve_mode="insured_loss_curve",
                 curve_mode_prefix="insured_loss_curve",
+                render_multi=True))
+
+        if insured_loss_ratio_curves:
+            results.extend(self._serialize(
+                block_id, curves=insured_loss_ratio_curves,
+                curve_mode="insured_loss_ratio_curve",
+                curve_mode_prefix="insured_loss_ratio_curve",
                 render_multi=True))
 
         return results

@@ -36,6 +36,7 @@ logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 # In degrees
 DEFAULT_REGION_CELL_SIZE = 0.1
 
+
 class Region(object):
     """A container of polygons, used for bounds checking."""
 
@@ -386,7 +387,6 @@ class Site(nhlib_geo.Point):
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
-
 
 
 def multipoint_ewkt_from_coords(coords):
