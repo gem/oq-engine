@@ -69,6 +69,8 @@ def compute(sites, assets_getter,
 
             if compute_insured_curve:
                 insured_curve = _compute_insured_loss_curve(asset, loss_curve)
+                insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
+                    asset, insured_curve, hazard_dict)
             else:
                 insured_curve = None
 
@@ -239,16 +241,22 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
             mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
 
             cov = vuln_function.cov_for(ground_motion_field)
-            variance = (mean_ratio * cov) ** 2.0
 
-            epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(
-                math.log((variance / mean_ratio ** 2.0) + 1.0))
+            if vuln_function.is_beta:
+                stddev = cov * mean_ratio
+                alpha = classical._alpha_value(mean_ratio, stddev)
+                beta = classical._beta_value(mean_ratio, stddev)
+                loss_ratios.append(numpy.random.beta(alpha, beta, size=None))
+            else:
+                variance = (mean_ratio * cov) ** 2.0
+                epsilon = epsilon_provider.epsilon(asset)
+                sigma = math.sqrt(
+                    math.log((variance / mean_ratio ** 2.0) + 1.0))
 
-            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                variance + mean_ratio ** 2.0))
+                mu = math.log(mean_ratio ** 2.0 / math.sqrt(
+                    variance + mean_ratio ** 2.0))
 
-            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
+                loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
     return numpy.array(loss_ratios)
 
@@ -458,3 +466,16 @@ def _compute_insured_losses(asset, losses):
                 if value > asset.ins_limit:
                     losses[i] = asset.ins_limit
     return losses
+
+
+def _compute_insured_loss_ratio_curve(self, insured_losses, asset, gmf):
+    """
+    Generates an insured loss ratio curve
+    """
+    insured_loss_ratio_curve = self._compute_loss_ratio_curve(
+        asset, gmf, insured_losses)
+
+    insured_loss_ratio_curve.x_values = (
+        insured_loss_ratio_curve.x_values / asset.value)
+
+    return insured_loss_ratio_curve
