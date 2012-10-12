@@ -32,15 +32,11 @@ from celery.task import task
 from django.contrib.gis import geos
 
 from numpy import array
-from numpy import exp
 from numpy import histogram
 from numpy import linspace
 from numpy import mean
 from numpy import where
 from numpy import zeros
-from numpy.random import beta as beta_dist
-from scipy import sqrt, log
-from scipy import stats
 
 from openquake.calculators.base import Calculator
 from openquake.db import models
@@ -55,6 +51,7 @@ from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
+from risklib import classical, benefit_cost_ratio
 
 
 LOG = logs.LOG
@@ -73,31 +70,9 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = _compute_conditional_loss(loss_curve, loss_poe)
+    loss_conditional = classical._conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
     kvs.get_client().set(key, loss_conditional)
-
-
-def _compute_conditional_loss(curve, probability):
-    """Return the loss (or loss ratio) corresponding to the given
-    PoE (Probability of Exceendance).
-
-    Return the max loss (or loss ratio) if the given PoE is smaller
-    than the lowest PoE defined.
-
-    Return zero if the given PoE is greater than the
-    highest PoE defined.
-    """
-    # dups in the curve have to be skipped
-    loss_curve = shapes.Curve(unique_curve(curve))
-
-    if loss_curve.ordinate_out_of_bounds(probability):
-        if probability < loss_curve.y_values[-1]:
-            return loss_curve.x_values[-1]
-        else:
-            return 0.0
-
-    return loss_curve.abscissa_for(probability)
 
 
 @task
@@ -725,15 +700,15 @@ def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
                      asset.asset_ref, loss_curve)
-            eal_original = compute_mean_loss(loss_curve)
+            eal_original = benefit_cost_ratio._mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset.taxonomy]
             loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
                      asset.asset_ref, loss_curve)
-            eal_retrofitted = compute_mean_loss(loss_curve)
+            eal_retrofitted = benefit_cost_ratio._mean_loss(loss_curve)
 
-            bcr = compute_bcr(eal_original, eal_retrofitted,
+            bcr = benefit_cost_ratio._bcr(eal_original, eal_retrofitted,
                               interest_rate, asset_life_expectancy,
                               asset.retrofitting_cost)
 
@@ -764,38 +739,6 @@ def compute_loss_curve(loss_ratio_curve, asset):
     return loss_ratio_curve.rescale_abscissae(asset)
 
 
-def _compute_mid_mean_pe(loss_ratio_curve):
-    """Compute a new loss ratio curve taking the mean values."""
-
-    loss_ratios = loss_ratio_curve.abscissae
-    pes = loss_ratio_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
-
-    return shapes.Curve(zip(ratios, mid_pes))
-
-
-def _compute_mid_po(loss_ratio_pe_mid_curve):
-    """Compute a loss ratio curve that has PoOs
-    (Probabilities of Occurrence) as Y values."""
-
-    loss_ratios = loss_ratio_pe_mid_curve.abscissae
-    pes = loss_ratio_pe_mid_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    pos = collect(loop(pes, lambda x, y: x - y))
-
-    return shapes.Curve(zip(ratios, pos))
-
-
-def compute_mean_loss(curve):
-    """Compute the mean loss (or loss ratio) for the given curve."""
-
-    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-    return sum(i * j for i, j in zip(
-            mid_curve.abscissae, mid_curve.ordinates))
-
 
 def loop(elements, func, *args):
     """Loop over the given elements, yielding func(current, next, *args)."""
@@ -821,27 +764,6 @@ def unique_curve(curve):
         seen[ordinate] = abscissa
 
     return zip(seen.values(), seen.keys())
-
-
-def compute_bcr(eal_original, eal_retrofitted, interest_rate,
-                asset_life_expectancy, retrofitting_cost):
-    """
-    Compute the Benefit-Cost Ratio.
-
-    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
-
-    Where:
-
-    * BCR -- Benefit cost ratio
-    * EALo -- Expected annual loss for original asset
-    * EALr -- Expected annual loss for retrofitted asset
-    * r -- Interest rate
-    * t -- Life expectancy of the asset
-    * C -- Retrofitting cost
-    """
-    return ((eal_original - eal_retrofitted)
-            * (1 - exp(- interest_rate * asset_life_expectancy))
-            / (interest_rate * retrofitting_cost))
 
 
 def compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
@@ -1054,71 +976,6 @@ def compute_beta(mean_loss_ratio, stddev):
 
     return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
         (mean_loss_ratio - mean_loss_ratio ** 2))
-
-
-class Lognorm(object):
-    """ Simple Wrapper to use in a generic way survival functions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.lognorm.sf
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        position = kwargs.get('col')
-
-        vf_loss_ratio = vuln_function.loss_ratios[position]
-
-        stddev = vuln_function.covs[position] * vf_loss_ratio
-
-        variance = stddev ** 2.0
-
-        sigma = sqrt(log((variance / vf_loss_ratio ** 2.0) + 1.0))
-        mu = exp(log(vf_loss_ratio ** 2.0 /
-            sqrt(variance + vf_loss_ratio ** 2.0)))
-
-        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-
-
-class BetaDistribution(object):
-    """ Simple Wrapper to use in a generic way Beta Distributions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.beta.sf
-
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        col = kwargs.get('col')
-        vf_loss_ratio = vuln_function.loss_ratios[col]
-        stddev = vuln_function.stddevs[col]
-
-        return stats.beta.sf(loss_ratio,
-                compute_alpha(vf_loss_ratio, stddev),
-                compute_beta(vf_loss_ratio, stddev))
 
 
 def compute_loss_ratio_curve(vuln_function, gmf_set,

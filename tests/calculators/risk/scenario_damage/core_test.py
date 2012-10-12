@@ -28,7 +28,7 @@ from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
-    ScenarioDamageRiskCalculator, compute_gmv_fractions)
+    ScenarioDamageRiskCalculator)
 
 from tests.utils import helpers
 
@@ -169,102 +169,6 @@ class ScenarioDamageRiskCalculatorTestCase(
         self._close_to(5.7, data.mean)
         self._close_to(2.1, data.stddev)
 
-    def test_dda_iml_above_range(self):
-        # corner case where we have a ground motion value
-        # (that corresponds to the intensity measure level in the
-        # fragility function) that is higher than the highest
-        # intensity measure level defined in the model (in this
-        # particular case 0.7). Given this condition, to compute
-        # the fractions of buildings we use the highest intensity
-        # measure level defined in the model (0.7 in this case)
-
-        [ism] = models.inputs4job(self.job.id, input_type="fragility")
-
-        fmodel = models.FragilityModel(
-            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
-            imt="mmi", lss=["LS1"], format="discrete")
-
-        fmodel.save()
-
-        func = models.Ffd(
-            fragility_model=fmodel, taxonomy="RC",
-            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
-
-        func.save()
-
-        self._close_to(compute_gmv_fractions([func], 0.7),
-                compute_gmv_fractions([func], 0.8))
-
-    def test_dda_iml_below_range_damage_limit_undefined(self):
-        # corner case where we have a ground motion value
-        # (that corresponds to the intensity measure level in the
-        # fragility function) that is lower than the lowest
-        # intensity measure level defined in the model (in this
-        # particular case 0.1). Given this condition, and without
-        # having the no_damage_limit attribute defined, the
-        # fractions of buildings is 100% no_damage and 0% for the
-        # remaining limit states defined in the model
-        [ism] = models.inputs4job(self.job.id, input_type="fragility")
-
-        fmodel = models.FragilityModel(
-            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
-            imt="mmi", lss=["LS1"], format="discrete")
-
-        fmodel.save()
-
-        func = models.Ffd(
-            fragility_model=fmodel, taxonomy="RC",
-            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
-
-        func.save()
-
-        self._close_to([1.0, 0.0],
-            compute_gmv_fractions([func], 0.05))
-
-    def test_dda_iml_below_range_damage_limit_defined(self):
-        # corner case where we have a ground motion value
-        # (that corresponds to the intensity measure level in the
-        # fragility function) that is lower than the lowest
-        # intensity measure level defined in the model (in this
-        # particular case 0.1) and lower than the no_damage_limit
-        # attribute defined in the model. Given this condition, the
-        # fractions of buildings is 100% no_damage and 0% for the
-        # remaining limit states defined in the model.
-
-        [ism] = models.inputs4job(self.job.id, input_type="fragility")
-
-        fmodel = models.FragilityModel(
-            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
-            imt="mmi", lss=["LS1"], format="discrete", no_damage_limit=0.05)
-
-        fmodel.save()
-
-        func = models.Ffd(
-            fragility_model=fmodel, taxonomy="RC",
-            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
-
-        func.save()
-
-        self._close_to([1.0, 0.0],
-            compute_gmv_fractions([func], 0.02))
-
-    def test_gmv_between_no_damage_limit_and_first_iml(self):
-        # corner case where we have a ground motion value
-        # (that corresponds to the intensity measure level in the
-        # fragility function) that is lower than the lowest
-        # intensity measure level defined in the model (in this
-        # particular case 0.1) but bigger than the no_damage_limit
-        # attribute defined in the model. Given this condition, the
-        # fractions of buildings is 97.5% no_damage and 2.5% for the
-        # remaining limit states defined in the model.
-
-        fm = self._store_dsc_fmodel()
-        funcs = fm.ffd_set.filter(
-            taxonomy="RC").order_by("lsi")
-
-        self._close_to([0.975, 0.025, 0.],
-            compute_gmv_fractions(funcs, 0.075))
-
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
         fm = self._store_con_fmodel()
@@ -276,11 +180,18 @@ class ScenarioDamageRiskCalculatorTestCase(
         # per block in the execute() method and we are not
         # testing it here, just stubbing out some values to
         # produce the taxonomy distribution
-        self.calculator.ddt_fractions = {"RC": numpy.array(
-                [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])}
+        self.calculator.dd_taxonomy_means = {"RC": numpy.array(
+            [1.0, 0.0, 0.0])}
+
+        self.calculator.dd_taxonomy_stddevs = {"RC": numpy.array(
+            [1.0, 0.0, 0.0])}
 
         # stubbing out also the total distribution
-        self.calculator.total_fractions = numpy.array([[1.0, 0.0, 0.0]])
+        self.calculator.total_distribution_means = \
+            numpy.array([1.0, 0.0, 0.0])
+
+        self.calculator.total_distribution_stddevs = \
+            numpy.array([1.0, 0.0, 0.0])
 
         self.job_ctxt.serialize_results_to = ["xml"]
         self.calculator.post_execute()
@@ -295,8 +206,12 @@ class ScenarioDamageRiskCalculatorTestCase(
         # otherwise, just on database (default)
         fm = self._store_con_fmodel()
 
-        # stubbing out the total distribution
-        self.calculator.total_fractions = numpy.array([[1.0, 0.0, 0.0]])
+        # stubbing out also the total distribution
+        self.calculator.total_distribution_means =\
+        numpy.array([1.0, 0.0, 0.0])
+
+        self.calculator.total_distribution_stddevs =\
+        numpy.array([1.0, 0.0, 0.0])
 
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
