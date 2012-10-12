@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -14,8 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# TODO: add immutability?
-# TODO: add validation on input values?
+# TODO: validation on input values?
 class FragilityFunctionContinuous(object):
 
     def __init__(self, fragility_model, mean, stddev, lsi):
@@ -44,7 +44,8 @@ class FragilityFunctionDiscrete(object):
 class FragilityModel(object):
 
     def __init__(self, format, imls, limit_states,
-                 no_damage_limit=None):
+        no_damage_limit=None):
+
         self.imls = imls
         self.format = format
         self.lss = limit_states
@@ -53,9 +54,11 @@ class FragilityModel(object):
 
 class Asset(object):
 
-    def __init__(self, taxonomy, value, asset_ref, number_of_units=None,
-        ins_limit=None, deductible=None, ):
+    def __init__(self, asset_ref, taxonomy, value, site,
+        number_of_units=None,
+        ins_limit=None, deductible=None):
 
+        self.site = site
         self.value = value
         self.taxonomy = taxonomy
         self.asset_ref = asset_ref

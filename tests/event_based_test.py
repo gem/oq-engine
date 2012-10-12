@@ -18,7 +18,7 @@ import numpy
 import mock
 import unittest
 
-from risklib.models import Asset
+from risklib.models import input
 from risklib.curve import Curve, EMPTY_CURVE
 from risklib.vulnerability_function import VulnerabilityFunction
 from risklib.event_based import (
@@ -38,7 +38,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         ])
 
     def test_insurance_boundaries_defined(self):
-        asset = Asset("a taxonomy", None, "a14", 1, 700, 300)
+        asset = input.Asset("a14", "a taxonomy", None, None, 1, 700, 300)
         self.assertTrue(_insurance_boundaries_defined(asset))
 
         asset.ins_limit = None
@@ -49,7 +49,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, _insurance_boundaries_defined, asset)
 
     def test_compute_insured_losses(self):
-        asset = Asset("a taxonomy", None, "a14", 1, 300, 150)
+        asset = input.Asset("a14", "a taxonomy", None, None, 1, 300, 150)
 
         expected = numpy.array([
             0, 300, 180.02423357, 171.02684563,
@@ -60,7 +60,7 @@ class InsuredLossesTestCase(unittest.TestCase):
             _compute_insured_losses(asset, self.losses)))
 
     def test_compute_insured_loss_curve(self):
-        asset = Asset("a taxonomy", None, "a14", 1, 500, 5)
+        asset = input.Asset("a14", "a taxonomy", None, None, 1, 500, 5)
         loss_curve = Curve(([(10, 0.2), (4, 1.0)]))
         expected_insured_lc = Curve([(10, 0.2), (0, 1.0)])
 
@@ -539,8 +539,11 @@ class EpsilonProviderTestCase(unittest.TestCase):
         self.epsilon_provider2 = EpsilonProvider(
             correlation_type=PERFECTLY_CORRELATED,
             taxonomies=["a", "b"])
-        self.assets = [Asset("a", None, None),
-            Asset("b", None, None), Asset("a", None, None)]
+        self.assets = [
+            input.Asset(None, "a", None, None),
+            input.Asset(None, "b", None, None),
+            input.Asset(None, "a", None, None),
+        ]
 
     def test_uncorrelated(self):
         samples = []
