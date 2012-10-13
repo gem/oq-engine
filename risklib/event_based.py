@@ -31,7 +31,7 @@ def compute(sites, assets_getter,
             hazard_getter,
             loss_histogram_bins,
             conditional_loss_poes,
-            compute_insured_curve,
+            compute_insured_losses,
             seed, correlation_type,
             on_asset_complete=EMPTY_CALLBACK):
 
@@ -52,38 +52,36 @@ def compute(sites, assets_getter,
             vulnerability_function = vulnerability_model[asset.taxonomy]
 
             loss_ratios = _compute_loss_ratios(
-                vulnerability_function, hazard_dict,
-                asset,
-                seed, correlation_type, taxonomies)
-            loss_ratio_curve = _compute_loss_ratio_curve(
-                vulnerability_function, hazard_dict,
-                asset,
-                loss_histogram_bins, loss_ratios,
+                vulnerability_function, hazard_dict, asset,
                 seed, correlation_type, taxonomies)
 
-            loss_curve = classical._loss_curve(loss_ratio_curve, asset.value)
+            loss_ratio_curve = _compute_loss_ratio_curve(
+                vulnerability_function, hazard_dict,
+                asset, loss_histogram_bins, loss_ratios,
+                seed, correlation_type, taxonomies)
+
+            loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
             loss_conditionals = dict([
                 (loss_poe, classical._conditional_loss(loss_curve, loss_poe))
                 for loss_poe in conditional_loss_poes])
 
-            if compute_insured_curve:
-                insured_losses = _compute_insured_losses(
-                    asset, loss_curve.x_values)
+            if compute_insured_losses:
+                losses = loss_ratios * asset.value
+                insured_losses = _compute_insured_losses(asset, losses)
+
                 insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
                     vulnerability_function, hazard_dict, asset,
                     loss_histogram_bins, insured_losses,
                     seed, correlation_type, taxonomies)
-                insured_curve = insured_loss_ratio_curve.rescale_abscissae(
+
+                insured_loss_curve = loss_ratio_curve.rescale_abscissae(
                     asset.value)
-            else:
-                insured_curve = None
-                insured_loss_ratio_curve = None
 
             on_asset_complete(
                 asset, point, loss_ratio_curve,
                 loss_curve, loss_conditionals,
-                insured_curve, insured_loss_ratio_curve)
+                insured_loss_curve, insured_loss_ratio_curve)
 
             aggregate_losses += loss_ratios * asset.value
 
@@ -182,7 +180,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
                          taxonomies=None):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
-
+    
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
