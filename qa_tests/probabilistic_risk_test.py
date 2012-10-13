@@ -345,7 +345,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             losses = [float(x) for x in self._get(
                 root, xpath_losses(asset_ref)).split()]
 
-            numpy.testing.asset_allclose(
+            numpy.testing.assert_allclose(
                 losses, expected_losses[asset_ref],
                 atol=0.0, rtol=tol)
 
