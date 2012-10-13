@@ -48,11 +48,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
             tf_args=dict(job_id=self.job_ctxt.job_id))
 
-        aggregate_curve = general.AggregateLossCurve()
-
-        for losses in region_losses:
-            aggregate_curve.append(losses)
-
         if not self.is_benefit_cost_ratio_mode():
             self.agg_curve = event_based.aggregate_loss_curve(
                 region_losses, self._tses(), self._time_span(),
@@ -181,7 +176,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             block.sites,
             lambda site: general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site),
-            self.vuln_curves,
+            self.vulnerability_curves,
             hazard_getter,
             self.job_ctxt.oq_job_profile.loss_histogram_bins,
             general.conditional_loss_poes(self.job_ctxt.params),
@@ -238,8 +233,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         result = result.items()
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
-
-        return aggregate_curve.losses
 
     def _loss_ratio_curve_on_kvs(self, column, row, loss_ratio_curve, asset):
         """

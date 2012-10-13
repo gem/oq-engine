@@ -346,7 +346,7 @@ class BaseRiskCalculator(Calculator):
                                                        asset)))
 
                 if insured_loss_ratio_curve:
-                    insured_loss_ratio_curve = shapes.Curve.from_json(
+                    insured_loss_ratio_curve = curve.Curve.from_json(
                         insured_loss_ratio_curve)
 
                     insured_loss_ratio_curves.append((site,

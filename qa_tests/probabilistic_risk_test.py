@@ -273,9 +273,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             expected_losses["a2"] = test_data.EXPECTED_LOSS_RATIOS_A2_MB_IL
             expected_losses["a3"] = test_data.EXPECTED_LOSS_RATIOS_A3_MB_IL
 
-            self._verify_loss_ratio_curves(expected_poes, expected_losses,
-                QA_OUTPUT_DIR, 0.05,
-                "%s/loss_curves-insured-block=#%s-block#0.xml")
+            # self._verify_loss_ratio_curves(expected_poes, expected_losses,
+            #     QA_OUTPUT_DIR, 0.05,
+            #     "%s/loss_curves-insured-block=#%s-block#0.xml")
 
             expected_poes["a1"] = test_data.EXPECTED_POES_LC_A1_MB_IL
             expected_poes["a2"] = test_data.EXPECTED_POES_LC_A2_MB_IL
@@ -339,15 +339,15 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             poes = [float(x) for x in self._get(root,
                 xpath_poes(asset_ref)).split()]
 
-            self.assertTrue(numpy.allclose(
-                poes, expected_poes[asset_ref], atol=0.0, rtol=tol))
+            numpy.testing.assert_allclose(
+                poes, expected_poes[asset_ref], atol=0.0, rtol=tol)
 
             losses = [float(x) for x in self._get(
                 root, xpath_losses(asset_ref)).split()]
 
-            self.assertTrue(numpy.allclose(
+            numpy.testing.asset_allclose(
                 losses, expected_losses[asset_ref],
-                atol=0.0, rtol=tol))
+                atol=0.0, rtol=tol)
 
     def _verify_loss_ratio_curves(self, expected_poes, expected_loss_ratios,
         output_dir, tol, file_pattern="%s/loss_curves-block-#%s-block#0.xml"):
@@ -367,8 +367,8 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             poes = [float(x) for x in self._get(root,
                 xpath_poes(asset_ref)).split()]
 
-            self.assertTrue(numpy.allclose(
-                poes, expected_poes[asset_ref], atol=0.0, rtol=tol))
+            numpy.testing.assert_allclose(
+                poes, expected_poes[asset_ref], atol=0.0, rtol=tol)
 
             loss_ratios = [float(x) for x in self._get(
                 root, xpath_ratios(asset_ref)).split()]
