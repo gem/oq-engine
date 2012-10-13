@@ -68,15 +68,22 @@ def compute(sites, assets_getter,
                 for loss_poe in conditional_loss_poes])
 
             if compute_insured_curve:
-                insured_curve = _compute_insured_loss_curve(asset, loss_curve)
+                insured_losses = _compute_insured_losses(
+                    asset, loss_curve.x_values)
                 insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
-                    asset, insured_curve, hazard_dict)
+                    vulnerability_function, hazard_dict, asset,
+                    loss_histogram_bins, insured_losses,
+                    seed, correlation_type, taxonomies)
+                insured_curve = insured_loss_ratio_curve.rescale_abscissae(
+                    asset.value)
             else:
                 insured_curve = None
+                insured_loss_ratio_curve = None
 
             on_asset_complete(
                 asset, point, loss_ratio_curve,
-                loss_curve, loss_conditionals, insured_curve)
+                loss_curve, loss_conditionals,
+                insured_curve, insured_loss_ratio_curve)
 
             aggregate_losses += loss_ratios * asset.value
 
@@ -367,9 +374,9 @@ def _generate_curve(losses, probs_of_exceedance):
 
 
 def _compute_loss_ratio_curve(vuln_function, gmf_set,
-                             asset, loss_histogram_bins, loss_ratios=None,
-                             seed=None, correlation_type=None,
-                             taxonomies=None):
+                              asset, loss_histogram_bins, loss_ratios=None,
+                              seed=None, correlation_type=None,
+                              taxonomies=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -425,7 +432,7 @@ def _compute_insured_loss_curve(asset, loss_curve):
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposureModelFile`
     :param loss_curve: a loss curve.
-    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
+    :type loss_curve: a :py:class:`risklib.curve.Curve` instance.
     """
     insured_losses = _compute_insured_losses(asset, loss_curve.x_values)
 
@@ -468,12 +475,20 @@ def _compute_insured_losses(asset, losses):
     return losses
 
 
-def _compute_insured_loss_ratio_curve(self, insured_losses, asset, gmf):
+def _compute_insured_loss_ratio_curve(
+                vuln_function, gmf_set,
+                asset, loss_histogram_bins, insured_losses,
+                seed=None, correlation_type=None,
+                taxonomies=None):
     """
     Generates an insured loss ratio curve
     """
-    insured_loss_ratio_curve = self._compute_loss_ratio_curve(
-        asset, gmf, insured_losses)
+    insured_loss_ratio_curve = _compute_loss_ratio_curve(
+        vuln_function, gmf_set,
+        asset, loss_histogram_bins,
+        loss_ratios=insured_losses,
+        seed=seed, correlation_type=correlation_type,
+        taxonomies=taxonomies)
 
     insured_loss_ratio_curve.x_values = (
         insured_loss_ratio_curve.x_values / asset.value)
