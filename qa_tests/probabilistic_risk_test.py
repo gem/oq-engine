@@ -273,9 +273,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             expected_losses["a2"] = test_data.EXPECTED_LOSS_RATIOS_A2_MB_IL
             expected_losses["a3"] = test_data.EXPECTED_LOSS_RATIOS_A3_MB_IL
 
-            # self._verify_loss_ratio_curves(expected_poes, expected_losses,
-            #     QA_OUTPUT_DIR, 0.05,
-            #     "%s/loss_curves-insured-block=#%s-block#0.xml")
+            self._verify_loss_ratio_curves(expected_poes, expected_losses,
+                QA_OUTPUT_DIR, 0.05,
+                "%s/loss_curves-insured-block=#%s-block#0.xml")
 
             expected_poes["a1"] = test_data.EXPECTED_POES_LC_A1_MB_IL
             expected_poes["a2"] = test_data.EXPECTED_POES_LC_A2_MB_IL
