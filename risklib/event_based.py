@@ -68,6 +68,7 @@ def compute(sites, assets_getter,
 
             if compute_insured_losses:
                 losses = loss_ratios * asset.value
+
                 insured_losses = _compute_insured_losses(asset, losses)
 
                 insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
@@ -75,8 +76,12 @@ def compute(sites, assets_getter,
                     loss_histogram_bins, insured_losses,
                     seed, correlation_type, taxonomies)
 
-                insured_loss_curve = loss_ratio_curve.rescale_abscissae(
-                    asset.value)
+                insured_loss_curve = (
+                    insured_loss_ratio_curve.rescale_abscissae(asset.value))
+            else:
+                insured_losses = None
+                insured_loss_curve = None
+                insured_loss_ratio_curve = None
 
             on_asset_complete(
                 asset, point, loss_ratio_curve,
@@ -180,7 +185,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
                          taxonomies=None):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
-    
+
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
