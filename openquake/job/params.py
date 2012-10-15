@@ -347,7 +347,7 @@ define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('scenario', 'scenario_damage', 'event_based',
              'event_based_bcr'), to_job=str2bool)
-define_param('NO_PROGRESS_TIMEOUT', 'no_progress_timeout', to_job=int)
+# define_param('NO_PROGRESS_TIMEOUT', 'no_progress_timeout', to_job=int)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
