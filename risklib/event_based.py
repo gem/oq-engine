@@ -79,7 +79,6 @@ def compute(sites, assets_getter,
                 insured_loss_curve = (
                     insured_loss_ratio_curve.rescale_abscissae(asset.value))
             else:
-                insured_losses = None
                 insured_loss_curve = None
                 insured_loss_ratio_curve = None
 
