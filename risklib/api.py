@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from risklib import classical as classical_functions
 from risklib.models import output
+from risklib import classical as classical_functions
+from risklib import scenario_damage as scenario_damage_functions
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -120,6 +121,47 @@ def classical(vulnerability_model, steps=10):
             asset, loss_ratio_curve, loss_curve)
 
     return classical_wrapped
+
+
+class scenario_damage(object):
+    """
+    Scenario damage calculator. For each asset it produces:
+        * a damage distribution
+        * a collapse map
+
+    It also produces the following aggregate results:
+        * damage distribution per taxonomy
+        * total damage distribution
+    """
+
+    def __init__(self, fragility_model, fragility_functions):
+        self.fragility_model = fragility_model
+        self.fragility_functions = fragility_functions
+
+        # sum the fractions of all the assets with the same taxonomy
+        self.fractions_per_taxonomy = {}
+
+    def __call__(self, asset, hazard):
+        taxonomy = asset.taxonomy
+
+        damage_distribution_asset, fractions = (
+            scenario_damage_functions._damage_distribution_per_asset(asset,
+            (self.fragility_model, self.fragility_functions[taxonomy]),
+            hazard))
+
+        collapse_map = scenario_damage_functions._collapse_map(fractions)
+
+        asset_fractions = self.fractions_per_taxonomy.get(taxonomy,
+            scenario_damage_functions._make_damage_distribution_matrix(
+            self.fragility_model, hazard))
+
+        self.fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
+
+        return output.ScenarioDamageAssetOutput(
+            asset, damage_distribution_asset, collapse_map)
+
+    def damage_distribution_by_taxonomy(self):
+        return self.fractions_per_taxonomy
 
 
 def conditional_losses(conditional_loss_poes, loss_curve_calculator):

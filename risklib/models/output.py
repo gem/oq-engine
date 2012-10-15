@@ -40,3 +40,13 @@ class ClassicalAssetOutput(AssetOutput):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class ScenarioDamageAssetOutput(AssetOutput):
+
+    def __init__(self, asset, damage_distribution_asset, collapse_map):
+
+        super(ScenarioDamageAssetOutput, self).__init__(asset)
+
+        self.collapse_map = collapse_map
+        self.damage_distribution_asset = damage_distribution_asset
