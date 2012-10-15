@@ -96,7 +96,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
     def test_conditional_losses(self):
         asset = input.Asset("a1", None, None, None)
         asset_output = output.ClassicalAssetOutput(
-            asset, (2.0, 2.0), (1.0, 1.0))
+            asset, [(2.0, 2.0)], [(1.0, 1.0)])
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
 
@@ -109,7 +109,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
             loss_curve_calculator.assert_called_with(asset, 1.0)
 
             expected_output = output.ClassicalAssetOutput(
-                asset, (2.0, 2.0), (1.0, 1.0), {0.1: 0.5, 0.2: 0.5})
+                asset, [(2.0, 2.0)], [(1.0, 1.0)], {0.1: 0.5, 0.2: 0.5})
 
             # as output we have the output from the given loss curve
             # calculator, plus the conditional losses
