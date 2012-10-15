@@ -20,6 +20,7 @@ import ConfigParser
 import getpass
 import md5
 import os
+import sys
 
 from django.core import exceptions
 from django.db import close_connection
@@ -28,6 +29,7 @@ from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.supervising import supervisor
+from openquake.utils import monitor
 
 
 def prepare_job(user_name="openquake", log_level='progress'):
@@ -344,6 +346,13 @@ def _switch_to_job_phase(job, status):
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status)
     logs.log_progress("%s" % status, 1)
+    if status == "executing":
+        # Record the compute nodes that were available at the beginning of the
+        # execute phase so we can detect failed nodes later.
+        failed_nodes = monitor.count_failed_nodes(job)
+        if failed_nodes == -1:
+            logs.LOG.critical("No live compute nodes, aborting calculation")
+            sys.exit(1)
 
 
 def _do_run_hazard(job, exports):
