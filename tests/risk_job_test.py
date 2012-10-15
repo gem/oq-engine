@@ -31,84 +31,13 @@ from openquake.calculators.risk.general import Block
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.parser import exposure
+from risklib import curve
 
+import risklib
 from tests.utils import helpers
 
 TEST_FILE = "exposure-portfolio.xml"
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
-
-
-class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
-    """Tests the `epsilon` method in class `EpsilonProvider`"""
-
-    def setUp(self):
-        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
-        inputs = [("exposure", path)]
-        self.job = self.setup_classic_job(inputs=inputs)
-        [input] = models.inputs4job(self.job.id, input_type="exposure",
-                                    path=path)
-        writer = ExposureDBWriter(input)
-        exposure_parser = exposure.ExposureModelFile(path)
-        writer.serialize(exposure_parser)
-        self.model = writer.model
-        self.epsilon_provider = general.EpsilonProvider(
-            dict(EPSILON_RANDOM_SEED=37))
-
-    def tearDown(self):
-        self.teardown_job(self.job)
-
-    def test_uncorrelated(self):
-        """For uncorrelated jobs we sample epsilon values per asset.
-
-        A new sample should be drawn for each asset irrespective of any
-        building typology similarities.
-        """
-        samples = []
-        for asset in self.model.exposuredata_set.all():
-            sample = self.epsilon_provider.epsilon(asset)
-            self.assertTrue(sample not in samples,
-                            "%s is already in %s" % (sample, samples))
-            self.assertTrue(isinstance(sample, float),
-                            "Invalid sample (%s)" % sample)
-            samples.append(sample)
-
-    def test_correlated(self):
-        """For correlated jobs we sample epsilon values per building typology.
-
-        A sample should be drawn whenever an asset with a new building typology
-        is encountered. Assets of the same typology should share sample values.
-        Please not that building typologies and taxonomies are roughly
-        equivalent.
-        """
-        samples = dict()
-        self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
-        for asset in self.model.exposuredata_set.all():
-            sample = self.epsilon_provider.epsilon(asset)
-            taxonomy = asset.taxonomy
-            # This is either the first time we see this taxonomy or the sample
-            # is identical to the one originally drawn for this taxonomy.
-            if taxonomy not in samples:
-                samples[taxonomy] = sample
-            else:
-                self.assertTrue(sample == samples[taxonomy])
-        # Make sure we used at least two taxonomies in this test.
-        self.assertTrue(len(samples.keys()) > 1)
-        # Are all samples valid values?
-        for taxonomy, sample in samples.iteritems():
-            self.assertTrue(
-                isinstance(sample, float),
-                "Invalid sample (%s) for taxonomy %s" % (sample, taxonomy))
-
-    def test_incorrect_configuration_setting(self):
-        """The correctness of the asset correlation configuration is enforced.
-
-        If the `ASSET_CORRELATION` parameter is set in the job configuration
-        file it should have a correct value ("perfect").
-        """
-        self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "this-is-wrong"
-        for asset in self.model.exposuredata_set.all():
-            self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
-            break
 
 
 class BlockTestCase(unittest.TestCase):
@@ -346,22 +275,6 @@ class RiskCalculatorTestCase(unittest.TestCase):
                         key=row_col)
 
         self.assertEqual(expected, actual)
-
-    def test_that_conditional_loss_is_in_kvs(self):
-        asset = GRID_ASSETS[(0, 1)]
-        loss_poe = 0.1
-        job_id = "1"
-        row = 0
-        col = 1
-        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
-                                   (0.27, 0.089), (0.30, 0.066)])
-
-        # should set in kvs the conditional loss
-        general.compute_conditional_loss(job_id, col, row, loss_curve, asset,
-                                         loss_poe)
-        loss_key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref,
-                                       loss_poe)
-        self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_asset_losses_per_site(self):
         mm = mock.MagicMock(spec=redis.Redis)

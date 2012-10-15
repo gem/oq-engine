@@ -25,11 +25,12 @@ import unittest
 
 from lxml import etree
 
-from openquake import shapes
 from openquake import xml
+from openquake import shapes
 from openquake.db import models
 from openquake.output import risk as risk_output
 from openquake.nrml.utils import nrml_schema_file
+from risklib import curve
 
 from tests.utils import helpers
 
@@ -44,10 +45,10 @@ LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
 NRML_SCHEMA_PATH = nrml_schema_file()
 
-TEST_LOSS_CURVE = shapes.Curve(
+TEST_LOSS_CURVE = curve.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
 
-TEST_LOSS_RATIO_CURVE = shapes.Curve(
+TEST_LOSS_RATIO_CURVE = curve.Curve(
     [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17),
      (1.0, 0.03)])
 

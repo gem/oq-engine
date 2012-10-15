@@ -25,7 +25,8 @@ from django.contrib.gis.geos import GEOSGeometry
 from openquake.db import models
 from openquake.output.risk import (
     LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
-from openquake.shapes import Site, Curve
+from openquake.shapes import Site
+from risklib import curve
 
 from tests.utils import helpers
 
@@ -37,19 +38,19 @@ from tests.utils import helpers
 # and putting a breakpoint in openquake/output/risk.py:CurveXMLWriter.write()
 RISK_LOSS_CURVE_DATA = [
     (Site(-118.077721, 33.852034),
-     [Curve([(3.18e-06, 1.0), (8.81e-06, 1.0), (1.44e-05, 1.0),
+     [curve.Curve([(3.18e-06, 1.0), (8.81e-06, 1.0), (1.44e-05, 1.0),
              (2.00e-05, 1.0)]), None]),
 
     (Site(-118.077721, 33.852034),
-     [Curve([(7.18e-06, 1.0), (1.91e-05, 1.0), (3.12e-05, 1.0),
+     [curve.Curve([(7.18e-06, 1.0), (1.91e-05, 1.0), (3.12e-05, 1.0),
              (4.32e-05, 1.0)]), None]),
 
     (Site(-118.077721, 33.852034),
-     [Curve([(5.48e-06, 1.0), (1.45e-05, 1.0), (2.36e-05, 1.0),
+     [curve.Curve([(5.48e-06, 1.0), (1.45e-05, 1.0), (2.36e-05, 1.0),
              (3.27e-05, 1.0)]), None]),
 
     (Site(-118.077721, 33.852034),
-     [Curve([(9.77e-06, 1.0), (2.64e-05, 1.0), (4.31e-05, 1.0),
+     [curve.Curve([(9.77e-06, 1.0), (2.64e-05, 1.0), (4.31e-05, 1.0),
              (5.98e-05, 1.0)]), None]),
 ]
 
@@ -159,7 +160,7 @@ class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
             loc = lcd.location
 
             data = (Site(loc.x, loc.y),
-                    (Curve(zip(lcd.losses, lcd.poes)),
+                    (curve.Curve(zip(lcd.losses, lcd.poes)),
                     {u'assetID': lcd.asset_ref}))
 
             inserted_data.append(data)

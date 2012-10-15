@@ -19,3 +19,12 @@ tests/data/usgs-nshm/**/*
 *.tiff
 openquake.db
 coverage.ec
+demos/**/computed_output/*
+tests/data/demos/**/computed_output/*
+.ropeproject
+*.log
+*_flymake.py
+*.rdb
+dbinary.xml
+tests/data/example-loss-curves-for-plotting.svg
+.\#*\#
