@@ -303,6 +303,9 @@ CREATE TABLE uiapi.hazard_calculation (
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
+    -- what time period w/o any progress is acceptable for calculations?
+    -- The timeout is stored in seconds and is 1 hour by default.
+    no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
         CHECK(calculation_mode IN ('classical', 'event_based')),
     region_grid_spacing float,

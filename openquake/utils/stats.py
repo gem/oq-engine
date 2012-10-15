@@ -21,9 +21,11 @@
 Utility functions related to keeping job progress information and statistics.
 """
 
+from datetime import datetime
 from functools import wraps
 import redis
 
+from openquake.db import models
 from openquake.utils import config
 
 
@@ -67,6 +69,9 @@ STATS_KEYS = {
 
     # The last "percent complete" figure that was reported to the end user
     "lvr": ("g", "gen:lvr", "t"),
+    # The time (seconds since epoch) at which the last (nhzrd|nrisk)_done
+    # value was written
+    "lvr_ts": ("g", "gen:lvr_ts", "t"),
 
     # The total amount of work for a nhlib-based hazard calculation
     "nhzrd_total": ("h", "nhzrd:total", "t"),
@@ -281,6 +286,12 @@ class count_progress(object):   # pylint: disable=C0103
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
                 pk_inc(job_id, key, num_items)
+
+                # record the time (in seconds since epoch) at which the
+                # progress value was incremented.
+                tstamp = int(datetime.utcnow().strftime("%s"))
+                pk_set(job_id, "lvr_ts", tstamp)
+
                 return result
             except:
                 # Count failure
@@ -348,3 +359,33 @@ def delete_job_counters(job_id):
     keys = conn.keys("oqs/%s*" % job_id)
     if keys:
         conn.delete(*keys)
+
+
+def get_progress_timing_data(job):
+    """Get length of time since the last task completed and the timeout.
+
+    :param job: The :class:`openquake.db.models.OqJob` instance to use
+    :returns: number of seconds since the last task completed (or the
+        execute phase began) and the value of the `no_progress_timeout`
+        parameter as a 2-tuple
+    """
+    def epoch(dto):
+        """Convert a datetime object to seconds since epoch"""
+        return int(dto.strftime("%s"))
+
+    tstamp = epoch(datetime.utcnow())
+
+    # the "last value recorded time stamp" will be zero if not set in the kvs
+    lvr_ts = pk_get(job.id, "lvr_ts")
+
+    # when did the most recent "executing" job phase for this calculation
+    # start?
+    jpss = models.JobPhaseStats.objects.filter(oq_job=job,
+                                               job_status="executing")
+    [jps] = jpss.order_by("-start_time")[:1]
+    jps_ts = epoch(jps.start_time)
+
+    # take the more recent of the two time stamps
+    lvr_ts = jps_ts if jps_ts > lvr_ts else lvr_ts
+
+    return (tstamp - lvr_ts, models.profile4job(job.id).no_progress_timeout)

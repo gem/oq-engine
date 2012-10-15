@@ -621,6 +621,11 @@ class HazardCalculation(djm.Model):
 
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
+
+    # The timeout is stored in seconds and is 1 hour by default.
+    no_progress_timeout = djm.IntegerField(
+        default=3600, help_text="what time period w/o any progress is "
+                                "acceptable for calculations?")
     # TODO:
     #force_inputs = djm.BooleanField(
     #    default=False, help_text="whether the model inputs should be parsed "
