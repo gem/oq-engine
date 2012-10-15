@@ -122,16 +122,14 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
         calculator = ClassicalRiskCalculator(the_job)
 
         curve1 = calculator._get_db_curve(Site(-122.2, 37.5))
-        self.assertEqual(list(curve1.abscissae),
-                          [0.005, 0.007, 0.0098, 0.0137])
-        self.assertEqual(list(curve1.ordinates),
-                          [0.354, 0.114, 0.023, 0.002])
+        self.assertEqual(curve1,
+                          zip([0.005, 0.007, 0.0098, 0.0137],
+                              [0.354, 0.114, 0.023, 0.002]))
 
         curve2 = calculator._get_db_curve(Site(-122.1, 37.5))
-        self.assertEqual(list(curve2.abscissae),
-                          [0.005, 0.007, 0.0098, 0.0137])
-        self.assertEqual(list(curve2.ordinates),
-                          [0.454, 0.214, 0.123, 0.102])
+        self.assertEqual(curve2,
+                         zip([0.005, 0.007, 0.0098, 0.0137],
+                             [0.454, 0.214, 0.123, 0.102]))
 
 
 class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
