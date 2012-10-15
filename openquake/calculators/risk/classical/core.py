@@ -32,7 +32,7 @@ from openquake.calculators.risk.general import (
     hazard_input_site, BaseRiskCalculator)
 
 from collections import defaultdict
-from risklib import classical, benefit_cost_ratio, api
+from risklib import benefit_cost_ratio, api
 
 
 LOGGER = logs.LOG

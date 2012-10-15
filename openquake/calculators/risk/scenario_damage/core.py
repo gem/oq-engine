@@ -34,7 +34,7 @@ from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
 from openquake.export.risk import export_dmg_dist_total, export_collapse_map
-from risklib import scenario_damage
+from risklib import scenario_damage, api
 
 LOGGER = logs.LOG
 
@@ -181,27 +181,28 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
 
         fragility_model = _fm(self.job_ctxt.oq_job)
-        frag_functions = fragility_model.functions_by_taxonomy()
+        fragility_functions = fragility_model.functions_by_taxonomy()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        ground_motion_field_loader = lambda site: general.load_gmvs_at(
+        hazard_getter = lambda site: general.load_gmvs_at(
             self.job_ctxt.job_id, general.hazard_input_site(
             self.job_ctxt, site))
 
-        assets_loader = lambda site: general.BaseRiskCalculator.assets_at(
+        assets_getter = lambda site: general.BaseRiskCalculator.assets_at(
             self.job_ctxt.job_id, site)
 
-        def on_asset_complete_cb(asset, damage_distribution_asset,
-                                 collapse_map):
+        calculator = api.scenario_damage(fragility_model, fragility_functions)
 
-            self._store_cmap(asset, collapse_map)
-            self._store_dda(asset,
-                            scenario_damage.damage_states(fragility_model),
-                damage_distribution_asset)
+        for asset_output in api.compute_on_sites(block.sites,
+            assets_getter, hazard_getter, calculator):
 
-        return scenario_damage.compute(block.sites, assets_loader,
-            (fragility_model, frag_functions), ground_motion_field_loader,
-            on_asset_complete_cb)
+            self._store_cmap(asset_output.asset, asset_output.collapse_map)
+
+            self._store_dda(asset_output.asset,
+                scenario_damage.damage_states(fragility_model),
+                asset_output.damage_distribution_asset)
+
+        return calculator.damage_distribution_by_taxonomy
 
     def _store_cmap(self, asset, (mean, stddev)):
         """
