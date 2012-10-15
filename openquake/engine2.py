@@ -344,7 +344,8 @@ def _switch_to_job_phase(job, status):
     """
     job.status = status
     job.save()
-    models.JobPhaseStats.objects.create(oq_job=job, job_status=status)
+    models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
+                                        ctype="hazard")
     logs.log_progress("%s" % status, 1)
     if status == "executing":
         # Record the compute nodes that were available at the beginning of the
