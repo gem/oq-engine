@@ -134,3 +134,28 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         # because the scientific logic is tested elsewhere
         self.assertIsNotNone(asset_output.loss_curve)
         self.assertIsNotNone(asset_output.loss_ratio_curve)
+
+
+class ScenarioDamageCalculatorTestCase(unittest.TestCase):
+
+    def test_scenario_damage_calculator(self):
+        fragility_model = input.FragilityModel("discrete",
+            [0.1, 0.2], ["LS1", "LS2"])
+
+        fragility_function = input.FragilityFunctionDiscrete(
+            fragility_model, [0.8, 0.7], 1)
+
+        asset = input.Asset("a1", "RC", None, None, number_of_units=1.0)
+
+        calculator = api.scenario_damage(fragility_model,
+            {"RC": [fragility_function]})
+
+        asset_output = calculator(asset, [0.11, 0.12, 0.13])
+
+        self.assertEquals(asset, asset_output.asset)
+
+        # here we just verify the outputs are stored,
+        # because the scientific logic is tested elsewhere
+        self.assertIsNotNone(asset_output.collapse_map)
+        self.assertIsNotNone(asset_output.damage_distribution_asset)
+        self.assertIsNotNone(calculator.damage_distribution_by_taxonomy)

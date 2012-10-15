@@ -139,7 +139,7 @@ class scenario_damage(object):
         self.fragility_functions = fragility_functions
 
         # sum the fractions of all the assets with the same taxonomy
-        self.fractions_per_taxonomy = {}
+        self._fractions_per_taxonomy = {}
 
     def __call__(self, asset, hazard):
         taxonomy = asset.taxonomy
@@ -151,17 +151,18 @@ class scenario_damage(object):
 
         collapse_map = scenario_damage_functions._collapse_map(fractions)
 
-        asset_fractions = self.fractions_per_taxonomy.get(taxonomy,
+        asset_fractions = self._fractions_per_taxonomy.get(taxonomy,
             scenario_damage_functions._make_damage_distribution_matrix(
             self.fragility_model, hazard))
 
-        self.fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
+        self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
 
         return output.ScenarioDamageAssetOutput(
             asset, damage_distribution_asset, collapse_map)
 
+    @property
     def damage_distribution_by_taxonomy(self):
-        return self.fractions_per_taxonomy
+        return self._fractions_per_taxonomy
 
 
 def conditional_losses(conditional_loss_poes, loss_curve_calculator):
