@@ -19,6 +19,7 @@ import unittest
 import logging
 from datetime import datetime
 
+from openquake import engine
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
@@ -247,3 +248,53 @@ class SupersupervisorTestCase(unittest.TestCase):
             supersupervisor.main()
             self.assertEqual(process.call_count, 1)
             self.assertEqual(FakeProcess.started, True)
+
+
+class AbortDueToFailedNodesTestCase(unittest.TestCase):
+    """Exercise supervising.supervisor.abort_due_to_failed_nodes()"""
+
+    job = monitor_patch = stats_patch = monitor_mock = stats_mock = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = engine.prepare_job()
+
+    def setUp(self):
+        self.monitor_patch = patch(
+            "openquake.utils.monitor.count_failed_nodes")
+        self.stats_patch = patch(
+            "openquake.utils.stats.get_progress_timing_data")
+        self.monitor_mock = self.monitor_patch.start()
+        self.stats_mock = self.stats_patch.start()
+
+    def tearDown(self):
+        self.monitor_patch.stop()
+        self.stats_patch.stop()
+
+    def test_abort_due_to_failed_nodes_with_zero_failures_and_no_timeout(self):
+        # the "no progress" timeout has not been exceeded and no node failures
+        # have been detected -> return 0
+        self.monitor_mock.return_value = 0
+        self.stats_mock.return_value = (361, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(self.job.id))
+
+    def test_abort_due_to_failed_nodes_with_zero_failures_and_timeout(self):
+        # the "no progress" timeout is exceeded but no node failures have been
+        # detected -> return 0
+        self.monitor_mock.return_value = 0
+        self.stats_mock.return_value = (3610, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(self.job.id))
+
+    def test_abort_due_to_failed_nodes_with_failures_and_no_timeout(self):
+        # the "no progress" timeout has not been exceeded but there are node
+        # failures  -> return 0
+        self.monitor_mock.return_value = 5
+        self.stats_mock.return_value = (362, 3600)
+        self.assertEqual(0, supervisor.abort_due_to_failed_nodes(self.job.id))
+
+    def test_abort_due_to_failed_nodes_with_failures_and_timeout(self):
+        # the "no progress" timeout has been exceeded *and* there are node
+        # failures -> (return value > 0)
+        self.monitor_mock.return_value = 7
+        self.stats_mock.return_value = (4000, 3600)
+        self.assertEqual(7, supervisor.abort_due_to_failed_nodes(self.job.id))
