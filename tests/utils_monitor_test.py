@@ -160,11 +160,11 @@ class CountFailedNodesTestCase(unittest.TestCase):
         self.live_patch.stop()
 
     def test_count_failed_nodes_with_zero_nodes(self):
-        # Result: 0 failed nodes
+        # Signal when there are zero live nodes at the start of the calculation
         self.db_mock.return_value = {}
         self.live_mock.return_value = set()
         actual = monitor.count_failed_nodes(self.job)
-        self.assertEqual(0, actual)
+        self.assertEqual(-1, actual)
 
     def test_count_failed_nodes_with_a_node_that_went_offline(self):
         # Result: 1 failed nodes
