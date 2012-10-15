@@ -561,6 +561,8 @@ class JobPhaseStats(djm.Model):
     Capture when the various job phases started.
     '''
     oq_job = djm.ForeignKey('OqJob')
+    # calculation type (hazard|risk)
+    ctype = djm.TextField()
     job_status = djm.TextField()
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
