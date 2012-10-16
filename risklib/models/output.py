@@ -14,39 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
-class AssetOutput(object):
-
-    def __init__(self, asset):
-        self.asset = asset
+import collections
 
 
-class ClassicalAssetOutput(AssetOutput):
-
-    def __init__(self, asset, loss_ratio_curve,
-        loss_curve, conditional_losses=None):
-
-        super(ClassicalAssetOutput, self).__init__(asset)
-
-        self.loss_curve = loss_curve
-        self.loss_ratio_curve = loss_ratio_curve
-        self.conditional_losses = conditional_losses
-
-    def __eq__(self, other):
-        return (self.asset == other.asset and
-            self.loss_ratio_curve == other.loss_ratio_curve and
-            self.loss_curve == other.loss_curve and
-            self.conditional_losses == other.conditional_losses)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
+    ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
 
 
-class ScenarioDamageAssetOutput(AssetOutput):
-
-    def __init__(self, asset, damage_distribution_asset, collapse_map):
-
-        super(ScenarioDamageAssetOutput, self).__init__(asset)
-
-        self.collapse_map = collapse_map
-        self.damage_distribution_asset = damage_distribution_asset
+ScenarioDamageAssetOutput = collections.namedtuple("ScenarioDamageAssetOutput",
+    ["asset", "damage_distribution_asset", "collapse_map"])

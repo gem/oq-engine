@@ -31,7 +31,7 @@ def compute(sites, assets_getter,
             hazard_getter,
             loss_histogram_bins,
             conditional_loss_poes,
-            compute_insured_curve,
+            compute_insured_losses,
             seed, correlation_type,
             on_asset_complete=EMPTY_CALLBACK):
 
@@ -52,29 +52,40 @@ def compute(sites, assets_getter,
             vulnerability_function = vulnerability_model[asset.taxonomy]
 
             loss_ratios = _compute_loss_ratios(
-                vulnerability_function, hazard_dict,
-                asset,
-                seed, correlation_type, taxonomies)
-            loss_ratio_curve = _compute_loss_ratio_curve(
-                vulnerability_function, hazard_dict,
-                asset,
-                loss_histogram_bins, loss_ratios,
+                vulnerability_function, hazard_dict, asset,
                 seed, correlation_type, taxonomies)
 
-            loss_curve = classical._loss_curve(loss_ratio_curve, asset.value)
+            loss_ratio_curve = _compute_loss_ratio_curve(
+                vulnerability_function, hazard_dict,
+                asset, loss_histogram_bins, loss_ratios,
+                seed, correlation_type, taxonomies)
+
+            loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
             loss_conditionals = dict([
                 (loss_poe, classical._conditional_loss(loss_curve, loss_poe))
                 for loss_poe in conditional_loss_poes])
 
-            if compute_insured_curve:
-                insured_curve = _compute_insured_loss_curve(asset, loss_curve)
+            if compute_insured_losses:
+                losses = loss_ratios * asset.value
+
+                insured_losses = _compute_insured_losses(asset, losses)
+
+                insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
+                    vulnerability_function, hazard_dict, asset,
+                    loss_histogram_bins, insured_losses,
+                    seed, correlation_type, taxonomies)
+
+                insured_loss_curve = (
+                    insured_loss_ratio_curve.rescale_abscissae(asset.value))
             else:
-                insured_curve = None
+                insured_loss_curve = None
+                insured_loss_ratio_curve = None
 
             on_asset_complete(
                 asset, point, loss_ratio_curve,
-                loss_curve, loss_conditionals, insured_curve)
+                loss_curve, loss_conditionals,
+                insured_loss_curve, insured_loss_ratio_curve)
 
             aggregate_losses += loss_ratios * asset.value
 
@@ -239,16 +250,22 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
             mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
 
             cov = vuln_function.cov_for(ground_motion_field)
-            variance = (mean_ratio * cov) ** 2.0
 
-            epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(
-                math.log((variance / mean_ratio ** 2.0) + 1.0))
+            if vuln_function.is_beta:
+                stddev = cov * mean_ratio
+                alpha = classical._alpha_value(mean_ratio, stddev)
+                beta = classical._beta_value(mean_ratio, stddev)
+                loss_ratios.append(numpy.random.beta(alpha, beta, size=None))
+            else:
+                variance = (mean_ratio * cov) ** 2.0
+                epsilon = epsilon_provider.epsilon(asset)
+                sigma = math.sqrt(
+                    math.log((variance / mean_ratio ** 2.0) + 1.0))
 
-            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                variance + mean_ratio ** 2.0))
+                mu = math.log(mean_ratio ** 2.0 / math.sqrt(
+                    variance + mean_ratio ** 2.0))
 
-            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
+                loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
     return numpy.array(loss_ratios)
 
@@ -359,9 +376,9 @@ def _generate_curve(losses, probs_of_exceedance):
 
 
 def _compute_loss_ratio_curve(vuln_function, gmf_set,
-                             asset, loss_histogram_bins, loss_ratios=None,
-                             seed=None, correlation_type=None,
-                             taxonomies=None):
+                              asset, loss_histogram_bins, loss_ratios=None,
+                              seed=None, correlation_type=None,
+                              taxonomies=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -417,7 +434,7 @@ def _compute_insured_loss_curve(asset, loss_curve):
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposureModelFile`
     :param loss_curve: a loss curve.
-    :type loss_curve: a :py:class:`openquake.shapes.Curve` instance.
+    :type loss_curve: a :py:class:`risklib.curve.Curve` instance.
     """
     insured_losses = _compute_insured_losses(asset, loss_curve.x_values)
 
@@ -458,3 +475,24 @@ def _compute_insured_losses(asset, losses):
                 if value > asset.ins_limit:
                     losses[i] = asset.ins_limit
     return losses
+
+
+def _compute_insured_loss_ratio_curve(
+                vuln_function, gmf_set,
+                asset, loss_histogram_bins, insured_losses,
+                seed=None, correlation_type=None,
+                taxonomies=None):
+    """
+    Generates an insured loss ratio curve
+    """
+    insured_loss_ratio_curve = _compute_loss_ratio_curve(
+        vuln_function, gmf_set,
+        asset, loss_histogram_bins,
+        loss_ratios=insured_losses,
+        seed=seed, correlation_type=correlation_type,
+        taxonomies=taxonomies)
+
+    insured_loss_ratio_curve.x_values = (
+        insured_loss_ratio_curve.x_values / asset.value)
+
+    return insured_loss_ratio_curve

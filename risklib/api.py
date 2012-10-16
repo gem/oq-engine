@@ -118,7 +118,7 @@ def classical(vulnerability_model, steps=10):
             loss_ratio_curve, asset.value)
 
         return output.ClassicalAssetOutput(
-            asset, loss_ratio_curve, loss_curve)
+            asset, loss_ratio_curve, loss_curve, None)
 
     return classical_wrapped
 
@@ -174,10 +174,8 @@ def conditional_losses(conditional_loss_poes, loss_curve_calculator):
     def conditional_losses_wrapped(asset, hazard):
         asset_output = loss_curve_calculator(asset, hazard)
 
-        asset_output.conditional_losses = (
-            classical_functions._conditional_losses(
+        return asset_output._replace(
+            conditional_losses=classical_functions._conditional_losses(
             asset_output.loss_curve, conditional_loss_poes))
-
-        return asset_output
 
     return conditional_losses_wrapped
