@@ -32,7 +32,7 @@ from openquake.calculators.risk.general import (
     hazard_input_site, BaseRiskCalculator)
 
 from collections import defaultdict
-from risklib import classical, benefit_cost_ratio, api
+from risklib import benefit_cost_ratio, api
 
 
 LOGGER = logs.LOG
@@ -116,7 +116,8 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
             point = self.job_ctxt.region.grid.point_at(
                 shapes.Site(location.x, location.y))
 
-            loss_key = kvs.tokens.loss_curve_key(self.job_ctxt.job_id, point.row,
+            loss_key = kvs.tokens.loss_curve_key(
+                self.job_ctxt.job_id, point.row,
                 point.column, asset_output.asset.asset_ref)
 
             kvs.get_client().set(loss_key, asset_output.loss_curve.to_json())
