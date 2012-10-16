@@ -35,14 +35,14 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         list(api.compute_on_sites(sites,
             assets_getter, hazard_getter, calculator))
 
-        calls = [mock.call(asset, 1.0)] * 3
-        calculator.assert_has_calls(calls)
+        expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
+            (((3.0, 3.0),), {})]
 
-        calls = [mock.call((1.0, 1.0)), mock.call((2.0, 2.0)),
-            mock.call((3.0, 3.0))]
+        self.assertEquals(expected_calls, assets_getter.call_args_list)
+        self.assertEquals(expected_calls, hazard_getter.call_args_list)
 
-        assets_getter.assert_has_calls(calls)
-        hazard_getter.assert_has_calls(calls)
+        self.assertEquals([((asset, 1.0), {})] * 3,
+            calculator.call_args_list)
 
     def test_multiple_assets_per_site(self):
         sites = [(1.0, 1.0)]
@@ -60,10 +60,10 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         list(api.compute_on_sites(sites,
             assets_getter, hazard_getter, calculator))
 
-        calls = [mock.call(assets[0], 1.0), mock.call(assets[1], 1.0),
-            mock.call(assets[2], 1.0)]
+        expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
+            ((assets[2], 1.0), {})]
 
-        calculator.assert_has_calls(calls)
+        self.assertEquals(expected_calls, calculator.call_args_list)
 
 
 class ComputeOnAssetsTestCase(unittest.TestCase):
@@ -80,15 +80,15 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
         list(api.compute_on_assets(assets, hazard_getter, calculator))
 
-        calls = [mock.call((1.0, 1.0)), mock.call((2.0, 2.0)),
-            mock.call((3.0, 3.0))]
+        expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
+            (((3.0, 3.0),), {})]
 
-        hazard_getter.assert_has_calls(calls)
+        self.assertEquals(expected_calls, hazard_getter.call_args_list)
 
-        calls = [mock.call(assets[0], 1.0), mock.call(assets[1], 1.0),
-                 mock.call(assets[2], 1.0)]
+        expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
+            ((assets[2], 1.0), {})]
 
-        calculator.assert_has_calls(calls)
+        self.assertEquals(expected_calls, calculator.call_args_list)
 
 
 class ConditionalLossesTestCase(unittest.TestCase):
