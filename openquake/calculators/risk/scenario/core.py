@@ -21,7 +21,6 @@ event based approach.
 """
 
 
-import numpy
 import os
 
 from openquake import logs
@@ -31,7 +30,7 @@ from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
 from openquake.utils.tasks import distribute
-from risklib import event_based
+from risklib import scenario
 
 LOGGER = logs.LOG
 
@@ -48,7 +47,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # sum of the assets losses of the
         # whole computation
-        self._sum_region_losses = None
+        self._region_losses = []
 
         # mean and standard deviation
         # loss of each asset
@@ -85,11 +84,9 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Mean region loss value: %s" % numpy.mean(
-            self._sum_region_losses)
-
-        print "Standard deviation region loss value: %s" % numpy.std(
-            self._sum_region_losses, ddof=1)
+        mean, stddev = scenario.aggregate_losses(self._region_losses)
+        print "Mean region loss value: %s" % mean
+        print "Standard deviation region loss value: %s" % stddev
 
     def execute(self):
         """
@@ -103,19 +100,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         vuln_model = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
-        region_losses = []
         region_loss_map_data = {}
 
-        region_data = distribute(
+        region_losses = distribute(
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
             tf_args=dict(job_id=self.job_ctxt.job_id,
             vuln_model=vuln_model, insured_losses=self._insured_losses))
 
-        for block_data in region_data:
-            region_losses.append(block_data[0])
+        for block_data in region_losses:
+            self._region_losses.append(block_data[0])
             collect_region_data(block_data[1], region_loss_map_data)
-
-        self._sum_region_losses = reduce(lambda x, y: x + y, region_losses)
 
         self._loss_map_data = [(site, data)
                 for site, data in region_loss_map_data.iteritems()]
@@ -186,40 +180,29 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         seed, correlation_type = self._get_correlation_type()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        block_losses = []
         loss_map_data = {}
 
-        for site in block.sites:
-            gmvs = {"IMLs": general.load_gmvs_at(
-                    self.job_ctxt.job_id, general.hazard_input_site(
-                    self.job_ctxt, site))}
+        def on_asset_complete(asset, mean_loss, std_loss):
+            asset_site = shapes.Site(asset.site.x, asset.site.y)
+            collect_block_data(loss_map_data, asset_site,
+                               ({
+                                   "mean_loss": mean_loss,
+                                   "stddev_loss": std_loss}, {
+                                       "assetID": asset.asset_ref
+                                       }))
 
-            assets = general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
+        sum_block_losses = scenario.compute(
+            block.sites,
+            lambda site: general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site),
+            vuln_model,
+            lambda site: general.load_gmvs_at(
+                self.job_ctxt.job_id, general.hazard_input_site(
+                    self.job_ctxt, site)),
+            insured_losses,
+            seed, correlation_type,
+            on_asset_complete)
 
-            for asset in assets:
-                vuln_function = vuln_model[asset.taxonomy]
-
-                loss_ratios = event_based._compute_loss_ratios(
-                    vuln_function, gmvs, asset,
-                    seed, correlation_type, vuln_model.keys())
-                losses = loss_ratios * asset.value
-
-                if insured_losses:
-                    losses = event_based._compute_insured_losses(asset, losses)
-
-                asset_site = shapes.Site(asset.site.x, asset.site.y)
-
-                loss = ({
-                    "mean_loss": numpy.mean(losses),
-                    "stddev_loss": numpy.std(losses, ddof=1)}, {
-                    "assetID": asset.asset_ref
-                })
-
-                block_losses.append(losses)
-                collect_block_data(loss_map_data, asset_site, loss)
-
-        sum_block_losses = reduce(lambda x, y: x + y, block_losses)
         return sum_block_losses, loss_map_data
 
 

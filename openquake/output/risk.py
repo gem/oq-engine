@@ -38,6 +38,7 @@ from openquake.xml import NRML
 from openquake.xml import NRML_NS
 from openquake.xml import NSMAP
 from risklib import curve
+from openquake import logs
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -519,7 +520,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, scenario):
         :py:class:`output.risk.LossMapNonScenarioXMLWriter`
     """
     writers = []
-
+    logs.LOG.debug("I'VE BEEN CALLED")
     if 'db' in serialize_to:
         writers.append(LossMapDBWriter(nrml_path, job_id))
 
@@ -833,7 +834,8 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
         :py:class:`output.risk.LossRatioCurveXMLWriter`
     """
 
-    assert curve_mode in ('loss', 'loss_ratio', 'insured_loss_curve')
+    assert curve_mode in ('loss', 'loss_ratio', 'insured_loss_curve',
+        'insured_loss_ratio_curve')
 
     writers = []
 
@@ -844,12 +846,13 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
 
         if curve_mode == 'loss':
             writers.append(LossCurveDBWriter(nrml_path, job_id))
-        elif curve_mode in ('loss_ratio', 'insured_loss_curve'):
+        elif curve_mode in ('loss_ratio', 'insured_loss_curve',
+                            'insured_loss_ratio_curve'):
             # We are non interested in storing loss ratios in the db
             pass
 
     if 'xml' in serialize_to:
-        if curve_mode == 'loss_ratio':
+        if curve_mode in ('loss_ratio', 'insured_loss_ratio_curve'):
             writer_class = LossRatioCurveXMLWriter
         elif curve_mode  in ('loss', 'insured_loss_curve'):
             writer_class = LossCurveXMLWriter

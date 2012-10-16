@@ -33,6 +33,7 @@ from openquake.input.exposure import ExposureDBWriter
 from openquake.parser import exposure
 from risklib import curve
 
+import risklib
 from tests.utils import helpers
 
 TEST_FILE = "exposure-portfolio.xml"
@@ -274,22 +275,6 @@ class RiskCalculatorTestCase(unittest.TestCase):
                         key=row_col)
 
         self.assertEqual(expected, actual)
-
-    def test_that_conditional_loss_is_in_kvs(self):
-        asset = GRID_ASSETS[(0, 1)]
-        loss_poe = 0.1
-        job_id = "1"
-        row = 0
-        col = 1
-        loss_curve = curve.Curve([(0.21, 0.131), (0.24, 0.108),
-                                   (0.27, 0.089), (0.30, 0.066)])
-
-        # should set in kvs the conditional loss
-        general.compute_conditional_loss(job_id, col, row, loss_curve, asset,
-                                         loss_poe)
-        loss_key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref,
-                                       loss_poe)
-        self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_asset_losses_per_site(self):
         mm = mock.MagicMock(spec=redis.Redis)
