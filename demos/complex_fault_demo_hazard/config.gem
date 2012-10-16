@@ -1,7 +1,6 @@
 [general]
 
 CALCULATION_MODE = Classical
-NO_PROGRESS_TIMEOUT = 10
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
