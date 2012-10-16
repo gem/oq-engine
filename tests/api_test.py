@@ -54,8 +54,8 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         ]
 
         calculator = mock.Mock()
-        assets_getter = mock.Mock(return_value=assets)
         hazard_getter = mock.Mock(return_value=1.0)
+        assets_getter = mock.Mock(return_value=assets)
 
         list(api.compute_on_sites(sites,
             assets_getter, hazard_getter, calculator))
@@ -96,7 +96,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
     def test_conditional_losses(self):
         asset = input.Asset("a1", None, None, None)
         asset_output = output.ClassicalAssetOutput(
-            asset, [(2.0, 2.0)], [(1.0, 1.0)])
+            asset, [(2.0, 2.0)], [(1.0, 1.0)], None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
 
