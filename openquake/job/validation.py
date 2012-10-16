@@ -367,7 +367,7 @@ def region_grid_spacing_is_valid(mdl):
 
 def no_progress_timeout_is_valid(mdl):
     if not mdl.no_progress_timeout > 0:
-        return False, ['Region grid spacing must be > 0']
+        return False, ['"No progress" time-out must be > 0']
     return True, []
 
 
