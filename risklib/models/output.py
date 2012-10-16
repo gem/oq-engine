@@ -13,3 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import collections
+
+
+ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
+    ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
