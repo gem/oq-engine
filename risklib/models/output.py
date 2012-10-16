@@ -17,5 +17,5 @@
 import collections
 
 
-ClassicalAssetOutput = collections.namedtuple("AssetOutput",
+ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
     ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
