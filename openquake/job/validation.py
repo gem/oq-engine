@@ -211,6 +211,7 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
         model = models.HazardCalculation
         fields = (
             'description',
+            'no_progress_timeout',
             'region',
             'region_grid_spacing',
             'sites',
@@ -242,6 +243,7 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
         model = models.HazardCalculation
         fields = (
             'description',
+            'no_progress_timeout',
             'region',
             'region_grid_spacing',
             'sites',
@@ -360,6 +362,12 @@ def region_is_valid(mdl):
 def region_grid_spacing_is_valid(mdl):
     if not mdl.region_grid_spacing > 0:
         return False, ['Region grid spacing must be > 0']
+    return True, []
+
+
+def no_progress_timeout_is_valid(mdl):
+    if not mdl.no_progress_timeout > 0:
+        return False, ['"No progress" time-out must be > 0']
     return True, []
 
 
