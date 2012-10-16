@@ -331,22 +331,23 @@ def run_hazard(job, log_level, log_file, exports):
     return models.OqJob.objects.get(id=job.id)
 
 
-def _switch_to_job_phase(job, status):
+def _switch_to_job_phase(job, ctype, status):
     """Switch to a particular phase of execution.
 
-    This involves setting the job's status as well as creating a
-    `job_phase_stats` record.
+    This involves creating a `job_phase_stats` record and logging the new
+    status.
 
     :param job:
         An :class:`~openquake.db.models.OqJob` instance.
+    :param str ctype: calculation type (hazard|risk)
     :param str status: one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
     """
     job.status = status
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
-                                        ctype="hazard")
-    logs.log_progress("%s" % status, 1)
+                                        ctype=ctype)
+    logs.log_progress("%s (%s)" % (status, ctype), 1)
     if status == "executing":
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
@@ -377,25 +378,25 @@ def _do_run_hazard(job, exports):
     calc = CALCULATORS_NEXT[calc_mode](job)
 
     # - Run the calculation
-    _switch_to_job_phase(job, "pre_executing")
+    _switch_to_job_phase(job, "hazard", "pre_executing")
     calc.pre_execute()
 
-    _switch_to_job_phase(job, "executing")
+    _switch_to_job_phase(job, "hazard", "executing")
     calc.execute()
 
-    _switch_to_job_phase(job, "post_executing")
+    _switch_to_job_phase(job, "hazard", "post_executing")
     calc.post_execute()
 
-    _switch_to_job_phase(job, "post_processing")
+    _switch_to_job_phase(job, "hazard", "post_processing")
     calc.post_process()
 
-    _switch_to_job_phase(job, "export")
+    _switch_to_job_phase(job, "hazard", "export")
     calc.export(exports=exports)
 
-    _switch_to_job_phase(job, "clean_up")
+    _switch_to_job_phase(job, "hazard", "clean_up")
     calc.clean_up()
 
-    _switch_to_job_phase(job, "complete")
+    _switch_to_job_phase(job, "hazard", "complete")
     logs.LOG.debug("*> complete")
 
     return job
