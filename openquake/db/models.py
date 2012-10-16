@@ -561,11 +561,38 @@ class JobPhaseStats(djm.Model):
     Capture when the various job phases started.
     '''
     oq_job = djm.ForeignKey('OqJob')
+    # calculation type (hazard|risk)
+    ctype = djm.TextField()
     job_status = djm.TextField()
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
         db_table = 'uiapi\".\"job_phase_stats'
+
+
+class CNodeStats(djm.Model):
+    '''
+    Captures the compute node status (changes).
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    node = djm.TextField(help_text="Compute node name")
+    STATUS_CHOICES = (
+        (u"up", u"Compute node available"),
+        (u"down", u"Compute node unavailable"),
+    )
+    current_status = djm.TextField(
+        choices=STATUS_CHOICES, help_text="Current compute node status")
+
+    # Please note: the time stamps are managed by triggers, no need to set
+    # them manually
+    current_ts = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    previous_ts = djm.DateTimeField(null=True)
+
+    failures = djm.IntegerField(
+        help_text="Number of up -> down status changes", default=0)
+
+    class Meta:
+        db_table = 'uiapi\".\"cnode_stats'
 
 
 class Job2profile(djm.Model):
@@ -596,6 +623,11 @@ class HazardCalculation(djm.Model):
 
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
+
+    # The timeout is stored in seconds and is 1 hour by default.
+    no_progress_timeout = djm.IntegerField(
+        default=3600, help_text="what time period w/o any progress is "
+                                "acceptable for calculations?")
     # TODO:
     #force_inputs = djm.BooleanField(
     #    default=False, help_text="whether the model inputs should be parsed "
