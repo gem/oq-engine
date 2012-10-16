@@ -17,8 +17,7 @@ import unittest
 import numpy
 
 from risklib.scenario_damage import _ground_motion_value_fractions
-from risklib.models import (
-    FragilityModel, FragilityFunctionDiscrete)
+from risklib.models import input
 
 
 LIMIT_STATES = ["state1", "state2"]
@@ -35,8 +34,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # the fractions of buildings we use the highest intensity
         # measure level defined in the model (0.7 in this case)
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
+        fm = input.FragilityModel(
+            "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
+
+        func = input.FragilityFunctionDiscrete(
+            fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to(_ground_motion_value_fractions((fm, [func]), 0.7),
                        _ground_motion_value_fractions((fm, [func]), 0.8))
@@ -51,8 +53,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 100% no_damage and 0% for the
         # remaining limit states defined in the model
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
+        fm = input.FragilityModel(
+            "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
+
+        func = input.FragilityFunctionDiscrete(
+            fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0, 0.0],
             _ground_motion_value_fractions((fm, [func]), 0.05))
@@ -67,10 +72,11 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 100% no_damage and 0% for the
         # remaining limit states defined in the model.
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
+        fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
             LIMIT_STATES, no_damage_limit=0.05)
 
-        func = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
+        func = input.FragilityFunctionDiscrete(
+            fm, [0.05, 0.20, 0.50, 1.00], 1)
 
         self._close_to([1.0, 0.0, 0.0],
             _ground_motion_value_fractions((fm, [func]), 0.02))
@@ -85,11 +91,14 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # fractions of buildings is 97.5% no_damage and 2.5% for the
         # remaining limit states defined in the model.
 
-        fm = FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
+        fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
             LIMIT_STATES, no_damage_limit=0.05)
 
-        func1 = FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
-        func2 = FragilityFunctionDiscrete(fm, [0.00, 0.05, 0.20, 0.50], 2)
+        func1 = input.FragilityFunctionDiscrete(
+            fm, [0.05, 0.20, 0.50, 1.00], 1)
+
+        func2 = input.FragilityFunctionDiscrete(
+            fm, [0.00, 0.05, 0.20, 0.50], 2)
 
         self._close_to([0.975, 0.025, 0.],
             _ground_motion_value_fractions((fm, [func1, func2]), 0.075))

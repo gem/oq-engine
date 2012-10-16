@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -14,6 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from risklib import classical as classical_functions
+from risklib.models import output
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -29,7 +31,7 @@ def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
     The assets lookup logic for a single site is completely up to the
     caller, as well as the logic to lookup the correct hazard on that site.
     Also, the are no constraints at all on how a single geographical site is
-    represented, because they are just passed to the client implementation
+    represented, because they are just passed back to the client implementation
     of the assets and hazard getters to load the related inputs.
 
     :param sites: the set of sites where to trigger the computation on
@@ -38,7 +40,7 @@ def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
     :param assets_getter: the logic used to lookup the assets defined
         on a single geographical site
     :type assets_getter: `callable` that accepts as single parameter a
-        geographical site and returns a set of `risklib.models.Asset`
+        geographical site and returns a set of `risklib.models.input.Asset`
     :param hazard_getter: the logic used to lookup the hazard defined
         on a single geographical site
     :type hazard_getter: `callable` that accepts as single parameter a
@@ -48,9 +50,10 @@ def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
     :param calculator: a specific calculator (classical, probabilistic
         event based, benefit cost ratio, scenario risk, scenario damage)
     :type calculator: `callable` that accepts as first parameter an
-        instance of `risklib.models.Asset` and as second parameter the
-        hazard input. It returns an instance of `risklib.api.AssetOutput`
-        with the results of the computation for the given asset
+        instance of `risklib.models.input.Asset` and as second parameter the
+        hazard input. It returns an instance of
+        `risklib.models.output.AssetOutput` with the results of the
+        computation for the given asset
     """
 
     for site in sites:
@@ -69,7 +72,8 @@ def compute_on_assets(assets, hazard_getter, calculator):
     except that here we loop over the given assets.
 
     :param assets: the set of assets where to trigger the computation on
-    :type assets: an `iterator` over a collection of `risklib.models.Asset`
+    :type assets: an `iterator` over a collection of
+        `risklib.models.input.Asset`
     :param hazard_getter: the logic used to lookup the hazard defined
         on a single geographical site
     :type hazard_getter: `callable` that accepts as single parameter a
@@ -79,9 +83,10 @@ def compute_on_assets(assets, hazard_getter, calculator):
     :param calculator: a specific calculator (classical, probabilistic
         event based, benefit cost ratio, scenario risk, scenario damage)
     :type calculator: `callable` that accepts as first parameter an
-        instance of `risklib.models.Asset` and as second parameter the
-        hazard input. It returns an instance of `risklib.api.AssetOutput`
-        with the results of the computation for the given asset
+        instance of `risklib.models.input.Asset` and as second parameter the
+        hazard input. It returns an instance of
+        `risklib.models.output.AssetOutput` with the results of the
+        computation for the given asset
     """
 
     for asset in assets:
@@ -102,7 +107,7 @@ def classical(vulnerability_model, steps=10):
         vulnerability_function, steps))
         for taxonomy, vulnerability_function in vulnerability_model.items()])
 
-    def wrapped(asset, hazard):
+    def classical_wrapped(asset, hazard):
         vulnerability_function = vulnerability_model[asset.taxonomy]
 
         loss_ratio_curve = classical_functions._loss_ratio_curve(
@@ -111,34 +116,23 @@ def classical(vulnerability_model, steps=10):
         loss_curve = classical_functions._loss_curve(
             loss_ratio_curve, asset.value)
 
-        asset_output = AssetOutput()
+        return output.ClassicalAssetOutput(
+            asset, loss_ratio_curve, loss_curve, None)
 
-        asset_output.asset = asset
-        asset_output.loss_curve = loss_curve
-        asset_output.loss_ratio_curve = loss_ratio_curve
-
-        return asset_output
-
-    return wrapped
+    return classical_wrapped
 
 
-def conditional_losses(conditional_loss_poes, function):
+def conditional_losses(conditional_loss_poes, loss_curve_calculator):
     """
     Compute the conditional losses for each Probability
     of Exceedance given as input.
     """
 
-    def wrapped(asset, hazard):
-        asset_output = function(asset, hazard)
+    def conditional_losses_wrapped(asset, hazard):
+        asset_output = loss_curve_calculator(asset, hazard)
 
-        conditional_losses = classical_functions._conditional_losses(
-            asset_output.loss_curve, conditional_loss_poes)
+        return asset_output._replace(
+            conditional_losses=classical_functions._conditional_losses(
+            asset_output.loss_curve, conditional_loss_poes))
 
-        asset_output.conditional_losses = conditional_losses
-
-        return asset_output
-
-    return wrapped
-
-
-class AssetOutput(object): pass
+    return conditional_losses_wrapped
