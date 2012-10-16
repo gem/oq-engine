@@ -388,4 +388,4 @@ def get_progress_timing_data(job):
     # take the more recent of the two time stamps
     lvr_ts = jps_ts if jps_ts > lvr_ts else lvr_ts
 
-    return (tstamp - lvr_ts, models.profile4job(job.id).no_progress_timeout)
+    return (tstamp - lvr_ts, job.hazard_calculation.no_progress_timeout)
