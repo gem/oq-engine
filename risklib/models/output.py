@@ -23,3 +23,7 @@ ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
 
 ScenarioDamageAssetOutput = collections.namedtuple("ScenarioDamageAssetOutput",
     ["asset", "damage_distribution_asset", "collapse_map"])
+
+
+BCRAssetOutput = collections.namedtuple("BCRAssetOutput", ["asset", "bcr",
+    "eal_original", "eal_retrofitted"])
