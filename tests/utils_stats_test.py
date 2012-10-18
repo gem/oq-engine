@@ -29,7 +29,7 @@ import sys
 import unittest
 
 from openquake import engine
-from openquake.db.models import JobPhaseStats
+from openquake.db.models import HazardCalculation, JobPhaseStats
 from openquake.utils import stats
 
 from tests.utils import helpers
@@ -401,23 +401,11 @@ def approx_equal(expected, actual, tolerance):
 class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.get_progress_timing_data()."""
 
-    job = db_patch = db_mock = None
-
-    @classmethod
-    def setUpClass(cls):
-        class OQJP(object):
-            no_progress_timeout = 3601
-
-        cls.db_patch = helpers.patch("openquake.db.models.profile4job")
-        cls.db_mock = cls.db_patch.start()
-        cls.db_mock.return_value = OQJP()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.db_patch.stop()
+    job = None
 
     def setUp(self):
         self.job = engine.prepare_job()
+        self.job.hazard_calculation = HazardCalculation(no_progress_timeout=99)
 
     def test_get_progress_timing_data_before_first_increment(self):
         # No "progress counter increment" time stamp exists, the time stamp of
@@ -429,7 +417,7 @@ class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
         jps.save()
         actual, timeout = stats.get_progress_timing_data(self.job)
         self.assertTrue(approx_equal(300, actual, 5))
-        self.assertEqual(3601, timeout)
+        self.assertEqual(99, timeout)
 
     def test_get_progress_timing_data_no_increment_multiple_rows(self):
         # No progress counter increment time stamp exists, the time stamp of
