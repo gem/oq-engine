@@ -2,7 +2,7 @@ python-oq (0.8.3-1) precise; urgency=low
 
   * Upstream release
 
- -- Matteo Nastasi <nastasi@openquake.org>  Fri, 19 Oct 2012 10:22:24 +0200
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 19 Oct 2012 11:12:19 +0200
 
 python-oq (0.8.2-5) precise; urgency=low
 
