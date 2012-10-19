@@ -7,8 +7,16 @@ def read(fname):
 
 
 setup(
+    entry_points = {
+        'console_scripts': [
+            'openquake = openquake.bin.oqscript:main',
+            'oq_cache_gc = openquake.bin.cache_gc:main',
+            'oq_monitor = openquake.bin.openquake_supervisor:main',
+            'oq_check_monitors = openquake.supervising.supersupervisor:main',
+            'oq_log_sink = openquake.bin.openquake_messages_collector:main',
+            ]},
     name = "openquake",
-    version = "0.7.0",
+    version = "0.8.2",
     author = "The OpenQuake team",
     author_email = "info@openquake.org",
     description = ("Computes hazard, risk and socio-economic impact of "
@@ -21,16 +29,8 @@ setup(
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
     ],
-    packages = find_packages(exclude=['bin', 'bin.*', 'qa_tests', 'tools', "tests", "tests.*", ".*oqpath.*", "openquake.nrml.tests", "openquake.nrml.tests.*" ]),
+    packages = find_packages(),
     include_package_data=True,
-    package_data={'openquake': ['db/schema/*',
-                                'nrml/schema/hazard/*', 'nrml/schema/risk/*', 'nrml/schema/gml/*',
-                                'nrml/schema/GML-SimpleFeaturesProfileSchema.xsd',
-                                'nrml/schema/nrml_common.xsd', 'nrml/schema/nrml.xsd',
-                                'nrml/schema/xlinks/*', 'logging.cfg', 'openquake.cfg', 'README', 'LICENSE' ]},
-
     scripts = [
-        "bin/openquake", "bin/oq_create_db", "bin/oq_cache_gc",
-        "bin/oq_restart_workers", "bin/oq_monitor", "bin/oq_log_sink",
-        "bin/oq_check_monitors"],
+        "openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
 )
