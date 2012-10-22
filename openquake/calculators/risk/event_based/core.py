@@ -230,7 +230,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         bcr = api.bcr(api.probabilistic_event_based(
             vulnerability_model_original, loss_histogram_bins, seed,
             correlation_type), api.probabilistic_event_based(
-            vulnerability_model_retrofitted, loss_histogram_bins,seed,
+            vulnerability_model_retrofitted, loss_histogram_bins, seed,
             correlation_type), float(self.job_ctxt.params["INTEREST_RATE"]),
             float(self.job_ctxt.params["ASSET_LIFE_EXPECTANCY"]))
 
