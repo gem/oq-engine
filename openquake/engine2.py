@@ -275,14 +275,75 @@ def create_hazard_calculation(owner, params, files):
 
 
 def run_hazard(job, log_level, log_file, exports):
-    """Run a hazard job.
+    """
+    Run a hazard calculation.
 
     :param job:
-        :class:`openquake.db.models.OqJob` instance which references a valid
+        :class:`openquake.db.model.OqJob` instance which references a valid
         :class:`openquake.db.models.HazardCalculation`.
+    :param str log_level:
+        The desired logging level. Valid choices are 'debug', 'info',
+        'progress', 'warn', 'error', and 'critical'.
+    :param str log_file:
+        Complete path (including file name) to file where logs will be written.
+        If `None`, logging will just be printed to standard output.
     :param list exports:
-        a (potentially empty) list of export targets, currently only "xml" is
-        supported
+        A (potentially empty) list of export targets. Currently only "xml" is
+        supported.
+    """
+    from openquake.calculators.hazard import CALCULATORS_NEXT
+
+    calc_mode = job.hazard_calculation.calculation_mode
+    # - Instantiate the calculator class
+    calc = CALCULATORS_NEXT[calc_mode](job)
+
+    return _run_calc(job, log_level, log_file, exports, calc, 'hazard')
+
+
+def run_risk(job, log_level, log_file, exports):
+    """
+    Run a risk calculation.
+
+    :param job:
+        :class:`openquake.db.model.OqJob` instance which references a valid
+        :class:`openquake.db.models.RiskCalculation`.
+    :param str log_level:
+        The desired logging level. Valid choices are 'debug', 'info',
+        'progress', 'warn', 'error', and 'critical'.
+    :param str log_file:
+        Complete path (including file name) to file where logs will be written.
+        If `None`, logging will just be printed to standard output.
+    :param list exports:
+        A (potentially empty) list of export targets. Currently only "xml" is
+        supported.
+    """
+
+    # TODO: instantiate risk calculator
+    return _run_calc(job, log_level, log_file, exports, None, 'risk')
+
+
+def _run_calc(job, log_level, log_file, exports, calc, job_type):
+    """
+    Run a calculation.
+
+    :param job:
+        :class:`openquake.db.model.OqJob` instance which references a valid
+        :class:`openquake.db.models.RiskCalculation` or
+        :class:`openquake.db.models.HazardCalculation`.
+    :param str log_level:
+        The desired logging level. Valid choices are 'debug', 'info',
+        'progress', 'warn', 'error', and 'critical'.
+    :param str log_file:
+        Complete path (including file name) to file where logs will be written.
+        If `None`, logging will just be printed to standard output.
+    :param list exports:
+        A (potentially empty) list of export targets. Currently only "xml" is
+        supported.
+    :param calc:
+        Calculator object, which must implement the interface of
+        :class:`openquake.calculators.base.CalculatorNext`.
+    :param str job_type:
+        'hazard' or 'risk'
     """
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
@@ -299,7 +360,7 @@ def run_hazard(job, log_level, log_file, exports):
             job.is_running = True
             job.save()
             kvs.mark_job_as_current(job.id)
-            _do_run_hazard(job, exports)
+            _do_run_calc(job, exports, calc, job_type)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -357,7 +418,7 @@ def _switch_to_job_phase(job, ctype, status):
             sys.exit(1)
 
 
-def _do_run_hazard(job, exports):
+def _do_run_calc(job, exports, calc, job_type):
     """
     Step through all of the phases of a hazard calculation, updating the job
     status at each phase.
@@ -370,33 +431,26 @@ def _do_run_hazard(job, exports):
     :returns:
         The input job object when the calculation completes.
     """
-    from openquake.calculators.hazard import CALCULATORS_NEXT
-
-    calc_mode = job.hazard_calculation.calculation_mode
-
-    # - Instantiate the calculator class
-    calc = CALCULATORS_NEXT[calc_mode](job)
-
     # - Run the calculation
-    _switch_to_job_phase(job, "hazard", "pre_executing")
+    _switch_to_job_phase(job, job_type, "pre_executing")
     calc.pre_execute()
 
-    _switch_to_job_phase(job, "hazard", "executing")
+    _switch_to_job_phase(job, job_type, "executing")
     calc.execute()
 
-    _switch_to_job_phase(job, "hazard", "post_executing")
+    _switch_to_job_phase(job, job_type, "post_executing")
     calc.post_execute()
 
-    _switch_to_job_phase(job, "hazard", "post_processing")
+    _switch_to_job_phase(job, job_type, "post_processing")
     calc.post_process()
 
-    _switch_to_job_phase(job, "hazard", "export")
+    _switch_to_job_phase(job, job_type, "export")
     calc.export(exports=exports)
 
-    _switch_to_job_phase(job, "hazard", "clean_up")
+    _switch_to_job_phase(job, job_type, "clean_up")
     calc.clean_up()
 
-    _switch_to_job_phase(job, "hazard", "complete")
+    _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
 
     return job
