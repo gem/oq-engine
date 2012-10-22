@@ -93,7 +93,7 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
 class ConditionalLossesTestCase(unittest.TestCase):
 
-    def test_conditional_losses(self):
+    def test_conditional_losses_calculator(self):
         asset = input.Asset("a1", None, None, None)
         asset_output = output.ClassicalAssetOutput(
             asset, [(2.0, 2.0)], [(1.0, 1.0)], None)
@@ -211,7 +211,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
 class InsuredLossesTestCase(unittest.TestCase):
 
-    def test_insured_losses(self):
+    def test_insured_losses_calculator(self):
         asset = input.Asset("a1", "RC", 1.0, None)
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
@@ -234,7 +234,7 @@ class InsuredLossesTestCase(unittest.TestCase):
 
 class InsuredCurveTestCase(unittest.TestCase):
 
-    def test_insured_curves(self):
+    def test_insured_curves_calculator(self):
         hazard = {"IMLs": [0.11, 0.12, 0.13]}
         asset = input.Asset("a1", "RC", 1.0, None)
 
