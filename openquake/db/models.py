@@ -870,7 +870,7 @@ class RiskCalculation(djm.Model):
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
-    export_dir = fjm.TextField(null=True, blank=True)
+    export_dir = djm.TextField(null=True, blank=True)
     force_inputs = djm.BooleanField()
 
     #####################
