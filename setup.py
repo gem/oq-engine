@@ -1,9 +1,16 @@
-import os
 from setuptools import setup, find_packages
 
 
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+README="""
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Please note: the /usr/bin/openquake script requires a celeryconfig.py
+file in the PYTHONPATH.  Please make sure this is the case and that your
+celeryconfig.py file works with your python-celery setup.
+
+Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
+"""
 
 
 setup(
@@ -24,7 +31,7 @@ setup(
     license = "AGPL3",
     keywords = "earthquake seismic hazard risk",
     url = "http://openquake.org/",
-    long_description=read('openquake/README'),
+    long_description=README,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
