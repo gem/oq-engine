@@ -24,6 +24,7 @@ from celery.exceptions import TimeoutError
 
 from openquake import kvs
 from openquake import logs
+from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk.general import (
@@ -31,7 +32,7 @@ from openquake.calculators.risk.general import (
     hazard_input_site, BaseRiskCalculator)
 
 from collections import defaultdict
-from risklib import classical, benefit_cost_ratio
+from risklib import benefit_cost_ratio, api
 
 
 LOGGER = logs.LOG
@@ -92,44 +93,47 @@ class ClassicalRiskCalculator(ProbabilisticRiskCalculator):
         """
         block = Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        vuln_curves = vulnerability.load_vuln_model_from_kvs(
+        vulnerability_model = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
-        lrem_steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
-        loss_poes = conditional_loss_poes(self.job_ctxt.params)
+        steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
 
         assets_getter = lambda site: BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
+            self.job_ctxt.job_id, site)
 
         hazard_getter = lambda site: (
-            self.job_ctxt.region.grid.point_at(site),
-            self._get_db_curve(
-                hazard_input_site(self.job_ctxt, site)))
+            self._get_db_curve(hazard_input_site(self.job_ctxt, site)))
 
-        def on_asset_complete(asset, point, loss_ratio_curve,
-                              loss_curve, loss_conditionals):
+        calculator = api.conditional_losses(
+            conditional_loss_poes(self.job_ctxt.params),
+            api.classical(vulnerability_model, steps=steps))
+
+        for asset_output in api.compute_on_sites(block.sites,
+            assets_getter, hazard_getter, calculator):
+
+            location = asset_output.asset.site
+
+            point = self.job_ctxt.region.grid.point_at(
+                shapes.Site(location.x, location.y))
+
             loss_key = kvs.tokens.loss_curve_key(
                 self.job_ctxt.job_id, point.row,
-                point.column, asset.asset_ref)
+                point.column, asset_output.asset.asset_ref)
 
-            kvs.get_client().set(loss_key, loss_curve.to_json())
+            kvs.get_client().set(loss_key, asset_output.loss_curve.to_json())
 
-            for poe, loss in loss_conditionals.items():
-                key = kvs.tokens.loss_key(
-                    self.job_ctxt.job_id, point.row, point.column,
-                    asset.asset_ref, poe)
-                kvs.get_client().set(key, loss)
-
-            loss_ratio_key = kvs.tokens.loss_ratio_key(
-                self.job_ctxt.job_id, point.row,
-                point.column, asset.asset_ref)
+            loss_ratio_key = kvs.tokens.loss_ratio_key(self.job_ctxt.job_id,
+                point.row, point.column, asset_output.asset.asset_ref)
 
             kvs.get_client().set(loss_ratio_key,
-                                 loss_ratio_curve.to_json())
+                asset_output.loss_ratio_curve.to_json())
 
-        classical.compute(
-            block.sites, assets_getter, vuln_curves, hazard_getter,
-            lrem_steps, loss_poes, on_asset_complete)
+            for poe, loss in asset_output.conditional_losses.items():
+                key = kvs.tokens.loss_key(
+                    self.job_ctxt.job_id, point.row, point.column,
+                    asset_output.asset.asset_ref, poe)
+
+                kvs.get_client().set(key, loss)
 
     def _compute_bcr(self, block_id):
         """
