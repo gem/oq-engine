@@ -95,7 +95,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
         asset = input.Asset("a1", None, None, None)
-        asset_output = output.ClassicalAssetOutput(
+        asset_output = output.ClassicalOutput(
             asset, [(2.0, 2.0)], [(1.0, 1.0)], None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
@@ -108,7 +108,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
             loss_curve_calculator.assert_called_with(asset, 1.0)
 
-            expected_output = output.ClassicalAssetOutput(
+            expected_output = output.ClassicalOutput(
                 asset, [(2.0, 2.0)], [(1.0, 1.0)], {0.1: 0.5, 0.2: 0.5})
 
             # as output we have the output from the given loss curve
@@ -216,7 +216,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
         asset_output = utils.new(
-            output.ProbabilisticEventBasedAssetOutput,
+            output.ProbabilisticEventBasedOutput,
             losses=[0.5, 0.5, 0.5])
 
         losses_calculator = mock.Mock(return_value=asset_output)
@@ -232,7 +232,7 @@ class InsuredLossesTestCase(unittest.TestCase):
             self.assertEquals([0.5, 0.5, 0.5], asset_output.insured_losses)
 
 
-class InsuredCurveTestCase(unittest.TestCase):
+class InsuredCurvesTestCase(unittest.TestCase):
 
     def test_insured_curves_calculator(self):
         hazard = {"IMLs": [0.11, 0.12, 0.13]}
@@ -244,7 +244,7 @@ class InsuredCurveTestCase(unittest.TestCase):
         vulnerability_model = {"RC": function}
 
         asset_output = utils.new(
-            output.ProbabilisticEventBasedAssetOutput,
+            output.ProbabilisticEventBasedOutput,
             insured_losses=[0.5, 0.5, 0.5])
 
         insured_losses_calculator = mock.Mock(return_value=asset_output)
@@ -271,3 +271,35 @@ class InsuredCurveTestCase(unittest.TestCase):
             # asset value is 1.0
             self.assertEquals(insured_loss_ratio_curve,
                 asset_output.insured_loss_curve)
+
+
+class ScenarioRiskCalculatorTestCase(unittest.TestCase):
+
+    def test_scenario_risk_calculator(self):
+        hazard = [0.11, 0.12, 0.13]
+        asset = input.Asset("a1", "RC", 1.0, None,
+            ins_limit=1.0, deductible=1.0)
+
+        function = vulnerability_function.VulnerabilityFunction(
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+
+        vulnerability_model = {"RC": function}
+
+        asset_output = api.scenario_risk(
+            vulnerability_model, 37, "perfect")(asset, hazard)
+
+        self.assertEquals(asset, asset_output.asset)
+
+        # here we just verify the outputs are stored,
+        # because the scientific logic is tested elsewhere
+        self.assertIsNotNone(asset_output.mean)
+        self.assertIsNotNone(asset_output.standard_deviation)
+
+        # same, but with an insured calculator
+        asset_output = api.scenario_risk(
+            vulnerability_model, 37, "perfect", insured=True)(asset, hazard)
+
+        self.assertEquals(asset, asset_output.asset)
+
+        self.assertIsNotNone(asset_output.mean)
+        self.assertIsNotNone(asset_output.standard_deviation)
