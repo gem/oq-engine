@@ -220,7 +220,7 @@ class probabilistic_event_based(object):
         * a loss curve
 
     It also produces the following aggregate results:
-        * aggregated loss curve
+        * aggregate loss curve
     """
 
     def __init__(self, vulnerability_model, loss_histogram_bins,
@@ -231,14 +231,14 @@ class probabilistic_event_based(object):
         self.vulnerability_model = vulnerability_model
         self.loss_histogram_bins = loss_histogram_bins
 
-        self._aggregated_losses = None
+        self._aggregate_losses = None
 
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
-        if self._aggregated_losses is None:
-            self._aggregated_losses = numpy.zeros(len(hazard["IMLs"]))
+        if self._aggregate_losses is None:
+            self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
 
         loss_ratios = event_based_functions._compute_loss_ratios(
             vulnerability_function, hazard, asset, self.seed,
@@ -251,14 +251,14 @@ class probabilistic_event_based(object):
         losses = loss_ratios * asset.value
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
-        self._aggregated_losses += losses
+        self._aggregate_losses += losses
 
         return output.ProbabilisticEventBasedAssetOutput(asset, losses,
             loss_ratio_curve, loss_curve, None, None, None, None)
 
     @property
-    def aggregated_losses(self):
-        return self._aggregated_losses
+    def aggregate_losses(self):
+        return self._aggregate_losses
 
 
 def insured_losses(losses_calculator):
@@ -300,3 +300,49 @@ def insured_curves(vulnerability_model, loss_histogram_bins, seed,
             insured_loss_curve=insured_loss_curve)
 
     return insured_curves_wrapped
+
+
+class scenario_risk(object):
+    """
+    Scenario risk calculator. For each asset it produces:
+        * mean / standard deviation of asset losses
+
+    It also produces the following aggregate results:
+        * aggregate losses
+    """
+
+    def __init__(self, vulnerability_model, seed,
+        correlation_type, insured=False):
+
+        self.seed = seed
+        self.insured = insured
+        self.correlation_type = correlation_type
+        self.vulnerability_model = vulnerability_model
+
+        self._aggregate_losses = None
+
+    def __call__(self, asset, hazard):
+        taxonomies = self.vulnerability_model.keys()
+        vulnerability_function = self.vulnerability_model[asset.taxonomy]
+
+        if self._aggregate_losses is None:
+            self._aggregate_losses = numpy.zeros(len(hazard))
+
+        loss_ratios = event_based_functions._compute_loss_ratios(
+            vulnerability_function, {"IMLs": hazard}, asset,
+            self.seed, self.correlation_type, taxonomies)
+
+        losses = loss_ratios * asset.value
+
+        if self.insured:
+            losses = event_based_functions._compute_insured_losses(
+                asset, losses)
+
+        self._aggregate_losses += losses
+
+        return output.ScenarioRiskAssetOutput(asset, numpy.mean(losses),
+            numpy.std(losses, ddof=1))
+
+    @property
+    def aggregate_losses(self):
+        return self._aggregate_losses

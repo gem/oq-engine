@@ -33,3 +33,7 @@ ProbabilisticEventBasedAssetOutput = collections.namedtuple(
     "ProbabilisticEventBasedAssetOutput", ["asset", "losses",
     "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
     "insured_loss_curve", "insured_losses", "conditional_losses"])
+
+
+ScenarioRiskAssetOutput = collections.namedtuple("ScenarioRiskAssetOutput",
+    ["asset", "mean", "standard_deviation"])

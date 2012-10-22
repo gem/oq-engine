@@ -232,7 +232,7 @@ class InsuredLossesTestCase(unittest.TestCase):
             self.assertEquals([0.5, 0.5, 0.5], asset_output.insured_losses)
 
 
-class InsuredCurveTestCase(unittest.TestCase):
+class InsuredCurvesTestCase(unittest.TestCase):
 
     def test_insured_curves_calculator(self):
         hazard = {"IMLs": [0.11, 0.12, 0.13]}
@@ -271,3 +271,35 @@ class InsuredCurveTestCase(unittest.TestCase):
             # asset value is 1.0
             self.assertEquals(insured_loss_ratio_curve,
                 asset_output.insured_loss_curve)
+
+
+class ScenarioRiskCalculatorTestCase(unittest.TestCase):
+
+    def test_scenario_risk_calculator(self):
+        hazard = [0.11, 0.12, 0.13]
+        asset = input.Asset("a1", "RC", 1.0, None,
+            ins_limit=1.0, deductible=1.0)
+
+        function = vulnerability_function.VulnerabilityFunction(
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+
+        vulnerability_model = {"RC": function}
+
+        asset_output = api.scenario_risk(
+            vulnerability_model, 37, "perfect")(asset, hazard)
+
+        self.assertEquals(asset, asset_output.asset)
+
+        # here we just verify the outputs are stored,
+        # because the scientific logic is tested elsewhere
+        self.assertIsNotNone(asset_output.mean)
+        self.assertIsNotNone(asset_output.standard_deviation)
+
+        # same, but with an insured calculator
+        asset_output = api.scenario_risk(
+            vulnerability_model, 37, "perfect", insured=True)(asset, hazard)
+
+        self.assertEquals(asset, asset_output.asset)
+
+        self.assertIsNotNone(asset_output.mean)
+        self.assertIsNotNone(asset_output.standard_deviation)
