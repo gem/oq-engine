@@ -466,7 +466,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
     def test_hazard_calculation_is_not_valid_missing_export_dir(self):
         # When the user specifies '--exports' on the command line the
         # 'export_dir' parameter must be present in the .ini file.
-        err = ('--export specified on the command line but the '
+        err = ('--exports specified on the command line but the '
                '"export_dir" parameter is missing in the .ini file')
         expected_errors = {
             'export_dir': [err],
