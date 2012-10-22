@@ -284,37 +284,6 @@ def _touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
-def list_calculations():
-    """
-    Deprecated.
-
-    Simple UI wrapper around
-    :func:`openquake.export.core.get_jobs`. It prints the results in
-    a nice way."""
-    jobs = export.get_jobs(getpass.getuser())
-    if len(jobs) > 0:
-        print 'ID\tStatus\tDescription'
-        for c in jobs:
-            # TODO: For now, only display hazard calculations
-            if c.hazard_calculation is not None:
-                print '%s\t%s\t%s' % (c.id, c.status,
-                                      c.hazard_calculation.description)
-
-
-def list_outputs(job_id):
-    """
-    Deprecated.
-
-    Simple UI wrapper arround
-    :func:`openquake.export.core.get_outputs`. It prints the results in a
-    nice way."""
-    outputs = export.get_outputs(job_id)
-    if len(outputs) > 0:
-        print 'ID\tOuput Type'
-        for o in outputs:
-            print '%s\t%s' % (o.id, o.output_type)
-
-
 def do_export(output_id, target_dir):
     """
     Deprecated.
@@ -355,16 +324,6 @@ if __name__ == '__main__':
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
                    args.force_inputs, args.exports)
-        except job.config.ValidationException as e:
-            print str(e)
-        except IOError as e:
-            print str(e)
-        except Exception as e:
-            raise
-    elif args.list_calculations:
-        list_calculations()
-    elif args.list_outputs is not None:
-        list_outputs(args.list_outputs)
     elif args.export is not None:
         output_id, target_dir = args.export
         output_id = int(output_id)
