@@ -19,3 +19,7 @@ import collections
 
 ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
     ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
+
+
+ScenarioDamageAssetOutput = collections.namedtuple("ScenarioDamageAssetOutput",
+    ["asset", "damage_distribution_asset", "collapse_map"])
