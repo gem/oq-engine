@@ -142,11 +142,6 @@ def set_up_arg_parser():
         help='(DEPRECATED) List outputs for a completed calculation', type=int,
         metavar='CALCULATION_ID')
     export_grp.add_argument(
-        '--export',
-        help=('(DEPRECATED) Export the desired output to the specified '
-              'directory'),
-        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
         '--exports', choices=['xml'],  default=[], action="append",
         help='Post-calculation exports, if any. Only "xml" is supported')
 
@@ -284,27 +279,6 @@ def _touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
-def do_export(output_id, target_dir):
-    """
-    Deprecated.
-
-    Simple UI wrapper around
-    :func:`openquake.export.core.export`. It prints the results in a nice
-    way."""
-    from django.core.exceptions import ObjectDoesNotExist
-    try:
-        files = export.export(output_id, target_dir)
-        if len(files) > 0:
-            print 'Files Exported:'
-            for f in files:
-                print f
-    except NotImplementedError, err:
-        print err.message
-        print 'This feature is probably not implemented yet'
-    except ObjectDoesNotExist:
-        print 'No output found for OUTPUT_ID %s' % output_id
-
-
 if __name__ == '__main__':
     arg_parser = set_up_arg_parser()
 
@@ -324,10 +298,5 @@ if __name__ == '__main__':
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
                    args.force_inputs, args.exports)
-    elif args.export is not None:
-        output_id, target_dir = args.export
-        output_id = int(output_id)
-
-        do_export(output_id, target_dir)
     else:
         arg_parser.print_usage()
