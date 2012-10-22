@@ -100,35 +100,45 @@ def set_up_arg_parser():
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
-        '--run-hazard', help='Run a hazard job with the specified config file',
+        '--run-hazard',
+        '--rh',
+        help='Run a hazard job with the specified config file',
         metavar='CONFIG_FILE')
     hazard_grp.add_argument(
         '--list-hazard-calculations',
+        '--lhc',
         help='List hazard calculation information',
         action='store_true')
     hazard_grp.add_argument(
         '--list-hazard-outputs',
+        '--lho',
         help='List outputs for the specified hazard calculation',
         metavar='HAZARD_CALCULATION_ID')
     hazard_grp.add_argument(
         '--export-hazard',
+        '--eh',
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
     risk_grp = parser.add_argument_group('Risk')
     risk_grp.add_argument(
-        '--run-risk', help='Run a risk job with the specified config file',
+        '--run-risk',
+        '--rr',
+        help='Run a risk job with the specified config file',
         metavar='CONFIG_FILE')
     risk_grp.add_argument(
         '--list-risk-calculations',
+        '--lrc',
         help='List risk calculation information',
         action='store_true')
     risk_grp.add_argument(
         '--list-risk-outputs',
+        '--lro',
         help='List outputs for the specified risk calculation',
         metavar='RISK_CALCULATION_ID')
     risk_grp.add_argument(
         '--export-risk',
+        '--er',
         help='Export the desired risk output to the specified directory',
         nargs=2,
         metavar=('OUTPUT_ID', 'TARGET_DIR'))
