@@ -16,6 +16,7 @@
 
 from risklib.models import output
 from risklib import classical as classical_functions
+from risklib import benefit_cost_ratio as bcr_functions
 from risklib import scenario_damage as scenario_damage_functions
 
 
@@ -179,3 +180,30 @@ def conditional_losses(conditional_loss_poes, loss_curve_calculator):
             asset_output.loss_curve, conditional_loss_poes))
 
     return conditional_losses_wrapped
+
+
+def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
+    interest_rate, asset_life_expectancy):
+    """
+    Compute the Benefit Cost Ratio. For each asset, it produces:
+        * the benefit cost ratio
+        * the expected annual loss
+        * the expect annual loss retrofitted
+    """
+
+    def bcr_wrapped(asset, hazard):
+        expected_annual_loss_original = bcr_functions._mean_loss(
+            loss_curve_calculator_original(asset, hazard).loss_curve)
+
+        expected_annual_loss_retrofitted = bcr_functions._mean_loss(
+            loss_curve_calculator_retrofitted(asset, hazard).loss_curve)
+
+        bcr = bcr_functions._bcr(expected_annual_loss_original,
+            expected_annual_loss_retrofitted, interest_rate,
+            asset_life_expectancy, asset.retrofitting_cost)
+
+        return output.BCRAssetOutput(
+            asset, bcr, expected_annual_loss_original,
+            expected_annual_loss_retrofitted)
+
+    return bcr_wrapped

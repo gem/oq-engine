@@ -159,3 +159,28 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         self.assertIsNotNone(asset_output.collapse_map)
         self.assertIsNotNone(asset_output.damage_distribution_asset)
         self.assertIsNotNone(calculator.damage_distribution_by_taxonomy)
+
+
+class BCRCalculatorTestCase(unittest.TestCase):
+
+    def test_bcr_calculator(self):
+        hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
+        asset = input.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
+
+        function = vulnerability_function.VulnerabilityFunction(
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+
+        vulnerability_model = {"RC": function}
+        vulnerability_model_retrofitted = {"RC": function}
+
+        asset_output = (api.bcr(api.classical(vulnerability_model),
+            api.classical(vulnerability_model_retrofitted), 1.0, 1.0)
+            (asset, hazard_curve))
+
+        self.assertEquals(asset, asset_output.asset)
+
+        # here we just verify the outputs are stored,
+        # because the scientific logic is tested elsewhere
+        self.assertIsNotNone(asset_output.bcr)
+        self.assertIsNotNone(asset_output.eal_original)
+        self.assertIsNotNone(asset_output.eal_retrofitted)

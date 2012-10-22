@@ -55,8 +55,8 @@ class FragilityModel(object):
 class Asset(object):
 
     def __init__(self, asset_ref, taxonomy, value, site,
-        number_of_units=None,
-        ins_limit=None, deductible=None):
+        number_of_units=None, ins_limit=None, deductible=None,
+        retrofitting_cost=None):
 
         self.site = site
         self.value = value
@@ -65,3 +65,4 @@ class Asset(object):
         self.ins_limit = ins_limit
         self.deductible = deductible
         self.number_of_units = number_of_units
+        self.retrofitting_cost = retrofitting_cost
