@@ -196,7 +196,7 @@ class BaseOQModelForm(ModelForm):
             # calculation i.e. an 'export_dir' parameter must be present.
             if not hc.export_dir:
                 all_valid = False
-                err = ('--export specified on the command line but the '
+                err = ('--exports specified on the command line but the '
                        '"export_dir" parameter is missing in the .ini file')
                 self._add_error('export_dir', err)
 
