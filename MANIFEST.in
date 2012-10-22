@@ -1,3 +1,5 @@
-include lib/*.jar
-include dist/*.jar
-include celeryconfig.py
+include openquake/LICENSE openquake/README
+recursive-include openquake *.sql
+recursive-include openquake *.xsd
+recursive-include openquake *.cfg
+recursive-include openquake *.gem
