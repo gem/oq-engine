@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
+
 from risklib.models import output
 from risklib import classical as classical_functions
+from risklib import event_based as event_based_functions
 from risklib import benefit_cost_ratio as bcr_functions
 from risklib import scenario_damage as scenario_damage_functions
 
@@ -207,3 +210,93 @@ def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
             expected_annual_loss_retrofitted)
 
     return bcr_wrapped
+
+
+class probabilistic_event_based(object):
+    """
+    Probabilistic event based calculator. For each asset it produces:
+        * a set of losses
+        * a loss ratio curve
+        * a loss curve
+
+    It also produces the following aggregate results:
+        * aggregated loss curve
+    """
+
+    def __init__(self, vulnerability_model, loss_histogram_bins,
+        seed, correlation_type):
+
+        self.seed = seed
+        self.correlation_type = correlation_type
+        self.vulnerability_model = vulnerability_model
+        self.loss_histogram_bins = loss_histogram_bins
+
+        self._aggregated_losses = None
+
+    def __call__(self, asset, hazard):
+        taxonomies = self.vulnerability_model.keys()
+        vulnerability_function = self.vulnerability_model[asset.taxonomy]
+
+        if self._aggregated_losses is None:
+            self._aggregated_losses = numpy.zeros(len(hazard["IMLs"]))
+
+        loss_ratios = event_based_functions._compute_loss_ratios(
+            vulnerability_function, hazard, asset, self.seed,
+            self.correlation_type, taxonomies)
+
+        loss_ratio_curve = event_based_functions._compute_loss_ratio_curve(
+            vulnerability_function, hazard, asset, self.loss_histogram_bins,
+            loss_ratios, self.seed, self.correlation_type, taxonomies)
+
+        losses = loss_ratios * asset.value
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
+
+        self._aggregated_losses += losses
+
+        return output.ProbabilisticEventBasedAssetOutput(asset, losses,
+            loss_ratio_curve, loss_curve, None, None, None, None)
+
+    @property
+    def aggregated_losses(self):
+        return self._aggregated_losses
+
+
+def insured_losses(losses_calculator):
+    """
+    Insured losses calculator.
+    """
+
+    def insured_losses_wrapped(asset, hazard):
+        asset_output = losses_calculator(asset, hazard)
+
+        return asset_output._replace(
+            insured_losses=event_based_functions._compute_insured_losses(
+            asset, asset_output.losses))
+
+    return insured_losses_wrapped
+
+
+def insured_curves(vulnerability_model, loss_histogram_bins, seed,
+    correlation_type, insured_losses_calculator):
+    """
+    Insured (loss ratio / loss) curves calculator.
+    """
+
+    def insured_curves_wrapped(asset, hazard):
+        taxonomies = vulnerability_model.keys()
+        asset_output = insured_losses_calculator(asset, hazard)
+        vulnerability_function = vulnerability_model[asset.taxonomy]
+
+        insured_loss_ratio_curve = (
+            event_based_functions._compute_insured_loss_ratio_curve(
+            vulnerability_function, hazard, asset, loss_histogram_bins,
+            asset_output.insured_losses, seed, correlation_type, taxonomies))
+
+        insured_loss_curve = (
+            insured_loss_ratio_curve.rescale_abscissae(asset.value))
+
+        return asset_output._replace(
+            insured_loss_ratio_curve=insured_loss_ratio_curve,
+            insured_loss_curve=insured_loss_curve)
+
+    return insured_curves_wrapped

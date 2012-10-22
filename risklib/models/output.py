@@ -27,3 +27,9 @@ ScenarioDamageAssetOutput = collections.namedtuple("ScenarioDamageAssetOutput",
 
 BCRAssetOutput = collections.namedtuple("BCRAssetOutput", ["asset", "bcr",
     "eal_original", "eal_retrofitted"])
+
+
+ProbabilisticEventBasedAssetOutput = collections.namedtuple(
+    "ProbabilisticEventBasedAssetOutput", ["asset", "losses",
+    "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
+    "insured_loss_curve", "insured_losses", "conditional_losses"])
