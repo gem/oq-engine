@@ -215,7 +215,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         asset = input.Asset("a1", "RC", 1.0, None)
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
-        asset_output = utils.namedtuple_with_defaults(
+        asset_output = utils.new(
             output.ProbabilisticEventBasedAssetOutput,
             losses=[0.5, 0.5, 0.5])
 
@@ -243,7 +243,7 @@ class InsuredCurveTestCase(unittest.TestCase):
 
         vulnerability_model = {"RC": function}
 
-        asset_output = utils.namedtuple_with_defaults(
+        asset_output = utils.new(
             output.ProbabilisticEventBasedAssetOutput,
             insured_losses=[0.5, 0.5, 0.5])
 
