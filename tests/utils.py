@@ -14,12 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import inspect
 
-
-def namedtuple_with_defaults(tuple_type, default_value=None, **kwargs):
-    args_list = inspect.getargspec(tuple_type.__new__).args[1:]
-    params = dict([(x, default_value) for x in args_list])
+def new(tuple_type, **kwargs):
+    params = dict.fromkeys(tuple_type._fields)
     params.update(kwargs)
 
     return tuple_type(**params)
