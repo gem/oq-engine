@@ -95,7 +95,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
         asset = input.Asset("a1", None, None, None)
-        asset_output = output.ClassicalAssetOutput(
+        asset_output = output.ClassicalOutput(
             asset, [(2.0, 2.0)], [(1.0, 1.0)], None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
@@ -108,7 +108,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
             loss_curve_calculator.assert_called_with(asset, 1.0)
 
-            expected_output = output.ClassicalAssetOutput(
+            expected_output = output.ClassicalOutput(
                 asset, [(2.0, 2.0)], [(1.0, 1.0)], {0.1: 0.5, 0.2: 0.5})
 
             # as output we have the output from the given loss curve
@@ -216,7 +216,7 @@ class InsuredLossesTestCase(unittest.TestCase):
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
         asset_output = utils.new(
-            output.ProbabilisticEventBasedAssetOutput,
+            output.ProbabilisticEventBasedOutput,
             losses=[0.5, 0.5, 0.5])
 
         losses_calculator = mock.Mock(return_value=asset_output)
@@ -244,7 +244,7 @@ class InsuredCurvesTestCase(unittest.TestCase):
         vulnerability_model = {"RC": function}
 
         asset_output = utils.new(
-            output.ProbabilisticEventBasedAssetOutput,
+            output.ProbabilisticEventBasedOutput,
             insured_losses=[0.5, 0.5, 0.5])
 
         insured_losses_calculator = mock.Mock(return_value=asset_output)
