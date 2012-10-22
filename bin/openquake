@@ -69,9 +69,11 @@ import oqpath
 oqpath.set_oq_path()
 
 from openquake import __version__
+from openquake import engine2
 from openquake.db import models
 from openquake.export import core as export
 from openquake.export import hazard as hazard_export
+from openquake.job import validation
 from openquake.utils import version as utils_version
 
 
@@ -165,12 +167,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         If `True`, don't attempt to reuse existing identical inputs; instead,
         import fresh copies.
     :param list exports:
-        A list of export types requested by the user, currently only 'xml'
-        is supported
+        A list of export types requested by the user. Currently only 'xml'
+        is supported.
     """
-    from openquake import engine2
-    from openquake.job import validation
-
     try:
         if log_file is not None:
             try:
@@ -189,7 +188,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
         # Validate the job:
         calc_mode = job.hazard_calculation.calculation_mode
-        form_class = validation.VALIDATOR_MAP.get(calc_mode)
+        form_class = validation.HAZ_VALIDATOR_MAP.get(calc_mode)
         if form_class is None:
             print 'Calculation mode "%s" not supported' % calc_mode
             sys.exit(1)
@@ -273,6 +272,73 @@ def export_hazard(haz_output_id, target_dir):
         print 'This feature is probably not implemented yet'
     except ObjectDoesNotExist:
         print 'No output found for OUTPUT_ID %s' % output_id
+
+
+def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
+    """
+    Run a risk calculation using the specified config file and other options.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) file.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param bool force_inputs:
+        If `True`, don't attempt to reuse existing identical inputs; instead,
+        import fresh copies.
+    :param list exports:
+        A list of export types requested by the user. Currently only 'xml'
+        is supported.
+    """
+    try:
+        if log_file is not None:
+            try:
+                _touch_log_file(log_file)
+            except IOError as e:
+                raise IOError('Error writing to log file %s: %s'
+                              % (log_file, e.strerror))
+
+        job = engine2.prepare_job(user_name=getpass.getuser(), log_level=log_level)
+        params, files = engine2.parse_config(
+            open(cfg_file, 'r'), force_inputs=force_inputs)
+        calculation = engine2.create_risk_calculation(job.owner, params,
+                                                      files.values())
+        job.risk_calculation = calculation
+        job.save()
+
+        # Validate the job:
+        calc_mode = job.risk_calculation.calculation_mode
+
+        """
+        form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
+        if form_class is None:
+            print 'Calculation mode "%s" not supported' % calc_mode
+            sys.exit(1)
+
+        form = form_class(instance=calculation, files=files, exports=exports)
+        # For now, just print whether or not the job is valid
+        # (and any errors if it isn't valid)
+        if not form.is_valid():
+            print ('Job configuration is not valid. Errors: %s'
+                   % dict(form.errors))
+            sys.exit(1)
+        """
+
+        # Initialize the supervisor, instantiate the calculator,
+        # and run the calculation.
+        completed_job = engine2.run_risk(job, log_level, log_file, exports)
+        if completed_job is not None:
+            # We check for `None` here because the supervisor and executor
+            # process forks return to here as well. We want to ignore them.
+            if completed_job.status == 'complete':
+                print 'Job %s ran successfully' % completed_job.id
+            else:
+                print 'Job %s failed' % completed_job.id
+    except IOError as e:
+        print str(e)
+    except Exception as e:
+        raise
 
 
 def _touch_log_file(log_file):
