@@ -78,6 +78,8 @@ mv README.txt      openquake/README
 mv celeryconfig.py openquake
 mv logging.cfg     openquake
 mv openquake.cfg   openquake
+rm openquake/bin/oqpath.py 
+rm openquake/utils/monitor.py
 
 dpkg-buildpackage $DPBP_FLAG
 cd -

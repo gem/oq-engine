@@ -36,8 +36,14 @@ setup(
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
     ],
-    packages = find_packages(),
-    include_package_data=True,
+   packages = find_packages(exclude=['bin', 'bin.*', 'qa_tests', 'qa_tests.*', 'tools', "tests", "tests.*", "openquake.bin.oqpath", "openquake.bin.oqpath.*", "openquake.nrml.tests", "openquake.nrml.tests.*" ]),
+   include_package_data=True,
+   package_data={'openquake': ['db/schema/*',
+                               'nrml/schema/hazard/*', 'nrml/schema/risk/*', 'nrml/schema/gml/*',
+                               'nrml/schema/GML-SimpleFeaturesProfileSchema.xsd',
+                               'nrml/schema/nrml_common.xsd', 'nrml/schema/nrml.xsd',
+                               'nrml/schema/xlinks/*', 'logging.cfg', 'openquake.cfg', 'README', 'LICENSE' ]},
+   exclude_package_data = { '': ['openquake/bin/oqpath.py'] },
     scripts = [
         "openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
 )
