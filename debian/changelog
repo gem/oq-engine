@@ -1,8 +1,14 @@
+python-oq (0.8.4-1+dev01) precise; urgency=low
+
+  * Alignment of self-contained debian pkg system to 0.8.3-1 version
+ 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 22 Oct 2012 17:05:44 +0200
+
 python-oq (0.8.3-1) precise; urgency=low
 
-  * Upstream release
+  * upstream release
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 19 Oct 2012 11:12:19 +0200
+ -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 19 Oct 2012 19:53:00 +0200
 
 python-oq (0.8.2-5) precise; urgency=low
 

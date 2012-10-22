@@ -23,7 +23,7 @@ setup(
             'oq_log_sink = openquake.bin.openquake_messages_collector:main',
             ]},
     name = "openquake",
-    version = "0.8.3",
+    version = "0.8.4",
     author = "The OpenQuake team",
     author_email = "info@openquake.org",
     description = ("Computes hazard, risk and socio-economic impact of "

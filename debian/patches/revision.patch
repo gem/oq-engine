@@ -7,7 +7,7 @@ Index: python-oq/openquake/bin/create_oq_schema
  
  # Openquake version
 -oq_version="0.5.0"
-+oq_version="0.8.3"
++oq_version="0.8.4"
  
  # Stop at the first error in a batch to give a chance to see the error message
  psql_batch_options='--set ON_ERROR_STOP=1'
@@ -28,7 +28,7 @@ Index: python-oq/openquake/__init__.py
      0,  # major
      8,  # minor
 -    1,  # sprint number
-+    3,  # sprint number
++    4,  # sprint number
      0)  # release date (seconds since the "Epoch"), do *not* set in master!
 -
 -# The path to the OpenQuake root directory
