@@ -115,15 +115,23 @@ def set_up_arg_parser():
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
-    calc_grp = parser.add_argument_group('Run calculations')
-    calc_grp.add_argument(
-        '--config-file', '--config_file',
-        help='(DEPRECATED) Run a calculation with the specifed config file',
+    risk_grp = parser.add_argument_group('Risk')
+    risk_grp.add_argument(
+        '--run-risk', help='Run a risk job with the specified config file',
         metavar='CONFIG_FILE')
-    calc_grp.add_argument(
-        '--output-type', '--output_type',
-        help='(DEPRECATED) Defaults to "db"', required=False,
-        choices=['db', 'xml'], default='db')
+    risk_grp.add_argument(
+        '--list-risk-calculations',
+        help='List risk calculation information',
+        action='store_true')
+    risk_grp.add_argument(
+        '--list-risk-outputs',
+        help='List outputs for the specified risk calculation',
+        metavar='RISK_CALCULATION_ID')
+    risk_grp.add_argument(
+        '--export-risk',
+        help='Export the desired risk output to the specified directory',
+        nargs=2,
+        metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
@@ -347,27 +355,6 @@ if __name__ == '__main__':
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
                    args.force_inputs, args.exports)
-    elif args.config_file is not None:
-        from openquake import job
-        from openquake import engine
-        try:
-            if args.log_file is not None:
-                # Capture logging messages to a file.
-                try:
-                    _touch_log_file(args.log_file)
-                except IOError as e:
-                    raise IOError('Error writing to log file %s: %s'
-                              % (args.log_file, e.strerror))
-
-            user_name = getpass.getuser()
-            ajob = engine.prepare_job(user_name)
-            _, params, sections = engine.import_job_profile(
-                args.config_file, ajob, user_name, args.force_inputs)
-            engine.run_job(ajob, params, sections,
-                           output_type=args.output_type,
-                           log_level=args.log_level,
-                           force_inputs=args.force_inputs,
-                           log_file=args.log_file)
         except job.config.ValidationException as e:
             print str(e)
         except IOError as e:
