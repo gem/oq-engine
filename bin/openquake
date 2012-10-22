@@ -178,7 +178,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(user_name=getpass.getuser(), log_level=log_level)
+        job = engine2.prepare_job(
+            user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
         calculation = engine2.create_hazard_calculation(job.owner, params,
@@ -299,7 +300,8 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(user_name=getpass.getuser(), log_level=log_level)
+        job = engine2.prepare_job(
+            user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
         calculation = engine2.create_risk_calculation(job.owner, params,
@@ -310,6 +312,8 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
         # Validate the job:
         calc_mode = job.risk_calculation.calculation_mode
 
+        # TODO(LB):
+        # Re-enable this when validation is supported.
         """
         form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
         if form_class is None:
