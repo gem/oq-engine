@@ -30,7 +30,7 @@ from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
 from openquake.utils.tasks import distribute
-from risklib import scenario
+from risklib import scenario, api
 
 LOGGER = logs.LOG
 
@@ -175,35 +175,35 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                     ])]
         """
 
-        vuln_model = kwargs["vuln_model"]
-        insured_losses = kwargs["insured_losses"]
+        insured = kwargs["insured_losses"]
+        vulnerability_model = kwargs["vuln_model"]
         seed, correlation_type = self._get_correlation_type()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
+        assets_getter = lambda site: general.BaseRiskCalculator.assets_at(
+            self.job_ctxt.job_id, site)
+
+        hazard_getter = lambda site: general.load_gmvs_at(
+            self.job_ctxt.job_id, general.hazard_input_site(
+            self.job_ctxt, site))
+
         loss_map_data = {}
 
-        def on_asset_complete(asset, mean_loss, std_loss):
-            asset_site = shapes.Site(asset.site.x, asset.site.y)
-            collect_block_data(loss_map_data, asset_site,
-                               ({
-                                   "mean_loss": mean_loss,
-                                   "stddev_loss": std_loss}, {
-                                       "assetID": asset.asset_ref
-                                       }))
+        calculator = api.scenario_risk(vulnerability_model, seed,
+            correlation_type, insured)
 
-        sum_block_losses = scenario.compute(
-            block.sites,
-            lambda site: general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site),
-            vuln_model,
-            lambda site: general.load_gmvs_at(
-                self.job_ctxt.job_id, general.hazard_input_site(
-                    self.job_ctxt, site)),
-            insured_losses,
-            seed, correlation_type,
-            on_asset_complete)
+        for asset_output in api.compute_on_sites(block.sites, assets_getter,
+            hazard_getter, calculator):
 
-        return sum_block_losses, loss_map_data
+            asset_site = shapes.Site(asset_output.asset.site.x,
+                asset_output.asset.site.y)
+
+            collect_block_data(loss_map_data, asset_site, ({
+                "mean_loss": asset_output.mean,
+                "stddev_loss": asset_output.standard_deviation}, {
+                "assetID": asset_output.asset.asset_ref}))
+
+        return calculator.aggregate_losses, loss_map_data
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
