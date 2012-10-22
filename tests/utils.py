@@ -14,22 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import collections
 
+def new(tuple_type, **kwargs):
+    params = dict.fromkeys(tuple_type._fields)
+    params.update(kwargs)
 
-ClassicalAssetOutput = collections.namedtuple("ClassicalAssetOutput",
-    ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
-
-
-ScenarioDamageAssetOutput = collections.namedtuple("ScenarioDamageAssetOutput",
-    ["asset", "damage_distribution_asset", "collapse_map"])
-
-
-BCRAssetOutput = collections.namedtuple("BCRAssetOutput", ["asset", "bcr",
-    "eal_original", "eal_retrofitted"])
-
-
-ProbabilisticEventBasedAssetOutput = collections.namedtuple(
-    "ProbabilisticEventBasedAssetOutput", ["asset", "losses",
-    "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
-    "insured_loss_curve", "insured_losses", "conditional_losses"])
+    return tuple_type(**params)
