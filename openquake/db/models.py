@@ -905,19 +905,19 @@ class RiskCalculation(djm.Model):
     #######################
     # Classical parameters:
     #######################
-    lrem_steps_per_interval = djm.IntegerField()
-    conditional_loss_poes = fields.FloatArrayField()
+    lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
+    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
 
     #########################
     # Event-Based parameters:
     #########################
-    loss_histogram_bins = djm.IntegerField()
+    loss_histogram_bins = djm.IntegerField(null=True, blank=True)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
     ######################################
-    interest_rate = djm.FloatField()
-    asset_life_expectancy = djm.FloatField()
+    interest_rate = djm.FloatField(null=True, blank=True)
+    asset_life_expectancy = djm.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
