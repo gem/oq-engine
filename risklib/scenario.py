@@ -18,49 +18,6 @@
 
 import numpy
 
-from risklib.signals import EMPTY_CALLBACK
-from risklib import event_based
-
-
-def compute(sites, assets_getter,
-            vulnerability_model,
-            hazard_getter,
-            compute_insured_losses,
-            seed, correlation_type,
-            on_asset_complete=EMPTY_CALLBACK):
-
-    taxonomies = vulnerability_model.keys()
-
-    aggregate_losses = None
-
-    for site in sites:
-        assets = assets_getter(site)
-
-        ground_motion_values = hazard_getter(site)
-
-        if aggregate_losses is None:
-            aggregate_losses = numpy.zeros(len(ground_motion_values))
-
-        for asset in assets:
-            vulnerability_function = vulnerability_model[asset.taxonomy]
-
-            loss_ratios = event_based._compute_loss_ratios(
-                vulnerability_function, {'IMLs': ground_motion_values},
-                asset,
-                seed, correlation_type, taxonomies)
-            losses = loss_ratios * asset.value
-
-            if compute_insured_losses:
-                losses = event_based._compute_insured_losses(asset, losses)
-
-            aggregate_losses += losses
-
-            on_asset_complete(asset,
-                              numpy.mean(losses),
-                              numpy.std(losses, ddof=1))
-
-    return aggregate_losses
-
 
 def aggregate_losses(set_of_losses):
     total_losses = sum(set_of_losses)

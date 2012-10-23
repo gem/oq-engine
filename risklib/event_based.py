@@ -20,76 +20,9 @@ import numpy
 import random
 
 from risklib import curve
-from risklib.signals import EMPTY_CALLBACK
 from risklib import classical
 
 UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
-
-
-def compute(sites, assets_getter,
-            vulnerability_model,
-            hazard_getter,
-            loss_histogram_bins,
-            conditional_loss_poes,
-            compute_insured_losses,
-            seed, correlation_type,
-            on_asset_complete=EMPTY_CALLBACK):
-
-    aggregate_losses = None
-
-    taxonomies = vulnerability_model.keys()
-
-    for site in sites:
-        assets = assets_getter(site)
-
-        # the dict contains IMLs, TSES, TimeSpan
-        point, hazard_dict = hazard_getter(site)
-
-        if aggregate_losses is None:
-            aggregate_losses = numpy.zeros(len(hazard_dict["IMLs"]))
-
-        for asset in assets:
-            vulnerability_function = vulnerability_model[asset.taxonomy]
-
-            loss_ratios = _compute_loss_ratios(
-                vulnerability_function, hazard_dict, asset,
-                seed, correlation_type, taxonomies)
-
-            loss_ratio_curve = _compute_loss_ratio_curve(
-                vulnerability_function, hazard_dict,
-                asset, loss_histogram_bins, loss_ratios,
-                seed, correlation_type, taxonomies)
-
-            loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
-
-            loss_conditionals = dict([
-                (loss_poe, classical._conditional_loss(loss_curve, loss_poe))
-                for loss_poe in conditional_loss_poes])
-
-            if compute_insured_losses:
-                losses = loss_ratios * asset.value
-
-                insured_losses = _compute_insured_losses(asset, losses)
-
-                insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
-                    vulnerability_function, hazard_dict, asset,
-                    loss_histogram_bins, insured_losses,
-                    seed, correlation_type, taxonomies)
-
-                insured_loss_curve = (
-                    insured_loss_ratio_curve.rescale_abscissae(asset.value))
-            else:
-                insured_loss_curve = None
-                insured_loss_ratio_curve = None
-
-            on_asset_complete(
-                asset, point, loss_ratio_curve,
-                loss_curve, loss_conditionals,
-                insured_loss_curve, insured_loss_ratio_curve)
-
-            aggregate_losses += loss_ratios * asset.value
-
-    return aggregate_losses
 
 
 def aggregate_loss_curve(set_of_losses, tses, time_span, histogram_bins):
