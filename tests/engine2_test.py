@@ -404,6 +404,46 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.assertEqual(site_model.id, inp2hcs.input.id)
 
 
+class CreateRiskCalculationTestCase(unittest.TestCase):
+
+    def test_create_risk_calculation(self):
+        params = {
+            'base_path': 'path/to/job.ini',
+            'export_dir': '/tmp/xxx',
+            'calculation_mode': 'classical',
+            # just some sample params
+            'lrem_steps_per_interval': 5,
+            'conditional_loss_poes': '0.01, 0.02, 0.05',
+            'region_constraint': '-0.5 0.5, 0.5 0.5, 0.5 -0.5, -0.5, -0.5',
+        }
+
+        owner = helpers.default_user()
+
+        vuln_file = models.Input(digest='123', path='/foo/bar', size=0,
+                                 input_type='vulnerability', owner=owner)
+        vuln_file.save()
+        exposure_file = models.Input(digest='456', path='/foo/baz', size=0,
+                                     input_type='exposure', owner=owner)
+        exposure_file.save()
+
+        files = [vuln_file, exposure_file]
+
+        rc = engine2.create_risk_calculation(owner, params, files)
+        # Normalize/clean fields by fetching a fresh copy from the db.
+        rc = models.RiskCalculation.objects.get(id=rc.id)
+
+        self.assertEqual(rc.calculation_mode, 'classical')
+        self.assertEqual(rc.lrem_steps_per_interval, 5)
+        self.assertEqual(rc.conditional_loss_poes, [0.01, 0.02, 0.05])
+        self.assertEqual(
+            rc.region_constraint.wkt,
+            ('POLYGON ((-0.5000000000000000 0.5000000000000000, '
+             '0.5000000000000000 0.5000000000000000, '
+             '0.5000000000000000 -0.5000000000000000, '
+             '-0.5000000000000000 -0.5000000000000000, '
+             '-0.5000000000000000 0.5000000000000000))'))
+
+
 class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
     """Integration test for basic engine functions.
 
