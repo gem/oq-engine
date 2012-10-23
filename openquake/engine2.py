@@ -301,9 +301,8 @@ def create_risk_calculation(owner, params, files):
     rc.full_clean()
     rc.save()
 
-    # TODO: link input files
-    # for f in files:
-    #     models.Input2rcalc(input=f, risk_calculation=rc).save()
+    for f in files:
+        models.Input2rcalc(input=f, risk_calculation=rc).save()
 
     return rc
 
