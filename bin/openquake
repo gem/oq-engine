@@ -419,6 +419,7 @@ if __name__ == '__main__':
     elif args.export_risk is not None:
         print "export risk"
     elif args.run_risk is not None:
-        print "run risk"
+        run_risk(args.run_risk, args.log_level, args.log_file,
+                 args.force_inputs, args.exports)
     else:
         arg_parser.print_usage()
