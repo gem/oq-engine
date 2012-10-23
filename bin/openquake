@@ -240,6 +240,28 @@ def list_hazard_calculations():
                 print '\tJob ID: %s, Status: %s' % (j.id, status)
 
 
+def list_risk_calculations():
+    print "Risk calculations:"
+    rcs = models.RiskCalculation.objects.filter(
+        owner__user_name=getpass.getuser())
+    if len(rcs) == 0:
+        print 'None'
+    else:
+        for rc in rcs:
+            print 'Calculation ID: %s, Description: %s' % (
+                rc.id, rc.description)
+            jobs = models.OqJob.objects.filter(risk_calculation=rc.id)
+            for j in jobs:
+                if j.is_running:
+                    status = 'pending'
+                else:
+                    if j.status == 'complete':
+                        status = 'successful'
+                    else:
+                        status = 'failed'
+                print '\tJob ID: %s, Status: %s' % (j.id, status)
+
+
 def list_hazard_outputs(hc_id):
     """
     List the outputs for a given
@@ -251,6 +273,21 @@ def list_hazard_outputs(hc_id):
     outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
     if len(outputs) > 0:
         print 'ID\tOuput Type'
+        for o in outputs:
+            print '%s\t%s' % (o.id, o.output_type)
+
+
+def list_risk_outputs(rc_id):
+    """
+    List the outputs for a given
+    :class:`~openquake.db.models.RiskCalculation`.
+
+    :param rc_id:
+        ID of a risk calculation.
+    """
+    outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+    if len(outputs) > 0:
+        print 'ID\tOutput Type'
         for o in outputs:
             print '%s\t%s' % (o.id, o.output_type)
 
@@ -309,12 +346,12 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
         job.risk_calculation = calculation
         job.save()
 
-        # Validate the job:
-        calc_mode = job.risk_calculation.calculation_mode
-
         # TODO(LB):
         # Re-enable this when validation is supported.
         """
+        # Validate the job:
+        calc_mode = job.risk_calculation.calculation_mode
+
         form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
         if form_class is None:
             print 'Calculation mode "%s" not supported' % calc_mode
@@ -359,9 +396,12 @@ if __name__ == '__main__':
 
     if args.version:
         print utils_version.info(__version__)
-    elif args.list_hazard_calculations:
+        sys.exit(0)
+
+    # hazard
+    if args.list_hazard_calculations:
         list_hazard_calculations()
-    elif args.list_hazard_outputs:
+    elif args.list_hazard_outputs is not None:
         list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
@@ -371,5 +411,14 @@ if __name__ == '__main__':
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
                    args.force_inputs, args.exports)
+    # risk
+    elif args.list_risk_calculations:
+        list_risk_calculations()
+    elif args.list_risk_outputs is not None:
+        list_risk_outputs(args.list_risk_outputs)
+    elif args.export_risk is not None:
+        print "export risk"
+    elif args.run_risk is not None:
+        print "run risk"
     else:
         arg_parser.print_usage()
