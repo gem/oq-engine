@@ -40,6 +40,7 @@ from scipy import sqrt, log
 from scipy import stats
 
 from openquake.calculators.base import Calculator
+from openquake.calculators.base import CalculatorNext
 from openquake.db import models
 from openquake import kvs
 from openquake import logs
@@ -1195,3 +1196,10 @@ def load_gmvs_at(job_id, point):
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
     return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
+
+
+class BaseRiskCalculatorNext(CalculatorNext):
+
+    def execute(self):
+        # TODO(LB): Temporary
+        print "Fake execution. Implement me!"
