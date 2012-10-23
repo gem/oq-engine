@@ -17,5 +17,23 @@
 import collections
 
 
-ClassicalAssetOutput = collections.namedtuple("AssetOutput",
+ClassicalOutput = collections.namedtuple("ClassicalOutput",
     ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
+
+
+ScenarioDamageOutput = collections.namedtuple("ScenarioDamageOutput",
+    ["asset", "damage_distribution_asset", "collapse_map"])
+
+
+BCROutput = collections.namedtuple("BCROutput", ["asset", "bcr",
+    "eal_original", "eal_retrofitted"])
+
+
+ProbabilisticEventBasedOutput = collections.namedtuple(
+    "ProbabilisticEventBasedOutput", ["asset", "losses",
+    "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
+    "insured_loss_curve", "insured_losses", "conditional_losses"])
+
+
+ScenarioRiskOutput = collections.namedtuple("ScenarioRiskOutput",
+    ["asset", "mean", "standard_deviation"])
