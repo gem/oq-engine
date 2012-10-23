@@ -75,6 +75,8 @@ _FILE_PARAMS_TO_INPUT_TYPE = {
     'source_model_logic_tree_file': 'lt_source',
     'gsim_logic_tree_file': 'lt_gsim',
     'site_model_file': 'site_model',
+    'vulnerability_file': 'vulnerability',
+    'exposure_file': 'exposure',
 }
 
 
@@ -274,6 +276,38 @@ def create_hazard_calculation(owner, params, files):
     return hc
 
 
+def create_risk_calculation(owner, params, files):
+    """Given a params `dict` parsed from the config file, create a
+    :class:`~openquake.db.models.RiskCalculation`.
+
+    :param owner:
+        The :class:`~openquake.db.models.OqUser` who will own this profile.
+    :param dict params:
+        Dictionary of parameter names and values. Parameter names should match
+        exactly the field names of
+        :class:`openquake.db.model.RiskCalculation`.
+    :param list files:
+        List of :class:`~openquake.db.models.Input` objects to be linked to the
+        calculation.
+    :returns:
+        :class:`openquake.db.model.RiskCalculation` object. A corresponding
+        record will obviously be saved to the database.
+    """
+    if "export_dir" in params:
+        params["export_dir"] = os.path.abspath(params["export_dir"])
+
+    rc = models.RiskCalculation(**params)
+    rc.owner = owner
+    rc.full_clean()
+    rc.save()
+
+    # TODO: link input files
+    # for f in files:
+    #     models.Input2rcalc(input=f, risk_calculation=rc).save()
+
+    return rc
+
+
 def run_hazard(job, log_level, log_file, exports):
     """
     Run a hazard calculation.
@@ -318,8 +352,11 @@ def run_risk(job, log_level, log_file, exports):
         supported.
     """
 
-    # TODO: instantiate risk calculator
-    return _run_calc(job, log_level, log_file, exports, None, 'risk')
+    # TODO: instantiate a real risk calculator
+    from openquake.calculators.risk.general import BaseRiskCalculatorNext
+    calc = BaseRiskCalculatorNext(job)
+
+    return _run_calc(job, log_level, log_file, exports, calc, 'risk')
 
 
 def _run_calc(job, log_level, log_file, exports, calc, job_type):
