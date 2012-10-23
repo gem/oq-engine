@@ -505,6 +505,7 @@ class OqJob(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
+    risk_calculation = djm.ForeignKey('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
