@@ -87,6 +87,7 @@ GRANT ALL ON SEQUENCE uiapi.hazard_calculation_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.risk_calculation_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2hcalc_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input2rcalc_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
@@ -330,13 +331,17 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 GRANT SELECT ON uiapi.hazard_calculation TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON uiapi.hazard_calculation TO oq_job_init;
 
--- uiapi.input2haz_calc
+-- uiapi.input2hcalc
 GRANT SELECT ON uiapi.input2hcalc TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON uiapi.input2hcalc TO oq_job_init;
 
 -- uiapi.risk_calculation
 GRANT SELECT ON uiapi.risk_calculation TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON uiapi.risk_calculation TO oq_job_init;
+
+-- uiapi.input2rcalc
+GRANT SELECT ON uiapi.input2rcalc TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.input2rcalc TO oq_job_init;
 
 -- uiapi.cnode_stats
 -- what nodes became available/unavailable at what time?
