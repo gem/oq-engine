@@ -155,7 +155,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     if [ -x /etc/init.d/celeryd ]; then
         /etc/init.d/celeryd start
     else
-        cd $HDIR; rm -f /tmp/celeryd.log; export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-amd64/jre; celeryd > /tmp/celeryd.log 2>&1 3>&1 &
+        cd $HDIR; rm -f /tmp/celeryd.log; export JAVA_HOME=/usr/lib/jvm/default-java/jre; celeryd > /tmp/celeryd.log 2>&1 3>&1 &
     fi
 
     DDIR=/usr/share/doc/python-oq/examples/demos
