@@ -17,15 +17,13 @@
 
 
 from openquake.calculators.hazard.disagg.core import DisaggHazardCalculator
-from openquake.calculators.hazard.event_based.core import (
-    EventBasedHazardCalculator)
 from openquake.calculators.hazard.scenario.core import ScenarioHazardCalculator
 from openquake.calculators.hazard.uhs.core import UHSCalculator
 
 from openquake.calculators.hazard.classical.core import (
     ClassicalHazardCalculator)
 from openquake.calculators.hazard.event_based.core_next import (
-    EventBasedHazardCalculator as NewEventBasedHazardCalculator)
+    EventBasedHazardCalculator)
 
 
 CALCULATORS = {
@@ -39,5 +37,5 @@ CALCULATORS = {
 
 CALCULATORS_NEXT = {
     'classical': ClassicalHazardCalculator,
-    'event_based': NewEventBasedHazardCalculator,
+    'event_based': EventBasedHazardCalculator,
 }
