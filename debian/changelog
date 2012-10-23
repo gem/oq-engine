@@ -1,8 +1,20 @@
 python-oq (0.8.4-1+dev01) precise; urgency=low
 
-  * Alignment of self-contained debian pkg system to 0.8.3-1 version
+  * Alignment of self-contained debian pkg system to 0.8.3-3 version
  
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 22 Oct 2012 17:05:44 +0200
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 23 Oct 2012 13:43:44 +0200
+
+python-oq (0.8.3-3) precise; urgency=low
+
+  * Add missing monitor.py source
+
+ -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 23 Oct 2012 10:16:18 +0200
+
+python-oq (0.8.3-2) precise; urgency=low
+
+  * Use arch-independent JAVA_HOME env. variable values (LP: #1069804)
+
+ -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 22 Oct 2012 15:30:39 +0200
 
 python-oq (0.8.3-1) precise; urgency=low
 
