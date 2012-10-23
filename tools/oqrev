@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# set -x
+
 help() {
 cat <<HSD
 `basename $0` is a tool that helps reviewing OpenQuake branches of others
@@ -82,6 +84,10 @@ python_src="openquake"
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]; then
+    git submodule update
+fi
+git diff --quiet HEAD
+if [ $? -ne 0 ]; then
     echo "Your branch has uncommitted changes. Please commit first."
     exit 2
 fi
@@ -140,16 +146,22 @@ do
         fi
 
         # Is the pull request still open?
-        pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' $pullreq_file | head -1`
+        pr_state=`awk '/class="state/ { split($0,F,/[<>]/); print F[3];}' $pullreq_file | head -1`
         if [ "$pr_state" != "Open" ]; then
             echo "https://github.com/gem/$repo/pull/$pull is not open any more"
             exit 4
         fi
 
-        # Find the branch author's github user name and the branch name.
-        branch=`cat $pullreq_file | perl -wane 'if ($_ =~ /span.+class=.commit-ref from.>.+class=.user.>([^<]+)<.span>:([^<]+)/) { printf("%s/%s", $1, $2); }'`
-        branch_name="$branch"
-        github_user=`dirname $branch`
+        user_branch=`grep css-truncate-target $pullreq_file | head -n 2 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        other_remote=`dirname $user_branch`
+        other_reference=`basename $user_branch`
+
+        user_branch=`grep css-truncate-target $pullreq_file | tail -n 3 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        github_user=`dirname $user_branch`
+        branch_reference=`basename $user_branch`
+
+        branch="$user_branch"
+        branch_name="$user_branch"
 
         # Map the author's github user name to a "git remote" name in our
         # local repository.
@@ -158,7 +170,6 @@ do
             echo "You don't have a remote repository defined for github user $github_user. Plase add one and try again."
             exit 5
         fi
-        branch_reference=`basename $branch`
         ;;
     -L|--local)
         fetch_remotes=0
