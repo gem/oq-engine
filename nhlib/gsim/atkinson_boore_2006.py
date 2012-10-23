@@ -176,14 +176,13 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         Compute mean value (for a set of indexes) without site amplification
         terms. This is equation (5), p. 2191, without S term.
         """
-        mean[idxs] = \
-            C['c1'] + \
-            C['c2'] * mag + \
-            C['c3'] * (mag ** 2) + \
-            (C['c4'] + C['c5'] * mag) * f1[idxs] + \
-            (C['c6'] + C['c7'] * mag) * f2[idxs] + \
-            (C['c8'] + C['c9'] * mag) * f0[idxs] + \
-            C['c10'] * rrup[idxs]
+        mean[idxs] = (C['c1'] +
+                      C['c2'] * mag +
+                      C['c3'] * (mag ** 2) +
+                      (C['c4'] + C['c5'] * mag) * f1[idxs] +
+                      (C['c6'] + C['c7'] * mag) * f2[idxs] +
+                      (C['c8'] + C['c9'] * mag) * f0[idxs] +
+                      C['c10'] * rrup[idxs])
 
     def _compute_soil_amplification(self, C, sites, pga_bc, mean):
         """
@@ -211,7 +210,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         return stddevs
 
     #: Hard rock coefficents, table 6, pag 2192,
-    #: coefficient values taken from Fortran implementation of Dave Boore 
+    #: coefficient values taken from Fortran implementation of Dave Boore
     #: (higher precision than in the paper)
     COEFFS_HARD_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT     c1          c2          c3          c4          c5          c6          c7          c8          c9          c10
@@ -244,7 +243,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     """)
 
     #: Coefficients for NEHRP BC boundary (Vs30 = 760 m/s), table 9, pag 2202
-    #: coefficient values taken from Fortran implementation of Dave Boore 
+    #: coefficient values taken from Fortran implementation of Dave Boore
     #: (higher precision than in the paper)
     COEFFS_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c1          c2          c3          c4          c5          c6          c7          c8          c9         c10
