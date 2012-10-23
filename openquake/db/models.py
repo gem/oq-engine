@@ -994,6 +994,18 @@ class Input2hcalc(djm.Model):
         db_table = 'uiapi\".\"input2hcalc'
 
 
+class Input2rcalc(djm.Model):
+    '''
+    `input` to `risk_calculation` link table.
+    '''
+
+    input = djm.ForeignKey('Input')
+    risk_calculation = djm.ForeignKey('RiskCalculation')
+
+    class Meta:
+        db_table = 'uiapi\".\"input2rcalc'
+
+
 class OqJobProfile(djm.Model):
     '''
     Parameters needed to run an OpenQuake job
