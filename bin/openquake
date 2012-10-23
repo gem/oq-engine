@@ -52,7 +52,6 @@ Available Risk Analysis
 
 import argparse
 import getpass
-import logging
 import os
 import sys
 
@@ -71,7 +70,6 @@ oqpath.set_oq_path()
 from openquake import __version__
 from openquake import engine2
 from openquake.db import models
-from openquake.export import core as export
 from openquake.export import hazard as hazard_export
 from openquake.job import validation
 from openquake.utils import version as utils_version
