@@ -243,6 +243,7 @@ CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
+    risk_calculation_id INTEGER,  -- FK to uiapi.risk_calculation
     log_level VARCHAR NOT NULL DEFAULT 'progress' CONSTRAINT oq_job_log_level_check
         CHECK(log_level IN ('debug', 'info', 'progress', 'warn', 'error', 'critical')),
     -- One of: pre_execution, executing, post_execution, post_processing, complete
@@ -356,6 +357,36 @@ CREATE TABLE uiapi.input2hcalc (
     input_id INTEGER NOT NULL,
     hazard_calculation_id INTEGER NOT NULL
 ) TABLESPACE uiapi_ts;
+
+
+CREATE TABLE uiapi.risk_calculation (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,  -- FK to admin.oq_user
+    -- Contains the absolute path to the directory containing the job config
+    -- file
+    base_path VARCHAR NOT NULL,
+    export_dir VARCHAR,
+    force_inputs BOOLEAN NOT NULL,
+    -- general parameters:
+    -- (see also `region` and `sites` geometries defined below)
+    description VARCHAR NOT NULL DEFAULT '',
+    -- what time period w/o any progress is acceptable for calculations?
+    -- The timeout is stored in seconds and is 1 hour by default.
+    no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
+    calculation_mode VARCHAR NOT NULL,
+
+    -- classical parameters:
+    lrem_steps_per_interval INTEGER,
+    conditional_loss_poes float[],
+
+    -- event-based parameters:
+    loss_histogram_bins INTEGER,
+
+    -- BCR (Benefit-Cost Ratio) parameters:
+    interest_rate float,
+    asset_life_expectancy float
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
 
 
 CREATE TABLE uiapi.cnode_stats (
@@ -1685,6 +1716,10 @@ ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
 ON DELETE RESTRICT;
 
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_risk_calculation
+FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id)
+ON DELETE RESTRICT;
+
 ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1693,6 +1728,9 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
