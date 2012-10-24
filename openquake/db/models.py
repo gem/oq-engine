@@ -877,7 +877,7 @@ class RiskCalculation(djm.Model):
     # General parameters:
     #####################
 
-    # A description for this config proifile which is meaningful to a user.
+    # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
 
     # The timeout is stored in seconds and is 1 hour by default.
