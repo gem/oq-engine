@@ -84,10 +84,6 @@ python_src="openquake"
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]; then
-    git submodule update
-fi
-git diff --quiet HEAD
-if [ $? -ne 0 ]; then
     echo "Your branch has uncommitted changes. Please commit first."
     exit 2
 fi
@@ -287,10 +283,12 @@ num_of_py_files=`git diff ${other_branch}...${branch_branch} --name-only --diff-
 
 if [ $skip_pylint -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     git checkout $other_branch
+    git submodule update
     echo "Running pylint on $other_branch.."
     pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 
     git checkout $branch_branch
+    git submodule update
     echo "Running pylint on $branch_name.."
     pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
