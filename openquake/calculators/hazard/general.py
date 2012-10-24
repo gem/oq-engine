@@ -1145,6 +1145,10 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         block_size = int(config.get('hazard', 'block_size'))
         num_tasks = 0
         for lt_rlz in realizations:
+            # Each realization has the potential to choose a random source
+            # model, and thus there may be a variable number of tasks for each
+            # realization (depending on the number of the sources in the model
+            # which was chosen for the realization).
             num_sources = models.SourceProgress.objects.filter(
                 lt_realization=lt_rlz).count()
             num_tasks += math.ceil(float(num_sources) / block_size)
