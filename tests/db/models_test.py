@@ -597,3 +597,30 @@ class GmfSetIterTestCase(unittest.TestCase):
                 equal, error = helpers.deep_eq(exp_gmf, act_gmf)
 
                 self.assertTrue(equal, error)
+
+
+class PrepGeometryTestCase(unittest.TestCase):
+
+    def test__prep_geometry(self):
+        the_input = {
+            # with commas between every value
+            'sites': '-1.1, -1.2, 1.3, 0.0',
+            # with no commas
+            'region': '-1 1 1 1 1 -1 -1 -1',
+            # with randomly placed commas
+            'region_constraint': (
+                    '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
+            'something': 'else',
+        }
+
+        expected = {
+            'sites': 'MULTIPOINT(-1.1 -1.2, 1.3 0.0)',
+            'region': (
+                'POLYGON((-1.0 1.0, 1.0 1.0, 1.0 -1.0, -1.0 -1.0, -1.0 1.0))'),
+            'region_constraint': (
+                'POLYGON((-0.5 0.5, 0.0 2.0, 0.5 0.5, 0.5 -0.5, -0.5 -0.5, '
+                '-0.5 0.5))'),
+            'something': 'else',
+        }
+
+        self.assertEqual(expected, models._prep_geometry(the_input))
