@@ -301,6 +301,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_post_process(self):
         self.job, self.calc = self._setup_a_new_calculator()
+        hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
         self.job.is_running = True
@@ -335,14 +336,15 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual(expected_number_of_mean_curve_outputs,
                          outputs.count())
-        curves = models.HazardCurve.objects.filter(
+        [pga_mean_curves] = models.HazardCurve.objects.filter(
             output__output_type="hazard_curve", output__oq_job=self.job,
-            statistics="mean")
+            statistics="mean", imt='PGA')
+        [sa_mean_curves] = models.HazardCurve.objects.filter(
+            output__output_type="hazard_curve", output__oq_job=self.job,
+            statistics="mean", imt='SA', sa_period=0.025)
 
-        self.assertEqual(expected_number_of_mean_curves, curves.count())
-
-        for curve in curves:
-            self.assertEqual(60, curve.hazardcurvedata_set.count())
+        self.assertEqual(120, pga_mean_curves.hazardcurvedata_set.count())
+        self.assertEqual(120, sa_mean_curves.hazardcurvedata_set.count())
 
         quantiles = len(self.job.hazard_calculation.quantile_hazard_curves)
         expected_number_of_quantile_curve_outputs = imts_nr * quantiles
