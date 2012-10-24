@@ -1137,15 +1137,21 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         # Record num sites, num realizations, and num tasks.
         hc = self.job.hazard_calculation
         num_sites = len(hc.points_to_compute())
-        num_rlzs = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id).count()
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id)
+        num_rlzs = realizations.count()
 
         # Compute the number of tasks.
-        [source_input] = models.inputs4hcalc(hc.id, input_type='source')
-        num_sources = models.ParsedSource.objects.filter(
-            input=source_input.id).count()
         block_size = int(config.get('hazard', 'block_size'))
-        num_tasks = num_rlzs * math.ceil(float(num_sources) / block_size)
+        num_tasks = 0
+        for lt_rlz in realizations:
+            # Each realization has the potential to choose a random source
+            # model, and thus there may be a variable number of tasks for each
+            # realization (depending on the number of the sources in the model
+            # which was chosen for the realization).
+            num_sources = models.SourceProgress.objects.filter(
+                lt_realization=lt_rlz).count()
+            num_tasks += math.ceil(float(num_sources) / block_size)
 
         models.JobStats.objects.filter(oq_job=self.job.id).update(
             num_sites=num_sites, num_tasks=num_tasks,
