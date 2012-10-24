@@ -172,40 +172,6 @@ def create_job(params, **kwargs):
     return JobContext(params, job_id, **kwargs)
 
 
-def run_job(config_file, params=None, check_output=False):
-    """Given a path to a config file, run openquake as a separate process using
-    `subprocess`.
-
-    This function blocks until the openquake job has concluded.
-
-    :param str config_file:
-        Path to the calculation config file.
-    :param list params:
-        List of additional command line params to bin/openquake. Optional.
-    :param bool check_output:
-        If `True`, use :func:`subprocess.check_output` instead of
-        :func:`subprocess.check_call`.
-
-    :returns:
-        With the default input, return the return code of the subprocess.
-
-        If ``check_output`` is set to True, return the output of the subprocess
-        call to bin/openquake as a `str`. See
-        http://docs.python.org/library/subprocess.html#subprocess.check_output
-        for more details.
-    :raises:
-        If the return code of the subprocess call is not 0, a
-        :exception:`subprocess.CalledProcessError` is raised.
-    """
-    args = ["bin/openquake", "--force-inputs", "--config-file=" + config_file]
-    if not params is None:
-        args.extend(params)
-    if check_output:
-        return subprocess.check_output(args)
-    else:
-        return subprocess.check_call(args)
-
-
 def run_hazard_job(config_file, params=None, check_output=False,
                    silence=False):
     """
