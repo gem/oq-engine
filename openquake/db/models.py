@@ -812,10 +812,8 @@ class HazardCalculation(djm.Model):
         expected after a full computation of the hazard calculation
         has been performed
         """
-
         realizations_nr = self.ltrealization_set.count()
-        imt_nr = len(self.intensity_measure_types_and_levels)
-        return realizations_nr * imt_nr
+        return realizations_nr
 
     def should_compute_mean_curves(self):
         """
