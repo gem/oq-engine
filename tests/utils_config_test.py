@@ -74,6 +74,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
     def test_load_from_file_with_no_config_files(self):
         """In the absence of config files the `cfg` dict will be empty."""
         config.Config().cfg.clear()
+        os.environ["OQ_SITE_CFG_PATH"] = '/a/non/existing/file'
         config.Config()._load_from_file()
         self.assertEqual([], config.Config().cfg.keys())
 
@@ -105,6 +106,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             d=4'''
         local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
+        os.environ["OQ_SITE_CFG_PATH"] = '/a/non/existing/file'
         config.Config().cfg.clear()
         config.Config()._load_from_file()
         self.assertEqual(["C", "D"], sorted(config.Config().cfg.keys()))
