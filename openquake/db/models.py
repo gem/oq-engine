@@ -608,7 +608,7 @@ class Job2profile(djm.Model):
 
 class HazardCalculation(djm.Model):
     '''
-    Parameters need to run a Hazard job.
+    Parameters needed to run a Hazard job.
     '''
     owner = djm.ForeignKey('OqUser')
     # Contains the absolute path to the directory containing the job config
@@ -628,10 +628,6 @@ class HazardCalculation(djm.Model):
     no_progress_timeout = djm.IntegerField(
         default=3600, help_text="what time period w/o any progress is "
                                 "acceptable for calculations?")
-    # TODO:
-    #force_inputs = djm.BooleanField(
-    #    default=False, help_text="whether the model inputs should be parsed "
-    #    "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
@@ -807,41 +803,7 @@ class HazardCalculation(djm.Model):
         db_table = 'uiapi\".\"hazard_calculation'
 
     def __init__(self, *args, **kwargs):
-        # If geometries were specified as string lists of coords,
-        # convert them to WKT before doing anything else.
-        for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
-                               ('region', 'POLYGON((%s))')):
-            if field in kwargs:
-                geom = kwargs[field]
-                try:
-                    wkt.loads(geom)
-                    # if this succeeds, we know the wkt is at least valid
-                    # we don't know the geometry type though; we'll leave that
-                    # to subsequent validation
-                except wkt.ReadingError:
-                    try:
-                        coords = [
-                            float(x) for x in fields.ARRAY_RE.split(geom)
-                        ]
-                    except ValueError:
-                        raise ValueError(
-                            'Could not coerce `str` to a list of `float`s'
-                        )
-                    else:
-                        if not len(coords) % 2 == 0:
-                            raise ValueError(
-                                'Got an odd number of coordinate values'
-                            )
-                        else:
-                            # Construct WKT from the coords
-                            # NOTE: ordering is expected to be lon,lat
-                            points = ['%s %s' % (coords[i], coords[i + 1])
-                                      for i in xrange(0, len(coords), 2)]
-                            # if this is the region, close the linear polygon
-                            # ring by appending the first coord to the end
-                            if field == 'region':
-                                points.append(points[0])
-                            kwargs[field] = wkt_fmt % ', '.join(points)
+        kwargs = _prep_geometry(kwargs)
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
     def individual_curves_per_location(self):
@@ -898,6 +860,125 @@ class HazardCalculation(djm.Model):
         else:
             # there's no geometry defined
             return None
+
+
+class RiskCalculation(djm.Model):
+    '''
+    Parameters needed to run a Risk job.
+    '''
+    owner = djm.ForeignKey('OqUser')
+    # Contains the absolute path to the directory containing the job config
+    # file.
+    base_path = djm.TextField()
+    export_dir = djm.TextField(null=True, blank=True)
+    force_inputs = djm.BooleanField()
+
+    #####################
+    # General parameters:
+    #####################
+
+    # A description for this config profile which is meaningful to a user.
+    description = djm.TextField(default='', blank=True)
+
+    # The timeout is stored in seconds and is 1 hour by default.
+    no_progress_timeout = djm.IntegerField(
+        default=3600, help_text="what time period w/o any progress is "
+                                "acceptable for calculations?")
+
+    CALC_MODE_CHOICES = (
+        # TODO(LB): Enable these once calculators are supported and
+        # implemented.
+        # (u'classical', u'Classical PSHA'),
+        # (u'event_based', u'Probabilistic Event-Based'),
+        # (u'scenario', u'Scenario'),
+        # (u'scenario_damage', u'Scenario Damage'),
+        # Benefit-cost ratio calculator based on Classical PSHA risk calc
+        # (u'classical_bcr', u'Classical BCR'),
+        # Benefit-cost ratio calculator based on Event Based risk calc
+        # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
+    )
+    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
+    region_constraint = djm.PolygonField(
+        srid=DEFAULT_SRID, null=True, blank=True)
+
+    #######################
+    # Classical parameters:
+    #######################
+    lrem_steps_per_interval = djm.IntegerField()
+    conditional_loss_poes = fields.FloatArrayField()
+
+    #########################
+    # Event-Based parameters:
+    #########################
+    loss_histogram_bins = djm.IntegerField()
+
+    ######################################
+    # BCR (Benefit-Cost Ratio) parameters:
+    ######################################
+    interest_rate = djm.FloatField()
+    asset_life_expectancy = djm.FloatField()
+
+    class Meta:
+        db_table = 'uiapi\".\"risk_calculation'
+
+    def __init__(self, *args, **kwargs):
+        kwargs = _prep_geometry(kwargs)
+        super(RiskCalculation, self).__init__(*args, **kwargs)
+
+
+def _prep_geometry(kwargs):
+    """
+    Helper function to convert geometry specified in a job config file to WKT,
+    so that it can save to the database in a geometry field.
+
+    :param dict kwargs:
+        `dict` representing some keyword arguments, which may contain geometry
+        definitions in some sort of string or list form
+
+    :returns:
+        The modified ``kwargs``, with WKT to replace the input geometry
+        definitions.
+    """
+    # If geometries were specified as string lists of coords,
+    # convert them to WKT before doing anything else.
+    for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
+                           ('region', 'POLYGON((%s))'),
+                           ('region_constraint', 'POLYGON((%s))')):
+        if field in kwargs:
+            geom = kwargs[field]
+            try:
+                wkt.loads(geom)
+                # if this succeeds, we know the wkt is at least valid
+                # we don't know the geometry type though; we'll leave that
+                # to subsequent validation
+            except wkt.ReadingError:
+                try:
+                    coords = [
+                        float(x) for x in fields.ARRAY_RE.split(geom)
+                    ]
+                except ValueError:
+                    raise ValueError(
+                        'Could not coerce `str` to a list of `float`s'
+                    )
+                else:
+                    if not len(coords) % 2 == 0:
+                        raise ValueError(
+                            'Got an odd number of coordinate values'
+                        )
+                    else:
+                        # Construct WKT from the coords
+                        # NOTE: ordering is expected to be lon,lat
+                        points = ['%s %s' % (coords[i], coords[i + 1])
+                                  for i in xrange(0, len(coords), 2)]
+                        # if this is the region, close the linear polygon
+                        # ring by appending the first coord to the end
+                        if field in ('region', 'region_constraint'):
+                            points.append(points[0])
+                        # update the field
+                        kwargs[field] = wkt_fmt % ', '.join(points)
+
+    # return the (possbily) modified kwargs
+    return kwargs
 
 
 class Input2hcalc(djm.Model):
