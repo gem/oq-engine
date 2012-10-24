@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# set -x
+#set -x
 
 help() {
 cat <<HSD
@@ -152,11 +152,11 @@ do
             exit 4
         fi
 
-        user_branch=`grep css-truncate-target $pullreq_file | head -n 2 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        user_branch=`grep css-truncate-target.user $pullreq_file | head -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
         other_remote=`dirname $user_branch`
         other_reference=`basename $user_branch`
 
-        user_branch=`grep css-truncate-target $pullreq_file | tail -n 3 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        user_branch=`grep css-truncate-target.user $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
         github_user=`dirname $user_branch`
         branch_reference=`basename $user_branch`
 
