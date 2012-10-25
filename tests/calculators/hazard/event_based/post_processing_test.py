@@ -26,7 +26,8 @@ from tests.calculators.hazard.event_based import _pp_test_data as test_data
 class GmvsToHazCurveTestCase(unittest.TestCase):
     """
     Tests for
-    :func:`openquake.calculators.hazard.event_based.post_processing.gmvs_to_haz_curve`.
+    :func:`\
+openquake.calculators.hazard.event_based.post_processing.gmvs_to_haz_curve`.
     """
 
     def test_gmvs_to_haz_curve_site_1(self):
