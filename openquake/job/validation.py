@@ -324,7 +324,7 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
         return all_valid
 
 #: Maps calculation_mode to the appropriate validator class
-VALIDATOR_MAP = {
+HAZ_VALIDATOR_MAP = {
     'classical': ClassicalHazardCalculationForm,
     'event_based': EventBasedHazardCalculationForm,
 }
