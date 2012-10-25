@@ -1669,9 +1669,11 @@ class GmfSet(djm.Model):
         if self.complete_logic_tree_gmf:
             # Get all of the GmfSets associated with a logic tree realization,
             # for this calculation.
-            lt_gmf_sets = GmfSet.objects.filter(
-                gmf_collection__output__oq_job=job,
-                gmf_collection__lt_realization__isnull=False)
+            lt_gmf_sets = GmfSet.objects\
+                .filter(
+                    gmf_collection__output__oq_job=job,
+                    gmf_collection__lt_realization__isnull=False)\
+                .order_by('gmf_collection', 'ses_ordinal')
             for gmf in itertools.chain(*lt_gmf_sets):
                 yield gmf
         else:

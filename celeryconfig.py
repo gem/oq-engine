@@ -46,10 +46,8 @@ CELERY_RESULT_BACKEND = "amqp"
 
 CELERY_IMPORTS = (
     "openquake.calculators.hazard.classical.core",
-    "openquake.calculators.hazard.disagg.core",
-    "openquake.calculators.hazard.disagg.subsets",
-    "openquake.calculators.hazard.uhs.core",
-    "openquake.calculators.risk.general",
+    "openquake.calculators.hazard.event_based.core_next",
+    "openquake.calculators.hazard.event_based.post_processing",
     "tests.utils.tasks")
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
