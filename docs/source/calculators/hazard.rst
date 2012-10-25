@@ -32,18 +32,22 @@ Classical PSHA Core
 ===================
 .. automodule:: openquake.calculators.hazard.classical.core
 
+Classical PSHA Post-Processing
+==============================
+.. automodule:: openquake.calculators.hazard.classical.post_processing
+
 ***************************
 Event-Based PSHA Calculator
 ***************************
-
-The Event-Based Probabilistic Seismic Hazard Analysis (ePSHA) approach
-allows calculation of ground-motion ﬁelds from stochastic event sets.
-Eventually, Classical PSHA results - such as hazard curves - can be obtained
-by post-processing the set of computed ground-motion ﬁelds.
+.. automodule:: openquake.calculators.hazard.event_based.__init__
 
 Event-Based Core
 ================
-.. automodule:: openquake.calculators.hazard.event_based.core
+.. automodule:: openquake.calculators.hazard.event_based.core_next
+
+Event-Based Post-Proccessing
+============================
+.. automodule:: openquake.calculators.hazard.event_based.post_processing
 
 *******************
 Scenario Calculator
