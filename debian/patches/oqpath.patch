@@ -1,5 +1,5 @@
---- a/bin/cache_gc.py
-+++ b/bin/cache_gc.py
+--- a/openquake/bin/cache_gc.py
++++ b/openquake/bin/cache_gc.py
 @@ -30,9 +30,6 @@
  import getopt
  import sys
@@ -10,8 +10,8 @@
  from openquake import kvs
  from openquake import logs
  
---- a/bin/openquake
-+++ b/bin/openquake
+--- a/openquake/bin/oqscript.py
++++ b/openquake/bin/oqscript.py
 @@ -52,7 +52,6 @@
  
  import argparse
@@ -31,8 +31,8 @@
  
  from openquake import __version__
  from openquake.export import core as export
---- a/bin/openquake_supervisor
-+++ b/bin/openquake_supervisor
+--- a/openquake/bin/openquake_supervisor.py
++++ b/openquake/bin/openquake_supervisor.py
 @@ -25,9 +25,6 @@
  import os
  import sys

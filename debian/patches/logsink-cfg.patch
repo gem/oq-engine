@@ -1,6 +1,8 @@
---- a/bin/openquake_messages_collector.py
-+++ b/bin/openquake_messages_collector.py
-@@ -8,21 +8,17 @@
+Index: python-oq/openquake/bin/openquake_messages_collector.py
+===================================================================
+--- python-oq.orig/openquake/bin/openquake_messages_collector.py
++++ python-oq/openquake/bin/openquake_messages_collector.py
+@@ -8,21 +8,14 @@ The collected messages will be logged by
  in logging.cfg
  """
  
@@ -9,9 +11,9 @@
  import logging
  import logging.config
  
- import oqpath
- oqpath.set_oq_path()
- 
+-import oqpath
+-oqpath.set_oq_path()
+-
 -import openquake
  from openquake import signalling
  
