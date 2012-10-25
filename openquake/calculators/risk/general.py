@@ -1199,7 +1199,17 @@ def load_gmvs_at(job_id, point):
 
 
 class BaseRiskCalculatorNext(CalculatorNext):
+    """
+    A temporary "dummy" calculator that doesn't do anything. This is currently
+    only used to be able to exercise the risk engine end-to-end.
+
+    This will eventually updated or replaced when we start to implement the new
+    set of risk calculators based oq-risklib.
+    """
 
     def execute(self):
+        """
+        Empty execute method, just to be able to exercise the risk engine.
+        """
         # TODO(LB): Temporary
         print "Fake execution. Implement me!"
