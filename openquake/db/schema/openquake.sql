@@ -359,6 +359,13 @@ CREATE TABLE uiapi.input2hcalc (
 ) TABLESPACE uiapi_ts;
 
 
+CREATE TABLE uiapi.input2rcalc (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    risk_calculation_id INTEGER NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 CREATE TABLE uiapi.risk_calculation (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,  -- FK to admin.oq_user
@@ -1731,6 +1738,12 @@ FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON D
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_risk_calculation_fk
+FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
