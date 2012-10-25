@@ -301,7 +301,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_post_process(self):
         self.job, self.calc = self._setup_a_new_calculator()
-        hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
         self.job.is_running = True

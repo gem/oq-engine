@@ -688,5 +688,4 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         ("post_processing_task", tasks),
                         tf_args=dict(job_id=self.job.id))
 
-
         logs.LOG.debug('< done with post processing')
