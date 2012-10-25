@@ -52,7 +52,6 @@ Available Risk Analysis
 
 import argparse
 import getpass
-import logging
 import os
 import sys
 
@@ -69,9 +68,10 @@ import oqpath
 oqpath.set_oq_path()
 
 from openquake import __version__
+from openquake import engine2
 from openquake.db import models
-from openquake.export import core as export
 from openquake.export import hazard as hazard_export
+from openquake.job import validation
 from openquake.utils import version as utils_version
 
 
@@ -165,12 +165,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         If `True`, don't attempt to reuse existing identical inputs; instead,
         import fresh copies.
     :param list exports:
-        A list of export types requested by the user, currently only 'xml'
-        is supported
+        A list of export types requested by the user. Currently only 'xml'
+        is supported.
     """
-    from openquake import engine2
-    from openquake.job import validation
-
     try:
         if log_file is not None:
             try:
@@ -179,7 +176,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(user_name=getpass.getuser(), log_level=log_level)
+        job = engine2.prepare_job(
+            user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
         calculation = engine2.create_hazard_calculation(job.owner, params,
@@ -189,7 +187,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
         # Validate the job:
         calc_mode = job.hazard_calculation.calculation_mode
-        form_class = validation.VALIDATOR_MAP.get(calc_mode)
+        form_class = validation.HAZ_VALIDATOR_MAP.get(calc_mode)
         if form_class is None:
             print 'Calculation mode "%s" not supported' % calc_mode
             sys.exit(1)
@@ -240,6 +238,28 @@ def list_hazard_calculations():
                 print '\tJob ID: %s, Status: %s' % (j.id, status)
 
 
+def list_risk_calculations():
+    print "Risk calculations:"
+    rcs = models.RiskCalculation.objects.filter(
+        owner__user_name=getpass.getuser())
+    if len(rcs) == 0:
+        print 'None'
+    else:
+        for rc in rcs:
+            print 'Calculation ID: %s, Description: %s' % (
+                rc.id, rc.description)
+            jobs = models.OqJob.objects.filter(risk_calculation=rc.id)
+            for j in jobs:
+                if j.is_running:
+                    status = 'pending'
+                else:
+                    if j.status == 'complete':
+                        status = 'successful'
+                    else:
+                        status = 'failed'
+                print '\tJob ID: %s, Status: %s' % (j.id, status)
+
+
 def list_hazard_outputs(hc_id):
     """
     List the outputs for a given
@@ -251,6 +271,21 @@ def list_hazard_outputs(hc_id):
     outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
     if len(outputs) > 0:
         print 'ID\tOuput Type'
+        for o in outputs:
+            print '%s\t%s' % (o.id, o.output_type)
+
+
+def list_risk_outputs(rc_id):
+    """
+    List the outputs for a given
+    :class:`~openquake.db.models.RiskCalculation`.
+
+    :param rc_id:
+        ID of a risk calculation.
+    """
+    outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+    if len(outputs) > 0:
+        print 'ID\tOutput Type'
         for o in outputs:
             print '%s\t%s' % (o.id, o.output_type)
 
@@ -275,6 +310,76 @@ def export_hazard(haz_output_id, target_dir):
         print 'No output found for OUTPUT_ID %s' % output_id
 
 
+def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
+    """
+    Run a risk calculation using the specified config file and other options.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) file.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param bool force_inputs:
+        If `True`, don't attempt to reuse existing identical inputs; instead,
+        import fresh copies.
+    :param list exports:
+        A list of export types requested by the user. Currently only 'xml'
+        is supported.
+    """
+    try:
+        if log_file is not None:
+            try:
+                _touch_log_file(log_file)
+            except IOError as e:
+                raise IOError('Error writing to log file %s: %s'
+                              % (log_file, e.strerror))
+
+        job = engine2.prepare_job(
+            user_name=getpass.getuser(), log_level=log_level)
+        params, files = engine2.parse_config(
+            open(cfg_file, 'r'), force_inputs=force_inputs)
+        calculation = engine2.create_risk_calculation(job.owner, params,
+                                                      files.values())
+        job.risk_calculation = calculation
+        job.save()
+
+        # TODO(LB):
+        # Re-enable this when validation is supported.
+        """
+        # Validate the job:
+        calc_mode = job.risk_calculation.calculation_mode
+
+        form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
+        if form_class is None:
+            print 'Calculation mode "%s" not supported' % calc_mode
+            sys.exit(1)
+
+        form = form_class(instance=calculation, files=files, exports=exports)
+        # For now, just print whether or not the job is valid
+        # (and any errors if it isn't valid)
+        if not form.is_valid():
+            print ('Job configuration is not valid. Errors: %s'
+                   % dict(form.errors))
+            sys.exit(1)
+        """
+
+        # Initialize the supervisor, instantiate the calculator,
+        # and run the calculation.
+        completed_job = engine2.run_risk(job, log_level, log_file, exports)
+        if completed_job is not None:
+            # We check for `None` here because the supervisor and executor
+            # process forks return to here as well. We want to ignore them.
+            if completed_job.status == 'complete':
+                print 'Job %s ran successfully' % completed_job.id
+            else:
+                print 'Job %s failed' % completed_job.id
+    except IOError as e:
+        print str(e)
+    except Exception as e:
+        raise
+
+
 def _touch_log_file(log_file):
     """If a log file destination is specified, attempt to open the file in
     'append' mode ('a'). If the specified file is not writable, an
@@ -289,9 +394,12 @@ if __name__ == '__main__':
 
     if args.version:
         print utils_version.info(__version__)
-    elif args.list_hazard_calculations:
+        sys.exit(0)
+
+    # hazard
+    if args.list_hazard_calculations:
         list_hazard_calculations()
-    elif args.list_hazard_outputs:
+    elif args.list_hazard_outputs is not None:
         list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
@@ -301,5 +409,15 @@ if __name__ == '__main__':
     elif args.run_hazard is not None:
         run_hazard(args.run_hazard, args.log_level, args.log_file,
                    args.force_inputs, args.exports)
+    # risk
+    elif args.list_risk_calculations:
+        list_risk_calculations()
+    elif args.list_risk_outputs is not None:
+        list_risk_outputs(args.list_risk_outputs)
+    elif args.export_risk is not None:
+        print "export risk"
+    elif args.run_risk is not None:
+        run_risk(args.run_risk, args.log_level, args.log_file,
+                 args.force_inputs, args.exports)
     else:
         arg_parser.print_usage()
