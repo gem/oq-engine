@@ -24,6 +24,8 @@ E.g. mean and quantile curves.
 import numpy
 from scipy.stats import mstats
 
+from openquake.utils import tasks as utils_tasks
+
 
 # Number of locations considered by each task
 DEFAULT_LOCATIONS_PER_TASK = 1000
@@ -259,3 +261,19 @@ def quantile_curves_weighted(poe_matrix, weights, quantile):
                 numpy.interp(quantile, cum_weights, sorted_poes))
         ret.append(result_curve)
     return numpy.array(ret).transpose()
+
+
+# Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
+# pylint: disable=W0613
+@utils_tasks.oqtask
+def do_post_process(job_id, post_processing_task):
+    """
+    Executing a post-processing work package. It could be a mean, quantile, or
+    hazard map post-processing task.
+    """
+    func_key, func_args = post_processing_task
+    func = get_post_processing_fn(func_key)
+    # Disabling 'Used * or ** magic'
+    # pylint: disable=W0142
+    func(*func_args)
+do_post_process.ignore_result = False
