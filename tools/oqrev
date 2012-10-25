@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# set -x
+#set -x
 
 help() {
 cat <<HSD
@@ -84,10 +84,6 @@ python_src="openquake"
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]; then
-    git submodule update
-fi
-git diff --quiet HEAD
-if [ $? -ne 0 ]; then
     echo "Your branch has uncommitted changes. Please commit first."
     exit 2
 fi
@@ -152,11 +148,11 @@ do
             exit 4
         fi
 
-        user_branch=`grep css-truncate-target $pullreq_file | head -n 2 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        user_branch=`grep css-truncate-target.user $pullreq_file | head -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
         other_remote=`dirname $user_branch`
         other_reference=`basename $user_branch`
 
-        user_branch=`grep css-truncate-target $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
+        user_branch=`grep css-truncate-target.user $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /css-truncate-target[^>]+>([^<]+)<.+css-truncate-target[^>]+>([^<]+)</) { printf "%s/%s", $1, $2 }'`
         github_user=`dirname $user_branch`
         branch_reference=`basename $user_branch`
 
@@ -287,10 +283,12 @@ num_of_py_files=`git diff ${other_branch}...${branch_branch} --name-only --diff-
 
 if [ $skip_pylint -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     git checkout $other_branch
+    git submodule update
     echo "Running pylint on $other_branch.."
     pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 
     git checkout $branch_branch
+    git submodule update
     echo "Running pylint on $branch_name.."
     pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 

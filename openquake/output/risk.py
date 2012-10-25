@@ -37,8 +37,8 @@ from openquake.xml import GML_NS
 from openquake.xml import NRML
 from openquake.xml import NRML_NS
 from openquake.xml import NSMAP
+from risklib import curve
 from openquake import logs
-
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -701,13 +701,13 @@ class LossCurveDBReader(object):
         }
 
         for datum in loss_curve_data:
-            curve = shapes.Curve(zip(datum.losses, datum.poes))
+            lrc = curve.Curve(zip(datum.losses, datum.poes))
 
             asset = asset.copy()
             asset['assetID'] = datum.asset_ref
 
             loc = datum.location
-            curves.append((shapes.Site(loc.x, loc.y), (curve, asset)))
+            curves.append((shapes.Site(loc.x, loc.y), (lrc, asset)))
 
         return curves
 
@@ -774,7 +774,7 @@ class LossCurveDBWriter(writer.DBWriter):
         :type point: :py:class:`openquake.shapes.Site`
 
         :param curve: the loss curve
-        :type curve: :py:class:`openquake.shapes.Curve`
+        :type curve: :py:class:`risklib.curve.Curve`
 
         The asset contains at least this items:
             * **asset_ref** - the assetID

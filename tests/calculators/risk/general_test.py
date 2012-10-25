@@ -13,24 +13,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import itertools
 import os
-import numpy
 import unittest
 import json
 
 from django.contrib.gis import geos
-from openquake.calculators.risk import general
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.classical.core import _compute_lrem
 from openquake.calculators.risk.general import BaseRiskCalculator
-from openquake.calculators.risk.general import compute_alpha
-from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
 from openquake.calculators.risk.general import hazard_input_site
-from openquake.calculators.risk.general import (compute_insured_losses,
-                                                insurance_boundaries_defined)
 from openquake.job import config
 from openquake.db import models
 from openquake import engine
@@ -38,7 +30,6 @@ from openquake import kvs
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
-from openquake.shapes import Curve
 
 from tests.utils import helpers
 
@@ -148,79 +139,6 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
                 expected_lr_file_name % dict(job_id=job.id,
                                              block=0),
                 file_name)
-
-
-class BetaDistributionTestCase(unittest.TestCase):
-    """ Beta Distribution related testcase """
-
-    def setUp(self):
-        self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
-        self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
-        self.covs = [0.500, 0.400, 0.300, 0.200, 0.100]
-        self.imls = [0.100, 0.200, 0.300, 0.450, 0.600]
-
-    def test_compute_alphas(self):
-        # expected alphas provided by Vitor
-
-        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-
-        alphas = [compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
-                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-        self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
-
-    def test_compute_betas(self):
-        # expected betas provided by Vitor
-
-        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
-
-        betas = [compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
-                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-        self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
-
-    def test_compute_lrem_using_beta_distribution(self):
-        # expected lrem provided by Vitor
-
-        expected_beta_distributions = [
-            [1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000],
-            [0.9895151, 0.9999409, 1.0000000, 1.0000000, 1.0000000],
-            [0.9175720, 0.9981966, 0.9999997, 1.0000000, 1.0000000],
-            [0.7764311, 0.9887521, 0.9999922, 1.0000000, 1.0000000],
-            [0.6033381, 0.9633258, 0.9999305, 1.0000000, 1.0000000],
-            [0.4364471, 0.9160514, 0.9996459, 1.0000000, 1.0000000],
-            [0.2975979, 0.8460938, 0.9987356, 1.0000000, 1.0000000],
-            [0.1931667, 0.7574557, 0.9964704, 1.0000000, 1.0000000],
-            [0.1202530, 0.6571491, 0.9917729, 0.9999999, 1.0000000],
-            [0.0722091, 0.5530379, 0.9832939, 0.9999997, 1.0000000],
-            [0.0420056, 0.4521525, 0.9695756, 0.9999988, 1.0000000],
-            [0.0130890, 0.2790107, 0.9213254, 0.9999887, 1.0000000],
-            [0.0037081, 0.1564388, 0.8409617, 0.9999306, 1.0000000],
-            [0.0009665, 0.0805799, 0.7311262, 0.9996882, 1.0000000],
-            [0.0002335, 0.0384571, 0.6024948, 0.9988955, 1.0000000],
-            [0.0000526, 0.0171150, 0.4696314, 0.9967629, 1.0000000],
-            [0.0000022, 0.0027969, 0.2413923, 0.9820831, 1.0000000],
-            [0.0000001, 0.0003598, 0.0998227, 0.9364072, 1.0000000],
-            [0.0000000, 0.0000367, 0.0334502, 0.8381920, 0.9999995],
-            [0.0000000, 0.0000030, 0.0091150, 0.6821293, 0.9999959],
-            [0.0000000, 0.0000002, 0.0020162, 0.4909782, 0.9999755],
-            [0.0000000, 0.0000000, 0.0000509, 0.1617086, 0.9995033],
-            [0.0000000, 0.0000000, 0.0000005, 0.0256980, 0.9945488],
-            [0.0000000, 0.0000000, 0.0000000, 0.0016231, 0.9633558],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000288, 0.8399534],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000001, 0.5409583],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.3413124],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.1589844],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0421052],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0027925],
-            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
-
-        vuln_function = shapes.VulnerabilityFunction(
-            self.imls, self.mean_loss_ratios, self.covs, "BT")
-
-        lrem = _compute_lrem(vuln_function, 5)
-
-        helpers.assertDeepAlmostEqual(
-            self, expected_beta_distributions, lrem, delta=0.0005)
-
 
 RISK_DEMO_CONFIG_FILE = helpers.demo_file(
     "classical_psha_based_risk/config.gem")
@@ -423,75 +341,3 @@ class HazardInputSiteTestCase(unittest.TestCase):
 
         self.assertEqual(shapes.Site(1.5, 1.5), hazard_input_site(
                 job_ctxt, shapes.Site(1.6, 1.6)))
-
-
-class InsuredLossesTestCase(unittest.TestCase, helpers.DbTestCase):
-    emdl = None
-    job = None
-
-    @classmethod
-    def setUpClass(cls):
-        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "SEB-exposure.yaml")
-        inputs = [("exposure", path)]
-        cls.job = cls.setup_classic_job(inputs=inputs)
-        [input] = models.inputs4job(cls.job.id, input_type="exposure",
-            path=path)
-        owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = input.model()
-        if not cls.emdl:
-            cls.emdl = models.ExposureModel(
-                owner=owner, input=input, description="SEB exposure model",
-                category="SEB factory buildings", stco_unit="screws",
-                stco_type="aggregated")
-            cls.emdl.save()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
-
-    def setUp(self):
-        imls = [0.10, 0.30, 0.50, 1.00]
-        loss_ratios = [0.05, 0.10, 0.15, 0.30]
-        covs = [0.30, 0.30, 0.20, 0.20]
-
-        self.vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios,
-            covs, "LN")
-
-        self.gmvs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
-                              0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
-
-        self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                         -0.4336, 0.3426, 3.5784, 2.7694]
-
-        self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        self.eps_provider = helpers.EpsilonProvider(self.asset, self.epsilons)
-
-        self.losses = numpy.array([72.23120833, 410.55950159, 180.02423357,
-                                   171.02684563, 250.77079384, 39.45861103,
-                                   114.54372035, 288.28653452, 473.38307021,
-                                   488.47447798])
-
-    def test_insurance_boundaries_defined(self):
-        self.asset.ref = 'a14'
-        self.asset.ins_limit = 700
-        self.asset.deductible = 300
-        self.assertTrue(insurance_boundaries_defined(self.asset))
-
-        self.asset.ins_limit = None
-        self.assertRaises(RuntimeError, insurance_boundaries_defined,
-            self.asset)
-
-        self.asset.ins_limit = 700
-        self.asset.deductible = None
-        self.assertRaises(RuntimeError, insurance_boundaries_defined,
-            self.asset)
-
-    def test_compute_insured_losses(self):
-        self.asset.deductible = 150
-        self.asset.ins_limit = 300
-        expected = numpy.array([0, 300, 180.02423357, 171.02684563,
-                                250.77079384, 0, 0, 288.28653452, 300, 300])
-
-        self.assertTrue(numpy.allclose(expected,
-                compute_insured_losses(self.asset, self.losses)))
-
