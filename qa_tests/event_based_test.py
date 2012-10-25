@@ -25,7 +25,8 @@ from risklib import event_based
 from qa_tests.event_based_test_data import (GROUND_MOTION_VALUES_A1,
     GROUND_MOTION_VALUES_A2, GROUND_MOTION_VALUES_A3,
     GROUND_MOTION_VALUES_A1_BD, GROUND_MOTION_VALUES_A2_BD,
-    GROUND_MOTION_VALUES_A3_BD)
+    GROUND_MOTION_VALUES_A3_BD, GROUND_MOTION_VALUES_A1_IL,
+    GROUND_MOTION_VALUES_A2_IL, GROUND_MOTION_VALUES_A3_IL)
 
 
 class EventBasedTestCase(unittest.TestCase):
@@ -50,9 +51,10 @@ class EventBasedTestCase(unittest.TestCase):
 
         peb_calculator = api.probabilistic_event_based(
             vulnerability_model, 10, None, None)
-        calculator = api.conditional_losses([0.99], peb_calculator)
+        peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
 
-        asset_output = calculator(input.Asset("a1", "RM", 3000, None),
+        asset_output = peb_conditional_losses(
+            input.Asset("a1", "RM", 3000, None),
             {"IMLs": GROUND_MOTION_VALUES_A1, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 78.1154725900
@@ -88,7 +90,8 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_losses_a1_lc, asset_output.loss_curve.x_values)
 
-        asset_output = calculator(input.Asset("a2", "RC", 2000, None),
+        asset_output = peb_conditional_losses(
+            input.Asset("a2", "RC", 2000, None),
             {"IMLs": GROUND_MOTION_VALUES_A2, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 36.2507008221
@@ -121,7 +124,8 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_losses_a2_lc, asset_output.loss_curve.x_values)
 
-        asset_output = calculator(input.Asset("a3", "RM", 1000, None),
+        asset_output = peb_conditional_losses(
+            input.Asset("a3", "RM", 1000, None),
             {"IMLs": GROUND_MOTION_VALUES_A3, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 23.4782545574
@@ -315,3 +319,131 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.x_values)
+
+    def test_insured_loss_mean_based(self):
+        vulnerability_function_rm = (
+            vulnerability_function.VulnerabilityFunction(
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+
+        vulnerability_function_rc = (
+            vulnerability_function.VulnerabilityFunction(
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+
+        vulnerability_model = {"RM": vulnerability_function_rm,
+                               "RC": vulnerability_function_rc}
+
+        peb_calculator = api.probabilistic_event_based(
+            vulnerability_model, 10, None, None)
+        peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
+        peb_insured_losses = api.insured_losses(peb_conditional_losses)
+        peb_insured_curves = api.insured_curves(
+            vulnerability_model, 10, None, None, peb_insured_losses)
+
+        asset_output = peb_insured_curves(
+            input.Asset("a1", "RM", 3000, None, ins_limit=125, deductible=40),
+            {"IMLs": GROUND_MOTION_VALUES_A1_IL, "TSES": 50, "TimeSpan": 50})
+
+        expected_poes_a1 = [0.999999999241817, 0.999999999241756,
+                            0.999999999241818, 0.999999994397740,
+                            0.999664553654242,	0.981685826817424,
+                            0.950213638037609,	0.864670424561284,
+                            0.864677109328630]
+
+        # Loss ratio curve
+        expected_losses_a1_lrc = [0.00231481481481481, 0.00694444444444445,
+                                  0.0115740740740741, 0.0162037037037037,
+                                  0.0208333333333333, 0.0254629629629630,
+                                  0.0300925925925926, 0.0347222222222222,
+                                  0.0393518518518519]
+
+        # Loss curve
+        expected_losses_a1_lc = [6.94444444444445, 20.8333333333333,
+                                 34.7222222222222, 48.6111111111111,
+                                 62.5000000000000, 76.3888888888889,
+                                 90.2777777777778, 104.166666666667,
+                                 118.055555555556]
+
+        self.assert_allclose(
+            expected_poes_a1, asset_output.insured_loss_ratio_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a1_lrc,
+            asset_output.insured_loss_ratio_curve.x_values)
+
+        self.assert_allclose(
+            expected_poes_a1, asset_output.insured_loss_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a1_lc, asset_output.insured_loss_curve.x_values)
+
+
+        asset_output = peb_insured_curves(
+            input.Asset("a2", "RC", 2000, None, ins_limit=15, deductible=50),
+            {"IMLs": GROUND_MOTION_VALUES_A2_IL, "TSES": 50, "TimeSpan": 50})
+
+        expected_poes_a2 = [0.999999887469239, 0.999999887472202,
+                            0.999999887466752,	0.999997739830177,
+                            0.999664538439969,	0.997521316464728,
+                            0.981684445676922,	0.950213415220451,
+                            0.864675860594400]
+
+        expected_losses_a2_lrc = [0.00138888888888889, 0.00416666666666667,
+                                  0.00694444444444445, 0.00972222222222222,
+                                  0.0125000000000000, 0.0152777777777778,
+                                  0.0180555555555556, 0.0208333333333333,
+                                  0.0236111111111111]
+
+        expected_losses_a2_lc = [2.77777777777778, 8.33333333333333,
+                                 13.8888888888889, 19.4444444444444,
+                                 25, 30.5555555555556, 36.1111111111111,
+                                 41.6666666666667, 47.2222222222222]
+
+        """
+        self.assert_allclose(
+            expected_poes_a2, asset_output.insured_loss_ratio_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a2_lrc,
+            asset_output.insured_loss_ratio_curve.x_values)
+
+        self.assert_allclose(
+            expected_poes_a2, asset_output.insured_loss_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a2_lc, asset_output.insured_loss_curve.x_values)
+        """
+        asset_output = peb_insured_curves(
+            input.Asset("a3", "RM", 1000, None, ins_limit=24, deductible=13),
+            {"IMLs": GROUND_MOTION_VALUES_A3_IL, "TSES": 50, "TimeSpan": 50})
+
+        expected_poes_a3 = [0.999999999994891, 0.999999999994891,
+                            0.999999999994891, 0.999999999994891,
+                            0.999999999994891, 0.999999999986112,
+                            0.999997739824223, 0.999876598280200,
+                            0.999088132862596]
+
+        expected_losses_a3_lrc = [0.00133333333333333, 0.00400000000000000,
+                                  0.00666666666666667, 0.00933333333333333,
+                                  0.0120000000000000, 0.0146666666666667,
+                                  0.0173333333333333, 0.0200000000000000,
+                                  0.0226666666666667]
+
+        expected_losses_a3_lc = [1.33333333333333, 4, 6.66666666666667,
+                                 9.33333333333333, 12, 14.6666666666667,
+                                 17.3333333333333, 20, 22.6666666666667]
+
+
+        self.assert_allclose(
+            expected_poes_a3, asset_output.insured_loss_ratio_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a3_lrc,
+            asset_output.insured_loss_ratio_curve.x_values)
+
+        self.assert_allclose(
+            expected_poes_a3, asset_output.insured_loss_curve.y_values)
+
+        self.assert_allclose(
+            expected_losses_a3_lc, asset_output.insured_loss_curve.x_values)
