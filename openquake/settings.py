@@ -69,7 +69,7 @@ DEFAULT_USER = 'admin'
 # We need a 'default' database to make Django happy:
 DATABASES['default'] = {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    'NAME': 'openquake',
+    'NAME': DB_SECTION.get('name', 'openquake'),
     'USER': DB_SECTION.get('%s_user' % DEFAULT_USER, 'oq_admin'),
     'PASSWORD': DB_SECTION.get('%s_password' % DEFAULT_USER, 'openquake'),
     'HOST': '',
