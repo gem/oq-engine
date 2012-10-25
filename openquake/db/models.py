@@ -505,6 +505,7 @@ class OqJob(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
+    risk_calculation = djm.ForeignKey('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
@@ -904,19 +905,19 @@ class RiskCalculation(djm.Model):
     #######################
     # Classical parameters:
     #######################
-    lrem_steps_per_interval = djm.IntegerField()
-    conditional_loss_poes = fields.FloatArrayField()
+    lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
+    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
 
     #########################
     # Event-Based parameters:
     #########################
-    loss_histogram_bins = djm.IntegerField()
+    loss_histogram_bins = djm.IntegerField(null=True, blank=True)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
     ######################################
-    interest_rate = djm.FloatField()
-    asset_life_expectancy = djm.FloatField()
+    interest_rate = djm.FloatField(null=True, blank=True)
+    asset_life_expectancy = djm.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
@@ -991,6 +992,18 @@ class Input2hcalc(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"input2hcalc'
+
+
+class Input2rcalc(djm.Model):
+    '''
+    `input` to `risk_calculation` link table.
+    '''
+
+    input = djm.ForeignKey('Input')
+    risk_calculation = djm.ForeignKey('RiskCalculation')
+
+    class Meta:
+        db_table = 'uiapi\".\"input2rcalc'
 
 
 class OqJobProfile(djm.Model):
