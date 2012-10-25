@@ -115,6 +115,8 @@ def gmf_post_process_arg_gen(job):
                        invest_time, duration, sa_period, sa_damping)
 
 
+# Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
+# pylint: disable=W0613
 @utils_tasks.oqtask
 def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
                              invest_time, duration, sa_period=None,
