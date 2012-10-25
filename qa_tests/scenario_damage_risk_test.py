@@ -35,7 +35,56 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
               0.45975761535464116],
         )
     
-    def test_discrete(self):
+    def test_continuous_ff(self):
+        fragility_model = input.FragilityModel(
+            "continuous", None, ["LS1", "LS2"]) ## IMLs??
+
+        fragility_functions = dict(
+            RC = [
+                input.FragilityFunctionContinuous(
+                    fragility_model, 0.2, 0.05, 'LS1'),
+                input.FragilityFunctionContinuous(
+                    fragility_model, 0.35, 0.10, 'LS2')
+                ],
+            RM = [
+                input.FragilityFunctionContinuous(
+                    fragility_model, 0.25, 0.08, 'LS1'),
+                input.FragilityFunctionContinuous(
+                    fragility_model, 0.40, 0.12, 'LS2'),
+                ])
+
+        calculator = api.scenario_damage(fragility_model, fragility_functions)
+ 
+        out = calculator(
+            input.Asset("a1", "RM", 3000, None, number_of_units=3000), 
+            self.hazard['a1'])
+        mean = [1562.6067550208, 1108.0189275488, 329.3743174305]
+        stdev = [968.93502576, 652.7358505746, 347.3929450270]
+        cmap = (329.3743174305, 347.3929450270)
+        almost_equal(out.damage_distribution_asset, (mean, stdev))
+        almost_equal(out.collapse_map, cmap)
+
+        out = calculator(
+            input.Asset("a3", "RM", 1000, None, number_of_units=1000), 
+            self.hazard['a3'])
+        mean = [417.3296948271, 387.2084383654, 195.4618668074]
+        stdev = [304.4769498434, 181.1415598664, 253.91309010185]
+        cmap = (195.4618668074, 253.9130901018)
+        almost_equal(out.damage_distribution_asset, (mean, stdev))
+        almost_equal(out.collapse_map, cmap)
+
+        out = calculator(
+            input.Asset("a2", "RC", 2000, None, number_of_units=2000), 
+            self.hazard['a2'])
+        mean = [56.7201291212, 673.1047565606, 1270.1751143182]
+        stdev = [117.7802813522, 485.2023172324, 575.8724057319]
+        cmap = (1270.1751143182, 575.8724057319)
+        almost_equal(out.damage_distribution_asset, (mean, stdev))
+        almost_equal(out.collapse_map, cmap)
+
+        # TODO: check the aggregations
+
+    def test_discrete_ff(self):
         fragility_model = input.FragilityModel(
             "discrete", [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"])
 
