@@ -27,7 +27,7 @@ from qa_tests import _utils as qa_utils
 
 class ClassicalHazardCase12TestCase(qa_utils.BaseQATestCase):
 
-    EXPECTED_XML= """<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    EXPECTED_XML = """<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1" gsimTreePath="b1|b2">
     <IMLs>0.1 0.4 0.6</IMLs>
     <hazardCurve>
