@@ -33,7 +33,6 @@ from openquake import kvs
 from openquake import logs
 from openquake import xml
 from openquake.calculators.hazard import general as hazard_general
-from openquake.calculators.hazard.scenario import core as scenario
 from openquake.engine import JobContext
 from openquake.export import psha
 from openquake.job import params as job_params
@@ -86,47 +85,6 @@ class HazardEngineTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError:
                 pass
-
-
-class ParameterizeSitesTestCase(unittest.TestCase):
-    """Tests relating to BaseHazardCalculator.parameterize_sites()."""
-
-    def test_parameterize_sites_no_site_model(self):
-        job_ctxt = helpers.prepare_job_context(
-            helpers.demo_file('scenario_risk/config.gem')
-        )
-
-        calc = scenario.ScenarioHazardCalculator(job_ctxt)
-
-        jsites = calc.parameterize_sites(job_ctxt.sites_to_compute())
-
-        # expected params:
-        jp = job_ctxt.oq_job_profile
-
-        exp_sadigh = job_params.REVERSE_ENUM_MAP[jp.sadigh_site_type]
-        exp_vs30 = jp.reference_vs30_value
-        exp_vs30_type = jp.vs30_type
-        exp_z1pt0 = jp.depth_to_1pt_0km_per_sec
-        exp_z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
-
-        for jsite in jsites:
-            self.assertEqual(
-                exp_vs30, jsite.getParameter('Vs30').getValue().value
-            )
-            self.assertEqual(
-                exp_vs30_type, jsite.getParameter('Vs30 Type').getValue()
-            )
-            self.assertEqual(
-                exp_z1pt0,
-                jsite.getParameter('Depth 1.0 km/sec').getValue().value
-            )
-            self.assertEqual(
-                exp_z2pt5,
-                jsite.getParameter('Depth 2.5 km/sec').getValue().value
-            )
-            self.assertEqual(
-                exp_sadigh, jsite.getParameter('Sadigh Site Type').getValue()
-            )
 
 
 class IMLTestCase(unittest.TestCase):
