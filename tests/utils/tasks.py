@@ -32,8 +32,7 @@ from tests.utils import helpers
 
 
 def test_task(func, *args, **kwargs):
-    celery_queue = config.get('amqp', 'celery_queue')
-    kwargs.update(dict(queue=celery_queue))
+    kwargs['queue'] = config.get('amqp', 'celery_queue')
     return task(func, *args, **kwargs)
 
 
