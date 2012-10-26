@@ -25,36 +25,42 @@ Task functions for our unit tests.
 from celery.task import task
 
 from openquake import java
+from openquake.utils import config
 from openquake.utils import stats
 
 from tests.utils import helpers
 
 
-@task
+def test_task(func, *args, **kwargs):
+    kwargs['queue'] = config.get('amqp', 'celery_queue')
+    return task(func, *args, **kwargs)
+
+
+@test_task
 def reflect_args(*args, **kwargs):
     """Merely returns the parameters received."""
     return (args, kwargs)
 
 
-@task
+@test_task
 def just_say_hello(*args, **kwargs):
     """Merely returns 'hello'."""
     return "hello"
 
 
-@task
+@test_task
 def just_say_1(*args, **kwargs):
     """Merely returns 1."""
     return 1
 
 
-@task
+@test_task
 def single_arg_called_a(a):
     """Takes a single argument called `a` and merely returns `True`."""
     return True
 
 
-@task
+@test_task
 def failing_task(data):
     """
     Takes a single argument called `data` and raises a `NotImplementedError`
@@ -63,7 +69,7 @@ def failing_task(data):
     raise NotImplementedError(data)
 
 
-@task
+@test_task
 @java.unpack_exception
 def jtask_task(data):
     """
@@ -72,7 +78,7 @@ def jtask_task(data):
     return str(java.jvm().java.lang.Integer(data))
 
 
-@task
+@test_task
 @java.unpack_exception
 def failing_jtask_task(data):
     """
@@ -81,16 +87,17 @@ def failing_jtask_task(data):
     raise Exception('test exception')
 
 
-@task
+@test_task
 def reflect_data_to_be_processed(data):
     """Merely returns the data received."""
     return data
 
 
-@task(ignore_result=True)
+@test_task
 def ignore_result(data):
     """Write the data using the given test store key."""
     key, value = data[0]
     helpers.TestStore.set(key, value)
     # Results will be ignored.
     return data
+ignore_result.ignore_result = True
