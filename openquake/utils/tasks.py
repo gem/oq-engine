@@ -28,6 +28,7 @@ from celery.task import task
 
 from openquake import logs
 from openquake.db import models
+from openquake.utils import config
 
 
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
@@ -215,4 +216,5 @@ def oqtask(task_func):
             logs.LOG.exception(err)
             raise
 
-    return task(wrapped, ignore_result=True)
+    celery_queue = config.get('amqp', 'celery_queue')
+    return task(wrapped, ignore_result=True, queue=celery_queue)
