@@ -34,7 +34,6 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 
-from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db import fields
 from openquake.db.models import ExposureData
@@ -63,7 +62,7 @@ from openquake.utils import config as utils_config
 from openquake.utils import stats
 from openquake.input import logictree
 
-CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
+CALCS = dict(risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 
@@ -756,150 +755,6 @@ def _store_input_parameters(params, calc_mode, job_profile):
     if job_profile.imt != 'sa':
         job_profile.period = None
         job_profile.damping = None
-
-
-def run_job(job, params, sections, output_type='db', log_level='warn',
-            force_inputs=False, log_file=None):
-    """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
-    :class:`openquake.db.models.OqJob` object and run the job.
-
-    NOTE: The params and sections parameters are temporary but will be required
-    until we can run calculations purely using Django model objects as
-    calculator input.
-
-    Returns the calculation object when the calculation concludes.
-
-    :param job:
-        :class:`openquake.db.models.OqJob` instance
-    :param params:
-        A dictionary of config parameters parsed from the calculation
-        config file.
-    :param sections:
-        A list of sections parsed from the calculation config file.
-    :param output_type:
-        'db' or 'xml' (defaults to 'db')
-    :param str log_level:
-        One of 'debug', 'info', 'warn', 'error', or 'critical'.
-        Defaults to 'warn'.
-    :param bool force_inputs: If `True` the model input files will be parsed
-        and the resulting content written to the database no matter what.
-    :param str log_file:
-        Optional log file location.
-
-    :returns:
-        :class:`openquake.db.models.OqJob` instance.
-    """
-    if not output_type in ('db', 'xml'):
-        raise RuntimeError("output_type must be 'db' or 'xml'")
-
-    job.description = job.profile().description
-    job.status = 'running'
-    job.save()
-
-    # Clear any counters for this job_id, prior to running the
-    # job.
-    # We do this just to make sure all of the counters behave properly and can
-    # provide accurate data about a calculation in-progress.
-    stats.delete_job_counters(job.id)
-
-    # Make the job/calculation ID generally available.
-    utils_config.Config().job_id = job.id
-
-    serialize_results_to = ['db']
-    if output_type == 'xml':
-        serialize_results_to.append('xml')
-
-    job_ctxt = JobContext(params, job.id, sections=sections,
-                          serialize_results_to=serialize_results_to,
-                          oq_job_profile=job.profile(), oq_job=job,
-                          log_level=log_level, force_inputs=force_inputs)
-
-    # closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes. otherwise if one of them closes
-    # the connection it immediately becomes unavailable for other
-    close_connection()
-
-    job_pid = os.fork()
-    if not job_pid:
-        # calculation executor process
-        try:
-            logs.init_logs_amqp_send(level=log_level, job_id=job.id)
-            _launch_job(job_ctxt, sections)
-        except Exception, ex:
-            logs.LOG.critical("Calculation failed with exception: '%s'"
-                              % str(ex))
-            job.status = 'failed'
-            job.save()
-            raise
-        else:
-            job.status = 'succeeded'
-            job.save()
-        return
-
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        logs.set_logger_level(logs.logging.root, log_level)
-        supervisor_pid = os.getpid()
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = job_pid
-        job.save()
-        supervisor.supervise(job_pid, job.id, log_file=log_file)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
-
-    return job
-
-
-def _launch_job(job_ctxt, sections):
-    """Instantiate calculator(s) and actually run the job.
-
-    :param job_ctxt:
-        :class:`openquake.engine.JobContext` instance.
-    :param sections:
-        List of config file sections. Example::
-            ['general', 'HAZARD', 'RISK']
-    """
-    # TODO(LB):
-    # In the future, this should be moved to the initialize() method of the
-    # base Calculator class, or something like that. For now, we don't want it
-    # there because it would get called twice in a Hazard+Risk job.
-    # This is going to need some thought.
-    # Ignoring 'Access to a protected member'
-    # pylint: disable=W0212
-    job_ctxt._record_initial_stats()
-
-    job_ctxt.to_kvs()
-
-    output_dir = os.path.join(job_ctxt.base_path, job_ctxt['OUTPUT_DIR'])
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    calc_mode = job_ctxt.oq_job_profile.calc_mode
-
-    for job_type in ('hazard', 'risk'):
-        if not job_type.upper() in sections:
-            continue
-
-        calc_class = CALCS[job_type][calc_mode]
-
-        calculator = calc_class(job_ctxt)
-        logs.LOG.debug("Launching calculation with id=%s and type='%s'"
-                       % (job_ctxt.job_id, job_type))
-
-        calculator.initialize()
-        calculator.pre_execute()
-        calculator.execute()
-        calculator.post_execute()
-        calculator.clean_up()
 
 
 def import_job_profile(path_to_cfg, job, user_name='openquake',
