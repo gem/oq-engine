@@ -75,6 +75,7 @@
             <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
             <!-- For the case of a 'complete logic tree' SES; there is just a single SES in the entire file. -->
             <xs:element name="stochasticEventSet" type="StochasticEventSet" />
+            <xs:element ref="hazardMap" />
         </xs:choice>
     </xs:complexType>
 </xs:schema>
