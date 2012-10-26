@@ -14,11 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy
 import unittest
 
 from risklib import api
-from risklib import curve
 from risklib.models import input
 from risklib import vulnerability_function
 
