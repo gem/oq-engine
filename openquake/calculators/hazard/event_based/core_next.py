@@ -458,7 +458,7 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
     rnd.seed(hc.random_seed)
 
     realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc, is_complete=False)
+            hazard_calculation=hc, is_complete=False).order_by('id')
 
     result_grp_ordinal = 1
     for lt_rlz in realizations:
