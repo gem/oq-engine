@@ -1673,7 +1673,7 @@ class GmfSet(djm.Model):
                 .filter(
                     gmf_collection__output__oq_job=job,
                     gmf_collection__lt_realization__isnull=False)\
-                .order_by('gmf_collection', 'ses_ordinal')
+                .order_by('id')
             for gmf in itertools.chain(*lt_gmf_sets):
                 yield gmf
         else:
