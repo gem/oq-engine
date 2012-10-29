@@ -29,6 +29,8 @@ from openquake.db import models
 from openquake.utils import config
 
 
+DEFAULT_STATS_DB = 15
+
 # Predefined kvs keys for calculator progress/statistics counters.
 # Calculators will maintain totals/incremental counter values of interest.
 # These can be used to provide feedback to the user and/or terminate the
@@ -180,7 +182,7 @@ def _redis():
     port = config.get("kvs", "port")
     port = int(port) if port else 6379
     stats_db = config.get("kvs", "stats_db")
-    stats_db = int(stats_db) if stats_db else 15
+    stats_db = int(stats_db) if stats_db else DEFAULT_STATS_DB
     args = {"host": host, "port": port, "db": stats_db}
     return redis.Redis(**args)
 
