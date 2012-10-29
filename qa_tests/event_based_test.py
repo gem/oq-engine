@@ -107,7 +107,6 @@ class EventBasedTestCase(unittest.TestCase):
                                     0.0127434402, 0.0163844231, 0.0200254060,
                                     0.0236663889, 0.0273073718, 0.0309483547]
 
-
         expected_losses_a2_lc = [3.6409829079, 10.9229487236, 18.2049145394,
                                  25.4868803551, 32.7688461709, 40.0508119866,
                                  47.3327778023, 54.6147436181, 61.8967094338]
@@ -180,12 +179,12 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0001, 0.0001, 0.0001, 0.0001,0.0001], "BT"))
+                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT"))
 
         vulnerability_function_rc = (
             vulnerability_function.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0001, 0.0001, 0.0001, 0.0001,0.0001], "BT"))
+                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT"))
 
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
@@ -195,7 +194,7 @@ class EventBasedTestCase(unittest.TestCase):
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
 
         asset_output = peb_conditional_losses(
-            input.Asset("a1", "RM", 3000,None),
+            input.Asset("a1", "RM", 3000, None),
             {"IMLs": GROUND_MOTION_VALUES_A1_BD, "TSES": 2500, "TimeSpan": 50})
 
         expected_loss_map = 73.8279109206
@@ -203,7 +202,7 @@ class EventBasedTestCase(unittest.TestCase):
             asset_output.conditional_losses[0.99],
             delta=0.05 * expected_loss_map)
 
-        expected_poes_a1 = [ 1.0, 0.601480958915, 0.147856211034,
+        expected_poes_a1 = [1.0, 0.601480958915, 0.147856211034,
                              0.130641764601, 0.113079563283, 0.0768836536134,
                              0.0768836536134, 0.0198013266932, 0.0198013266932]
 
@@ -378,9 +377,8 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_losses_a1_lc, asset_output.insured_loss_curve.x_values)
 
-
         asset_output = peb_insured_curves(
-            input.Asset("a2", "RC", 2000, None, ins_limit=15, deductible=50),
+            input.Asset("a2", "RC", 2000, None, ins_limit=50, deductible=15),
             {"IMLs": GROUND_MOTION_VALUES_A2_IL, "TSES": 50, "TimeSpan": 50})
 
         expected_poes_a2 = [0.999999887469239, 0.999999887472202,
@@ -400,7 +398,6 @@ class EventBasedTestCase(unittest.TestCase):
                                  25, 30.5555555555556, 36.1111111111111,
                                  41.6666666666667, 47.2222222222222]
 
-        """
         self.assert_allclose(
             expected_poes_a2, asset_output.insured_loss_ratio_curve.y_values)
 
@@ -413,7 +410,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assert_allclose(
             expected_losses_a2_lc, asset_output.insured_loss_curve.x_values)
-        """
+
         asset_output = peb_insured_curves(
             input.Asset("a3", "RM", 1000, None, ins_limit=24, deductible=13),
             {"IMLs": GROUND_MOTION_VALUES_A3_IL, "TSES": 50, "TimeSpan": 50})
@@ -433,7 +430,6 @@ class EventBasedTestCase(unittest.TestCase):
         expected_losses_a3_lc = [1.33333333333333, 4, 6.66666666666667,
                                  9.33333333333333, 12, 14.6666666666667,
                                  17.3333333333333, 20, 22.6666666666667]
-
 
         self.assert_allclose(
             expected_poes_a3, asset_output.insured_loss_ratio_curve.y_values)
