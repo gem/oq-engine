@@ -22,12 +22,26 @@ from risklib.models import input
 from risklib import vulnerability_function
 from risklib import event_based
 
-from qa_tests.event_based_test_data import (GROUND_MOTION_VALUES_A1,
-    GROUND_MOTION_VALUES_A2, GROUND_MOTION_VALUES_A3,
-    GROUND_MOTION_VALUES_A1_BD, GROUND_MOTION_VALUES_A2_BD,
-    GROUND_MOTION_VALUES_A3_BD, GROUND_MOTION_VALUES_A1_IL,
-    GROUND_MOTION_VALUES_A2_IL, GROUND_MOTION_VALUES_A3_IL)
+import os, csv, collections
 
+THISDIR = os.path.dirname(__file__)
+
+def read_vectors_from_csv(name, dirname=THISDIR):
+    "Read columns of floats and return a namedtuple of vectors"
+    fullname = os.path.join(dirname, name + '.csv')
+    with open(fullname) as f:
+        reader = csv.reader(f)
+        header = reader.next()
+        record = collections.namedtuple(name, header)
+        lists = [[] for _ in range(len(header))]
+        for row in reader:
+            for i, col in enumerate(header):
+                lists[i].append(float(row[i]))
+        return record(*lists)
+
+gmf = read_vectors_from_csv('gmf')
+gmf_bd = read_vectors_from_csv('gmf_bd')
+gmf_il = read_vectors_from_csv('gmf_il')
 
 class EventBasedTestCase(unittest.TestCase):
 
@@ -55,7 +69,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a1", "RM", 3000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A1, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf.a1, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 78.1154725900
         self.assertAlmostEqual(expected_loss_map,
@@ -92,7 +106,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a2", "RC", 2000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A2, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf.a2, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 36.2507008221
         self.assertAlmostEqual(expected_loss_map,
@@ -125,7 +139,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a3", "RM", 1000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A3, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf.a3, "TSES": 50, "TimeSpan": 50})
 
         expected_loss_map = 23.4782545574
         self.assertAlmostEqual(expected_loss_map,
@@ -195,7 +209,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a1", "RM", 3000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A1_BD, "TSES": 2500, "TimeSpan": 50})
+            {"IMLs": gmf_bd.a1, "TSES": 2500, "TimeSpan": 50})
 
         expected_loss_map = 73.8279109206
         self.assertAlmostEqual(expected_loss_map,
@@ -232,7 +246,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a2", "RC", 2000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A2_BD, "TSES": 2500, "TimeSpan": 50})
+            {"IMLs": gmf_bd.a2, "TSES": 2500, "TimeSpan": 50})
 
         expected_loss_map = 25.2312514028
         self.assertAlmostEqual(expected_loss_map,
@@ -267,7 +281,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_conditional_losses(
             input.Asset("a3", "RM", 1000, None),
-            {"IMLs": GROUND_MOTION_VALUES_A3_BD, "TSES": 2500, "TimeSpan": 50})
+            {"IMLs": gmf_bd.a3, "TSES": 2500, "TimeSpan": 50})
 
         expected_loss_map = 29.7790495007
         self.assertAlmostEqual(expected_loss_map,
@@ -342,7 +356,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_insured_curves(
             input.Asset("a1", "RM", 3000, None, ins_limit=125, deductible=40),
-            {"IMLs": GROUND_MOTION_VALUES_A1_IL, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf_il.a1, "TSES": 50, "TimeSpan": 50})
 
         expected_poes_a1 = [0.999999999241817, 0.999999999241756,
                             0.999999999241818, 0.999999994397740,
@@ -379,7 +393,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_insured_curves(
             input.Asset("a2", "RC", 2000, None, ins_limit=50, deductible=15),
-            {"IMLs": GROUND_MOTION_VALUES_A2_IL, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf_il.a2, "TSES": 50, "TimeSpan": 50})
 
         expected_poes_a2 = [0.999999887469239, 0.999999887472202,
                             0.999999887466752,	0.999997739830177,
@@ -413,7 +427,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         asset_output = peb_insured_curves(
             input.Asset("a3", "RM", 1000, None, ins_limit=24, deductible=13),
-            {"IMLs": GROUND_MOTION_VALUES_A3_IL, "TSES": 50, "TimeSpan": 50})
+            {"IMLs": gmf_il.a3, "TSES": 50, "TimeSpan": 50})
 
         expected_poes_a3 = [0.999999999994891, 0.999999999994891,
                             0.999999999994891, 0.999999999994891,
