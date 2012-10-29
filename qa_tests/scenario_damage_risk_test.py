@@ -14,11 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
+import unittest, numpy
 from risklib import api
 from risklib.models import input
 
 class ScenarioDamageRiskTestCase(unittest.TestCase):
+
+    def assert_allclose(self, expected, actual):
+        return numpy.testing.assert_allclose(
+            expected, actual, atol=0.0, rtol=1E-7)
 
     hazard = dict(
         a1 = [0.17111044666642075, 0.3091294488722627, 0.15769192850594427,
@@ -61,8 +65,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [1562.6067550208, 1108.0189275488, 329.3743174305]
         stdev = [968.93502576, 652.7358505746, 347.3929450270]
         cmap = (329.3743174305, 347.3929450270)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         out = calculator(
             input.Asset("a3", "RM", 1000, None, number_of_units=1000), 
@@ -70,8 +74,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [417.3296948271, 387.2084383654, 195.4618668074]
         stdev = [304.4769498434, 181.1415598664, 253.91309010185]
         cmap = (195.4618668074, 253.9130901018)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         out = calculator(
             input.Asset("a2", "RC", 2000, None, number_of_units=2000), 
@@ -79,8 +83,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [56.7201291212, 673.1047565606, 1270.1751143182]
         stdev = [117.7802813522, 485.2023172324, 575.8724057319]
         cmap = (1270.1751143182, 575.8724057319)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         # TODO: check the aggregations
 
@@ -110,8 +114,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [875.81078203, 1448.29628694, 675.89293103]
         stdev = [757.54019289, 256.15319254, 556.76593931]
         cmap = (675.89293102729573, 556.76593931180378)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         out = calculator(
             input.Asset("a3", "RM", 1000, None, number_of_units=1000), 
@@ -119,8 +123,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [224.4178072, 465.64396155, 309.93823125]
         stdev = [220.65161409, 136.92817619, 246.84424913]
         cmap = (309.93823125141324, 246.84424912551529)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         out = calculator(
             input.Asset("a2", "RC", 2000, None, number_of_units=2000), 
@@ -128,71 +132,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         mean = [344.90849228, 747.62412976, 907.46737796]
         stdev = [300.61123079, 144.64852962, 417.30737837]
         cmap = (907.46737796377931, 417.30737836563844)
-        almost_equal(out.damage_distribution_asset, (mean, stdev))
-        almost_equal(out.collapse_map, cmap)
+        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
+        self.assert_allclose(out.collapse_map, cmap)
 
         # TODO: check the aggregations
-
-
-
-
-
-
-
-
-#################### the following must be put somewhere else ###############
-
-def almost_equal(a, b, precision=1E-7):
-    assert equal(a, b, precision), '%s != %s' % (str(a), str(b))
-
-def equal(f1, f2, precision, strip=None):
-    """
-    An utility to check if two numbers (or nested sequences of numbers)
-    are equal within a given precision. Here are few examples of usage:
-
-  >>> equal(1, 1, .001) # these numbers are exactly equal, so no problem
-  True
-
-  >>> equal(1, 1.1, .001) # these numbers are equal within 0.1% of precision
-  False
-
-  >>> equal(1, 1.0011, .001) # these numbers are NOT at 0.1% of precision
-  False
-
-  >>> equal(range(3), range(3), .1) # these sequences are exactly equals
-  True
-
-  >>> equal([0, 1, 2], [0, 1, 1.9], .01) # these sequences are not equals
-  False
-
-  Notice that 'equal' has a .last_args attributes that stores the last
-  arguments passed to it; in this case
-
-  >>> equal.last_args #doctest: +ELLIPSIS
-  (2, 1.899999999..., 0.01)
-
-  >>> equal([1, [2,3]], [1, [2, 3]], .01)
-  True
-
-  If the sequences are not homogenous, you get a ValueError:
-
-  >>> equal([1, [2,3]], [1, [2]], .01)
-  Traceback (most recent call last):
-    ...
-  ValueError: Sequences of different length
-    """
-    equal.last_args = f1, f2, precision
-    if hasattr(f1, '__iter__'):
-        if len(f1) != len(f2):
-            raise ValueError('Sequences of different length')
-        return all(equal(e1, e2, precision, strip) for (e1, e2) in zip(f1, f2))
-    elif not isinstance(f1, float):
-        if strip and isinstance(f1, basestring) and isinstance(f2, basestring):
-            return f1.strip(strip) == f2.strip(strip)
-        return f1 == f2
-    elif f1 == f2 or abs(f1 - f2)/abs(f1 + f2) * 2 < precision \
-            or abs(f1 - f2) < 1e-12:
-        return True
-    else:
-        return False
-
