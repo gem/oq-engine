@@ -43,12 +43,21 @@ __KVS_CONN_POOL = None
 
 # pylint: disable=W0603
 def get_client(**kwargs):
-    """Return a redis kvs client connection object."""
+    """
+    Return a redis kvs client connection for general OpenQuake engine
+    calculation usage..
+
+    PLEASE NOTE: The 'db' argument is automatically read from the openquake.cfg
+    and set. If specified in ``kwargs``, it will be overridden with the setting
+    in openquake.cfg.
+    """
     global __KVS_CONN_POOL
     if __KVS_CONN_POOL is None:
         cfg = config.get_section("kvs")
+        # get the default db from the openquake.cfg:
+        db = int(config.get('kvs', 'redis_db'))
         __KVS_CONN_POOL = redis.ConnectionPool(
-            max_connections=1, host=cfg["host"], port=int(cfg["port"]))
+            max_connections=1, host=cfg["host"], port=int(cfg["port"]), db=db)
     kwargs.update({"connection_pool": __KVS_CONN_POOL})
     return redis.Redis(**kwargs)
 
