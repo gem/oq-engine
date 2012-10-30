@@ -18,11 +18,11 @@ import unittest, numpy
 from risklib import api
 from risklib.models import input
 
-class ScenarioDamageRiskTestCase(unittest.TestCase):
+def assert_close(expected, actual):
+    return numpy.testing.assert_allclose(
+        expected, actual, atol=0.0, rtol=1E-7)
 
-    def assert_allclose(self, expected, actual):
-        return numpy.testing.assert_allclose(
-            expected, actual, atol=0.0, rtol=1E-7)
+class ScenarioDamageRiskTestCase(unittest.TestCase):
 
     hazard = dict(
         a1 = [0.17111044666642075, 0.3091294488722627, 0.15769192850594427,
@@ -39,9 +39,18 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
               0.45975761535464116],
         )
     
+    def assert_ok(self, asset_output, expected_means, expected_stdevs):
+        # a scenario_damage calculator returns:
+        # 1. the damage_distribution, i.e. (means, stdevs) for all damage states
+        # 2. the collapse_map, i.e. (mean, stdev) of the highest damage state
+        assert_close(asset_output.damage_distribution_asset,
+                     (expected_means, expected_stdevs))
+        assert_close(asset_output.collapse_map,
+                     (expected_means[-1], expected_stdevs[-1]))
+
     def test_continuous_ff(self):
         fragility_model = input.FragilityModel(
-            "continuous", None, ["LS1", "LS2"]) ## IMLs??
+            "continuous", None, ["LS1", "LS2"])
 
         fragility_functions = dict(
             RC = [
@@ -59,32 +68,26 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         calculator = api.scenario_damage(fragility_model, fragility_functions)
  
-        out = calculator(
+        asset_output = calculator(
             input.Asset("a1", "RM", 3000, None, number_of_units=3000), 
             self.hazard['a1'])
-        mean = [1562.6067550208, 1108.0189275488, 329.3743174305]
-        stdev = [968.93502576, 652.7358505746, 347.3929450270]
-        cmap = (329.3743174305, 347.3929450270)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
+        expected_means = [1562.6067550208, 1108.0189275488, 329.3743174305]
+        expected_stdevs = [968.93502576, 652.7358505746, 347.3929450270]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
 
-        out = calculator(
+        asset_output = calculator(
             input.Asset("a3", "RM", 1000, None, number_of_units=1000), 
             self.hazard['a3'])
-        mean = [417.3296948271, 387.2084383654, 195.4618668074]
-        stdev = [304.4769498434, 181.1415598664, 253.91309010185]
-        cmap = (195.4618668074, 253.9130901018)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
-
-        out = calculator(
+        expected_means = [417.3296948271, 387.2084383654, 195.4618668074]
+        expected_stdevs = [304.4769498434, 181.1415598664, 253.91309010185]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
+       
+        asset_output = calculator(
             input.Asset("a2", "RC", 2000, None, number_of_units=2000), 
             self.hazard['a2'])
-        mean = [56.7201291212, 673.1047565606, 1270.1751143182]
-        stdev = [117.7802813522, 485.2023172324, 575.8724057319]
-        cmap = (1270.1751143182, 575.8724057319)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
+        expected_means = [56.7201291212, 673.1047565606, 1270.1751143182]
+        expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
 
         # TODO: check the aggregations
 
@@ -108,31 +111,25 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         calculator = api.scenario_damage(fragility_model, fragility_functions)
  
-        out = calculator(
+        asset_output = calculator(
             input.Asset("a1", "RM", 3000, None, number_of_units=3000), 
             self.hazard['a1'])
-        mean = [875.81078203, 1448.29628694, 675.89293103]
-        stdev = [757.54019289, 256.15319254, 556.76593931]
-        cmap = (675.89293102729573, 556.76593931180378)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
+        expected_means = [875.81078203, 1448.29628694, 675.89293103]
+        expected_stdevs = [757.54019289, 256.15319254, 556.76593931]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
 
-        out = calculator(
+        asset_output = calculator(
             input.Asset("a3", "RM", 1000, None, number_of_units=1000), 
             self.hazard['a3'])
-        mean = [224.4178072, 465.64396155, 309.93823125]
-        stdev = [220.65161409, 136.92817619, 246.84424913]
-        cmap = (309.93823125141324, 246.84424912551529)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
+        expected_means = [224.4178072, 465.64396155, 309.93823125]
+        expected_stdevs = [220.65161409, 136.92817619, 246.84424913]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
 
-        out = calculator(
+        asset_output = calculator(
             input.Asset("a2", "RC", 2000, None, number_of_units=2000), 
             self.hazard['a2'])
-        mean = [344.90849228, 747.62412976, 907.46737796]
-        stdev = [300.61123079, 144.64852962, 417.30737837]
-        cmap = (907.46737796377931, 417.30737836563844)
-        self.assert_allclose(out.damage_distribution_asset, (mean, stdev))
-        self.assert_allclose(out.collapse_map, cmap)
+        expected_means = [344.90849228, 747.62412976, 907.46737796]
+        expected_stdevs = [300.61123079, 144.64852962, 417.30737837]
+        self.assert_ok(asset_output, expected_means, expected_stdevs)
 
         # TODO: check the aggregations

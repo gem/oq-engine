@@ -341,7 +341,7 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
-    if not gmf_set["IMLs"]:
+    if len(gmf_set["IMLs"]) == 0: # works for numpy arrays too
         return curve.EMPTY_CURVE
 
     if loss_ratios is None:

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os, collections
 import unittest
 import numpy
 
@@ -21,27 +22,13 @@ from risklib import api
 from risklib.models import input
 from risklib import vulnerability_function
 from risklib import event_based
-
-import os, csv, collections
+from risklib.tests.utils import vectors_from_csv
 
 THISDIR = os.path.dirname(__file__)
 
-def read_vectors_from_csv(name, dirname=THISDIR):
-    "Read columns of floats and return a namedtuple of vectors"
-    fullname = os.path.join(dirname, name + '.csv')
-    with open(fullname) as f:
-        reader = csv.reader(f)
-        header = reader.next()
-        record = collections.namedtuple(name, header)
-        lists = [[] for _ in range(len(header))]
-        for row in reader:
-            for i, col in enumerate(header):
-                lists[i].append(float(row[i]))
-        return record(*lists)
-
-gmf = read_vectors_from_csv('gmf')
-gmf_bd = read_vectors_from_csv('gmf_bd')
-gmf_il = read_vectors_from_csv('gmf_il')
+gmf = vectors_from_csv('gmf', THISDIR)
+gmf_bd = vectors_from_csv('gmf_bd', THISDIR)
+gmf_il = vectors_from_csv('gmf_il', THISDIR)
 
 Triplet = collections.namedtuple('Triplet', 'a1 a2 a3')
 

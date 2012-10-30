@@ -17,7 +17,7 @@
 import mock
 import unittest
 
-from tests import utils
+from risklib.tests import utils
 from risklib.models import input, output
 from risklib import api, curve, vulnerability_function
 

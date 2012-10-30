@@ -14,13 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
+import os, unittest
 
 from risklib import api
 from risklib import scenario
 from risklib.models import input
 from risklib import vulnerability_function
-from qa_tests import scenario_risk_test_data
+from risklib.tests.utils import vectors_from_csv
+
+THISDIR = os.path.dirname(__file__)
+
+gmv = vectors_from_csv('gmv', THISDIR)
 
 def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0)):
     return vulnerability_function.VulnerabilityFunction(
@@ -28,12 +32,12 @@ def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0)):
 
 class ScenarioRiskTestCase(unittest.TestCase):
 
-    _vulnerability_model_mean = dict(
+    vulnerability_model_mean = dict(
         RM=vf([0.05, 0.1, 0.2, 0.4, 0.8]),
         RC=vf([0.035, 0.07, 0.14, 0.28, 0.56])
         )
 
-    _hazard_mean = dict(
+    hazard_mean = dict(
         a1=[0.17111044666642075, 0.3091294488722627,
             0.15769192850594427, 0.33418745728229904,
             0.1744414801203893, 0.29182607890936946,
@@ -53,11 +57,11 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
     def test_mean_based(self):
         calculator = api.scenario_risk(
-            self._vulnerability_model_mean, None, None)
+            self.vulnerability_model_mean, None, None)
 
         asset_output = calculator(
             input.Asset("a1", "RM", 3000, None),
-            self._hazard_mean["a1"])
+            self.hazard_mean["a1"])
 
         self.assertAlmostEqual(440.147078317589,
             asset_output.mean)
@@ -67,7 +71,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         asset_output = calculator(
             input.Asset("a3", "RM", 1000, None),
-            self._hazard_mean["a3"])
+            self.hazard_mean["a3"])
 
         self.assertAlmostEqual(180.717534009275,
             asset_output.mean)
@@ -77,7 +81,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         asset_output = calculator(
             input.Asset("a2", "RC", 2000, None),
-            self._hazard_mean["a2"])
+            self.hazard_mean["a2"])
 
         self.assertAlmostEqual(432.225448142534,
             asset_output.mean)
@@ -101,8 +105,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
             correlation_type=None)
 
         asset_output = calculator(
-            input.Asset("a1", "RM", 3000, None),
-            scenario_risk_test_data.GROUND_MOTION_VALUES_A1)
+            input.Asset("a1", "RM", 3000, None), gmv.a1)
 
         self.assertAlmostEqual(521.885458891, asset_output.mean,
             delta=0.05 * 521.885458891)
@@ -110,8 +113,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         self.assertTrue(asset_output.standard_deviation > 244.825980356)
 
         asset_output = calculator(
-            input.Asset("a3", "RM", 1000, None),
-            scenario_risk_test_data.GROUND_MOTION_VALUES_A3)
+            input.Asset("a3", "RM", 1000, None), gmv.a3)
 
         self.assertAlmostEqual(200.54874638, asset_output.mean,
             delta=0.05 * 200.54874638)
@@ -119,8 +121,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         self.assertTrue(asset_output.standard_deviation > 94.2302991022)
 
         asset_output = calculator(
-            input.Asset("a2", "RC", 2000, None),
-            scenario_risk_test_data.GROUND_MOTION_VALUES_A2)
+            input.Asset("a2", "RC", 2000, None), gmv.a2)
 
         self.assertAlmostEqual(510.821363253, asset_output.mean,
             delta=0.05 * 510.821363253)
@@ -137,13 +138,13 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
     def test_insured_losses_mean(self):
         calculator = api.scenario_risk(
-            self._vulnerability_model_mean,
+            self.vulnerability_model_mean,
             None, None, insured=True)
 
         asset_output = calculator(
             input.Asset("a1", "RM", 3000, None,
             deductible=300, ins_limit=600),
-            self._hazard_mean["a1"])
+            self.hazard_mean["a1"])
 
         self.assertAlmostEqual(327.492087529, asset_output.mean)
 
@@ -153,7 +154,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         asset_output = calculator(
             input.Asset("a3", "RM", 1000, None,
             deductible=100, ins_limit=300),
-            self._hazard_mean["a3"])
+            self.hazard_mean["a3"])
 
         self.assertAlmostEqual(156.750910806, asset_output.mean)
 
@@ -163,7 +164,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         asset_output = calculator(
             input.Asset("a2", "RC", 2000, None,
             deductible=350, ins_limit=800),
-            self._hazard_mean["a2"])
+            self.hazard_mean["a2"])
 
         self.assertAlmostEqual(314.859579324, asset_output.mean)
 

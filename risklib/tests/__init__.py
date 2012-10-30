@@ -13,10 +13,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-
-def new(tuple_type, **kwargs):
-    params = dict.fromkeys(tuple_type._fields)
-    params.update(kwargs)
-
-    return tuple_type(**params)
