@@ -20,12 +20,10 @@ Database related unit tests for hazard computations with the hazard engine.
 """
 
 import itertools
-import mock
 import string
 import unittest
 
 from openquake import writer
-from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
 
 
@@ -110,14 +108,6 @@ class SMWrapper(object):
         return self.func(*args, **kwargs)
 
 
-class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for openquake.output.hazard.create_gmf_writer()."""
-
-    create_function = SMWrapper(hazard_output.create_gmf_writer)
-    xml_writer_class = hazard_output.GMFXMLWriter
-    db_writer_class = hazard_output.GmfDBWriter
-
-
 class CreateRiskWriterTest(unittest.TestCase):
 
     def test_loss_curve_writer_creation(self):
@@ -161,101 +151,3 @@ class CreateRiskWriterTest(unittest.TestCase):
 
         self.assertEqual(type(writer),
                 risk_output.LossMapDBWriter)
-
-
-class CreateWriterTestCase(unittest.TestCase):
-    """Tests the behaviour of output.hazard._create_writer()."""
-
-    class _FDS(object):
-        """Fake DB serializer class to be used for testing."""
-        def __init__(self, identifier):
-            self.identifier = identifier
-
-        def __call__(self):
-            """Return the `identifier` so we can compare and test."""
-            return self.identifier
-
-    class _FXS(_FDS):
-        """Fake XML serializer class to be used for testing."""
-        def set_mode(self, _mode):
-            """Will be invoked by the function under test."""
-            pass
-
-    jobs = itertools.count(20)
-    files = itertools.cycle(string.ascii_lowercase)
-    dbs = itertools.count(1000)
-    xmls = itertools.count(2000)
-
-    def _init_curve(self):
-        # Constructor for DB serializer.
-        self.d = mock.Mock(spec=hazard_output.HazardCurveDBWriter)
-        self.d.side_effect = lambda _p1, _p2: self._FDS(self.dbs.next())
-        # Constructor for XML serializer.
-        self.x = mock.Mock(spec=hazard_output.HazardCurveXMLWriter)
-        self.x.side_effect = lambda _p1: self._FXS(self.xmls.next())
-
-    def _init_map(self):
-        # Constructor for DB serializer.
-        self.d = mock.Mock(spec=hazard_output.HazardMapDBWriter)
-        self.d.side_effect = lambda _p1, _p2: self._FDS(self.dbs.next())
-        # Constructor for XML serializer.
-        self.x = mock.Mock(spec=hazard_output.HazardMapXMLWriter)
-        self.x.side_effect = lambda _p1: self._FXS(self.xmls.next())
-
-    def test__create_writer_with_db_only_and_curve(self):
-        """Only the db writer is created."""
-        self._init_curve()
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db"], self.files.next(), self.x, self.d)
-        self.assertEqual(0, self.x.call_count)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(self.dbs.next() - 1, result())
-
-    def test__create_writer_with_db_only_and_map(self):
-        """Only the db writer is created."""
-        self._init_map()
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db"], self.files.next(), self.x, self.d)
-        self.assertEqual(0, self.x.call_count)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(self.dbs.next() - 1, result())
-
-    def test__create_writers_with_single_stage_and_curve(self):
-        """
-        Both serializers are created, no caching of the XML serializers.
-        """
-        self._init_curve()
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
-                         [rw() for rw in result.writers])
-        # Next time we call the method under test it will invoke the
-        # constructors and the serializers returned are different.
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(2, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
-                         [rw() for rw in result.writers])
-
-    def test__create_writers_with_single_stage_and_map(self):
-        """
-        Both serializers are created, no caching of the XML serializers.
-        """
-        self._init_map()
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
-                         [rw() for rw in result.writers])
-        # Next time we call the method under test it will invoke the
-        # constructors and the serializers returned are different.
-        result = hazard_output._create_writer(
-            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(2, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
-                         [rw() for rw in result.writers])

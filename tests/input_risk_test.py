@@ -20,14 +20,9 @@
 import unittest
 import os
 
-from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.event_based.core import (
-    EventBasedRiskCalculator)
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.input.fragility import FragilityDBWriter
-from openquake.output.hazard import GmfDBWriter
-from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposureModelFile
 from openquake.parser.fragility import FragilityModelParser
 from openquake.shapes import Site
@@ -115,114 +110,6 @@ def GMF_DATA():
             Site(-117, 41): {'groundMotion': 1.3},
         },
     ]
-
-
-@unittest.skip
-class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
-    """
-    Test the code to read hazard curves from DB.
-    """
-    def setUp(self):
-        self.job = self.setup_classic_job()
-        output_path = self.generate_output_path(self.job,
-                                                output_type="hazard_curve")
-        hcw = HazardCurveDBWriter(output_path, self.job.id)
-        hcw.serialize(HAZARD_CURVE_DATA())
-        output_path = self.generate_output_path(self.job,
-                                                output_type="hazard_curve")
-        hcw = HazardCurveDBWriter(output_path, self.job.id)
-        hcw.serialize(MEAN_CURVE_DATA())
-        output_path = self.generate_output_path(self.job,
-                                                output_type="hazard_curve")
-        hcw = HazardCurveDBWriter(output_path, self.job.id)
-        hcw.serialize(QUANTILE_CURVE_DATA())
-
-    def tearDown(self):
-        if hasattr(self, "job") and self.job:
-            self.teardown_job(self.job)
-        if hasattr(self, "output") and self.output:
-            self.teardown_output(self.output)
-
-    def test_read_curve(self):
-        """Verify _get_db_curve."""
-        the_job = helpers.create_job({}, job_id=self.job.id)
-        calculator = ClassicalRiskCalculator(the_job)
-
-        curve1 = calculator._get_db_curve(Site(-122.2, 37.5))
-        self.assertEqual(list(curve1.abscissae),
-                          [0.005, 0.007, 0.0098, 0.0137])
-        self.assertEqual(list(curve1.ordinates),
-                          [0.354, 0.114, 0.023, 0.002])
-
-        curve2 = calculator._get_db_curve(Site(-122.1, 37.5))
-        self.assertEqual(list(curve2.abscissae),
-                          [0.005, 0.007, 0.0098, 0.0137])
-        self.assertEqual(list(curve2.ordinates),
-                          [0.454, 0.214, 0.123, 0.102])
-
-
-class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
-    """
-    Test the code to read the ground motion fields from DB.
-    """
-    def setUp(self):
-        self.job = self.setup_classic_job()
-        for gmf in GMF_DATA():
-            output_path = self.generate_output_path(self.job)
-            hcw = GmfDBWriter(output_path, self.job.id)
-            hcw.serialize(gmf)
-
-    def tearDown(self):
-        if hasattr(self, "job") and self.job:
-            self.teardown_job(self.job)
-        if hasattr(self, "output") and self.output:
-            self.teardown_output(self.output)
-
-    def test_site_keys(self):
-        """Verify _sites_to_gmf_keys"""
-        params = {
-            'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
-            'REGION_GRID_SPACING': '1.0'}
-
-        the_job = helpers.create_job(params, job_id=self.job.id)
-        calculator = EventBasedRiskCalculator(the_job)
-
-        keys = calculator._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
-
-        self.assertEqual(["0!0", "2!1"], keys)
-
-    def test_read_gmfs(self):
-        """Verify _get_db_gmfs."""
-        params = {
-            'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
-            'REGION_GRID_SPACING': '1.0'}
-
-        the_job = helpers.create_job(params, job_id=self.job.id)
-        calculator = EventBasedRiskCalculator(the_job)
-
-        self.assertEqual(3, len(calculator._gmf_db_list(self.job.id)))
-
-        # only the keys in gmfs are used
-        gmfs = calculator._get_db_gmfs([], self.job.id)
-        self.assertEqual({}, gmfs)
-
-        # only the keys in gmfs are used
-        sites = [Site(lon, lat)
-                        for lon in xrange(-117, -115)
-                        for lat in xrange(40, 43)]
-        gmfs = calculator._get_db_gmfs(sites, self.job.id)
-        # avoid rounding errors
-        for k, v in gmfs.items():
-            gmfs[k] = [round(i, 1) for i in v]
-
-        self.assertEqual({
-                '0!0': [0.1, 0.5, 0.0],
-                '0!1': [0.2, 0.6, 0.0],
-                '1!0': [0.4, 0.8, 1.3],
-                '1!1': [0.3, 0.7, 1.2],
-                '2!0': [0.0, 0.0, 1.0],
-                '2!1': [0.0, 0.0, 1.1],
-                }, gmfs)
 
 
 class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
