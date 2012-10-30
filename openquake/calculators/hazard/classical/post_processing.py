@@ -277,3 +277,38 @@ def do_post_process(job_id, post_processing_task):
     # pylint: disable=W0142
     func(*func_args)
 do_post_process.ignore_result = False
+
+
+def compute_hazard_map(curves, imls, poes):
+    """
+    Given a set of hazard curve poes, interpolate a hazard map at the specified
+    ``poe``.
+
+    :param curves:
+        2D array of floats. Each row represents a curve, where the values
+        in the row are the PoEs (Probabilities of Exceedance) corresponding to
+        ``imls``.
+
+    :param imls:
+    :param float poes:
+
+    :returns:
+        Numpy array of IML (Intensity Measure Level) values, one value for each
+        input curve.
+    """
+    try:
+        # if ``poes`` is a list of one element, unpack it to a scalar value
+        if len(poes) == 1:
+            [poes] = poes
+    except TypeError:
+        # We'll get a `TypeError` if ``poes`` is already a scalar.
+        pass
+
+    result = []
+    imls = numpy.array(imls[::-1])
+
+    for curve in curves:
+        hmap_val = numpy.interp(poes, curve[::-1], imls)
+        result.append(hmap_val)
+
+    return numpy.array(result).transpose()
