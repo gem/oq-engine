@@ -1258,28 +1258,29 @@ class HazardMap(djm.Model):
     Hazard Map header (information which pertains to entire map)
     '''
     output = djm.ForeignKey('Output')
-    poe = djm.FloatField()
+    # FK only required for non-statistical results (i.e., mean or quantile
+    # curves).
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    investigation_time = djm.FloatField()
+    imt = djm.TextField(choices=IMT_CHOICES)
+    imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
         (u'quantile', u'Quantile'),
     )
-    statistic_type = djm.TextField(choices=STAT_CHOICES)
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    poe = djm.FloatField()
+    # lons, lats, and imls are stored as numpy arrays with a uniform size and
+    # shape
+    lons = fields.PickleField()
+    lats = fields.PickleField()
+    imls = fields.PickleField()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
-
-
-class HazardMapData(djm.Model):
-    '''
-    Hazard Map data (data for a single point in the map)
-    '''
-    hazard_map = djm.ForeignKey('HazardMap')
-    value = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'hzrdr\".\"hazard_map_data'
 
 
 def parse_imt(imt):
