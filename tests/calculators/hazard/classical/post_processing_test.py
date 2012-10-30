@@ -425,7 +425,7 @@ class HazardMapsTestCase(unittest.TestCase):
         imls = [0.005, 0.007, 0.0098]
         poe = 0.2
 
-        expected = [0.0091, 0.00687952, 0.0098, 0.005, 0.007]
+        expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
         actual = compute_hazard_map(curves, imls, poe)
         aaae(expected, actual)
@@ -443,7 +443,7 @@ class HazardMapsTestCase(unittest.TestCase):
         imls = [0.005, 0.007, 0.0098]
         poe = [0.2]
 
-        expected = [0.0091, 0.00687952, 0.0098, 0.005, 0.007]
+        expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
         actual = compute_hazard_map(curves, imls, poe)
         aaae(expected, actual)
