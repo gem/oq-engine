@@ -6,53 +6,35 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
-
-    <xs:element name="hazardMap" type="HazardMap" substitutionGroup="gml:_Feature"/>
+    <xs:element name="hazardMap" type="HazardMap" />
     <xs:complexType name="HazardMap">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element ref="HMNode" minOccurs="1" maxOccurs="unbounded"/>
-                </xs:sequence>
-                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
-                <xs:attribute name="IMT" type="IMTType" use="required"/>
-                <xs:attribute name="endBranchLabel" type="xs:string"/>
-                <xs:attributeGroup ref="QuantileGroup"/>
-            </xs:extension>
-        </xs:complexContent>
+        <xs:sequence>
+            <xs:element name="node" type="HazardMapNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+        <!-- Probability of Exceedence for the map. This was the PoE for hazard curve
+             interpolation to produce this map. -->
+        <xs:attribute name="poE" type="NormalizedDoubleType" use="required" />
+
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+        <!-- Both tree paths are only used for representing curves for a single realization.
+             In other words, the paths are not relevent for statistical results (mean or quantile). -->
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
     </xs:complexType>
 
-    <xs:element name="HMNode" type="HMNodeType" substitutionGroup="fieldNode"/>
-    <xs:complexType name="HMNodeType">
-        <xs:complexContent>
-            <xs:extension base="HMFieldNode">
-                <xs:sequence>
-                    <xs:element name="IML" type="xs:double"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <xs:complexType name="HMFieldNode">
-        <xs:complexContent>
-            <xs:restriction base="FieldNode">
-                <xs:sequence>
-                    <xs:element ref="HMSite"/>
-                </xs:sequence>
-            </xs:restriction>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
-    <xs:complexType name="HMSiteType">
-        <xs:complexContent>
-            <xs:extension base="gml:PointPropertyType">
-                <xs:sequence>
-                    <xs:element name="vs30" type="PositiveDoubleType" minOccurs="0" maxOccurs="1"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:complexType name="HazardMapNode">
+        <xs:attribute name="iml" type="xs:float" use="required" />
+        <xs:attribute name="lon" type="xs:float" use="required" />
+        <xs:attribute name="lat" type="xs:float" use="required" />
     </xs:complexType>
 
 </xs:schema>
