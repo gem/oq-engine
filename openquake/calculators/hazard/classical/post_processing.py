@@ -287,22 +287,30 @@ def compute_hazard_map(curves, imls, poes):
     :param curves:
         2D array of floats. Each row represents a curve, where the values
         in the row are the PoEs (Probabilities of Exceedance) corresponding to
-        ``imls``.
-
+        ``imls``. Each curve corresponds to a geographical location.
     :param imls:
+        Intensity Measure Levels associated with these hazard ``curves``. Type
+        should be an array-like of floats.
     :param float poes:
+        Value(s) on which to interpolate a hazard map from the input
+        ``curves``. Can be an array-like or scalar value (for a single PoE).
 
     :returns:
-        Numpy array of IML (Intensity Measure Level) values, one value for each
-        input curve.
+        A 2D numpy array of hazard map data. Each element/row in the resulting
+        array represents the interpolated map for each ``poes`` value
+        specified. If ``poes`` is just a single scalar value, the result array
+        will have a length of 1.
+
+        The results are structure this way so it is easy to iterate over the
+        hazard map results, and in a consistent way (no matter how many
+        ``poes`` values are specified).
     """
-    try:
-        # if ``poes`` is a list of one element, unpack it to a scalar value
-        if len(poes) == 1:
-            [poes] = poes
-    except TypeError:
-        # We'll get a `TypeError` if ``poes`` is already a scalar.
-        pass
+    poes = numpy.array(poes)
+
+    if len(poes.shape) == 0:
+        # ``poes`` was passed in as a scalar;
+        # convert it to 1D array of 1 element
+        poes = poes.reshape(1)
 
     result = []
     imls = numpy.array(imls[::-1])
