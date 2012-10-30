@@ -44,27 +44,27 @@ def setup_tasks(job, calculation, curve_finder, writers,
     The setup of the output involves the creation of a aggregate
     result container object.
 
-    :param job
+    :param job:
       The job associated with this computation
 
-    :param calculation
+    :param calculation:
       An object holding the configuration of the calculation.
       It should implement the property intensity_measure_types_and_levels
       (returning a dictionary imt -> levels)
       the method #individual_curves_per_location
 
-    :param curve_finder
+    :param curve_finder:
       An object used to query for individual hazard curves.
       It should implement the methods #individual_curve_nr and
       #individual_curve_chunks and #get_weights
 
-    :param writers
+    :param writers:
       An dictionary of ResultWriters classes.
       A ResultWriter is a context manager that implement the method
       #add_data and #create_aggregate_result. It flushes the
       results when it exits from the generated context
 
-    :param locations_per_task
+    :param locations_per_task:
       Number of locations processed by each task in the post process
       phase (optional)
     """
@@ -129,13 +129,13 @@ def persite_result_decorator(func):
         :param chunk_of_curves is an object that implements the
           properties poes, weights, locations and curves_per_location
 
-        :param writer
+        :param writer:
           an object that can save the result.
 
-        :param use_weights
+        :param use_weights:
           True if weights should be passed to func
 
-        :param *args, *kwargs
+        :param *args, *kwargs:
           other arguments passed to the wrapped function
         """
 
@@ -182,7 +182,7 @@ def mean_curves(poe_matrix):
     """
     Calculate mean curves. Unweighted
 
-    :param poe_matrix
+    :param poe_matrix:
       a 3d matrix with shape given by (curves_per_location x
       number of locations x intensity measure levels)
     """
@@ -193,11 +193,11 @@ def mean_curves_weighted(poe_matrix, weights):
     """
     Calculate mean curves. Weighted version
 
-    :param poe_matrix
+    :param poe_matrix:
       a 3d matrix with shape given by (curves_per_location x
       number of locations x intensity measure levels)
 
-    :param weights
+    :param weights:
       a vector of weights with size equal to the number of
       curves per location
     """
@@ -208,11 +208,11 @@ def quantile_curves(poe_matrix, quantile):
     """
     Compute quantile curves. Unweighted version
 
-    :param poe_matrix
+    :param poe_matrix:
       a 3d matrix with shape given by (curves_per_location x
       number of locations x intensity measure levels)
 
-    :param quantile
+    :param quantile:
       The quantile considered by the computation
     """
 
@@ -228,15 +228,15 @@ def quantile_curves_weighted(poe_matrix, weights, quantile):
     """
     Compute quantile curves. Weighted version
 
-    :param poe_matrix
+    :param poe_matrix:
       a 3d matrix with shape given by (curves_per_location x
       number of locations x intensity measure levels)
 
-    :param weights
+    :param weights:
       a vector of weights with size equal to the number of
       curves per location
 
-    :param quantile
+    :param quantile:
       The quantile considered by the computation
     """
     # NOTE(LB): Weights might be passed as a list of `decimal.Decimal`
