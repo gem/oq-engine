@@ -25,6 +25,58 @@ SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
 
+def _validate_hc_hm_metadata(md):
+    """
+    Validate metadata `dict`, which is same for both hazard curves and hazard
+    maps.
+
+    :param dict md:
+        `dict` which can contain the following keys:
+
+        * statistics
+        * gsimlt_path
+        * smlt_path
+        * imt
+        * sa_period
+        * sa_damping
+
+    :raises:
+        :exc:`ValueError` if the metadata is not valid.
+    """
+    if (md.get('statistics') is not None
+        and (md.get('smlt_path') is not None
+             or md.get('gsimlt_path') is not None)):
+        raise ValueError('Cannot specify both `statistics` and logic tree '
+                         'paths')
+
+    if md.get('statistics') is not None:
+        # make sure only valid statistics types are specified
+        if md.get('statistics') not in ('mean', 'quantile'):
+            raise ValueError('`statistics` must be either `mean` or '
+                             '`quantile`')
+    else:
+        # must specify both logic tree paths
+        if md.get('smlt_path') is None or md.get('gsimlt_path') is None:
+            raise ValueError('Both logic tree paths are required for '
+                             'non-statistical results')
+
+    if md.get('statistics') == 'quantile':
+        if md.get('quantile_value') is None:
+            raise ValueError('quantile stastics results require a quantile'
+                             ' value to be specified')
+
+    if not md.get('statistics') == 'quantile':
+        if md.get('quantile_value') is not None:
+            raise ValueError('Quantile value must be specified with '
+                             'quantile statistics')
+
+    if md.get('imt') == 'SA':
+        if md.get('sa_period') is None:
+            raise ValueError('`sa_period` is required for IMT == `SA`')
+        if md.get('sa_damping') is None:
+            raise ValueError('`sa_damping` is required for IMT == `SA`')
+
+
 class HazardCurveXMLWriter(object):
     """
     :param path:
@@ -56,6 +108,9 @@ class HazardCurveXMLWriter(object):
         self.imt = imt
         self.imls = imls
 
+        metadata['imt'] = imt
+        _validate_hc_hm_metadata(metadata)
+
         self.statistics = metadata.get('statistics')
         self.quantile_value = metadata.get('quantile_value')
         self.smlt_path = metadata.get('smlt_path')
@@ -63,50 +118,9 @@ class HazardCurveXMLWriter(object):
         self.sa_period = metadata.get('sa_period')
         self.sa_damping = metadata.get('sa_damping')
 
-    def validate_metadata(self):
-        """
-        Validate the hazard curve collection metadata to ensure that meaningful
-        results are serialized.
-
-        :raises:
-            :exc:`ValueError` if the metadata is not valid.
-        """
-        if (self.statistics is not None
-            and (self.smlt_path is not None or self.gsimlt_path is not None)):
-            raise ValueError('Cannot specify both `statistics` and logic tree '
-                             'paths')
-
-        if self.statistics is None:
-            # must specify both logic tree paths
-            if self.smlt_path is None or self.gsimlt_path is None:
-                raise ValueError('Both logic tree paths are required for '
-                                 'non-statistical results')
-        else:
-            if self.statistics not in ('mean', 'quantile'):
-                raise ValueError('`statistics` must be either `mean` or '
-                                 '`quantile`')
-
-        if self.statistics == 'quantile':
-            if self.quantile_value is None:
-                raise ValueError('quantile stastics results require a quantile'
-                                 ' value to be specified')
-
-        if not self.statistics == 'quantile':
-            if self.quantile_value is not None:
-                raise ValueError('Quantile value must be specified with '
-                                 'quantile statistics')
-
-        if self.imt == 'SA':
-            if self.sa_period is None:
-                raise ValueError('`sa_period` is required for IMT == `SA`')
-            if self.sa_damping is None:
-                raise ValueError('`sa_damping` is required for IMT == `SA`')
-
     def serialize(self, data):
         """
         Write a sequence of hazard curves to the specified file.
-
-        Metadata is validated before curve data is written.
 
         :param data:
             Iterable of hazard curve data. Each datum must be an object with
@@ -116,8 +130,6 @@ class HazardCurveXMLWriter(object):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        self.validate_metadata()
-
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         with open(self.path, 'w') as fh:
@@ -403,3 +415,88 @@ class SESXMLWriter(object):
             corner_elem.set('lon', str(corner[0]))
             corner_elem.set('lat', str(corner[1]))
             corner_elem.set('depths', str(corner[2]))
+
+
+class HazardMapXMLWriter(object):
+    """
+    :param path:
+        File path (including filename) for XML results to be saved to.
+    :param float investigation_time:
+        Investigation time (in years) defined in the calculation which produced
+        these results.
+    :param str imt:
+        Intensity measure type used to compute these hazard curves.
+    :param poe:
+        The Probability of Exceedance level for which this hazard map was
+        produced.
+    :param metadata:
+        A combination of the following keyword arguments:
+
+        * statistics: 'mean' or 'quantile'
+        * quantile_value: Only required if statistics = 'quantile'.
+        * smlt_path: String representing the logic tree path which produced
+          these curves. Only required for non-statistical curves.
+        * gsimlt_path: String represeting the GSIM logic tree path which
+          produced these curves. Only required for non-statisical curves.
+        * sa_period: Only used with imt = 'SA'.
+        * sa_damping: Only used with imt = 'SA'.
+    """
+
+    def __init__(self, path, investigation_time, imt, poe, **metadata):
+        self.path = path
+        self.investigation_time = investigation_time
+        self.imt = imt
+        self.poe = poe
+
+        metadata['imt'] = imt
+        _validate_hc_hm_metadata(metadata)
+
+        self.statistics = metadata.get('statistics')
+        self.quantile_value = metadata.get('quantile_value')
+        self.smlt_path = metadata.get('smlt_path')
+        self.gsimlt_path = metadata.get('gsimlt_path')
+        self.sa_period = metadata.get('sa_period')
+        self.sa_damping = metadata.get('sa_damping')
+
+    def serialize(self, data):
+        """
+        Write a sequence of hazard map data to the specified file.
+
+        :param data:
+            Iterable of hazard map data. Each datum should be a triple of
+            (lon, lat, iml) values.
+        """
+
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+
+            hazard_map = etree.SubElement(root, 'hazardMap')
+
+            # set metadata attributes
+            hazard_map.set('IMT', str(self.imt))
+            hazard_map.set('investigationTime',
+                           str(self.investigation_time))
+            hazard_map.set('poE', str(self.poe))
+
+            if self.statistics is not None:
+                hazard_map.set('statistics', self.statistics)
+            if self.quantile_value is not None:
+                hazard_map.set('quantileValue', str(self.quantile_value))
+            if self.smlt_path is not None:
+                hazard_map.set(SM_TREE_PATH, self.smlt_path)
+            if self.gsimlt_path is not None:
+                hazard_map.set(GSIM_TREE_PATH, self.gsimlt_path)
+            if self.sa_period is not None:
+                hazard_map.set('saPeriod', str(self.sa_period))
+            if self.sa_damping is not None:
+                hazard_map.set('saDamping', str(self.sa_damping))
+
+            for lon, lat, iml in data:
+                node = etree.SubElement(hazard_map, 'node')
+                node.set('lon', str(lon))
+                node.set('lat', str(lat))
+                node.set('iml', str(iml))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))

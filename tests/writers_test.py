@@ -101,70 +101,70 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     def test_validate_metadata_stats_and_smlt_path(self):
         # statistics + smlt path
         metadata = dict(statistics='mean', smlt_path='foo')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_stats_and_gsimlt_path(self):
         # statistics + gsimlt path
         metadata = dict(statistics='mean', gsimlt_path='foo')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_only_smlt_path(self):
         # only 1 logic tree path specified
         metadata = dict(smlt_path='foo')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_only_gsimlt_path(self):
         # only 1 logic tree path specified
         metadata = dict(gsimlt_path='foo')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_invalid_stats(self):
         # invalid stats type
         metadata = dict(statistics='invalid')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_quantile_stats_with_no_value(self):
         # quantile statistics with no quantile value
         metadata = dict(statistics='quantile')
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_sa_with_no_period(self):
         # damping but no sa period
         metadata = dict(statistics='mean', sa_damping=5.0)
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'SA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_sa_with_no_damping(self):
         # sa period but no damping
         metadata = dict(statistics='mean', sa_period=5.0)
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'SA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_mean_stats_with_quantile_value(self):
         metadata = dict(statistics='mean', quantile_value=5.0)
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_validate_metadata_no_stats_with_quantile_value(self):
         metadata = dict(quantile_value=5.0)
-        writer = writers.HazardCurveXMLWriter(
+        self.assertRaises(
+            ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
-        self.assertRaises(ValueError, writer.validate_metadata)
 
     def test_serialize(self):
         # Just a basic serialization test.
@@ -596,3 +596,43 @@ class SESXMLWriterTestCase(unittest.TestCase):
         self.assertRaises(
             ValueError, writers.SESXMLWriter._create_rupture_mesh,
             rupture, rup_elem)
+
+
+class HazardMapXMLWriterTestCase(unittest.TestCase):
+
+    def test_serialize(self):
+        data = [
+            (-1.0, 1.0, 0.01),
+            (1.0, 1.0, 0.02),
+            (1.0, -1.0, 0.03),
+            (-1.0, -1.0, 0.04),
+        ]
+
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardMap IMT="SA" investigationTime="50.0" poE="0.1" sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" saPeriod="0.025" saDamping="5.0">
+    <node lon="-1.0" lat="1.0" iml="0.01"/>
+    <node lon="1.0" lat="1.0" iml="0.02"/>
+    <node lon="1.0" lat="-1.0" iml="0.03"/>
+    <node lon="-1.0" lat="-1.0" iml="0.04"/>
+  </hazardMap>
+</nrml>
+""")
+
+        try:
+            _, path = tempfile.mkstemp()
+            metadata = dict(
+                sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+                gsimlt_path='b1_b4_b5')
+            writer = writers.HazardMapXMLWriter(
+                path, 50.0, 'SA', 0.1, **metadata)
+            writer.serialize(data)
+
+            expected_text = expected.readlines()
+            fh = open(path, 'r')
+            text = fh.readlines()
+            self.assertEqual(expected_text, text)
+        finally:
+            os.unlink(path)
+
