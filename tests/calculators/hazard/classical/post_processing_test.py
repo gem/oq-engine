@@ -35,7 +35,7 @@ from tests.utils.helpers import random_location_generator
 
 from openquake.calculators.hazard.classical.post_processing import (
     setup_tasks, mean_curves, quantile_curves, persite_result_decorator,
-    mean_curves_weighted, quantile_curves_weighted)
+    mean_curves_weighted, quantile_curves_weighted, compute_hazard_map)
 
 
 # package prefix used for mock.patching
@@ -407,3 +407,65 @@ def _curve_db(location_nr, level_nr, curves_per_location, sigma):
                      weight=weights[j],
                      poes=numpy.array(poes)))
     return curve_db, location_db
+
+
+class HazardMapsTestCase(unittest.TestCase):
+    pass
+
+    def test_compute_hazard_map(self):
+        aaae = numpy.testing.assert_array_almost_equal
+
+        curves = [
+            [0.8, 0.5, 0.1],
+            [0.98, 0.15, 0.05],
+            [0.6, 0.5, 0.4],
+            [0.1, 0.01, 0.001],
+            [0.8, 0.2, 0.1],
+        ]
+        imls = [0.005, 0.007, 0.0098]
+        poe = 0.2
+
+        expected = [0.0091, 0.00687952, 0.0098, 0.005, 0.007]
+
+        actual = compute_hazard_map(curves, imls, poe)
+        aaae(expected, actual)
+
+    def test_compute_hazard_map_poes_list_of_one(self):
+        aaae = numpy.testing.assert_array_almost_equal
+
+        curves = [
+            [0.8, 0.5, 0.1],
+            [0.98, 0.15, 0.05],
+            [0.6, 0.5, 0.4],
+            [0.1, 0.01, 0.001],
+            [0.8, 0.2, 0.1],
+        ]
+        imls = [0.005, 0.007, 0.0098]
+        poe = [0.2]
+
+        expected = [0.0091, 0.00687952, 0.0098, 0.005, 0.007]
+
+        actual = compute_hazard_map(curves, imls, poe)
+        aaae(expected, actual)
+
+
+    def test_compute_hazard_map_multi_poe(self):
+        aaae = numpy.testing.assert_array_almost_equal
+
+        curves = [
+            [0.8, 0.5, 0.1],
+            [0.98, 0.15, 0.05],
+            [0.6, 0.5, 0.4],
+            [0.1, 0.01, 0.001],
+            [0.8, 0.2, 0.1],
+        ]
+        imls = [0.005, 0.007, 0.0098]
+        poes = [0.1, 0.2]
+
+        expected = [
+            [0.0098, 0.0084, 0.0098, 0.005, 0.0098],
+            [0.0091, 0.00687952, 0.0098, 0.005, 0.007],
+        ]
+
+        actual = compute_hazard_map(curves, imls, poes)
+        aaae(expected, actual)
