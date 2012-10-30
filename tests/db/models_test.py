@@ -549,7 +549,6 @@ class GmfSetIterTestCase(unittest.TestCase):
 
             self.assertTrue(equal, error)
 
-
     @attr('slow')
     def test_iter(self):
         # Test data
