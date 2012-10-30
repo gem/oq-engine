@@ -27,7 +27,6 @@ import re
 from datetime import datetime
 from ConfigParser import ConfigParser
 
-from django.db import close_connection
 from django.db import transaction
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
@@ -57,9 +56,6 @@ from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
 from openquake.kvs import mark_job_as_current
-from openquake.supervising import supervisor
-from openquake.utils import config as utils_config
-from openquake.utils import stats
 from openquake.input import logictree
 
 CALCS = dict(risk=RISK_CALCS)
