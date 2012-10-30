@@ -24,7 +24,6 @@ import nhlib
 from nhlib import geo as nhlib_geo
 from nose.plugins.attrib import attr
 
-from openquake import engine
 from openquake import engine2
 from openquake import shapes
 from openquake.calculators.hazard import general
@@ -270,7 +269,7 @@ class GetSiteModelTestCase(unittest.TestCase):
 class ClosestSiteModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        owner = engine.prepare_user('openquake')
+        owner = engine2.prepare_user('openquake')
         self.site_model_inp = models.Input(
             owner=owner, digest='fake', path='fake',
             input_type='site_model', size=0

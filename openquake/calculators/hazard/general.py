@@ -47,7 +47,6 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
 from openquake.java import list_to_jdouble_array
-from openquake.job import params as job_params
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake import logs
@@ -494,82 +493,6 @@ class BaseHazardCalculator(base.Calculator):
         gmpe_map = generate_gmpe_map(self.job_ctxt.job_id, self.cache)
         self.set_gmpe_params(gmpe_map)
         return gmpe_map
-
-    def parameterize_sites(self, site_list):
-        """Set vs30, vs30 type, z1pt0, z2pt5, and sadigh site type parameters
-        on all input sites, returning a jpype `ArrayList` of OpenSHA `Site`
-        objects.
-
-        For vs30, vs30 type, z1pt0, and z2pt5:
-        These params can be defined in general for the entire calculation.
-        Alternatively, the calculation can define a `SITE_MODEL`, which supply
-        site-specific parameters. This method handles both cases.
-
-        NOTE: If a `SITE_MODEL` is used, it needs to be properly stored first.
-        See :func:`~openquake.calculators.hazard.general.store_site_model`.
-
-        :param site_list:
-            `list` of :class:`~openquake.shapes.Site` objects.
-        :returns:
-            jpype `ArrayList` of `org.opensha.commons.data.Site` objects (with
-            the above parameters set).
-        """
-        # make sure the JVM is started
-        java.jvm()
-
-        # the return value
-        jsite_list = java.jclass("ArrayList")()
-
-        job_profile = self.job_ctxt.oq_job_profile
-
-        # The `sadigh site type` is the same in any case
-        sadigh_param = java.jclass("StringParameter")("Sadigh Site Type")
-        sadigh_param.setValue(
-            job_params.REVERSE_ENUM_MAP[job_profile.sadigh_site_type]
-        )
-
-        site_model = get_site_model(self.job_ctxt.oq_job.id)
-
-        if site_model is not None:
-            # set site-specific parameters:
-            for site in site_list:
-                jsite = site.to_java()
-
-                sm_data = get_closest_site_model_data(site_model, site)
-                set_java_site_parameters(jsite, sm_data)
-                # The sadigh site type param is not site specific, but we need
-                # to set it anyway.
-                jsite.addParameter(sadigh_param)
-
-                jsite_list.add(jsite)
-        else:
-            # use the same parameters for all sites
-            vs30_param = java.jclass("DoubleParameter")("Vs30")
-            vs30_param.setValue(job_profile.reference_vs30_value)
-
-            vs30_type_param = java.jclass("StringParameter")("Vs30 Type")
-            vs30_type_param.setValue(job_profile.vs30_type)
-
-            z1pt0_param = java.jclass("DoubleParameter")("Depth 1.0 km/sec")
-            z1pt0_param.setValue(job_profile.depth_to_1pt_0km_per_sec)
-
-            z2pt5_param = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-            z2pt5_param.setValue(
-                job_profile.reference_depth_to_2pt5km_per_sec_param
-            )
-
-            for site in site_list:
-                jsite = site.to_java()
-
-                jsite.addParameter(vs30_param)
-                jsite.addParameter(vs30_type_param)
-                jsite.addParameter(z1pt0_param)
-                jsite.addParameter(z2pt5_param)
-                jsite.addParameter(sadigh_param)
-
-                jsite_list.add(jsite)
-
-        return jsite_list
 
 
 def exchange_and_conn_args():

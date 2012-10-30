@@ -283,35 +283,3 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         for key, value in data:
             self.assertEqual(value.upper(), TestStore.get(key))
-
-
-class CalculatorForTaskTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.utils.tasks.calculator_for_task`."""
-
-    def test_calculator_for_task(self):
-        """Load up a sample calculation (into the db and cache) and make sure
-        we can instantiate the correct calculator for a given calculation id.
-        """
-        from openquake.calculators.hazard.scenario.core import (
-            ScenarioHazardCalculator)
-        job = engine.prepare_job()
-        job_profile, params, sections = engine.import_job_profile(demo_file(
-            'scenario_risk/config.gem'), job)
-
-        job_ctxt = engine.JobContext(params, job.id,
-                                             oq_job_profile=job_profile,
-                                             oq_job=job)
-        job_ctxt.to_kvs()
-
-        with patch(
-            'openquake.utils.tasks.get_running_job') as grc_mock:
-
-            # Loading of the JobContext is done by
-            # `get_running_job`, which is covered by other tests.
-            # So, we just want to make sure that it's called here.
-            grc_mock.return_value = job_ctxt
-
-            calculator = tasks.calculator_for_task(job.id, 'hazard')
-
-            self.assertTrue(isinstance(calculator, ScenarioHazardCalculator))
-            self.assertEqual(1, grc_mock.call_count)
