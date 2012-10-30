@@ -131,7 +131,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'hzrdr' schema, test for proper db routing
         for read operations.
         '''
-        classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
+        classes = [HazardMap, HazardCurve, HazardCurveData,
             GmfData]
         expected_db = 'reslt_writer'
 
@@ -142,7 +142,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'hzrdr' schema, test for proper db routing
         for write operations.
         '''
-        classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
+        classes = [HazardMap, HazardCurve, HazardCurveData,
             GmfData]
 
         expected_db = 'reslt_writer'
