@@ -97,16 +97,16 @@ class AkkarCagnan2010(BooreAtkinson2008):
         # compute full mean value by adding site amplification terms
         # (but avoiding recomputing mean on rock for PGA)
         if imt == PGA():
-            mean = \
-                np.log(pga4nl) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
+            mean = (np.log(pga4nl) +
+                    self._get_site_amplification_linear(sites, C_SR) +
+                    self._get_site_amplification_non_linear(sites, pga4nl,
+                                                            C_SR))
         else:
             C = self.COEFFS_AC10[imt]
-            mean = \
-                self._compute_mean(C, rup.mag, dists.rjb, rup.rake) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
+            mean = (self._compute_mean(C, rup.mag, dists.rjb, rup.rake) +
+                    self._get_site_amplification_linear(sites, C_SR) +
+                    self._get_site_amplification_non_linear(sites, pga4nl,
+                                                            C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
         if isinstance(imt, SA):
@@ -156,8 +156,8 @@ class AkkarCagnan2010(BooreAtkinson2008):
         Compute and return fourth term in equations (1a)
         and (1b), pages 2981 and 2982, respectively.
         """
-        return (C['a5'] + C['a6'] * (mag - self.c1)) * \
-            np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2))
+        return ((C['a5'] + C['a6'] * (mag - self.c1)) *
+                np.log(np.sqrt(rjb ** 2 + C['a7'] ** 2)))
 
     def _compute_faulting_style_term(self, C, rake):
         """
@@ -174,12 +174,11 @@ class AkkarCagnan2010(BooreAtkinson2008):
         Compute and return mean value without site conditions,
         that is equations (1a) and (1b), p.2981-2982.
         """
-        mean = \
-            C['a1'] + \
-            self._compute_linear_magnitude_term(C, mag) + \
-            self._compute_quadratic_magnitude_term(C, mag) + \
-            self._compute_logarithmic_distance_term(C, mag, rjb) + \
-            self._compute_faulting_style_term(C, rake)
+        mean = (C['a1'] +
+                self._compute_linear_magnitude_term(C, mag) +
+                self._compute_quadratic_magnitude_term(C, mag) +
+                self._compute_logarithmic_distance_term(C, mag, rjb) +
+                self._compute_faulting_style_term(C, rake))
 
         return mean
 
