@@ -28,15 +28,10 @@ import numpy
 import os
 import unittest
 
-from openquake import engine
 from openquake import kvs
 from openquake import logs
-from openquake import xml
 from openquake.calculators.hazard import general as hazard_general
-from openquake.engine import JobContext
 from openquake.export import psha
-from openquake.job import params as job_params
-from openquake.kvs import tokens
 from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers

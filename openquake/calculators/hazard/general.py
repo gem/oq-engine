@@ -47,7 +47,6 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
 from openquake.java import list_to_jdouble_array
-from openquake.job import params as job_params
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake import logs
