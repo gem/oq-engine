@@ -20,9 +20,6 @@
 import unittest
 import os
 
-from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.event_based.core import (
-    EventBasedRiskCalculator)
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.input.fragility import FragilityDBWriter
