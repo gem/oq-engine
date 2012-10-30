@@ -32,7 +32,13 @@ class AbrahamsonSilva2008(GMPE):
     Relations" (2008, Earthquakes Spectra, Volume 24, Number 1, pages 67-97).
     This class implements only the equations for mainshock/foreshocks/swarms
     type events, that is the aftershock term (4th term in equation 1, page 74)
-    is set to zero.
+    is set to zero. The constant displacement model (page 80) is also not
+    implemented (that is equation 1, page 74 is used for all periods and no
+    correction is applied for periods greater than the constant displacement
+    period). This class implements also the corrections (for standard
+    deviation and hanging wall term calculation) as described in:
+    http://peer.berkeley.edu/products/abrahamson-silva_nga_report_files/
+    AS08_NGA_errata.pdf
     """
     #: Supported tectonic region type is active shallow crust, see paragraph
     #: 'Data Set Selection', see page 68.
@@ -84,27 +90,15 @@ class AbrahamsonSilva2008(GMPE):
 
         # compute median pga on rock (vs30=1100), needed for site response
         # term calculation
-        pga1100 = self._compute_imt1100(PGA(), sites, rup, dists)
-        print 'pga on rock: ', pga1100
-
-        Td = self._compute_constant_displacement_period(rup)
-        
-        #print 'base term: ', self._compute_base_term(C, rup, dists)
-        #print 'faulting style term: ', self._compute_faulting_style_term(C, rup)
-        #print 'site response term: ', self._compute_site_response_term(C, imt, sites, pga1100)
-        #print 'hanging wall term: ', self._compute_hanging_wall_term(C, dists, rup)
-        #print 'top of rupture depth term: ', self._compute_top_of_rupture_depth_term(C, rup)
-        #print 'large distance term: ', self._compute_large_distance_term(C, dists, rup)
-        #print 'soild depth term: ', self._compute_soil_depth_term(C, imt, sites)
-        #print 'pga on rock: ', pga1100
-
+        pga1100 = np.exp(self._compute_imt1100(PGA(), sites, rup, dists))
+        print 'hanging wall term: ', self._compute_hanging_wall_term(C, dists, rup)
         mean = (self._compute_base_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
                 self._compute_site_response_term(C, imt, sites, pga1100) +
                 self._compute_hanging_wall_term(C, dists, rup) +
                 self._compute_top_of_rupture_depth_term(C, rup) +
                 self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites))
+                self._compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
         stddevs = None
 
@@ -167,37 +161,49 @@ class AbrahamsonSilva2008(GMPE):
         equation 1, page 74. The calculation of this term is explained in
         paragraph 'Hanging-Wall Model', page 77.
         """
-        # equation 8, page 77
-        T1 = np.zeros_like(dists.rjb)
-        idx = dists.rjb < 30.0
-        T1[idx] = 1.0 - dists.rjb[idx] / 30.0
-
-        # equation 9, page 77
-        T2 = np.ones_like(dists.rx)
-        if rup.dip < 90.0:
-            idx = dists.rx <= rup.width * np.cos(rup.dip)
-            T2[idx] = 0.5 + dists.rx[idx] / (2 * rup.width * np.cos(rup.dip))
-
-        # equation 10, page 78
-        T3 = np.ones_like(dists.rx)
-        idx = dists.rx < rup.ztor
-        T3[idx] = dists.rx[idx] / rup.ztor
-
-        # equation 11, page 78
-        if rup.mag <= 6.0:
-            T4 = 0.0
-        elif rup.mag > 6 and rup.mag < 7:
-            T4 = rup.mag - 6
+        if rup.dip == 90.0:
+            return np.zeros_like(dists.rx)
         else:
-            T4 = 1.0
+            idx = dists.rx > 0
+            Fhw = np.zeros_like(dists.rx)
+            Fhw[idx] = 1
 
-        # equation 12, page 78
-        if rup.dip >= 70:
-            T5 = 1.0 - (rup.dip - 70.0) / 20.0
-        else:
-            T5 = 1.0
+            # equation 8, page 77
+            T1 = np.zeros_like(dists.rx)
+            idx1 = (dists.rjb < 30.0) & (idx)
+            T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
+            print 'T1', T1
 
-        return C['a14'] * T1 * T2 * T3 * T4 * T5
+            # equation 9, page 77
+            T2 = np.ones_like(dists.rx)
+            idx2 = (dists.rx <= rup.width * np.cos(rup.dip)) & (idx)
+            T2[idx2] = 0.5 + dists.rx[idx2] / (2 * rup.width * np.cos(rup.dip))
+            print 'T2', T2
+
+            # equation 10, page 78
+            T3 = np.ones_like(dists.rx)
+            idx3 = (dists.rx < rup.ztor) & (idx)
+            T3[idx3] = dists.rx[idx3] / rup.ztor
+            print 'T3', T3
+
+            # equation 11, page 78
+            if rup.mag <= 6.0:
+                T4 = 0.0
+            elif rup.mag > 6 and rup.mag < 7:
+                T4 = rup.mag - 6
+            else:
+                T4 = 1.0
+            print 'T4', T4
+
+            # equation 5, in AS08_NGA_errata.pdf
+            if rup.dip >= 30:
+                T5 = 1.0 - (rup.dip - 30.0) / 60.0
+            else:
+                T5 = 1.0
+            print 'T5', T5
+            print 'a14 ', C['a14']
+
+            return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
 
     def _compute_top_of_rupture_depth_term(self, C, rup):
         """
@@ -231,60 +237,49 @@ class AbrahamsonSilva2008(GMPE):
 
         return large_distance_term
 
-    def _compute_soil_depth_term(self, C, imt, sites):
+    def _compute_soil_depth_term(self, C, imt, z1pt0, vs30):
         """
         Compute and return soil depth model term, that is the 9-th term in
         equation 1, page 74. The calculation of this term is explained in
         paragraph 'Soil Depth Model', page 79.
         """
-        a21 = self._compute_a21_factor(C, imt, sites.z1pt0, sites.vs30)
-        median_z1pt0 = self._compute_median_z1pt0(sites.vs30)
+        a21 = self._compute_a21_factor(C, imt, z1pt0, vs30)
+        a22 = self._compute_a22_factor(imt)
+        median_z1pt0 = self._compute_median_z1pt0(vs30)
 
-        soil_depth_term = a21 * np.log((sites.z1pt0 + self.CONSTS['c2']) /
+        soil_depth_term = a21 * np.log((z1pt0 + self.CONSTS['c2']) /
                                        (median_z1pt0 + self.CONSTS['c2']))
 
-        if sites.z1pt0 >= 200:
-            a22 = self._compute_a22_factor(imt)
-            soil_depth_term += a22 * np.log(sites.z1pt0 / 200)
+        idx = z1pt0 >= 200
+        soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
 
         return soil_depth_term
 
     def _compute_imt1100(self, imt, sites, rup, dists):
         """
-        Compute and return median imt value for vs30 = 1100 m/s.
+        Compute and return mean imt value for rock conditions
+        (vs30 = 1100 m/s)
         """
+        vs30_1100 = np.zeros_like(sites.vs30) + 1100
+        vs30_star, _ = self._compute_vs30_star_factor(imt, vs30_1100)
         C = self.COEFFS[imt]
-        #print 'base term: ', self._compute_base_term(C, rup, dists)
-        #print 'faulting style term: ', self._compute_faulting_style_term(C, rup)
-        #print 'hanging wall term: ', self._compute_hanging_wall_term(C, dists, rup)
-        #print 'top of rupture depth term: ', self._compute_top_of_rupture_depth_term(C, rup)
-        #print 'large distance term: ', self._compute_large_distance_term(C, dists, rup)
-        #print 'soil depth term: ', self._compute_soil_depth_term(C, imt, sites)
         mean = (self._compute_base_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
                 self._compute_hanging_wall_term(C, dists, rup) +
                 self._compute_top_of_rupture_depth_term(C, rup) +
                 self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites))
+                self._compute_soil_depth_term(C, imt, sites.z1pt0, vs30_1100) +
+                # this is the site response term in case of vs30=1100
+                ((C['a10'] + C['b'] * self.CONSTS['n']) *
+                np.log(vs30_star / C['VLIN'])))
 
-        vs30_1100 = np.zeros_like(sites.vs30) + 1100
-        vs30_star, _ = self._compute_vs30_star_factor(imt, vs30_1100)
-        #print 'site response term: ', (C['a10'] + C['b'] * self.CONSTS['n']) * \
-        #         np.log(vs30_star / C['VLIN'])
-        mean += (C['a10'] + C['b'] * self.CONSTS['n']) * \
-                 np.log(vs30_star / C['VLIN'])
-
-        return np.exp(mean)
+        return mean
 
     def _compute_a21_factor(self, C, imt, z1pt0, vs30):
         """
         Compute and return a21 factor, equation 18, page 80.
         """
-        if isinstance(imt, PGV) or isinstance(imt, PGA):
-            period = 1
-        else:
-            period = imt.period
-        e2 = self._compute_e2_factor(period, vs30)
+        e2 = self._compute_e2_factor(imt, vs30)
         a21 = e2.copy()
 
         vs30_star, v1 = self._compute_vs30_star_factor(imt, vs30)
@@ -298,7 +293,7 @@ class AbrahamsonSilva2008(GMPE):
         idx = numerator + e2 * denominator < 0
         a21[idx] = - numerator[idx] / denominator[idx]
 
-        idx = vs30 <=1000
+        idx = vs30 >=1000
         a21[idx] = 0.0
 
         return a21
@@ -335,19 +330,30 @@ class AbrahamsonSilva2008(GMPE):
 
         return v1
 
-    def _compute_e2_factor(self, period, vs30):
+    def _compute_e2_factor(self, imt, vs30):
         """
         Compute and return e2 factor, equation 19, page 80.
         """
         e2 = np.zeros_like(vs30)
-        idx = vs30 <= 1000
 
-        if period >= 0.35 and period <= 2.0:
-            e2[idx] = -0.25 * np.log(vs30[idx] / 1000) * np.log(period / 0.35)
-        elif period > 2.0:
-            e2[idx] = -0.25 * np.log(vs30[idx] / 1000) * np.log(2.0 / 0.35)
+        if isinstance(imt, PGV):
+            period = 1
+        elif isinstance(imt, PGA):
+            period = 0
+        else:
+            period = imt.period
 
-        return e2
+        if period < 0.35:
+            return e2
+        else:
+            idx = vs30 <= 1000
+            if period >= 0.35 and period <= 2.0:
+                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
+                           np.log(period / 0.35))
+            elif period > 2.0:
+                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
+                           np.log(2.0 / 0.35))
+            return e2
 
     def _compute_median_z1pt0(self, vs30):
         """
@@ -375,13 +381,6 @@ class AbrahamsonSilva2008(GMPE):
                 return 0.0
             else:
                 return 0.0625 * (period - 2.0)
-
-    def _compute_constant_displacement_period(self, rup):
-        """
-        Compute and return period at which rock spectrum reaches
-        a constant displacemenent, equation 21, page 80.
-        """
-        return 10 ** (-1.25 + 0.3 * rup.mag)
 
     #: Coefficient tables obtained by joining table 5a page 84, and table 5b
     #: page 85.
