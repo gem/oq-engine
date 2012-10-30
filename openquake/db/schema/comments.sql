@@ -98,19 +98,13 @@ COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific 
 COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
 
 
-COMMENT ON TABLE hzrdr.hazard_map IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN hzrdr.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
 COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
-COMMENT ON COLUMN hzrdr.hazard_map.statistic_type IS 'Statistic type, one of:
+COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
 
-
-COMMENT ON TABLE hzrdr.hazard_map_data IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN hzrdr.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
-COMMENT ON COLUMN hzrdr.hazard_map_data.location IS 'Position in the hazard map';
-COMMENT ON COLUMN hzrdr.hazard_map_data.value IS 'IML value for this location';
 
 -- uhs
 COMMENT ON TABLE hzrdr.uh_spectra IS 'Uniform Hazard Spectra
