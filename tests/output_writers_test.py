@@ -20,7 +20,6 @@ Database related unit tests for hazard computations with the hazard engine.
 """
 
 import itertools
-import mock
 import string
 import unittest
 
