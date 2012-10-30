@@ -24,6 +24,7 @@ E.g. mean and quantile curves.
 import numpy
 from scipy.stats import mstats
 
+from openquake.db import models
 from openquake.utils import tasks as utils_tasks
 
 
@@ -279,7 +280,7 @@ def do_post_process(job_id, post_processing_task):
 do_post_process.ignore_result = False
 
 
-def compute_hazard_map(curves, imls, poes):
+def compute_hazard_maps(curves, imls, poes):
     """
     Given a set of hazard curve poes, interpolate a hazard map at the specified
     ``poe``.
@@ -320,3 +321,54 @@ def compute_hazard_map(curves, imls, poes):
         result.append(hmap_val)
 
     return numpy.array(result).transpose()
+
+
+_HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s'
+
+
+@utils_tasks.oqtask
+def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
+    job = models.OqJob.objects.get(id=job_id)
+
+    hc = models.HazardCurve.objects.get(id=hazard_curve_id)
+    hcd = hc.hazardcurvedata_set().order_by('location')
+
+    curves = (curve.poes for curve in hcd)
+    hazard_maps = compute_hazard_maps(curves, hc.imls, poes)
+
+    for i, poe in enumerate(poes):
+        imls = hazard_maps[i]
+        lons = numpy.empty(imls.shape)
+        lats = numpy.empty(imls.shape)
+
+        for j, point in enumerate(imls):
+            location = hcd[j].location
+            lons[j] = location.x
+            lats[j] = location.y
+
+        imt = hc.imt
+        if imt == 'SA':
+            # if it's SA, include the period using the standard notation
+            imt = 'SA(%s)' % hc.sa_period
+
+        # save the hazard map
+        # create `Output` first:
+        disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(poe=poe, imt=imt)
+        output = models.Output.objects.create_output(
+            job, disp_name, 'hazard_map')
+
+        # now create and store the hazard map
+        hm = models.HazardMap.objects.create(
+            lt_realization=hc.lt_realization,
+            investigation_time=hc.investigation_time,
+            imt=hc.imt,
+            imls=hc.imls,
+            statistics=hc.statistics,
+            quantile=hc.quantile,
+            sa_period=hc.sa_period,
+            sa_damping=hc.sa_damping,
+            poe=poe,
+            lons=lons,
+            lats=lats,
+            imls=imls,
+        )
