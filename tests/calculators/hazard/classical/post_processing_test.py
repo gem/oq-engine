@@ -427,7 +427,7 @@ class HazardMapsTestCase(unittest.TestCase):
 
         expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
-        actual = compute_hazard_map(curves, imls, poe)
+        actual = compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
     def test_compute_hazard_map_poes_list_of_one(self):
@@ -440,12 +440,17 @@ class HazardMapsTestCase(unittest.TestCase):
             [0.1, 0.01, 0.001],
             [0.8, 0.2, 0.1],
         ]
+
+        # NOTE(LB): Curves may be passed as a generator or iterator;
+        # let's make sure that works, too.
+        curves = iter(curves)
+
         imls = [0.005, 0.007, 0.0098]
         poe = [0.2]
 
         expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
-        actual = compute_hazard_map(curves, imls, poe)
+        actual = compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
 
@@ -467,5 +472,5 @@ class HazardMapsTestCase(unittest.TestCase):
             [0.0091, 0.00687952, 0.0098, 0.005, 0.007],
         ]
 
-        actual = compute_hazard_map(curves, imls, poes)
+        actual = compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
