@@ -277,7 +277,7 @@ class EventBasedTestCase(unittest.TestCase):
             testdata.expected_losses_lc[asset_id], 
             asset_output.loss_curve.x_values)
 
-    def test_sampled_based_beta(self):
+    def test_sample_based_beta(self):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],

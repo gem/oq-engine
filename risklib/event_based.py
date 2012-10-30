@@ -147,10 +147,10 @@ def _compute_loss_ratios(vuln_function, gmf_set,
         return _mean_based(vuln_function, gmf_set)
     else:
         epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
-        return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
+        return _sample_based(vuln_function, gmf_set, epsilon_provider, asset)
 
 
-def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
+def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the set of loss ratios when at least one CV
     (Coefficent of Variation) defined in the vulnerability function
     is greater than zero.
@@ -165,7 +165,7 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
         **TimeSpan** - time span parameter (float)
         **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
+        using the sample based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance

@@ -25,6 +25,24 @@ from risklib import vulnerability_function
 
 class ClassicalTestCase(unittest.TestCase):
 
+    hazard_curve = [
+        (0.001, 0.0398612669790014),
+        (0.01, 0.039861266979001400), (0.05, 0.039728757480298900),
+        (0.10, 0.029613426625612500), (0.15, 0.019827328756491600),
+        (0.20, 0.013062270161451900), (0.25, 0.008655387950000430),
+        (0.30, 0.005898520593689670), (0.35, 0.004061698589511780),
+        (0.40, 0.002811727179526820), (0.45, 0.001995117417776690),
+        (0.50, 0.001358705972845710), (0.55, 0.000989667841573727),
+        (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
+        (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
+
+    loss_ratios = [
+        0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06,
+        0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16,
+        0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40,
+        0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
+        0.92, 0.96, 1.00]
+
     def test_lognormal_distribution(self):
 
         vulnerability_model = {"VF":
@@ -36,7 +54,7 @@ class ClassicalTestCase(unittest.TestCase):
             api.classical(vulnerability_model, steps=5))
 
         asset_output = calculator(
-            input.Asset("a1", "VF", 2, None), self._hazard_curve())
+            input.Asset("a1", "VF", 2, None), self.hazard_curve)
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -57,13 +75,13 @@ class ClassicalTestCase(unittest.TestCase):
             8.66392324535e-06]
 
         self.assertEqual(curve.Curve(
-            zip(self._loss_ratios(), poes)),
+            zip(self.loss_ratios, poes)),
             asset_output.loss_ratio_curve)
 
         # loss curve y-values are same as loss ratio curve
         # loss curve x-values are the ones from loss ratio curve * asset value
         self.assertEqual(curve.Curve(zip(
-            numpy.array(self._loss_ratios()) * 2, poes)),
+            numpy.array(self.loss_ratios) * 2, poes)),
             asset_output.loss_curve)
 
         self.assertAlmostEqual(0.264586283238,
@@ -85,8 +103,10 @@ class ClassicalTestCase(unittest.TestCase):
         calculator = api.conditional_losses([0.01],
             api.classical(vulnerability_model, steps=5))
 
+        value = 2 # the asset value
+
         asset_output = calculator(
-            input.Asset("a1", "VF", 2, None), self._hazard_curve())
+            input.Asset("a1", "VF", value, None), self.hazard_curve)
 
         poes = [
             0.039334753367700, 0.039125428171600,
@@ -106,34 +126,13 @@ class ClassicalTestCase(unittest.TestCase):
             3.28497166702e-05, 2.178664466e-06, 0.0]
 
         self.assertEqual(curve.Curve(
-            zip(self._loss_ratios(), poes)),
-            asset_output.loss_ratio_curve)
+            zip(self.loss_ratios, poes)), asset_output.loss_ratio_curve)
 
         # loss curve y-values are same as loss ratio curve
         # loss curve x-values are the ones from loss ratio curve * asset value
-        self.assertEqual(curve.Curve(zip(
-            numpy.array(self._loss_ratios()) * 2, poes)),
+        self.assertEqual(
+            curve.Curve(zip(numpy.array(self.loss_ratios) * value, poes)),
             asset_output.loss_curve)
 
         self.assertAlmostEqual(0.264870863283,
             asset_output.conditional_losses[0.01])
-
-    def _hazard_curve(self):
-        return [
-            (0.001, 0.0398612669790014),
-            (0.01, 0.039861266979001400), (0.05, 0.039728757480298900),
-            (0.10, 0.029613426625612500), (0.15, 0.019827328756491600),
-            (0.20, 0.013062270161451900), (0.25, 0.008655387950000430),
-            (0.30, 0.005898520593689670), (0.35, 0.004061698589511780),
-            (0.40, 0.002811727179526820), (0.45, 0.001995117417776690),
-            (0.50, 0.001358705972845710), (0.55, 0.000989667841573727),
-            (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
-            (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
-
-    def _loss_ratios(self):
-        return [
-            0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06,
-            0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16,
-            0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40,
-            0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
-            0.92, 0.96, 1.00]
