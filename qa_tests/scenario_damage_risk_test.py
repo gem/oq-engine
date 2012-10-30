@@ -89,7 +89,23 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
         self.assert_ok(asset_output, expected_means, expected_stdevs)
 
-        # TODO: check the aggregations
+        # aggregations for taxonomy
+        distr = calculator.damage_distribution_by_taxonomy
+        rm = distr['RM'] # array 10x3
+        rc = distr['RC'] # array 10x3
+       
+        assert_close(
+            rm.mean(0), [1979.9364498479, 1495.2273659142, 524.8361842379])
+        assert_close(
+            rm.std(0, ddof=1),[1103.6005152909, 745.3252495731, 401.9195159565])
+        assert_close(
+            rc.mean(0), [56.7201291212, 673.1047565606, 1270.1751143182])
+        assert_close(
+            rc.std(0, ddof=1), [117.7802813522, 485.2023172324, 575.8724057319])
+
+        # aggregations for total
+        ## means: [2036.6565789692, 2168.332122474, 1795.0112985561]
+        ## stdevs: [1075.3192939160, 1076.4342601834, 687.0910669304]
 
     def test_discrete_ff(self):
         fragility_model = input.FragilityModel(
@@ -132,4 +148,20 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [300.61123079, 144.64852962, 417.30737837]
         self.assert_ok(asset_output, expected_means, expected_stdevs)
 
-        # TODO: check the aggregations
+        # aggregations for taxonomy
+        distr = calculator.damage_distribution_by_taxonomy
+        rm = distr['RM'] # array 10x3
+        rc = distr['RC'] # array 10x3
+       
+        assert_close(
+            rm.mean(0), [1100.2285892246, 1913.9402484967, 985.8311622787])
+        assert_close(
+            rm.std(0, ddof=1),[880.2774984768, 296.2197411105, 616.5632580754])
+        assert_close(
+            rc.mean(0), [344.9084922789, 747.6241297573, 907.4673779638])
+        assert_close(
+            rc.std(0, ddof=1),[300.6112307894, 144.6485296163, 417.307378365])
+
+        # aggregations for total
+        ## means: [1445.1370815035, 2661.5643782540, 1893.2985402425]
+        ## stdevs: [824.7812010370, 374.0010314384, 661.8114364615]
