@@ -91,7 +91,7 @@ class AbrahamsonSilva2008(GMPE):
         # compute median pga on rock (vs30=1100), needed for site response
         # term calculation
         pga1100 = np.exp(self._compute_imt1100(PGA(), sites, rup, dists))
-        print 'hanging wall term: ', self._compute_hanging_wall_term(C, dists, rup)
+
         mean = (self._compute_base_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
                 self._compute_site_response_term(C, imt, sites, pga1100) +
@@ -172,19 +172,18 @@ class AbrahamsonSilva2008(GMPE):
             T1 = np.zeros_like(dists.rx)
             idx1 = (dists.rjb < 30.0) & (idx)
             T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
-            print 'T1', T1
 
             # equation 9, page 77
             T2 = np.ones_like(dists.rx)
-            idx2 = (dists.rx <= rup.width * np.cos(rup.dip)) & (idx)
-            T2[idx2] = 0.5 + dists.rx[idx2] / (2 * rup.width * np.cos(rup.dip))
-            print 'T2', T2
+            idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) & 
+                    (idx))
+            T2[idx2] = (0.5 + dists.rx[idx2] /
+                        (2 * rup.width * np.cos(np.radians(rup.dip))))
 
             # equation 10, page 78
             T3 = np.ones_like(dists.rx)
             idx3 = (dists.rx < rup.ztor) & (idx)
             T3[idx3] = dists.rx[idx3] / rup.ztor
-            print 'T3', T3
 
             # equation 11, page 78
             if rup.mag <= 6.0:
@@ -193,15 +192,12 @@ class AbrahamsonSilva2008(GMPE):
                 T4 = rup.mag - 6
             else:
                 T4 = 1.0
-            print 'T4', T4
 
             # equation 5, in AS08_NGA_errata.pdf
             if rup.dip >= 30:
                 T5 = 1.0 - (rup.dip - 30.0) / 60.0
             else:
                 T5 = 1.0
-            print 'T5', T5
-            print 'a14 ', C['a14']
 
             return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
 
