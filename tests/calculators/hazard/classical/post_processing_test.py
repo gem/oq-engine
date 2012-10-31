@@ -31,8 +31,10 @@ import numpy
 import random
 import unittest
 
+from tests.utils import helpers
 from tests.utils.helpers import random_location_generator
 
+from openquake.db import models
 from openquake.calculators.hazard.classical.post_processing import (
     setup_tasks, mean_curves, quantile_curves, persite_result_decorator,
     mean_curves_weighted, quantile_curves_weighted, compute_hazard_map)
@@ -473,3 +475,10 @@ class HazardMapsTestCase(unittest.TestCase):
 
         actual = compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
+
+    def test_do_hazard_map_post_process(self):
+        cfg = helpers.get_data_path(
+            'calculators/hazard/classical/haz_map_test_job.ini')
+        helpers.run_hazard_job(cfg)
+
+        # TODO: verify hazard maps
