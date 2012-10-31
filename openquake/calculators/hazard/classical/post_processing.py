@@ -21,11 +21,18 @@ Post processing functionality for the classical PSHA hazard calculator.
 E.g. mean and quantile curves.
 """
 
+import math
 import numpy
+
+from celery.task.sets import TaskSet
 from scipy.stats import mstats
 
+
+from openquake import logs
 from openquake.db import models
+from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
+from openquake.utils.general import block_splitter
 
 
 # Number of locations considered by each task
@@ -323,15 +330,33 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-_HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s'
+_HAZ_MAP_DISP_NAME_MEAN_FMT = 'hazard-map(%(poe)s)-%(imt)s-mean'
+_HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
+    'hazard-map(%(poe)s)-%(imt)s-quantile(%(quantile)s)')
+# Hazard maps for a specific end branch
+_HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
 
 
 @utils_tasks.oqtask
 def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
+    """
+    Celery task function to process a set of hazard curves into 1 hazard map
+    for each PoE in ``poes``.
+
+    Hazard map results are written directly to the database.
+
+    :param int job_id:
+        ID of the current :class:`openquake.db.models.OqJob`.
+    :param int hazard_curve_id:
+        ID of a set of
+        :class:`hazard curves <openquake.db.models.HazardCurve>`.
+    :param list poes:
+        List of PoEs for which we want to iterpolate hazard maps.
+    """
     job = models.OqJob.objects.get(id=job_id)
 
     hc = models.HazardCurve.objects.get(id=hazard_curve_id)
-    hcd = hc.hazardcurvedata_set().order_by('location')
+    hcd = hc.hazardcurvedata_set.order_by('location')
 
     curves = (curve.poes for curve in hcd)
     hazard_maps = compute_hazard_maps(curves, hc.imls, poes)
@@ -353,16 +378,24 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
 
         # save the hazard map
         # create `Output` first:
-        disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(poe=poe, imt=imt)
+        if hc.statistics == 'mean':
+            disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(poe=poe, imt=imt)
+        elif hc.statistics == 'quantile':
+            disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
+                poe=poe, imt=imt, quantile=hc.quantile)
+        else:
+            disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
+                poe=poe, imt=imt, rlz=hc.lt_realization)
+
         output = models.Output.objects.create_output(
             job, disp_name, 'hazard_map')
 
         # now create and store the hazard map
         hm = models.HazardMap.objects.create(
+            output=output,
             lt_realization=hc.lt_realization,
             investigation_time=hc.investigation_time,
             imt=hc.imt,
-            imls=hc.imls,
             statistics=hc.statistics,
             quantile=hc.quantile,
             sa_period=hc.sa_period,
@@ -372,3 +405,36 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             lats=lats,
             imls=imls,
         )
+hazard_curves_to_hazard_map.ignore_result = False
+
+
+def do_hazard_map_post_process(job):
+    logs.LOG.debug('> Post-processing - Hazard Maps')
+    block_size = int(config.get('hazard', 'concurrent_tasks'))
+
+    poes = job.hazard_calculation.poes_hazard_maps
+
+    # Stats for debug logging:
+    hazard_curve_ids = models.HazardCurve.objects.filter(
+        output__oq_job=job).values_list('id', flat=True)
+    logs.LOG.debug('num haz curves: %s' % len(hazard_curve_ids))
+
+    # Limit the number of concurrent tasks to the configured concurrency level:
+    block_gen = block_splitter(hazard_curve_ids, block_size)
+    total_blocks = int(math.ceil(len(hazard_curve_ids) / float(block_size)))
+
+    for i, block in enumerate(block_gen):
+        logs.LOG.debug('> Hazard post-processing block, %s of %s'
+                       % (i + 1, total_blocks))
+
+        tasks = []
+        for hazard_curve_id in block:
+            tasks.append(hazard_curves_to_hazard_map.subtask(
+                (job.id, hazard_curve_id, poes)))
+        results = TaskSet(tasks=tasks).apply_async()
+
+        utils_tasks._check_exception(results)
+
+        logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
+                       % (i + 1, total_blocks))
+    logs.LOG.debug('< Done post-processing - Hazard Maps')
