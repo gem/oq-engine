@@ -410,7 +410,6 @@ def _curve_db(location_nr, level_nr, curves_per_location, sigma):
 
 
 class HazardMapsTestCase(unittest.TestCase):
-    pass
 
     def test_compute_hazard_map(self):
         aaae = numpy.testing.assert_array_almost_equal
