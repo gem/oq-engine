@@ -21,13 +21,41 @@ Functions for exporting risk artifacts from the database.
 import os
 
 from openquake.db import models
-from openquake.export.core import makedirs
-from openquake.output.risk import AggregateLossCurveXMLWriter
+from openquake.export import core
+from openquake.output.risk import (
+    AggregateLossCurveXMLWriter, LossCurveXMLWriter)
 from openquake.output.scenario_damage import (
 DmgDistPerAssetXMLWriter, DmgDistPerTaxonomyXMLWriter, DmgDistTotalXMLWriter)
 
 
-@makedirs
+def export(output_id, target_dir):
+    output = models.Output.objects.get(id=output_id)
+    export_fn = _export_fn_map().get(
+        output.output_type, core._export_fn_not_implemented)
+
+    return export_fn(output, os.path.expanduser(target_dir))
+
+
+def _export_fn_map():
+    fn_map = {
+        'loss_curve': export_loss_curve,
+        }
+    return fn_map
+
+
+@core.makedirs
+def export_loss_curve(output, target_dir):
+    filename = 'loss-ratio-curve-%s.xml' % output.id
+    path = os.path.abspath(os.path.join(target_dir, filename))
+    writer = LossCurveXMLWriter(path)
+
+    loss_curves = models.LossCurveData.objects.filter(
+        loss_curve__output=output.id)
+    writer.serialize(loss_curves)
+    return [path]
+
+
+@core.makedirs
 def export_agg_loss_curve(output, target_dir):
     """Export the specified aggregate loss curve ``output`` to the
     ``target_dir``.
@@ -51,7 +79,7 @@ def export_agg_loss_curve(output, target_dir):
     return [file_path]
 
 
-@makedirs
+@core.makedirs
 def export_dmg_dist_per_asset(output, target_dir):
     """
     Export the damage distribution per asset identified
@@ -76,7 +104,7 @@ def export_dmg_dist_per_asset(output, target_dir):
     return [file_path]
 
 
-@makedirs
+@core.makedirs
 def export_dmg_dist_per_taxonomy(output, target_dir):
     """
     Export the damage distribution per taxonomy identified
@@ -103,7 +131,7 @@ def export_dmg_dist_per_taxonomy(output, target_dir):
     return [file_path]
 
 
-@makedirs
+@core.makedirs
 def export_dmg_dist_total(output, target_dir):
     """
     Export the total damage distribution identified

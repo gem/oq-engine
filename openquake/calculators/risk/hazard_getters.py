@@ -50,7 +50,7 @@ class HazardCurveGetterPerAsset(object):
 
         [haz_curve_data] = list(raw_query_set)
 
-        return zip(self.imls, haz_curve_data['poes'])
+        return zip(self.imls, haz_curve_data.poes)
 
 
 HAZARD_GETTERS = dict(

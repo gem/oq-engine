@@ -75,6 +75,10 @@ from openquake.job import validation
 from openquake.utils import version as utils_version
 
 
+HAZARD_OUTPUT_ARG = "--hazard-output-id"
+MISSING_HAZARD_OUTPUT_MSG = "Please, specify which Hazard output ID should be used with %s" % HAZARD_OUTPUT_ARG
+
+
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
@@ -126,6 +130,11 @@ def set_up_arg_parser():
         '--rr',
         help='Run a risk job with the specified config file',
         metavar='CONFIG_FILE')
+    risk_grp.add_argument(
+        HAZARD_OUTPUT_ARG,
+        '--ho',
+        help='Use the desiderd hazard output as input for the risk job',
+        metavar='HAZARD_OUTPUT')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -310,7 +319,9 @@ def export_hazard(haz_output_id, target_dir):
         print 'No output found for OUTPUT_ID %s' % output_id
 
 
-def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
+def run_risk(
+        cfg_file, log_level, log_file,
+        force_inputs, exports, hazard_output_id):
     """
     Run a risk calculation using the specified config file and other options.
 
@@ -326,6 +337,8 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
+    :param str hazard_ouput_id:
+        The Hazard Output ID used by the risk calculation
     """
     try:
         if log_file is not None:
@@ -339,14 +352,12 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
             user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
+        params.update(dict(hazard_output_id=hazard_output_id))
         calculation = engine2.create_risk_calculation(job.owner, params,
                                                       files.values())
         job.risk_calculation = calculation
         job.save()
 
-        # TODO(LB):
-        # Re-enable this when validation is supported.
-        """
         # Validate the job:
         calc_mode = job.risk_calculation.calculation_mode
 
@@ -359,14 +370,13 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
         # For now, just print whether or not the job is valid
         # (and any errors if it isn't valid)
         if not form.is_valid():
-            print ('Job configuration is not valid. Errors: %s'
-                   % dict(form.errors))
-            sys.exit(1)
-        """
+            complain_and_exit(
+                'Job configuration is not valid. Errors: %s' % dict(form.errors), 1)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_risk(job, log_level, log_file, exports)
+        completed_job = engine2.run_risk(
+            job, log_level, log_file, exports)
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -387,14 +397,18 @@ def _touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
+def complain_and_exit(msg, exit_code=0):
+    print msg
+    sys.exit(exit_code)
+
+
 if __name__ == '__main__':
     arg_parser = set_up_arg_parser()
 
     args = arg_parser.parse_args()
 
     if args.version:
-        print utils_version.info(__version__)
-        sys.exit(0)
+        complain_and_exit(utils_version.info(__version__))
 
     # hazard
     if args.list_hazard_calculations:
@@ -417,7 +431,10 @@ if __name__ == '__main__':
     elif args.export_risk is not None:
         print "export risk"
     elif args.run_risk is not None:
+        if args.hazard_output_id is None:
+            complain_and_exit(MISSING_HAZARD_OUTPUT_MSG)
         run_risk(args.run_risk, args.log_level, args.log_file,
-                 args.force_inputs, args.exports)
+                 args.force_inputs, args.exports,
+                 hazard_output_id=args.hazard_output_id)
     else:
         arg_parser.print_usage()
