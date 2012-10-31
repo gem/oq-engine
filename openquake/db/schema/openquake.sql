@@ -385,6 +385,7 @@ CREATE TABLE uiapi.risk_calculation (
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
+    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
 
     -- event-based parameters:
     loss_histogram_bins INTEGER,
@@ -1563,7 +1564,8 @@ CREATE TABLE riski.vulnerability_model (
         CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
-    category VARCHAR NOT NULL,
+    asset_category VARCHAR NOT NULL,
+    loss_category VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1582,6 +1584,7 @@ CREATE TABLE riski.vulnerability_function (
         CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Coefficients of variation
     covs float[] NOT NULL,
+    prob_distribution VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (vulnerability_model_id, taxonomy)
@@ -1741,6 +1744,9 @@ FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON D
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_curve_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;

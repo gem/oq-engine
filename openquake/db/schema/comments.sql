@@ -208,7 +208,8 @@ COMMENT ON COLUMN riski.vulnerability_function.last_update IS 'Date/time of the 
 
 
 COMMENT ON TABLE riski.vulnerability_model IS 'A risk vulnerability model';
-COMMENT ON COLUMN riski.vulnerability_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.vulnerability_model.loss_category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.vulnerability_model.asset_category IS 'The asset category of the vulnerability function set';
 COMMENT ON COLUMN riski.vulnerability_model.description IS 'An optional description of the risk vulnerability model at hand';
 COMMENT ON COLUMN riski.vulnerability_model.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN riski.vulnerability_model.last_update IS 'Date/time of the last change of the model at hand';
