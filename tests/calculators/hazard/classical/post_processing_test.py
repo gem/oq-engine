@@ -37,7 +37,7 @@ from tests.utils.helpers import random_location_generator
 from openquake.db import models
 from openquake.calculators.hazard.classical.post_processing import (
     setup_tasks, mean_curves, quantile_curves, persite_result_decorator,
-    mean_curves_weighted, quantile_curves_weighted, compute_hazard_map)
+    mean_curves_weighted, quantile_curves_weighted, compute_hazard_maps)
 
 
 # package prefix used for mock.patching
