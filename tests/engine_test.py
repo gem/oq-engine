@@ -263,57 +263,6 @@ class EngineAPITestCase(unittest.TestCase):
                     self.assertEqual(1, djc_mock.call_count)
 
 
-class EngineLaunchCalcTestCase(unittest.TestCase):
-    """Tests for :func:`openquake.engine._launch_job`."""
-
-    def test__launch_job_calls_core_calc_methods(self):
-        # The `Calculator` interface defines 4 general methods:
-        # - initialize
-        # - pre_execute
-        # - execute
-        # - post_execute
-        # When `_launch_job` is called, each of these methods should be
-        # called once per job type (hazard, risk).
-
-        # Calculation setup:
-        cfg_file = helpers.demo_file('scenario_risk/config.gem')
-
-        job = engine.prepare_job()
-        job_profile, params, sections = engine.import_job_profile(
-            cfg_file, job)
-
-        job_ctxt = engine.JobContext(
-            params, job.id, sections=sections,
-            serialize_results_to=['xml', 'db'],
-            oq_job_profile=job_profile, oq_job=job)
-
-        # Mocking setup:
-        cls_haz_calc = ('openquake.calculators.hazard.scenario.core'
-                        '.ScenarioHazardCalculator')
-        cls_risk_calc = ('openquake.calculators.risk.scenario.core'
-                         '.ScenarioRiskCalculator')
-        methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
-        haz_patchers = [helpers.patch('%s.%s' % (cls_haz_calc, m))
-                        for m in methods]
-        risk_patchers = [helpers.patch('%s.%s' % (cls_risk_calc, m))
-                         for m in methods]
-
-        haz_mocks = [p.start() for p in haz_patchers]
-        risk_mocks = [p.start() for p in risk_patchers]
-
-        # Call the function under test:
-        engine._launch_job(job_ctxt, sections)
-
-        self.assertTrue(all(x.call_count == 1 for x in haz_mocks))
-        self.assertTrue(all(x.call_count == 1 for x in risk_mocks))
-
-        # Tear down the mocks:
-        for p in haz_patchers:
-            p.stop()
-        for p in risk_patchers:
-            p.stop()
-
-
 @unittest.skip
 class ReadSitesFromExposureTestCase(unittest.TestCase):
 

@@ -1028,32 +1028,35 @@ CREATE TABLE uiapi.job2profile (
 ) TABLESPACE uiapi_ts;
 
 
--- Hazard map header
+-- Complete hazard map
 CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    poe float NOT NULL,
-    -- Statistic type, one of:
-    --      mean
-    --      quantile
-    statistic_type VARCHAR CONSTRAINT statistic_type_value
-        CHECK(statistic_type IN ('mean', 'quantile')),
+    lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
+    investigation_time float NOT NULL,
+    imt VARCHAR NOT NULL CONSTRAINT hazard_map_imt
+        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    statistics VARCHAR CONSTRAINT hazard_map_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
     -- Quantile value (only for "quantile" statistics)
-    quantile float CONSTRAINT quantile_value
+    quantile float CONSTRAINT hazard_map_quantile_value
         CHECK(
-            ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
-            OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
+    sa_period float CONSTRAINT hazard_map_sa_period
+        CHECK(
+            ((imt = 'SA') AND (sa_period IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float CONSTRAINT hazard_map_sa_damping
+        CHECK(
+            ((imt = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    poe float NOT NULL,
+    lons bytea NOT NULL,
+    lats bytea NOT NULL,
+    imls bytea NOT NULL
 ) TABLESPACE hzrdr_ts;
-
-
--- Hazard map data.
-CREATE TABLE hzrdr.hazard_map_data (
-    id SERIAL PRIMARY KEY,
-    hazard_map_id INTEGER NOT NULL,
-    value float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'hazard_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Hazard curve data.
@@ -1826,9 +1829,10 @@ ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.hazard_map_data
-ADD CONSTRAINT hzrdr_hazard_map_data_hazard_map_fk
-FOREIGN KEY (hazard_map_id) REFERENCES hzrdr.hazard_map(id) ON DELETE CASCADE;
+ALTER TABLE hzrdr.hazard_map
+ADD CONSTRAINT hzrdr_hazard_map_lt_realization_fk
+FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
+ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_output_fk

@@ -38,7 +38,6 @@ CREATE INDEX uiapi_upload_owner_id_idx on uiapi.upload(owner_id);
 -- hzrdr indices on foreign keys
 -- hazard map
 CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
-CREATE INDEX hzrdr_hazard_map_data_hazard_map_id_idx on hzrdr.hazard_map_data(hazard_map_id);
 -- hazard curve
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);

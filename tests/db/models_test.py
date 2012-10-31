@@ -534,7 +534,7 @@ class GmfSetIterTestCase(unittest.TestCase):
         [act_gmf_set] = models.GmfSet.objects\
             .filter(gmf_collection__output__oq_job=job.id,
                     gmf_collection__lt_realization__isnull=True)\
-            .order_by('gmf_collection', 'ses_ordinal')
+            .order_by('id')
 
         self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
                          act_gmf_set.complete_logic_tree_gmf)
@@ -548,7 +548,6 @@ class GmfSetIterTestCase(unittest.TestCase):
             equal, error = helpers.deep_eq(exp_gmf, act_gmf)
 
             self.assertTrue(equal, error)
-
 
     @attr('slow')
     def test_iter(self):
