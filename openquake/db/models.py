@@ -904,9 +904,9 @@ class RiskCalculation(djm.Model):
                                 "acceptable for calculations?")
 
     CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'classical', u'Classical PSHA'),
         # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
@@ -918,6 +918,10 @@ class RiskCalculation(djm.Model):
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
+
+    # the hazard output (it can point to an HazardCurve or to a
+    # GmfSet) used by the risk calculation
+    hazard_output = djm.ForeignKey("Output", null=False, blank=False)
 
     #######################
     # Classical parameters:
@@ -1236,6 +1240,7 @@ class Output(djm.Model):
         (u'ses', u'Stochastic Event Set'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'loss_curve', u'Loss Curve'),
+        (u'loss_ratio_curve', u'Loss Ratio Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
@@ -1868,7 +1873,6 @@ class LossMap(djm.Model):
 
     output = djm.ForeignKey("Output")
     scenario = djm.BooleanField()
-    loss_map_ref = djm.TextField(null=True)
     end_branch_label = djm.TextField(null=True)
     category = djm.TextField(null=True)
     unit = djm.TextField(null=True)
@@ -2180,9 +2184,10 @@ class ExposureData(djm.Model):
 ## Tables in the 'riski' schema.
 
 class VulnerabilityModelManager(djm.Manager):
-    def get_from_job(self, job, input_type="vulnerability"):
-        return self.get(input__input2job__job=job,
-                        input__input_type=input_type)
+    def get_from_job(self, job):
+        [input] = inputs4rcalc(job.risk_calculation,
+                               input_type="vulnerability")
+        return input.vulnerabilitymodel_set.all()[0]
 
 
 class VulnerabilityModel(djm.Model):
@@ -2196,7 +2201,8 @@ class VulnerabilityModel(djm.Model):
     description = djm.TextField(null=True)
     imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
     imls = fields.FloatArrayField()
-    category = djm.TextField()
+    asset_category = djm.TextField()
+    loss_category = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     objects = VulnerabilityModelManager()
@@ -2216,6 +2222,7 @@ class VulnerabilityFunction(djm.Model):
 
     vulnerability_model = djm.ForeignKey("VulnerabilityModel")
     taxonomy = djm.TextField()
+    prob_distribution = djm.TextField()
     loss_ratios = fields.FloatArrayField()
     covs = fields.FloatArrayField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -2226,7 +2233,7 @@ class VulnerabilityFunction(djm.Model):
     def to_risklib(self):
         return vulnerability_function.VulnerabilityFunction(
             self.vulnerability_model.imls, self.loss_ratios, self.covs,
-            distribution="LN")
+            distribution=self.prob_distribution)
 
 
 class FragilityModel(djm.Model):
