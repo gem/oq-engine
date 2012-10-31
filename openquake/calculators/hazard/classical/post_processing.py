@@ -385,7 +385,7 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
                 poe=poe, imt=imt, quantile=hc.quantile)
         else:
             disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
-                poe=poe, imt=imt, rlz=hc.lt_realization)
+                poe=poe, imt=imt, rlz=hc.lt_realization.id)
 
         output = models.Output.objects.create_output(
             job, disp_name, 'hazard_map')
