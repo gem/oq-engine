@@ -382,6 +382,9 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     ("post_processing_task", tasks),
                     tf_args=dict(job_id=self.job.id))
 
+        if len(hc.poes_hazard_maps) > 0:
+            post_processing.do_hazard_map_post_process(self.job)
+
         logs.LOG.debug('< done with post processing')
 
 
