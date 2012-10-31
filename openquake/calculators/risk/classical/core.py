@@ -21,16 +21,22 @@ from openquake.db import models
 from risklib import api
 
 
+from celery.contrib import rdb
+
+
 @tasks.oqtask
-def classical(job_id, asset_ids, hazard_getter):
-    job = models.OqJob.objects.get(job_id)
+def classical(job_id, asset_ids, hazard_getter, loss_curve_id):
+    #    rdb.set_trace()
+    job = models.OqJob.objects.get(pk=job_id)
     rc = job.risk_calculation
 
     model = models.VulnerabilityModel.objects.get_from_job(job).to_risklib()
     assets = models.ExposureData.objects.filter(id__in=asset_ids)
 
     hazard_getter_class = hazard_getters.HAZARD_GETTERS[hazard_getter]
-    hazard_getter = hazard_getter_class(rc.hazard_curve_id)
+    hazard_getter = hazard_getter_class(rc.hazard_output.hazardcurve.id)
+
+    loss_curve = models.LossCurve.objects.get(pk=loss_curve_id)
 
     calculator = api.conditional_losses(
         rc.conditional_loss_poes,
@@ -38,7 +44,14 @@ def classical(job_id, asset_ids, hazard_getter):
 
     for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
-        print asset_output
+        models.LossCurveData.objects.create(
+            loss_curve=loss_curve,
+            asset_ref=asset_output.asset.asset_ref,
+            location=asset_output.asset.site.wkt,
+            poes=asset_output.loss_curve.x_values.tolist(),
+            losses=asset_output.loss_curve.y_values.tolist())
+
+classical.ignore_result = True
 
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
