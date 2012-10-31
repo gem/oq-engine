@@ -409,6 +409,13 @@ hazard_curves_to_hazard_map.ignore_result = False
 
 
 def do_hazard_map_post_process(job):
+    """
+    Create and distribute tasks for processing hazard curves into hazard maps.
+
+    :param job:
+        A :class:`openquake.db.models.OqJob` which has some hazard curves
+        associated with it.
+    """
     logs.LOG.debug('> Post-processing - Hazard Maps')
     block_size = int(config.get('hazard', 'concurrent_tasks'))
 
