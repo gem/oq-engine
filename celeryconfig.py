@@ -46,6 +46,7 @@ CELERY_RESULT_BACKEND = "amqp"
 
 CELERY_IMPORTS = (
     "openquake.calculators.hazard.classical.core",
+    "openquake.calculators.hazard.classical.post_processing",
     "openquake.calculators.hazard.event_based.core_next",
     "openquake.calculators.hazard.event_based.post_processing",
     "tests.utils.tasks")
