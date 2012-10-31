@@ -515,7 +515,7 @@ class GmfSetIterTestCase(unittest.TestCase):
         # which we can use for both test cases (gmf_set iter and complete logic
         # tree iter).
         cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
-        helpers.run_hazard_job(cfg, silence=True)
+        helpers.run_hazard_job_sp(cfg, silence=True)
 
     @attr('slow')
     def test_complete_logic_tree_gmf_iter(self):

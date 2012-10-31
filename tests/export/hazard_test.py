@@ -54,7 +54,7 @@ class HazardCurveExportTestCase(unittest.TestCase):
             cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job(cfg, silence=True)
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -94,7 +94,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             cfg = helpers.demo_file('event_based_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job(cfg, silence=True)
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
