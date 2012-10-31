@@ -37,6 +37,7 @@ import numpy
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
+from risklib import vulnerability_function
 from shapely import wkt
 
 from openquake.db import fields
@@ -109,6 +110,24 @@ def inputs4hcalc(calc_id, input_type=None):
         A list of :class:`Input` instances.
     """
     result = Input.objects.filter(input2hcalc__hazard_calculation=calc_id)
+    if input_type is not None:
+        result = result.filter(input_type=input_type)
+    return result
+
+
+def inputs4rcalc(calc_id, input_type=None):
+    """
+    Get all of the inputs for a given hazard calculation.
+
+    :param int calc_id:
+        ID of a :class:`HazardCalculation`.
+    :param input_type:
+        A valid input type (optional). Leave as `None` if you want all inputs
+        for a given calculation.
+    :returns:
+        A list of :class:`Input` instances.
+    """
+    result = Input.objects.filter(input2rcalc__risk_calculation=calc_id)
     if input_type is not None:
         result = result.filter(input_type=input_type)
     return result
@@ -2159,6 +2178,11 @@ class ExposureData(djm.Model):
 
 ## Tables in the 'riski' schema.
 
+class VulnerabilityModelManager(djm.Manager):
+    def get_from_job(self, job, input_type="vulnerability"):
+        return self.get(input__input2job__job=job,
+                        input__input_type=input_type)
+
 
 class VulnerabilityModel(djm.Model):
     '''
@@ -2174,8 +2198,14 @@ class VulnerabilityModel(djm.Model):
     category = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    objects = VulnerabilityModelManager()
+
     class Meta:
         db_table = 'riski\".\"vulnerability_model'
+
+    def to_risklib(self):
+        return dict([(fn.taxonomy, fn.to_risklib())
+                     for fn in self.vulnerabilityfunction_set.all()])
 
 
 class VulnerabilityFunction(djm.Model):
@@ -2191,6 +2221,11 @@ class VulnerabilityFunction(djm.Model):
 
     class Meta:
         db_table = 'riski\".\"vulnerability_function'
+
+    def to_risklib(self):
+        return vulnerability_function.VulnerabilityFunction(
+            self.vulnerability_model.imls, self.loss_ratios, self.covs,
+            distribution="LN")
 
 
 class FragilityModel(djm.Model):

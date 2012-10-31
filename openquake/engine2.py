@@ -351,9 +351,11 @@ def run_risk(job, log_level, log_file, exports):
         supported.
     """
 
+    from openquake.calculators.risk import CALCULATORS
+
     # TODO: instantiate a real risk calculator
-    from openquake.calculators.risk.general import BaseRiskCalculatorNext
-    calc = BaseRiskCalculatorNext(job)
+    calc_mode = job.risk_calculation.calculation_mode
+    calc = CALCULATORS[calc_mode](job)
 
     return _run_calc(job, log_level, log_file, exports, calc, 'risk')
 
