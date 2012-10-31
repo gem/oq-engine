@@ -173,7 +173,7 @@ def create_job(params, **kwargs):
     return JobContext(params, job_id, **kwargs)
 
 
-def run_hazard_job(config_file, exports=None):
+def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
