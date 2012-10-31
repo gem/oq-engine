@@ -41,6 +41,7 @@ import shapely
 
 from django.core import exceptions
 
+from openquake.calculators import hazard
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
@@ -172,8 +173,37 @@ def create_job(params, **kwargs):
     return JobContext(params, job_id, **kwargs)
 
 
-def run_hazard_job(config_file, params=None, check_output=False,
-                   silence=False):
+def run_hazard_job(config_file, exports=None):
+    """
+    Given the path to job config file, run the job and assert that it was
+    successful. If this assertion passes, return the completed job.
+
+    :param str cfg:
+        Path to a job config file.
+    :param list exports:
+        A list of export format types. Currently only 'xml' is supported.
+    :returns:
+        The completed :class:`~openquake.db.models.OqJob`.
+    """
+    if exports is None:
+        exports = []
+
+    job = get_hazard_job(cfg)
+    job.is_running = True
+    job.save()
+
+    calc_mode = job.hazard_calculation.calculation_mode
+    calc = hazard.CALCULATORS_NEXT[calc_mode](job)
+    completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
+    job.is_running = False
+    job.save()
+
+    return completed_job
+
+
+
+def run_hazard_job_sp(config_file, params=None, check_output=False,
+                      silence=False):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
