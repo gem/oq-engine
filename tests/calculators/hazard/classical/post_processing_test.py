@@ -454,7 +454,6 @@ class HazardMapsTestCase(unittest.TestCase):
         actual = post_processing.compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
-
     def test_compute_hazard_map_multi_poe(self):
         curves = [
             [0.8, 0.5, 0.1],
@@ -534,7 +533,6 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
         aaae([0.0, 0.001], hm_0_02.lats)
         # our mock hazard map results:
         aaae([0.0091, 0.00687952], hm_0_02.imls)
-
 
     def test_hazard_curves_to_hazard_map_logic_tree(self):
         lt_haz_curves = models.HazardCurve.objects.filter(
