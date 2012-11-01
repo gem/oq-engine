@@ -143,7 +143,7 @@ class AbrahamsonSilva2008(GMPE):
         site_resp_term = np.zeros_like(sites.vs30)
 
         vs30_star, _ = self._compute_vs30_star_factor(imt, sites.vs30)
-        vlin, c, n= C['VLIN'], self.CONSTS['c'], self.CONSTS['n']
+        vlin, c, n = C['VLIN'], self.CONSTS['c'], self.CONSTS['n']
         a10, b = C['a10'], C['b']
 
         idx = sites.vs30 < vlin
@@ -177,7 +177,7 @@ class AbrahamsonSilva2008(GMPE):
 
             # equation 9, page 77
             T2 = np.ones_like(dists.rx)
-            idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) & 
+            idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) &
                     (idx))
             T2[idx2] = (0.5 + dists.rx[idx2] /
                         (2 * rup.width * np.cos(np.radians(rup.dip))))
@@ -305,8 +305,8 @@ class AbrahamsonSilva2008(GMPE):
         delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
 
         std_intra = np.sqrt(sigma_b ** 2 + self.CONSTS['sigma_amp'] ** 2 +
-                     (delta_amp ** 2) * (sigma_b_pga ** 2) +
-                     2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
+                            (delta_amp ** 2) * (sigma_b_pga ** 2) +
+                            2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
 
         return std_intra
 
@@ -319,7 +319,7 @@ class AbrahamsonSilva2008(GMPE):
         delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
 
         std_inter = np.sqrt(tau_0 ** 2 + (delta_amp ** 2) * (tau_b_pga ** 2) +
-                     2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
+                            2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
 
         return std_inter
 
@@ -339,11 +339,11 @@ class AbrahamsonSilva2008(GMPE):
         s1 = np.zeros_like(vs30measured, dtype=float)
         s2 = np.zeros_like(vs30measured, dtype=float)
 
-        idx = vs30measured == True
+        idx = vs30measured == 1
         s1[idx] = C['s1mea']
         s2[idx] = C['s2mea']
 
-        idx = vs30measured == False
+        idx = vs30measured == 0
         s1[idx] = C['s1est']
         s2[idx] = C['s2est']
 
@@ -392,12 +392,12 @@ class AbrahamsonSilva2008(GMPE):
         numerator = ((C['a10'] + C['b'] * self.CONSTS['n']) *
                      np.log(vs30_star / np.min([v1, 1000])))
         denominator = np.log((z1pt0 + self.CONSTS['c2']) /
-                      (median_z1pt0 + self.CONSTS['c2']))
-        
+                             (median_z1pt0 + self.CONSTS['c2']))
+
         idx = numerator + e2 * denominator < 0
         a21[idx] = - numerator[idx] / denominator[idx]
 
-        idx = vs30 >=1000
+        idx = vs30 >= 1000
         a21[idx] = 0.0
 
         return a21
@@ -421,7 +421,7 @@ class AbrahamsonSilva2008(GMPE):
             if t <= 0.50:
                 v1 = 1500.0
             elif t > 0.50 and t <= 1.0:
-                v1 =  np.exp(8.0 - 0.795 * np.log(t / 0.21))
+                v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
             elif t > 1.0 and t < 2.0:
                 v1 = np.exp(6.76 - 0.297 * np.log(t))
             else:
