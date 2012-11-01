@@ -498,6 +498,44 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             'calculators/hazard/classical/haz_map_test_job2.ini')
         cls.job = helpers.run_hazard_job(cfg)
 
+    def _test_maps(self, curve, hm_0_1, hm_0_02, lt_rlz=None):
+        self.assertEqual(lt_rlz, hm_0_1.lt_realization)
+        self.assertEqual(lt_rlz, hm_0_02.lt_realization)
+
+        self.assertEqual(
+            curve.investigation_time, hm_0_1.investigation_time)
+        self.assertEqual(
+            curve.investigation_time, hm_0_02.investigation_time)
+
+        self.assertEqual(curve.imt, hm_0_1.imt)
+        self.assertEqual(curve.imt, hm_0_02.imt)
+
+        self.assertEqual(curve.statistics, hm_0_1.statistics)
+        self.assertEqual(curve.statistics, hm_0_02.statistics)
+
+        self.assertEqual(curve.quantile, hm_0_1.quantile)
+        self.assertEqual(curve.quantile, hm_0_02.quantile)
+
+        self.assertIsNone(hm_0_1.sa_period)
+        self.assertIsNone(hm_0_02.sa_period)
+
+        self.assertIsNone(hm_0_1.sa_damping)
+        self.assertIsNone(hm_0_02.sa_damping)
+
+        self.assertEqual(0.1, hm_0_1.poe)
+        self.assertEqual(0.02, hm_0_02.poe)
+
+        aaae([0.0, 0.001], hm_0_1.lons)
+        aaae([0.0, 0.001], hm_0_1.lats)
+        # our mock hazard map results:
+        aaae([0.0098, 0.0084], hm_0_1.imls)
+
+        aaae([0.0, 0.001], hm_0_02.lons)
+        aaae([0.0, 0.001], hm_0_02.lats)
+        # our mock hazard map results:
+        aaae([0.0091, 0.00687952], hm_0_02.imls)
+
+
     def test_hazard_curves_to_hazard_map_logic_tree(self):
         lt_haz_curves = models.HazardCurve.objects.filter(
             output__oq_job=self.job,
@@ -516,46 +554,47 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
                     output__oq_job=self.job,
                     lt_realization=lt_rlz).order_by('-poe')
 
-                self.assertEqual(lt_rlz, hm_0_1.lt_realization)
-                self.assertEqual(lt_rlz, hm_0_02.lt_realization)
-
-                self.assertEqual(
-                    curve.investigation_time, hm_0_1.investigation_time)
-                self.assertEqual(
-                    curve.investigation_time, hm_0_02.investigation_time)
-
-                self.assertEqual(curve.imt, hm_0_1.imt)
-                self.assertEqual(curve.imt, hm_0_02.imt)
-
-                self.assertIsNone(hm_0_1.statistics)
-                self.assertIsNone(hm_0_02.statistics)
-
-                self.assertIsNone(hm_0_1.quantile)
-                self.assertIsNone(hm_0_02.quantile)
-
-                self.assertIsNone(hm_0_1.sa_period)
-                self.assertIsNone(hm_0_02.sa_period)
-
-                self.assertIsNone(hm_0_1.sa_damping)
-                self.assertIsNone(hm_0_02.sa_damping)
-
-                self.assertEqual(0.1, hm_0_1.poe)
-                self.assertEqual(0.02, hm_0_02.poe)
-
-                aaae([0.0, 0.001], hm_0_1.lons)
-                aaae([0.0, 0.001], hm_0_1.lats)
-                # our mock hazard map results:
-                aaae([0.0098, 0.0084], hm_0_1.imls)
-
-                aaae([0.0, 0.001], hm_0_02.lons)
-                aaae([0.0, 0.001], hm_0_02.lats)
-                # our mock hazard map results:
-                aaae([0.0091, 0.00687952], hm_0_02.imls)
+                self._test_maps(curve, hm_0_1, hm_0_02, lt_rlz=lt_rlz)
 
     def test_hazard_curves_to_hazard_map_mean(self):
+        mean_haz_curves = models.HazardCurve.objects.filter(
+            output__oq_job=self.job,
+            statistics='mean')
+
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
             compute.return_value = self.MOCK_HAZARD_MAP
 
+            for curve in mean_haz_curves:
+                hazard_curves_to_hazard_map(
+                    self.job.id, curve.id, self.TEST_POES)
+
+                hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
+                    output__oq_job=self.job,
+                    statistics='mean').order_by('-poe')
+
+                self._test_maps(curve, hm_0_1, hm_0_02)
+
     def test_hazard_curves_to_hazard_map_quantile(self):
+        mean_haz_curves = models.HazardCurve.objects.filter(
+            output__oq_job=self.job,
+            statistics='mean')
+
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
             compute.return_value = self.MOCK_HAZARD_MAP
+
+            for quantile in (0.1, 0.9):
+                quantile_haz_curves = models.HazardCurve.objects.filter(
+                    output__oq_job=self.job,
+                    statistics='quantile',
+                    quantile=quantile)
+
+                for curve in quantile_haz_curves:
+                    hazard_curves_to_hazard_map(
+                        self.job.id, curve.id, self.TEST_POES)
+
+                    hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
+                        output__oq_job=self.job,
+                        statistics='quantile',
+                        quantile=quantile).order_by('-poe')
+
+                    self._test_maps(curve, hm_0_1, hm_0_02)
