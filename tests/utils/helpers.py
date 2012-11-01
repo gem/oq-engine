@@ -201,7 +201,6 @@ def run_hazard_job(cfg, exports=None):
     return completed_job
 
 
-
 def run_hazard_job_sp(config_file, params=None, check_output=False,
                       silence=False):
     """
