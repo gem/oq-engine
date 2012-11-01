@@ -337,6 +337,8 @@ _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
 _HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
 
 
+# Silencing 'Too many local variables'
+# pylint: disable=R0914
 def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
     """
     Function to process a set of hazard curves into 1 hazard map for each PoE
@@ -365,7 +367,7 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
         lons = numpy.empty(imls.shape)
         lats = numpy.empty(imls.shape)
 
-        for j, point in enumerate(imls):
+        for j, _ in enumerate(imls):
             location = hcd[j].location
             lons[j] = location.x
             lats[j] = location.y
@@ -390,7 +392,7 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             job, disp_name, 'hazard_map')
 
         # now create and store the hazard map
-        hm = models.HazardMap.objects.create(
+        models.HazardMap.objects.create(
             output=output,
             lt_realization=hc.lt_realization,
             investigation_time=hc.investigation_time,
@@ -405,6 +407,8 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             imls=imls,
         )
 
+# Disabling 'invalid name'
+# pylint: disable=C0103
 hazard_curves_to_hazard_map_task = utils_tasks.oqtask(
     hazard_curves_to_hazard_map)
 hazard_curves_to_hazard_map_task.ignore_result = False
