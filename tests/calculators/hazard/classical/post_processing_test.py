@@ -575,10 +575,6 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
                 self._test_maps(curve, hm_0_1, hm_0_02)
 
     def test_hazard_curves_to_hazard_map_quantile(self):
-        mean_haz_curves = models.HazardCurve.objects.filter(
-            output__oq_job=self.job,
-            statistics='mean')
-
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
             compute.return_value = self.MOCK_HAZARD_MAP
 
