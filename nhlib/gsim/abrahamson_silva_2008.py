@@ -85,8 +85,9 @@ class AbrahamsonSilva2008(GMPE):
         for spec of input and result values.
         """
         # extract dictionaries of coefficients specific to required
-        # intensity measure type.
+        # intensity measure type and for PGA
         C = self.COEFFS[imt]
+        C_PGA = self.COEFFS[PGA()]
 
         # compute median pga on rock (vs30=1100), needed for site response
         # term calculation
@@ -100,7 +101,8 @@ class AbrahamsonSilva2008(GMPE):
                 self._compute_large_distance_term(C, dists, rup) +
                 self._compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
-        stddevs = None
+        stddevs = self._get_stddevs(C, C_PGA, pga1100, rup, sites,
+                                    stddev_types)
 
         return mean, stddevs
 
@@ -271,6 +273,112 @@ class AbrahamsonSilva2008(GMPE):
 
         return mean
 
+    def _get_stddevs(self, C, C_PGA, pga1100, rup, sites, stddev_types):
+        """
+        Return standard deviations as described in paragraph 'Equations for
+        standard deviation', page 81.
+        """
+        std_intra = self._compute_intra_event_std(C, C_PGA, pga1100, rup.mag,
+                                                  sites.vs30,
+                                                  sites.vs30measured)
+        std_inter = self._compute_inter_event_std(C, C_PGA, pga1100, rup.mag,
+                                                  sites.vs30)
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(std_intra)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(std_inter)
+        return stddevs
+
+    def _compute_intra_event_std(self, C, C_PGA, pga1100, mag, vs30,
+                                 vs30measured):
+        """
+        Compute intra event standard deviation (equation 24) as described
+        in the errata and not in the original paper.
+        """
+        sigma_b = self._compute_sigma_b(C, mag, vs30measured)
+        sigma_b_pga = self._compute_sigma_b(C_PGA, mag, vs30measured)
+        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
+
+        std_intra = np.sqrt(sigma_b ** 2 + self.CONSTS['sigma_amp'] ** 2 +
+                     (delta_amp ** 2) * (sigma_b_pga ** 2) +
+                     2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
+
+        return std_intra
+
+    def _compute_inter_event_std(self, C, C_PGA, pga1100, mag, vs30):
+        """
+        Compute inter event standard deviation, equation 25, page 82.
+        """
+        tau_0 = self._compute_std_0(C['s3'], C['s4'], mag)
+        tau_b_pga = self._compute_std_0(C_PGA['s3'], C_PGA['s4'], mag)
+        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
+
+        std_inter = np.sqrt(tau_0 ** 2 + (delta_amp ** 2) * (tau_b_pga ** 2) +
+                     2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
+
+        return std_inter
+
+    def _compute_sigma_b(self, C, mag, vs30measured):
+        """
+        Equation 23, page 81.
+        """
+        sigma_0 = self._compute_sigma_0(C, mag, vs30measured)
+        sigma_amp = self.CONSTS['sigma_amp']
+
+        return np.sqrt(sigma_0 ** 2 - sigma_amp ** 2)
+
+    def _compute_sigma_0(self, C, mag, vs30measured):
+        """
+        Equation 27, page 82.
+        """
+        s1 = np.zeros_like(vs30measured, dtype=float)
+        s2 = np.zeros_like(vs30measured, dtype=float)
+
+        idx = vs30measured == True
+        s1[idx] = C['s1mea']
+        s2[idx] = C['s2mea']
+
+        idx = vs30measured == False
+        s1[idx] = C['s1est']
+        s2[idx] = C['s2est']
+
+        return self._compute_std_0(s1, s2, mag)
+
+    def _compute_std_0(self, c1, c2, mag):
+        """
+        Common part of equations 27 and 28, pag 82.
+        """
+        if mag < 5:
+            return c1
+        elif mag >= 5 and mag <= 7:
+            return c1 + (c2 - c1) * (mag - 5) / 2
+        else:
+            return c2
+
+    def _compute_partial_derivative_site_amp(self, C, pga1100, vs30):
+        """
+        Partial derivative of site amplification term with respect to
+        PGA on rock (equation 26), as described in the errata and not
+        in the original paper.
+        """
+        delta_amp = np.zeros_like(vs30)
+        vlin = C['VLIN']
+        c = self.CONSTS['c']
+        b = C['b']
+        n = self.CONSTS['n']
+
+        idx = vs30 < vlin
+        delta_amp[idx] = (- b * pga1100[idx] / (pga1100[idx] + c) +
+                          b * pga1100[idx] / (pga1100[idx] + c *
+                          ((vs30[idx] / vlin) ** n)))
+
+        return delta_amp
+
     def _compute_a21_factor(self, C, imt, z1pt0, vs30):
         """
         Compute and return a21 factor, equation 18, page 80.
@@ -381,31 +489,31 @@ class AbrahamsonSilva2008(GMPE):
     #: Coefficient tables obtained by joining table 5a page 84, and table 5b
     #: page 85.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT    VLIN     b       a1       a2       a8       a10     a12      a13     a14      a15      a16      a18
-    pga     865.1  -1.186   0.804   -0.9679  -0.0372   0.9445  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067
-    0.010   865.1  -1.186   0.811   -0.9679  -0.0372   0.9445  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067
-    0.020   865.1  -1.219   0.855   -0.9774  -0.0372   0.9834  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067
-    0.030   907.8  -1.273   0.962   -1.0024  -0.0372   1.0471  0.0000  -0.0600  1.1331  -0.3500   0.9000  -0.0067
-    0.040   994.5  -1.308   1.037   -1.0289  -0.0315   1.0884  0.0000  -0.0600  1.1708  -0.3500   0.9000  -0.0067
-    0.050  1053.5  -1.346   1.133   -1.0508  -0.0271   1.1333  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0076
-    0.075  1085.7  -1.471   1.375   -1.0810  -0.0191   1.2808  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0093
-    0.100  1032.5  -1.624   1.563   -1.0833  -0.0166   1.4613  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0093
-    0.150   877.6  -1.931   1.716   -1.0357  -0.0254   1.8071  0.0181  -0.0600  1.1683  -0.3500   0.9000  -0.0093
-    0.200   748.2  -2.188   1.687   -0.9700  -0.0396   2.0773  0.0309  -0.0600  1.1274  -0.3500   0.9000  -0.0083
-    0.250   654.3  -2.381   1.646   -0.9202  -0.0539   2.2794  0.0409  -0.0600  1.0956  -0.3500   0.9000  -0.0069
-    0.300   587.1  -2.518   1.601   -0.8974  -0.0656   2.4201  0.0491  -0.0600  1.0697  -0.3500   0.9000  -0.0057
-    0.400   503.0  -2.657   1.511   -0.8677  -0.0807   2.5510  0.0619  -0.0600  1.0288  -0.3500   0.8423  -0.0039
-    0.500   456.6  -2.669   1.397   -0.8475  -0.0924   2.5395  0.0719  -0.0600  0.9971  -0.3191   0.7458  -0.0025
-    0.750   410.5  -2.401   1.137   -0.8206  -0.1137   2.1493  0.0800  -0.0600  0.9395  -0.2629   0.5704   0.0000
-    1.000   400.0  -1.955   0.915   -0.8088  -0.1289   1.5705  0.0800  -0.0600  0.8985  -0.2230   0.4460   0.0000
-    1.500   400.0  -1.025   0.510   -0.7995  -0.1534   0.3991  0.0800  -0.0600  0.8409  -0.1668   0.2707   0.0000
-    2.000   400.0  -0.299   0.192   -0.7960  -0.1708  -0.6072  0.0800  -0.0600  0.8000  -0.1270   0.1463   0.0000
-    3.000   400.0   0.000  -0.280   -0.7960  -0.1954  -0.9600  0.0800  -0.0600  0.4793  -0.0708  -0.0291   0.0000
-    4.000   400.0   0.000  -0.639   -0.7960  -0.2128  -0.9600  0.0800  -0.0600  0.2518  -0.0309  -0.1535   0.0000
-    5.000   400.0   0.000  -0.936   -0.7960  -0.2263  -0.9208  0.0800  -0.0600  0.0754   0.0000  -0.2500   0.0000
-    7.500   400.0   0.000  -1.527   -0.7960  -0.2509  -0.7700  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000
-    10.00   400.0   0.000  -1.993   -0.7960  -0.2683  -0.6630  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000
-    pgv     400.0  -1.955   5.7578  -0.9046  -0.1200   1.5390  0.0800  -0.0600  0.7000  -0.3900   0.6300   0.0000
+    IMT    VLIN     b       a1       a2       a8       a10     a12      a13     a14      a15      a16      a18     s1est  s2est  s1mea  s2mea  s3     s4     rho
+    pga     865.1  -1.186   0.804   -0.9679  -0.0372   0.9445  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067  0.590  0.470  0.576  0.453  0.470  0.300  1.000
+    0.010   865.1  -1.186   0.811   -0.9679  -0.0372   0.9445  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067  0.590  0.470  0.576  0.453  0.420  0.300  1.000
+    0.020   865.1  -1.219   0.855   -0.9774  -0.0372   0.9834  0.0000  -0.0600  1.0800  -0.3500   0.9000  -0.0067  0.590  0.470  0.576  0.453  0.420  0.300  1.000
+    0.030   907.8  -1.273   0.962   -1.0024  -0.0372   1.0471  0.0000  -0.0600  1.1331  -0.3500   0.9000  -0.0067  0.605  0.478  0.591  0.461  0.462  0.305  0.991
+    0.040   994.5  -1.308   1.037   -1.0289  -0.0315   1.0884  0.0000  -0.0600  1.1708  -0.3500   0.9000  -0.0067  0.615  0.483  0.602  0.466  0.492  0.309  0.982
+    0.050  1053.5  -1.346   1.133   -1.0508  -0.0271   1.1333  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0076  0.623  0.488  0.610  0.471  0.515  0.312  0.973
+    0.075  1085.7  -1.471   1.375   -1.0810  -0.0191   1.2808  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0093  0.630  0.495  0.617  0.479  0.550  0.317  0.952
+    0.100  1032.5  -1.624   1.563   -1.0833  -0.0166   1.4613  0.0000  -0.0600  1.2000  -0.3500   0.9000  -0.0093  0.630  0.501  0.617  0.485  0.550  0.321  0.929
+    0.150   877.6  -1.931   1.716   -1.0357  -0.0254   1.8071  0.0181  -0.0600  1.1683  -0.3500   0.9000  -0.0093  0.630  0.509  0.616  0.491  0.550  0.326  0.896
+    0.200   748.2  -2.188   1.687   -0.9700  -0.0396   2.0773  0.0309  -0.0600  1.1274  -0.3500   0.9000  -0.0083  0.630  0.514  0.614  0.495  0.520  0.329  0.874
+    0.250   654.3  -2.381   1.646   -0.9202  -0.0539   2.2794  0.0409  -0.0600  1.0956  -0.3500   0.9000  -0.0069  0.630  0.518  0.612  0.497  0.497  0.332  0.856
+    0.300   587.1  -2.518   1.601   -0.8974  -0.0656   2.4201  0.0491  -0.0600  1.0697  -0.3500   0.9000  -0.0057  0.630  0.522  0.611  0.499  0.479  0.335  0.841
+    0.400   503.0  -2.657   1.511   -0.8677  -0.0807   2.5510  0.0619  -0.0600  1.0288  -0.3500   0.8423  -0.0039  0.630  0.527  0.608  0.501  0.449  0.338  0.818
+    0.500   456.6  -2.669   1.397   -0.8475  -0.0924   2.5395  0.0719  -0.0600  0.9971  -0.3191   0.7458  -0.0025  0.630  0.532  0.606  0.504  0.426  0.341  0.783
+    0.750   410.5  -2.401   1.137   -0.8206  -0.1137   2.1493  0.0800  -0.0600  0.9395  -0.2629   0.5704   0.0000  0.630  0.539  0.602  0.506  0.385  0.346  0.680
+    1.000   400.0  -1.955   0.915   -0.8088  -0.1289   1.5705  0.0800  -0.0600  0.8985  -0.2230   0.4460   0.0000  0.630  0.545  0.594  0.503  0.350  0.350  0.607
+    1.500   400.0  -1.025   0.510   -0.7995  -0.1534   0.3991  0.0800  -0.0600  0.8409  -0.1668   0.2707   0.0000  0.615  0.552  0.566  0.497  0.350  0.350  0.504
+    2.000   400.0  -0.299   0.192   -0.7960  -0.1708  -0.6072  0.0800  -0.0600  0.8000  -0.1270   0.1463   0.0000  0.604  0.558  0.544  0.491  0.350  0.350  0.431
+    3.000   400.0   0.000  -0.280   -0.7960  -0.1954  -0.9600  0.0800  -0.0600  0.4793  -0.0708  -0.0291   0.0000  0.589  0.565  0.527  0.500  0.350  0.350  0.328
+    4.000   400.0   0.000  -0.639   -0.7960  -0.2128  -0.9600  0.0800  -0.0600  0.2518  -0.0309  -0.1535   0.0000  0.578  0.570  0.515  0.505  0.350  0.350  0.255
+    5.000   400.0   0.000  -0.936   -0.7960  -0.2263  -0.9208  0.0800  -0.0600  0.0754   0.0000  -0.2500   0.0000  0.570  0.587  0.510  0.529  0.350  0.350  0.200
+    7.500   400.0   0.000  -1.527   -0.7960  -0.2509  -0.7700  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000  0.611  0.618  0.572  0.579  0.350  0.350  0.200
+    10.00   400.0   0.000  -1.993   -0.7960  -0.2683  -0.6630  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000  0.640  0.640  0.612  0.612  0.350  0.350  0.200
+    pgv     400.0  -1.955   5.7578  -0.9046  -0.1200   1.5390  0.0800  -0.0600  0.7000  -0.3900   0.6300   0.0000  0.590  0.470  0.576  0.453  0.420  0.300  0.740
     """)
 
     #: equation constants (that is IMT independent)
@@ -418,5 +526,6 @@ class AbrahamsonSilva2008(GMPE):
         'a5': -0.398,
         'n': 1.18,
         'c': 1.88,
-        'c2': 50
+        'c2': 50,
+        'sigma_amp': 0.3
     }
