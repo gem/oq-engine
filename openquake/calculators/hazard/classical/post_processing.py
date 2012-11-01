@@ -337,11 +337,10 @@ _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
 _HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
 
 
-@utils_tasks.oqtask
 def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
     """
-    Celery task function to process a set of hazard curves into 1 hazard map
-    for each PoE in ``poes``.
+    Function to process a set of hazard curves into 1 hazard map for each PoE
+    in ``poes``.
 
     Hazard map results are written directly to the database.
 
@@ -405,7 +404,10 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             lats=lats,
             imls=imls,
         )
-hazard_curves_to_hazard_map.ignore_result = False
+
+hazard_curves_to_hazard_map_task = utils_tasks.oqtask(
+    hazard_curves_to_hazard_map)
+hazard_curves_to_hazard_map_task.ignore_result = False
 
 
 def do_hazard_map_post_process(job):
@@ -436,7 +438,7 @@ def do_hazard_map_post_process(job):
 
         tasks = []
         for hazard_curve_id in block:
-            tasks.append(hazard_curves_to_hazard_map.subtask(
+            tasks.append(hazard_curves_to_hazard_map_task.subtask(
                 (job.id, hazard_curve_id, poes)))
         results = TaskSet(tasks=tasks).apply_async()
 
