@@ -270,9 +270,9 @@ def list_hazard_outputs(hc_id):
     """
     outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
     if len(outputs) > 0:
-        print 'ID\tOuput Type'
+        print 'ID\tOuput Type\tName'
         for o in outputs:
-            print '%s\t%s' % (o.id, o.output_type)
+            print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
 
 
 def list_risk_outputs(rc_id):
@@ -285,9 +285,9 @@ def list_risk_outputs(rc_id):
     """
     outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
     if len(outputs) > 0:
-        print 'ID\tOutput Type'
+        print 'ID\tOutput Type\tName'
         for o in outputs:
-            print '%s\t%s' % (o.id, o.output_type)
+            print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
 
 
 def export_hazard(haz_output_id, target_dir):
