@@ -187,7 +187,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         hc = self.job.hazard_calculation
 
         rlz1, rlz2 = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id)
+            hazard_calculation=hc.id).order_by('ordinal')
 
         progress = dict(total=0, computed=0)
 
