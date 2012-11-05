@@ -82,4 +82,47 @@ where
 * ``P`` is the number of geographical points of interest
 * ``I`` is the number of IMT/IML definitions
 
+Statistical Curves
+------------------
+
+The classical hazard calculator is also capable of producing `mean` and
+`quantile` curves. These aggregates are computed from the curves for a given
+point and IMT over all logic tree realizations.
+
+Mean Curves
+^^^^^^^^^^^
+
+When computing a mean hazard curve for a given point/IMT, there are two
+possible approaches:
+
+1. mean, unweighted
+2. mean, weighted
+
+Technically, both approaches are "weighted". In the first approach, however,
+the weights are `implicit` and are taken into account in the process of logic
+tree sampling. This approach is used in the case of random Monte-Carlo logic
+tree sampling. The total of number of logic tree samples is defined by the user
+with the `number_of_logic_tree_samples` configuration parameter.
+
+In the second approach, the weights are explicit in the
+caluclation of the mean. This approach is used in the case of end-branch logic
+tree enumeration, whereby each possible logic tree path is traversed. (Each
+logic tree path in this case defines a weight.) The total number of logic tree
+samples in this case is determined by the total number of possible tree paths.
+(To perform end-branch enumeration, the user must specify
+`number_of_logic_tree_samples = 0` in the job configuration.
+
+Quantile Curves
+^^^^^^^^^^^^^^^
+
+Similar to mean curves, quantiles curves can be produced for a given
+point/IMT/quantile level (in the range [0.0, 1.0]), there are two possible
+approaches:
+
+1. quantile, unweighted
+2. quantile, weighted
+
+As with mean curves, `unweighted quantiles` are calculated when Monte-Carlo
+logic tree sampling is used and `weighted quantiles` are calculated when logic
+tree end-branch enumeration is used.
 """
