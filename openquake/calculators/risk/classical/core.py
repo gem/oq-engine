@@ -26,7 +26,6 @@ from celery.contrib import rdb
 
 @tasks.oqtask
 def classical(job_id, asset_ids, hazard_getter, loss_curve_id):
-    #    rdb.set_trace()
     job = models.OqJob.objects.get(pk=job_id)
     rc = job.risk_calculation
 
@@ -48,10 +47,9 @@ def classical(job_id, asset_ids, hazard_getter, loss_curve_id):
             loss_curve=loss_curve,
             asset_ref=asset_output.asset.asset_ref,
             location=asset_output.asset.site.wkt,
-            poes=asset_output.loss_curve.x_values.tolist(),
-            losses=asset_output.loss_curve.y_values.tolist())
-
-classical.ignore_result = True
+            poes=asset_output.loss_curve.y_values.tolist(),
+            losses=asset_output.loss_curve.x_values.tolist())
+classical.ignore_result = False
 
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
