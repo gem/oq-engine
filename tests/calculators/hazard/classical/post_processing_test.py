@@ -473,14 +473,6 @@ class HazardMapsTestCase(unittest.TestCase):
         actual = post_processing.compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
 
-    def test_do_hazard_map_post_process(self):
-        cfg = helpers.get_data_path(
-            'calculators/hazard/classical/haz_map_test_job.ini')
-        job = helpers.run_hazard_job(cfg)
-
-        hazard_maps = models.HazardMap.objects.filter(output__oq_job=job)
-        # TODO: verify hazard maps
-
 
 class HazardMapTaskFuncTestCase(unittest.TestCase):
 
