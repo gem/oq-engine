@@ -408,6 +408,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
 
     def test_create_risk_calculation(self):
         params = {
+            'hazard_output_id': 1,
             'base_path': 'path/to/job.ini',
             'export_dir': '/tmp/xxx',
             'calculation_mode': 'classical',
