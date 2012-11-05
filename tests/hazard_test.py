@@ -31,7 +31,6 @@ import unittest
 from openquake import kvs
 from openquake import logs
 from openquake.calculators.hazard import general as hazard_general
-from openquake.export import psha
 from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers
@@ -80,56 +79,3 @@ class HazardEngineTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError:
                 pass
-
-
-class IMLTestCase(unittest.TestCase):
-    """
-    Tests that every Intensity Measure Type
-    declared in ``openquake.db.models.OqJobProfile.IMT_CHOICES``
-    has a correct corresponding function
-    in ``openquake.hazard.general.IML_SCALING`` mapping
-    and is allowed to be the configuration parameter value
-    for ``INTENSITY_MEASURE_TYPE``.
-    """
-    def test_scaling_definitions(self):
-        from openquake.db.models import OqJobProfile
-        from openquake.job.params import ENUM_MAP
-        from openquake.calculators.hazard.general import IML_SCALING
-        enum_map_reversed = dict((val, key) for (key, val) in ENUM_MAP.items())
-        imt_config_names = [enum_map_reversed[imt]
-                            for (imt, imt_verbose) in OqJobProfile.IMT_CHOICES
-                            if imt in enum_map_reversed]
-        self.assertEqual(set(IML_SCALING) - set(imt_config_names), set())
-        self.assertEqual(set(imt_config_names), set(IML_SCALING))
-        for imt in imt_config_names:
-            self.assertTrue(callable(IML_SCALING[imt]))
-            self.assertTrue(hasattr(self, 'test_imt_%s' % imt),
-                            'please test imt %s' % imt)
-
-    def _test_imt(self, imt, function):
-        sample_imt = [1.2, 3.4, 5.6]
-        double_array = hazard_general.get_iml_list(sample_imt, imt)
-        actual_result = [val.value for val in double_array]
-        expected_result = map(function, sample_imt)
-        self.assertEqual(actual_result, expected_result)
-
-    def test_imt_PGA(self):
-        self._test_imt('PGA', numpy.log)
-
-    def test_imt_SA(self):
-        self._test_imt('SA', numpy.log)
-
-    def test_imt_PGV(self):
-        self._test_imt('PGV', numpy.log)
-
-    def test_imt_PGD(self):
-        self._test_imt('PGD', numpy.log)
-
-    def test_imt_IA(self):
-        self._test_imt('IA', numpy.log)
-
-    def test_imt_RSD(self):
-        self._test_imt('RSD', numpy.log)
-
-    def test_imt_MMI(self):
-        self._test_imt('MMI', lambda val: val)

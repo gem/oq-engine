@@ -26,7 +26,7 @@ import os
 from openquake.db import models
 from openquake.export.core import makedirs
 from openquake.utils import round_float
-from openquake.output import uhs as uhs_output
+
 
 #: Format string for HDF5 dataset names
 _DS_NAME_FMT = 'lon:%s-lat:%s'
@@ -112,8 +112,8 @@ def export_uhs(output, target_dir):
         file_names.append(file_name)
 
     nrml_file_path = os.path.join(target_dir, _XML_FILE_NAME)
-    nrml_writer = uhs_output.UHSXMLWriter(nrml_file_path, uh_spectra.periods,
-                                          uh_spectra.timespan)
+
+    # TODO (lp) port uhs writer to nrml
     nrml_writer.serialize(nrml_data)
 
     # Don't forget the nrml file:
