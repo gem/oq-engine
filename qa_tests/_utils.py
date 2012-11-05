@@ -17,8 +17,6 @@ import unittest
 
 from lxml import etree
 
-from openquake import engine2
-from openquake.calculators import hazard
 from tests.utils import helpers
 
 
@@ -42,18 +40,7 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        if exports is None:
-            exports = []
-
-        job = helpers.get_hazard_job(cfg)
-        job.is_running = True
-        job.save()
-
-        calc_mode = job.hazard_calculation.calculation_mode
-        calc = hazard.CALCULATORS_NEXT[calc_mode](job)
-        completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
-        job.is_running = False
-        job.save()
+        completed_job = helpers.run_hazard_job(cfg, exports=exports)
 
         self.assertEqual('complete', completed_job.status)
         return completed_job

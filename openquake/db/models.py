@@ -1287,7 +1287,6 @@ class HazardMap(djm.Model):
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
-    imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
         (u'quantile', u'Quantile'),
