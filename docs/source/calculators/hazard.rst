@@ -35,6 +35,8 @@ Classical PSHA Core
 Classical PSHA Post-Processing
 ==============================
 .. automodule:: openquake.calculators.hazard.classical.post_processing
+.. autofunction:: openquake.calculators.hazard.classical.post_processing.hazard_curves_to_hazard_map_task
+.. autofunction:: openquake.calculators.hazard.classical.post_processing.do_post_process
 
 ***************************
 Event-Based PSHA Calculator
