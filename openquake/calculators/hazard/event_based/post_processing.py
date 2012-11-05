@@ -211,7 +211,7 @@ def do_post_process(job):
         # Check for Exceptions in the results and raise
         utils_tasks._check_exception(results)
 
-        logs.LOG.debug('> Done GMF post-processing block, %s of %s'
+        logs.LOG.debug('< Done GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
     logs.LOG.debug('< Done post-processing - GMFs to Hazard Curves')
 
