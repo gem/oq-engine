@@ -65,18 +65,20 @@ key elements:
 * **Spectral Acceleration (SA) Damping** - Optional; used only if the IMT is
   SA.
 
-For a given calculation, hazard curves are computed for each IMT/IML definition
-and each geographical point of interest. (In other words: If a calculation
-specifies a geometry with 10 points of interest and 3 IMT/IML definitions, 30
-curves will be computed.
+For a given calculation, hazard curves are computed for each logic tree
+realization, each IMT/IML definition, and each geographical point of interest.
+(In other words: If a calculation specifies 4 logic tree samples, a geometry
+with 10 points of interest, and 3 IMT/IML definitions, 120 curves will be
+computed.)
 
 Another way to put it is:
 
-``T = P * I``
+``T = R * P * I``
 
 where
 
 * ``T`` is the total number of curves
+* ``R`` is the total number of logic tree realizations
 * ``P`` is the number of geographical points of interest
 * ``I`` is the number of IMT/IML definitions
 
