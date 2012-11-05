@@ -54,26 +54,30 @@ class HazardCurveExportTestCase(unittest.TestCase):
             cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job(cfg, silence=True)
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            expected_outputs = 6
+            expected_outputs = 18  # 6 hazard curves + 12 hazard maps
             self.assertEqual(expected_outputs, len(outputs))
 
-            # Just to be thorough, let's make sure we can export everything:
-            exported_files = []
-            for o in outputs:
-                files = hazard.export(o.id, target_dir)
-                exported_files.extend(files)
+            # Export the hazard curves:
+            curves = outputs.filter(output_type='hazard_curve')
+            hc_files = []
+            for curve in curves:
+                hc_files.extend(hazard.export(curve.id, target_dir))
 
-            self.assertEqual(expected_outputs, len(exported_files))
-            for f in exported_files:
+            self.assertEqual(6, len(hc_files))
+
+            for f in hc_files:
                 self.assertTrue(os.path.exists(f))
                 self.assertTrue(os.path.isabs(f))
                 self.assertTrue(os.path.getsize(f) > 0)
+
+            # TODO(LB): Test hazard map export as well. This exporter isn't
+            # implemented yet.
         finally:
             shutil.rmtree(target_dir)
 
@@ -94,7 +98,7 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
             cfg = helpers.demo_file('event_based_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job(cfg, silence=True)
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
