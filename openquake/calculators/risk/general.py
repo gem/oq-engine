@@ -168,4 +168,3 @@ class BaseRiskCalculator(base.CalculatorNext):
                 self.job, "Loss Curve set", "loss_curve"))
 
         # TODO (lp) loss maps
-
