@@ -39,12 +39,19 @@ def _number_of(elem_name, tree):
     expr = '//%s' % elem_name
     return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
 
+class BaseExportTestCase(unittest.TestCase):
 
-class HazardCurveExportTestCase(unittest.TestCase):
+    def _test_exported_file(self, filename):
+        self.assertTrue(os.path.exists(filename))
+        self.assertTrue(os.path.isabs(filename))
+        self.assertTrue(os.path.getsize(filename) > 0)
+
+
+class ClassicalExportTestcase(BaseExportTestCase):
 
     @attr('slow')
-    def test_export_hazard_curves(self):
-        # Run a hazard calculation to compute some curves
+    def test_classical_hazard_export(self):
+        # Run a hazard calculation to compute some curves and maps
         # Call the exporter and verify that files were created
         # Since the hazard curve XML writer is concerned with correctly
         # generating XML, we won't test that here.
@@ -72,17 +79,23 @@ class HazardCurveExportTestCase(unittest.TestCase):
             self.assertEqual(6, len(hc_files))
 
             for f in hc_files:
-                self.assertTrue(os.path.exists(f))
-                self.assertTrue(os.path.isabs(f))
-                self.assertTrue(os.path.getsize(f) > 0)
+                self._test_exported_file(f)
 
-            # TODO(LB): Test hazard map export as well. This exporter isn't
-            # implemented yet.
+            # Test hazard map export as well.
+            maps = outputs.filter(output_type='hazard_map')
+            hm_files = []
+            for haz_map in maps:
+                hm_files.extend(hazard.export(haz_map.id, target_dir))
+
+            self.assertEqual(12, len(hm_files))
+
+            for f in hm_files:
+                self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
 
 
-class EventBasedGMFExportTestCase(unittest.TestCase):
+class EventBasedExportTestCase(BaseExportTestCase):
 
     @attr('slow')
     def test_export_for_event_based(self):
@@ -169,7 +182,4 @@ class EventBasedGMFExportTestCase(unittest.TestCase):
         finally:
             shutil.rmtree(target_dir)
 
-    def _test_exported_file(self, filename):
-        self.assertTrue(os.path.exists(filename))
-        self.assertTrue(os.path.isabs(filename))
-        self.assertTrue(os.path.getsize(filename) > 0)
+
