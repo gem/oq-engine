@@ -31,8 +31,6 @@ from openquake import engine
 from openquake import kvs
 from openquake.db import models
 from openquake import shapes
-from openquake.calculators.risk.event_based.core import (
-    EventBasedRiskCalculator)
 from openquake.engine import import_job_profile
 from openquake.engine import JobContext
 from openquake.engine import _parse_config_file
@@ -833,40 +831,6 @@ class RunJobTestCase(unittest.TestCase):
 
 
 @unittest.skip
-class JobsWithExposureTestCase(unittest.TestCase):
-    '''Tests related to job with exposure.'''
-
-    def setUp(self):
-        # Test 'event-based' job
-        cfg_path = helpers.testdata_path("simplecase/config.gem")
-
-        self.job = engine.prepare_job()
-        self.jp, self.params, self.sections = engine.import_job_profile(
-            cfg_path, self.job)
-
-    def test_with_risk_jobs_we_can_trigger_hazard_only_on_exposure_sites(self):
-        # When we have hazard and risk jobs, we can ask to trigger
-        # the hazard computation only on the sites specified
-        # in the exposure file.
-        self.params['COMPUTE_HAZARD_AT_ASSETS_LOCATIONS'] = True
-
-        job_ctxt = engine.JobContext(
-            self.params, self.job.id, sections=self.sections,
-            oq_job_profile=self.jp)
-
-        calc = EventBasedRiskCalculator(job_ctxt)
-        calc.store_exposure_assets()
-
-        expected_sites = set([
-            shapes.Site(-118.077721, 33.852034),
-            shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)])
-
-        actual_sites = set(job_ctxt.sites_to_compute())
-        self.assertEqual(expected_sites, actual_sites)
-
-
-@unittest.skip
 class JobStatsTestCase(unittest.TestCase):
     '''
     Tests related to capturing job stats.
@@ -900,40 +864,6 @@ class JobStatsTestCase(unittest.TestCase):
         self.assertTrue(actual_stats.start_time is not None)
         self.assertEqual(91, actual_stats.num_sites)
         self.assertEqual(1, actual_stats.realizations)
-
-    def test_job_launch_calls_record_initial_stats(self):
-        '''When a job is launched, make sure that
-        :py:method:`openquake.engine.JobContext._record_initial_stats`
-        is called.
-        '''
-        # Mock out pieces of the test job so it doesn't actually run.
-        eb_haz_calc = ('openquake.calculators.hazard.event_based.core'
-                       '.EventBasedHazardCalculator')
-        eb_risk_calc = ('openquake.calculators.risk.event_based.core'
-                       '.EventBasedRiskCalculator')
-        methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
-
-        haz_patchers = [patch('%s.%s' % (eb_haz_calc, m)) for m in methods]
-        risk_patchers = [patch('%s.%s' % (eb_risk_calc, m)) for m in methods]
-
-        for p in haz_patchers:
-            p.start()
-        for p in risk_patchers:
-            p.start()
-
-        try:
-            record = 'openquake.engine.JobContext._record_initial_stats'
-
-            with patch(record) as record_mock:
-                engine._launch_job(
-                    self.eb_job, ['general', 'HAZARD', 'RISK'])
-
-                self.assertEqual(1, record_mock.call_count)
-        finally:
-            for p in haz_patchers:
-                p.stop()
-            for p in risk_patchers:
-                p.stop()
 
 
 class JobUtilsTestCase(unittest.TestCase):
