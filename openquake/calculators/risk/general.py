@@ -20,6 +20,7 @@
 import os
 
 from openquake import logs
+from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base
 from openquake.parser import (
@@ -33,75 +34,115 @@ from openquake.utils import general, tasks
 from openquake.input import exposure as exposure_writer
 
 
-# number of assets processed by a celery task
+# default number of assets processed by a celery task
 ASSET_BLOCK_SIZE = 1000
 
 
 class BaseRiskCalculator(base.CalculatorNext):
     """
-    A temporary "dummy" calculator that doesn't do anything. This is currently
-    only used to be able to exercise the risk engine end-to-end.
-
-    This will eventually updated or replaced when we start to implement the new
-    set of risk calculators based oq-risklib.
+    Abstract base class for risk calculators. Contains a bunch of common
+    functionality, including initialization procedures and the core
+    distribution/execution logic.
 
     :attribute asset_ids
-      An array of asset_ids
+      The array of asset_ids the calculator will work on. They are
+      extracted from the exposure input and filtered according with the
+      RiskCalculation region_constraint
 
-    :attribute loss_curve
-       The LossCurve object that will store the final output
+    :attribute output_container_ids
+      A dictionary holding the output containers object ids (e.g. LossCurve,
+      LossMap)
     """
 
-    # the celery task used in the execute phase
+    #: in subclasses, this would be a reference to the the celery task
+    #  function used in the execute phase
     celery_task = None
 
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
         self.asset_ids = []
-        self.loss_curve = None
+        self.output_container_ids = None
 
     def pre_execute(self):
-        logs.LOG.debug('> storing exposure')
-        self._store_exposure()
+        """
+        In this phase, the general workflow is
 
-        logs.LOG.debug('> validating region constraint')
-        self._validate_region_constraint()
+        1. Parse the exposure input and store the exposure data (if
+        not already present)
 
-        logs.LOG.debug('> filter exposure')
-        self.asset_ids = self._filter_exposure()
+        2. Filter the exposure in order to consider only the assets of
+        interest
 
-        logs.LOG.debug('> storing risk model')
-        self.store_risk_model()
+        3. Prepare and save the output containers.
+        """
+        with logs.tracing('store exposure'):
+            exposure_model = self._store_exposure()
 
-        logs.LOG.debug('> creating output containers')
-        self.create_outputs()
+        with logs.tracing('filter exposure'):
+            self.asset_ids = models.ExposureData.objects.contained_in(
+                exposure_model, self.job.risk_calculation.region_constraint)
+
+            if not self.asset_ids:
+                raise RuntimeError(
+                    ['Region of interest is not covered by the exposure input.'
+                     ' This configuration is invalid. '
+                     ' Change the region constraint input or use a proper '
+                     ' exposure file'])
+
+        with logs.tracing('store risk model'):
+            self.store_risk_model()
+
+        with logs.tracing('create output containers'):
+            self.output_container_ids = self.create_outputs()
 
     def execute(self):
+        """
+        Calculation work is parallelized over block of assets, which
+        means that each task will compute risk for only a subset of
+        the exposure considered.
+
+        The asset block size value is got by the variable `block_size`
+        in `[risk]` section of the OpenQuake config file.
+        """
+
+        asset_block_size = int(
+            config.get('risk', 'block_size') or ASSET_BLOCK_SIZE)
+
         asset_chunks = list(general.block_splitter(
-            self.asset_ids, ASSET_BLOCK_SIZE))
+            self.asset_ids, asset_block_size))
+
+        tf_args = dict(job_id=self.job.id,
+                     hazard_getter="one_query_per_asset")
+        tf_args.update(self.output_container_ids)
 
         tasks.distribute(
             self.celery_task,
             ("asset_ids", asset_chunks),
-            tf_args=dict(job_id=self.job.id,
-                         hazard_getter="one_query_per_asset",
-                         loss_curve_id=self.loss_curve.id))
+            tf_args=tf_args)
 
     def export(self, *args, **kwargs):
+        """
+        If requested by the user, automatically export all result artifacts to
+        the specified format. (NOTE: The only export format supported at the
+        moment is NRML XML.
+
+        :returns:
+            A list of the export filenames, including the absolute path to each
+            file.
+        """
+
         exported_files = []
-        logs.LOG.debug('> starting exports')
+        with logs.tracing('exports'):
 
-        if 'exports' in kwargs and 'xml' in kwargs['exports']:
-            outputs = export_core.get_outputs(self.job.id)
+            if 'exports' in kwargs and 'xml' in kwargs['exports']:
+                outputs = export_core.get_outputs(self.job.id)
 
-            for output in outputs:
-                exported_files.extend(risk_export.export(
-                    output.id, self.job.risk_calculation.export_dir))
+                for output in outputs:
+                    exported_files.extend(risk_export.export(
+                        output.id, self.job.risk_calculation.export_dir))
 
-            for exp_file in exported_files:
-                logs.LOG.debug('exported %s' % exp_file)
-
-        logs.LOG.debug('< done with exports')
+                for exp_file in exported_files:
+                    logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
     def _store_exposure(self):
@@ -112,29 +153,20 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
-        if exposure_model_input.exposuremodel_set.count():
-            return
+        queryset = exposure_model_input.exposuremodel_set
+        if queryset.exists():
+            assert queryset.count() == 1
+            return queryset.all()[0]
 
         path = os.path.join(rc.base_path, exposure_model_input.path)
         exposure_stream = exposure_parser.ExposureModelFile(path)
         writer = exposure_writer.ExposureDBWriter(exposure_model_input)
         writer.serialize(exposure_stream)
-
-    def _filter_exposure(self):
-        """
-        Filter the exposure according to the value of region_constraint
-        """
-        region_constraint = self.job.risk_calculation.region_constraint
-        return models.ExposureData.objects.filter(
-            site__contained=region_constraint).values_list('id', flat=True)
-
-    def _validate_region_constraint(self):
-        # TODO (lp) check that region constraint is a subset of the
-        # exposure support
-        return True
+        return writer.model
 
     def store_risk_model(self):
-        """ load vulnerability and write to db"""
+        """Load and store vulnerability model. It could be overriden
+        to load fragility models or multiple vulnerability models"""
 
         rc = self.job.risk_calculation
 
@@ -160,11 +192,16 @@ class BaseRiskCalculator(base.CalculatorNext):
                 loss_ratios=record['lossRatio'])
 
     def create_outputs(self):
-        # Create container records for outputs
+        """
+        Create outputs container objects (e.g. LossCurve, Output).
 
-        # Loss Curves
-        self.loss_curve = models.LossCurve.objects.create(
-            output=models.Output.objects.create_output(
-                self.job, "Loss Curve set", "loss_curve"))
+        Derived classes should override this to create containers for
+        storing objects other than LossCurves.
 
-        # TODO (lp) loss maps
+        :return a dictionary string -> ContainerObject ids
+        """
+
+        return dict(
+            loss_curve=models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "Loss Curve set", "loss_curve")).pk)
