@@ -197,13 +197,13 @@ def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
     """
 
     def bcr_wrapped(asset, hazard):
-        expected_annual_loss_original = bcr_functions._mean_loss(
+        expected_annual_loss_original = bcr_functions.mean_loss(
             loss_curve_calculator_original(asset, hazard).loss_curve)
 
-        expected_annual_loss_retrofitted = bcr_functions._mean_loss(
+        expected_annual_loss_retrofitted = bcr_functions.mean_loss(
             loss_curve_calculator_retrofitted(asset, hazard).loss_curve)
 
-        bcr = bcr_functions._bcr(expected_annual_loss_original,
+        bcr = bcr_functions.bcr(expected_annual_loss_original,
             expected_annual_loss_retrofitted, interest_rate,
             asset_life_expectancy, asset.retrofitting_cost)
 
