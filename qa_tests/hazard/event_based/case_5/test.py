@@ -56,7 +56,7 @@ class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
                 hazard_curve__output__oq_job=job.id)
 
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes, actual_curve.poes, decimal=3)
+                expected_curve_poes, actual_curve.poes, decimal=2)
 
             # Test the export as well:
             [exported_file] = hazard_export.export(

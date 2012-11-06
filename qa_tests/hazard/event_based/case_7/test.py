@@ -95,17 +95,17 @@ class EventBasedHazardCase7TestCase(qa_utils.BaseQATestCase):
                 ['b2'], actual_curve_b2.hazard_curve.lt_realization.sm_lt_path)
 
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes_b1, actual_curve_b1.poes, decimal=3)
+                expected_curve_poes_b1, actual_curve_b1.poes, decimal=2)
 
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes_b2, actual_curve_b2.poes, decimal=3)
+                expected_curve_poes_b2, actual_curve_b2.poes, decimal=2)
 
             # Test the mean curve:
             [mean_curve] = models.HazardCurveData.objects\
                 .filter(hazard_curve__output__oq_job=job.id,
                         hazard_curve__statistics='mean')
             numpy.testing.assert_array_almost_equal(
-                expected_mean_poes, mean_curve.poes, decimal=3)
+                expected_mean_poes, mean_curve.poes, decimal=2)
 
             # Test the exports as well:
             [exported_file_b1] = hazard_export.export(

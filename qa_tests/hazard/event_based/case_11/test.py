@@ -160,15 +160,15 @@ class EventBasedHazardCase11TestCase(qa_utils.BaseQATestCase):
                 ['b1', 'b4'],
                 curve_b1_b4.hazard_curve.lt_realization.sm_lt_path)
 
-            aaae(expected_curve_poes_b1_b2, curve_b1_b2.poes, decimal=4)
-            aaae(expected_curve_poes_b1_b3, curve_b1_b3.poes, decimal=4)
-            aaae(expected_curve_poes_b1_b4, curve_b1_b4.poes, decimal=4)
+            aaae(expected_curve_poes_b1_b2, curve_b1_b2.poes, decimal=2)
+            aaae(expected_curve_poes_b1_b3, curve_b1_b3.poes, decimal=2)
+            aaae(expected_curve_poes_b1_b4, curve_b1_b4.poes, decimal=2)
 
             # Test the mean curve:
             [mean_curve] = models.HazardCurveData.objects\
                 .filter(hazard_curve__output__oq_job=job.id,
                         hazard_curve__statistics='mean')
-            aaae(expected_mean_poes, mean_curve.poes, decimal=4)
+            aaae(expected_mean_poes, mean_curve.poes, decimal=2)
 
             # Test the quantile curves:
             quantile_0_1_curve, quantile_0_9_curve = \
@@ -176,8 +176,8 @@ class EventBasedHazardCase11TestCase(qa_utils.BaseQATestCase):
                     .filter(hazard_curve__output__oq_job=job.id,
                             hazard_curve__statistics='quantile')\
                     .order_by('hazard_curve__quantile')
-            aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=4)
-            aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=4)
+            aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=2)
+            aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=2)
 
             # Test the exports as well:
             [exported_file_b1_b2] = hazard_export.export(
