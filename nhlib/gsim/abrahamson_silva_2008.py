@@ -516,7 +516,7 @@ class AbrahamsonSilva2008(GMPE):
     pgv     400.0  -1.955   5.7578  -0.9046  -0.1200   1.5390  0.0800  -0.0600  0.7000  -0.3900   0.6300   0.0000  0.590  0.470  0.576  0.453  0.420  0.300  0.740
     """)
 
-    #: equation constants (that is IMT independent)
+    #: equation constants (that are IMT independent)
     CONSTS = {
         # coefficients in table 4, page 84
         'c1': 6.75,
