@@ -42,6 +42,11 @@ class BaseGMFCalcTestCase(unittest.TestCase):
         self.intra3 = 0.3
         self.intra45 = 1
         self.intra67 = 1e-300
+        self.total1 = 0.6
+        self.total2 = 3
+        self.total3 = 0.4
+        self.total45 = 10
+        self.total67 = 0.2
         self.stddev1 = (self.inter1 ** 2 + self.intra1 ** 2) ** 0.5
         self.stddev2 = (self.inter2 ** 2 + self.intra2 ** 2) ** 0.5
         self.stddev3 = (self.inter3 ** 2 + self.intra3 ** 2) ** 0.5
@@ -57,13 +62,41 @@ class BaseGMFCalcTestCase(unittest.TestCase):
                  Site(p[5], self.mean4567, True, self.inter67, self.intra67),
                  Site(p[6], self.mean4567, False, self.inter67, self.intra67)]
         self.sites = SiteCollection(sites)
+
+        sites_total = [
+            # `intra` values are not used in this case
+            # they're just fake "stand-in" values
+            Site(p[0], self.mean1, False, self.total1, self.intra1),
+            Site(p[1], self.mean2, True, self.total2, self.intra2),
+            Site(p[2], self.mean3, False, self.total3, self.intra3),
+            Site(p[3], self.mean4567, True, self.total45, self.intra45),
+            Site(p[4], self.mean4567, False, self.total45, self.intra45),
+            Site(p[5], self.mean4567, True, self.total67, self.intra67),
+            Site(p[6], self.mean4567, False, self.total67, self.intra67)]
+        self.sites_total = SiteCollection(sites_total)
+
         self.rupture = object()
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
-        class FakeGSIM(object):
+        class BaseFakeGSIM(object):
             expect_stddevs = True
             expect_same_sitecol = True
+
+            def make_contexts(gsim, sites, rupture):
+                raise NotImplementedError
+
+            def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
+                                     stddev_types):
+                raise NotImplementedError
+
+            def to_imt_unit_values(gsim, intensities):
+                return intensities - 10.
+
+        class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
+                [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
+            )
 
             def make_contexts(gsim, sites, rupture):
                 if gsim.expect_same_sitecol:
@@ -86,8 +119,29 @@ class BaseGMFCalcTestCase(unittest.TestCase):
                     self.assertEqual(stddev_types, [])
                     return mean + 10, []
 
-            def to_imt_unit_values(gsim, intensities):
-                return intensities - 10.
+        class FakeGSIMTotalStdDev(BaseFakeGSIM):
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+
+            def make_contexts(gsim, sites, rupture):
+                if gsim.expect_same_sitecol:
+                    self.assertIs(sites, self.sites_total)
+                else:
+                    self.assertIsNot(sites, self.sites_total)
+                self.assertIs(rupture, self.rupture)
+                return sites.vs30, sites.z1pt0, sites.z2pt5
+
+            def get_mean_and_stddevs(gsim, mean, std_total, not_used, imt,
+                                     stddev_types):
+                assert imt is self.imt1 or imt is self.imt2
+                if gsim.expect_stddevs:
+                    self.assertEqual(stddev_types, [const.StdDev.TOTAL])
+
+                    # + 10 is needed to make sure that to_imt_unit_values()
+                    # is called on the result of gmf calc
+                    return mean + 10, [std_total]
+                else:
+                    self.assertEqual(stddev_types, [])
+                    return mean + 10, []
 
         def rupture_site_filter(rupture_site_gen):
             [(rupture, sites)] = rupture_site_gen
@@ -97,10 +151,41 @@ class BaseGMFCalcTestCase(unittest.TestCase):
 
         self.rupture_site_filter = rupture_site_filter
 
-        self.gsim = FakeGSIM()
+        self.gsim = FakeGSIMInterIntraStdDevs()
+        self.total_stddev_gsim = FakeGSIMTotalStdDev()
 
 
 class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
+
+    def test_total_stddev_only(self):
+        truncation_level = None
+        numpy.random.seed(37)
+        realizations = 1000
+        gmfs = ground_motion_fields(self.rupture, self.sites_total,
+                                    [self.imt2],
+                                    self.total_stddev_gsim,
+                                    truncation_level,
+                                    realizations=realizations,
+                                    correlation_model=None)
+        intensity = gmfs[self.imt2]
+
+        assert_allclose((intensity[0].mean(), intensity[0].std()),
+                        (self.mean1, self.total1), rtol=4e-2)
+        assert_allclose((intensity[1].mean(), intensity[1].std()),
+                        (self.mean2, self.total2), rtol=4e-2)
+        assert_allclose((intensity[2].mean(), intensity[2].std()),
+                        (self.mean3, self.total3), rtol=4e-2)
+
+        assert_allclose((intensity[3].mean(), intensity[3].std()),
+                        (self.mean4567, self.total45), rtol=4e-2)
+        assert_allclose((intensity[4].mean(), intensity[4].std()),
+                        (self.mean4567, self.total45), rtol=4e-2)
+
+        assert_allclose((intensity[5].mean(), intensity[5].std()),
+                        (self.mean4567, self.total67), rtol=4e-2)
+        assert_allclose((intensity[6].mean(), intensity[6].std()),
+                        (self.mean4567, self.total67), rtol=4e-2)
+
     def test_no_filtering_no_truncation(self):
         truncation_level = None
         numpy.random.seed(3)
