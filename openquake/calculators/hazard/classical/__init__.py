@@ -98,6 +98,10 @@ The classical hazard calculator is also capable of producing `mean` and
 `quantile` curves. These aggregates are computed from the curves for a given
 point and IMT over all logic tree realizations.
 
+Similar to hazard curves for individual realizations, statistical hazard curves
+are grouped by IMT and statistic type. (For quantiles, groups are separated by
+quantile level.) Each group includes 1 curve for each point of interest.
+
 Mean Curves
 ^^^^^^^^^^^
 
