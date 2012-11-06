@@ -37,8 +37,10 @@ Sources:
 Outputs
 *******
 
-* Hazard Curves
-* Hazard Maps
+* :ref:`Hazard Curves <hazard-curves>`
+* :ref:`Hazard Maps <hazard-maps>`
+
+.. _hazard-curves:
 
 Hazard Curves
 =============
@@ -166,4 +168,9 @@ where
 * ``Q`` is the number of quantile levels
 * ``P`` is the number of geographical points of interest
 * ``I`` is the number of IMT/IML definitions
+
+.. _hazard-maps:
+
+Hazard Maps
+===========
 """
