@@ -194,7 +194,7 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, 10, None, None)
 
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
@@ -260,7 +260,7 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, 10, None, None)
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
 
@@ -303,7 +303,7 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, 10, None, None)
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
         peb_insured_losses = api.insured_losses(peb_conditional_losses)

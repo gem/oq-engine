@@ -51,7 +51,7 @@ class ClassicalTestCase(unittest.TestCase):
             [0.5, 0.4, 0.3, 0.2, 0.1], "LN")}
 
         calculator = api.conditional_losses([0.01, 0.02, 0.05],
-            api.classical(vulnerability_model, steps=5))
+            api.Classical(vulnerability_model, steps=5))
 
         asset_output = calculator(
             input.Asset("a1", "VF", 2, None), self.hazard_curve)
@@ -101,7 +101,7 @@ class ClassicalTestCase(unittest.TestCase):
             [0.5, 0.4, 0.3, 0.2, 0.1], "BT")}
 
         calculator = api.conditional_losses([0.01],
-            api.classical(vulnerability_model, steps=5))
+            api.Classical(vulnerability_model, steps=5))
 
         value = 2 # the asset value
 
