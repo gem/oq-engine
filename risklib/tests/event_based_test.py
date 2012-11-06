@@ -21,51 +21,10 @@ import unittest
 from risklib.models import input
 from risklib.curve import Curve, EMPTY_CURVE
 from risklib.vulnerability_function import VulnerabilityFunction
-from risklib.event_based import (
-    _insurance_boundaries_defined, _compute_insured_losses,
-    _compute_insured_loss_curve, _compute_loss_ratios,
+from risklib.event_based import (_compute_loss_ratios,
     _compute_loss_ratios_range, _compute_cumulative_histogram,
     _compute_rates_of_exceedance, _compute_probs_of_exceedance,
     _compute_loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
-
-
-class InsuredLossesTestCase(unittest.TestCase):
-    def setUp(self):
-        self.losses = numpy.array([72.23120833,
-            410.55950159, 180.02423357, 171.02684563,
-            250.77079384, 39.45861103, 114.54372035,
-            288.28653452, 473.38307021, 488.47447798,
-        ])
-
-    def test_insurance_boundaries_defined(self):
-        asset = input.Asset("a14", "a taxonomy", None, None, 1, 700, 300)
-        self.assertTrue(_insurance_boundaries_defined(asset))
-
-        asset.ins_limit = None
-        self.assertRaises(RuntimeError, _insurance_boundaries_defined, asset)
-
-        asset.ins_limit = 700
-        asset.deductible = None
-        self.assertRaises(RuntimeError, _insurance_boundaries_defined, asset)
-
-    def test_compute_insured_losses(self):
-        asset = input.Asset("a14", "a taxonomy", None, None, 1, 300, 150)
-
-        expected = numpy.array([
-            0, 300, 180.02423357, 171.02684563,
-            250.77079384, 0, 0, 288.28653452, 300, 300,
-        ])
-
-        self.assertTrue(numpy.allclose(expected,
-            _compute_insured_losses(asset, self.losses)))
-
-    def test_compute_insured_loss_curve(self):
-        asset = input.Asset("a14", "a taxonomy", None, None, 1, 500, 5)
-        loss_curve = Curve(([(10, 0.2), (4, 1.0)]))
-        expected_insured_lc = Curve([(10, 0.2), (0, 1.0)])
-
-        self.assertEqual(expected_insured_lc,
-            _compute_insured_loss_curve(asset, loss_curve))
 
 
 GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
