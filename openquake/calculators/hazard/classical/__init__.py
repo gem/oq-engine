@@ -105,6 +105,9 @@ quantile level.) Each group includes 1 curve for each point of interest.
 Mean Curves
 ^^^^^^^^^^^
 
+Mean hazard curves can be computed by specifying `mean_hazard_curves = true` in
+the job configuration.
+
 When computing a mean hazard curve for a given point/IMT, there are two
 possible approaches:
 
@@ -124,6 +127,16 @@ logic tree path in this case defines a weight.) The total number of logic tree
 samples in this case is determined by the total number of possible tree paths.
 (To perform end-branch enumeration, the user must specify
 `number_of_logic_tree_samples = 0` in the job configuration.
+
+The total number of mean curves calculated is
+
+``T = P * I``
+
+where
+
+* ``T`` is the total number of curves
+* ``P`` is the number of geographical points of interest
+* ``I`` is the number of IMT/IML definitions
 
 Quantile Curves
 ^^^^^^^^^^^^^^^
