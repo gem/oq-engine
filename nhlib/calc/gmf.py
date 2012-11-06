@@ -96,22 +96,45 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                                              truncation_level)
 
     for imt in imts:
-        mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
-        )
-        stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
-        stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
-        mean = mean.reshape(mean.shape + (1, ))
 
-        intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
-                                                               realizations))
-        if correlation_model is not None:
-            intra_residual = correlation_model.apply_correlation(
-                sites, imt, intra_residual
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == set([StdDev.TOTAL]):
+            # If the GSIM provides only total standard deviation, then we need
+            # to compute only mean and total standard deviation at the sites
+            # of interest.
+            # In this case, we also assume that no correlation model is used.
+            assert correlation_model is None
+
+            mean, [stddev_total] = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, [StdDev.TOTAL]
+            )
+            stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
+            mean = mean.reshape(mean.shape + (1, ))
+
+            total_residual = stddev_total * distribution.rvs(
+                size=(len(sites), realizations)
+            )
+            gmf = gsim.to_imt_unit_values(mean + total_residual)
+        else:
+            mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
+            )
+            stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
+            stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
+            mean = mean.reshape(mean.shape + (1, ))
+
+            intra_residual = stddev_intra * distribution.rvs(
+                size=(len(sites), realizations)
             )
 
-        inter_residual = stddev_inter * distribution.rvs(size=realizations)
-        gmf = gsim.to_imt_unit_values(mean + intra_residual + inter_residual)
+            if correlation_model is not None:
+                intra_residual = correlation_model.apply_correlation(
+                    sites, imt, intra_residual
+                )
+
+            inter_residual = stddev_inter * distribution.rvs(size=realizations)
+            gmf = gsim.to_imt_unit_values(
+                mean + intra_residual + inter_residual)
+
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result
