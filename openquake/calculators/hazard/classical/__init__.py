@@ -141,6 +141,10 @@ where
 Quantile Curves
 ^^^^^^^^^^^^^^^
 
+Quantile hazard curves can be computed by specifying one or more
+`quantile_hazard_curves` values (for example,
+`quantile_hazard_curves = 0.15, 0.85`) in the job configuration.
+
 Similar to mean curves, quantiles curves can be produced for a given
 point/IMT/quantile level (in the range [0.0, 1.0]), there are two possible
 approaches:
@@ -151,4 +155,15 @@ approaches:
 As with mean curves, `unweighted quantiles` are calculated when Monte-Carlo
 logic tree sampling is used and `weighted quantiles` are calculated when logic
 tree end-branch enumeration is used.
+
+The total number of mean curves calculated is
+
+``T = Q * P * I``
+
+where
+
+* ``T`` is the total number of curves
+* ``Q`` is the number of quantile levels
+* ``P`` is the number of geographical points of interest
+* ``I`` is the number of IMT/IML definitions
 """
