@@ -99,11 +99,11 @@ class EventBasedHazardCase8TestCase(qa_utils.BaseQATestCase):
                 curve_b1_b4.hazard_curve.lt_realization.sm_lt_path)
 
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes_b1_b2, curve_b1_b2.poes, decimal=3)
+                expected_curve_poes_b1_b2, curve_b1_b2.poes, decimal=2)
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes_b1_b3, curve_b1_b3.poes, decimal=3)
+                expected_curve_poes_b1_b3, curve_b1_b3.poes, decimal=2)
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes_b1_b4, curve_b1_b4.poes, decimal=3)
+                expected_curve_poes_b1_b4, curve_b1_b4.poes, decimal=2)
 
             # Test the exports as well:
             [exported_file_b1_b2] = hazard_export.export(
