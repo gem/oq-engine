@@ -1240,7 +1240,6 @@ class Output(djm.Model):
         (u'ses', u'Stochastic Event Set'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'loss_curve', u'Loss Curve'),
-        (u'loss_ratio_curve', u'Loss Ratio Curve'),
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
@@ -1921,6 +1920,7 @@ class LossCurveData(djm.Model):
     loss_curve = djm.ForeignKey("LossCurve")
     asset_ref = djm.TextField()
     losses = fields.FloatArrayField()
+    loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
@@ -2125,6 +2125,19 @@ class Occupancy(djm.Model):
         db_table = 'oqmif\".\"occupancy'
 
 
+class AssetManager(djm.Manager):
+    """
+    Asset manager
+    """
+    def contained_in(self, exposure_model, region):
+        """
+        Return the asset ids contained in `region` associated with
+        `exposure_model`
+        """
+        return self.filter(exposure_model=exposure_model,
+                           site__contained=region).values('id', flat=True)
+
+
 class ExposureData(djm.Model):
     '''
     Per-asset risk exposure data
@@ -2155,6 +2168,8 @@ class ExposureData(djm.Model):
         null=True, help_text="insurance deductible")
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    objects = AssetManager()
 
     @property
     def value(self):

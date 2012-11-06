@@ -249,6 +249,7 @@ COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the
 COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
 COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 
