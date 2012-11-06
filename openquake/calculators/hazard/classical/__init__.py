@@ -64,6 +64,12 @@ key elements:
 * **Spectral Acceleration (SA) Period** - Optional; used only if the IMT is SA.
 * **Spectral Acceleration (SA) Damping** - Optional; used only if the IMT is
   SA.
+* **Source Model Logic Tree Path (SMLT Path)** - The path taken through the
+  calculation's source model logic tree. Does not apply to statistical curves,
+  since these aggregate are computed over multiple logic tree realizations.
+* **GSIM (Ground Shaking Intensity Model) Logic Tree Path (GSIMLT Path)** - The
+  path take through the calculation's GSIM logic tree. As with the SMLT Path,
+  this does not apply to statistical curves.
 
 For a given calculation, hazard curves are computed for each logic tree
 realization, each IMT/IML definition, and each geographical point of interest.
@@ -81,6 +87,9 @@ where
 * ``R`` is the total number of logic tree realizations
 * ``P`` is the number of geographical points of interest
 * ``I`` is the number of IMT/IML definitions
+
+Hazard curves are grouped by IMT and realization (1 group per IMT per
+realization). Each group includes 1 curve for each point of interest.
 
 Statistical Curves
 ------------------
