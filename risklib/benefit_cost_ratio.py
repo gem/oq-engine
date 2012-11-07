@@ -49,12 +49,12 @@ def mean_loss(curve):
     mean_loss_ratios = [numpy.mean([x, y])
                         for x, y in zip(loss_ratios, loss_ratios[1:])]
 
-    mid_pes = [numpy.mean([x, y])
+    mean_pes = [numpy.mean([x, y])
                for x, y in zip(pes, pes[1:])]
 
     mean_loss_ratios = [numpy.mean([x, y])
                         for x, y in zip(mean_loss_ratios, mean_loss_ratios[1:])]
 
-    mid_pes = [x - y for x, y in zip(mid_pes, mid_pes[1:])]
+    mean_pes = [x - y for x, y in zip(mean_pes, mean_pes[1:])]
 
-    return numpy.dot(mean_loss_ratios, mid_pes)
+    return numpy.dot(mean_loss_ratios, mean_pes)
