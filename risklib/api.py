@@ -247,7 +247,7 @@ class ProbabilisticEventBased(object):
             vulnerability_function, hazard, asset, self.seed,
             self.correlation_type, taxonomies)
 
-        loss_ratio_curve = event_based_functions._compute_loss_ratio_curve(
+        loss_ratio_curve = event_based_functions.compute_loss_ratio_curve(
             vulnerability_function, hazard, asset, self.loss_histogram_bins,
             loss_ratios, self.seed, self.correlation_type, taxonomies)
 
@@ -291,9 +291,13 @@ def insured_curves(vulnerability_model, loss_histogram_bins, seed,
         vulnerability_function = vulnerability_model[asset.taxonomy]
 
         insured_loss_ratio_curve = (
-            insured_loss_functions.compute_insured_loss_ratio_curve(
-            vulnerability_function, hazard, asset, loss_histogram_bins,
-            asset_output.insured_losses, seed, correlation_type, taxonomies))
+            event_based_functions.compute_loss_ratio_curve(
+                vulnerability_function, hazard, asset, loss_histogram_bins,
+                loss_ratios=asset_output.insured_losses, seed=seed,
+                correlation_type=correlation_type, taxonomies=taxonomies))
+
+        insured_loss_ratio_curve.x_values = (
+            insured_loss_ratio_curve.x_values / asset.value)
 
         insured_loss_curve = (
             insured_loss_ratio_curve.rescale_abscissae(asset.value))

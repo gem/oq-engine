@@ -24,7 +24,7 @@ from risklib.vulnerability_function import VulnerabilityFunction
 from risklib.event_based import (_compute_loss_ratios,
     _compute_loss_ratios_range, _compute_cumulative_histogram,
     _compute_rates_of_exceedance, _compute_probs_of_exceedance,
-    _compute_loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
+    compute_loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
 
 
 GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -419,7 +419,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.255765, 0.82622606), (0.426275, 0.77686984),
                                        (0.596785, 0.52763345), (0.767295, 0.39346934)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmf1,
             None, 6))
 
@@ -427,7 +427,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.2640675, 0.917915), (0.4346125, 0.77686984),
                                        (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmf2,
             None, 6))
 
@@ -435,7 +435,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.2584, 0.89460078), (0.4121, 0.63212056),
                                        (0.5658, 0.39346934), (0.7195, 0.39346934)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmf3,
             None, 6))
 
@@ -443,7 +443,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.25551, 0.93607214), (0.4209, 0.77686984),
                                        (0.58629, 0.52763345), (0.75168, 0.39346934)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmf4,
             None, 6))
 
@@ -451,7 +451,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.23872, 0.95021293), (0.39655, 0.7134952),
                                        (0.55438, 0.52763345), (0.71221, 0.39346934)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmfs_5,
             None, 6))
 
@@ -459,7 +459,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                        (0.2128575, 0.917915), (0.3540125, 0.82622606),
                                        (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function2, self.gmf6,
             None, 6))
 
@@ -467,7 +467,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmfs = dict(GMF)
         gmfs["IMLs"] = ()
 
-        curve = _compute_loss_ratio_curve(
+        curve = compute_loss_ratio_curve(
             self.vulnerability_function1, gmfs, None, None, 25)
 
         self.assertEqual(EMPTY_CURVE, curve)
@@ -487,7 +487,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
             (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
 
-        self.assertEqual(expected_curve, _compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
             self.vulnerability_function1, gmfs, None, 25))
 
 

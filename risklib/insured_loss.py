@@ -52,24 +52,3 @@ def compute_insured_losses(asset, losses):
                 if value > asset.ins_limit:
                     losses[i] = asset.ins_limit
     return losses
-
-
-def compute_insured_loss_ratio_curve(
-        vuln_function, gmf_set,
-        asset, loss_histogram_bins, insured_losses,
-        seed=None, correlation_type=None,
-        taxonomies=None):
-    """
-    Generates an insured loss ratio curve
-    """
-    insured_loss_ratio_curve = event_based._compute_loss_ratio_curve(
-        vuln_function, gmf_set,
-        asset, loss_histogram_bins,
-        loss_ratios=insured_losses,
-        seed=seed, correlation_type=correlation_type,
-        taxonomies=taxonomies)
-
-    insured_loss_ratio_curve.x_values = (
-        insured_loss_ratio_curve.x_values / asset.value)
-
-    return insured_loss_ratio_curve

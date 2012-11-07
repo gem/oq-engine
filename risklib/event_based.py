@@ -308,7 +308,7 @@ def _generate_curve(losses, probs_of_exceedance):
     return curve.Curve(zip(mean_losses, probs_of_exceedance))
 
 
-def _compute_loss_ratio_curve(vuln_function, gmf_set,
+def compute_loss_ratio_curve(vuln_function, gmf_set,
                               asset, loss_histogram_bins, loss_ratios=None,
                               seed=None, correlation_type=None,
                               taxonomies=None):
