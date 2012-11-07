@@ -51,9 +51,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0)
 
         writer.serialize([])
-
-        self.assertEqual(expected.readlines(),
-            open(self.filename, "r").readlines())
+        self._verify_output(expected)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -89,9 +87,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         ]
 
         writer.serialize(data)
-
-        self.assertEqual(expected.readlines(),
-            open(self.filename, "r").readlines())
+        self._verify_output(expected)
 
     def test_serialize_optional_attributes(self):
         expected = StringIO.StringIO("""\
@@ -119,6 +115,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             loss_ratios=[0.4, 0.6, 0.8])]
 
         writer.serialize(data)
+        self._verify_output(expected)
 
+    def _verify_output(self, expected):
         self.assertEqual(expected.readlines(),
             open(self.filename, "r").readlines())
