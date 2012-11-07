@@ -19,8 +19,7 @@ import numpy
 
 from risklib.models import input
 
-from risklib.insured_loss import (
-    _insurance_boundaries_defined, compute_insured_losses)
+from risklib.insured_loss import compute_insured_losses
 
 
 class InsuredLossesTestCase(unittest.TestCase):
@@ -30,17 +29,6 @@ class InsuredLossesTestCase(unittest.TestCase):
                                    250.77079384, 39.45861103, 114.54372035,
                                    288.28653452, 473.38307021, 488.47447798,
                                    ])
-
-    def test_insurance_boundaries_defined(self):
-        asset = input.Asset("a14", "a taxonomy", None, None, 1, 700, 300)
-        self.assertTrue(_insurance_boundaries_defined(asset))
-
-        asset.ins_limit = None
-        self.assertRaises(RuntimeError, _insurance_boundaries_defined, asset)
-
-        asset.ins_limit = 700
-        asset.deductible = None
-        self.assertRaises(RuntimeError, _insurance_boundaries_defined, asset)
 
     def test_compute_insured_losses(self):
         asset = input.Asset("a14", "a taxonomy", None, None, 1, 300, 150)
