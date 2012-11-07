@@ -100,28 +100,24 @@ def compute_on_assets(assets, hazard_getter, calculator):
         yield calculator(asset, hazard)
 
 
-class Classical(object):
+def classical(vulnerability_model, steps=10):
     """
     Classical calculator. For each asset it produces:
-        * a loss curve
-        * a loss ratio curve
-        * a set of conditional losses
+    * a loss curve
+    * a loss ratio curve
+    * a set of conditional losses
     """
 
-    def __init__(self, vulnerability_model, steps=10):
-        self.vulnerability_model = vulnerability_model
-        self.steps = steps
-        self.matrices = dict([(taxonomy,
-        classical_functions._loss_ratio_exceedance_matrix(
-        vulnerability_function, steps))
-        for taxonomy, vulnerability_function in vulnerability_model.items()])
+    matrices = dict([(taxonomy,
+                      classical_functions._loss_ratio_exceedance_matrix(
+                          vulnerability_function, steps))
+                     for taxonomy, vulnerability_function in vulnerability_model.items()])
 
-    def __call__(self, asset, hazard):
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
+    def classical_wrapped(asset, hazard):
+        vulnerability_function = vulnerability_model[asset.taxonomy]
 
         loss_ratio_curve = classical_functions._loss_ratio_curve(
-            vulnerability_function, self.matrices[asset.taxonomy],
-            hazard, self.steps)
+            vulnerability_function, matrices[asset.taxonomy], hazard, steps)
 
         loss_curve = classical_functions._loss_curve(
             loss_ratio_curve, asset.value)
@@ -129,9 +125,11 @@ class Classical(object):
         return output.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
 
+    return classical_wrapped
 
 
-class ScenarioDamage(object):
+
+class scenario_damage(object):
     """
     Scenario damage calculator. For each asset it produces:
         * a damage distribution
@@ -215,7 +213,7 @@ def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
     return bcr_wrapped
 
 
-class ProbabilisticEventBased(object):
+class probabilistic_event_based(object):
     """
     Probabilistic event based calculator. For each asset it produces:
         * a set of losses
@@ -309,7 +307,7 @@ def insured_curves(vulnerability_model, loss_histogram_bins, seed,
     return insured_curves_wrapped
 
 
-class ScenarioRisk(object):
+class scenario_risk(object):
     """
     Scenario risk calculator. For each asset it produces:
         * mean / standard deviation of asset losses
