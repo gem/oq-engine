@@ -81,9 +81,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
         data = [
             LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
-            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0], loss_ratios=[]),
+                poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
+                loss_ratios=None),
+
             LOSS_CURVE(asset_ref="asset_2", location=POINT(2.0, 2.5),
-            poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0], loss_ratios=[]),
+                poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
+                loss_ratios=None),
         ]
 
         writer.serialize(data)

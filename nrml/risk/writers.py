@@ -25,8 +25,8 @@ import nrml
 
 class LossCurveXMLWriter(object):
 
-    def __init__(self, path, investigation_time, source_model_tree_path=None,
-                 gsim_tree_path=None, unit=None):
+    def __init__(self, path, investigation_time,
+                 source_model_tree_path=None, gsim_tree_path=None, unit=None):
 
         self._unit = unit
         self._path = path
@@ -41,26 +41,26 @@ class LossCurveXMLWriter(object):
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
-            for d in data:
+            for curve in data:
                 if self._loss_curves is None:
                     self._create_loss_curves_container(root)
 
                 loss_curve = etree.SubElement(self._loss_curves, "lossCurve")
 
-                _append_location(loss_curve, d.location)
-                loss_curve.set("assetRef", d.asset_ref)
+                _append_location(loss_curve, curve.location)
+                loss_curve.set("assetRef", curve.asset_ref)
 
                 poes = etree.SubElement(loss_curve, "poEs")
-                poes.text = " ".join([str(p) for p in d.poes])
+                poes.text = " ".join([str(p) for p in curve.poes])
 
                 losses = etree.SubElement(loss_curve, "losses")
-                losses.text = " ".join([str(p) for p in d.losses])
+                losses.text = " ".join([str(p) for p in curve.losses])
 
-                if len(d.loss_ratios):
+                if curve.loss_ratios is not None:
                     loss_ratios = etree.SubElement(loss_curve, "lossRatios")
 
                     loss_ratios.text = " ".join(
-                        [str(p) for p in d.loss_ratios])
+                        [str(p) for p in curve.loss_ratios])
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
