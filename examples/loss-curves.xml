@@ -1,58 +1,35 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-    <!-- riskResult is a gml:Feature -->
-    <riskResult gml:id="rr1">
-        <config/>
+    <!-- `unit` is optional. If the file has been produced using
+    mean or quantile hazard curves, no `sourceModelTreePath` and `gsimTreePath`
+    attributes will be provided. -->
+    <lossCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2"
+                investigationTime="50.0" unit="USD">
 
-        <!-- lossCurveList is a gml:Feature (due to simple features profile)
-                 in full GML, it should be a gml:FeatureCollection -->
-        <lossCurveList gml:id="lossCurveList_1">
+        <lossCurve assetRef="asset_1">
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
 
-            <!-- asset is a gml:Feature -->
-            <asset gml:id="asset_1">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>-117.0 30.0</gml:pos>
-                    </gml:Point>
-                </site>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+            <losses>10.2354 21.324321 28.032432</losses>
 
-                <lossCurves>
-                    <lossCurve endBranchLabel="vf_1">
-                        <loss>0.0 100.0 200.0</loss>
-                        <poE>0.4 0.2 0.1</poE>
-                    </lossCurve>
-                    <lossCurve endBranchLabel="vf_2">
-                        <loss>0.0 200.0 400.0</loss>
-                        <poE>0.2 0.1 0.05</poE>
-                    </lossCurve>
-                </lossCurves>
+            <!-- loss ratios are optional. -->
+            <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+        </lossCurve>
 
-            </asset>
+        <lossCurve assetRef="asset_2">
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
 
-            <asset gml:id="asset_2">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>-117.0 35.0</gml:pos>
-                    </gml:Point>
-                </site>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+            <losses>10.2354 21.324321 28.032432</losses>
 
-                <lossCurves>
-                    <lossCurve endBranchLabel="vf_3">
-                        <loss>0.0 1000.0 2000.0</loss>
-                        <poE>0.6 0.3 0.1</poE>
-                    </lossCurve>
-
-                    <!-- loss curve with no explicit vuln function, should this be allowed?
-                         Could be useful to "just plot" a loss curve -->
-                    <lossCurve>
-                        <loss>0.0 5000.0 10000.0</loss>
-                        <poE>0.1 0.01 0.001</poE>
-                    </lossCurve>
-                </lossCurves>
-            </asset>
-
-        </lossCurveList>
-    </riskResult>
+            <!-- loss ratios are optional. -->
+            <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+        </lossCurve>
+    </lossCurves>
 </nrml>
