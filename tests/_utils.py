@@ -13,10 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import collections
 from nose import tools
 from lxml import etree
-import collections
+
+import nrml
 
 
 def deep_eq(a, b):
@@ -83,17 +84,8 @@ def assert_xml_equal(a, b):
     tools.assert_equal(contents_a, contents_b)
 
 
-def _nrml_schema_file():
-    """
-    Return the absolute path to the NRML schema file.
-    """
-
-    return os.path.join(os.path.abspath(
-        os.path.dirname(__file__)), "..", "nrml", "schema", "nrml.xsd")
-
-
 def validates_against_xml_schema(xml_instance_path,
-                                 schema_path=_nrml_schema_file()):
+                                 schema_path=nrml.nrml_schema_file()):
     """
     Check whether an XML file validates against an XML schema.
     """

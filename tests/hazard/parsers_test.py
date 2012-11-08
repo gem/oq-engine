@@ -21,9 +21,9 @@ import unittest
 from lxml import etree
 
 from nrml import models
-from nrml import parsers
 
-import _utils
+from tests import _utils
+from nrml.hazard import parsers
 
 
 class SourceModelParserTestCase(unittest.TestCase):

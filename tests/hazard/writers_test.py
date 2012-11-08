@@ -23,7 +23,7 @@ from collections import namedtuple
 
 from lxml import etree
 
-from nrml import writers
+from nrml.hazard import writers
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 Location = namedtuple('Location', 'x, y')
@@ -635,4 +635,3 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
             self.assertEqual(expected_text, text)
         finally:
             os.unlink(path)
-
