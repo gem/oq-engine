@@ -34,7 +34,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def remove_file(self):
         try:
             os.remove(self.filename)
-        except: pass
+        except OSError:
+            pass
 
     def setUp(self):
         self.remove_file()

@@ -24,6 +24,23 @@ import nrml
 
 
 class LossCurveXMLWriter(object):
+    """
+    :param path:
+        File path (including filename) for results to be saved to.
+    :param float investigation_time:
+        Investigation time (also known as Time Span) defined in
+        the calculation which produced these results (in years).
+    :param str source_model_tree_path:
+        Id of the source model tree path (obtained concatenating the IDs of
+        the branches the path is made of) for which input hazard curves
+        have been computed.
+    :param str gsim_tree_path:
+        Id of the gsim (ground shaking intensity model) tree path (obtained
+        concatenating the IDs of the branches the path is made of) for which
+        input hazard curves have been computed.
+    :param str unit:
+        Attribute describing how the value of the assets has been measured.
+    """
 
     def __init__(self, path, investigation_time,
                  source_model_tree_path=None, gsim_tree_path=None, unit=None):
@@ -37,13 +54,39 @@ class LossCurveXMLWriter(object):
         self._loss_curves = None
 
     def serialize(self, data):
+        """
+        Serialize a collection of loss curves.
+
+        :param data:
+            An iterable of loss curves objects. Each object should:
+
+            * define an attribute `location` which is itself an object
+            defining two attributes, `x` containing the longitude value
+            and `y` containing the latitude value.
+            * define an attribute `asset_ref` which contains the unique
+            identifier of the asset related to the loss curve.
+            * define an attribute `poes`, which is a list of floats
+            describing the probabilities of exceedance.
+            * define an attribute `losses`, which is a list of floats
+            describing the losses.
+            * define an attribute `loss_ratios`, which is a list of floats
+            describing the loss ratios.
+
+            All attributes must be defined, except for `loss_ratios` that
+            can be `None` since it is optional in the schema.
+
+            Also, `poes`, `losses` and `loss_ratios` values must be indexed
+            coherently, i.e.: the loss (and optionally loss ratio) at index
+            zero is related to the probability of exceedance at the same
+            index.
+        """
 
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
             for curve in data:
                 if self._loss_curves is None:
-                    self._create_loss_curves_container(root)
+                    self._create_loss_curves_elem(root)
 
                 loss_curve = etree.SubElement(self._loss_curves, "lossCurve")
 
@@ -66,7 +109,11 @@ class LossCurveXMLWriter(object):
                 root, pretty_print=True, xml_declaration=True,
                 encoding="UTF-8"))
 
-    def _create_loss_curves_container(self, root):
+    def _create_loss_curves_elem(self, root):
+        """
+        Create the <lossCurves /> element with associated attributes.
+        """
+
         self._loss_curves = etree.SubElement(root, "lossCurves")
 
         self._loss_curves.set("investigationTime",
@@ -85,6 +132,9 @@ class LossCurveXMLWriter(object):
 
 
 def _append_location(element, location):
+    """
+    Append the geographical location to the given element.
+    """
     gml_ns = nrml.SERIALIZE_NS_MAP["gml"]
 
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
