@@ -124,7 +124,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
-    @attr('qa')
+    @attr('qa', 'classical')
     def test(self):
         result_dir = tempfile.mkdtemp()
         aaae = numpy.testing.assert_array_almost_equal
