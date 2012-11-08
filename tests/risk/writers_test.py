@@ -20,6 +20,7 @@ import StringIO
 import collections
 
 from nrml.risk import writers
+from tests import _utils
 
 
 POINT = collections.namedtuple("Point", "x y")
@@ -53,7 +54,9 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0)
 
         writer.serialize([])
-        self._verify_output(expected)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -92,7 +95,9 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         ]
 
         writer.serialize(data)
-        self._verify_output(expected)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
 
     def test_serialize_optional_attributes(self):
         expected = StringIO.StringIO("""\
@@ -120,8 +125,6 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             loss_ratios=[0.4, 0.6, 0.8])]
 
         writer.serialize(data)
-        self._verify_output(expected)
 
-    def _verify_output(self, expected):
-        self.assertEqual(expected.readlines(),
-            open(self.filename, "r").readlines())
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
