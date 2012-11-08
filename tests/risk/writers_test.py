@@ -44,7 +44,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         self.remove_file()
 
     def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""<?xml version='1.0' encoding='UTF-8'?>
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
 """)
 

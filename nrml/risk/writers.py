@@ -60,10 +60,10 @@ class LossCurveXMLWriter(object):
         :param data:
             An iterable of loss curves objects. Each object should:
 
-            * define an attribute `location` which is itself an object
+            * define an attribute `location`, which is itself an object
             defining two attributes, `x` containing the longitude value
             and `y` containing the latitude value.
-            * define an attribute `asset_ref` which contains the unique
+            * define an attribute `asset_ref`, which contains the unique
             identifier of the asset related to the loss curve.
             * define an attribute `poes`, which is a list of floats
             describing the probabilities of exceedance.
