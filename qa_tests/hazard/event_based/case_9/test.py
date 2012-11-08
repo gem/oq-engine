@@ -55,7 +55,7 @@ class EventBasedHazardCase9TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
-    @attr('qa')
+    @attr('qa', 'event_based')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
