@@ -193,10 +193,10 @@ def do_post_process(job):
 
     # Stats for debug logging:
     n_imts = len(hc.intensity_measure_types_and_levels)
-    job_stats = models.JobStats.objects.get(oq_job=job.id)
+    n_sites = len(hc.points_to_compute())
+    n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
     total_blocks = int(math.ceil(
-        (n_imts * job_stats.num_sites * job_stats.num_realizations)
-        / block_size))
+        (n_imts * n_sites * n_rlzs) / float(block_size)))
 
     for i, block in enumerate(block_gen):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
