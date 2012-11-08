@@ -135,6 +135,7 @@ def _append_location(element, location):
     """
     Append the geographical location to the given element.
     """
+
     gml_ns = nrml.SERIALIZE_NS_MAP["gml"]
 
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
