@@ -40,16 +40,33 @@ class LossCurveXMLWriter(object):
         input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
+    :param str statistics:
+        `mean` or `quantile`. When serializing loss curves produced from
+        statistical hazard inputs, it describes the type of statistic used.
+    :param float quantile_value:
+        When serializing loss curves produced from quantile hazard inputs,
+        it describes the quantile value.
     """
 
     def __init__(self, path, investigation_time,
-                 source_model_tree_path=None, gsim_tree_path=None, unit=None):
+                 source_model_tree_path=None, gsim_tree_path=None,
+                 statistics=None, quantile_value=None, unit=None):
+
+        if statistics is not None:
+            _check_statistics_or_logic_tree(
+                source_model_tree_path, gsim_tree_path)
+
+            _check_statistics_metadata(statistics, quantile_value)
+        else:
+            _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path)
 
         self._unit = unit
         self._path = path
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
         self._source_model_tree_path = source_model_tree_path
+        self._statistics = statistics
+        self._quantile_value = quantile_value
 
         self._loss_curves = None
 
@@ -127,6 +144,14 @@ class LossCurveXMLWriter(object):
             self._loss_curves.set("gsimTreePath",
                 str(self._gsim_tree_path))
 
+        if self._statistics is not None:
+            self._loss_curves.set("statistics",
+                str(self._statistics))
+
+        if self._quantile_value is not None:
+            self._loss_curves.set("quantileValue",
+                str(self._quantile_value))
+
         if self._unit is not None:
             self._loss_curves.set("unit", str(self._unit))
 
@@ -141,3 +166,39 @@ def _append_location(element, location):
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
     gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)
+
+
+def _check_statistics_metadata(statistics, quantile_value):
+    """
+    `statistics` must be in ("quantile", "mean") and `quantile_value`
+    must be specified when `statistics` == "quantile".
+    """
+
+    if statistics not in ("quantile", "mean"):
+        raise ValueError("`statistics` must be in ('quantile', 'mean').")
+
+    if statistics == "quantile" and quantile_value is None:
+        raise ValueError("When `statistics` == 'quantile', "
+            "`quantile_value` must also be specified.")
+
+
+def _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path):
+    """
+    Logic tree parameters must be both specified.
+    """
+
+    if source_model_tree_path is None or gsim_tree_path is None:
+        raise ValueError("When specifying a logic tree branch, "
+            "both `source_model_tree_path` and `gsim_tree_path` "
+            "must be specified.")
+
+
+def _check_statistics_or_logic_tree(source_model_tree_path,
+                                    gsim_tree_path):
+
+    """
+    When `statistics` is used, no logic tree parameters must be specified.
+    """
+    if source_model_tree_path is not None or gsim_tree_path is not None:
+        raise ValueError("You must choose `statistics` or "
+            "(`source_model_tree_path`, `gsim_tree_path`), not both.")

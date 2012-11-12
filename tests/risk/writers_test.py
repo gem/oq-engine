@@ -51,7 +51,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 """)
 
         writer = writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0)
+            investigation_time=10.0, statistics="mean")
 
         writer.serialize([])
 
@@ -62,7 +62,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0">
+  <lossCurves investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -82,7 +82,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 """)
 
         writer = writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0)
+            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+            gsim_tree_path="b1_b2", unit="USD")
 
         data = [
             LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
@@ -99,11 +100,11 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         _utils.validates_against_xml_schema(self.filename)
 
-    def test_serialize_optional_attributes(self):
+    def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+  <lossCurves investigationTime="10.0" statistics="quantile" quantileValue="0.5" unit="USD">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -117,8 +118,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 """)
 
         writer = writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
-            gsim_tree_path="b1_b2", unit="USD")
+            investigation_time=10.0, statistics="quantile",
+            quantile_value=0.50, unit="USD")
 
         data = [LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
@@ -128,3 +129,47 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
         _utils.assert_xml_equal(expected, self.filename)
         _utils.validates_against_xml_schema(self.filename)
+
+    def test_quantile_metadata_validation(self):
+        # `statistics` must be "quantile" or "mean".
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, statistics="UNKNOWN")
+
+        # when "quantile" is used, `quantile_value` must be
+        # specified as well.
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, statistics="quantile")
+
+        writers.LossCurveXMLWriter(self.filename, investigation_time=50.0,
+            statistics="quantile", quantile_value=0.50)
+
+        writers.LossCurveXMLWriter(self.filename, investigation_time=50.0,
+            statistics="mean")
+
+    def test_logic_tree_metadata_validation(self):
+        # logic tree parameters must be both specified.
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, source_model_tree_path="b1|b2")
+
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, gsim_tree_path="b1|b2")
+
+        writers.LossCurveXMLWriter(self.filename,
+            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+            gsim_tree_path="b1_b2")
+
+    def test_logic_tree_or_statistics_metadata_validation(self):
+        # logic tree parameters or statistics, not both.
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, source_model_tree_path="b1|b2",
+            statistics="mean")
+
+        self.assertRaises(
+            ValueError, writers.LossCurveXMLWriter, self.filename,
+            investigation_time=10.0, gsim_tree_path="b1|b2",
+            statistics="mean")
