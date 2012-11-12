@@ -15,16 +15,6 @@ The :mod:`output` Module
     :undoc-members:
     :show-inheritance:
 
-
-The :mod:`hazard` Module
--------------------------
-
-.. automodule:: openquake.output.hazard
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 The :mod:`risk` Module
 -------------------------
 

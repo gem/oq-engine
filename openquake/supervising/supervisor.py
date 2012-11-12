@@ -194,21 +194,23 @@ def abort_due_to_failed_nodes(job_id):
     :returns: the number of failed compute nodes if the job should be aborted
         zero otherwise.
     """
-    logging.debug("> abort_due_to_failed_nodes")
+    logging.debug("> check for failed nodes")
     result = 0
 
     job = OqJob.objects.get(id=job_id)
     failed_nodes = monitor.count_failed_nodes(job)
-    logging.debug(">> failed_nodes: %s", failed_nodes)
 
     if failed_nodes:
+        logging.debug(">> failed_nodes: %s", failed_nodes)
         no_progress_period, timeout = stats.get_progress_timing_data(job)
         logging.debug(">> no_progress_period: %s", no_progress_period)
         logging.debug(">> timeout: %s", timeout)
         if no_progress_period > timeout:
             result = failed_nodes
+    else:
+        logging.debug('>> no failures')
 
-    logging.debug("< abort_due_to_failed_nodes")
+    logging.debug("< check for failed nodes")
     return result
 
 
