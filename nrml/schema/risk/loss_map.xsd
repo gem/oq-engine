@@ -22,6 +22,10 @@
              computed with the classical / probabilistic calculators. -->
         <xs:attribute name="poE" type="NormalizedDoubleType" use="optional" />
 
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
         <!-- Both tree paths are only used for representing curves for a single realization.
              In other words, the paths are not relevent for statistical results (mean or quantile). -->
         <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
