@@ -74,11 +74,13 @@ def _export_fn_map():
         'ses': export_ses,
         'complete_lt_ses': export_ses,
         'complete_lt_gmf': export_gmf,
+        'hazard_map': export_hazard_map,
     }
     return fn_map
 
 
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
+HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
 GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
@@ -240,3 +242,50 @@ def curves2nrml(target_dir, job):
         logs.log_progress("No hazard curves found for export", 2)
 
     LOG.debug("< curves2nrml")
+
+
+@makedirs
+def export_hazard_map(output, target_dir):
+    """
+    Export the specified hazard map ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` with an `output_type` of
+        `hazard_map`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file name (including the absolute path to each
+        file).
+    """
+    hazard_map = models.HazardMap.objects.get(output=output)
+
+    filename = HAZARD_MAP_FILENAME_FMT % dict(hazard_map_id=hazard_map.id)
+    path = os.path.abspath(os.path.join(target_dir, filename))
+
+    if hazard_map.lt_realization is not None:
+        # If the maps are for a specified logic tree realization,
+        # get the tree paths
+        lt_rlz = hazard_map.lt_realization
+        smlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsimlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    else:
+        # These maps must be constructed from mean or quantile curves
+        smlt_path = None
+        gsimlt_path = None
+
+    metadata = {
+        'quantile_value': hazard_map.quantile,
+        'statistics': hazard_map.statistics,
+        'smlt_path': smlt_path,
+        'gsimlt_path': gsimlt_path,
+        'sa_period': hazard_map.sa_period,
+        'sa_damping': hazard_map.sa_damping,
+    }
+
+    writer = nrml_writers.HazardMapXMLWriter(
+        path, hazard_map.investigation_time, hazard_map.imt, hazard_map.poe,
+        **metadata)
+    writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
+    return [path]
