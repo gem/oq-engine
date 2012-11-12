@@ -22,7 +22,7 @@ from risklib import api
 
 
 @tasks.oqtask
-def classical(job_id, asset_ids, hazard_getter, output_container_ids):
+def classical(job_id, asset_ids, hazard_getter, loss_curve):
     job = models.OqJob.objects.get(pk=job_id)
     rc = job.risk_calculation
 
@@ -39,7 +39,7 @@ def classical(job_id, asset_ids, hazard_getter, output_container_ids):
     for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
         models.LossCurveData.objects.create(
-            loss_curve_id=output_container_ids['loss_curve'],
+            loss_curve_id=loss_curve,
             asset_ref=asset_output.asset.asset_ref,
             location=asset_output.asset.site.wkt,
             poes=asset_output.loss_curve.y_values.tolist(),
