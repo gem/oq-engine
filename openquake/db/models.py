@@ -2125,7 +2125,7 @@ class Occupancy(djm.Model):
         db_table = 'oqmif\".\"occupancy'
 
 
-class AssetManager(djm.Manager):
+class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
@@ -2135,7 +2135,7 @@ class AssetManager(djm.Manager):
         `exposure_model`
         """
         return self.filter(exposure_model=exposure_model,
-                           site__contained=region).values('id', flat=True)
+                           site__within=region).values_list('id', flat=True)
 
 
 class ExposureData(djm.Model):
