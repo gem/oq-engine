@@ -173,4 +173,38 @@ where
 
 Hazard Maps
 ===========
+
+Hazard maps are geographical meshes of intensity values. Intensity values are
+extracted from hazard curve functions by interpolating at a given probability
+exceedance. To put it another way, hazard maps seek to answer the following
+question: "At the given level probability, what intensity level is likely to be
+exceeded at a given geographical points in the next X years?"
+
+The resulting geographical mesh is often depicted graphically, with a color key
+defining which color to plot at the given location for a given value or range
+values.
+
+Hazard maps bear the same metadata as
+:ref:`hazard curves <hazard-curves>`, with the addition of the
+probability at which the hazard maps were computed.
+
+For a given calulcation, hazard maps are computed for each hazard curve. Maps
+can be computed for one or more probabilities of exceedance, so the total
+number of hazard maps is
+
+``T = C * E``
+
+where
+
+* ``T`` is the total number of maps
+* ``C`` is the total number of hazard curves (see the method for calculating
+  the :ref:`number of hazard curves <hazard-curves>`)
+* ``E`` is the total number of probabilities of exceedance
+
+Statistical Maps
+----------------
+
+Hazard maps can be produced from any set of hazard curves, including mean and
+quantile aggregates. There are no special methods required for computing these
+maps; the process is the same for all hazard map computation.
 """
