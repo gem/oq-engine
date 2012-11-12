@@ -235,5 +235,5 @@ class tracing(object):
     def __enter__(self):
         LOG.debug('> starting ', self.msg)
 
-    def __exit__(self):
+    def __exit__(self, *args, **kwargs):
         LOG.debug('< done with ', self.msg)
