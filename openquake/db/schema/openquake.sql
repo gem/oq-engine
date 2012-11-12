@@ -1346,9 +1346,8 @@ CREATE TABLE riskr.loss_curve_data (
     asset_ref VARCHAR NOT NULL,
     losses float[] NOT NULL CONSTRAINT non_negative_losses
         CHECK (0 <= ALL(losses)),
-    loss_ratios float[] NOT NULL
-        CONSTRAINT check_loss_ratios
-        CHECK (0 <= ALL(loss_ratios)) AND (ALL(loss_ratios) <= 1)
+    loss_ratios float[] NOT NULL CONSTRAINT check_loss_ratios
+        CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE riskr_ts;
