@@ -199,6 +199,7 @@ def _check_statistics_or_logic_tree(source_model_tree_path,
     """
     When `statistics` is used, no logic tree parameters must be specified.
     """
+
     if source_model_tree_path is not None or gsim_tree_path is not None:
         raise ValueError("You must choose `statistics` or "
             "(`source_model_tree_path`, `gsim_tree_path`), not both.")
