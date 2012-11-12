@@ -14,6 +14,28 @@
 		<stco>2</stco>
 		<taxonomy>VF</taxonomy>
 	</assetDefinition>
+
+	<assetDefinition gml:id="a2">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-120.000	37.225</gml:pos>
+			</gml:Point>
+		</site>
+		<reco>0.2</reco>
+		<stco>3</stco>
+		<taxonomy>VF</taxonomy>
+	</assetDefinition>
+
+	<assetDefinition gml:id="a3">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-20.000	37.225</gml:pos>
+			</gml:Point>
+		</site>
+		<reco>0.2</reco>
+		<stco>3</stco>
+		<taxonomy>VF</taxonomy>
+	</assetDefinition>
 </exposureList>
 </exposureModel>
 </nrml>

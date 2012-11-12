@@ -15,22 +15,30 @@
 
 import unittest
 
-
 from tests.utils import helpers
+from openquake.utils import config
 from openquake.calculators.risk import general as risk
 from openquake.db import models as openquake
 
 
 class BaseRiskCalculatorTestCase(unittest.TestCase):
     """
-    Integration test for the base class supporting the risk
-    calculators
+    An abstract class that just setup a risk job
     """
     def setUp(self):
         cfg = helpers.demo_file(
             'classical_psha_based_risk/job.ini')
         self.job = helpers.get_risk_job(cfg)
 
+
+class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
+    """
+    Integration test for the base class supporting the risk
+    calculators
+    """
+
+    def setUp(self):
+        super(RiskCalculatorTestCase, self).setUp()
         self.base_calculator = risk.BaseRiskCalculator(self.job)
 
     def test_store_exposure(self):
@@ -51,11 +59,11 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         actual_asset_queryset = openquake.ExposureData.objects.filter(
             exposure_model=model)
 
-        self.assertEqual(1, actual_asset_queryset.count())
+        self.assertEqual(3, actual_asset_queryset.count())
 
-        asset = actual_asset_queryset.all()[0]
+        asset_refs = [a.asset_ref for a in actual_asset_queryset.all()]
 
-        self.assertEqual("a1", asset.asset_ref)
+        self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
     def test_store_risk_model(self):
         """
@@ -89,3 +97,53 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.assertTrue('loss_curve' in outputs)
         self.assertTrue(openquake.LossCurve.objects.filter(
             pk=outputs['loss_curve']).exists())
+
+    def test_filter_exposure(self):
+        """
+        Test that the exposure is filtered properly
+        """
+        model = openquake.ExposureModel.objects.get(
+            input__input2rcalc__risk_calculation=self.job.risk_calculation,
+            input__input_type="exposure")
+
+        asset_ids = self.base_calculator._filter_exposure(model)
+        self.assertEqual(2, len(asset_ids))
+        self.assertEqual(
+            ["a1", "a2"],
+            [a.asset_ref
+             for a in openquake.ExposureData.objects.filter(pk__in=asset_ids)])
+
+    def test_pre_execute(self):
+        # Most of the pre-execute functionality is implement in other methods.
+        # For this test, just make sure each method gets called.
+        base_path = ('openquake.calculators.risk.classical.general'
+                     '.BaseRiskCalculator')
+        patches = (
+            helpers.patch(
+                '%s.%s' % (base_path, '_store_exposure')),
+            helpers.patch(
+                '%s.%s' % (base_path, 'store_risk_model')),
+            helpers.patch(
+                '%s.%s' % (base_path, 'create_outputs')),
+            helpers.patch(
+                '%s.%s' % (base_path, '_filter_exposure')))
+
+        mocks = [p.start() for p in patches]
+
+        self.base_calculator.pre_execute()
+
+        for i, m in enumerate(mocks):
+            self.assertEqual(1, m.call_count)
+            m.stop()
+            patches[i].stop()
+
+    def test_execute(self):
+        """
+        Test that the distribute function is called properly
+        """
+
+        # TODO (lp) use mock instead of accessing internal fields of
+        # the Config object
+        config.get_section('risk').cfg['block_size'] = 1
+
+        
