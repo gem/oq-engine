@@ -79,8 +79,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             exposure_model = self._store_exposure()
 
         with logs.tracing('filter exposure'):
-            self.asset_ids = models.ExposureData.objects.contained_in(
-                exposure_model, self.job.risk_calculation.region_constraint)
+            self.asset_ids = self._filter_exposure(exposure_model)
 
             if not self.asset_ids:
                 raise RuntimeError(
@@ -163,6 +162,18 @@ class BaseRiskCalculator(base.CalculatorNext):
         writer = exposure_writer.ExposureDBWriter(exposure_model_input)
         writer.serialize(exposure_stream)
         return writer.model
+
+    def _filter_exposure(self, exposure_model):
+        """
+        Filter the exposure according with the region_constraint
+        config
+
+        :param exposure_model:
+          The ExposureModel considered
+        :type: `openquake.db.models.ExposureModel`
+        """
+        return models.ExposureData.objects.contained_in(
+            exposure_model, self.job.risk_calculation.region_constraint)
 
     def store_risk_model(self):
         """Load and store vulnerability model. It could be overriden
