@@ -13,8 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import collections
+from nose import tools
+from lxml import etree
+
+import nrml
 
 
 def deep_eq(a, b):
@@ -64,3 +67,29 @@ def _test_seq(a, b):
 
     for i, item in enumerate(a):
         _deep_eq(item, b[i])
+
+
+def assert_xml_equal(a, b):
+    """
+    Compare two XML artifacts for equality.
+
+    :param a, b:
+        Paths to XML files, or a file-like object containing the XML
+        contents.
+    """
+
+    contents_a = etree.tostring(etree.parse(a), pretty_print=True)
+    contents_b = etree.tostring(etree.parse(b), pretty_print=True)
+
+    tools.assert_equal(contents_a, contents_b)
+
+
+def validates_against_xml_schema(xml_instance_path,
+                                 schema_path=nrml.nrml_schema_file()):
+    """
+    Check whether an XML file validates against an XML schema.
+    """
+
+    xml_doc = etree.parse(xml_instance_path)
+    xmlschema = etree.XMLSchema(etree.parse(schema_path))
+    return xmlschema.validate(xml_doc)
