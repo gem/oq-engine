@@ -8,99 +8,58 @@
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
-    <xs:element name="disaggregationResultField" type="DisaggregationResultFieldType" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="DisaggregationResultFieldType">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element ref="disaggregationResultTypes" minOccurs="1" maxOccurs="1"/>
-                    <xs:element ref="disaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
-                </xs:sequence>
-                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
-                <xs:attribute name="IMT" type="IMTType" use="required"/>
-                <xs:attribute name="endBranchLabel" type="xs:string"/>
-                <xs:attributeGroup ref="QuantileGroup"/>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <!-- List of disaggregation result types for a disaggregationResultField. -->
-    <xs:element name="disaggregationResultTypes">
-        <xs:simpleType>
-            <xs:restriction base="DisaggregationResultTypesType">
-                <xs:minLength value="1"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:element>
-
-    <xs:simpleType name="DisaggregationResultTypesType">
-        <xs:list itemType="DisaggregationPMFType"/>
-    </xs:simpleType>
-
-    <xs:element name="disaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
-    <xs:complexType name="DisaggregationResultNodeType">
-        <xs:complexContent>
-            <xs:extension base="FieldNode">
-                <xs:choice>
-                    <xs:sequence>
-                        <xs:element name="disaggregationMatrixSet" type="DisaggregationMatrixSetType"/>
-                    </xs:sequence>
-                    <xs:sequence>
-                        <xs:element name="disaggregationResult" type="DisaggregationResultType"/>
-                    </xs:sequence>
-                </xs:choice>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <xs:complexType name="DisaggregationMatrixSetType">
+    <xs:element name="disaggMatrices" type="DisaggMatrices" />
+    <xs:complexType name="DisaggMatrices">
         <xs:sequence>
-            <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
+            <xs:element name="disaggMatrix" type="DisaggMatrix" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="groundMotionValue" type="PositiveDoubleType" use="required"/>
+
+        <xs:attribute name="IMT" type="IMTType" use="required" />
+        <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
+        <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
+        <xs:attribute name="saDamping" type="PositiveDoubleType" use="optional" />
+
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <xs:attribute name="lon" type="xs:double" use="required" />
+        <xs:attribute name="lat" type="xs:double" use="required" />
+
+        <xs:attribute name="magBinEdges" type="PositiveDoubleList" use="optional" />
+        <xs:attribute name="distBinEdges" type="PositiveDoubleList" use="optional" />
+        <xs:attribute name="lonBinEdges" type="DoubleList" use="optional" />
+        <xs:attribute name="latBinEdges" type="DoubleList" use="optional" />
+        <xs:attribute name="epsBinEdges" type="DoubleList" use="optional" />
     </xs:complexType>
 
-    <!-- For binary disaggregation results.
-         Indicates the GMV and a path to the file containing all of the disagg. results for this node. -->
-    <xs:complexType name="DisaggregationResultType">
-        <xs:attribute name="groundMotionValue" type="PositiveDoubleType" use="required"/>
-        <xs:attribute name="path" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="DisaggregationMatrixType">
+    <xs:complexType name="DisaggMatrix">
         <xs:sequence>
-            <xs:element name="disaggregationMatrixValue" type="DisaggregationMatrixValue" maxOccurs="unbounded"/>
+            <xs:element name="prob" type="DisaggProb" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="disaggregationPMFType" type="DisaggregationPMFType" use="required"/>
+
+        <xs:attribute name="type" type="PMFType" use="required" />
+        <xs:attribute name="dims" type="xs:string" use="required" />
+        <xs:attribute name="poE" type="NormalizedDoubleType" use="required" />
+        <xs:attribute name="iml" type="xs:double" use="required" />
     </xs:complexType>
 
-    <xs:simpleType name="DisaggregationPMFType">
+    <xs:complexType name="DisaggProb">
+        <xs:attribute name="index" type="xs:string" />
+        <xs:attribute name="value" type="NormalizedDoubleType" />
+    </xs:complexType>
+
+    <xs:simpleType name="PMFType">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="MagPMF"/>
-            <xs:enumeration value="DistPMF"/>
-            <xs:enumeration value="TRTPMF"/>
-            <xs:enumeration value="MagTRTPMF"/>
-            <xs:enumeration value="MagDistPMF"/>
-            <xs:enumeration value="MagDistEpsPMF"/>
-            <xs:enumeration value="LatLonPMF"/>
-            <xs:enumeration value="LatLonMagPMF"/>
-            <xs:enumeration value="LatLonEpsPMF"/>
-            <xs:enumeration value="LatLonMagEpsPMF"/>
-            <xs:enumeration value="LatLonTRTPMF"/>
-            <xs:enumeration value="FullDisaggMatrix"/>
+            <xs:enumeration value="Mag" />
+            <xs:enumeration value="Dist" />
+            <xs:enumeration value="TRT" />
+            <xs:enumeration value="Mag,Dist" />
+            <xs:enumeration value="Mag,Dist,Eps" />
+            <xs:enumeration value="Lon,Lat" />
+            <xs:enumeration value="Mag,Lon,Lat" />
+            <xs:enumeration value="Lon,Lat,TRT" />
         </xs:restriction>
     </xs:simpleType>
-
-    <xs:complexType name="DisaggregationMatrixValue">
-        <xs:sequence>
-            <xs:element name="PMFValue" type="NormalizedDoubleType"/>
-        </xs:sequence>
-        <xs:attribute name="latitudeBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="longitudeBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="magnitudeBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="distanceBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="epsilonBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="tectonicRegionTypeBin" type="xs:string"></xs:attribute>
-    </xs:complexType>
-
 </xs:schema>
