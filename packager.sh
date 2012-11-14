@@ -78,16 +78,21 @@ mv README.txt      openquake/README
 mv celeryconfig.py openquake
 mv logging.cfg     openquake
 mv openquake.cfg   openquake
+mv bin/openquake   bin/noq
 rm openquake/bin/oqpath.py 
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
 
-exit 0
+# exit 0
 #
 # DEVEL
-GEM_BUILD_EXTR="${GEM_BUILD_ROOT}/extr"
+GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
+mksafedir "$GEM_BUILD_PKG"
+GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
+set -x
+cp  ${GEM_BUILD_ROOT}/python-noq_*.deb  $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x ../python-oq_*.deb .
-dpkg -e ../python-oq_*.deb 
+dpkg -x $GEM_BUILD_PKG/python-noq_*.deb .
+dpkg -e $GEM_BUILD_PKG/python-noq_*.deb 
