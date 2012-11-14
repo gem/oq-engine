@@ -1,0 +1,37 @@
+--- a/bin/openquake
++++ b/bin/openquake
+@@ -344,32 +344,8 @@
+         run_hazard(args.run_hazard, args.log_level, args.log_file,
+                    args.force_inputs, args.exports)
+     elif args.config_file is not None:
+-        from openquake import job
+-        from openquake import engine
+-        try:
+-            if args.log_file is not None:
+-                # Capture logging messages to a file.
+-                try:
+-                    _touch_log_file(args.log_file)
+-                except IOError as e:
+-                    raise IOError('Error writing to log file %s: %s'
+-                              % (args.log_file, e.strerror))
+-
+-            user_name = getpass.getuser()
+-            ajob = engine.prepare_job(user_name)
+-            _, params, sections = engine.import_job_profile(
+-                args.config_file, ajob, user_name, args.force_inputs)
+-            engine.run_job(ajob, params, sections,
+-                           output_type=args.output_type,
+-                           log_level=args.log_level,
+-                           force_inputs=args.force_inputs,
+-                           log_file=args.log_file)
+-        except job.config.ValidationException as e:
+-            print str(e)
+-        except IOError as e:
+-            print str(e)
+-        except Exception as e:
+-            raise
++        raise NotImplementedError("--config-file is not supported any more "
++                                  "please use --run-hazard instead")
+     elif args.list_calculations:
+         list_calculations()
+     elif args.list_outputs is not None:
