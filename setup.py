@@ -32,7 +32,7 @@ Copyright (C) 2010-2012 GEM Foundation.
 
 import os
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 version = '0.4'
@@ -66,7 +66,7 @@ setup(
     description="Natural hazards' Risk Markup Language",
     long_description=__doc__,
     platforms=['any'],
-    packages=['nrml'],
+    packages=find_packages(exclude=['tests', 'tests.*']),
     package_data={'nrml': package_data},
     requires=['lxml'],  # Shows up when running `python setup.py --requires`
     provides=['nrml (0.4)'],
