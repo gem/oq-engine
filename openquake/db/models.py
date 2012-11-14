@@ -749,6 +749,35 @@ class HazardCalculation(djm.Model):
         blank=True,
     )
 
+    ###################################
+    # Disaggregation Calculator params:
+    ###################################
+    mag_bin_width = djm.FloatField(
+        help_text=('Width of magnitude bins, which ultimately defines the size'
+                   ' of the magnitude dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    distance_bin_width = djm.FloatField(
+        help_text=('Width of distance bins, which ultimately defines the size'
+                   ' of the distance dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    coordinate_width = djm.FloatField(
+        help_text=('Width of coordinate bins, which ultimately defines the'
+                   ' size of the longitude and latitude dimensions of a'
+                   ' disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    num_epsilon_bins = djm.IntegerField(
+        help_text=('Number of epsilon bins, which defines the size of the'
+                   ' epsilon dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+
     ################################
     # Output/post-processing params:
     ################################
