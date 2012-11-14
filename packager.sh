@@ -80,7 +80,7 @@ mv logging.cfg     openquake
 mv openquake.cfg   openquake
 mv bin/openquake   bin/noq
 rm openquake/bin/oqpath.py 
-
+rm -rf $(find demos -mindepth 1 -maxdepth 1 | grep -v 'demos/simple_fault_demo_hazard' | grep -v 'demos/event_based_hazard')
 dpkg-buildpackage $DPBP_FLAG
 cd -
 
