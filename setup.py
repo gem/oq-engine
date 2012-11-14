@@ -20,8 +20,8 @@ setup(
             "oq_cache_gc = openquake.bin.cache_gc:main",
             "oq_monitor = openquake.bin.openquake_supervisor:main",
             ]},
-    name="openquake",
-    version="0.8.4",
+    name="noq",
+    version="0.2",
     author="The OpenQuake team",
     author_email="info@openquake.org",
     description=("Computes hazard, risk and socio-economic impact of "
