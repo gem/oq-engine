@@ -50,7 +50,7 @@ setup(
             "nrml/schema/nrml_common.xsd", "nrml/schema/nrml.xsd",
             "nrml/schema/xlinks/*", "logging.cfg", "openquake.cfg",
             "README", "LICENSE"]},
-    exclude_package_data={"": ["openquake/bin/oqpath.py"]},
+    exclude_package_data={"": ["bin/oqpath.py"]},
     scripts=[
-        "openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
+        "bin/oq_create_db", "bin/oq_restart_workers"]
     )
