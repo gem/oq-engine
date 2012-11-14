@@ -16,11 +16,9 @@ Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 setup(
     entry_points={
         "console_scripts": [
-            "openquake = openquake.bin.oqscript:main",
+            "noq = openquake.bin.oqscript:main",
             "oq_cache_gc = openquake.bin.cache_gc:main",
             "oq_monitor = openquake.bin.openquake_supervisor:main",
-            "oq_check_monitors = openquake.supervising.supersupervisor:main",
-            "oq_log_sink = openquake.bin.openquake_messages_collector:main",
             ]},
     name="openquake",
     version="0.8.4",
@@ -50,7 +48,7 @@ setup(
             "nrml/schema/nrml_common.xsd", "nrml/schema/nrml.xsd",
             "nrml/schema/xlinks/*", "logging.cfg", "openquake.cfg",
             "README", "LICENSE"]},
-    exclude_package_data={"": ["bin/oqpath.py"]},
+    exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors", "bin/oq_log_sink" ]},
     scripts=[
         "bin/oq_create_db", "bin/oq_restart_workers"]
     )
