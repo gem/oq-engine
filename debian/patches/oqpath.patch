@@ -1,0 +1,67 @@
+--- a/openquake/__init__.py
++++ b/openquake/__init__.py
+@@ -48,8 +48,6 @@
+ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+ """
+ 
+-import os
+-
+ # Please note: the release date should always have a value of 0 (zero) in the
+ # master branch. It will only be set to a meaningful value in *packaged* and
+ # released OpenQuake code.
+@@ -58,6 +56,3 @@
+     2,  # minor
+     0,  # sprint number
+     0)  # release date (seconds since the "Epoch"), do *not* set in master!
+-
+-# The path to the OpenQuake root directory
+-OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+--- a/openquake/bin/cache_gc.py
++++ b/openquake/bin/cache_gc.py
+@@ -30,9 +30,6 @@
+ import getopt
+ import sys
+ 
+-import oqpath
+-oqpath.set_oq_path()
+-
+ from openquake import kvs
+ from openquake import logs
+ 
+--- a/openquake/bin/oqscript.py
++++ b/openquake/bin/oqscript.py
+@@ -52,7 +52,6 @@
+ 
+ import argparse
+ import getpass
+-import logging
+ import os
+ import sys
+ 
+@@ -65,9 +64,6 @@
+ except ImportError:
+     sys.path.append('/usr/openquake')
+ 
+-import oqpath
+-oqpath.set_oq_path()
+-
+ from openquake import __version__
+ from openquake.db import models
+ from openquake.export import core as export
+--- a/openquake/bin/openquake_supervisor.py
++++ b/openquake/bin/openquake_supervisor.py
+@@ -21,14 +21,9 @@
+ """
+ The OpenQuake job supervisor process, spawned by each OpenQuake job.
+ """
+-import logging
+ import os
+ import sys
+ 
+-import oqpath
+-oqpath.set_oq_path()
+-
+-
+ def main():  # pylint: disable=C0111
+     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
+ 
