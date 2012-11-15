@@ -21,7 +21,6 @@ import unittest
 import os
 
 from openquake.db import models
-from openquake.input.exposure import ExposureDBWriter
 from openquake.input.fragility import FragilityDBWriter
 from openquake.parser.exposure import ExposureModelFile
 from openquake.parser.fragility import FragilityModelParser
@@ -110,118 +109,6 @@ def GMF_DATA():
             Site(-117, 41): {'groundMotion': 1.3},
         },
     ]
-
-
-class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
-    """
-    Test the code to serialize exposure model to DB.
-    """
-    job = None
-    path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
-
-    @classmethod
-    def setUpClass(cls):
-        inputs = [("exposure", cls.path)]
-        cls.job = cls.setup_classic_job(inputs=inputs)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
-
-    def setUp(self):
-        [input] = models.inputs4job(self.job.id, input_type="exposure")
-        self.writer = ExposureDBWriter(input)
-
-    def test_read_exposure(self):
-        parser = ExposureModelFile(self.path)
-
-        # call tested function
-        self.writer.serialize(parser)
-
-        # test results
-        model = self.writer.model
-
-        self.assertFalse(model is None)
-
-        # Make sure the exposure model is associated with the proper
-        # input and job.
-        self.assertEqual(self.path, model.input.path)
-        self.assertEqual("exposure", model.input.input_type)
-        self.assertEqual(1, len(models.inputs4job(self.job.id)))
-
-        # check model fields
-        self.assertEqual("Collection of existing building in downtown Pavia",
-                          model.description)
-        self.assertEqual("buildings", model.category)
-
-        self.assertEqual("per_asset", model.area_type)
-        self.assertEqual("GBP", model.area_unit)
-
-        self.assertEqual("per_area", model.coco_type)
-        self.assertEqual("CHF", model.coco_unit)
-
-        self.assertEqual("aggregated", model.reco_type)
-        self.assertEqual("EUR", model.reco_unit)
-
-        self.assertEqual("aggregated", model.stco_type)
-        self.assertEqual("USD", model.stco_unit)
-
-        self.assertEqual("Pavia taxonomy", model.taxonomy_source)
-
-        # check asset instances
-        assets = sorted(model.exposuredata_set.all(), key=lambda e: e.value)
-
-        def _to_site(pg_point):
-            return Site(pg_point.x, pg_point.y)
-
-        self.assertEqual("asset_01", assets[0].asset_ref)
-        self.assertEqual(120, assets[0].area)
-        self.assertEqual(12.95, assets[0].coco)
-        self.assertEqual(55, assets[0].deductible)
-        self.assertEqual(999, assets[0].ins_limit)
-        self.assertEqual(7, assets[0].number_of_units)
-        self.assertEqual(109876, assets[0].reco)
-        self.assertEqual(150000, assets[0].stco)
-        self.assertEqual(150000, assets[0].value)
-        self.assertEqual("RC/DMRF-D/LR", assets[0].taxonomy)
-        self.assertEqual(Site(9.15000, 45.16667), _to_site(assets[0].site))
-        self.assertEqual(0, assets[0].occupancy_set.count())
-
-        self.assertEqual("asset_02", assets[1].asset_ref)
-        self.assertEqual(119, assets[1].area)
-        self.assertEqual(21.95, assets[1].coco)
-        self.assertEqual(66, assets[1].deductible)
-        self.assertEqual(1999, assets[1].ins_limit)
-        self.assertEqual(6, assets[1].number_of_units)
-        self.assertEqual(205432, assets[1].reco)
-        self.assertEqual(250000, assets[1].stco)
-        self.assertEqual(250000, assets[1].value)
-        self.assertEqual("RC/DMRF-D/HR", assets[1].taxonomy)
-        self.assertEqual(Site(9.15333, 45.12200), _to_site(assets[1].site))
-        day, night = sorted(assets[1].occupancy_set.all(),
-                            key=lambda o: o.description)
-        self.assertEqual(12, day.occupants)
-        self.assertEqual("day", day.description)
-        self.assertEqual(50, night.occupants)
-        self.assertEqual("night", night.description)
-
-        self.assertEqual("asset_03", assets[2].asset_ref)
-        self.assertEqual(118, assets[2].area)
-        self.assertEqual(30.95, assets[2].coco)
-        self.assertEqual(77, assets[2].deductible)
-        self.assertEqual(2888, assets[2].ins_limit)
-        self.assertEqual(5, assets[2].number_of_units)
-        self.assertEqual(495432, assets[2].reco)
-        self.assertEqual(500000, assets[2].stco)
-        self.assertEqual(500000, assets[2].value)
-        self.assertEqual("RC/DMRF-D/LR", assets[2].taxonomy)
-        self.assertEqual(Site(9.14777, 45.17999), _to_site(assets[2].site))
-        morning, afternoon = sorted(assets[2].occupancy_set.all(),
-                                    key=lambda o: o.description)
-        self.assertEqual(5, afternoon.occupants)
-        self.assertEqual("late afternoon", afternoon.description)
-        self.assertEqual(36, morning.occupants)
-        self.assertEqual("early morning", morning.description)
 
 
 class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
