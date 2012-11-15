@@ -17,18 +17,15 @@ Contents:
     db/models
     db/fields
     architecture
-    formats
     kvs
     logs
     input
-    output
     producer
     risk
     schema
     shapes
     utils
     writer
-    xml
 
 Indices and tables
 ==================
