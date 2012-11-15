@@ -267,8 +267,8 @@ def _get_correl_model(hc):
         '%sCorrelationModel' % hc.ground_motion_correlation_model,
         None)
     if correl_model_cls is None:
-        raise RuntimeError("Unknown correlation model: '%s'"
-                           % hc.ground_motion_correlation_model)
+        # There's no correlation model for this calculation.
+        return None
 
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
