@@ -18,7 +18,6 @@ Contents:
     db/fields
     architecture
     formats
-    java
     kvs
     logs
     input
