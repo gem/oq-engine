@@ -16,9 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import mock
 import os
-import redis
 import unittest
 
 from django.contrib.gis import geos
@@ -229,21 +227,6 @@ class RiskCalculatorTestCase(unittest.TestCase):
             (shapes.GridPoint(self.grid, 0, 1), GRID_ASSETS[(1, 0)]),
             (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])]
 
-    def test_grid_assets_iterator(self):
-        def row_col(item):
-            return item[0].row, item[0].column
-
-        jp = models.profile4job(self.job_ctxt.job_id)
-        jp.region_grid_spacing = 0.01
-        jp.save()
-        calculator = general.BaseRiskCalculator(self.job_ctxt)
-
-        expected = sorted(self.grid_assets, key=row_col)
-        actual = sorted(calculator.grid_assets_iterator(self.grid),
-                        key=row_col)
-
-        self.assertEqual(expected, actual)
-
     def test_that_conditional_loss_is_in_kvs(self):
         asset = GRID_ASSETS[(0, 1)]
         loss_poe = 0.1
@@ -259,29 +242,3 @@ class RiskCalculatorTestCase(unittest.TestCase):
         loss_key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref,
                                        loss_poe)
         self.assertTrue(kvs.get_client().get(loss_key))
-
-    def test_asset_losses_per_site(self):
-        mm = mock.MagicMock(spec=redis.Redis)
-        mm.get.return_value = 0.123
-        with helpers.patch('openquake.kvs.get_client') as mgc:
-            mgc.return_value = mm
-
-            def coords(item):
-                return item[0].coords
-
-            expected = [
-                (shapes.Site(10.0, 10.0),
-                    [({'value': 0.123}, GRID_ASSETS[(0, 0)])]),
-                (shapes.Site(10.1, 10.0),
-                    [({'value': 0.123}, GRID_ASSETS[(0, 1)])]),
-                (shapes.Site(10.0, 10.1),
-                    [({'value': 0.123}, GRID_ASSETS[(1, 0)])]),
-                (shapes.Site(10.1, 10.1),
-                    [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
-
-            calculator = general.BaseRiskCalculator(self.job_ctxt)
-            actual = calculator.asset_losses_per_site(0.5, self.grid_assets)
-            expected = sorted(expected, key=coords)
-            actual = sorted(actual, key=coords)
-
-            self.assertEqual(expected, actual)

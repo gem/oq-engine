@@ -17,18 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from django.contrib.gis.geos import GEOSGeometry
-from lxml import etree
-from StringIO import StringIO
 import numpy
 import os
-import tempfile
 import unittest
 
 from openquake.db import models
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.event_based import core as eb_core
 from openquake.calculators.risk.general import AggregateLossCurve
-from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import _compute_conditional_loss
@@ -42,7 +38,6 @@ from openquake.calculators.risk.general import _compute_mid_mean_pe
 from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
-from openquake.calculators.risk.general import ProbabilisticRiskCalculator
 from openquake.calculators.risk.scenario import core as scenario
 from openquake import engine
 from openquake import kvs
@@ -1201,105 +1196,3 @@ class RiskJobGeneralTestCase(unittest.TestCase):
                  'assetID-202'),
             ])
         ])
-
-    def test_asset_bcr_per_site(self):
-        self._make_job({})
-        self._prepare_bcr_result()
-
-        job = BaseRiskCalculator(self.job)
-
-        bcr_per_site = job.asset_bcr_per_site()
-        self.assertEqual(bcr_per_site, [
-            (shapes.Site(-1.1, 19.0), [
-                [{u'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
-                 u'assetID-191'],
-                [{u'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
-                 u'assetID-192']
-            ]),
-            (shapes.Site(2.3, 20.0), [
-                [{u'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
-                 u'assetID-201'],
-                [{u'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
-                 u'assetID-202']
-            ])
-        ])
-
-    def test_write_output_bcr(self):
-        self._make_job({})
-        self._prepare_bcr_result()
-
-        job = ProbabilisticRiskCalculator(self.job)
-
-        expected_result = """\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
-      gml:id="undefined">
-  <riskResult gml:id="undefined">
-    <benefitCostRatioMap gml:id="undefined" endBranchLabel="undefined"
-                         lossCategory="undefined" unit="undefined"
-                         interestRate="0.12" assetLifeExpectancy="50">
-      <BCRNode gml:id="mn_1">
-        <site>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>-1.1 19.0</gml:pos>
-          </gml:Point>
-        </site>
-        <benefitCostRatioValue assetRef="assetID-191">
-          <expectedAnnualLossOriginal>12.34</expectedAnnualLossOriginal>
-          <expectedAnnualLossRetrofitted>4</expectedAnnualLossRetrofitted>
-          <benefitCostRatio>35.1</benefitCostRatio>
-        </benefitCostRatioValue>
-        <benefitCostRatioValue assetRef="assetID-192">
-          <expectedAnnualLossOriginal>2.5</expectedAnnualLossOriginal>
-          <expectedAnnualLossRetrofitted>2.2</expectedAnnualLossRetrofitted>
-          <benefitCostRatio>35.2</benefitCostRatio>
-        </benefitCostRatioValue>
-      </BCRNode>
-      <BCRNode gml:id="mn_2">
-        <site>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>2.3 20.0</gml:pos>
-          </gml:Point>
-        </site>
-        <benefitCostRatioValue assetRef="assetID-201">
-          <expectedAnnualLossOriginal>1.23</expectedAnnualLossOriginal>
-          <expectedAnnualLossRetrofitted>0.3</expectedAnnualLossRetrofitted>
-          <benefitCostRatio>35.1</benefitCostRatio>
-        </benefitCostRatioValue>
-        <benefitCostRatioValue assetRef="assetID-202">
-          <expectedAnnualLossOriginal>4</expectedAnnualLossOriginal>
-          <expectedAnnualLossRetrofitted>0.4</expectedAnnualLossRetrofitted>
-          <benefitCostRatio>35.2</benefitCostRatio>
-        </benefitCostRatioValue>
-      </BCRNode>
-    </benefitCostRatioMap>
-  </riskResult>
-</nrml>"""
-
-        output_dir = tempfile.mkdtemp()
-        try:
-            job.job_ctxt.params = {'OUTPUT_DIR': output_dir,
-                                       'INTEREST_RATE': '0.12',
-                                       'ASSET_LIFE_EXPECTANCY': '50'}
-            job.job_ctxt._base_path = '.'
-
-            resultfile = os.path.join(output_dir, 'bcr-map.xml')
-
-            try:
-                job.write_output_bcr()
-                result = open(resultfile).read()
-            finally:
-                if os.path.exists(resultfile):
-                    os.remove(resultfile)
-        finally:
-            os.rmdir(output_dir)
-
-        result = StringIO(result)
-        expected_result = StringIO(expected_result)
-
-        events1 = [(elem.tag, elem.attrib, elem.text)
-                   for (event, elem) in etree.iterparse(result)]
-        events2 = [(elem.tag, elem.attrib, elem.text)
-                   for (event, elem) in etree.iterparse(expected_result)]
-        self.assertEqual(events1, events2)

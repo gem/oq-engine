@@ -16,7 +16,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import mock
 import os
 import textwrap
 import unittest
@@ -31,8 +30,6 @@ from openquake import engine
 from openquake import kvs
 from openquake.db import models
 from openquake import shapes
-from openquake.calculators.risk.event_based.core import (
-    EventBasedRiskCalculator)
 from openquake.engine import import_job_profile
 from openquake.engine import JobContext
 from openquake.engine import _parse_config_file
