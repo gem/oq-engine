@@ -22,7 +22,6 @@ from datetime import datetime
 from openquake import engine
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake.supervising import supervisor
-from openquake.supervising import supersupervisor
 from openquake.utils import stats
 
 from tests.utils.helpers import patch, job_from_file, get_data_path
@@ -201,53 +200,6 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(
             ((123,), {'error_msg': 'job process 1 crashed or terminated'}),
             self.update_job_status_and_error_msg.call_args)
-
-
-@unittest.skip
-class SupersupervisorTestCase(unittest.TestCase):
-    def setUp(self):
-        self.running_pid = 1324
-        self.stopped_pid = 4312
-        OqJob.objects.all().update(status='succeeded')
-        job_pid = 1
-        for status in ('pending', 'running', 'failed', 'succeeded'):
-            for supervisor_pid in (self.running_pid, self.stopped_pid):
-                job = job_from_file(get_data_path(CONFIG_FILE))
-                job = OqJob.objects.get(id=job.job_id)
-                job.status = status
-                job.supervisor_pid = supervisor_pid
-                job.job_pid = job_pid
-                job_pid += 1
-                job.save()
-                if status == 'running' and supervisor_pid == self.stopped_pid:
-                    self.dead_supervisor_job_id = job.id
-                    self.dead_supervisor_job_pid = job.job_pid
-        self.is_pid_running = patch('openquake.supervising.is_pid_running')
-        self.is_pid_running = self.is_pid_running.start()
-        self.is_pid_running.side_effect = lambda pid: pid != self.stopped_pid
-
-    def tearDown(self):
-        self.is_pid_running.stop()
-
-    def test_main(self):
-        with patch('multiprocessing.Process') as process:
-            expected_args = (self.dead_supervisor_job_id,
-                             self.dead_supervisor_job_pid)
-
-            class FakeProcess(object):
-                started = False
-
-                def __init__(fp, target, args):
-                    assert target is supervisor.supervise
-                    assert args == expected_args
-
-                def start(self):
-                    FakeProcess.started = True
-
-            process.side_effect = FakeProcess
-            supersupervisor.main()
-            self.assertEqual(process.call_count, 1)
-            self.assertEqual(FakeProcess.started, True)
 
 
 class AbortDueToFailedNodesTestCase(unittest.TestCase):

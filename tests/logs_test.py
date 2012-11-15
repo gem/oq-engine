@@ -27,134 +27,11 @@ import kombu
 import kombu.entity
 import kombu.messaging
 
-from openquake import java
 from openquake import logs
 from openquake.utils import config
 from openquake.utils import stats
 
 from tests.utils import helpers
-
-
-class JavaLogsTestCase(unittest.TestCase):
-    def setUp(self):
-        self.jvm = java.jvm()
-        self.handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        self.python_logger = logging.getLogger('java')
-        self.python_logger.addHandler(self.handler)
-        self.python_logger.setLevel(logging.DEBUG)
-
-        jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
-        self.root_logger = jlogger_class.getRootLogger()
-        self.other_logger = jlogger_class.getLogger('other_logger')
-
-    def tearDown(self):
-        self.python_logger.removeHandler(self.handler)
-        self.python_logger.setLevel(logging.NOTSET)
-
-    def test_error(self):
-        self.root_logger.error('java error msg')
-        [record] = self.handler.buffer
-        self.assertEqual(record.levelno, logging.ERROR)
-        self.assertEqual(record.levelname, 'ERROR')
-        self.assertEqual(record.name, 'java')
-        self.assertEqual(record.msg, 'java error msg')
-        self.assertEqual(record.threadName, 'main')
-        self.assertEqual(record.processName,
-                         multiprocessing.current_process().name)
-
-    def test_warning(self):
-        self.other_logger.warn('warning message')
-        [record] = self.handler.buffer
-        self.assertEqual(record.levelno, logging.WARNING)
-        self.assertEqual(record.levelname, 'WARNING')
-        self.assertEqual(record.name, 'java.other_logger')
-        self.assertEqual(record.msg, 'warning message')
-
-    def test_debug(self):
-        self.other_logger.debug('this is verbose debug info')
-        [record] = self.handler.buffer
-        self.assertEqual(record.levelno, logging.DEBUG)
-        self.assertEqual(record.levelname, 'DEBUG')
-        self.assertEqual(record.name, 'java.other_logger')
-        self.assertEqual(record.msg, 'this is verbose debug info')
-
-    def test_fatal(self):
-        self.root_logger.fatal('something bad has happened')
-        [record] = self.handler.buffer
-        # java "fatal" records are mapped to python "critical" ones
-        self.assertEqual(record.levelno, logging.CRITICAL)
-        self.assertEqual(record.levelname, 'CRITICAL')
-        self.assertEqual(record.name, 'java')
-        self.assertEqual(record.msg, 'something bad has happened')
-
-    def test_info(self):
-        self.root_logger.info('information message')
-        [record] = self.handler.buffer
-        self.assertEqual(record.levelno, logging.INFO)
-        self.assertEqual(record.levelname, 'INFO')
-        self.assertEqual(record.name, 'java')
-        self.assertEqual(record.msg, 'information message')
-
-    def test_record_serializability(self):
-        self.root_logger.info('whatever')
-        [record] = self.handler.buffer
-        # original args are tuple which becomes list
-        # being encoded to json and back
-        record.args = list(record.args)
-        self.assertEqual(json.loads(json.dumps(record.__dict__)),
-                         record.__dict__)
-
-    def test_custom_level(self):
-        # checking that logging with custom levels issues a warning but works
-
-        # org.apache.log4j.Level doesn't allow to be instantiated directly
-        # and jpype doesn't support subclassing java in python. that's why
-        # in this test we just check JavaLoggingBridge without touching
-        # java objects.
-        class MockMessage(object):
-            def getLevel(self):
-                class Level(object):
-                    def toInt(self):
-                        return 12345
-                return Level()
-
-            @property
-            def logger(self):
-                class Logger(object):
-                    def getParent(self):
-                        return None
-                return Logger()
-
-            def getLocationInformation(self):
-                class LocationInformation(object):
-                    getFileName = lambda self: 'some/file'
-                    getLineNumber = lambda self: '123'
-                    getClassName = lambda self: 'someclassname'
-                    getMethodName = lambda self: 'somemethod'
-                return LocationInformation()
-
-            getLoggerName = lambda self: 'root'
-            getMessage = lambda self: 'somemessage'
-            getThreadName = lambda self: 'somethread'
-
-        java.JavaLoggingBridge().append(MockMessage())
-        # we expect to have two messages logged in this case:
-        # first is warning about unknown level used,
-        # and second is the actual log message.
-        [warning, record] = self.handler.buffer
-
-        self.assertEqual(warning.levelno, logging.WARNING)
-        self.assertEqual(warning.name, 'java')
-        self.assertEqual(warning.getMessage(), 'unrecognised logging level ' \
-                                               '12345 was used')
-
-        self.assertEqual(record.levelno, 12345)
-        self.assertEqual(record.levelname, 'Level 12345')
-        self.assertEqual(record.name, 'java')
-        self.assertEqual(record.msg, 'somemessage')
-        self.assertEqual(record.pathname, 'some/file')
-        self.assertEqual(record.lineno, 123)
-        self.assertEqual(record.funcName, 'someclassname.somemethod')
 
 
 class PythonAMQPLogTestCase(unittest.TestCase):
@@ -252,7 +129,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 216)
+        self.assertEqual(info['lineno'], 93)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
