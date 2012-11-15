@@ -22,7 +22,6 @@ import os
 
 from openquake.db import models
 from openquake.input.fragility import FragilityDBWriter
-from openquake.parser.exposure import ExposureModelFile
 from openquake.parser.fragility import FragilityModelParser
 from openquake.shapes import Site
 
