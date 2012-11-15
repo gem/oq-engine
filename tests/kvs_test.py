@@ -17,15 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import json
 import numpy
-import os
 
 import unittest
 
 from openquake import kvs
 from openquake import logs
-from openquake.utils import config
 from tests.utils import helpers
 from tests.utils.helpers import patch
 

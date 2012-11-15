@@ -11,9 +11,3 @@ Seismic Sources
 ---------------
 
 .. automodule:: openquake.input.source
-
-
-Risk Exposure Model
--------------------
-
-.. automodule:: openquake.input.exposure
