@@ -24,7 +24,6 @@ import string
 import unittest
 
 from openquake import writer
-from openquake.output import risk as risk_output
 
 
 class ComposeWritersTest(unittest.TestCase):
@@ -106,48 +105,3 @@ class SMWrapper(object):
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
-
-
-class CreateRiskWriterTest(unittest.TestCase):
-
-    def test_loss_curve_writer_creation(self):
-        # XML writers
-        writer = risk_output.create_loss_curve_writer(
-            None, ['xml'], "fakepath.xml", "loss_ratio")
-        self.assertEqual(type(writer), risk_output.LossRatioCurveXMLWriter)
-        writer = risk_output.create_loss_curve_writer(
-            None, ['xml'], "fakepath.xml", "loss")
-        self.assertEqual(type(writer), risk_output.LossCurveXMLWriter)
-
-        # database writers
-        writer = risk_output.create_loss_curve_writer(
-            1, ['db'], "fakepath.xml", "loss_ratio")
-        self.assertEqual(writer, None)
-        writer = risk_output.create_loss_curve_writer(
-            1, ['db'], "fakepath.xml", "loss")
-        self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
-
-    def test_scenario_loss_map_writer_creation(self):
-        # XML writer
-        writer = risk_output.create_loss_map_writer(
-            None, ['xml'], "fakepath.xml", True)
-        self.assertEqual(type(writer), risk_output.LossMapXMLWriter)
-
-        # database writer
-        writer = risk_output.create_loss_map_writer(
-            1, ['db'], "fakepath.xml", True)
-        self.assertEqual(type(writer), risk_output.LossMapDBWriter)
-
-    def test_nonscenario_loss_map_writer_creation(self):
-        # XML writer
-        writer = risk_output.create_loss_map_writer(
-            None, ['xml'], "fakepath.xml", False)
-        self.assertEqual(type(writer),
-                risk_output.LossMapNonScenarioXMLWriter)
-
-        # database writer is the same for scenario and non-scenario
-        writer = risk_output.create_loss_map_writer(
-            1, ['db'], "fakepath.xml", False)
-
-        self.assertEqual(type(writer),
-                risk_output.LossMapDBWriter)
