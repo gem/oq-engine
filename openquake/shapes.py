@@ -34,7 +34,6 @@ from scipy.interpolate import interp1d
 
 from nhlib import geo as nhlib_geo
 
-from openquake import java
 from openquake.utils import round_float
 from openquake import logs
 
@@ -379,13 +378,6 @@ class Site(nhlib_geo.Point):
         return hash(
             hashlib.md5(
                 repr((self.longitude, self.latitude, self.depth))).hexdigest())
-
-    def to_java(self):
-        """Converts to a Java Site object"""
-        jpype = java.jvm()
-        loc_class = jpype.JClass("org.opensha.commons.geo.Location")
-        site_class = jpype.JClass("org.opensha.commons.data.Site")
-        return site_class(loc_class(self.latitude, self.longitude))
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
