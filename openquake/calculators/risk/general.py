@@ -19,15 +19,9 @@
 
 
 import math
-import os
 import random
 
-from collections import defaultdict
 from collections import OrderedDict
-
-from celery.task import task
-
-from django.contrib.gis import geos
 
 from numpy import array
 from numpy import exp
@@ -39,17 +33,10 @@ from numpy import zeros
 from scipy import sqrt, log
 from scipy import stats
 
-from openquake.calculators.base import Calculator
 from openquake.calculators.base import CalculatorNext
-from openquake.db import models
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.input.fragility import FragilityDBWriter
-from openquake.job import config as job_config
-from openquake.parser import fragility
-from openquake.parser import vulnerability
-from openquake.utils import round_float
 
 
 LOG = logs.LOG
