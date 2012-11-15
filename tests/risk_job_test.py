@@ -23,13 +23,11 @@ import unittest
 
 from django.contrib.gis import geos
 
-from openquake import engine
 from openquake import kvs
 from openquake import shapes
 from openquake.calculators.risk import general
 from openquake.calculators.risk.general import Block
 from openquake.db import models
-from openquake.parser import exposure
 
 from tests.utils import helpers
 
