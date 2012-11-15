@@ -45,11 +45,9 @@ from openquake.db import models
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.input.exposure import ExposureDBWriter
 from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
-from openquake.parser import exposure
 from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
@@ -135,7 +133,6 @@ class BaseRiskCalculator(Calculator):
 
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
-        self.store_exposure_assets()
         self.store_vulnerability_model()
         self.partition()
 
@@ -238,18 +235,6 @@ class BaseRiskCalculator(Calculator):
 
         LOG.info("Job has partitioned %s sites into %s blocks",
                  len(sites), block_count)
-
-    def store_exposure_assets(self):
-        """Load exposure assets and write them to database."""
-        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        if emi.exposuremodel_set.all().count() > 0:
-            return
-
-        path = os.path.join(self.job_ctxt.base_path, emi.path)
-        exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emi)
-        writer.serialize(exposure_parser)
-        return emi.model()
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
