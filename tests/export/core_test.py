@@ -154,21 +154,6 @@ class GetOutputsTestCase(BaseExportTestCase):
             output_type='loss_curve')
         self.cpsha_lc_output.save()
 
-    @helpers.skipit
-    def test_get_outputs_cpsha(self):
-        self._create_job_profiles(self.user_name)
-        self._set_up_complete_jobs()
-        self._set_up_outputs()
-
-        expected_cpsha = [self.cpsha_hc_output, self.cpsha_mean_hc_output,
-                          self.cpsha_lc_output]
-        actual_cpsha = list(export.get_outputs(self.cpsha_job_fail.id))
-        self.assertEqual(expected_cpsha, actual_cpsha)
-
-        expected_uhs = [self.uhs_output]
-        actual_uhs = list(export.get_outputs(self.uhs_job.id))
-        self.assertEqual(expected_uhs, actual_uhs)
-
     def test_get_outputs_no_outputs(self):
         self._create_job_profiles(self.user_name)
         self._set_up_complete_jobs()
