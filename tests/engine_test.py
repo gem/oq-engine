@@ -240,50 +240,6 @@ class EngineAPITestCase(unittest.TestCase):
         # If this fails, it will raise an `ObjectDoesNotExist` exception.
         models.OqUser.objects.get(user_name=user_name)
 
-    @helpers.skipit
-    def test_run_job_deletes_job_counters(self):
-        # This test ensures that
-        # :function:`openquake.utils.stats.delete_job_counters` is called
-        cfg_path = helpers.demo_file('HazardMapTest/config.gem')
-
-        job_profile, params, sections = engine.import_job_profile(
-            cfg_path, self.job)
-
-        # We don't want any of the supervisor/executor forking to happen; it's
-        # not necessary. Also, forking should not happen in the context of a
-        # test run.
-        with helpers.patch('os.fork', mocksignature=False) as fork_mock:
-            # Fake return val for fork:
-            fork_mock.return_value = 0
-            # And we don't actually want to run the job.
-            with helpers.patch('openquake.engine._launch_job'):
-                with helpers.patch(
-                    'openquake.utils.stats.delete_job_counters') as djc_mock:
-                    engine.run_job(self.job, params, sections)
-                    self.assertEqual(1, djc_mock.call_count)
-
-
-@unittest.skip
-class ReadSitesFromExposureTestCase(unittest.TestCase):
-
-    def test_read_sites_from_exposure(self):
-        # Test reading site data from an exposure file using
-        # :py:function:`openquake.risk.read_sites_from_exposure`.
-        job_cfg = helpers.testdata_path('simplecase/config.gem')
-
-        test_job = helpers.job_from_file(job_cfg)
-        calc = core.EventBasedRiskCalculator(test_job)
-        calc.store_exposure_assets()
-
-        expected_sites = set([
-            shapes.Site(-118.077721, 33.852034),
-            shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)])
-
-        actual_sites = set(engine.read_sites_from_exposure(test_job))
-
-        self.assertEqual(expected_sites, actual_sites)
-
 
 class FileDigestTestCase(unittest.TestCase):
     """Test the _file_digest() function."""
@@ -368,16 +324,6 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
             i2j.save()
         return mdl
 
-    @helpers.skipit
-    def test__identical_input(self):
-        # The matching fragility model input is found
-        expected = self._setup_input(
-            input_type="fragility", size=123, path=self.FRAGM,
-            digest=self.fragm_digest, jobs=self.jobs_u1)
-        actual = engine._identical_input("fragility", self.fragm_digest,
-                                         self.job.owner.id)
-        self.assertEqual(expected.id, actual.id)
-
     def test__identical_input_and_non_matching_digest(self):
         # The exposure model input is not found since the md5sum digest does
         # not match.
@@ -458,22 +404,6 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def tearDown(self):
         self.teardown_job(self.job)
-
-    @helpers.skipit
-    def test__insert_input_files(self):
-        # A new input record is inserted for the GMPE logic tree but the
-        # existing input row is reused for the source model logic tree.
-        engine._insert_input_files(self.PARAMS, self.job, False)
-        [glt_i] = models.inputs4job(self.job.id, input_type="lt_gsim")
-        self.assertNotEqual(self.glt_i.id, glt_i.id)
-        [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
-        self.assertEqual(self.slt_i.id, slt_i.id)
-        # Make sure the LT and the hazard source have been associated.
-        [src_link] = models.Src2ltsrc.objects.filter(lt_src=slt_i)
-        self.assertEqual("dissFaultModel.xml", src_link.filename)
-        self.assertEqual(slt_i, src_link.lt_src)
-        [hzrd_i] = models.inputs4job(self.job.id, input_type="source")
-        self.assertEqual(hzrd_i, src_link.hzrd_src)
 
     def test_model_content_single_file(self):
         # The contents of input files (such as logic trees, exposure models,
