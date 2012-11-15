@@ -112,12 +112,6 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job_ctxt.sections,
                          self.job_ctxt_with_includes.sections)
 
-    @helpers.skipit
-    def test_job_with_only_hazard_config_only_has_hazard_section(self):
-        job_with_only_hazard = \
-            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
 
         sha_from_file_key = lambda params, key: params[key].split('!')[1]
@@ -471,46 +465,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
-    @helpers.skipit
-    def test_prepare_classical_job(self):
-        abs_path = partial(datapath, "classical_psha_simple")
-        params = self.BASE_CLASSICAL_PARAMS.copy()
-        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
-        params['REGION_GRID_SPACING'] = '0.1'
-        params['BASE_PATH'] = abs_path('')
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = "source_model_logic_tree.xml"
-        params['GMPE_LOGIC_TREE_FILE'] = "gmpe_logic_tree.xml"
-        params['EXPOSURE'] = abs_path("small_exposure.xml")
-        params['VULNERABILITY'] = abs_path("vulnerability.xml")
-        params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
-        params['GMPE_LT_RANDOM_SEED'] = '5'
-        params['LREM_STEPS_PER_INTERVAL'] = '5'
-
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
-                          False)
-        self.assertEqual(params['REGION_VERTEX'], _to_coord_list(jp.region))
-        self.assertFieldsEqual(
-            {'calc_mode': 'classical',
-             'region_grid_spacing': 0.1,
-             'min_magnitude': 5.0,
-             'investigation_time': 50.0,
-             'component': 'gmroti50',
-             'imt': 'pga',
-             'period': None,
-             'truncation_type': 'twosided',
-             'truncation_level': 3.0,
-             'reference_vs30_value': 760.0,
-             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
-             'poes': [0.01, 0.1],
-             'realizations': 2,
-             'histories': None,
-             'gm_correlated': None,
-             'damping': None,
-             'gmf_calculation_number': None,
-             'rupture_surface_discretization': None,
-             'subduction_rupture_floating_type': 'downdip',
-             }, jp)
-
     def test_prepare_classical_job_over_sites(self):
         '''
         Same as test_prepare_classical_job, but with geometry specified as
@@ -602,45 +556,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
              'gm_correlated': True,
              }, jp)
 
-    @helpers.skipit
-    def test_prepare_event_based_job(self):
-        abs_path = partial(datapath, "simplecase")
-        params = self.BASE_EVENT_BASED_PARAMS.copy()
-        params['REGION_VERTEX'] = \
-            '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
-        params['REGION_GRID_SPACING'] = '0.02'
-        params['BASE_PATH'] = abs_path('')
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = "source_model_logic_tree.xml"
-        params['GMPE_LOGIC_TREE_FILE'] = "gmpe_logic_tree.xml"
-        params['EXPOSURE'] = abs_path("small_exposure.xml")
-        params['VULNERABILITY'] = abs_path("vulnerability.xml")
-        params['GMF_RANDOM_SEED'] = '1'
-        params['LOSS_HISTOGRAM_BINS'] = '25'
-
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
-                          False)
-        self.assertEqual(params['REGION_VERTEX'], _to_coord_list(jp.region))
-        self.assertFieldsEqual(
-            {'calc_mode': 'event_based',
-             'region_grid_spacing': 0.02,
-             'min_magnitude': 5.0,
-             'investigation_time': 50.0,
-             'component': 'average',
-             'imt': 'sa',
-             'period': 1.0,
-             'truncation_type': 'none',
-             'truncation_level': 3.0,
-             'reference_vs30_value': 760.0,
-             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
-             'poes': None,
-             'realizations': 5,
-             'histories': 1,
-             'gm_correlated': False,
-             'damping': 5.0,
-             'gmf_calculation_number': None,
-             'rupture_surface_discretization': None,
-             }, jp)
-
     def test_prepare_event_based_job_over_sites(self):
         '''
         Same as test_prepare_event_based_job, but with geometry specified as
@@ -688,71 +603,6 @@ class RunJobTestCase(unittest.TestCase):
 
     def _calculation_status(self):
         return models.OqJob.objects.latest(field_name='last_update').status
-
-    @helpers.skipit
-    def test_successful_job_lifecycle(self):
-
-        def test_status_running_and_succeed(*args):
-            self.assertEqual('running', self._calculation_status())
-
-            return []
-
-        def patch_job_launch(*args, **kwargs):
-            self.job = self.job_from_file(*args, **kwargs)
-
-            self.assertEqual('pending', self._calculation_status())
-
-            return self.job
-
-        before_launch = engine._launch_job
-        try:
-            engine._launch_job = mock.Mock(
-                side_effect=test_status_running_and_succeed)
-
-            with patch('openquake.engine._job_from_file') as from_file:
-                from_file.side_effect = patch_job_launch
-
-                with patch('os.fork', mocksignature=False) as fork:
-                    fork.return_value = 0
-                    engine.run_job(self.job, self.params, self.sections)
-
-            self.assertEqual(1, engine._launch_job.call_count)
-            self.assertEqual('succeeded', self._calculation_status())
-        finally:
-            engine._launch_job = before_launch
-
-    @helpers.skipit
-    def test_failed_job_lifecycle(self):
-
-        def test_status_running_and_fail(*args):
-            self.assertEqual('running', self._calculation_status())
-
-            raise Exception('OMG!')
-
-        def patch_job_launch(*args, **kwargs):
-            self.job = self.job_from_file(*args, **kwargs)
-
-            self.assertEqual('pending', self._calculation_status())
-
-            return self.job
-
-        before_launch = engine._launch_job
-        try:
-            engine._launch_job = mock.Mock(
-                side_effect=test_status_running_and_fail)
-
-            with patch('openquake.engine._job_from_file') as from_file:
-                from_file.side_effect = patch_job_launch
-
-                with patch('os.fork', mocksignature=False) as fork:
-                    fork.return_value = 0
-                    self.assertRaises(Exception, engine.run_job,
-                                      self.job, self.params, self.sections)
-
-            self.assertEqual(1, engine._launch_job.call_count)
-            self.assertEqual('failed', self._calculation_status())
-        finally:
-            engine._launch_job = before_launch
 
     def test_computes_sites_in_region_when_specified(self):
         """When we have hazard jobs only, and we specify a region,
@@ -805,135 +655,6 @@ class RunJobTestCase(unittest.TestCase):
                 shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
 
         self.assertEqual(expected_sites, engine.sites_to_compute())
-
-    @helpers.skipit
-    def test_supervisor_is_spawned(self):
-        with patch('openquake.engine._job_from_file'):
-
-            before_launch = engine._launch_job
-            try:
-                engine._launch_job = mock.Mock()
-                with patch('os.fork', mocksignature=False) as fork:
-
-                    def fork_side_effect():
-                        fork.side_effect = lambda: 0
-                        return 1234
-                    fork.side_effect = fork_side_effect
-                    superv_func = 'openquake.supervising.supervisor.supervise'
-                    with patch(superv_func) as sv:
-                        engine.run_job(self.job, self.params, self.sections)
-                        job = models.OqJob.objects.latest(
-                            field_name='last_update')
-
-                        self.assertEqual(1, sv.call_count)
-                        self.assertEqual(((1234, job.id), {'log_file': None}),
-                                         sv.call_args)
-            finally:
-                engine._launch_job = before_launch
-
-
-@unittest.skip
-class JobsWithExposureTestCase(unittest.TestCase):
-    '''Tests related to job with exposure.'''
-
-    def setUp(self):
-        # Test 'event-based' job
-        cfg_path = helpers.testdata_path("simplecase/config.gem")
-
-        self.job = engine.prepare_job()
-        self.jp, self.params, self.sections = engine.import_job_profile(
-            cfg_path, self.job)
-
-    def test_with_risk_jobs_we_can_trigger_hazard_only_on_exposure_sites(self):
-        # When we have hazard and risk jobs, we can ask to trigger
-        # the hazard computation only on the sites specified
-        # in the exposure file.
-        self.params['COMPUTE_HAZARD_AT_ASSETS_LOCATIONS'] = True
-
-        job_ctxt = engine.JobContext(
-            self.params, self.job.id, sections=self.sections,
-            oq_job_profile=self.jp)
-
-        calc = EventBasedRiskCalculator(job_ctxt)
-        calc.store_exposure_assets()
-
-        expected_sites = set([
-            shapes.Site(-118.077721, 33.852034),
-            shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)])
-
-        actual_sites = set(job_ctxt.sites_to_compute())
-        self.assertEqual(expected_sites, actual_sites)
-
-
-@unittest.skip
-class JobStatsTestCase(unittest.TestCase):
-    '''
-    Tests related to capturing job stats.
-    '''
-
-    def setUp(self):
-        # Test 'event-based' job
-        cfg_path = helpers.testdata_path("simplecase/config.gem")
-        base_path = helpers.testdata_path("simplecase")
-
-        oq_job = engine.prepare_job()
-        oq_job_profile, params, sections = engine.import_job_profile(
-            cfg_path, oq_job)
-
-        self.eb_job = JobContext(
-            params, oq_job.id, sections=sections, base_path=base_path,
-            oq_job_profile=oq_job_profile, oq_job=oq_job)
-
-    def test_record_initial_stats(self):
-        '''Verify that
-        :py:method:`openquake.engine.JobContext._record_initial_stats`
-        reports initial calculation stats.
-
-        As we add fields to the uiapi.job_stats table, this test will need to
-        be updated to check for this new information.
-        '''
-        self.eb_job._record_initial_stats()
-
-        actual_stats = models.JobStats.objects.get(oq_job=self.eb_job.job_id)
-
-        self.assertTrue(actual_stats.start_time is not None)
-        self.assertEqual(91, actual_stats.num_sites)
-        self.assertEqual(1, actual_stats.realizations)
-
-    def test_job_launch_calls_record_initial_stats(self):
-        '''When a job is launched, make sure that
-        :py:method:`openquake.engine.JobContext._record_initial_stats`
-        is called.
-        '''
-        # Mock out pieces of the test job so it doesn't actually run.
-        eb_haz_calc = ('openquake.calculators.hazard.event_based.core'
-                       '.EventBasedHazardCalculator')
-        eb_risk_calc = ('openquake.calculators.risk.event_based.core'
-                       '.EventBasedRiskCalculator')
-        methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
-
-        haz_patchers = [patch('%s.%s' % (eb_haz_calc, m)) for m in methods]
-        risk_patchers = [patch('%s.%s' % (eb_risk_calc, m)) for m in methods]
-
-        for p in haz_patchers:
-            p.start()
-        for p in risk_patchers:
-            p.start()
-
-        try:
-            record = 'openquake.engine.JobContext._record_initial_stats'
-
-            with patch(record) as record_mock:
-                engine._launch_job(
-                    self.eb_job, ['general', 'HAZARD', 'RISK'])
-
-                self.assertEqual(1, record_mock.call_count)
-        finally:
-            for p in haz_patchers:
-                p.stop()
-            for p in risk_patchers:
-                p.stop()
 
 
 class JobUtilsTestCase(unittest.TestCase):
