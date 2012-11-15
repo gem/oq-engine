@@ -23,10 +23,8 @@ import uuid
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
-from openquake.calculators.risk.event_based import core
 from openquake.db import models
 from openquake import engine
-from openquake import shapes
 
 from tests.utils import helpers
 

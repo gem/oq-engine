@@ -20,11 +20,12 @@ import logging
 from datetime import datetime
 
 from openquake import engine
-from openquake.db.models import OqJob, ErrorMsg, JobStats
+from openquake.db.models import ErrorMsg
+from openquake.db.models import JobStats
 from openquake.supervising import supervisor
 from openquake.utils import stats
 
-from tests.utils.helpers import patch, job_from_file, get_data_path
+from tests.utils.helpers import patch
 from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 
