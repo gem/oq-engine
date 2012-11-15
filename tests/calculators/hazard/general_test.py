@@ -25,7 +25,6 @@ from nhlib import geo as nhlib_geo
 from nose.plugins.attrib import attr
 
 from openquake import engine2
-from openquake import shapes
 from openquake.calculators.hazard import general
 from openquake.calculators.hazard.classical import core as cls_core
 from openquake.db import models

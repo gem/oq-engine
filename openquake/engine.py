@@ -33,7 +33,6 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 
-from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db import fields
 from openquake.db.models import ExposureData
 from openquake.db.models import Input
@@ -58,7 +57,6 @@ from openquake.job.params import PARAMS
 from openquake.kvs import mark_job_as_current
 from openquake.input import logictree
 
-CALCS = dict(risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 

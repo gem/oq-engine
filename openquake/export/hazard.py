@@ -25,7 +25,6 @@ from nrml import writers as nrml_writers
 from openquake import logs
 from openquake.db import models
 from openquake.export import core
-from openquake.export import uhs
 from openquake.export.core import makedirs
 
 
@@ -70,7 +69,6 @@ def _export_fn_map():
     """
 
     fn_map = {
-        'uh_spectra': uhs.export_uhs,
         'hazard_curve': export_hazard_curves,
         'gmf': export_gmf,
         'ses': export_ses,
