@@ -42,7 +42,6 @@ def _export_fn_map():
         'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
         'dmg_dist_per_taxonomy': risk.export_dmg_dist_per_taxonomy,
         'dmg_dist_total': risk.export_dmg_dist_total,
-        'agg_loss_curve': risk.export_agg_loss_curve,
     }
     return fn_map
 

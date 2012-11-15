@@ -25,7 +25,6 @@ Task functions for our unit tests.
 from celery.task import task
 
 from openquake.utils import config
-from openquake.utils import stats
 
 from tests.utils import helpers
 

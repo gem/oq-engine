@@ -24,23 +24,17 @@ Includes:
 - hazard maps (only mean and quantile)
 """
 
-import numpy
 import os
 import unittest
 
 from openquake import kvs
 from openquake import logs
-from openquake.calculators.hazard import general as hazard_general
-from openquake.export import psha
-from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers
 
 LOG = logs.LOG
 
 TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
-
-NRML_SCHEMA_PATH = nrml_schema_file()
 
 SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
     'simple_fault_demo_hazard/source_model_logic_tree.xml')
