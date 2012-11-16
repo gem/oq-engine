@@ -632,6 +632,7 @@ class HazardCalculation(djm.Model):
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
+        (u'disaggregation', u'Disaggregation'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
