@@ -113,6 +113,7 @@ mv celeryconfig.py openquake
 mv logging.cfg     openquake
 mv openquake.cfg   openquake
 mv bin/openquake   bin/noq
+mv bin/openquake_supervisor bin/openquake_supervisor.py
 
 rm bin/demo_risk.sh bin/demo_server.sh bin/openquake_messages_collector.py bin/openquake_supersupervisor bin/oqpath.py
 
