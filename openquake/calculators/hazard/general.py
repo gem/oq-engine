@@ -37,7 +37,7 @@ from nrml import parsers as nrml_parsers
 from shapely import geometry
 
 from openquake import engine2
-from openquake import java
+# from openquake import java
 from openquake import kvs
 from openquake import writer
 from openquake.export import core as export_core
@@ -46,7 +46,7 @@ from openquake.calculators import base
 from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
-from openquake.java import list_to_jdouble_array
+# from openquake.java import list_to_jdouble_array
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake import logs
@@ -74,53 +74,6 @@ IML_SCALING = {
 # Routing key format string for communication between tasks and the control
 # node.
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
-
-
-def get_iml_list(imls, intensity_measure_type):
-    """Build the appropriate Arbitrary Discretized Func from the IMLs,
-    based on the IMT"""
-
-    return list_to_jdouble_array(
-        [IML_SCALING[intensity_measure_type](x) for x in imls])
-
-
-@java.unpack_exception
-def generate_erf(job_id, cache):
-    """ Generate the Earthquake Rupture Forecast from the source model data
-    stored in the KVS.
-
-    :param int job_id: id of the job
-    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
-    :returns: jpype instance of
-        `org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF`
-    """
-    src_key = kvs.tokens.source_model_key(job_id)
-    job_key = kvs.tokens.generate_job_key(job_id)
-
-    sources = java.jclass("JsonSerializer").getSourceListFromCache(
-        cache, src_key)
-
-    erf = java.jclass("GEM1ERF")(sources)
-
-    calc = java.jclass("LogicTreeProcessor")(cache, job_key)
-    calc.setGEM1ERFParams(erf)
-
-    return erf
-
-
-def generate_gmpe_map(job_id, cache):
-    """ Generate the GMPE map from the GMPE data stored in the KVS.
-
-    :param int job_id: id of the job
-    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
-    :returns: jpype instace of
-        `HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>`
-    """
-    gmpe_key = kvs.tokens.gmpe_key(job_id)
-
-    gmpe_map = java.jclass(
-        "JsonSerializer").getGmpeMapFromCache(cache, gmpe_key)
-    return gmpe_map
 
 
 def store_source_model(job_id, seed, params, calc):
