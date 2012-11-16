@@ -50,5 +50,5 @@ setup(
             "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors", "bin/oq_log_sink"]},
     scripts=[
-        "bin/oq_create_db", "bin/oq_restart_workers"]
+        "bin/oq_create_db", "bin/oq_restart_workers" ]
     )
