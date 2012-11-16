@@ -337,6 +337,11 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- disaggregation calculator parameters:
+    mag_bin_width float,
+    distance_bin_width float,
+    coordinate_bin_width float,
+    num_epsilon_bins INTEGER,
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
