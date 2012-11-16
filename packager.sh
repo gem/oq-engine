@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+# set -x
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
 
@@ -125,11 +125,14 @@ cd -
 # exit 0
 #
 # DEVEL
+if [ -z "$GEM_SRC_PKG" ]; then
+    echo "env var GEM_SRC_PKG not set, exit"
+    exit 1
+fi
 GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-set -x
 cp  ${GEM_BUILD_ROOT}/python-noq_*.deb  $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
 dpkg -x $GEM_BUILD_PKG/python-noq_*.deb .
