@@ -215,9 +215,9 @@ class LossMapXMLWriter(object):
 
             * define an attribute `location`, which is itself an object
               defining two attributes, `x` containing the longitude value
-              and `y` containing the latitude value. *Since the losses are
-              grouped by location in the final artifact, this
-              object must be properly hashable*.
+              and `y` containing the latitude value. Also, it must define
+              an attribute `wkt`, which is the Well-known text
+              representation of the location.
             * define an attribute `asset_ref`, which contains the unique
               identifier of the asset related to the loss curve.
             * define an attribute `value`, which is the value of the loss.
@@ -230,12 +230,12 @@ class LossMapXMLWriter(object):
                 if self._loss_map is None:
                     self._create_loss_map_elem(root)
 
-                loss_node = self._loss_nodes.get(loss.location)
+                loss_node = self._loss_nodes.get(loss.location.wkt)
 
                 if loss_node is None:
                     loss_node = etree.SubElement(self._loss_map, "node")
                     _append_location(loss_node, loss.location)
-                    self._loss_nodes[loss.location] = loss_node
+                    self._loss_nodes[loss.location.wkt] = loss_node
 
                 loss_elem = etree.SubElement(loss_node, "loss")
                 loss_elem.set("assetRef", str(loss.asset_ref))

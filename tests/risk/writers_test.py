@@ -23,10 +23,21 @@ from nrml.risk import writers
 from tests import _utils
 
 
-POINT = collections.namedtuple("Point", "x y")
 LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
+
+
+class Point(object):
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    @property
+    def wkt(self):
+        # dummy implementation, just for testing.
+        return str(self.x) + str(self.y)
 
 
 class LossCurveXMLWriterTestCase(unittest.TestCase):
@@ -87,11 +98,11 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             gsim_tree_path="b1_b2", unit="USD")
 
         data = [
-            LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None),
 
-            LOSS_CURVE(asset_ref="asset_2", location=POINT(2.0, 2.5),
+            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None),
         ]
@@ -122,7 +133,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0, statistics="quantile",
             quantile_value=0.50)
 
-        data = [LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+        data = [LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
             loss_ratios=[0.4, 0.6, 0.8])]
 
@@ -188,11 +199,11 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0, poe=0.8, statistics="mean")
 
         data = [
-            LOSS_NODE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+            LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
                 value=15.23),
-            LOSS_NODE(asset_ref="asset_2", location=POINT(1.0, 1.5),
+            LOSS_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
                 value=16.23),
-            LOSS_NODE(asset_ref="asset_3", location=POINT(2.0, 2.5),
+            LOSS_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
                 value=17.23),
         ]
 
@@ -220,7 +231,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0, poe=0.80, statistics="quantile",
             quantile_value=0.50, unit="USD", loss_category="economic")
 
-        data = [LOSS_NODE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
             value=15.23)]
 
         writer.serialize(data)
@@ -247,7 +258,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
             investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
             gsim_tree_path="b1|b2", unit="USD", loss_category="economic")
 
-        data = [LOSS_NODE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
             value=15.23)]
 
         writer.serialize(data)
