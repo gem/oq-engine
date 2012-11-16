@@ -310,7 +310,11 @@ CREATE TABLE uiapi.hazard_calculation (
     -- The timeout is stored in seconds and is 1 hour by default.
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
-        CHECK(calculation_mode IN ('classical', 'event_based')),
+        CHECK(calculation_mode IN (
+            'classical',
+            'event_based',
+            'disaggregation'
+        )),
     region_grid_spacing float,
     -- logic tree parameters:
     random_seed INTEGER,
