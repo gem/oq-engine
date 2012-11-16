@@ -58,25 +58,6 @@ def makedirs(fn):
     return wrapped
 
 
-def get_jobs(user_name):
-    """Get the completed jobs (successful and failed) for the given user_name.
-
-    Results are given in reverse chronological order.
-
-    :param str user_name:
-        Owner of the returned results.
-    :returns:
-        :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.db.models.OqJob` objects, sorted in
-        reverse chronological order.
-    :rtype:
-        :class:`django.db.models.query.QuerySet`
-    """
-    return models.OqJob.objects.filter(
-        status='complete', is_running=False, owner__user_name=user_name
-    ).order_by('-last_update')
-
-
 def get_outputs(job_id):
     """Get all :class:`openquake.db.models.Output` objects associated with the
     specified job.
