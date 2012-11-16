@@ -822,3 +822,74 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
+
+
+class DisaggHazardCalculationFormTestCase(unittest.TestCase):
+
+    def test_valid_disagg_calc(self):
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='disaggregation',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mag_bin_width=0.3,
+            distance_bin_width=10.0,
+            coordinate_bin_width=0.02,  # decimal degrees
+            num_epsilon_bins=4,
+        )
+        form = validation.DisaggHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_disagg_calc(self):
+        expected_errors = {
+            'mag_bin_width': ['Magnitude bin width must be > 0.0'],
+            'distance_bin_width': ['Distance bin width must be > 0.0'],
+            'coordinate_bin_width': ['Coordinate bin width must be > 0.0'],
+            'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='disaggregation',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mag_bin_width=0.0,
+            distance_bin_width=0.0,
+            coordinate_bin_width=0.0,  # decimal degrees
+            num_epsilon_bins=0,
+        )
+        form = validation.DisaggHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
