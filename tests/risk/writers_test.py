@@ -36,8 +36,7 @@ class Point(object):
 
     @property
     def wkt(self):
-        # dummy implementation, just for testing.
-        return str(self.x) + str(self.y)
+        return "POINT(%s %s)" % (self.x, self.y)
 
 
 class LossCurveXMLWriterTestCase(unittest.TestCase):
