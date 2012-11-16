@@ -764,7 +764,7 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    coordinate_width = djm.FloatField(
+    coordinate_bin_width = djm.FloatField(
         help_text=('Width of coordinate bins, which ultimately defines the'
                    ' size of the longitude and latitude dimensions of a'
                    ' disaggregation matrix'),
