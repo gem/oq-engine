@@ -259,8 +259,9 @@ class FileDigestTestCase(unittest.TestCase):
 class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the _identical_input() function."""
 
-    EXPOM = helpers.get_data_path("exposure.xml")
-    FRAGM = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
+    SRC_MODEL = helpers.demo_file(
+        "simple_fault_demo_hazard/dissFaultModel.xml")
+    SITE_MODEL = helpers.demo_file("_site_model/site_model.xml")
 
     # some jobs (first succeeded) ran by user "u2"
     jobs_u2 = []
@@ -296,10 +297,10 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         cls.job.save()
         if sys.platform == 'darwin':
             cls.fragm_digest = subprocess.check_output(
-                ["md5", cls.FRAGM]).split()[-1]
+                ["md5", cls.SITE_MODEL]).split()[-1]
         else:
             cls.fragm_digest = subprocess.check_output(
-                ["md5sum", cls.FRAGM]).split()[0]
+                ["md5sum", cls.SITE_MODEL]).split()[0]
 
     @classmethod
     def tearDownClass(cls):
@@ -326,8 +327,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since the md5sum digest does
         # not match.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
-            jobs=self.jobs_u1)
+            input_type="exposure", size=123, path=self.SRC_MODEL,
+            digest="0" * 32, jobs=self.jobs_u1)
         actual = engine._identical_input("exposure", "x" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)
@@ -336,8 +337,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since the first job to have
         # used it has failed.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
-            jobs=self.failed_jobs_u1)
+            input_type="exposure", size=123, path=self.SRC_MODEL,
+            digest="0" * 32, jobs=self.failed_jobs_u1)
         actual = engine._identical_input("exposure", "0" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)
@@ -346,8 +347,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since its owner is not the user
         # that is running the current job.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
-            jobs=self.jobs_u2)
+            input_type="exposure", size=123, path=self.SRC_MODEL,
+            digest="0" * 32, jobs=self.jobs_u2)
         actual = engine._identical_input("exposure", "0" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)

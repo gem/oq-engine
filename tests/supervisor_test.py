@@ -20,6 +20,7 @@ import logging
 from datetime import datetime
 
 from openquake import engine
+from openquake import engine2
 from openquake.db.models import ErrorMsg
 from openquake.db.models import JobStats
 from openquake.supervising import supervisor
@@ -98,6 +99,8 @@ class SupervisorTestCase(unittest.TestCase):
 
         logging.root.setLevel(logging.CRITICAL)
 
+        self.job = engine2.prepare_job()
+
     def tearDown(self):
         # Stop all the started patches
         for patcher in self.patchers:
@@ -120,7 +123,7 @@ class SupervisorTestCase(unittest.TestCase):
             # the supervisor will receive a msg
             run.side_effect = run_
 
-            supervisor.supervise(1, 123, timeout=0.1)
+            supervisor.supervise(1, self.job.id, timeout=0.1)
 
             # the job process is terminated
             self.assertEqual(1, self.terminate_job.call_count)
@@ -128,17 +131,23 @@ class SupervisorTestCase(unittest.TestCase):
 
             # stop time is recorded
             self.assertEqual(1, self.record_job_stop_time.call_count)
-            self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+            self.assertEqual(
+                ((self.job.id,), {}),
+                self.record_job_stop_time.call_args)
 
             # the cleanup is triggered
             self.assertEqual(1, self.cleanup_after_job.call_count)
-            self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+            self.assertEqual(
+                ((self.job.id,), {}),
+                self.cleanup_after_job.call_args)
 
             # the status in the job record is updated
-            self.assertEqual(1,
-                             self.update_job_status_and_error_msg.call_count)
-            self.assertEqual(((123, 'a msg'), {}),
-                             self.update_job_status_and_error_msg.call_args)
+            self.assertEqual(
+                1,
+                self.update_job_status_and_error_msg.call_count)
+            self.assertEqual(
+                ((self.job.id, 'a msg'), {}),
+                self.update_job_status_and_error_msg.call_args)
 
     def test_actions_after_job_process_termination(self):
         # the job process is *not* running
