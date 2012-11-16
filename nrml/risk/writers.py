@@ -73,16 +73,16 @@ class LossCurveXMLWriter(object):
             An iterable of loss curve objects. Each object should:
 
             * define an attribute `location`, which is itself an object
-            defining two attributes, `x` containing the longitude value
-            and `y` containing the latitude value.
+              defining two attributes, `x` containing the longitude value
+              and `y` containing the latitude value.
             * define an attribute `asset_ref`, which contains the unique
-            identifier of the asset related to the loss curve.
+              identifier of the asset related to the loss curve.
             * define an attribute `poes`, which is a list of floats
-            describing the probabilities of exceedance.
+              describing the probabilities of exceedance.
             * define an attribute `losses`, which is a list of floats
-            describing the losses.
+              describing the losses.
             * define an attribute `loss_ratios`, which is a list of floats
-            describing the loss ratios.
+              describing the loss ratios.
 
             All attributes must be defined, except for `loss_ratios` that
             can be `None` since it is optional in the schema.
@@ -214,12 +214,12 @@ class LossMapXMLWriter(object):
             An iterable of loss objects. Each object should:
 
             * define an attribute `location`, which is itself an object
-            defining two attributes, `x` containing the longitude value
-            and `y` containing the latitude value. *Since the losses are
-            grouped by location in the final artifact, this
-            object must be properly hashable*.
+              defining two attributes, `x` containing the longitude value
+              and `y` containing the latitude value. *Since the losses are
+              grouped by location in the final artifact, this
+              object must be properly hashable*.
             * define an attribute `asset_ref`, which contains the unique
-            identifier of the asset related to the loss curve.
+              identifier of the asset related to the loss curve.
             * define an attribute `value`, which is the value of the loss.
         """
 
