@@ -536,6 +536,8 @@ class GmfSetIterTestCase(unittest.TestCase):
                     gmf_collection__lt_realization__isnull=True)\
             .order_by('id')
 
+        self.assertEqual(len(list(exp_gmf_set)), len(list(act_gmf_set)))
+
         self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
                          act_gmf_set.complete_logic_tree_gmf)
         self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
@@ -582,7 +584,9 @@ class GmfSetIterTestCase(unittest.TestCase):
                     gmf_collection__lt_realization__isnull=False)\
             .order_by('gmf_collection', 'ses_ordinal')
 
+        import nose; nose.tools.set_trace()
         for i, exp_gmf_set in enumerate(exp_gmf_sets):
+            print "i is %s" % i
             act_gmf_set = gmf_sets[i]
             self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
                              act_gmf_set.complete_logic_tree_gmf)
