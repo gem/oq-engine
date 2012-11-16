@@ -113,6 +113,10 @@ mv celeryconfig.py openquake
 mv logging.cfg     openquake
 mv openquake.cfg   openquake
 mv bin/openquake   bin/noq
+
+rm bin/demo_risk.sh bin/demo_server.sh bin/openquake_messages_collector.py bin/openquake_supersupervisor bin/oqpath.py
+
+
 rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 dpkg-buildpackage $DPBP_FLAG
 cd -
