@@ -843,7 +843,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
             intensity_measure_types_and_levels=VALID_IML_IMT_STR,
-            truncation_level=0.0,
+            truncation_level=0.1,
             maximum_distance=100.0,
             mag_bin_width=0.3,
             distance_bin_width=10.0,
@@ -861,6 +861,8 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             'distance_bin_width': ['Distance bin width must be > 0.0'],
             'coordinate_bin_width': ['Coordinate bin width must be > 0.0'],
             'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
+            'truncation_level': ['Truncation level must be > 0 for'
+                                 ' disaggregation calculations'],
         }
 
         hc = models.HazardCalculation(

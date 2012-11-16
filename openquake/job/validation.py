@@ -593,8 +593,15 @@ def intensity_measure_types_is_valid(mdl):
 
 
 def truncation_level_is_valid(mdl):
-    if not mdl.truncation_level >= 0:
-        return False, ['Truncation level must be >= 0']
+    if mdl.calculation_mode == 'disaggregation':
+        # truncation level must always be > 0 for disagg
+        if not mdl.truncation_level > 0:
+            return False, ['Truncation level must be > 0 for disaggregation'
+                           ' calculations']
+    else:
+        if not mdl.truncation_level >= 0:
+            return False, ['Truncation level must be >= 0']
+
     return True, []
 
 
