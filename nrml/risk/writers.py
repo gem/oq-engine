@@ -52,21 +52,16 @@ class LossCurveXMLWriter(object):
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None):
 
-        if statistics is not None:
-            _check_statistics_or_logic_tree(
-                source_model_tree_path, gsim_tree_path)
-
-            _check_statistics_metadata(statistics, quantile_value)
-        else:
-            _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path)
+        validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
+            statistics, quantile_value)
 
         self._unit = unit
         self._path = path
+        self._statistics = statistics
+        self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
         self._source_model_tree_path = source_model_tree_path
-        self._statistics = statistics
-        self._quantile_value = quantile_value
 
         self._loss_curves = None
 
@@ -75,19 +70,19 @@ class LossCurveXMLWriter(object):
         Serialize a collection of loss curves.
 
         :param data:
-            An iterable of loss curves objects. Each object should:
+            An iterable of loss curve objects. Each object should:
 
             * define an attribute `location`, which is itself an object
-            defining two attributes, `x` containing the longitude value
-            and `y` containing the latitude value.
+              defining two attributes, `x` containing the longitude value
+              and `y` containing the latitude value.
             * define an attribute `asset_ref`, which contains the unique
-            identifier of the asset related to the loss curve.
+              identifier of the asset related to the loss curve.
             * define an attribute `poes`, which is a list of floats
-            describing the probabilities of exceedance.
+              describing the probabilities of exceedance.
             * define an attribute `losses`, which is a list of floats
-            describing the losses.
+              describing the losses.
             * define an attribute `loss_ratios`, which is a list of floats
-            describing the loss ratios.
+              describing the loss ratios.
 
             All attributes must be defined, except for `loss_ratios` that
             can be `None` since it is optional in the schema.
@@ -156,6 +151,129 @@ class LossCurveXMLWriter(object):
             self._loss_curves.set("unit", str(self._unit))
 
 
+class LossMapXMLWriter(object):
+    """
+    Serializer for loss maps produced with the classical and
+    probabilistic calculators.
+
+    :param path:
+        File path (including filename) for results to be saved to.
+    :param float investigation_time:
+        Investigation time (also known as Time Span) defined in
+        the calculation which produced these results (in years).
+    :param float poe:
+        Probability of exceedance used to interpolate the losses
+        producing this loss map.
+    :param str source_model_tree_path:
+        Id of the source model tree path (obtained concatenating the IDs of
+        the branches the path is made of) for which input hazard curves
+        have been computed.
+    :param str gsim_tree_path:
+        Id of the gsim (ground shaking intensity model) tree path (obtained
+        concatenating the IDs of the branches the path is made of) for which
+        input hazard curves have been computed.
+    :param str unit:
+        Attribute describing how the value of the assets has been measured.
+    :param str loss_category:
+        Attribute describing the category (economic, population, buildings,
+        etc..) of the losses producing this loss map.
+    :param str statistics:
+        `mean` or `quantile`. When serializing loss curves produced from
+        statistical hazard inputs, it describes the type of statistic used.
+    :param float quantile_value:
+        When serializing loss curves produced from quantile hazard inputs,
+        it describes the quantile value.
+    """
+
+    def __init__(self, path, investigation_time, poe,
+                 source_model_tree_path=None, gsim_tree_path=None,
+                 statistics=None, quantile_value=None, unit=None,
+                 loss_category=None):
+
+        validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
+            statistics, quantile_value)
+
+        self._poe = poe
+        self._unit = unit
+        self._path = path
+        self._statistics = statistics
+        self._loss_category = loss_category
+        self._quantile_value = quantile_value
+        self._gsim_tree_path = gsim_tree_path
+        self._investigation_time = investigation_time
+        self._source_model_tree_path = source_model_tree_path
+
+        self._loss_map = None
+        self._loss_nodes = {}
+
+    def serialize(self, data):
+        """
+        Serialize a collection of losses.
+
+        :param data:
+            An iterable of loss objects. Each object should:
+
+            * define an attribute `location`, which is itself an object
+              defining two attributes, `x` containing the longitude value
+              and `y` containing the latitude value. Also, it must define
+              an attribute `wkt`, which is the Well-known text
+              representation of the location.
+            * define an attribute `asset_ref`, which contains the unique
+              identifier of the asset related to the loss curve.
+            * define an attribute `value`, which is the value of the loss.
+        """
+
+        with open(self._path, "w") as output:
+            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+
+            for loss in data:
+                if self._loss_map is None:
+                    self._create_loss_map_elem(root)
+
+                loss_node = self._loss_nodes.get(loss.location.wkt)
+
+                if loss_node is None:
+                    loss_node = etree.SubElement(self._loss_map, "node")
+                    _append_location(loss_node, loss.location)
+                    self._loss_nodes[loss.location.wkt] = loss_node
+
+                loss_elem = etree.SubElement(loss_node, "loss")
+                loss_elem.set("assetRef", str(loss.asset_ref))
+                loss_elem.set("value", str(loss.value))
+
+            output.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+    def _create_loss_map_elem(self, root):
+        """
+        Create the <lossMap /> element with associated attributes.
+        """
+
+        self._loss_map = etree.SubElement(root, "lossMap")
+        self._loss_map.set("investigationTime", str(self._investigation_time))
+        self._loss_map.set("poE", str(self._poe))
+
+        if self._source_model_tree_path is not None:
+            self._loss_map.set("sourceModelTreePath",
+                str(self._source_model_tree_path))
+
+        if self._gsim_tree_path is not None:
+            self._loss_map.set("gsimTreePath", str(self._gsim_tree_path))
+
+        if self._statistics is not None:
+            self._loss_map.set("statistics", str(self._statistics))
+
+        if self._quantile_value is not None:
+            self._loss_map.set("quantileValue", str(self._quantile_value))
+
+        if self._loss_category is not None:
+            self._loss_map.set("lossCategory", str(self._loss_category))
+
+        if self._unit is not None:
+            self._loss_map.set("unit", str(self._unit))
+
+
 def _append_location(element, location):
     """
     Append the geographical location to the given element.
@@ -168,10 +286,24 @@ def _append_location(element, location):
     gml_pos.text = "%s %s" % (location.x, location.y)
 
 
+def validate_hazard_metadata(gsim_tree_path=None, source_model_tree_path=None,
+                             statistics=None, quantile_value=None):
+    """
+    Validate the hazard input metadata.
+    """
+
+    if statistics is not None:
+        _check_statistics_or_logic_tree(source_model_tree_path, gsim_tree_path)
+        _check_statistics_metadata(statistics, quantile_value)
+    else:
+        _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path)
+
+
 def _check_statistics_metadata(statistics, quantile_value):
     """
     `statistics` must be in ("quantile", "mean") and `quantile_value`
-    must be specified when `statistics` == "quantile".
+    must be specified when `statistics` == "quantile". If `statistics` ==
+    "mean", `quantile_value` must be empty.
     """
 
     if statistics not in ("quantile", "mean"):
@@ -180,6 +312,10 @@ def _check_statistics_metadata(statistics, quantile_value):
     if statistics == "quantile" and quantile_value is None:
         raise ValueError("When `statistics` == 'quantile', "
             "`quantile_value` must also be specified.")
+
+    if statistics == "mean" and quantile_value is not None:
+        raise ValueError("When `statistics` == 'mean', "
+            "`quantile_value` must not be specified.")
 
 
 def _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path):

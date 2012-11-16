@@ -23,9 +23,20 @@ from nrml.risk import writers
 from tests import _utils
 
 
-POINT = collections.namedtuple("Point", "x y")
+LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
+
+
+class Point(object):
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    @property
+    def wkt(self):
+        return "POINT(%s %s)" % (self.x, self.y)
 
 
 class LossCurveXMLWriterTestCase(unittest.TestCase):
@@ -86,11 +97,11 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             gsim_tree_path="b1_b2", unit="USD")
 
         data = [
-            LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None),
 
-            LOSS_CURVE(asset_ref="asset_2", location=POINT(2.0, 2.5),
+            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None),
         ]
@@ -104,7 +115,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0" statistics="quantile" quantileValue="0.5" unit="USD">
+  <lossCurves investigationTime="10.0" statistics="quantile" quantileValue="0.5">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -119,9 +130,9 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
         writer = writers.LossCurveXMLWriter(self.filename,
             investigation_time=10.0, statistics="quantile",
-            quantile_value=0.50, unit="USD")
+            quantile_value=0.50)
 
-        data = [LOSS_CURVE(asset_ref="asset_1", location=POINT(1.0, 1.5),
+        data = [LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
             loss_ratios=[0.4, 0.6, 0.8])]
 
@@ -130,46 +141,177 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         _utils.validates_against_xml_schema(self.filename)
 
+
+class LossMapXMLWriterTestCase(unittest.TestCase):
+
+    filename = "loss_map.xml"
+
+    def remove_file(self):
+        try:
+            os.remove(self.filename)
+        except OSError:
+            pass
+
+    def setUp(self):
+        self.remove_file()
+
+    def tearDown(self):
+        self.remove_file()
+
+    def test_serialize_an_empty_model(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
+""")
+
+        writer = writers.LossMapXMLWriter(self.filename,
+            investigation_time=10.0, poe=0.5, statistics="mean")
+
+        writer.serialize([])
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
+
+    def test_serialize_a_model(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="10.0" poE="0.8" statistics="mean">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <loss assetRef="asset_1" value="15.23"/>
+      <loss assetRef="asset_2" value="16.23"/>
+    </node>
+    <node>
+      <gml:Point>
+        <gml:pos>2.0 2.5</gml:pos>
+      </gml:Point>
+      <loss assetRef="asset_3" value="17.23"/>
+    </node>
+  </lossMap>
+</nrml>
+""")
+
+        writer = writers.LossMapXMLWriter(self.filename,
+            investigation_time=10.0, poe=0.8, statistics="mean")
+
+        data = [
+            LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+                value=15.23),
+            LOSS_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
+                value=16.23),
+            LOSS_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
+                value=17.23),
+        ]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
+
+    def test_serialize_optional_metadata(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="10.0" poE="0.8" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <loss assetRef="asset_1" value="15.23"/>
+    </node>
+  </lossMap>
+</nrml>
+""")
+
+        writer = writers.LossMapXMLWriter(self.filename,
+            investigation_time=10.0, poe=0.80, statistics="quantile",
+            quantile_value=0.50, unit="USD", loss_category="economic")
+
+        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            value=15.23)]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
+
+    def test_serialize_using_hazard_realization(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="10.0" poE="0.8" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <loss assetRef="asset_1" value="15.23"/>
+    </node>
+  </lossMap>
+</nrml>
+""")
+
+        writer = writers.LossMapXMLWriter(self.filename,
+            investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
+            gsim_tree_path="b1|b2", unit="USD", loss_category="economic")
+
+        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            value=15.23)]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        _utils.validates_against_xml_schema(self.filename)
+
+
+class HazardMetadataValidationTestCase(unittest.TestCase):
+
     def test_quantile_metadata_validation(self):
         # `statistics` must be "quantile" or "mean".
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, statistics="UNKNOWN")
+            ValueError, writers.validate_hazard_metadata,
+            statistics="UNKNOWN")
 
         # when "quantile" is used, `quantile_value` must be
         # specified as well.
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, statistics="quantile")
+            ValueError, writers.validate_hazard_metadata,
+            statistics="quantile")
 
-        writers.LossCurveXMLWriter(self.filename, investigation_time=50.0,
-            statistics="quantile", quantile_value=0.50)
+        # when "mean" is used, `quantile_value` shouldn't
+        # be specified.
+        self.assertRaises(
+            ValueError, writers.validate_hazard_metadata,
+            statistics="mean", quantile_value=0.50)
 
-        writers.LossCurveXMLWriter(self.filename, investigation_time=50.0,
-            statistics="mean")
+        writers.validate_hazard_metadata(quantile_value=0.50,
+            statistics="quantile")
+
+        writers.validate_hazard_metadata(statistics="mean")
 
     def test_logic_tree_metadata_validation(self):
         # logic tree parameters must be both specified.
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, source_model_tree_path="b1|b2")
+            ValueError, writers.validate_hazard_metadata,
+            source_model_tree_path="b1|b2")
 
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, gsim_tree_path="b1|b2")
+            ValueError, writers.validate_hazard_metadata,
+            gsim_tree_path="b1|b2")
 
-        writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+        writers.validate_hazard_metadata(source_model_tree_path="b1_b2_b3",
             gsim_tree_path="b1_b2")
 
     def test_logic_tree_or_statistics_metadata_validation(self):
         # logic tree parameters or statistics, not both.
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, source_model_tree_path="b1|b2",
-            statistics="mean")
+            ValueError, writers.validate_hazard_metadata,
+            source_model_tree_path="b1|b2", statistics="mean")
 
         self.assertRaises(
-            ValueError, writers.LossCurveXMLWriter, self.filename,
-            investigation_time=10.0, gsim_tree_path="b1|b2",
-            statistics="mean")
+            ValueError, writers.validate_hazard_metadata,
+            gsim_tree_path="b1|b2", statistics="mean")
+
+        self.assertRaises(ValueError, writers.validate_hazard_metadata)
