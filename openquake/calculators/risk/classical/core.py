@@ -24,12 +24,13 @@ from django.db import transaction
 
 @tasks.oqtask
 @general.with_assets
-@general.with_hazard_curve_getter
-@general.with_vulnerability_model
 @stats.count_progress('r')
-def classical(_, assets, hazard_getter, vulnerability_model,
+def classical(job_id, assets, hazard_getter, hazard_id,
               loss_curve_id, loss_map_ids,
               lrem_steps_per_interval, conditional_loss_poes):
+    vulnerability_model = general.fetch_vulnerability_model(job_id)
+    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+
     calculator = api.conditional_losses(
         conditional_loss_poes,
         api.classical(vulnerability_model, lrem_steps_per_interval))
