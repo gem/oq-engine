@@ -19,13 +19,13 @@
 
 import os
 import math
+from functools import wraps
 
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base
-from openquake.parser import (
-    exposure as exposure_parser, vulnerability as vulnerability_parser)
+from openquake.parser import risk
 from openquake.export import (
     core as export_core, risk as risk_export)
 from openquake.utils import tasks
@@ -107,7 +107,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
 
         asset_block_size = int(math.ceil(
-            self.assets_nr / int(config.get('risk', 'task_number'))))
+            float(self.assets_nr) / int(config.get('risk', 'task_number'))))
 
         asset_offsets = range(0, self.assets_nr, asset_block_size)
 
@@ -163,7 +163,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             return exposure_model_input.exposuremodel
 
         path = os.path.join(rc.base_path, exposure_model_input.path)
-        exposure_stream = exposure_parser.ExposureModelFile(path)
+        exposure_stream = risk.ExposureModelFile(path)
         writer = exposure_writer.ExposureDBWriter(exposure_model_input)
         writer.serialize(exposure_stream)
         return writer.model
@@ -186,7 +186,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         [vulnerability_input] = models.inputs4rcalc(rc.id,
                                                     input_type='vulnerability')
 
-        for record in vulnerability_parser.VulnerabilityModelFile(
+        for record in risk.VulnerabilityModelFile(
                 vulnerability_input.path):
             vulnerability_model, _ = (
                 models.VulnerabilityModel.objects.get_or_create(
@@ -247,30 +247,14 @@ def with_assets(fn):
     return wrapped_function
 
 
-def with_hazard_curve_getter(fn):
-    def wrapped_function(*args, **kwargs):
-        hazard_getter = kwargs['hazard_getter']
-        hazard_getter_class = hazard_getters.HAZARD_GETTERS[
-            hazard_getter]
-        kwargs['hazard_getter'] = hazard_getter_class(
-            kwargs['hazard_id'])
-        del kwargs['hazard_id']
-
-        fn(*args, **kwargs)
-
-    return wrapped_function
+def hazard_getter(hazard_getter_name, hazard_id):
+    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
-def with_vulnerability_model(fn):
-    def wrapped_function(job_id, *args, **kwargs):
-        job = models.OqJob.objects.get(pk=job_id)
-        model = models.VulnerabilityModel.objects.get_from_job(
-            job).to_risklib()
-        kwargs['vulnerability_model'] = model
-
-        fn(job_id, *args, **kwargs)
-
-    return wrapped_function
+def fetch_vulnerability_model(job_id):
+    job = models.OqJob.objects.get(pk=job_id)
+    return models.VulnerabilityModel.objects.get_from_job(
+        job).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
