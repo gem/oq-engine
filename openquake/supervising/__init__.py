@@ -19,9 +19,7 @@
 """
 The OpenQuake supervising facilities consist of :mod:`job supervisor
 <openquake.supervising.supervisor>` which always runs paired with actual
-``bin/openquake`` process and :mod:`supervisor's supervisor
-<openquake.supervising.supersupervisor>`, which is responsible
-for respawning crashed supervisors.
+``bin/openquake`` process.
 """
 
 import os

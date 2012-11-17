@@ -177,25 +177,6 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             self.assertRaises(RuntimeError, general.validate_site_model,
                               self.site_model_nodes, mesh)
 
-    @helpers.skipit
-    def test_initialize_calls_validate(self):
-        # Test make sure the calculator `initialize` calls
-        # `validate_site_model`.
-        job_ctxt = helpers.prepare_job_context(
-            helpers.demo_file(
-                'simple_fault_demo_hazard/config_with_site_model.gem'
-            )
-        )
-
-        calc = general.BaseHazardCalculator(job_ctxt)
-        patch_path = 'openquake.calculators.hazard.general.validate_site_model'
-
-        with helpers.patch(patch_path) as validate_patch:
-            calc.initialize()
-            # validate_site_model itself is tested in another test
-            # here, we just make sure it gets called
-            self.assertEqual(1, validate_patch.call_count)
-
 
 class GetSiteModelTestCase(unittest.TestCase):
 

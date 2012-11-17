@@ -25,29 +25,16 @@ from openquake.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
-class ClassicalHazardCase12TestCase(qa_utils.BaseQATestCase):
+class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
 
-    EXPECTED_XML = """<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1" gsimTreePath="b1|b2">
-    <IMLs>0.1 0.4 0.6</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.751664728823 0.0780348539189 0.00686616439666</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    @attr('qa', 'classical')
+    @attr('qa', 'event_based')
     def test(self):
         result_dir = tempfile.mkdtemp()
         aaae = numpy.testing.assert_array_almost_equal
 
         try:
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-            expected_curve_poes = [0.75421006, 0.08098179, 0.00686616]
+            expected_curve_poes = [0.54736, 0.02380, 0.00000]
 
             job = self.run_hazard(cfg)
 
@@ -56,12 +43,5 @@ class ClassicalHazardCase12TestCase(qa_utils.BaseQATestCase):
                 hazard_curve__output__oq_job=job.id)
 
             aaae(expected_curve_poes, curve.poes, decimal=2)
-
-            # Test the exports as well:
-            [exported_file] = hazard_export.export(
-                curve.hazard_curve.output.id, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML),
-                exported_file)
         finally:
             shutil.rmtree(result_dir)
