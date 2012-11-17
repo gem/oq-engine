@@ -37,7 +37,6 @@ from nrml import parsers as nrml_parsers
 from shapely import geometry
 
 from openquake import engine2
-from openquake import java
 from openquake import kvs
 from openquake import writer
 from openquake.export import core as export_core
@@ -46,7 +45,6 @@ from openquake.calculators import base
 from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
-from openquake.java import list_to_jdouble_array
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake import logs
@@ -57,70 +55,9 @@ from openquake.utils import stats
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
 
-
-# NOTE: this refers to how the values are stored in KVS. In the config
-# file, values are stored untransformed (i.e., the list of IMLs is
-# not stored as logarithms).
-IML_SCALING = {
-    'PGA': numpy.log,
-    'MMI': lambda iml: iml,
-    'PGV': numpy.log,
-    'PGD': numpy.log,
-    'SA': numpy.log,
-    'IA': numpy.log,
-    'RSD': numpy.log,
-}
-
 # Routing key format string for communication between tasks and the control
 # node.
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
-
-
-def get_iml_list(imls, intensity_measure_type):
-    """Build the appropriate Arbitrary Discretized Func from the IMLs,
-    based on the IMT"""
-
-    return list_to_jdouble_array(
-        [IML_SCALING[intensity_measure_type](x) for x in imls])
-
-
-@java.unpack_exception
-def generate_erf(job_id, cache):
-    """ Generate the Earthquake Rupture Forecast from the source model data
-    stored in the KVS.
-
-    :param int job_id: id of the job
-    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
-    :returns: jpype instance of
-        `org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF`
-    """
-    src_key = kvs.tokens.source_model_key(job_id)
-    job_key = kvs.tokens.generate_job_key(job_id)
-
-    sources = java.jclass("JsonSerializer").getSourceListFromCache(
-        cache, src_key)
-
-    erf = java.jclass("GEM1ERF")(sources)
-
-    calc = java.jclass("LogicTreeProcessor")(cache, job_key)
-    calc.setGEM1ERFParams(erf)
-
-    return erf
-
-
-def generate_gmpe_map(job_id, cache):
-    """ Generate the GMPE map from the GMPE data stored in the KVS.
-
-    :param int job_id: id of the job
-    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
-    :returns: jpype instace of
-        `HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>`
-    """
-    gmpe_key = kvs.tokens.gmpe_key(job_id)
-
-    gmpe_map = java.jclass(
-        "JsonSerializer").getGmpeMapFromCache(cache, gmpe_key)
-    return gmpe_map
 
 
 def store_source_model(job_id, seed, params, calc):
@@ -152,45 +89,6 @@ def store_gmpe_map(job_id, seed, calc):
     logs.LOG.info("Storing GMPE map from job config")
     key = kvs.tokens.gmpe_key(job_id)
     calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
-
-
-def set_gmpe_params(gmpe_map, params):
-    """Push parameters from the config file into the GMPE objects.
-
-    :param gmpe_map: jpype instance of
-        `HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>`
-    :param dict params: job config params
-    """
-    jpype = java.jvm()
-
-    jd_float = lambda x: jpype.JDouble(float(x))
-
-    component = params.get('COMPONENT')
-    imt = params.get('INTENSITY_MEASURE_TYPE')
-    # PERIOD is not used in UHS calculations.
-    period = (jd_float(params.get('PERIOD'))
-              if params.get('PERIOD') is not None else None)
-    damping = jd_float(params.get('DAMPING'))
-    gmpe_trunc_type = params.get('GMPE_TRUNCATION_TYPE')
-    trunc_level = jd_float(params.get('TRUNCATION_LEVEL'))
-    stddev_type = params.get('STANDARD_DEVIATION_TYPE')
-
-    j_set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
-    for tect_region in gmpe_map.keySet():
-        gmpe = gmpe_map.get(tect_region)
-        # There are two overloads for this method; one with 'period'...
-        if period is not None:
-            j_set_gmpe_params(
-                component, imt, period, damping,
-                gmpe_trunc_type, trunc_level, stddev_type,
-                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-        # ... and one without.
-        else:
-            j_set_gmpe_params(
-                component, imt, damping,
-                gmpe_trunc_type, trunc_level, stddev_type,
-                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-        gmpe_map.put(tect_region, gmpe)
 
 
 @transaction.commit_on_success(using='job_init')
@@ -397,102 +295,6 @@ def store_site_data(hc_id, site_model_inp, mesh):
     site_data.save()
 
     return site_data
-
-
-def set_java_site_parameters(jsite, sm_data):
-    """Given a site model node and an OpenSHA `Site` object,
-    set vs30, vs30, z2pt5, and z1pt0 parameters.
-
-    :param jsite:
-        A `org.opensha.commons.data.Site` jpype object.
-    :param sm_data:
-        :class:`openquake.db.models.SiteModel` instance.
-    :returns:
-        The ``jsite`` input object (so this function can be chained).
-    """
-    vs30_param = java.jclass("DoubleParameter")("Vs30")
-    vs30_param.setValue(sm_data.vs30)
-
-    vs30_type_param = java.jclass("StringParameter")("Vs30 Type")
-    vs30_type_param.setValue(sm_data.vs30_type)
-
-    z1pt0_param = java.jclass("DoubleParameter")("Depth 1.0 km/sec")
-    z1pt0_param.setValue(sm_data.z1pt0)
-
-    z2pt5_param = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-    z2pt5_param.setValue(sm_data.z2pt5)
-
-    jsite.addParameter(vs30_param)
-    jsite.addParameter(vs30_type_param)
-    jsite.addParameter(z1pt0_param)
-    jsite.addParameter(z2pt5_param)
-
-    return jsite
-
-
-class BaseHazardCalculator(base.Calculator):
-    """Contains common functionality for Hazard calculators"""
-
-    def initialize(self):
-        """Read the raw site model from the database and populate the
-        `uiapi.site_model`.
-        """
-        site_model = get_site_model(self.job_ctxt.oq_job.id)
-
-        if site_model is not None:
-            # Explicit cast to `str` here because the XML parser doesn't like
-            # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = str(site_model.model_content.raw_content)
-            store_site_model(site_model, StringIO.StringIO(site_model_content))
-
-            site_model_data = models.SiteModel.objects.filter(input=site_model)
-
-            validate_site_model(
-                site_model_data, self.job_ctxt.sites_to_compute()
-            )
-
-    def pre_execute(self):
-        basepath = self.job_ctxt.params.get('BASE_PATH')
-        if not self.job_ctxt['CALCULATION_MODE'] in (
-                'Scenario', 'Scenario Damage'):
-            source_model_lt = self.job_ctxt.params.get(
-                'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-            gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-            self.calc = logictree.LogicTreeProcessor(
-                basepath, source_model_lt, gmpe_lt)
-
-    def execute(self):
-        """Calculation logic goes here; subclasses must implement this."""
-        raise NotImplementedError()
-
-    def store_source_model(self, seed):
-        """Generates a source model from the source model logic tree."""
-        if getattr(self, "calc", None) is None:
-            self.pre_execute()
-        store_source_model(self.job_ctxt.job_id, seed,
-                           self.job_ctxt.params, self.calc)
-
-    def store_gmpe_map(self, seed):
-        """Generates a hash of tectonic regions and GMPEs, using the logic tree
-        specified in the job config file."""
-        if getattr(self, "calc", None) is None:
-            self.pre_execute()
-        store_gmpe_map(self.job_ctxt.job_id, seed, self.calc)
-
-    def generate_erf(self):
-        """Generate the Earthquake Rupture Forecast from the currently stored
-        source model logic tree."""
-        return generate_erf(self.job_ctxt.job_id, self.cache)
-
-    def set_gmpe_params(self, gmpe_map):
-        """Push parameters from configuration file into the GMPE objects"""
-        set_gmpe_params(gmpe_map, self.job_ctxt.params)
-
-    def generate_gmpe_map(self):
-        """Generate the GMPE map from the stored GMPE logic tree."""
-        gmpe_map = generate_gmpe_map(self.job_ctxt.job_id, self.cache)
-        self.set_gmpe_params(gmpe_map)
-        return gmpe_map
 
 
 def exchange_and_conn_args():
