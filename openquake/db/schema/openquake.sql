@@ -1300,17 +1300,9 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    scenario BOOLEAN NOT NULL,
-    loss_map_ref VARCHAR,
-    end_branch_label VARCHAR,
-    category VARCHAR,
-    unit VARCHAR, -- e.g. USD, EUR
-    timespan float CONSTRAINT valid_timespan
-        CHECK (timespan > 0.0),
     -- poe is significant only for non-scenario calculations
-    poe float CONSTRAINT valid_poe
-        CHECK ((NOT scenario AND (poe >= 0.0) AND (poe <= 1.0))
-               OR (scenario AND poe IS NULL))
+    poe float NULL CONSTRAINT valid_poe
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.loss_map_data (
@@ -1318,8 +1310,8 @@ CREATE TABLE riskr.loss_map_data (
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
-    -- for non-scenario calculations std_dev is 0
-    std_dev float NOT NULL DEFAULT 0.0
+    -- for non-scenario calculations std_dev is NULL
+    std_dev float NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
@@ -1329,11 +1321,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    aggregate BOOLEAN NOT NULL DEFAULT false,
-
-    end_branch_label VARCHAR,
-    category VARCHAR,
-    unit VARCHAR -- e.g. EUR, USD
+    aggregate BOOLEAN NOT NULL DEFAULT false
 ) TABLESPACE riskr_ts;
 
 

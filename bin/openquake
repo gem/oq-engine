@@ -71,6 +71,7 @@ from openquake import __version__
 from openquake import engine2
 from openquake.db import models
 from openquake.export import hazard as hazard_export
+from openquake.export import risk as risk_export
 from openquake.job import validation
 from openquake.utils import version as utils_version
 
@@ -298,8 +299,15 @@ def list_risk_outputs(rc_id):
         for o in outputs:
             print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
 
-
 def export_hazard(haz_output_id, target_dir):
+    export(hazard_export.export, haz_output_id, target_dir)
+
+
+def export_risk(risk_output_id, target_dir):
+    export(risk_export.export, risk_output_id, target_dir)
+
+
+def export(fn, output_id, target_dir):
     """
     Simple UI wrapper around
     :func:`openquake.export.hazard.export` which prints a summary of files
@@ -307,7 +315,7 @@ def export_hazard(haz_output_id, target_dir):
     """
     from django.core.exceptions import ObjectDoesNotExist
     try:
-        files = hazard_export.export(haz_output_id, target_dir)
+        files = fn(output_id, target_dir)
         if len(files) > 0:
             print 'Files Exported:'
             for f in files:
@@ -429,7 +437,8 @@ if __name__ == '__main__':
     elif args.list_risk_outputs is not None:
         list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
-        print "export risk"
+        output_id, target_dir = args.export_risk
+        export_risk(output_id, target_dir)
     elif args.run_risk is not None:
         if args.hazard_output_id is None:
             complain_and_exit(MISSING_HAZARD_OUTPUT_MSG)

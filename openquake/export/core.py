@@ -23,6 +23,10 @@ import os
 from openquake.db import models
 
 
+#: Used to separate node labels in a logic tree path
+LT_PATH_JOIN_TOKEN = '|'
+
+
 def _export_fn_not_implemented(output, _target_dir):
     """This gets called if an export is attempted on an unsupported output
     type. See :data:`_EXPORT_FN_MAP`."""
