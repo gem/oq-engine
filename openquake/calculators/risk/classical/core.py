@@ -15,38 +15,46 @@
 
 
 from openquake.calculators.risk import general
-from openquake.calculators.risk import hazard_getters
 from openquake.utils import tasks
-from openquake.db import models
+from openquake.utils import stats
+from openquake import logs
 from risklib import api
+from django.db import transaction
 
 
 @tasks.oqtask
-def classical(job_id, asset_ids, hazard_getter, loss_curve):
-    job = models.OqJob.objects.get(pk=job_id)
-    rc = job.risk_calculation
-
-    model = models.VulnerabilityModel.objects.get_from_job(job).to_risklib()
-    assets = models.ExposureData.objects.filter(id__in=asset_ids)
-
-    hazard_getter_class = hazard_getters.HAZARD_GETTERS[hazard_getter]
-    hazard_getter = hazard_getter_class(rc.hazard_output.hazardcurve.id)
-
+@general.with_assets
+@general.with_hazard_curve_getter
+@general.with_vulnerability_model
+@stats.count_progress('r')
+def classical(_, assets, hazard_getter, vulnerability_model,
+              loss_curve_id, loss_map_ids,
+              lrem_steps_per_interval, conditional_loss_poes):
     calculator = api.conditional_losses(
-        rc.conditional_loss_poes,
-        api.classical(model, rc.lrem_steps_per_interval))
+        conditional_loss_poes,
+        api.classical(vulnerability_model, lrem_steps_per_interval))
 
-    for asset_output in api.compute_on_assets(
+    with transaction.commit_on_success(using='reslt_writer'):
+        logs.LOG.debug('launching compute_on_assets over %d' % len(assets))
+        for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
-        models.LossCurveData.objects.create(
-            loss_curve_id=loss_curve,
-            asset_ref=asset_output.asset.asset_ref,
-            location=asset_output.asset.site.wkt,
-            poes=asset_output.loss_curve.y_values.tolist(),
-            losses=asset_output.loss_curve.x_values.tolist(),
-            loss_ratios=asset_output.loss_ratio_curve.x_values.tolist())
+            general.write_loss_curve(loss_curve_id, asset_output)
+            general.write_loss_map(loss_map_ids, asset_output)
 classical.ignore_result = False
 
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
     celery_task = classical
+
+    @property
+    def calculation_parameters(self):
+        rc = self.job.risk_calculation
+
+        return {
+            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
+            'conditional_loss_poes': rc.conditional_loss_poes
+            }
+
+    @property
+    def hazard_id(self):
+        return self.job.risk_calculation.hazard_output.hazardcurve.id

@@ -120,7 +120,7 @@ def inputs4rcalc(calc_id, input_type=None):
     Get all of the inputs for a given hazard calculation.
 
     :param int calc_id:
-        ID of a :class:`HazardCalculation`.
+        ID of a :class:`RiskCalculation`.
     :param input_type:
         A valid input type (optional). Leave as `None` if you want all inputs
         for a given calculation.
@@ -947,6 +947,28 @@ class RiskCalculation(djm.Model):
         kwargs = _prep_geometry(kwargs)
         super(RiskCalculation, self).__init__(*args, **kwargs)
 
+    @property
+    def hazard_calculation(self):
+        """
+        :returns: the hazard calculation associated with the hazard
+        output used as input in risk calculation
+        """
+        return self.hazard_output.oq_job.hazard_calculation
+
+    def hazard_statistics(self):
+        if self.hazard_output.hazardcurve:
+            return (self.hazard_output.hazardcurve.statistics,
+                    self.hazard_output.hazardcurve.quantile)
+        else:
+            raise NotImplementedError
+
+    def hazard_logic_tree_paths(self):
+        if self.hazard_output.hazardcurve:
+            lt = self.hazard_output.hazardcurve.lt_realization
+            return lt.sm_lt_path, lt.gsim_lt_path
+        else:
+            raise NotImplementedError
+
 
 def _prep_geometry(kwargs):
     """
@@ -1648,7 +1670,7 @@ class GmfCollection(djm.Model):
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
     """
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # If `lt_realization` is None, this is a `complete logic tree`
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
@@ -1870,11 +1892,6 @@ class LossMap(djm.Model):
     '''
 
     output = djm.ForeignKey("Output")
-    scenario = djm.BooleanField()
-    end_branch_label = djm.TextField(null=True)
-    category = djm.TextField(null=True)
-    unit = djm.TextField(null=True)
-    timespan = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -1890,7 +1907,7 @@ class LossMapData(djm.Model):
     loss_map = djm.ForeignKey("LossMap")
     asset_ref = djm.TextField()
     value = djm.FloatField()
-    std_dev = djm.FloatField(default=0.0)
+    std_dev = djm.FloatField(default=0.0, null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
@@ -1902,11 +1919,8 @@ class LossCurve(djm.Model):
     Holds the parameters common to a set of loss curves
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
     aggregate = djm.BooleanField(default=False)
-    end_branch_label = djm.TextField(null=True)
-    category = djm.TextField(null=True)
-    unit = djm.TextField(null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2079,7 +2093,7 @@ class ExposureModel(djm.Model):
     '''
 
     owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
+    input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
     category = djm.TextField()
@@ -2129,13 +2143,13 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model, region):
+    def contained_in(self, exposure_model_id, region_constraint):
         """
         Return the asset ids contained in `region` associated with
         `exposure_model`
         """
-        return self.filter(exposure_model=exposure_model,
-                           site__within=region).values_list('id', flat=True)
+        return self.filter(exposure_model__id=exposure_model_id,
+                           site__within=region_constraint).order_by('id')
 
 
 class ExposureData(djm.Model):
@@ -2199,9 +2213,9 @@ class ExposureData(djm.Model):
 
 class VulnerabilityModelManager(djm.Manager):
     def get_from_job(self, job):
-        [input] = inputs4rcalc(job.risk_calculation,
-                               input_type="vulnerability")
-        return input.vulnerabilitymodel_set.all()[0]
+        [inp] = inputs4rcalc(job.risk_calculation,
+                             input_type="vulnerability")
+        return inp.vulnerabilitymodel_set.all()[0]
 
 
 class VulnerabilityModel(djm.Model):

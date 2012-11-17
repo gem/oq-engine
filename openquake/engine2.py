@@ -183,6 +183,8 @@ def get_input(path, input_type, owner, force_input, name=None):
     inp = None
 
     digest = _file_digest(path)
+
+    # FIXME remove me
     existing_input = _identical_input(input_type, digest, owner.id)
 
     if force_input or existing_input is None:
