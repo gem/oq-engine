@@ -22,6 +22,10 @@ import os
 
 from openquake.db import models
 from openquake.export import core
+from nrml.risk import writers
+
+
+LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 
 
 def export(output_id, target_dir):
@@ -41,13 +45,27 @@ def _export_fn_map():
 
 @core.makedirs
 def export_loss_curve(output, target_dir):
-    # TODO (lp) implement writer in nrml lib
-    # filename = 'loss-ratio-curve-%s.xml' % output.id
-    # path = os.path.abspath(os.path.join(target_dir, filename))
-    # writer = LossCurveXMLWriter(path)
-    # loss_curves = models.LossCurveData.objects.filter(
-    #     loss_curve__output=output.id)
-    # writer.serialize(loss_curves)
-    # return [path]
+    risk_calculation = output.oq_job.risk_calculation
+    investigation_time = risk_calculation.hazard_calculation.investigation_time
+    statistics, quantile_value = risk_calculation.hazard_statistics()
 
-    raise NotImplementedError
+    source_model_tree_path, gsim_tree_path = None, None
+    if not statistics:
+        source_model_tree_path, gsim_tree_path = (
+            risk_calculation.hazard_logic_tree_paths())
+
+    [exposure_input] = models.inputs4rcalc(risk_calculation, "exposure")
+
+    path = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+        'loss_curve_id': output.losscurve.id})
+
+    writer = writers.LossCurveXMLWriter(
+        path,
+        investigation_time,
+        core.LT_PATH_JOIN_TOKEN.join(source_model_tree_path),
+        core.LT_PATH_JOIN_TOKEN.join(gsim_tree_path),
+        statistics, quantile_value,
+        exposure_input.exposuremodel.stco_unit)
+
+    writer.serialize(output.losscurve.losscurvedata_set.all())
+    return [path]

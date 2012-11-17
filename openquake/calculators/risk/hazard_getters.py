@@ -18,6 +18,7 @@
 """Hazard getters for Risk calculators."""
 
 from openquake.db import models
+from django.db import connection
 
 
 # TODO: Optimize this, as it is very slow
@@ -25,6 +26,7 @@ class HazardCurveGetterPerAsset(object):
     def __init__(self, hazard_curve_id):
         self.hazard_curve_id = hazard_curve_id
         self.imls = models.HazardCurve.objects.get(pk=hazard_curve_id).imls
+        self._cache = {}
 
     def __call__(self, site):
         """
@@ -34,9 +36,14 @@ class HazardCurveGetterPerAsset(object):
             ID of a `hzrdr.hazard_curve` record, telling us which set of hazard
             curves to query for the closest curve.
         """
+        if site.wkt in self._cache:
+            return self._cache[site.wkt]
+
+        cursor = connection.cursor()
+
         query = """
         SELECT
-            hzrdr.hazard_curve_data.*,
+            hzrdr.hazard_curve_data.poes,
             min(ST_Distance_Sphere(location, %s))
                 AS min_distance
         FROM hzrdr.hazard_curve_data
@@ -46,11 +53,15 @@ class HazardCurveGetterPerAsset(object):
         LIMIT 1;"""
 
         args = ('SRID=4326; %s' % site.wkt, self.hazard_curve_id)
-        raw_query_set = models.HazardCurveData.objects.raw(query, args)
 
-        [haz_curve_data] = list(raw_query_set)
+        cursor.execute(query, args)
+        poes = cursor.fetchone()[0]
 
-        return zip(self.imls, haz_curve_data.poes)
+        hazard = zip(self.imls, poes)
+
+        self._cache[site.wkt] = hazard
+
+        return hazard
 
 
 HAZARD_GETTERS = dict(

@@ -146,4 +146,4 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         # the Config object
         config.get_section('risk').cfg['block_size'] = 1
 
-        
+        with mock.patch
