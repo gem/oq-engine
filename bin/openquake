@@ -218,6 +218,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
     except IOError as e:
@@ -313,7 +314,9 @@ def export(fn, output_id, target_dir):
     :func:`openquake.export.hazard.export` which prints a summary of files
     exported, if any.
     """
-    from django.core.exceptions import ObjectDoesNotExist
+    if not models.Output.objects.filter(pk=output_id).exists():
+        print 'No output found for OUTPUT_ID %s' % output_id
+        return
     try:
         files = fn(output_id, target_dir)
         if len(files) > 0:
@@ -323,8 +326,6 @@ def export(fn, output_id, target_dir):
     except NotImplementedError, err:
         print err.message
         print 'This feature is probably not implemented yet'
-    except ObjectDoesNotExist:
-        print 'No output found for OUTPUT_ID %s' % output_id
 
 
 def run_risk(
@@ -390,6 +391,7 @@ def run_risk(
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                list_risk_outputs(completed_job.risk_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
     except IOError as e:

@@ -36,7 +36,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
         api.classical(vulnerability_model, lrem_steps_per_interval))
 
     with transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug('launching compute_on_assets over %d' % len(assets))
+        logs.LOG.debug(
+            'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
             general.write_loss_curve(loss_curve_id, asset_output)
