@@ -19,7 +19,7 @@
 
 import os
 import math
-from functools import wraps
+import functools
 
 from openquake import logs
 from openquake.utils import config
@@ -223,12 +223,16 @@ class BaseRiskCalculator(base.CalculatorNext):
             loss_map_ids=dict((poe,
                 models.LossMap.objects.create(
                     output=models.Output.objects.create_output(
-                        self.job, "Loss Map Set", "loss_map"),
+                        self.job,
+                        "Loss Map Set with poe %s" % poe,
+                        "loss_map"),
                         poe=poe).pk)
                         for poe in job.risk_calculation.conditional_loss_poes))
 
 
 def with_assets(fn):
+
+    @functools.wraps(fn)
     def wrapped_function(job_id, offset, **kwargs):
         exposure_model_id = kwargs['exposure_model_id']
         region_constraint = kwargs['region_constraint']

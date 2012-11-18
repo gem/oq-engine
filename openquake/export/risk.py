@@ -26,6 +26,7 @@ from nrml.risk import writers
 
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
+LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
 
 
 def export(output_id, target_dir):
@@ -39,33 +40,51 @@ def export(output_id, target_dir):
 def _export_fn_map():
     fn_map = {
         'loss_curve': export_loss_curve,
+        'loss_map': export_loss_map,
         }
     return fn_map
 
 
-@core.makedirs
-def export_loss_curve(output, target_dir):
+def _export_common(output):
     risk_calculation = output.oq_job.risk_calculation
     investigation_time = risk_calculation.hazard_calculation.investigation_time
     statistics, quantile_value = risk_calculation.hazard_statistics()
 
     source_model_tree_path, gsim_tree_path = None, None
     if not statistics:
-        source_model_tree_path, gsim_tree_path = (
-            risk_calculation.hazard_logic_tree_paths())
+        source_model_tree_path, gsim_tree_path = [
+            core.LT_PATH_JOIN_TOKEN.join(x) for x in
+            risk_calculation.hazard_logic_tree_paths()]
 
-    [exposure_input] = models.inputs4rcalc(risk_calculation, "exposure")
+    unit = risk_calculation.model('exposure').stco_unit
 
-    path = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+    return dict(investigation_time=investigation_time,
+                statistics=statistics,
+                quantile_value=quantile_value,
+                source_model_tree_path=source_model_tree_path,
+                gsim_tree_path=gsim_tree_path,
+                unit=unit)
+
+
+@core.makedirs
+def export_loss_curve(output, target_dir):
+    args = _export_common(output)
+    args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.losscurve.id})
+    writers.LossCurveXMLWriter(**args).serialize(
+        output.losscurve.losscurvedata_set.all())
+    return [args['path']]
 
-    writer = writers.LossCurveXMLWriter(
-        path,
-        investigation_time,
-        core.LT_PATH_JOIN_TOKEN.join(source_model_tree_path),
-        core.LT_PATH_JOIN_TOKEN.join(gsim_tree_path),
-        statistics, quantile_value,
-        exposure_input.exposuremodel.stco_unit)
 
-    writer.serialize(output.losscurve.losscurvedata_set.all())
-    return [path]
+@core.makedirs
+def export_loss_map(output, target_dir):
+    risk_calculation = output.oq_job.risk_calculation
+    args = _export_common(output)
+    args.update(
+        dict(path=os.path.join(target_dir, LOSS_MAP_FILENAME_FMT % {
+            'loss_map_id': output.lossmap.id,
+            'poe': output.lossmap.poe}),
+            poe=output.lossmap.poe,
+            loss_category=risk_calculation.model('exposure').category))
+    writers.LossMapXMLWriter(**args)
+    return [args['path']]
