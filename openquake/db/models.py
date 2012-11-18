@@ -969,6 +969,15 @@ class RiskCalculation(djm.Model):
         else:
             raise NotImplementedError
 
+    def model(self, input_type):
+        [exposure_input] = inputs4rcalc(self, input_type)
+        if input_type == "exposure":
+            return exposure_input.exposuremodel
+        elif input_type == "vulnerability":
+            return exposure_input.vulnerabilitymodel
+        else:
+            raise RuntimeError("Unknown model")
+
 
 def _prep_geometry(kwargs):
     """
@@ -1891,7 +1900,7 @@ class LossMap(djm.Model):
     Holds metadata for loss maps
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
     poe = djm.FloatField(null=True)
 
     class Meta:
