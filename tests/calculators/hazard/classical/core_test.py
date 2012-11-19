@@ -240,7 +240,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         # Test the job stats:
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        self.assertEqual(16, job_stats.num_tasks)
+        # num sources * num lt samples / block size (items per task):
+        self.assertEqual(236, job_stats.num_tasks)
         self.assertEqual(120, job_stats.num_sites)
         self.assertEqual(2, job_stats.num_realizations)
 
