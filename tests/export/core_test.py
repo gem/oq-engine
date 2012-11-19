@@ -19,8 +19,26 @@ import os
 import shutil
 import tempfile
 import unittest
+import nrml
 
 from openquake.export import core as export
+
+
+def number_of(elem_name, tree):
+    """
+    Given an element name (including the namespaces prefix, if applicable),
+    return the number of occurrences of the element in a given XML document.
+    """
+    expr = '//%s' % elem_name
+    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
+
+
+class BaseExportTestCase(unittest.TestCase):
+
+    def _test_exported_file(self, filename):
+        self.assertTrue(os.path.exists(filename))
+        self.assertTrue(os.path.isabs(filename))
+        self.assertTrue(os.path.getsize(filename) > 0)
 
 
 @export.makedirs
