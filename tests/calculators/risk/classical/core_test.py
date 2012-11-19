@@ -1,3 +1,4 @@
+from job.validation import lrem_steps_per_interval_is_valid
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -15,6 +16,7 @@
 
 
 from tests.calculators.risk import general_test
+from tests import helpers
 
 from openquake.db import models as openquake
 from openquake.calculators.risk.classical import core as classical
@@ -50,11 +52,50 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
                          openquake.LossCurveData.objects.filter(
                              losscurve__output__oq_job=self.job).count())
 
+        files = self.calculator.export(exports='xml')
+        self.assertEqual([], files)
+
     def test_classical_task(self):
         """
         Test the main calculator task but execute it as a normal
         function
         """
 
-        classical.classical(self.job.id,
+        write_loss_curve_mock = helpers.patch(
+            'openquake.calculators.risk.general.write_loss_curve')
+        write_loss_map_mock = helpers.patch(
+            'openquake.calculators.risk.general.write_loss_map')
 
+        assets = models.Exposure.objects.all()
+        classical.classical(self.job.id,
+                            assets,
+                            "one_query_per_asset",
+                            self.job.risk_calculation.hazard_output.id,
+                            [1,2,3], {0.1: 1, 0.2: 2},
+                            1, [0.1, 0.2])
+
+        self.assertEqual(len(assets), write_loss_curve_mock.call_cout)
+        self.assertEqual(len(assets), write_loss_map_mock.call_cout)
+
+    def calculation_parameters(self):
+        """
+        Test that the specific calculation parameters are present
+        """
+
+        params = self.calculator.calculation_parameters
+        for field in ['lrem_steps_per_interval', 'conditional_loss_poes']:
+            self.assertTrue(
+                field in params)
+
+        self.assertEqual(5, params['lrem_steps_per_interval'])
+        self.assertEqual([0.01, 0.02, 0.05], params['conditional_loss_poes'])
+
+    def test_hazard_id(self):
+        """
+        Test that the hazard output used by the calculator is a
+        `openquake.db.models.HazardCurve` object
+        """
+
+        self.assertEqual(1,
+                         models.HazardCurve.objects.filter(
+                             pk=self.calculator.hazard_id).count())

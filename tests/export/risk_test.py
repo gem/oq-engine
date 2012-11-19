@@ -1,0 +1,94 @@
+# Copyright (c) 2010-2012, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import shutil
+import tempfile
+import unittest
+
+import nrml
+
+from nose.plugins.attrib import attr
+
+from openquake.db import models
+from openquake.export import core as export_core
+from openquake.export import risk
+
+from tests.utils import helpers
+
+
+def _number_of(elem_name, tree):
+    """
+    Given an element name (including the namespaces prefix, if applicable),
+    return the number of occurrences of the element in a given XML document.
+    """
+    expr = '//%s' % elem_name
+    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
+
+
+class BaseExportTestCase(unittest.TestCase):
+
+    def _test_exported_file(self, filename):
+        self.assertTrue(os.path.exists(filename))
+        self.assertTrue(os.path.isabs(filename))
+        self.assertTrue(os.path.getsize(filename) > 0)
+
+
+class ClassicalExportTestcase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_classical_risk_export(self):
+        """
+        Tests that outputs of a risk classical calculation are
+        exported
+        """
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+
+            # run the calculation to create something to export
+            retcode = helpers.run_risk_job_sp(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+            expected_outputs = 18  # 6 hazard curves + 12 hazard maps
+            self.assertEqual(expected_outputs, len(outputs))
+
+            # Export the loss curves:
+            curves = outputs.filter(output_type='loss_curve')
+            rc_files = []
+            for curve in curves:
+                rc_files.extend(risk.export(curve.id, target_dir))
+
+            self.assertEqual(6, len(rc_files))
+
+            for f in rc_files:
+                self._test_exported_file(f)
+
+            # Test loss map export as well.
+            maps = outputs.filter(output_type='loss_map')
+            lm_files = []
+            for loss_map in maps:
+                lm_files.extend(risk.export(loss_map.id, target_dir))
+
+            self.assertEqual(12, len(lm_files))
+
+            for f in lm_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
