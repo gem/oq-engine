@@ -82,9 +82,9 @@ class ClassicalExportTestcase(BaseExportTestCase):
 
             # Test loss map export as well.
             maps = outputs.filter(output_type='loss_map')
-            lm_files = []
-            for loss_map in maps:
-                lm_files.extend(risk.export(loss_map.id, target_dir))
+            lm_files = sum(
+                [risk.export(loss_map.id, target_dir)
+                 for loss_map in maps], [])
 
             self.assertEqual(3, len(lm_files))
 

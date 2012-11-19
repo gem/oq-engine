@@ -253,7 +253,8 @@ def run_risk_job_sp(config_file, params=None, check_output=False,
     process using `subprocess`. See `run_hazard_job_sp` for the signature
     """
 
-    hazard_curve_id = models.HazardCurve.objects.all()[0].output.id
+    hazard_curve_id = models.HazardCurve.objects.filter(
+        statistics="mean")[0].output.id
     args = ["bin/openquake", "--force-inputs", "--run-risk=%s" % config_file,
             "--hazard-output-id=%d" % hazard_curve_id]
     if params is not None:
