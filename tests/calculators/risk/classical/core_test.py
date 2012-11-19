@@ -1,4 +1,3 @@
-from job.validation import lrem_steps_per_interval_is_valid
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -16,9 +15,9 @@ from job.validation import lrem_steps_per_interval_is_valid
 
 
 from tests.calculators.risk import general_test
-from tests import helpers
+from tests.utils import helpers
 
-from openquake.db import models as openquake
+from openquake.db import models
 from openquake.calculators.risk.classical import core as classical
 
 
@@ -33,8 +32,8 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
     def test_complete_workflow(self):
         """
-        Test the complete calculation workflow and test for the
-        presence of the outputs
+        Test the complete risk classical calculation workflow and test
+        for the presence of the outputs
         """
         self.calculator.pre_execute()
 
@@ -43,39 +42,20 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.save()
         self.calculator.execute()
 
+        self.assertEqual(4,
+                         models.Output.objects.filter(oq_job=self.job).count())
         self.assertEqual(1,
-                         openquake.Output.objects.filter(oq_job=self.job))
-        self.assertEqual(1,
-                         openquake.LossCurve.objects.filter(
+                         models.LossCurve.objects.filter(
                              output__oq_job=self.job).count())
-        self.assertEqual(2,
-                         openquake.LossCurveData.objects.filter(
-                             losscurve__output__oq_job=self.job).count())
+        self.assertEqual(3,
+                         models.LossCurveData.objects.filter(
+                             loss_curve__output__oq_job=self.job).count())
+        self.assertEqual(9,
+                         models.LossMapData.objects.filter(
+                             loss_map__output__oq_job=self.job).count())
 
         files = self.calculator.export(exports='xml')
-        self.assertEqual([], files)
-
-    def test_classical_task(self):
-        """
-        Test the main calculator task but execute it as a normal
-        function
-        """
-
-        write_loss_curve_mock = helpers.patch(
-            'openquake.calculators.risk.general.write_loss_curve')
-        write_loss_map_mock = helpers.patch(
-            'openquake.calculators.risk.general.write_loss_map')
-
-        assets = models.Exposure.objects.all()
-        classical.classical(self.job.id,
-                            assets,
-                            "one_query_per_asset",
-                            self.job.risk_calculation.hazard_output.id,
-                            [1,2,3], {0.1: 1, 0.2: 2},
-                            1, [0.1, 0.2])
-
-        self.assertEqual(len(assets), write_loss_curve_mock.call_cout)
-        self.assertEqual(len(assets), write_loss_map_mock.call_cout)
+        self.assertEqual(4, len(files))
 
     def calculation_parameters(self):
         """

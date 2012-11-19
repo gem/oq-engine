@@ -976,6 +976,51 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
+def get_risk_job(risk_demo, hazard_demo, username=None):
+    """
+    Takes in input the paths (relative to the demos directory) to a
+    risk and hazard demo file config, respectively.
+
+    Creates the hazard outputs suitable to be used by a risk
+    calculation and then creates a :class:`openquake.db.models.OqJob`
+    object for a risk calculation. It also returns the input files
+    referenced by the risk config file.
+    """
+    username = username if username is not None else default_user().user_name
+
+    hazard_cfg = demo_file(hazard_demo)
+
+    hazard_job = get_hazard_job(hazard_cfg, username)
+    hc = hazard_job.hazard_calculation
+
+    risk_cfg = demo_file(risk_demo)
+
+    # FIXME: do we really need to create an HazardCurve to test a
+    # calculator?
+    hazard_output = models.HazardCurveData.objects.create(
+        hazard_curve=models.HazardCurve.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve"),
+            investigation_time=hc.investigation_time,
+            imt="PGA", imls=[0.1, 0.2, 0.3],
+            statistics="mean"),
+        poes=[0.1, 0.2, 0.3],
+        location="POINT(1 1)")
+
+    job = engine2.prepare_job(username)
+    params, files = engine2.parse_config(
+        open(risk_cfg, 'r'), force_inputs=True)
+
+    params.update(dict(hazard_output_id=hazard_output.hazard_curve.output.id))
+
+    risk_calc = engine2.create_risk_calculation(
+        job.owner, params, files.values())
+    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
+    job.risk_calculation = risk_calc
+    job.save()
+    return job, files
+
+
 def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
     return shapely.geometry.Point(
         (min_x + random.random() * (max_x - min_x),
