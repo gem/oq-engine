@@ -780,6 +780,51 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
             hc_prog.save()
 
+    def get_task_complete_callback(self, task_arg_gen):
+        """
+        :param task_arg_gen:
+            The task arg generator, so the callback can get the next set of
+            args and enqueue the next task.
+        :return:
+            A callback function which responds to a task completion signal.
+            A response typically includes enqueuing the next task and updating
+            progress counters.
+        """
+
+        def callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_sources = body['num_sources']
+
+            assert job_id == self.job.id
+            self.progress['computed'] += num_sources
+
+            logs.log_percent_complete(job_id, "hazard")
+
+            # Once we receive a completion signal, enqueue the next
+            # piece of work (if there's anything left to be done).
+            try:
+                self.core_calc_task.apply_async(task_arg_gen.next())
+            except StopIteration:
+                # There are no more tasks to dispatch; now we just need
+                # to wait until all tasks signal completion.
+                pass
+
+            message.ack()
+
+        return callback
+
     def execute(self):
         """
         Calculation work is parallelized over sources, which means that each
@@ -796,7 +841,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
         """
-        job = self.job
         block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
@@ -808,49 +852,19 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         task_gen = self.task_arg_gen(block_size)
 
-        def task_complete_callback(body, message):
-            """
-            :param dict body:
-                ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
-                number of sources computed).
-
-                Both values are `int`.
-            :param message:
-                A :class:`kombu.transport.pyamqplib.Message`, which contains
-                metadata about the message (including content type, channel,
-                etc.). See kombu docs for more details.
-            """
-            job_id = body['job_id']
-            num_sources = body['num_sources']
-
-            assert job_id == job.id
-            self.progress['computed'] += num_sources
-
-            logs.log_percent_complete(job_id, "hazard")
-
-            # Once we receive a completion signal, enqueue the next
-            # piece of work (if there's anything left to be done).
-            try:
-                self.core_calc_task.apply_async(task_gen.next())
-            except StopIteration:
-                # There are no more tasks to dispatch; now we just need
-                # to wait until all tasks signal completion.
-                pass
-
-            message.ack()
-
         exchange, conn_args = exchange_and_conn_args()
 
-        routing_key = ROUTING_KEY_FMT % dict(job_id=job.id)
+        routing_key = ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job.id, exchange=exchange,
+            'htasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
 
         with kombu.BrokerConnection(**conn_args) as conn:
             task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[task_complete_callback]):
+            with conn.Consumer(
+                task_signal_queue,
+                callbacks=[self.get_task_complete_callback(task_gen)]):
+
                 # First: Queue up the initial tasks.
                 for _ in xrange(concurrent_tasks):
                     try:
