@@ -664,22 +664,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         :param rlz_callbacks:
             See :meth:`initialize_realizations` for more info.
         """
-        hc = self.job.hazard_calculation
-
         # Each realization will have two seeds:
         # One for source model logic tree, one for GSIM logic tree.
         rnd = random.Random()
-        seed = hc.random_seed
+        seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
 
-        ltp = logictree.LogicTreeProcessor(hc.id)
+        ltp = logictree.LogicTreeProcessor(self.hc.id)
 
         hzrd_src_cache = {}
 
         # The first realization gets the seed we specified in the config file.
-        for i in xrange(hc.number_of_logic_tree_samples):
+        for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
             sm_name, sm_lt_path = ltp.sample_source_model_logictree(
                     rnd.randint(MIN_SINT_32, MAX_SINT_32))
@@ -689,7 +687,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     rnd.randint(MIN_SINT_32, MAX_SINT_32))
 
             lt_rlz = models.LtRealization(
-                hazard_calculation=hc,
+                hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
                 weight=None,
@@ -772,11 +770,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             :class:`openquake.db.models.LtRealization` object to associate
             with these inital hazard curve values.
         """
-        hc = self.job.hazard_calculation
+        num_points = len(self.hc.points_to_compute())
 
-        num_points = len(hc.points_to_compute())
-
-        im_data = hc.intensity_measure_types_and_levels
+        im_data = self.hc.intensity_measure_types_and_levels
         for imt, imls in im_data.items():
             hc_prog = models.HazardCurveProgress()
             hc_prog.lt_realization = lt_rlz
@@ -801,7 +797,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         enqueued, we just wait until all of the tasks conclude.
         """
         job = self.job
-        hc = job.hazard_calculation
         block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
@@ -911,10 +906,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        hc = self.job.hazard_calculation
-        num_sites = len(hc.points_to_compute())
+        num_sites = len(self.hc.points_to_compute())
         realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id)
+            hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
 
         # Compute the number of tasks.
