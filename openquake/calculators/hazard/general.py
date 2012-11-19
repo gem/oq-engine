@@ -461,6 +461,14 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         self.progress = dict(total=0, computed=0)
 
+    @property
+    def hc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.HazardCalculation`.
+        """
+        return self.job.hazard_calculation
+
     def task_arg_gen(self, block_size):
         """
         Generator function for creating the arguments for each task.
