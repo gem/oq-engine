@@ -86,5 +86,6 @@ def export_loss_map(output, target_dir):
             'poe': output.lossmap.poe}),
             poe=output.lossmap.poe,
             loss_category=risk_calculation.model('exposure').category))
-    writers.LossMapXMLWriter(**args)
+    writers.LossMapXMLWriter(**args).serialize(
+        output.lossmap.lossmapdata_set.all())
     return [args['path']]
