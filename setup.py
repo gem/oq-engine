@@ -36,10 +36,11 @@ setup(
         ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools", "tests", "tests.*",
-                                    "openquake.bin.oqpath",
-                                    "openquake.bin.oqpath.*",
+                                    "openquake.bin",
+                                    "openquake.bin.*",
                                     "openquake.nrml.tests",
                                     "openquake.nrml.tests.*"]),
+    py_modules=["openquake.bin.oqscript", "openquake.bin.cache_gc", "openquake.bin.openquake_supervisor", "openquake.bin.oq_create_db", "openquake.bin.oq_restart_workers"],
     include_package_data=True,
     package_data={"openquake": [
             "bin/*",

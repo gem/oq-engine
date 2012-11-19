@@ -106,7 +106,7 @@ mv logging.cfg     openquake
 mv openquake.cfg   openquake
 
 rm bin/demo_risk.sh bin/demo_server.sh bin/openquake_messages_collector.py bin/openquake_supersupervisor \
-    bin/oqpath.py bin/create_oq_schema
+    bin/create_oq_schema
 mv bin/openquake   bin/oqscript.py
 mv bin/openquake_supervisor bin/openquake_supervisor.py
 mv bin             openquake/bin
