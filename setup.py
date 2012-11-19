@@ -12,8 +12,11 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 """
 
-py_not_modules=["openquake/bin/__init__.py", "openquake/bin/oqpath.py"]
+py_not_modules=["openquake/bin/__init__.py", "openquake/bin/oqpath.py",
+                "openquake/bin/openquake_messages_collector.py"]
 py_modules=[f for f in findall('openquake/bin') if f not in py_not_modules ]
+print "pippo"
+print py_modules
 for i, el in enumerate(py_modules):
     py_modules[i] = el.replace("/", ".")
 
@@ -52,7 +55,6 @@ setup(
 
     include_package_data=True,
     package_data={"openquake": [
-            "bin/*",
             "db/schema/*",
             "nrml/schema/hazard/*", "nrml/schema/risk/*", "nrml/schema/gml/*",
             "nrml/schema/GML-SimpleFeaturesProfileSchema.xsd",
