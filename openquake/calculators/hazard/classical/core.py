@@ -218,10 +218,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             The (max) number of work items for each each task. In this case,
             sources.
         """
-        hc = self.job.hazard_calculation
-
         realizations = models.LtRealization.objects.filter(
-                hazard_calculation=hc, is_complete=False)
+                hazard_calculation=self.hc, is_complete=False)
 
         for lt_rlz in realizations:
             source_progress = models.SourceProgress.objects.filter(
@@ -275,12 +273,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
         is need to export the full hazard curve results).
         """
-        hc = self.job.hazard_calculation
-        im = hc.intensity_measure_types_and_levels
-        points = hc.points_to_compute()
+        im = self.hc.intensity_measure_types_and_levels
+        points = self.hc.points_to_compute()
 
         realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id)
+            hazard_calculation=self.hc.id)
 
         for rlz in realizations:
             # create a new `HazardCurve` 'container' record for each
@@ -289,7 +286,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
                 hco = models.Output(
-                    owner=hc.owner,
+                    owner=self.hc.owner,
                     oq_job=self.job,
                     display_name="hc-rlz-%s" % rlz.id,
                     output_type='hazard_curve',
@@ -299,7 +296,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 haz_curve = models.HazardCurve(
                     output=hco,
                     lt_realization=rlz,
-                    investigation_time=hc.investigation_time,
+                    investigation_time=self.hc.investigation_time,
                     imt=hc_im_type,
                     imls=imls,
                     sa_period=sa_period,
@@ -328,24 +325,21 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
-        hc = self.job.hazard_calculation
-
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=hc.id).delete()
+            lt_realization__hazard_calculation=self.hc.id).delete()
         models.SourceProgress.objects.filter(
-            lt_realization__hazard_calculation=hc.id).delete()
-        models.SiteData.objects.filter(hazard_calculation=hc.id).delete()
+            lt_realization__hazard_calculation=self.hc.id).delete()
+        models.SiteData.objects.filter(hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
 
     def post_process(self):
         logs.LOG.debug('> starting post processing')
 
-        hc = self.job.hazard_calculation
         # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
         # has some value (not an empty list), do post processing.
         # Otherwise, just skip it altogether.
-        if hc.mean_hazard_curves or hc.quantile_hazard_curves:
+        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
             tasks = post_processing.setup_tasks(
                 self.job, self.job.hazard_calculation,
                 curve_finder=models.HazardCurveData.objects,
@@ -357,7 +351,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     ("post_processing_task", tasks),
                     tf_args=dict(job_id=self.job.id))
 
-        if len(hc.poes_hazard_maps) > 0:
+        if len(self.hc.poes_hazard_maps) > 0:
             post_processing.do_hazard_map_post_process(self.job)
 
         logs.LOG.debug('< done with post processing')
