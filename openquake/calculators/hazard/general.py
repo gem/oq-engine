@@ -782,7 +782,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         job = self.job
         hc = job.hazard_calculation
-        sources_per_task = int(config.get('hazard', 'block_size'))
+        block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
         progress = dict(total=0, computed=0)
@@ -791,7 +791,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         # When `progress['compute']` becomes equal to `progress['total']`,
         # `execute` can conclude.
 
-        task_gen = self.task_arg_gen(hc, job, sources_per_task, progress)
+        task_gen = self.task_arg_gen(hc, job, block_size, progress)
 
         def task_complete_callback(body, message):
             """
