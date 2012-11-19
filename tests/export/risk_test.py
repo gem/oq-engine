@@ -66,7 +66,7 @@ class ClassicalExportTestcase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            expected_outputs = 18  # 6 hazard curves + 12 hazard maps
+            expected_outputs = 4  # 1 loss curve set + 3 loss curve map set
             self.assertEqual(expected_outputs, len(outputs))
 
             # Export the loss curves:
@@ -75,7 +75,7 @@ class ClassicalExportTestcase(BaseExportTestCase):
             for curve in curves:
                 rc_files.extend(risk.export(curve.id, target_dir))
 
-            self.assertEqual(6, len(rc_files))
+            self.assertEqual(1, len(rc_files))
 
             for f in rc_files:
                 self._test_exported_file(f)
@@ -86,7 +86,7 @@ class ClassicalExportTestcase(BaseExportTestCase):
             for loss_map in maps:
                 lm_files.extend(risk.export(loss_map.id, target_dir))
 
-            self.assertEqual(12, len(lm_files))
+            self.assertEqual(3, len(lm_files))
 
             for f in lm_files:
                 self._test_exported_file(f)
