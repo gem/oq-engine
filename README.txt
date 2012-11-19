@@ -1,6 +1,7 @@
-OpenQuake System
-==============
+OpenQuake calculators based on the nhlib (new hazard library)
 
-Until we get this updated, you should please follow the instructions here for installation: 
-https://github.com/gem/openquake/wiki
+This is the alpha release of the nhlib-based OpenQuake calculators.
+Currently only the following are supported:
 
+    - classical hazard calculator
+    - event-based hazard calculator
