@@ -13,6 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Core functionality for the classical PSHA risk calculator.
+"""
 
 from openquake.calculators.risk import general
 from openquake.utils import tasks

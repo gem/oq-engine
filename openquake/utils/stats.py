@@ -273,7 +273,7 @@ class count_progress(object):   # pylint: disable=C0103
         self.__name__ = "count_progress"
 
     @staticmethod
-    def get_task_data(*args, **kwargs):
+    def get_task_data(*args):
         """Return the job_id and the number of work items."""
         return args[0], len(args[1])
 
@@ -283,7 +283,7 @@ class count_progress(object):   # pylint: disable=C0103
         def wrapper(*args, **kwargs):
             """Call the wrapped function and step the done/failed counters in
                case of success/failure."""
-            job_id, num_items = self.get_task_data(*args, **kwargs)
+            job_id, num_items = self.get_task_data(*args)
             try:
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
