@@ -536,6 +536,8 @@ class GmfSetIterTestCase(unittest.TestCase):
                     gmf_collection__lt_realization__isnull=True)\
             .order_by('id')
 
+        self.assertEqual(len(list(exp_gmf_set)), len(list(act_gmf_set)))
+
         self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
                          act_gmf_set.complete_logic_tree_gmf)
         self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
