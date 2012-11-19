@@ -21,7 +21,6 @@ import unittest
 
 from openquake.db import routers
 from openquake.db.models import *
-from openquake.db.dbview_models import *
 
 
 class OQRouterTestCase(unittest.TestCase):

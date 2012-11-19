@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import mock
 
 from tests.utils import helpers
 from openquake.calculators.risk import general as risk
@@ -26,27 +27,43 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     An abstract class that just setup a risk job
     """
     def setUp(self):
-        cfg = helpers.demo_file(
-            'classical_psha_based_risk/job.ini')
-        self.job = helpers.get_risk_job(cfg)
+        self.job, _ = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+
+
+class FakeRiskCalculator(risk.BaseRiskCalculator):
+    """
+    Fake Risk Calculator. Used to test the base class
+    """
+
+    celery_task = mock.Mock()
+
+    @property
+    def hazard_id(self):
+        return 0
+
+    @property
+    def calculation_parameters(self):
+        return {}
 
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     """
     Integration test for the base class supporting the risk
-    calculators
+    calculators.
     """
 
     def setUp(self):
         super(RiskCalculatorTestCase, self).setUp()
-        self.base_calculator = risk.BaseRiskCalculator(self.job)
+        self.calculator = FakeRiskCalculator(self.job)
 
     def test_store_exposure(self):
         """
         Test that exposure data and models are properly stored and
         associated with the calculator
         """
-        self.base_calculator._store_exposure()
+        self.calculator._store_exposure()
 
         actual_model_queryset = models.ExposureModel.objects.filter(
             input__input2rcalc__risk_calculation=self.job.risk_calculation,
@@ -74,7 +91,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         [vulnerability_input] = models.inputs4rcalc(
             self.job.risk_calculation, input_type='vulnerability')
 
-        self.base_calculator.store_risk_model()
+        self.calculator.store_risk_model()
 
         actual_model_queryset = models.VulnerabilityModel.objects.filter(
             input=vulnerability_input)
@@ -92,7 +109,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         associated with the calculator
         """
 
-        outputs = self.base_calculator.create_outputs()
+        outputs = self.calculator.create_outputs()
 
         self.assertTrue('loss_curve_id' in outputs)
         self.assertTrue('loss_map_ids' in outputs)
@@ -100,41 +117,36 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.assertTrue(models.LossCurve.objects.filter(
             pk=outputs['loss_curve_id']).exists())
 
-        for map_id in outputs['loss_map_ids']:
-            self.assertTrue(models.LossCurve.objects.filter(
-                pk=map_id).exists())
-
-    def test_filter_exposure(self):
-        """
-        Test that the exposure is filtered properly
-        """
-        asset_ids = self.base_calculator._filter_exposure()
-        self.assertEqual(2, len(asset_ids))
         self.assertEqual(
-            ["a1", "a2"],
-            [a.asset_ref
-             for a in models.ExposureData.objects.filter(pk__in=asset_ids)])
+            sorted(self.job.risk_calculation.conditional_loss_poes),
+            sorted(outputs['loss_map_ids'].keys()))
+
+        for _, map_id in outputs['loss_map_ids'].items():
+            self.assertTrue(models.LossMap.objects.filter(
+                pk=map_id).exists())
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
-        base_path = ('openquake.calculators.risk.classical.general'
-                     '.BaseRiskCalculator')
+        path = ('openquake.calculators.risk.general.BaseRiskCalculator')
         patches = (
             helpers.patch(
-                '%s.%s' % (base_path, '_store_exposure')),
+                '%s.%s' % (path, '_store_exposure')),
             helpers.patch(
-                '%s.%s' % (base_path, 'store_risk_model')),
+                '%s.%s' % (path, 'store_risk_model')),
             helpers.patch(
-                '%s.%s' % (base_path, 'create_outputs')),
+                '%s.%s' % (path, 'create_outputs')),
             helpers.patch(
-                '%s.%s' % (base_path, '_filter_exposure')),
+                '%s.%s' % (path, '_initialize_progress')),
             helpers.patch(
-                '%s.%s' % (base_path, '_initialize_progress')))
+                'openquake.db.models.ExposureData.objects.contained_in'))
 
         mocks = [p.start() for p in patches]
 
-        self.base_calculator.pre_execute()
+        mocks[0].return_value = models.ExposureModel.objects.all()[0]
+        mocks[4].return_value = models.ExposureData.objects.all()
+
+        self.calculator.pre_execute()
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count)
@@ -146,10 +158,12 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         Test that the distribute function is called properly
         """
 
-        distribute = helpers.patch('openquake.utils.tasks.distribute')
+        patch = helpers.patch(
+            'openquake.utils.tasks.distribute')
+        distribute = patch.start()
 
-        self.base_calculator.pre_execute()
-        self.base_calculator.execute()
+        self.calculator.pre_execute()
+        self.calculator.execute()
 
         self.assertEqual(1, distribute.call_count)
 
@@ -158,6 +172,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         expected_model_id = self.calculator.exposure_model_id
         expected_kwargs = dict(job_id=self.job.id,
                                hazard_getter="one_query_per_asset",
+                               assets_per_task=1,
                                region_constraint=expected_region_constraint,
                                exposure_model_id=expected_model_id,
                                hazard_id=self.calculator.hazard_id)
@@ -166,8 +181,10 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         expected_call = ((self.calculator.celery_task,
                           ("offset", range(0, 3, 4))),
-                          expected_kwargs)
-        self.assertEqual([expected_call], distribute.call_args_list)
+                          dict(tf_args=expected_kwargs))
+        self.assertEqual(1, distribute.call_count)
+        self.assertEqual(expected_call[1:], distribute.call_args_list[0][1:])
+        patch.stop()
 
     def test_initialize_progress(self):
         """
@@ -177,9 +194,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator.pre_execute()
         self.calculator._initialize_progress()
 
-        total = stats.pk_get(self.calc.job.id, "nrisk_total")
-        self.assertEqual(self.asset_offsets, total)
-        done = stats.pk_get(self.calc.job.id, "nrisk_done")
+        total = stats.pk_get(self.calculator.job.id, "nrisk_total")
+        self.assertEqual(self.calculator.assets_nr, total)
+        done = stats.pk_get(self.calculator.job.id, "nrisk_done")
         self.assertEqual(0, done)
-
-    

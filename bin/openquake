@@ -361,7 +361,11 @@ def run_risk(
             user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
+
+        # Add the hazard output id to the risk calculation constructor
+        # args
         params.update(dict(hazard_output_id=hazard_output_id))
+
         calculation = engine2.create_risk_calculation(job.owner, params,
                                                       files.values())
         job.risk_calculation = calculation

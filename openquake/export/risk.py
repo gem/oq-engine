@@ -48,7 +48,7 @@ def _export_fn_map():
 def _export_common(output):
     risk_calculation = output.oq_job.risk_calculation
     investigation_time = risk_calculation.hazard_calculation.investigation_time
-    statistics, quantile_value = risk_calculation.hazard_statistics()
+    statistics, quantile_value = risk_calculation.hazard_statistics
 
     source_model_tree_path, gsim_tree_path = None, None
     if not statistics:
