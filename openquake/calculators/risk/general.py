@@ -42,14 +42,25 @@ class BaseRiskCalculator(base.CalculatorNext):
     functionality, including initialization procedures and the core
     distribution/execution logic.
 
-    :attribute asset_ids
-      The array of asset_ids the calculator will work on. They are
+    :attribute asset_nr
+      The number of assets the calculator will work on. Assets are
       extracted from the exposure input and filtered according with the
       RiskCalculation region_constraint
 
     :attribute output_container_ids
       A dictionary holding the output containers object ids (e.g. LossCurve,
       LossMap)
+
+    :attribute exposure_model_id
+      The exposure model used by the calculation
+
+    :attribute assets_per_task
+      The number of assets processed by each celery task
+
+    :attribute asset_offsets
+      A generator of asset offsets used by each celery task. Assets are
+      ordered by their id. An asset offset is an int that identify the
+      set of assets going from offset to offset + assets_per_task.
     """
 
     #: in subclasses, this would be a reference to the the celery task
@@ -61,6 +72,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         self.output_container_ids = None
         self.assets_nr = None
         self.exposure_model_id = None
+        self.assets_per_task = None
+        self.asset_offsets = None
 
     def pre_execute(self):
         """
@@ -73,20 +86,17 @@ class BaseRiskCalculator(base.CalculatorNext):
         interest
 
         3. Prepare and save the output containers.
+
+        4. Initialize progress counters
         """
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
+            self.assets_nr = self._filter_exposure()
+            self.assets_per_task = int(
+                math.ceil(float(self.assets_nr) / int(
+                    config.get('risk', 'task_number'))))
 
-            self.assets_nr = models.ExposureData.objects.contained_in(
-                self.exposure_model_id,
-                self.job.risk_calculation.region_constraint).count()
-
-            if not self.assets_nr:
-                raise RuntimeError(
-                    ['Region of interest is not covered by the exposure input.'
-                     ' This configuration is invalid. '
-                     ' Change the region constraint input or use a proper '
-                     ' exposure file'])
+            self.asset_offsets = range(0, self.assets_nr, self.assets_per_task)
 
         with logs.tracing('store risk model'):
             self.store_risk_model()
@@ -106,15 +116,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         in `[risk]` section of the OpenQuake config file.
         """
 
-        asset_block_size = int(math.ceil(
-            float(self.assets_nr) / int(config.get('risk', 'task_number'))))
-
-        asset_offsets = range(0, self.assets_nr, asset_block_size)
-
         tf_args = dict(
             job_id=self.job.id,
             hazard_getter="one_query_per_asset",
-            asset_block_size=asset_block_size,
+            assets_per_task=self.assets_per_task,
             region_constraint=self.job.risk_calculation.region_constraint,
             exposure_model_id=self.exposure_model_id,
             hazard_id=self.hazard_id)
@@ -123,7 +128,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         tasks.distribute(
             self.celery_task,
-            ("offset", asset_offsets),
+            ("offset", self.asset_offsets),
             tf_args=tf_args)
 
     def export(self, *args, **kwargs):
@@ -204,6 +209,19 @@ class BaseRiskCalculator(base.CalculatorNext):
                 covs=record['coefficientsVariation'],
                 loss_ratios=record['lossRatio'])
 
+    def _filter_exposure(self):
+        assets_nr = models.ExposureData.objects.contained_in(
+                self.exposure_model_id,
+                self.job.risk_calculation.region_constraint).count()
+
+        if not assets_nr:
+            raise RuntimeError(
+                ['Region of interest is not covered by the exposure input.'
+                 ' This configuration is invalid. '
+                 ' Change the region constraint input or use a proper '
+                 ' exposure file'])
+        return assets_nr
+
     def create_outputs(self):
         """
         Create outputs container objects (e.g. LossCurve, Output).
@@ -231,37 +249,62 @@ class BaseRiskCalculator(base.CalculatorNext):
 
 
 def with_assets(fn):
+    """
+    Decorator helper for a risk calculation celery task.
 
+    It transforms an oqtask function accepting an offset as first
+    argument and a block size over a list of assets into a function
+    that accepts a list of assets contained in a region_constraint.
+
+    The exposure_model, the region constraint and the assets_per_task
+    are got by kwargs of the original function. Such arguments are
+    removed from the function signature.
+
+    It is also responsible to log the progress
+    """
     @functools.wraps(fn)
     def wrapped_function(job_id, offset, **kwargs):
         exposure_model_id = kwargs['exposure_model_id']
         region_constraint = kwargs['region_constraint']
-        asset_block_size = kwargs['asset_block_size']
+        assets_per_task = kwargs['assets_per_task']
 
         del kwargs['exposure_model_id']
         del kwargs['region_constraint']
-        del kwargs['asset_block_size']
+        del kwargs['assets_per_task']
 
         assets = models.ExposureData.objects.contained_in(
             exposure_model_id,
-            region_constraint)[offset:offset + asset_block_size]
+            region_constraint)[offset:offset + assets_per_task]
 
         fn(job_id, assets, **kwargs)
+        logs.log_percent_complete(job_id, "risk")
 
     return wrapped_function
 
 
 def hazard_getter(hazard_getter_name, hazard_id):
+    """
+    Initializes and returns an hazard getter
+    """
     return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
 def fetch_vulnerability_model(job_id):
+    """
+    Returns the vulnerability model associated with the current
+    running job
+    """
     job = models.OqJob.objects.get(pk=job_id)
     return models.VulnerabilityModel.objects.get_from_job(
         job).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
+    """
+    Stores a `openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the `openquake.db.models.LossCurve`
+    output container is identified by `loss_curve_id`.
+    """
     models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset_output.asset.asset_ref,
@@ -272,6 +315,12 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 
 def write_loss_map(loss_map_ids, asset_output):
+    """
+    Stores `openquake.db.models.LossMapData` objects where the data
+    are got by `asset_output` and the `openquake.db.models.LossMap`
+    output containers are got by `loss_map_ids`.
+    """
+
     for poe, loss in asset_output.conditional_losses.items():
         models.LossMapData.objects.create(
             loss_map_id=loss_map_ids[poe],

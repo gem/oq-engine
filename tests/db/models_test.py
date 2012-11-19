@@ -261,6 +261,42 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
 
+class Inputs4RiskCalcTestCase(unittest.TestCase):
+
+    def test_no_inputs(self):
+        self.assertEqual([], list(models.inputs4rcalc(-1)))
+
+    def test_a_few_inputs(self):
+        cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        rc = engine2.create_risk_calculation(owner, params, files.values())
+
+        expected_ids = sorted([x.id for x in files.values()])
+
+        inputs = models.inputs4rcalc(rc.id)
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+    def test_with_input_type(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        rc = engine2.create_hazard_calculation(owner, params, files.values())
+
+        # It should only be 1 id, actually.
+        expected_ids = [x.id for x in files.values()
+                        if x.input_type == 'exposure']
+
+        inputs = models.inputsrhcalc(rc.id, input_type='exposure')
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+
 class HazardCalculationGeometryTestCase(unittest.TestCase):
     """Test special geometry handling in the HazardCalculation constructor."""
 

@@ -247,6 +247,34 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
             devnull.close()
 
 
+def run_risk_job_sp(config_file, params=None, check_output=False,
+                    silence=False):
+    """
+    Given a path to a config file, run an openquake risk job as a separate
+    process using `subprocess`. See `run_hazard_job_sp` for the signature
+    """
+
+    hazard_curve_id = models.HazardCurve.objects.all()[0].output.id
+    args = ["bin/openquake", "--force-inputs", "--run-risk=%s" % config_file,
+            "--hazard-output-id=%d" % hazard_curve_id]
+    if params is not None:
+        args.extend(params)
+
+    devnull = None
+    if silence:
+        devnull = open(os.devnull, 'wb')
+
+    try:
+        if check_output:
+            return subprocess.check_output(args, stdout=devnull,
+                                           stderr=devnull)
+        else:
+            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
+    finally:
+        if devnull is not None:
+            devnull.close()
+
+
 def store_hazard_logic_trees(a_job):
     """Helper function to store the source model and GMPE logic trees in the
     KVS so that it can be read by the Java code.

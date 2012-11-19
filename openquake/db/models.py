@@ -955,14 +955,25 @@ class RiskCalculation(djm.Model):
         """
         return self.hazard_output.oq_job.hazard_calculation
 
+    @property
     def hazard_statistics(self):
+        """
+        The hazard statistics value (mean/quantile and quantile value
+        if applicable) associated with the hazard output used by this
+        risk calculation
+        """
         if self.hazard_output.hazardcurve:
             return (self.hazard_output.hazardcurve.statistics,
                     self.hazard_output.hazardcurve.quantile)
         else:
             raise NotImplementedError
 
+    @property
     def hazard_logic_tree_paths(self):
+        """
+        The logic tree paths associated with the hazard output used by
+        this risk calculation
+        """
         if self.hazard_output.hazardcurve:
             lt = self.hazard_output.hazardcurve.lt_realization
             return lt.sm_lt_path, lt.gsim_lt_path
@@ -970,6 +981,10 @@ class RiskCalculation(djm.Model):
             raise NotImplementedError
 
     def model(self, input_type):
+        """
+        The model associated with this risk calculation with input of
+        type `input_type`
+        """
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
@@ -2154,8 +2169,10 @@ class AssetManager(djm.GeoManager):
     """
     def contained_in(self, exposure_model_id, region_constraint):
         """
-        Return the asset ids contained in `region` associated with
-        `exposure_model`
+        :returns the asset ids (ordered by id) contained in
+        `region_constraint` associated with an
+        `openquake.db.models.ExposureModel` with ID equal to
+        `exposure_model_id`
         """
         return self.filter(exposure_model__id=exposure_model_id,
                            site__within=region_constraint).order_by('id')

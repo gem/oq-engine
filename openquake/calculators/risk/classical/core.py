@@ -28,6 +28,32 @@ from django.db import transaction
 def classical(job_id, assets, hazard_getter, hazard_id,
               loss_curve_id, loss_map_ids,
               lrem_steps_per_interval, conditional_loss_poes):
+    """
+    Celery task for the classical risk calculator.
+
+    Gets vulnerability model, instantiates risklib calculators and
+    stores results to db in a single transaction.
+
+    :param int job_id:
+      ID of the currently running job
+    :param assets:
+      list of Assets to take into account
+    :param hazard_getter:
+      Strategy used to get the hazard curves
+    :param int hazard_id
+      ID of the Hazard Output the risk calculation is based on
+    :param loss_curve_id
+      ID of the `openquake.db.models.LossCurve` output container used
+      to store the computed loss curves
+    :param loss_map_ids
+      Dictionary poe->ID of the `openquake.db.models.LossMap` output
+      container used to store the computed loss maps
+    :param int lrem_steps_per_interval
+      Steps per interval used to compute the Loss Ratio Exceedance matrix
+    :param conditional_loss_poes
+      The poes taken into accout to compute the loss maps
+    """
+
     vulnerability_model = general.fetch_vulnerability_model(job_id)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
@@ -41,15 +67,26 @@ def classical(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
             general.write_loss_curve(loss_curve_id, asset_output)
-            general.write_loss_map(loss_map_ids, asset_output)
+            if loss_map_ids:
+                general.write_loss_map(loss_map_ids, asset_output)
 classical.ignore_result = False
 
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
+    """
+    Classical PSHA risk calculator. Computes loss curves and loss
+    params for a given set of assets.
+    """
+
+    #: The core calculation celery task function
     celery_task = classical
 
     @property
     def calculation_parameters(self):
+        """
+        The specific calculation parameters passed as kwargs to the
+        celery task function
+        """
         rc = self.job.risk_calculation
 
         return {
@@ -59,4 +96,8 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     @property
     def hazard_id(self):
+        """
+        The ID of the `openquake.db.models.HazardCurve` object that
+        stores the hazard curves used by the risk calculation
+        """
         return self.job.risk_calculation.hazard_output.hazardcurve.id
