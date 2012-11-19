@@ -193,7 +193,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
 
 
 @staticmethod
-def classical_task_arg_gen(hc, job, sources_per_task, progress):
+def classical_task_arg_gen(hc, job, block_size, progress):
     """
     Loop through realizations and sources to generate a sequence of
     task arg tuples. Each tuple of args applies to a single task.
@@ -205,8 +205,9 @@ def classical_task_arg_gen(hc, job, sources_per_task, progress):
         :class:`openquake.db.models.HazardCalculation` instance.
     :param job:
         :class:`openquake.db.models.OqJob` instance.
-    :param int sources_per_task:
-        The (max) number of sources to consider for each task.
+    :param int block_size:
+        The (max) number of work items for each each task. In this case,
+        sources.
     :param dict progress:
         A dict containing two integer values: 'total' and 'computed'. The task
         arg generator will update the 'total' count as the generator creates
@@ -222,8 +223,8 @@ def classical_task_arg_gen(hc, job, sources_per_task, progress):
                                                  flat=True)
         progress['total'] += len(source_ids)
 
-        for offset in xrange(0, len(source_ids), sources_per_task):
-            task_args = (job.id, source_ids[offset:offset + sources_per_task],
+        for offset in xrange(0, len(source_ids), block_size):
+            task_args = (job.id, source_ids[offset:offset + block_size],
                          lt_rlz.id)
             yield task_args
 
