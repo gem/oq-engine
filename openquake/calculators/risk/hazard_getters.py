@@ -21,7 +21,6 @@ from openquake.db import models
 from django.db import connection
 
 
-# TODO: Optimize this, as it is very slow
 class HazardCurveGetterPerAsset(object):
     def __init__(self, hazard_curve_id):
         self.hazard_curve_id = hazard_curve_id
