@@ -170,7 +170,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(exported_file)
-            self.assertEqual(420, _number_of('nrml:gmf', tree))
+            self.assertEqual(442, _number_of('nrml:gmf', tree))
 
             ################
             # Hazard curves:
