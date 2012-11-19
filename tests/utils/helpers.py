@@ -49,7 +49,6 @@ from openquake.engine import JobContext
 from openquake import engine
 from openquake import engine2
 from openquake import logs
-from openquake import producer
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
 
@@ -298,16 +297,6 @@ def store_hazard_logic_trees(a_job):
     store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
                        a_job.params, lt_proc)
     store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
-
-
-class WordProducer(producer.FileProducer):
-    """Simple File parser that looks for three
-    space-separated values on each line - lat, long and value"""
-
-    def _parse(self):
-        for line in self.file:
-            col, row, value = line.strip().split(' ', 2)
-            yield ((int(col), int(row)), value)
 
 
 def timeit(method):
