@@ -192,7 +192,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     logs.LOG.debug('< transaction complete')
 
 
-@staticmethod
 def classical_task_arg_gen(hc, job, block_size, progress):
     """
     Loop through realizations and sources to generate a sequence of
@@ -273,6 +272,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hc_prog.imt = imt
             hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
             hc_prog.save()
+    task_arg_gen = staticmethod(classical_task_arg_gen)
 
     def pre_execute(self):
         """
