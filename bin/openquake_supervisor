@@ -25,9 +25,11 @@ import logging
 import os
 import sys
 
-import oqpath
-oqpath.set_oq_path()
-
+try:
+    import oqpath
+    oqpath.set_oq_path()
+except ImportError:
+    pass
 
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
