@@ -12,6 +12,9 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 """
 
+py_modules=[f for f in setuptools.findall('openquake/bin') if f != "openquake/bin/oqpath.py"]
+for i, el in enumerate(py_modules):
+    py_modules[i] = el.replace("/", ".")
 
 setup(
     entry_points={
@@ -40,7 +43,8 @@ setup(
                                     "openquake.bin.*",
                                     "openquake.nrml.tests",
                                     "openquake.nrml.tests.*"]),
-    py_modules=["openquake.bin.oqscript", "openquake.bin.cache_gc", "openquake.bin.openquake_supervisor", "openquake.bin.oq_create_db", "openquake.bin.oq_restart_workers"],
+    py_modules=py_modules,
+
     include_package_data=True,
     package_data={"openquake": [
             "bin/*",
