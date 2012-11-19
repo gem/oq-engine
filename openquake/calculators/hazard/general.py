@@ -455,13 +455,22 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     #: In subclasses, this would be a reference to the task function
     core_calc_task = None
-    #: Generator function for creating the arguments for each task
-    task_arg_gen = None
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
 
         self.progress = dict(total=0, computed=0)
+
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        Subclasses must implement this.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
+        """
+        raise NotImplementedError
 
     def initialize_sources(self):
         """
@@ -796,7 +805,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         # When `self.progress['compute']` becomes equal to
         # `self.progress['total']`, # `execute` can conclude.
 
-        task_gen = self.task_arg_gen(hc, job, block_size, self.progress)
+        task_gen = self.task_arg_gen(block_size)
 
         def task_complete_callback(body, message):
             """
