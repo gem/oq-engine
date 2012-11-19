@@ -30,8 +30,11 @@ data.
 import getopt
 import sys
 
-import oqpath
-oqpath.set_oq_path()
+try:
+    import oqpath
+    oqpath.set_oq_path()
+except ImportError:
+    pass
 
 from openquake import kvs
 from openquake import logs

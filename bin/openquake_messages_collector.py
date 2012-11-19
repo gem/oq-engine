@@ -13,8 +13,11 @@ import os
 import logging
 import logging.config
 
-import oqpath
-oqpath.set_oq_path()
+try:
+    import oqpath
+    oqpath.set_oq_path()
+except ImportError:
+    pass
 
 import openquake
 from openquake import signalling
