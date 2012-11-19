@@ -1,5 +1,6 @@
 #!/bin/sh
 # set -x
+set -e
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
 
@@ -89,7 +90,6 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     ( echo "$pkg_name (${pkg_vers}+dev${dt}-${hash}) $pkg_rest"
       echo
-em openquake/bin/oqpath.py
       echo "  *  development version from $hash commit"
       echo
       echo " -- $DEBFULLNAME <$DEBEMAIL>  $(date -d@$dt -R)"
@@ -97,14 +97,6 @@ em openquake/bin/oqpath.py
     )  > debian/changelog
     cat debian/changelog.orig >> debian/changelog
     rm debian/changelog.orig
-
-#python-noq (0.2-4) precise; urgency=low
-#
-#  *  fix malformed patch
-#
-# -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 29 Oct 2012 15:14:15 +0100
-#
-    # $DEBEMAIL and $DEBFULLNAME
 fi
 # mods pre-packaging
 mv LICENSE         openquake
@@ -112,22 +104,26 @@ mv README.txt      openquake/README
 mv celeryconfig.py openquake
 mv logging.cfg     openquake
 mv openquake.cfg   openquake
-mv bin/openquake   bin/noq
+
+rm bin/demo_risk.sh bin/demo_server.sh bin/openquake_messages_collector.py bin/openquake_supersupervisor \
+    bin/oqpath.py bin/create_oq_schema
+mv bin/openquake   bin/oqscript.py
 mv bin/openquake_supervisor bin/openquake_supervisor.py
-
-rm bin/demo_risk.sh bin/demo_server.sh bin/openquake_messages_collector.py bin/openquake_supersupervisor bin/oqpath.py
-
+mv bin             openquake/bin
 
 rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 dpkg-buildpackage $DPBP_FLAG
 cd -
 
-# exit 0
+if [ $BUILD_DEVEL -ne 1 ]; then
+    exit 0
+fi
+
 #
-# DEVEL
+# DEVEL EXTRACTION OF SOURCES
 if [ -z "$GEM_SRC_PKG" ]; then
     echo "env var GEM_SRC_PKG not set, exit"
-    exit 1
+    exit 0
 fi
 GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
