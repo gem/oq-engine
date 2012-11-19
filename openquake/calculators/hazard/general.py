@@ -489,25 +489,24 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         (see :class:`openquake.db.models.ParsedSource`).
         """
         logs.log_progress("initializing sources", 2)
-        hc = self.job.hazard_calculation
 
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
-        [gsimlt] = models.inputs4hcalc(hc.id, input_type='lt_gsim')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
+        [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='lt_gsim')
         source_paths = logictree.read_logic_trees(
-            hc.base_path, smlt.path, gsimlt.path)
+            self.hc.base_path, smlt.path, gsimlt.path)
 
         src_inputs = []
         for src_path in source_paths:
-            full_path = os.path.join(hc.base_path, src_path)
+            full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
             inp = engine2.get_input(
-                full_path, 'source', hc.owner, hc.force_inputs)
+                full_path, 'source', self.hc.owner, self.hc.force_inputs)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
             models.Input2hcalc.objects.get_or_create(
-                input=inp, hazard_calculation=hc)
+                input=inp, hazard_calculation=self.hc)
 
             # Associate the source input to the source model logic tree input:
             models.Src2ltsrc.objects.get_or_create(
@@ -518,8 +517,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             src_content = StringIO.StringIO(src_inp.model_content.raw_content)
             sm_parser = nrml_parsers.SourceModelParser(src_content)
             src_db_writer = source.SourceDBWriter(
-                src_inp, sm_parser.parse(), hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
+                src_inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin, self.hc.area_source_discretization)
             src_db_writer.serialize()
 
     def initialize_site_model(self):
@@ -540,9 +539,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         consider all sites.)
         """
         logs.log_progress("initializing site model", 2)
-        hc_id = self.job.hazard_calculation.id
 
-        site_model_inp = get_site_model(hc_id)
+        site_model_inp = get_site_model(self.hc.id)
         if site_model_inp is not None:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
@@ -560,7 +558,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             validate_site_model(site_model_data, mesh)
 
-            store_site_data(hc_id, site_model_inp, mesh)
+            store_site_data(self.hc.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
