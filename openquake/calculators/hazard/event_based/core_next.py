@@ -454,13 +454,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             The (max) number of work items for each task. In this case,
             sources.
         """
-        hc = self.job.hazard_calculation
-
         rnd = random.Random()
-        rnd.seed(hc.random_seed)
+        rnd.seed(self.hc.random_seed)
 
         realizations = models.LtRealization.objects.filter(
-                hazard_calculation=hc, is_complete=False).order_by('id')
+                hazard_calculation=self.hc, is_complete=False).order_by('id')
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
@@ -496,8 +494,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Stochastic event set ruptures computed for this realization will be
         associated to these containers.
         """
-        hc = self.job.hazard_calculation
-
         output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
@@ -507,10 +503,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             models.SES.objects.create(
                 ses_collection=ses_coll,
-                investigation_time=hc.investigation_time,
+                investigation_time=self.hc.investigation_time,
                 ordinal=i)
 
     def initialize_complete_lt_ses_db_records(self):
@@ -523,8 +519,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         copied into this collection. See :func:`_save_ses_rupture` for more
         info.
         """
-        hc = self.job.hazard_calculation
-
         # `complete logic tree` SES
         clt_ses_output = models.Output.objects.create(
             owner=self.job.owner,
@@ -535,7 +529,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         clt_ses_coll = models.SESCollection.objects.create(
             output=clt_ses_output, complete_logic_tree_ses=True)
 
-        investigation_time = self._compute_investigation_time(hc)
+        investigation_time = self._compute_investigation_time(self.hc)
 
         models.SES.objects.create(
             ses_collection=clt_ses_coll,
@@ -551,8 +545,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Throughout the course of the calculation, computed GMFs will be copied
         into this collection. See :func:`_save_gmf_nodes` for more info.
         """
-        hc = self.job.hazard_calculation
-
         # `complete logic tree` GMF
         clt_gmf_output = models.Output.objects.create(
             owner=self.job.owner,
@@ -563,7 +555,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=clt_gmf_output, complete_logic_tree_gmf=True)
 
-        investigation_time = self._compute_investigation_time(hc)
+        investigation_time = self._compute_investigation_time(self.hc)
 
         models.GmfSet.objects.create(
             gmf_collection=gmf_coll,
@@ -609,8 +601,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         GMFs for this realization will be associated to these containers.
         """
-        hc = self.job.hazard_calculation
-
         output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
@@ -620,10 +610,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             models.GmfSet.objects.create(
                 gmf_collection=gmf_coll,
-                investigation_time=hc.investigation_time,
+                investigation_time=self.hc.investigation_time,
                 ses_ordinal=i)
 
     def pre_execute(self):
@@ -668,14 +658,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         """
         logs.LOG.debug('> starting post processing')
 
-        hc = self.job.hazard_calculation
-        if hc.hazard_curves_from_gmfs:
+        if self.hc.hazard_curves_from_gmfs:
             post_processing.do_post_process(self.job)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
             # post-processing.
-            if hc.mean_hazard_curves or hc.quantile_hazard_curves:
+            if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
                 tasks = cls_post_processing.setup_tasks(
                     self.job, self.job.hazard_calculation,
                     curve_finder=models.HazardCurveData.objects,
