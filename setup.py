@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, findall
 
 
 README = """
@@ -12,9 +12,14 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 """
 
-py_modules=[f for f in setuptools.findall('openquake/bin') if f != "openquake/bin/oqpath.py"]
+py_not_modules=["openquake/bin/__init__.py", "openquake/bin/oqpath.py"]
+py_modules=[f for f in findall('openquake/bin') if f not in py_not_modules ]
 for i, el in enumerate(py_modules):
     py_modules[i] = el.replace("/", ".")
+
+for i, el in enumerate(py_modules):
+    if el.endswith('.py'):
+       py_modules[i] = el[:-3]
 
 setup(
     entry_points={
