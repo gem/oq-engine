@@ -458,6 +458,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
     #: Generator function for creating the arguments for each task
     task_arg_gen = None
 
+    def __init__(self, *args, **kwargs):
+        super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
+
+        self.progress = dict(total=0, computed=0)
+
     def initialize_sources(self):
         """
         Parse and validation logic trees (source and gsim). Then get all
@@ -785,13 +790,13 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
-        progress = dict(total=0, computed=0)
+        self.progress = dict(total=0, computed=0)
         # The following two counters are in a dict so that we can use them in
         # the closures below.
-        # When `progress['compute']` becomes equal to `progress['total']`,
-        # `execute` can conclude.
+        # When `self.progress['compute']` becomes equal to
+        # `self.progress['total']`, # `execute` can conclude.
 
-        task_gen = self.task_arg_gen(hc, job, block_size, progress)
+        task_gen = self.task_arg_gen(hc, job, block_size, self.progress)
 
         def task_complete_callback(body, message):
             """
@@ -810,7 +815,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             num_sources = body['num_sources']
 
             assert job_id == job.id
-            progress['computed'] += num_sources
+            self.progress['computed'] += num_sources
 
             logs.log_percent_complete(job_id, "hazard")
 
@@ -847,7 +852,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         # under-utilizing worker node resources.
                         break
 
-                while (progress['computed'] < progress['total']):
+                while (self.progress['computed'] < self.progress['total']):
                     # This blocks until a message is received.
                     # Once we receive a completion signal, enqueue the next
                     # piece of work (if there's anything left to be done).
