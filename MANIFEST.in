@@ -1,5 +1,1 @@
-include lib/*.jar
-include dist/*.jar
-include celeryconfig.py
-include bin/oq_create_db
-include bin/oq_restart_workers
+exclude-recursive .
