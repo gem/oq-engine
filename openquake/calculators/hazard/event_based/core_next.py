@@ -433,7 +433,7 @@ def _create_gmf_record(gmf_set, imt):
 
 
 @staticmethod
-def event_based_task_arg_gen(hc, job, sources_per_task, progress):
+def event_based_task_arg_gen(hc, job, block_size, progress):
     """
     Loop through realizations and sources to generate a sequence of
     task arg tuples. Each tuple of args applies to a single task.
@@ -446,8 +446,8 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
         :class:`openquake.db.models.HazardCalculation` instance.
     :param job:
         :class:`openquake.db.models.OqJob` instance.
-    :param int sources_per_task:
-        The (max) number of sources to consider for each task.
+    :param int block_size:
+        The (max) number of work items for each task. In this case, sources.
     :param dict progress:
         A dict containing two integer values: 'total' and 'computed'. The task
         arg generator will update the 'total' count as the generator creates
@@ -468,11 +468,11 @@ def event_based_task_arg_gen(hc, job, sources_per_task, progress):
                                                  flat=True)
         progress['total'] += len(source_ids)
 
-        for offset in xrange(0, len(source_ids), sources_per_task):
+        for offset in xrange(0, len(source_ids), block_size):
             # Since this seed will used for numpy random seeding, it needs to
             # positive (since numpy will convert it to a unsigned long).
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (job.id, source_ids[offset:offset + sources_per_task],
+            task_args = (job.id, source_ids[offset:offset + block_size],
                          lt_rlz.id, task_seed, result_grp_ordinal)
             yield task_args
             result_grp_ordinal += 1
