@@ -782,6 +782,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def get_task_complete_callback(self, task_arg_gen):
         """
+        Create the callback which responds to a task completion signal.
+
         :param task_arg_gen:
             The task arg generator, so the callback can get the next set of
             args and enqueue the next task.
