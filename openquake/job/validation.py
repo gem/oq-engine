@@ -353,7 +353,6 @@ HAZ_VALIDATOR_MAP = {
 
 
 class ClassicalRiskCalculationForm(BaseOQModelForm):
-
     calc_mode = 'classical'
 
     class Meta:

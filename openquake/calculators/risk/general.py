@@ -231,18 +231,20 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         job = self.job
 
+        loss_map_ids = dict((poe,
+                             models.LossMap.objects.create(
+                                 output=models.Output.objects.create_output(
+                                     self.job,
+                                     "Loss Map Set with poe %s" % poe,
+                                     "loss_map"),
+                                     poe=poe).pk)
+                        for poe in job.risk_calculation.conditional_loss_poes)
+
         return dict(
             loss_curve_id=models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Loss Curve set", "loss_curve")).pk,
-            loss_map_ids=dict((poe,
-                models.LossMap.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job,
-                        "Loss Map Set with poe %s" % poe,
-                        "loss_map"),
-                        poe=poe).pk)
-                        for poe in job.risk_calculation.conditional_loss_poes))
+            loss_map_ids=loss_map_ids)
 
 
 def with_assets(fn):
@@ -261,6 +263,11 @@ def with_assets(fn):
     """
     @functools.wraps(fn)
     def wrapped_function(job_id, offset, **kwargs):
+        """
+        The wrapped celery task function that expects in input an
+        offset over the collection of all the Asset considered
+        by the risk calculation.
+        """
         exposure_model_id = kwargs['exposure_model_id']
         region_constraint = kwargs['region_constraint']
         assets_per_task = kwargs['assets_per_task']
@@ -292,8 +299,7 @@ def fetch_vulnerability_model(job_id):
     running job
     """
     job = models.OqJob.objects.get(pk=job_id)
-    return models.VulnerabilityModel.objects.get_from_job(
-        job).to_risklib()
+    return job.risk_calculation.model("vulnerability").to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):

@@ -30,6 +30,11 @@ LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
 
 
 def export(output_id, target_dir):
+    """
+    Export the given risk calculation output from the database to the
+    specified directory. See `openquake.export.hazard.export` for more
+    details.
+    """
     output = models.Output.objects.get(id=output_id)
     export_fn = _export_fn_map().get(
         output.output_type, core._export_fn_not_implemented)
@@ -38,6 +43,9 @@ def export(output_id, target_dir):
 
 
 def _export_fn_map():
+    """
+    Creates a mapping from output type to risk export function
+    """
     fn_map = {
         'loss_curve': export_loss_curve,
         'loss_map': export_loss_map,
@@ -46,6 +54,10 @@ def _export_fn_map():
 
 
 def _export_common(output):
+    """
+    Returns a dict containing the common arguments used by nrml
+    serializers to serialize the risk calculation `output`.
+    """
     risk_calculation = output.oq_job.risk_calculation
     investigation_time = risk_calculation.hazard_calculation.investigation_time
     statistics, quantile_value = risk_calculation.hazard_statistics
@@ -68,6 +80,10 @@ def _export_common(output):
 
 @core.makedirs
 def export_loss_curve(output, target_dir):
+    """
+    Export `output` to `target_dir` by using a nrml loss curves
+    serializer
+    """
     args = _export_common(output)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.losscurve.id})
@@ -78,6 +94,10 @@ def export_loss_curve(output, target_dir):
 
 @core.makedirs
 def export_loss_map(output, target_dir):
+    """
+    Export `output` to `target_dir` by using a nrml loss map
+    serializer
+    """
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output)
     args.update(

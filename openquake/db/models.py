@@ -52,8 +52,8 @@ DEFAULT_SRID = 4326
 
 
 VS30_TYPE_CHOICES = (
-   (u"measured", u"Value obtained from on-site measurements"),
-   (u"inferred", u"Estimated value"),
+    (u"measured", u"Value obtained from on-site measurements"),
+    (u"inferred", u"Estimated value"),
 )
 
 IMT_CHOICES = (
@@ -2236,21 +2236,13 @@ class ExposureData(djm.Model):
 
 
 ## Tables in the 'riski' schema.
-
-class VulnerabilityModelManager(djm.Manager):
-    def get_from_job(self, job):
-        [inp] = inputs4rcalc(job.risk_calculation,
-                             input_type="vulnerability")
-        return inp.vulnerabilitymodel_set.all()[0]
-
-
 class VulnerabilityModel(djm.Model):
     '''
     A risk vulnerability model
     '''
 
     owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
+    input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
     imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
@@ -2258,8 +2250,6 @@ class VulnerabilityModel(djm.Model):
     asset_category = djm.TextField()
     loss_category = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    objects = VulnerabilityModelManager()
 
     class Meta:
         db_table = 'riski\".\"vulnerability_model'
