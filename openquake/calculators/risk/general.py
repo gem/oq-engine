@@ -91,7 +91,17 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
-            self.assets_nr = self._filter_exposure()
+
+            self.assets_nr = models.ExposureData.objects.contained_in(
+                self.exposure_model_id,
+                self.job.risk_calculation.region_constraint).count()
+
+            if not self.assets_nr:
+                raise RuntimeError(
+                    ['Region of interest is not covered by the exposure input.'
+                     ' This configuration is invalid. '
+                     ' Change the region constraint input or use a proper '
+                     ' exposure file'])
             self.assets_per_task = int(
                 math.ceil(float(self.assets_nr) / int(
                     config.get('risk', 'task_number'))))
@@ -146,10 +156,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('exports'):
 
             if 'exports' in kwargs and 'xml' in kwargs['exports']:
-                exported_files = sum(
+                exported_files = sum([
                     risk_export.export(output.id,
                                        self.job.risk_calculation.export_dir)
-                    for output in export_core.get_outputs(self.job.id))
+                    for output in export_core.get_outputs(self.job.id)], [])
 
                 for exp_file in exported_files:
                     logs.LOG.debug('exported %s' % exp_file)
@@ -208,19 +218,6 @@ class BaseRiskCalculator(base.CalculatorNext):
                 prob_distribution=record['probabilisticDistribution'],
                 covs=record['coefficientsVariation'],
                 loss_ratios=record['lossRatio'])
-
-    def _filter_exposure(self):
-        assets_nr = models.ExposureData.objects.contained_in(
-                self.exposure_model_id,
-                self.job.risk_calculation.region_constraint).count()
-
-        if not assets_nr:
-            raise RuntimeError(
-                ['Region of interest is not covered by the exposure input.'
-                 ' This configuration is invalid. '
-                 ' Change the region constraint input or use a proper '
-                 ' exposure file'])
-        return assets_nr
 
     def create_outputs(self):
         """

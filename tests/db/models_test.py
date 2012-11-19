@@ -267,10 +267,10 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual([], list(models.inputs4rcalc(-1)))
 
     def test_a_few_inputs(self):
-        cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
-        owner = helpers.default_user()
-        rc = engine2.create_risk_calculation(owner, params, files.values())
+        job, files = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        rc = job.risk_calculation
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -281,16 +281,16 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
     def test_with_input_type(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
-        owner = helpers.default_user()
-        rc = engine2.create_hazard_calculation(owner, params, files.values())
+        job, files = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        rc = job.risk_calculation
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
                         if x.input_type == 'exposure']
 
-        inputs = models.inputsrhcalc(rc.id, input_type='exposure')
+        inputs = models.inputs4rcalc(rc.id, input_type='exposure')
 
         actual_ids = sorted([x.id for x in inputs])
 
