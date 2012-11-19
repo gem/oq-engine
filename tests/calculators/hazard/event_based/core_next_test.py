@@ -190,10 +190,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         rlz1, rlz2 = models.LtRealization.objects.filter(
             hazard_calculation=hc.id).order_by('ordinal')
 
-        progress = dict(total=0, computed=0)
-
-        task_arg_gen = self.calc.task_arg_gen(
-            hc, self.job, sources_per_task, progress)
+        task_arg_gen = self.calc.task_arg_gen(sources_per_task)
         task_arg_list = list(task_arg_gen)
 
         self.assertEqual(2, len(task_arg_list))
@@ -223,7 +220,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # Check the 'total' counter (computed by the task arg generator):
         # 2 realizations * 4 sources = 8 total
-        self.assertEqual(8, progress['total'])
+        self.assertEqual(8, self.calc.progress['total'])
 
         # Now check that we saved the right number of ruptures to the DB.
         ruptures1 = models.SESRupture.objects.filter(
