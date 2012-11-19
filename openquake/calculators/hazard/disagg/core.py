@@ -19,12 +19,84 @@ Disaggregation calculator core functionality
 """
 
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.classical import core as classical
+from openquake.utils import config
+from openquake.utils import general as general_utils
+from openquake.utils import stats
+from openquake.utils import tasks as utils_tasks
+
+
+@utils_tasks.oqtask
+@stats.count_progress('h')
+def disagg_task(job_id, calc_type, *args):
+    """
+    """
+    if calc_type == 'hazard_curve':
+        return classical.compute_hazard_curves(job_id, *args)
+    elif calc_type == 'disagg':
+        return compute_disagg(job_id, *args)
+    else:
+        msg = ('Invalid calculation type "%s";'
+               ' expected "hazard_curve" or "disagg"')
+        msg %= calc_type
+        raise RuntimeError(msg)
+
+
+def compute_disagg(job_id, points, lt_rlz_id):
+    return None
 
 
 class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
-    def execute(self):
+    def pre_execute(self):
         """
-        Fake temporary execution method.
+        Do pre-execution work. At the moment, this work entails: parsing and
+        initializing sources, parsing and initializing the site model (if there
+        is one), and generating logic tree realizations. (The latter piece
+        basically defines the work to be done in the `execute` phase.)
         """
-        print "Fake execute(). Implement me!"
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
+
+        # Deal with the site model and compute site data for the calculation
+        # (if a site model was specified, that is).
+        self.initialize_site_model()
+
+        # Now bootstrap the logic tree realizations and related data.
+        # This defines for us the "work" that needs to be done when we reach
+        # the `execute` phase.
+        # This will also stub out hazard curve result records. Workers will
+        # update these periodically with partial results (partial meaning,
+        # result curves for just a subset of the overall sources) when some
+        # work is complete.
+        self.initialize_realizations(
+            rlz_callbacks=[self.initialize_hazard_curve_progress])
+        self.initialize_pr_data()
+
+        self.record_init_stats()
+
+    def task_arg_gen(self, block_size):
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False)
+
+        # first, distribute tasks for hazard curve computation
+        for lt_rlz in realizations:
+            source_progress = models.SourceProgress.objects.filter(
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
+            source_ids = source_progress.values_list(
+                'parsed_source_id', flat=True)
+
+            self.progress['total'] += len(source_ids)
+            # keep track of hazard curves separately, so we can know when the
+            # hazard curve phase is completed
+            self.progress['hc_total'] += len(source_ids)
+            for block in general_utils.block_splitter(source_ids, block_size):
+                # job_id, calc type, source id block, lt rlz
+                yield (self.job.id, 'hazard_curve', block, lt_rlz.id)
+
+        # then distribute tasks for disaggregation histogram computation
+        all_points = list(self.hc.points_to_compute())
+        for lt_rlz in realizations:
+            for block in general_utils.block_splitter(all_points, block_size):
+                # job_id, calc type, point block, lt rlz
+                yield (self.job.id, 'disagg', block, lt_rlz.id)
