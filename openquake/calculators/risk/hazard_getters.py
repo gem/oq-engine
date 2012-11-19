@@ -15,13 +15,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Hazard getters for Risk calculators."""
+"""
+Hazard getters for Risk calculators.
+
+An HazardGetter is responsible to get hazard outputs needed by a risk
+calculation.
+"""
 
 from openquake.db import models
 from django.db import connection
 
 
 class HazardCurveGetterPerAsset(object):
+    """
+    Simple HazardCurve Getter that performs a query per asset.
+
+    It caches the computed hazard curve object on a per-location basis.
+    """
     def __init__(self, hazard_curve_id):
         self.hazard_curve_id = hazard_curve_id
         self.imls = models.HazardCurve.objects.get(pk=hazard_curve_id).imls
