@@ -36,8 +36,6 @@ setup(
         ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools", "tests", "tests.*",
-                                    "openquake.bin.oqpath",
-                                    "openquake.bin.oqpath.*",
                                     "openquake.nrml.tests",
                                     "openquake.nrml.tests.*"]),
     include_package_data=True,
@@ -49,7 +47,7 @@ setup(
             "nrml/schema/nrml_common.xsd", "nrml/schema/nrml.xsd",
             "nrml/schema/xlinks/*", "logging.cfg", "openquake.cfg",
             "README", "LICENSE"]},
-    exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors", "bin/oq_log_sink"]},
+    exclude_package_data={"": ["bin/oq_check_monitors", "bin/oq_log_sink"]},
     scripts=[
         "openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers" ]
     )
