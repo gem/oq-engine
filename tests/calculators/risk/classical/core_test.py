@@ -79,3 +79,23 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1,
                          models.HazardCurve.objects.filter(
                              pk=self.calculator.hazard_id).count())
+
+    def test_create_outputs(self):
+        """
+        Test that the proper output containers are created
+        """
+
+        outputs = self.calculator.create_outputs()
+
+        self.assertTrue('loss_curve_id' in outputs)
+
+        self.assertTrue(models.LossCurve.objects.filter(
+            pk=outputs['loss_curve_id']).exists())
+
+        self.assertEqual(
+            sorted(self.job.risk_calculation.conditional_loss_poes),
+            sorted(outputs['loss_map_ids'].keys()))
+
+        for _, map_id in outputs['loss_map_ids'].items():
+            self.assertTrue(models.LossMap.objects.filter(
+                pk=map_id).exists())
