@@ -1786,6 +1786,32 @@ class Gmf(djm.Model):
 
 
 class DisaggResult(djm.Model):
+    """
+    Storage for disaggregation historgrams. Each histogram is stored in
+    `matrix` as a 6-dimensional numpy array (pickled). The dimensions of the
+    matrix are as follows, in order:
+
+    * magnitude
+    * distance
+    * longitude
+    * latitude
+    * epsilon
+    * tectonic region type
+
+    Bin edges are defined for all of these dimensions (except tectonic region
+    type) as:
+
+    * `mag_bin_edges`
+    * `dist_bin_edges`
+    * `lat_bin_edges`
+    * `lon_bin_edges`
+    * `eps_bin_edges`
+
+    Additional metadata for the disaggregation histogram is stored, including
+    location (POINT geometry), disaggregation PoE (Probability of Exceedance)
+    and the corresponding IML (Intensity Measure Level) extracted from the
+    hazard curve, logic tree path information, and investigation time.
+    """
 
     output = djm.ForeignKey('Output')
     lt_realization = djm.ForeignKey('LtRealization')
