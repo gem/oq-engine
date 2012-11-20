@@ -26,6 +26,7 @@ from openquake.utils import stats
 from openquake.utils import tasks
 from openquake import logs
 from openquake.db import models
+from django.db import transaction
 
 
 @tasks.oqtask
@@ -61,7 +62,23 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     :param float asset_life_expectancy
       The life expectancy used for every asset
     """
-    logs.LOG.debug('Implement me')
+    model = general.fetch_vulnerability_model(job_id)
+    model_retrofitted = general.fetch_vulnerability_model_retrofitted(job_id)
+    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+
+    calculator = api.bcr(
+        api.classical(model, lrem_steps_per_interval),
+        api.classical(model_retrofitted, lrem_steps_per_interval),
+        interest_rate,
+        asset_life_expectancy)
+
+    with transaction.commit_on_success(using='reslt_writer'):
+        logs.LOG.debug(
+            'launching compute_on_assets over %d assets' % len(assets))
+        for asset_output in api.compute_on_assets(
+            assets, hazard_getter, calculator):
+            general.write_bcr_distribution(bcr_distribution_id, asset_output)
+classical_bcr.ignore_result = False
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
