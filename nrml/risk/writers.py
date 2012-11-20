@@ -297,12 +297,12 @@ class BCRMapXMLWriter(object):
         Attribute describing how the value of the assets has been measured.
     :param str loss_category:
         Attribute describing the category (economic, population, buildings,
-        etc..) of the losses producing this loss map.
+        etc..) of the losses producing this bcr map.
     :param str statistics:
-        `mean` or `quantile`. When serializing loss curves produced from
+        `mean` or `quantile`. When serializing bcr values produced from
         statistical hazard inputs, it describes the type of statistic used.
     :param float quantile_value:
-        When serializing loss curves produced from quantile hazard inputs,
+        When serializing bcr values produced from quantile hazard inputs,
         it describes the quantile value.
     """
 
