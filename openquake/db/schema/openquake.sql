@@ -310,7 +310,11 @@ CREATE TABLE uiapi.hazard_calculation (
     -- The timeout is stored in seconds and is 1 hour by default.
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
-        CHECK(calculation_mode IN ('classical', 'event_based')),
+        CHECK(calculation_mode IN (
+            'classical',
+            'event_based',
+            'disaggregation'
+        )),
     region_grid_spacing float,
     -- logic tree parameters:
     random_seed INTEGER,
@@ -337,6 +341,11 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- disaggregation calculator parameters:
+    mag_bin_width float,
+    distance_bin_width float,
+    coordinate_bin_width float,
+    num_epsilon_bins INTEGER,
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
@@ -964,11 +973,25 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_per_taxonomy
     --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
-        CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'complete_lt_gmf', 'ses', 'complete_lt_ses', 'loss_curve',
-            'loss_map', 'collapse_map', 'bcr_distribution', 'uh_spectra',
-            'agg_loss_curve', 'dmg_dist_per_asset', 'dmg_dist_per_taxonomy',
-            'dmg_dist_total')),
+        CHECK(output_type IN (
+            'agg_loss_curve',
+            'bcr_distribution',
+            'collapse_map',
+            'complete_lt_gmf',
+            'complete_lt_ses',
+            'disagg_matrix',
+            'dmg_dist_per_asset',
+            'dmg_dist_per_taxonomy',
+            'dmg_dist_total',
+            'gmf',
+            'hazard_curve',
+            'hazard_map',
+            'loss_curve',
+            'loss_map',
+            'ses',
+            'uh_spectra',
+            'unknown'
+        )),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -1213,6 +1236,33 @@ CREATE TABLE hzrdr.gmf (
     result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+
+
+CREATE TABLE hzrdr.disagg_result (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output
+    lt_realization_id INTEGER NOT NULL,  -- FK to hzrdr.lt_realization
+    investigation_time float NOT NULL,
+    imt VARCHAR NOT NULL CONSTRAINT disagg_result_imt
+        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    iml float NOT NULL,
+    poe float NOT NULL,
+    sa_period float CONSTRAINT disagg_result_sa_period
+        CHECK(
+            ((imt = 'SA') AND (sa_period IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float CONSTRAINT disagg_result_sa_damping
+        CHECK(
+            ((imt = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    mag_bin_edges float[],
+    dist_bin_edges float[],
+    lon_bin_edges float[],
+    lat_bin_edges float[],
+    eps_bin_edges float[],
+    matrix bytea NOT NULL
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
 
 
 -- GMF data.
@@ -1869,6 +1919,19 @@ ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
 ON DELETE CASCADE;
+
+
+-- disagg_result -> output FK
+ALTER TABLE hzrdr.disagg_result
+ADD CONSTRAINT hzrdr_disagg_result_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
+ON DELETE CASCADE;
+
+-- disagg_result -> lt_realization FK
+ALTER TABLE hzrdr.disagg_result
+ADD CONSTRAINT hzrdr_disagg_result_lt_realization_fk
+FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
+ON DELETE RESTRICT;
 
 
 -- UHS:
