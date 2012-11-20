@@ -36,12 +36,29 @@ from openquake.db.aggregate_result_writer import (MeanCurveWriter,
                                                   QuantileCurveWriter)
 from openquake.calculators.hazard.classical import post_processing
 
-
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.count_progress('h')
 def hazard_curves(job_id, src_ids, lt_rlz_id):
+    """
+    A celery task wrapper function around :func:`compute_hazard_curves`.
+    See :func:`compute_hazard_curves` for parameter definitions.
+    """
+    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
+                   % (job_id, lt_rlz_id))
+
+    result = compute_hazard_curves(job_id, src_ids, lt_rlz_id)
+    # Last thing, signal back the control node to indicate the completion of
+    # task. The control node needs this to manage the task distribution and
+    # keep track of progress.
+    logs.LOG.debug('< task complete, signalling completion')
+    haz_general.signal_task_complete(job_id, len(src_ids))
+
+    return result
+
+
+# Silencing 'Too many local variables'
+# pylint: disable=R0914
+def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     """
     Celery task for hazard curve calculator.
 
@@ -64,9 +81,6 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
     :param lt_rlz_id:
         Id of logic tree realization model to calculate for.
     """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
@@ -176,12 +190,6 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
         lt_rlz.save()
 
     logs.LOG.debug('< transaction complete')
-
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id, len(src_ids))
 
 
 @staticmethod
