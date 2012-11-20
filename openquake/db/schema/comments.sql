@@ -261,7 +261,6 @@ COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of 
 
 COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
 COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
-COMMENT ON COLUMN riskr.bcr_distribution.exposure_model_id IS 'The foreign key to the exposure model for this BCR distribution.';
 
 COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
