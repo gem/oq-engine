@@ -105,25 +105,15 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
     def test_create_outputs(self):
         """
-        Test that exposure data and models are properly stored and
-        associated with the calculator
+        Test that the proper output containers are created
         """
 
         outputs = self.calculator.create_outputs()
 
         self.assertTrue('loss_curve_id' in outputs)
-        self.assertTrue('loss_map_ids' in outputs)
 
         self.assertTrue(models.LossCurve.objects.filter(
             pk=outputs['loss_curve_id']).exists())
-
-        self.assertEqual(
-            sorted(self.job.risk_calculation.conditional_loss_poes),
-            sorted(outputs['loss_map_ids'].keys()))
-
-        for _, map_id in outputs['loss_map_ids'].items():
-            self.assertTrue(models.LossMap.objects.filter(
-                pk=map_id).exists())
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
