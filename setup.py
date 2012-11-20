@@ -12,8 +12,7 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 """
 
-PY_MODULES = ['openquake.bin.oq_create_db', 'openquake.bin.cache_gc',
-              'openquake.bin.oq_restart_workers', 'openquake.bin.oqscript']
+PY_MODULES = ['openquake.bin.cache_gc', 'openquake.bin.oqscript']
 
 setup(
     entry_points={
