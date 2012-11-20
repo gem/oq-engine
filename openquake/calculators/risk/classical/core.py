@@ -20,6 +20,7 @@ Core functionality for the classical PSHA risk calculator.
 from openquake.calculators.risk import general
 from openquake.utils import tasks
 from openquake.utils import stats
+from openquake.db import models
 from openquake import logs
 from risklib import api
 from django.db import transaction
@@ -60,18 +61,21 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     vulnerability_model = general.fetch_vulnerability_model(job_id)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.conditional_losses(
-        conditional_loss_poes,
-        api.classical(vulnerability_model, lrem_steps_per_interval))
+    promises = api.classical(vulnerability_model, lrem_steps_per_interval)
+
+    # if we need to compute the loss maps, we add the proper risk
+    # aggregator and get the conditional loss poes from the keys of
+    # loss_map_ids
+    if loss_map_ids:
+        promises = api.conditional_losses(loss_map_ids.keys(), promises)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, calculator):
+            assets, hazard_getter, promises):
             general.write_loss_curve(loss_curve_id, asset_output)
-            if loss_map_ids:
-                general.write_loss_map(loss_map_ids, asset_output)
+            general.write_loss_map(loss_map_ids, asset_output)
 classical.ignore_result = False
 
 
@@ -104,3 +108,21 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         stores the hazard curves used by the risk calculation
         """
         return self.job.risk_calculation.hazard_output.hazardcurve.id
+
+    def create_outputs(self):
+        """
+        Add loss map ids when conditional loss poes are specified
+        """
+        outputs = super(ClassicalRiskCalculator, self).create_outputs()
+        poes = self.job.risk_calculation.conditional_loss_poes or []
+
+        def create_loss_map(poe):
+            return models.LossMap.objects.create(
+                 output=models.Output.objects.create_output(
+                     self.job,
+                     "Loss Map Set with poe %s" % poe,
+                     "loss_map"),
+                     poe=poe).pk
+
+        outputs.update(dict((poe, create_loss_map(poe)) for poe in poes))
+        return outputs
