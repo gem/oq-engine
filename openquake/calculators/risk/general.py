@@ -196,28 +196,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """Load and store vulnerability model. It could be overriden
         to load fragility models or multiple vulnerability models"""
 
-        rc = self.job.risk_calculation
-
-        [vulnerability_input] = models.inputs4rcalc(rc.id,
-                                                    input_type='vulnerability')
-
-        for record in risk.VulnerabilityModelFile(
-                vulnerability_input.path):
-            vulnerability_model, _ = (
-                models.VulnerabilityModel.objects.get_or_create(
-                    owner=vulnerability_input.owner,
-                    input=vulnerability_input,
-                    imt=record['IMT'].lower(), imls=record['IML'],
-                    name=record['vulnerabilitySetID'],
-                    asset_category=record['assetCategory'],
-                    loss_category=record['lossCategory']))
-
-            models.VulnerabilityFunction.objects.create(
-                vulnerability_model=vulnerability_model,
-                taxonomy=record['ID'],
-                prob_distribution=record['probabilisticDistribution'],
-                covs=record['coefficientsVariation'],
-                loss_ratios=record['lossRatio'])
+        store_risk_model(self.job.risk_calculation, "vulnerability")
 
     def create_outputs(self):
         """
@@ -342,3 +321,26 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
         expected_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
         location=asset_output.asset.site)
+
+
+def store_risk_model(rc, input_type):
+    [vulnerability_input] = models.inputs4rcalc(
+        rc.id, input_type=input_type)
+
+    for record in risk.VulnerabilityModelFile(
+            vulnerability_input.path):
+        vulnerability_model, _ = (
+            models.VulnerabilityModel.objects.get_or_create(
+                owner=vulnerability_input.owner,
+                input=vulnerability_input,
+                imt=record['IMT'].lower(), imls=record['IML'],
+                name=record['vulnerabilitySetID'],
+                asset_category=record['assetCategory'],
+                loss_category=record['lossCategory']))
+
+        models.VulnerabilityFunction.objects.create(
+            vulnerability_model=vulnerability_model,
+            taxonomy=record['ID'],
+            prob_distribution=record['probabilisticDistribution'],
+            covs=record['coefficientsVariation'],
+            loss_ratios=record['lossRatio'])

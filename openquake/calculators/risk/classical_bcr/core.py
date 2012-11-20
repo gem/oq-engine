@@ -86,6 +86,10 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     @property
     def calculation_parameters(self):
+        """
+        Calculation specific parameters
+        """
+
         rc = self.job.risk_calculation
 
         return {
@@ -94,9 +98,17 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
             'asset_life_expectancy': rc.asset_life_expectancy
             }
 
-    @property
     def create_outputs(self):
+        """
+        Create BCR Distribution output container
+        """
         return dict(
             bcr_distribution_id=models.BCRDistribution.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "BCR Distribution", "bcr_distribution")).pk)
+
+    def store_risk_model(self):
+        super(ClassicalBCRRiskCalculator, self).store_risk_model()
+
+        general.store_risk_model(self.job.risk_calculation,
+                                 "vulnerability_retrofitted")

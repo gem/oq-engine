@@ -1022,7 +1022,7 @@ class RiskCalculation(djm.Model):
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
-        elif input_type == "vulnerability":
+        elif input_type in ["vulnerability", "vulnerability_retrofitted"]:
             return exposure_input.vulnerabilitymodel
         else:
             raise RuntimeError("Unknown model")
