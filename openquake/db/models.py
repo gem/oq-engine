@@ -651,6 +651,7 @@ class HazardCalculation(djm.Model):
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
+        (u'disaggregation', u'Disaggregation'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -764,6 +765,35 @@ class HazardCalculation(djm.Model):
     ground_motion_correlation_params = fields.DictField(
         help_text=('Parameters specific to the chosen ground motion'
                    ' correlation model'),
+        null=True,
+        blank=True,
+    )
+
+    ###################################
+    # Disaggregation Calculator params:
+    ###################################
+    mag_bin_width = djm.FloatField(
+        help_text=('Width of magnitude bins, which ultimately defines the size'
+                   ' of the magnitude dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    distance_bin_width = djm.FloatField(
+        help_text=('Width of distance bins, which ultimately defines the size'
+                   ' of the distance dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    coordinate_bin_width = djm.FloatField(
+        help_text=('Width of coordinate bins, which ultimately defines the'
+                   ' size of the longitude and latitude dimensions of a'
+                   ' disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    num_epsilon_bins = djm.IntegerField(
+        help_text=('Number of epsilon bins, which defines the size of the'
+                   ' epsilon dimension of a disaggregation matrix'),
         null=True,
         blank=True,
     )
@@ -1278,22 +1308,23 @@ class Output(djm.Model):
     oq_job = djm.ForeignKey('OqJob')
     display_name = djm.TextField()
     OUTPUT_TYPE_CHOICES = (
-        (u'unknown', u'Unknown'),
-        (u'hazard_curve', u'Hazard Curve'),
-        (u'hazard_map', u'Hazard Map'),
-        (u'gmf', u'Ground Motion Field'),
-        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
-        (u'ses', u'Stochastic Event Set'),
-        (u'complete_lt_ses', u'Complete Logic Tree SES'),
-        (u'loss_curve', u'Loss Curve'),
-        (u'loss_map', u'Loss Map'),
-        (u'collapse_map', u'Collapse map'),
-        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'collapse_map', u'Collapse map'),
+        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
+        (u'complete_lt_ses', u'Complete Logic Tree SES'),
+        (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
+        (u'gmf', u'Ground Motion Field'),
+        (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_map', u'Hazard Map'),
+        (u'loss_curve', u'Loss Curve'),
+        (u'loss_map', u'Loss Map'),
+        (u'ses', u'Stochastic Event Set'),
+        (u'uh_spectra', u'Uniform Hazard Spectra'),
+        (u'unknown', u'Unknown'),
     )
     output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -1821,6 +1852,54 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+
+class DisaggResult(djm.Model):
+    """
+    Storage for disaggregation historgrams. Each histogram is stored in
+    `matrix` as a 6-dimensional numpy array (pickled). The dimensions of the
+    matrix are as follows, in order:
+
+    * magnitude
+    * distance
+    * longitude
+    * latitude
+    * epsilon
+    * tectonic region type
+
+    Bin edges are defined for all of these dimensions (except tectonic region
+    type) as:
+
+    * `mag_bin_edges`
+    * `dist_bin_edges`
+    * `lat_bin_edges`
+    * `lon_bin_edges`
+    * `eps_bin_edges`
+
+    Additional metadata for the disaggregation histogram is stored, including
+    location (POINT geometry), disaggregation PoE (Probability of Exceedance)
+    and the corresponding IML (Intensity Measure Level) extracted from the
+    hazard curve, logic tree path information, and investigation time.
+    """
+
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+    investigation_time = djm.FloatField()
+    imt = djm.TextField(choices=IMT_CHOICES)
+    iml = djm.FloatField()
+    poe = djm.FloatField()
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    mag_bin_edges = fields.FloatArrayField(null=True)
+    dist_bin_edges = fields.FloatArrayField(null=True)
+    lon_bin_edges = fields.FloatArrayField(null=True)
+    lat_bin_edges = fields.FloatArrayField(null=True)
+    eps_bin_edges = fields.FloatArrayField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    matrix = fields.PickleField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"disagg_result'
 
 
 class GmfData(djm.Model):
