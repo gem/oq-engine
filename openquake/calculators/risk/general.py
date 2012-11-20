@@ -226,25 +226,17 @@ class BaseRiskCalculator(base.CalculatorNext):
         Derived classes should override this to create containers for
         storing objects other than LossCurves.
 
+        The default behavior is to create a loss curve output.
+
         :return a dictionary string -> ContainerObject ids
         """
 
         job = self.job
 
-        loss_map_ids = dict((poe,
-                             models.LossMap.objects.create(
-                                 output=models.Output.objects.create_output(
-                                     self.job,
-                                     "Loss Map Set with poe %s" % poe,
-                                     "loss_map"),
-                                     poe=poe).pk)
-                        for poe in job.risk_calculation.conditional_loss_poes)
-
         return dict(
             loss_curve_id=models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
-                    job, "Loss Curve set", "loss_curve")).pk,
-            loss_map_ids=loss_map_ids)
+                    job, "Loss Curve set", "loss_curve")).pk)
 
 
 def with_assets(fn):
