@@ -64,10 +64,9 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     promises = api.classical(vulnerability_model, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
-    # aggregator and get the conditional loss poes from the keys of
-    # loss_map_ids
-    if loss_map_ids:
-        promises = api.conditional_losses(loss_map_ids.keys(), promises)
+    # aggregator
+    if conditional_loss_poes:
+        promises = api.conditional_losses(conditional_loss_poes, promises)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
