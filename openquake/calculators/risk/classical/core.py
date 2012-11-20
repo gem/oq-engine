@@ -75,7 +75,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, promises):
             general.write_loss_curve(loss_curve_id, asset_output)
-            general.write_loss_map(loss_map_ids, asset_output)
+            if asset_output.conditional_losses:
+                general.write_loss_map(loss_map_ids, asset_output)
 classical.ignore_result = False
 
 
@@ -123,6 +124,6 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                      "Loss Map Set with poe %s" % poe,
                      "loss_map"),
                      poe=poe).pk
-
-        outputs.update(dict((poe, create_loss_map(poe)) for poe in poes))
+        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
+                                       for poe in poes)
         return outputs
