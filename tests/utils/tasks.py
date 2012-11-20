@@ -24,9 +24,7 @@ Task functions for our unit tests.
 
 from celery.task import task
 
-from openquake import java
 from openquake.utils import config
-from openquake.utils import stats
 
 from tests.utils import helpers
 
@@ -67,24 +65,6 @@ def failing_task(data):
     exception throwing it back.
     """
     raise NotImplementedError(data)
-
-
-@test_task
-@java.unpack_exception
-def jtask_task(data):
-    """
-    Takes a single argument called `data` and might raise a Java exception.
-    """
-    return str(java.jvm().java.lang.Integer(data))
-
-
-@test_task
-@java.unpack_exception
-def failing_jtask_task(data):
-    """
-    Takes a single argument called `data` and raises a Python exception.
-    """
-    raise Exception('test exception')
 
 
 @test_task

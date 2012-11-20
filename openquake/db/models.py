@@ -1209,22 +1209,23 @@ class Output(djm.Model):
     oq_job = djm.ForeignKey('OqJob')
     display_name = djm.TextField()
     OUTPUT_TYPE_CHOICES = (
-        (u'unknown', u'Unknown'),
-        (u'hazard_curve', u'Hazard Curve'),
-        (u'hazard_map', u'Hazard Map'),
-        (u'gmf', u'Ground Motion Field'),
-        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
-        (u'ses', u'Stochastic Event Set'),
-        (u'complete_lt_ses', u'Complete Logic Tree SES'),
-        (u'loss_curve', u'Loss Curve'),
-        (u'loss_map', u'Loss Map'),
-        (u'collapse_map', u'Collapse map'),
-        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'collapse_map', u'Collapse map'),
+        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
+        (u'complete_lt_ses', u'Complete Logic Tree SES'),
+        (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
+        (u'gmf', u'Ground Motion Field'),
+        (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_map', u'Hazard Map'),
+        (u'loss_curve', u'Loss Curve'),
+        (u'loss_map', u'Loss Map'),
+        (u'ses', u'Stochastic Event Set'),
+        (u'uh_spectra', u'Uniform Hazard Spectra'),
+        (u'unknown', u'Unknown'),
     )
     output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -1752,6 +1753,28 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+
+class DisaggResult(djm.Model):
+
+    output = djm.ForeignKey('Output')
+    lt_realization = djm.ForeignKey('LtRealization')
+    investigation_time = djm.FloatField()
+    imt = djm.TextField(choices=IMT_CHOICES)
+    iml = djm.FloatField()
+    poe = djm.FloatField()
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    mag_bin_edges = fields.FloatArrayField(null=True)
+    dist_bin_edges = fields.FloatArrayField(null=True)
+    lon_bin_edges = fields.FloatArrayField(null=True)
+    lat_bin_edges = fields.FloatArrayField(null=True)
+    eps_bin_edges = fields.FloatArrayField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    matrix = fields.PickleField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"disagg_result'
 
 
 class GmfData(djm.Model):
