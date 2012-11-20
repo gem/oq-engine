@@ -58,7 +58,7 @@ if [ `cat /etc/group | grep ^openquake: | wc -l` -eq 0 ]; then
 fi
 
 SDIR=/etc/openquake
-for cfg in openquake.cfg logging.cfg
+for cfg in openquake.cfg
 do
     rm -f $SDIR/$cfg.new_in_this_release
     if [ -f $SDIR/$cfg ]; then
