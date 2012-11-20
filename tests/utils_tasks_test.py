@@ -146,62 +146,6 @@ class DistributeTestCase(unittest.TestCase):
         self.assertEqual(expected, result)
 
 
-@unittest.skip
-class GetRunningCalculationTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.utils.tasks.get_running_job`."""
-
-    def setUp(self):
-        self.job = engine.prepare_job()
-        self.job_profile, self.params, _sections = (
-            engine.import_job_profile(demo_file(
-                'simple_fault_demo_hazard/config.gem'), self.job))
-
-        self.params['debug'] = 'warn'
-
-        # Cache the calc proxy data into the kvs:
-        job_ctxt = engine.JobContext(
-            self.params, self.job.id, oq_job_profile=self.job_profile,
-            oq_job=self.job)
-        job_ctxt.to_kvs()
-
-    def test_get_running_job(self):
-        self.job.status = 'pending'
-        self.job.save()
-
-        # No 'JobCompletedError' should be raised.
-        job_ctxt = tasks.get_running_job(self.job.id)
-
-        self.assertEqual(self.params, job_ctxt.params)
-        self.assertTrue(model_equals(
-            self.job_profile, job_ctxt.oq_job_profile,
-            ignore=('_owner_cache',)))
-        self.assertTrue(model_equals(
-            self.job, job_ctxt.oq_job,
-            ignore=('_owner_cache',)))
-
-    def test_get_completed_calculation(self):
-        self.job.status = 'succeeded'
-        self.job.save()
-
-        try:
-            tasks.get_running_job(self.job.id)
-        except tasks.JobCompletedError as exc:
-            self.assertEqual(exc.message, self.job.id)
-        else:
-            self.fail("JobCompletedError wasn't raised")
-
-    def test_completed_failure(self):
-        self.job.status = 'failed'
-        self.job.save()
-
-        try:
-            tasks.get_running_job(self.job.id)
-        except tasks.JobCompletedError as exc:
-            self.assertEqual(exc.message, self.job.id)
-        else:
-            self.fail("JobCompletedError wasn't raised")
-
-
 class IgnoreResultsTestCase(unittest.TestCase):
     """
     Tests the behaviour of utils.tasks.distribute() with tasks whose results
