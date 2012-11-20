@@ -1,3 +1,0 @@
-[submodule "openquake/nrml"]
-	path = openquake/nrml
-	url = git://github.com/gem/nrml.git

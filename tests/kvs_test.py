@@ -17,16 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import json
 import numpy
-import os
 
 import unittest
 
-from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake.utils import config
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
@@ -61,59 +57,6 @@ class JSONEncoderTestCase(unittest.TestCase):
 
         self.assertEqual('[1.0, 2.0, 3.0]',
                          encoder.encode(numpy.array([1.0, 2.0, 3.0])))
-
-
-class KVSTestCase(unittest.TestCase):
-    """
-    Tests for various KVS storage operations.
-    """
-
-    def setUp(self):
-        # starting the jvm...
-        print "About to start the jvm..."
-        jpype = java.jvm()
-        java_class = jpype.JClass("org.gem.engine.hazard.redis.Cache")
-        print "Not dead yet, and found the class..."
-        self.java_client = java_class(
-            config.get("kvs", "host"),
-            int(config.get("kvs", "port")),
-            int(config.get("kvs", "redis_db")))
-
-        self.python_client = kvs.get_client()
-        self.python_client.flushdb()
-
-        self._delete_test_file()
-
-    def tearDown(self):
-        self._delete_test_file()
-        self.python_client.flushdb()
-
-    @staticmethod
-    def _delete_test_file():
-        try:
-            os.remove(os.path.join(helpers.DATA_DIR, TEST_FILE))
-        except OSError:
-            pass
-
-    def test_can_wrap_the_java_client(self):
-        self.java_client.set("KEY", "VALUE")
-        self.assertEqual("VALUE", self.java_client.get("KEY"))
-
-    def test_can_write_in_java_and_read_in_python(self):
-        self.java_client.set("KEY", "VALUE")
-        self.assertEqual("VALUE", self.python_client.get("KEY"))
-
-    def test_can_write_in_python_and_read_in_java(self):
-        self.python_client.set("KEY", "VALUE")
-        self.assertEqual("VALUE", self.java_client.get("KEY"))
-
-    def test_get_list_json_decoded(self):
-        data = [{u'1': u'one'}, {u'2': u'two'}, {u'3': u'three'}]
-
-        for item in data:
-            kvs.get_client().rpush(TEST_KEY, json.dumps(item))
-
-        self.assertEqual(data, kvs.get_list_json_decoded(TEST_KEY))
 
 
 class TokensTestCase(unittest.TestCase):

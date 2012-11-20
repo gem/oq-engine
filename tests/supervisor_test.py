@@ -20,12 +20,13 @@ import logging
 from datetime import datetime
 
 from openquake import engine
-from openquake.db.models import OqJob, ErrorMsg, JobStats
+from openquake import engine2
+from openquake.db.models import ErrorMsg
+from openquake.db.models import JobStats
 from openquake.supervising import supervisor
-from openquake.supervising import supersupervisor
 from openquake.utils import stats
 
-from tests.utils.helpers import patch, job_from_file, get_data_path
+from tests.utils.helpers import patch
 from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 
@@ -59,10 +60,10 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
 
     def test_cleanup_after_job(self):
         with patch('openquake.kvs.cache_gc') as cache_gc:
-            supervisor.cleanup_after_job(123)
+            supervisor.cleanup_after_job(self.job.id)
 
             self.assertEqual(1, cache_gc.call_count)
-            self.assertEqual(((123, ), {}), cache_gc.call_args)
+            self.assertEqual(((self.job.id, ), {}), cache_gc.call_args)
 
     def test_update_job_status_and_error_msg(self):
         error_msg = 'a test message'
@@ -98,6 +99,8 @@ class SupervisorTestCase(unittest.TestCase):
 
         logging.root.setLevel(logging.CRITICAL)
 
+        self.job = engine2.prepare_job()
+
     def tearDown(self):
         # Stop all the started patches
         for patcher in self.patchers:
@@ -112,15 +115,21 @@ class SupervisorTestCase(unittest.TestCase):
                    'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):
-                record = logging.LogRecord('oq.job.123', logging.CRITICAL,
-                                           'path', 42, 'a msg', (), None)
+                record = logging.LogRecord(
+                    'oq.job.%s' % self.job.id,
+                    logging.CRITICAL,
+                    'path',
+                    42,
+                    'a msg',
+                    (),
+                    None)
                 mc.log_callback(record)
                 assert mc._stopped
 
             # the supervisor will receive a msg
             run.side_effect = run_
 
-            supervisor.supervise(1, 123, timeout=0.1)
+            supervisor.supervise(1, self.job.id, timeout=0.1)
 
             # the job process is terminated
             self.assertEqual(1, self.terminate_job.call_count)
@@ -128,32 +137,42 @@ class SupervisorTestCase(unittest.TestCase):
 
             # stop time is recorded
             self.assertEqual(1, self.record_job_stop_time.call_count)
-            self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+            self.assertEqual(
+                ((self.job.id,), {}),
+                self.record_job_stop_time.call_args)
 
             # the cleanup is triggered
             self.assertEqual(1, self.cleanup_after_job.call_count)
-            self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+            self.assertEqual(
+                ((self.job.id,), {}),
+                self.cleanup_after_job.call_args)
 
             # the status in the job record is updated
-            self.assertEqual(1,
-                             self.update_job_status_and_error_msg.call_count)
-            self.assertEqual(((123, 'a msg'), {}),
-                             self.update_job_status_and_error_msg.call_args)
+            self.assertEqual(
+                1,
+                self.update_job_status_and_error_msg.call_count)
+            self.assertEqual(
+                ((self.job.id, 'a msg'), {}),
+                self.update_job_status_and_error_msg.call_args)
 
     def test_actions_after_job_process_termination(self):
         # the job process is *not* running
         self.is_pid_running.return_value = False
         self.get_job_status.return_value = 'succeeded'
 
-        supervisor.supervise(1, 123, timeout=0.1)
+        supervisor.supervise(1, self.job.id, timeout=0.1)
 
         # stop time is recorded
         self.assertEqual(1, self.record_job_stop_time.call_count)
-        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.record_job_stop_time.call_args)
 
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
-        self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_failures(self):
         # the job process is running but has some failure counters above zero
@@ -162,11 +181,11 @@ class SupervisorTestCase(unittest.TestCase):
         self.is_pid_running.return_value = True
         self.get_job_status.return_value = 'running'
 
-        stats.delete_job_counters(123)
-        stats.incr_counter(123, "h", "a-failures")
-        stats.incr_counter(123, "r", "b-failures")
-        stats.incr_counter(123, "r", "b-failures")
-        supervisor.supervise(1, 123, timeout=0.1)
+        stats.delete_job_counters(self.job.id)
+        stats.incr_counter(self.job.id, "h", "a-failures")
+        stats.incr_counter(self.job.id, "r", "b-failures")
+        stats.incr_counter(self.job.id, "r", "b-failures")
+        supervisor.supervise(1, self.job.id, timeout=0.1)
 
         # the job process is terminated
         self.assertEqual(1, self.terminate_job.call_count)
@@ -174,11 +193,15 @@ class SupervisorTestCase(unittest.TestCase):
 
         # stop time is recorded
         self.assertEqual(1, self.record_job_stop_time.call_count)
-        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.record_job_stop_time.call_args)
 
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
-        self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_crash(self):
         # the job process is *not* running
@@ -186,68 +209,26 @@ class SupervisorTestCase(unittest.TestCase):
         # but the database record says it is
         self.get_job_status.return_value = 'running'
 
-        supervisor.supervise(1, 123, timeout=0.1)
+        supervisor.supervise(1, self.job.id, timeout=0.1)
 
         # stop time is recorded
         self.assertEqual(1, self.record_job_stop_time.call_count)
-        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.record_job_stop_time.call_args)
 
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
-        self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+        self.assertEqual(
+            ((self.job.id,), {}),
+            self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
         self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
         self.assertEqual(
-            ((123,), {'error_msg': 'job process 1 crashed or terminated'}),
+            ((self.job.id,),
+             {'error_msg': 'job process 1 crashed or terminated'}),
             self.update_job_status_and_error_msg.call_args)
-
-
-@unittest.skip
-class SupersupervisorTestCase(unittest.TestCase):
-    def setUp(self):
-        self.running_pid = 1324
-        self.stopped_pid = 4312
-        OqJob.objects.all().update(status='succeeded')
-        job_pid = 1
-        for status in ('pending', 'running', 'failed', 'succeeded'):
-            for supervisor_pid in (self.running_pid, self.stopped_pid):
-                job = job_from_file(get_data_path(CONFIG_FILE))
-                job = OqJob.objects.get(id=job.job_id)
-                job.status = status
-                job.supervisor_pid = supervisor_pid
-                job.job_pid = job_pid
-                job_pid += 1
-                job.save()
-                if status == 'running' and supervisor_pid == self.stopped_pid:
-                    self.dead_supervisor_job_id = job.id
-                    self.dead_supervisor_job_pid = job.job_pid
-        self.is_pid_running = patch('openquake.supervising.is_pid_running')
-        self.is_pid_running = self.is_pid_running.start()
-        self.is_pid_running.side_effect = lambda pid: pid != self.stopped_pid
-
-    def tearDown(self):
-        self.is_pid_running.stop()
-
-    def test_main(self):
-        with patch('multiprocessing.Process') as process:
-            expected_args = (self.dead_supervisor_job_id,
-                             self.dead_supervisor_job_pid)
-
-            class FakeProcess(object):
-                started = False
-
-                def __init__(fp, target, args):
-                    assert target is supervisor.supervise
-                    assert args == expected_args
-
-                def start(self):
-                    FakeProcess.started = True
-
-            process.side_effect = FakeProcess
-            supersupervisor.main()
-            self.assertEqual(process.call_count, 1)
-            self.assertEqual(FakeProcess.started, True)
 
 
 class AbortDueToFailedNodesTestCase(unittest.TestCase):
