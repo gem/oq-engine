@@ -1428,8 +1428,7 @@ ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
 -- Benefit-cost ratio distribution
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL, -- FK to output.id
-    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+    output_id INTEGER NOT NULL -- FK to output.id
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.bcr_distribution_data (
@@ -2005,10 +2004,6 @@ FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RE
 ALTER TABLE riskr.bcr_distribution
 ADD CONSTRAINT riskr_bcr_distribution_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.bcr_distribution
-ADD CONSTRAINT riskr_bcr_distribution_exposure_model_fk
-FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
 
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
