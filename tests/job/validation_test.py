@@ -16,6 +16,7 @@
 
 import json
 import unittest
+import random
 
 from openquake.db import models
 from openquake.job import validation
@@ -820,5 +821,44 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+
+class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
+    def setUp(self):
+        # setup a risk job just to get a valid hazard output id
+        job, _ = helpers.get_risk_job("classical_psha_based_risk/job.ini",
+                                   "simple_fault_demo_hazard/job.ini")
+        self.hazard_output = job.risk_calculation.hazard_output
+        self.compulsory_arguments = dict(
+            owner=helpers.default_user(),
+            calculation_mode="classical_bcr",
+            region_constraint="POLYGON((-150 90, 150 90, 150 -90, -150, -90))",
+            hazard_output=self.hazard_output,
+            lrem_steps_per_interval=5,
+            interest_rate=0.05,
+            asset_life_expectancy=40)
+
+    def test_valid_form(self):
+        rc = models.RiskCalculation(**self.compulsory_arguments)
+        form = validation.ClassicalRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form_as_missing_params(self):
+        # remove a random compulsory argument
+        choice = random.randint(0, len(self.compulsory_arguments))
+        dropped_field = self.compulsory_arguments.keys()[choice]
+        del self.compulsory_arguments[dropped_field]
+
+        rc = models.RiskCalculation(**self.compulsory_arguments)
+        form = validation.ClassicalRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+        self.assertFalse(form.is_valid())
+        expected_errors = {
+            dropped_field: [
+                "Can't be blank"
+                ]}
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
