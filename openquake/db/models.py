@@ -2095,7 +2095,6 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.ForeignKey("Output")
-    exposure_model = djm.ForeignKey("ExposureModel")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
