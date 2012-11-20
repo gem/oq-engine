@@ -326,10 +326,45 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
 
         return all_valid
 
+
+class DisaggHazardCalculationForm(BaseOQModelForm):
+
+    calc_mode = 'disaggregation'
+
+    class Meta:
+        model = models.HazardCalculation
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region',
+            'region_grid_spacing',
+            'sites',
+            'random_seed',
+            'number_of_logic_tree_samples',
+            'rupture_mesh_spacing',
+            'width_of_mfd_bin',
+            'area_source_discretization',
+            'reference_vs30_value',
+            'reference_vs30_type',
+            'reference_depth_to_2pt5km_per_sec',
+            'reference_depth_to_1pt0km_per_sec',
+            'investigation_time',
+            'intensity_measure_types_and_levels',
+            'truncation_level',
+            'maximum_distance',
+            'mag_bin_width',
+            'distance_bin_width',
+            'coordinate_bin_width',
+            'num_epsilon_bins',
+            'export_dir',
+        )
+
+
 #: Maps calculation_mode to the appropriate validator class
 HAZ_VALIDATOR_MAP = {
     'classical': ClassicalHazardCalculationForm,
     'event_based': EventBasedHazardCalculationForm,
+    'disaggregation': DisaggHazardCalculationForm,
 }
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
@@ -558,8 +593,15 @@ def intensity_measure_types_is_valid(mdl):
 
 
 def truncation_level_is_valid(mdl):
-    if not mdl.truncation_level >= 0:
-        return False, ['Truncation level must be >= 0']
+    if mdl.calculation_mode == 'disaggregation':
+        # truncation level must always be > 0 for disagg
+        if not mdl.truncation_level > 0:
+            return False, ['Truncation level must be > 0 for disaggregation'
+                           ' calculations']
+    else:
+        if not mdl.truncation_level >= 0:
+            return False, ['Truncation level must be >= 0']
+
     return True, []
 
 
@@ -640,4 +682,28 @@ def ground_motion_fields_is_valid(_mdl):
 def hazard_curves_from_gmfs_is_valid(_mdl):
     # This parameter is a simple True or False;
     # field normalization should cover all of validation necessary.
+    return True, []
+
+
+def mag_bin_width_is_valid(mdl):
+    if not mdl.mag_bin_width > 0.0:
+        return False, ['Magnitude bin width must be > 0.0']
+    return True, []
+
+
+def distance_bin_width_is_valid(mdl):
+    if not mdl.distance_bin_width > 0.0:
+        return False, ['Distance bin width must be > 0.0']
+    return True, []
+
+
+def coordinate_bin_width_is_valid(mdl):
+    if not mdl.coordinate_bin_width > 0.0:
+        return False, ['Coordinate bin width must be > 0.0']
+    return True, []
+
+
+def num_epsilon_bins_is_valid(mdl):
+    if not mdl.num_epsilon_bins > 0:
+        return False, ['Number of epsilon bins must be > 0']
     return True, []
