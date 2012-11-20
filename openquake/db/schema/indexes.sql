@@ -57,6 +57,8 @@ CREATE INDEX hzrdr_uh_spectrum_data_uh_spectrum_id_idx on hzrdr.uh_spectrum_data
 CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
 CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
 CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
+-- disagg_result
+CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
