@@ -64,7 +64,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     logs.LOG.debug('Implement me')
 
 
-class ClassicalRiskCalculatorWithBCR(classical.ClassicalRiskCalculator):
+class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     celery_task = classical_bcr
 
     @property
