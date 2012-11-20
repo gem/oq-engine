@@ -18,10 +18,10 @@
 from __future__ import absolute_import
 
 from .classical.core import ClassicalRiskCalculator
-from .classical_bcr.core import ClassicalRiskCalculatorWithBCR
+from .classical_bcr.core import ClassicalBCRRiskCalculator
 
 
 CALCULATORS = {
     'classical': ClassicalRiskCalculator,
-    'classical_bcr': ClassicalRiskCalculatorWithBCR
+    'classical_bcr': ClassicalBCRRiskCalculator
 }

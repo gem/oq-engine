@@ -294,6 +294,15 @@ def fetch_vulnerability_model(job_id):
     return job.risk_calculation.model("vulnerability").to_risklib()
 
 
+def fetch_vulnerability_model_retrofitted(job_id):
+    """
+    Returns the vulnerability model associated with the current
+    running job
+    """
+    job = models.OqJob.objects.get(pk=job_id)
+    return job.risk_calculation.model("vulnerability_retrofitted").to_risklib()
+
+
 def write_loss_curve(loss_curve_id, asset_output):
     """
     Stores a `openquake.db.models.LossCurveData` where the data are
@@ -323,3 +332,13 @@ def write_loss_map(loss_map_ids, asset_output):
             value=loss,
             std_dev=None,
             location=asset_output.asset.site)
+
+
+def write_bcr_distribution(bcr_distribution_id, asset_output):
+    models.BCRDistributionData.objects.create(
+        bcr_distribution_id=bcr_distribution_id,
+        asset_ref=asset_output.asset.asset_ref,
+        expected_annual_loss_original=asset_output.eal_original,
+        expected_annual_loss_retrofitted=asset_output.eal_retrofitted,
+        bcr=asset_output.bcr,
+        location=asset_output.asset.site)
