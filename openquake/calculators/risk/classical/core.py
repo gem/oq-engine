@@ -117,6 +117,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         poes = self.job.risk_calculation.conditional_loss_poes or []
 
         def create_loss_map(poe):
+            """
+            Given a poe create a loss map output container associated
+            with the current job
+            """
             return models.LossMap.objects.create(
                  output=models.Output.objects.create_output(
                      self.job,

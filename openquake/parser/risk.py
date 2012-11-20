@@ -106,6 +106,7 @@ RISK_BCR_MAP_BCR_VALUE = "%sbenefitCostRatio" % NRML
 RISK_BCR_MAP_EAL_ORIGINAL_VALUE = "%sexpectedAnnualLossOriginal" % NRML
 RISK_BCR_MAP_EAL_RETROFITTED_VALUE = "%sexpectedAnnualLossRetrofitted" % NRML
 
+
 class AttributeConstraint(object):
     """A constraint that can be used to filter input elements based on some
     attributes.
@@ -174,7 +175,7 @@ class FileProducer(object):
 
     def filter(self, region_constraint=None, attribute_constraint=None):
         """
-        Filters the elements readed by this 
+        Filters the elements readed by this
 
         region_constraint has to be of type shapes.RegionConstraint and
         specifies the region to which the elements of this producer
