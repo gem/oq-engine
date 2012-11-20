@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages, findall
+from setuptools import setup, find_packages
 
 
 README = """
@@ -12,17 +12,9 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
 """
 
-py_not_modules=["openquake/bin/__init__.py", "openquake/bin/oqpath.py",
-                "openquake/bin/openquake_messages_collector.py"]
-py_modules=[f for f in findall('openquake/bin') if f not in py_not_modules ]
-print "pippo"
-print py_modules
-for i, el in enumerate(py_modules):
-    py_modules[i] = el.replace("/", ".")
-
-for i, el in enumerate(py_modules):
-    if el.endswith('.py'):
-       py_modules[i] = el[:-3]
+PY_MODULES = ['openquake.bin.openquake_supervisor',
+              'openquake.bin.oq_create_db', 'openquake.bin.cache_gc',
+              'openquake.bin.oq_restart_workers', 'openquake.bin.oqscript']
 
 setup(
     entry_points={
@@ -51,7 +43,7 @@ setup(
                                     "openquake.bin.*",
                                     "openquake.nrml.tests",
                                     "openquake.nrml.tests.*"]),
-    py_modules=py_modules,
+    py_modules=PY_MODULES,
 
     include_package_data=True,
     package_data={"openquake": [
@@ -61,7 +53,7 @@ setup(
             "nrml/schema/nrml_common.xsd", "nrml/schema/nrml.xsd",
             "nrml/schema/xlinks/*", "logging.cfg", "openquake.cfg",
             "README", "LICENSE"]},
-    exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors", "bin/oq_log_sink"]},
-    scripts=[
-        "openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers" ]
+    exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
+                               "bin/oq_log_sink"]},
+    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
     )
