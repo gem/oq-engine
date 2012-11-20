@@ -366,9 +366,23 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             )
 
 
+class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
+    calc_mode = 'classical_bcr'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'lrem_steps_per_interval',
+            'interest_rate',
+            'asset_life_expectancy')
+
+
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
+    'classical_bcr': ClassicalRiskCalculationWithBCRForm
 }
 
 
