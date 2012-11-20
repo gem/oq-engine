@@ -455,8 +455,30 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     #: In subclasses, this would be a reference to the task function
     core_calc_task = None
-    #: Generator function for creating the arguments for each task
-    task_arg_gen = None
+
+    def __init__(self, *args, **kwargs):
+        super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
+
+        self.progress = dict(total=0, computed=0)
+
+    @property
+    def hc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.HazardCalculation`.
+        """
+        return self.job.hazard_calculation
+
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        Subclasses must implement this.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
+        """
+        raise NotImplementedError
 
     def initialize_sources(self):
         """
@@ -467,25 +489,24 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         (see :class:`openquake.db.models.ParsedSource`).
         """
         logs.log_progress("initializing sources", 2)
-        hc = self.job.hazard_calculation
 
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
-        [gsimlt] = models.inputs4hcalc(hc.id, input_type='lt_gsim')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
+        [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='lt_gsim')
         source_paths = logictree.read_logic_trees(
-            hc.base_path, smlt.path, gsimlt.path)
+            self.hc.base_path, smlt.path, gsimlt.path)
 
         src_inputs = []
         for src_path in source_paths:
-            full_path = os.path.join(hc.base_path, src_path)
+            full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
             inp = engine2.get_input(
-                full_path, 'source', hc.owner, hc.force_inputs)
+                full_path, 'source', self.hc.owner, self.hc.force_inputs)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
             models.Input2hcalc.objects.get_or_create(
-                input=inp, hazard_calculation=hc)
+                input=inp, hazard_calculation=self.hc)
 
             # Associate the source input to the source model logic tree input:
             models.Src2ltsrc.objects.get_or_create(
@@ -496,8 +517,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             src_content = StringIO.StringIO(src_inp.model_content.raw_content)
             sm_parser = nrml_parsers.SourceModelParser(src_content)
             src_db_writer = source.SourceDBWriter(
-                src_inp, sm_parser.parse(), hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
+                src_inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin, self.hc.area_source_discretization)
             src_db_writer.serialize()
 
     def initialize_site_model(self):
@@ -518,9 +539,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         consider all sites.)
         """
         logs.log_progress("initializing site model", 2)
-        hc_id = self.job.hazard_calculation.id
 
-        site_model_inp = get_site_model(hc_id)
+        site_model_inp = get_site_model(self.hc.id)
         if site_model_inp is not None:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
@@ -538,7 +558,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             validate_site_model(site_model_data, mesh)
 
-            store_site_data(hc_id, site_model_inp, mesh)
+            store_site_data(self.hc.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -644,22 +664,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         :param rlz_callbacks:
             See :meth:`initialize_realizations` for more info.
         """
-        hc = self.job.hazard_calculation
-
         # Each realization will have two seeds:
         # One for source model logic tree, one for GSIM logic tree.
         rnd = random.Random()
-        seed = hc.random_seed
+        seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
 
-        ltp = logictree.LogicTreeProcessor(hc.id)
+        ltp = logictree.LogicTreeProcessor(self.hc.id)
 
         hzrd_src_cache = {}
 
         # The first realization gets the seed we specified in the config file.
-        for i in xrange(hc.number_of_logic_tree_samples):
+        for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
             sm_name, sm_lt_path = ltp.sample_source_model_logictree(
                     rnd.randint(MIN_SINT_32, MAX_SINT_32))
@@ -669,7 +687,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     rnd.randint(MIN_SINT_32, MAX_SINT_32))
 
             lt_rlz = models.LtRealization(
-                hazard_calculation=hc,
+                hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
                 weight=None,
@@ -733,6 +751,82 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             [lt_rlz.id])
         transaction.commit_unless_managed()
 
+    def initialize_hazard_curve_progress(self, lt_rlz):
+        """
+        As a calculation progresses, workers will periodically update the
+        intermediate results. These results will be stored in
+        `htemp.hazard_curve_progress` until the calculation is completed.
+
+        Before the core calculation begins, we need to initalize these records,
+        one data set per IMT. Each dataset will be stored in the database as a
+        pickled 2D numpy array (with number of rows == calculation points of
+        interest and number of columns == number of IML values for a given
+        IMT).
+
+        We will create 1 `hazard_curve_progress` record per IMT per
+        realization.
+
+        :param lt_rlz:
+            :class:`openquake.db.models.LtRealization` object to associate
+            with these inital hazard curve values.
+        """
+        num_points = len(self.hc.points_to_compute())
+
+        im_data = self.hc.intensity_measure_types_and_levels
+        for imt, imls in im_data.items():
+            hc_prog = models.HazardCurveProgress()
+            hc_prog.lt_realization = lt_rlz
+            hc_prog.imt = imt
+            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
+            hc_prog.save()
+
+    def get_task_complete_callback(self, task_arg_gen):
+        """
+        Create the callback which responds to a task completion signal.
+
+        :param task_arg_gen:
+            The task arg generator, so the callback can get the next set of
+            args and enqueue the next task.
+        :return:
+            A callback function which responds to a task completion signal.
+            A response typically includes enqueuing the next task and updating
+            progress counters.
+        """
+
+        def callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_sources = body['num_sources']
+
+            assert job_id == self.job.id
+            self.progress['computed'] += num_sources
+
+            logs.log_percent_complete(job_id, "hazard")
+
+            # Once we receive a completion signal, enqueue the next
+            # piece of work (if there's anything left to be done).
+            try:
+                self.core_calc_task.apply_async(task_arg_gen.next())
+            except StopIteration:
+                # There are no more tasks to dispatch; now we just need
+                # to wait until all tasks signal completion.
+                pass
+
+            message.ack()
+
+        return callback
+
     def execute(self):
         """
         Calculation work is parallelized over sources, which means that each
@@ -749,62 +843,30 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
         """
-        job = self.job
-        hc = job.hazard_calculation
-        sources_per_task = int(config.get('hazard', 'block_size'))
+        block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
-        progress = dict(total=0, computed=0)
+        self.progress = dict(total=0, computed=0)
         # The following two counters are in a dict so that we can use them in
         # the closures below.
-        # When `progress['compute']` becomes equal to `progress['total']`,
-        # `execute` can conclude.
+        # When `self.progress['compute']` becomes equal to
+        # `self.progress['total']`, # `execute` can conclude.
 
-        task_gen = self.task_arg_gen(hc, job, sources_per_task, progress)
-
-        def task_complete_callback(body, message):
-            """
-            :param dict body:
-                ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
-                number of sources computed).
-
-                Both values are `int`.
-            :param message:
-                A :class:`kombu.transport.pyamqplib.Message`, which contains
-                metadata about the message (including content type, channel,
-                etc.). See kombu docs for more details.
-            """
-            job_id = body['job_id']
-            num_sources = body['num_sources']
-
-            assert job_id == job.id
-            progress['computed'] += num_sources
-
-            logs.log_percent_complete(job_id, "hazard")
-
-            # Once we receive a completion signal, enqueue the next
-            # piece of work (if there's anything left to be done).
-            try:
-                self.core_calc_task.apply_async(task_gen.next())
-            except StopIteration:
-                # There are no more tasks to dispatch; now we just need
-                # to wait until all tasks signal completion.
-                pass
-
-            message.ack()
+        task_gen = self.task_arg_gen(block_size)
 
         exchange, conn_args = exchange_and_conn_args()
 
-        routing_key = ROUTING_KEY_FMT % dict(job_id=job.id)
+        routing_key = ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job.id, exchange=exchange,
+            'htasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
 
         with kombu.BrokerConnection(**conn_args) as conn:
             task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[task_complete_callback]):
+            with conn.Consumer(
+                task_signal_queue,
+                callbacks=[self.get_task_complete_callback(task_gen)]):
+
                 # First: Queue up the initial tasks.
                 for _ in xrange(concurrent_tasks):
                     try:
@@ -816,7 +878,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         # under-utilizing worker node resources.
                         break
 
-                while (progress['computed'] < progress['total']):
+                while (self.progress['computed'] < self.progress['total']):
                     # This blocks until a message is received.
                     # Once we receive a completion signal, enqueue the next
                     # piece of work (if there's anything left to be done).
@@ -860,10 +922,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        hc = self.job.hazard_calculation
-        num_sites = len(hc.points_to_compute())
+        num_sites = len(self.hc.points_to_compute())
         realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id)
+            hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
 
         # Compute the number of tasks.
