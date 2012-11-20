@@ -23,30 +23,6 @@ import os
 from openquake.db import models
 
 
-def _export_fn_map():
-    """Creates a mapping from output type to export function.
-
-    The specific export functions should accept two parameters: a
-    :class:`openquake.db.models.Output` object and a taret dir (`str`).
-
-    Each function should return a list of the file names created by the export
-    action.
-
-    :rtype: `dict`
-    """
-    # Silencing `Reimport <module>` warnings
-    # pylint: disable=W0404
-    from openquake.export import risk
-
-    fn_map = {
-        'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
-        'dmg_dist_per_taxonomy': risk.export_dmg_dist_per_taxonomy,
-        'dmg_dist_total': risk.export_dmg_dist_total,
-        'agg_loss_curve': risk.export_agg_loss_curve,
-    }
-    return fn_map
-
-
 def _export_fn_not_implemented(output, _target_dir):
     """This gets called if an export is attempted on an unsupported output
     type. See :data:`_EXPORT_FN_MAP`."""
@@ -82,25 +58,6 @@ def makedirs(fn):
     return wrapped
 
 
-def get_jobs(user_name):
-    """Get the completed jobs (successful and failed) for the given user_name.
-
-    Results are given in reverse chronological order.
-
-    :param str user_name:
-        Owner of the returned results.
-    :returns:
-        :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.db.models.OqJob` objects, sorted in
-        reverse chronological order.
-    :rtype:
-        :class:`django.db.models.query.QuerySet`
-    """
-    return models.OqJob.objects.filter(
-        status='complete', is_running=False, owner__user_name=user_name
-    ).order_by('-last_update')
-
-
 def get_outputs(job_id):
     """Get all :class:`openquake.db.models.Output` objects associated with the
     specified job.
@@ -112,27 +69,3 @@ def get_outputs(job_id):
         :class:`openquake.db.models.Output` objects.
     """
     return models.Output.objects.filter(oq_job=job_id)
-
-
-def export(output_id, target_dir):
-    """Export the given calculation output from the database to the specified
-    directory.
-
-    :param int output_id:
-        ID of a :class:`openquake.db.models.Output`.
-    :param str target_dir:
-        Directory where output artifacts should be written.
-    :returns:
-        List of file names (including the full directory path) containing the
-        exported results.
-
-        The quantity and type of the result files depends on
-        the type of output, as well as calculation parameters. (See the
-        `output_type` attribute of :class:`openquake.db.models.Output`.)
-    """
-    output = models.Output.objects.get(id=output_id)
-
-    export_fn = _export_fn_map().get(
-        output.output_type, _export_fn_not_implemented)
-
-    return export_fn(output, os.path.expanduser(target_dir))

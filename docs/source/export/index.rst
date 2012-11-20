@@ -7,17 +7,10 @@ outputs to files.
 
 .. automodule:: openquake.export.core
 
-**********
-UHS Export
-**********
+*************
+Hazard Export
+*************
 
-Export functionality for UHS calculation result artifacts.
+API for exporting hazard artifacts from the DB.
 
-.. autofunction:: openquake.export.uhs.export_uhs
-.. automodule:: openquake.export.uhs
-
-***********
-Risk Export
-***********
-
-.. automodule:: openquake.export.risk
+.. automodule:: openquake.export.hazard
