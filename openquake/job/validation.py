@@ -346,7 +346,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
         return all_valid
 
 
-class DisaggHazardCalculationForm(BaseOQModelForm):
+class DisaggHazardCalculationForm(BaseHazardModelForm):
 
     calc_mode = 'disaggregation'
 
@@ -740,14 +740,16 @@ def lrem_steps_per_interval_is_valid(mdl):
     value = mdl.lrem_steps_per_interval
     msg = 'loss conditional exceedence matrix steps per interval must be > 0'
 
-    if value is not None:
-        if not value > 0:
-            return False, [msg]
+    if value is None or not value > 0:
+        return False, [msg]
     return True, []
 
 
 def region_constraint_is_valid(_mdl):
-    # validation occurs after we have loaded the exposure
+    # At this stage, we just use the region_is_valid implementation to
+    # check for a consistent geometry. Further validation occurs after
+    # we have loaded the exposure.
+    _mdl.region = _mdl.region_constraint
     return region_is_valid(_mdl)
 
 
