@@ -46,10 +46,10 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1,
                          models.LossCurve.objects.filter(
                              output__oq_job=self.job).count())
-        self.assertEqual(3,
+        self.assertEqual(2,
                          models.LossCurveData.objects.filter(
                              loss_curve__output__oq_job=self.job).count())
-        self.assertEqual(9,
+        self.assertEqual(6,
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
