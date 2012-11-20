@@ -102,11 +102,9 @@ fi
 mv LICENSE         openquake
 mv README.txt      openquake/README
 mv celeryconfig.py openquake
-mv logging.cfg     openquake
 mv openquake.cfg   openquake
 
 mv bin/openquake   bin/oqscript.py
-mv bin/openquake_supervisor bin/openquake_supervisor.py
 mv bin             openquake/bin
 
 rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
