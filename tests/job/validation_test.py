@@ -16,7 +16,7 @@
 
 import json
 import unittest
-import random
+import itertools
 
 from openquake.db import models
 from openquake.job import validation
@@ -825,40 +825,165 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
 
+
+class DisaggHazardCalculationFormTestCase(unittest.TestCase):
+
+    def test_valid_disagg_calc(self):
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='disaggregation',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            mag_bin_width=0.3,
+            distance_bin_width=10.0,
+            coordinate_bin_width=0.02,  # decimal degrees
+            num_epsilon_bins=4,
+        )
+        form = validation.DisaggHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_disagg_calc(self):
+        expected_errors = {
+            'mag_bin_width': ['Magnitude bin width must be > 0.0'],
+            'distance_bin_width': ['Distance bin width must be > 0.0'],
+            'coordinate_bin_width': ['Coordinate bin width must be > 0.0'],
+            'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
+            'truncation_level': ['Truncation level must be > 0 for'
+                                 ' disaggregation calculations'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='disaggregation',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mag_bin_width=0.0,
+            distance_bin_width=0.0,
+            coordinate_bin_width=0.0,  # decimal degrees
+            num_epsilon_bins=0,
+        )
+        form = validation.DisaggHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+
+class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
+    def setUp(self):
+        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
+                                          'simple_fault_demo_hazard/job.ini')
+        self.compulsory_arguments = dict(
+            calculation_mode="classical",
+            lrem_steps_per_interval=5)
+        self.other_args = dict(
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=job.risk_calculation.hazard_output)
+
+    def test_valid_form(self):
+        args = dict(self.compulsory_arguments.items())
+        args.update(self.other_args)
+
+        rc = models.RiskCalculation(**args)
+
+        form = validation.ClassicalRiskCalculationForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form(self):
+
+        def powerset(iterable):
+            s = list(iterable)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s) + 1))
+
+        for fields in list(powerset(self.compulsory_arguments))[1:]:
+            compulsory_arguments = dict(self.compulsory_arguments.items())
+            for field in fields:
+                compulsory_arguments[field] = None
+            compulsory_arguments.update(self.other_args)
+            rc = models.RiskCalculation(**compulsory_arguments)
+
+            form = validation.ClassicalRiskCalculationForm(
+                instance=rc, files=None)
+
+            self.assertFalse(form.is_valid(), fields)
+
+
 class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
     def setUp(self):
-        # setup a risk job just to get a valid hazard output id
-        job, _ = helpers.get_risk_job("classical_psha_based_risk/job.ini",
-                                   "simple_fault_demo_hazard/job.ini")
-        self.hazard_output = job.risk_calculation.hazard_output
+        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
+                                      'simple_fault_demo_hazard/job.ini')
         self.compulsory_arguments = dict(
-            owner=helpers.default_user(),
             calculation_mode="classical_bcr",
-            region_constraint="POLYGON((-150 90, 150 90, 150 -90, -150, -90))",
-            hazard_output=self.hazard_output,
             lrem_steps_per_interval=5,
             interest_rate=0.05,
             asset_life_expectancy=40)
 
+        self.other_args = dict(
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=job.risk_calculation.hazard_output)
+
     def test_valid_form(self):
-        rc = models.RiskCalculation(**self.compulsory_arguments)
+        args = dict(self.compulsory_arguments.items())
+        args.update(self.other_args)
+
+        rc = models.RiskCalculation(**args)
+
         form = validation.ClassicalRiskCalculationWithBCRForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_invalid_form_as_missing_params(self):
-        # remove a random compulsory argument
-        choice = random.randint(0, len(self.compulsory_arguments))
-        dropped_field = self.compulsory_arguments.keys()[choice]
-        del self.compulsory_arguments[dropped_field]
+    def test_invalid_form(self):
+        def powerset(iterable):
+            s = list(iterable)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s) + 1))
 
-        rc = models.RiskCalculation(**self.compulsory_arguments)
-        form = validation.ClassicalRiskCalculationWithBCRForm(
-            instance=rc, files=None)
-        self.assertFalse(form.is_valid())
-        expected_errors = {
-            dropped_field: [
-                "Can't be blank"
-                ]}
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
-        self.assertTrue(equal, err)
+        for fields in list(powerset(self.compulsory_arguments))[1:]:
+            compulsory_arguments = dict(self.compulsory_arguments.items())
+            for field in fields:
+                compulsory_arguments[field] = None
+            compulsory_arguments.update(self.other_args)
+            rc = models.RiskCalculation(**compulsory_arguments)
+
+            form = validation.ClassicalRiskCalculationWithBCRForm(
+                instance=rc, files=None)
+
+            self.assertFalse(form.is_valid(), fields)
