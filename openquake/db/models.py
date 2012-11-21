@@ -34,6 +34,7 @@ from datetime import datetime
 
 import numpy
 
+from django.db import connection
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
@@ -2253,8 +2254,23 @@ class AssetManager(djm.GeoManager):
         `openquake.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        return self.filter(exposure_model__id=exposure_model_id,
-                           site__within=region_constraint).order_by('id')
+        return self.raw("""
+    SELECT * FROM oqmif.exposure_data WHERE
+    exposure_model_id = %s AND
+    ST_COVERS(ST_GeographyFromText(%s), site)
+    ORDER BY id
+    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+
+    def contained_in_count(self, exposure_model_id, region_constraint):
+        cursor = connection.cursor()
+
+        cursor.execute("""
+        SELECT COUNT(*) FROM oqmif.exposure_data WHERE
+        exposure_model_id = %s AND
+        ST_COVERS(ST_GeographyFromText(%s), site)
+        """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+
+        return cursor.fetchone()[0]
 
 
 class ExposureData(djm.Model):
@@ -2268,7 +2284,7 @@ class ExposureData(djm.Model):
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
     taxonomy = djm.TextField()
-    site = djm.PointField(srid=DEFAULT_SRID)
+    site = djm.PointField(geography=True)
     # Override the default manager with a GeoManager instance in order to
     # enable spatial queries.
     objects = djm.GeoManager()
