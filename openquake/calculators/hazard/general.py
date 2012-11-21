@@ -850,7 +850,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
-        self.progress = dict(total=0, computed=0)
         # The following two counters are in a dict so that we can use them in
         # the closures below.
         # When `self.progress['compute']` becomes equal to
