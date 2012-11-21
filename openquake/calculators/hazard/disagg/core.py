@@ -119,10 +119,12 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def task_arg_gen(self, block_size):
         """
-        Generate task args for disaggregation calculations.
+        Generate task args for the first phase of the disaggregation
+        calculations. This phase is concerned with computing hazard curves,
+        which must be completed in full before disaggregation calculation
+        can begin.
 
-        First, args are generated for hazard curve computation. Once those are
-        through, args are generated for disagg histogram computation.
+        See also :meth:`disagg_task_arg_gen`.
 
         :param int block_size:
             The number of items per task. In this case, this the number of
@@ -147,6 +149,20 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # job_id, calc type, source id block, lt rlz
                 yield (self.job.id, 'hazard_curve', block, lt_rlz.id)
 
+    def disagg_task_arg_gen(self, block_size):
+        """
+        Generate task args for the second phase of disaggregation calculations.
+        This phase is concerned with computing the disaggregation histograms.
+
+        :param int block_size:
+            The number of items per task. In this case, this the number of
+            sources for hazard curve calc task, or number of sites for disagg
+            calc tasks.
+        """
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False)
+
+
         # then distribute tasks for disaggregation histogram computation
         all_points = list(self.hc.points_to_compute())
         for lt_rlz in realizations:
@@ -154,20 +170,25 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # job_id, calc type, point block, lt rlz
                 yield (self.job.id, 'disagg', block, lt_rlz.id)
 
-    def get_task_complete_callback(self, task_arg_gen):
+    def get_task_complete_callback(self, hc_task_arg_gen):
         """
         Overrides the default task complete callback, defined in the super
         class.
+
+        The ``hc_task_arg_gen`` pass here is the arg gen for the first phase of
+        the calculation. This method also handles task generation for the
+        second phase.
 
         See
         :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.get_task_complete_callback`
         for expected input and output.
         """
-        # Flag to indicate that the calculation is in the disagg phase (after
-        # hazard curve computation).
-        disagg_phase = False
-
+        block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
+
+        # prep the disaggregation task arg gen for the second phase of the
+        # calculation
+        disagg_task_arg_gen = self.disagg_task_arg_gen(block_size)
 
         def callback(body, message):
             """
@@ -197,13 +218,16 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
                 try:
-                    self.core_calc_task.apply_async(task_arg_gen.next())
+                    self.core_calc_task.apply_async(disagg_task_arg_gen.next())
                 except StopIteration:
                     # There are no more tasks to dispatch; now we just need to
                     # wait until all of the tasks signal completion.
                     pass
+                else:
+                    logs.LOG.debug('* queuing the next disagg task')
             else:
                 if calc_type == 'hazard_curve':
+                    # record progress specifically for hazard curve computation
                     self.progress['hc_computed'] += num_items
 
                     if (self.progress['hc_computed']
@@ -211,12 +235,13 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # we're switching to disagg phase
                         self.disagg_phase = True
 
+                        logs.LOG.debug('* queuing initial disagg tasks')
                         # the task queue should be empty, so let's fill it up
                         # with disagg tasks:
                         for _ in xrange(concurrent_tasks):
                             try:
                                 self.core_calc_task.apply_async(
-                                    task_arg_gen.next())
+                                    disagg_task_arg_gen.next())
                             except StopIteration:
                                 # If we get a `StopIteration` here, that means
                                 # we have number of disagg tasks <
@@ -225,7 +250,14 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     else:
                         # we're not done computing hazard curves; enqueue the
                         # next task
-                        self.core_calc_task.apply_async(task_arg_gen.next())
+                        try:
+                            self.core_calc_task.apply_async(
+                                hc_task_arg_gen.next())
+                        except StopIteration:
+                            pass
+                        else:
+                            logs.LOG.debug(
+                                '* queueing the next hazard curve task')
 
             message.ack()
 
