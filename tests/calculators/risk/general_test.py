@@ -13,88 +13,178 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import itertools
-import numpy
 import unittest
-import json
-
-from openquake.calculators.risk.general import compute_alpha
-from openquake.calculators.risk.general import compute_beta
-from openquake.calculators.risk.general import load_gmvs_at
-from openquake import kvs
-from openquake import shapes
+import mock
 
 from tests.utils import helpers
+from openquake.calculators.risk import general as risk
+from openquake.db import models
+from openquake.utils import stats
 
 
-class BetaDistributionTestCase(unittest.TestCase):
-    """ Beta Distribution related testcase """
+class BaseRiskCalculatorTestCase(unittest.TestCase):
+    """
+    An abstract class that just setup a risk job
+    """
+    def setUp(self):
+        self.job, _ = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+
+
+class FakeRiskCalculator(risk.BaseRiskCalculator):
+    """
+    Fake Risk Calculator. Used to test the base class
+    """
+
+    celery_task = mock.Mock()
+
+    @property
+    def hazard_id(self):
+        return 0
+
+    @property
+    def calculation_parameters(self):
+        return {}
+
+
+class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
+    """
+    Integration test for the base class supporting the risk
+    calculators.
+    """
 
     def setUp(self):
-        self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
-        self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
-        self.covs = [0.500, 0.400, 0.300, 0.200, 0.100]
-        self.imls = [0.100, 0.200, 0.300, 0.450, 0.600]
+        super(RiskCalculatorTestCase, self).setUp()
+        self.calculator = FakeRiskCalculator(self.job)
 
-    def test_compute_alphas(self):
-        # expected alphas provided by Vitor
-
-        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-
-        alphas = [compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
-                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-        self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
-
-    def test_compute_betas(self):
-        # expected betas provided by Vitor
-
-        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
-
-        betas = [compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
-                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-        self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
-
-
-RISK_DEMO_CONFIG_FILE = helpers.demo_file(
-    "classical_psha_based_risk/config.gem")
-
-
-class LoadGroundMotionValuesTestCase(unittest.TestCase):
-
-    job_id = "1234"
-    region = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
-
-    def setUp(self):
-        kvs.mark_job_as_current(self.job_id)
-        kvs.cache_gc(self.job_id)
-
-    def tearDown(self):
-        kvs.mark_job_as_current(self.job_id)
-        kvs.cache_gc(self.job_id)
-
-    def test_load_gmvs_at(self):
+    def test_store_exposure(self):
         """
-        Exercise the function
-        :func:`openquake.calculators.risk.general.load_gmvs_at`.
+        Test that exposure data and models are properly stored and
+        associated with the calculator
+        """
+        self.calculator._store_exposure()
+
+        actual_model_queryset = models.ExposureModel.objects.filter(
+            input__input2rcalc__risk_calculation=self.job.risk_calculation,
+            input__input_type="exposure")
+
+        self.assertEqual(1, actual_model_queryset.count())
+
+        model = actual_model_queryset.all()[0]
+
+        actual_asset_queryset = models.ExposureData.objects.filter(
+            exposure_model=model)
+
+        self.assertEqual(3, actual_asset_queryset.count())
+
+        asset_refs = [a.asset_ref for a in actual_asset_queryset.all()]
+
+        self.assertEqual(["a1", "a2", "a3"], asset_refs)
+
+    def test_store_risk_model(self):
+        """
+        Test that Vulnerability model and functions are properly
+        stored and associated with the calculator
         """
 
-        gmvs = [
-            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.117},
-            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.167},
-            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.542}]
+        [vulnerability_input] = models.inputs4rcalc(
+            self.job.risk_calculation, input_type='vulnerability')
 
-        expected_gmvs = [0.117, 0.167, 0.542]
-        point = self.region.grid.point_at(shapes.Site(0.1, 0.2))
+        self.calculator.store_risk_model()
 
-        # we expect this point to be at row 1, column 0
-        self.assertEqual(1, point.row)
-        self.assertEqual(0, point.column)
+        actual_model_queryset = models.VulnerabilityModel.objects.filter(
+            input=vulnerability_input)
+        self.assertEqual(1, actual_model_queryset.count())
 
-        key = kvs.tokens.ground_motion_values_key(self.job_id, point)
+        model = actual_model_queryset.all()[0]
 
-        # place the test values in kvs
-        for gmv in gmvs:
-            kvs.get_client().rpush(key, json.JSONEncoder().encode(gmv))
+        self.assertEqual("QA_test1", model.name)
 
-        actual_gmvs = load_gmvs_at(self.job_id, point)
-        self.assertEqual(expected_gmvs, actual_gmvs)
+        self.assertEqual(1, model.vulnerabilityfunction_set.count())
+
+    def test_create_outputs(self):
+        """
+        Test that the proper output containers are created
+        """
+
+        outputs = self.calculator.create_outputs()
+
+        self.assertTrue('loss_curve_id' in outputs)
+
+        self.assertTrue(models.LossCurve.objects.filter(
+            pk=outputs['loss_curve_id']).exists())
+
+    def test_pre_execute(self):
+        # Most of the pre-execute functionality is implement in other methods.
+        # For this test, just make sure each method gets called.
+        path = ('openquake.calculators.risk.general.BaseRiskCalculator')
+        patches = (
+            helpers.patch(
+                '%s.%s' % (path, '_store_exposure')),
+            helpers.patch(
+                '%s.%s' % (path, 'store_risk_model')),
+            helpers.patch(
+                '%s.%s' % (path, 'create_outputs')),
+            helpers.patch(
+                '%s.%s' % (path, '_initialize_progress')),
+            helpers.patch(
+                'openquake.db.models.ExposureData.objects.contained_in'))
+
+        mocks = [p.start() for p in patches]
+
+        mocks[0].return_value = models.ExposureModel.objects.all()[0]
+        mocks[4].return_value = models.ExposureData.objects.all()
+
+        self.calculator.pre_execute()
+
+        for i, m in enumerate(mocks):
+            self.assertEqual(1, m.call_count)
+            m.stop()
+            patches[i].stop()
+
+    def test_execute(self):
+        """
+        Test that the distribute function is called properly
+        """
+
+        patch = helpers.patch(
+            'openquake.utils.tasks.distribute')
+        distribute = patch.start()
+
+        self.calculator.pre_execute()
+        self.calculator.execute()
+
+        self.assertEqual(1, distribute.call_count)
+
+        expected_region_constraint = (
+            self.job.risk_calculation.region_constraint)
+        expected_model_id = self.calculator.exposure_model_id
+        expected_kwargs = dict(job_id=self.job.id,
+                               hazard_getter="one_query_per_asset",
+                               assets_per_task=1,
+                               region_constraint=expected_region_constraint,
+                               exposure_model_id=expected_model_id,
+                               hazard_id=self.calculator.hazard_id)
+        expected_kwargs.update(self.calculator.output_container_ids)
+        expected_kwargs.update(self.calculator.calculation_parameters)
+
+        expected_call = ((self.calculator.celery_task,
+                          ("offset", range(0, 3, 4))),
+                          dict(tf_args=expected_kwargs))
+        self.assertEqual(1, distribute.call_count)
+        self.assertEqual(expected_call[1:], distribute.call_args_list[0][1:])
+        patch.stop()
+
+    def test_initialize_progress(self):
+        """
+        Tests that the progress counter has been initialized properly
+        """
+
+        self.calculator.pre_execute()
+        self.calculator._initialize_progress()
+
+        total = stats.pk_get(self.calculator.job.id, "nrisk_total")
+        self.assertEqual(self.calculator.assets_nr, total)
+        done = stats.pk_get(self.calculator.job.id, "nrisk_done")
+        self.assertEqual(0, done)

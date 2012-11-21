@@ -71,8 +71,14 @@ from openquake import __version__
 from openquake import engine2
 from openquake.db import models
 from openquake.export import hazard as hazard_export
+from openquake.export import risk as risk_export
 from openquake.job import validation
 from openquake.utils import version as utils_version
+
+
+HAZARD_OUTPUT_ARG = "--hazard-output-id"
+MISSING_HAZARD_OUTPUT_MSG = "Please specify the ID of the hazard output to be"
+" used with this calculation (using '%s')" % HAZARD_OUTPUT_ARG
 
 
 def set_up_arg_parser():
@@ -126,6 +132,11 @@ def set_up_arg_parser():
         '--rr',
         help='Run a risk job with the specified config file',
         metavar='CONFIG_FILE')
+    risk_grp.add_argument(
+        HAZARD_OUTPUT_ARG,
+        '--ho',
+        help='Use the desired hazard output as input for the risk job',
+        metavar='HAZARD_OUTPUT')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -208,6 +219,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                print 'Calculation results:'
+                list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
     except IOError as e:
@@ -289,16 +302,25 @@ def list_risk_outputs(rc_id):
         for o in outputs:
             print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
 
-
 def export_hazard(haz_output_id, target_dir):
+    export(hazard_export.export, haz_output_id, target_dir)
+
+
+def export_risk(risk_output_id, target_dir):
+    export(risk_export.export, risk_output_id, target_dir)
+
+
+def export(fn, output_id, target_dir):
     """
     Simple UI wrapper around
     :func:`openquake.export.hazard.export` which prints a summary of files
     exported, if any.
     """
-    from django.core.exceptions import ObjectDoesNotExist
+    if not models.Output.objects.filter(pk=output_id).exists():
+        print 'No output found for OUTPUT_ID %s' % output_id
+        return
     try:
-        files = hazard_export.export(haz_output_id, target_dir)
+        files = fn(output_id, target_dir)
         if len(files) > 0:
             print 'Files Exported:'
             for f in files:
@@ -306,11 +328,11 @@ def export_hazard(haz_output_id, target_dir):
     except NotImplementedError, err:
         print err.message
         print 'This feature is probably not implemented yet'
-    except ObjectDoesNotExist:
-        print 'No output found for OUTPUT_ID %s' % output_id
 
 
-def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
+def run_risk(
+        cfg_file, log_level, log_file,
+        force_inputs, exports, hazard_output_id):
     """
     Run a risk calculation using the specified config file and other options.
 
@@ -326,6 +348,8 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
+    :param str hazard_ouput_id:
+        The Hazard Output ID used by the risk calculation
     """
     try:
         if log_file is not None:
@@ -339,14 +363,16 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
             user_name=getpass.getuser(), log_level=log_level)
         params, files = engine2.parse_config(
             open(cfg_file, 'r'), force_inputs=force_inputs)
+
+        # Add the hazard output id to the risk calculation constructor
+        # args
+        params.update(dict(hazard_output_id=hazard_output_id))
+
         calculation = engine2.create_risk_calculation(job.owner, params,
                                                       files.values())
         job.risk_calculation = calculation
         job.save()
 
-        # TODO(LB):
-        # Re-enable this when validation is supported.
-        """
         # Validate the job:
         calc_mode = job.risk_calculation.calculation_mode
 
@@ -359,19 +385,20 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports):
         # For now, just print whether or not the job is valid
         # (and any errors if it isn't valid)
         if not form.is_valid():
-            print ('Job configuration is not valid. Errors: %s'
-                   % dict(form.errors))
-            sys.exit(1)
-        """
+            complain_and_exit(
+                'Job configuration is not valid. Errors: %s' % dict(form.errors), 1)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_risk(job, log_level, log_file, exports)
+        completed_job = engine2.run_risk(
+            job, log_level, log_file, exports)
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                print 'Calculation results:'
+                list_risk_outputs(completed_job.risk_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
     except IOError as e:
@@ -387,14 +414,18 @@ def _touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
+def complain_and_exit(msg, exit_code=0):
+    print msg
+    sys.exit(exit_code)
+
+
 if __name__ == '__main__':
     arg_parser = set_up_arg_parser()
 
     args = arg_parser.parse_args()
 
     if args.version:
-        print utils_version.info(__version__)
-        sys.exit(0)
+        complain_and_exit(utils_version.info(__version__))
 
     # hazard
     if args.list_hazard_calculations:
@@ -415,9 +446,13 @@ if __name__ == '__main__':
     elif args.list_risk_outputs is not None:
         list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
-        print "export risk"
+        output_id, target_dir = args.export_risk
+        export_risk(output_id, target_dir)
     elif args.run_risk is not None:
+        if args.hazard_output_id is None:
+            complain_and_exit(MISSING_HAZARD_OUTPUT_MSG)
         run_risk(args.run_risk, args.log_level, args.log_file,
-                 args.force_inputs, args.exports)
+                 args.force_inputs, args.exports,
+                 hazard_output_id=args.hazard_output_id)
     else:
         arg_parser.print_usage()

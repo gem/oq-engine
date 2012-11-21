@@ -261,6 +261,42 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
 
+class Inputs4RiskCalcTestCase(unittest.TestCase):
+
+    def test_no_inputs(self):
+        self.assertEqual([], list(models.inputs4rcalc(-1)))
+
+    def test_a_few_inputs(self):
+        job, files = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        rc = job.risk_calculation
+
+        expected_ids = sorted([x.id for x in files.values()])
+
+        inputs = models.inputs4rcalc(rc.id)
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+    def test_with_input_type(self):
+        job, files = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        rc = job.risk_calculation
+
+        # It should only be 1 id, actually.
+        expected_ids = [x.id for x in files.values()
+                        if x.input_type == 'exposure']
+
+        inputs = models.inputs4rcalc(rc.id, input_type='exposure')
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+
 class HazardCalculationGeometryTestCase(unittest.TestCase):
     """Test special geometry handling in the HazardCalculation constructor."""
 
@@ -625,3 +661,66 @@ class PrepGeometryTestCase(unittest.TestCase):
         }
 
         self.assertEqual(expected, models._prep_geometry(the_input))
+
+
+from django.contrib.gis.geos.point import Point
+from django.contrib.gis.geos.polygon import Polygon
+from openquake.calculators.risk import general as general_risk
+
+
+class ExposureContainedInTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job, _ = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        calculator = general_risk.BaseRiskCalculator(self.job)
+        calculator.pre_execute()
+        self.model = self.job.risk_calculation.model('exposure')
+
+        common_fake_args = dict(
+            exposure_model=self.model,
+            stco=1,
+            number_of_units=10,
+            reco=1,
+            taxonomy="test")
+
+        asset = models.ExposureData(site=Point(0.5, 0.5),
+                                    asset_ref="test1",
+                                    **common_fake_args)
+        asset.save()
+
+        asset = models.ExposureData(site=Point(179.1, 0),
+                                    asset_ref="test2",
+                                    **common_fake_args)
+        asset.save()
+
+    def test_simple_inclusion(self):
+        region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+        self.assertEqual(1, len(list(results)))
+        self.assertEqual("test1", results[0].asset_ref)
+
+    def test_inclusion_of_a_pole(self):
+        region_constraint = Polygon(
+            ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+        self.assertEqual(1, len(results))
+        self.assertEqual("test1", results[0].asset_ref)
+
+        region_constraint = Polygon(
+            ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+        self.assertEqual(1, len(list(results)))
+        self.assertEqual("test2", results[0].asset_ref)
