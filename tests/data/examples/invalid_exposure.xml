@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <exposureModel gml:id="ep">
+    <invalid />
+    <exposureList gml:id="LA01" assetCategory="buildings" stcoType="aggregated" stcoUnit="CHF" recoType="aggregated" recoUnit="USD">
+      <gml:description>Collection of exposure values for existing building in Los Angeles County, California, US</gml:description>
+      <assetDefinition gml:id="a5624">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <reco>123</reco>
+        <stco>18.02</stco>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
+      </assetDefinition>
+      <assetDefinition gml:id="a5625">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <reco>123</reco>
+        <stco>5.07</stco>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
+      </assetDefinition>
+      <assetDefinition gml:id="a5626">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <reco>123</reco>
+        <stco>16.33</stco>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
+      </assetDefinition>
+    </exposureList>
+  </exposureModel>
+</nrml>
