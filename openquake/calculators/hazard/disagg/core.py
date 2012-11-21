@@ -78,6 +78,13 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     core_calc_task = disagg_task
 
+    def __init__(self, *args, **kwargs):
+        super(DisaggHazardCalculator, self).__init__(*args, **kwargs)
+
+        # Progress counter for hazard curve computation:
+        self.progress['hc_total'] = 0
+        self.progress['hc_computed'] = 0
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails: parsing and
