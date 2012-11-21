@@ -41,20 +41,21 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param int job_id:
       ID of the currently running job
     :param assets:
-      list of Assets to take into account
+      iterator over `openquake.db.models.ExposureData` to take into
+      account
     :param hazard_getter:
       Strategy used to get the hazard curves
-    :param int hazard_id
+    :param int hazard_id:
       ID of the Hazard Output the risk calculation is based on
-    :param loss_curve_id
+    :param loss_curve_id:
       ID of the `openquake.db.models.LossCurve` output container used
       to store the computed loss curves
-    :param loss_map_ids
+    :param loss_map_ids:
       Dictionary poe->ID of the `openquake.db.models.LossMap` output
       container used to store the computed loss maps
-    :param int lrem_steps_per_interval
+    :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
-    :param conditional_loss_poes
+    :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     """
 
@@ -66,7 +67,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+        calculator = api.conditional_losses(
+            conditional_loss_poes, calculator)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
@@ -117,6 +119,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         poes = self.job.risk_calculation.conditional_loss_poes or []
 
         def create_loss_map(poe):
+            """
+            Given a poe create a loss map output container associated
+            with the current job
+            """
             return models.LossMap.objects.create(
                  output=models.Output.objects.create_output(
                      self.job,
