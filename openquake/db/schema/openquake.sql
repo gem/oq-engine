@@ -394,6 +394,7 @@ CREATE TABLE uiapi.risk_calculation (
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
+    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
 
     -- event-based parameters:
     loss_histogram_bins INTEGER,
@@ -1349,17 +1350,9 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    scenario BOOLEAN NOT NULL,
-    loss_map_ref VARCHAR,
-    end_branch_label VARCHAR,
-    category VARCHAR,
-    unit VARCHAR, -- e.g. USD, EUR
-    timespan float CONSTRAINT valid_timespan
-        CHECK (timespan > 0.0),
     -- poe is significant only for non-scenario calculations
-    poe float CONSTRAINT valid_poe
-        CHECK ((NOT scenario AND (poe >= 0.0) AND (poe <= 1.0))
-               OR (scenario AND poe IS NULL))
+    poe float NULL CONSTRAINT valid_poe
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.loss_map_data (
@@ -1367,8 +1360,8 @@ CREATE TABLE riskr.loss_map_data (
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
-    -- for non-scenario calculations std_dev is 0
-    std_dev float NOT NULL DEFAULT 0.0
+    -- for non-scenario calculations std_dev is NULL
+    std_dev float NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
@@ -1378,11 +1371,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    aggregate BOOLEAN NOT NULL DEFAULT false,
-
-    end_branch_label VARCHAR,
-    category VARCHAR,
-    unit VARCHAR -- e.g. EUR, USD
+    aggregate BOOLEAN NOT NULL DEFAULT false
 ) TABLESPACE riskr_ts;
 
 
@@ -1395,6 +1384,8 @@ CREATE TABLE riskr.loss_curve_data (
     asset_ref VARCHAR NOT NULL,
     losses float[] NOT NULL CONSTRAINT non_negative_losses
         CHECK (0 <= ALL(losses)),
+    loss_ratios float[] NOT NULL CONSTRAINT check_loss_ratios
+        CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1613,7 +1604,8 @@ CREATE TABLE riski.vulnerability_model (
         CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
-    category VARCHAR NOT NULL,
+    asset_category VARCHAR NOT NULL,
+    loss_category VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1632,6 +1624,7 @@ CREATE TABLE riski.vulnerability_function (
         CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Coefficients of variation
     covs float[] NOT NULL,
+    prob_distribution VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (vulnerability_model_id, taxonomy)
@@ -1791,6 +1784,9 @@ FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON D
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_curve_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
