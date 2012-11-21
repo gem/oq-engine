@@ -134,7 +134,7 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                              self.job, "PGA")))
 
         self.assertEqual(2,
-                         len(self.manager.individual_curves(self.job)))
+                         len(self.manager.individual_curves(self.job, "PGA")))
 
     def test_individual_curves_nr(self):
         """
@@ -146,13 +146,13 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                              self.job, "fake imt"))
 
         self.assertEqual(2,
-                         self.manager.individual_curves_nr(self.job))
+                         self.manager.individual_curves_nr(self.job, "PGA"))
 
     def test_individual_curves_ordered(self):
         """
         Test getting individual curves ordered by location
         """
-        curves = self.manager.individual_curves_ordered(self.job)
+        curves = self.manager.individual_curves_ordered(self.job, "PGA")
 
         self.assertEqual(2, len(curves))
         self.assertTrue(curves[0].location < curves[1].location)
@@ -163,7 +163,7 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         """
         block_size = 1
         chunks = self.manager.individual_curves_chunks(
-            self.job, location_block_size=block_size)
+            self.job, "PGA", location_block_size=block_size)
         self.assertEqual(1, len(chunks))
 
         chunk = chunks[0].locations
