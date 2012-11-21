@@ -65,7 +65,7 @@ def disagg_task(job_id, calc_type, block, lt_rlz_id):
         raise RuntimeError(msg)
 
     haz_general.signal_task_complete(
-        job_id=job_id, num_items=None, calc_type=calc_type)
+        job_id=job_id, num_items=len(block), calc_type=calc_type)
 
     return result
 
