@@ -104,6 +104,17 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.record_init_stats()
 
     def task_arg_gen(self, block_size):
+        """
+        Generate task args for disaggregation calculations.
+
+        First, args are generated for hazard curve computation. Once those are
+        through, args are generated for disagg histogram computation.
+
+        :param int block_size:
+            The number of items per task. In this case, this the number of
+            sources for hazard curve calc task, or number of sites for disagg
+            calc tasks.
+        """
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc, is_complete=False)
 
