@@ -1,11 +1,1 @@
-# abort-on-config.patch
-# nuke-unneeded-binaries.patch
-# nuke-obsolete-demos.patch
-# nuke-nrml.patch
-# logging.cfg.patch
-# openquake.cfg.patch
-# mv-binaries-1.patch
-# mv-binaries-2.patch
-# packaging-artefacts.patch
-# oqpath.patch - must be applied maybe
-# rm-obsolete-nrml-references.patch
+# no patches are currently needed
