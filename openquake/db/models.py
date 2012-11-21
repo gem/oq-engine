@@ -1391,31 +1391,31 @@ class HazardCurveDataManager(djm.Manager):
     Manager class to filter and create HazardCurveData objects
     """
 
-    def individual_curves(self, job, imt=None):
+    def individual_curves(self, job, imt):
         """
         Returns all the individual hazard curve data objects. If `imt`
         is given the results are filtered by intensity measure type.
         Here imt is given in the long format.
         """
+        hc_im_type, sa_period, sa_damping = parse_imt(imt)
+
         query_args = {'hazard_curve__statistics__isnull': True,
                       'hazard_curve__output__oq_job': job,
-                      'hazard_curve__output__output_type': "hazard_curve"}
-        if imt:
-            hc_im_type, sa_period, sa_damping = parse_imt(imt)
-            query_args['hazard_curve__imt'] = hc_im_type
-            query_args['hazard_curve__sa_period'] = sa_period
-            query_args['hazard_curve__sa_damping'] = sa_damping
+                      'hazard_curve__output__output_type': "hazard_curve",
+                      'hazard_curve__imt': hc_im_type,
+                      'hazard_curve__sa_period': sa_period,
+                      'hazard_curve__sa_damping': sa_damping}
 
         queryset = self.filter(**query_args)
         return queryset
 
-    def individual_curves_ordered(self, job, imt=None):
+    def individual_curves_ordered(self, job, imt):
         """
         Same as #individual_curves but the results are ordered by location
         """
         return self.individual_curves(job, imt).order_by('location')
 
-    def individual_curves_nr(self, job, imt=None):
+    def individual_curves_nr(self, job, imt):
         """
         Returns the number of individual curves. If `imt` is given, it
         returns the number of individual curves with intensity measure
@@ -1440,7 +1440,7 @@ class HazardCurveDataManager(djm.Manager):
 
         return values[offset: block_size + offset]
 
-    def individual_curves_chunks(self, job, imt=None, location_block_size=1):
+    def individual_curves_chunks(self, job, imt, location_block_size=1):
         """
         Return a list of chunk of individual curves. A chunk is a
         tuple with all the ingredients needed to get a chunk of
