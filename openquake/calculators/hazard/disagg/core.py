@@ -18,8 +18,10 @@
 Disaggregation calculator core functionality
 """
 
+from openquake import logs
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.classical import core as classical
+from openquake.db import models
 from openquake.utils import config
 from openquake.utils import general as general_utils
 from openquake.utils import stats
