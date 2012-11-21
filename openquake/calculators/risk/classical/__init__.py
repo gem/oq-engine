@@ -13,15 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Information about the calculators available for the Risk engine."""
+# FIXME: provides docstring here
 
-from __future__ import absolute_import
-
-from .classical.core import ClassicalRiskCalculator
-from .classical_bcr.core import ClassicalBCRRiskCalculator
-
-
-CALCULATORS = {
-    'classical': ClassicalRiskCalculator,
-    'classical_bcr': ClassicalBCRRiskCalculator
-}
+"""
+Risk Calculator description neeed....
+"""
