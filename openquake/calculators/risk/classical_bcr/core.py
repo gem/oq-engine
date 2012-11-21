@@ -63,7 +63,8 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
       The life expectancy used for every asset
     """
     model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model_retrofitted(job_id)
+    model_retrofitted = general.fetch_vulnerability_model(
+        job_id, "retrofitted")
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.bcr(
@@ -82,6 +83,10 @@ classical_bcr.ignore_result = False
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
+    """
+    Classical BCR risk calculator. Computes BCR distributions for a
+    given set of assets.
+    """
     celery_task = classical_bcr
 
     @property
