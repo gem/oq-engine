@@ -184,7 +184,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             assert job_id == self.job.id
             self.progress['computed'] += num_items
 
-            # TODO: what does this do exactly???
+            # Log a progress message
             logs.log_percent_complete(job_id, 'hazard')
 
             if disagg_phase:
