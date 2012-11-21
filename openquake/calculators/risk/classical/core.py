@@ -41,38 +41,40 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param int job_id:
       ID of the currently running job
     :param assets:
-      list of Assets to take into account
+      iterator over `openquake.db.models.ExposureData` to take into
+      account
     :param hazard_getter:
       Strategy used to get the hazard curves
-    :param int hazard_id
+    :param int hazard_id:
       ID of the Hazard Output the risk calculation is based on
-    :param loss_curve_id
+    :param loss_curve_id:
       ID of the `openquake.db.models.LossCurve` output container used
       to store the computed loss curves
-    :param loss_map_ids
+    :param loss_map_ids:
       Dictionary poe->ID of the `openquake.db.models.LossMap` output
       container used to store the computed loss maps
-    :param int lrem_steps_per_interval
+    :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
-    :param conditional_loss_poes
+    :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     """
 
     vulnerability_model = general.fetch_vulnerability_model(job_id)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    promises = api.classical(vulnerability_model, lrem_steps_per_interval)
+    calculator = api.classical(vulnerability_model, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        promises = api.conditional_losses(conditional_loss_poes, promises)
+        calculator = api.conditional_losses(
+            conditional_loss_poes, calculator)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, promises):
+            assets, hazard_getter, calculator):
             general.write_loss_curve(loss_curve_id, asset_output)
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
