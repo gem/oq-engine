@@ -463,7 +463,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
-
         self.progress = dict(total=0, computed=0)
 
     @property
