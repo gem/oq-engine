@@ -2094,7 +2094,7 @@ class BCRDistribution(djm.Model):
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
