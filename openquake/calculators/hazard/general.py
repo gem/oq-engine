@@ -802,7 +802,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             """
             :param dict body:
                 ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                contain 2 keys: `job_id` and `num_items` (to indicate the
                 number of sources computed).
 
                 Both values are `int`.
@@ -812,10 +812,10 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 etc.). See kombu docs for more details.
             """
             job_id = body['job_id']
-            num_sources = body['num_sources']
+            num_items = body['num_items']
 
             assert job_id == self.job.id
-            self.progress['computed'] += num_sources
+            self.progress['computed'] += num_items
 
             logs.log_percent_complete(job_id, "hazard")
 
