@@ -51,7 +51,7 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id, len(src_ids))
+    haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
     return result
 
