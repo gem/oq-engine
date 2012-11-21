@@ -85,6 +85,11 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.progress['hc_total'] = 0
         self.progress['hc_computed'] = 0
 
+        # Flag to indicate that the computation has reached the disaggregation
+        # phase. Prior to this, the hazard curve computation phase must be
+        # completed.
+        self.disagg_phase = False
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails: parsing and
@@ -187,7 +192,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # Log a progress message
             logs.log_percent_complete(job_id, 'hazard')
 
-            if disagg_phase:
+            if self.disagg_phase:
                 # We're in the second phase of the calculation; just keep
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
@@ -204,7 +209,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     if (self.progress['hc_computed']
                         == self.progress['hc_total']):
                         # we're switching to disagg phase
-                        disagg_phase = True
+                        self.disagg_phase = True
 
                         # the task queue should be empty, so let's fill it up
                         # with disagg tasks:
