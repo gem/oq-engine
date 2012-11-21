@@ -148,3 +148,77 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             for block in general_utils.block_splitter(all_points, block_size):
                 # job_id, calc type, point block, lt rlz
                 yield (self.job.id, 'disagg', block, lt_rlz.id)
+
+    def get_task_complete_callback(self, task_arg_gen):
+        """
+        Overrides the default task complete callback, defined in the super
+        class.
+
+        See
+        :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.get_task_complete_callback`
+        for expected input and output.
+        """
+        # Flag to indicate that the calculation is in the disagg phase (after
+        # hazard curve computation).
+        disagg_phase = False
+
+        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
+
+        def callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_items = body['num_items']
+            calc_type = body['calc_type']
+
+            assert job_id == self.job.id
+            self.progress['computed'] += num_items
+
+            # TODO: what does this do exactly???
+            logs.log_percent_complete(job_id, 'hazard')
+
+            if disagg_phase:
+                try:
+                    self.core_calc_task.apply_async(task_arg_gen.next())
+                except StopIteration:
+                    # There are no more tasks to dispatch; now we just need to
+                    # wait until all of the tasks signal completion.
+                    pass
+            else:
+                if calc_type == 'hazard_curve':
+                    self.progress['hc_computed'] += num_items
+
+                    if (self.progress['hc_computed']
+                        == self.progress['hc_total']):
+                        # we're switching to disagg phase
+                        disagg_phase = True
+
+                        # the task queue should be empty, so let's fill it up
+                        # with disagg tasks:
+                        for _ in xrange(concurrent_tasks):
+                            try:
+                                self.core_calc_task.apply_async(
+                                    task_arg_gen.next())
+                            except StopIteration:
+                                # If we get a `StopIteration` here, that means
+                                # we have number of disagg tasks <
+                                # concurrent_tasks.
+                                break
+                    else:
+                        # we're not done computing hazard curves; enqueue the
+                        # next task
+                        self.core_calc_task.apply_async(task_arg_gen.next())
+
+            message.ack()
+
+        return callback
