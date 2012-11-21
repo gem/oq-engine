@@ -41,6 +41,9 @@ def disagg_task(job_id, calc_type, *args):
         msg %= calc_type
         raise RuntimeError(msg)
 
+    haz_general.signal_task_complete(
+        job_id=job_id, num_items=None, calc_type=calc_type)
+
 
 def compute_disagg(job_id, points, lt_rlz_id):
     return None
