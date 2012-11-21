@@ -228,7 +228,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             logs.LOG.debug('< done saving GMF results to DB')
 
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id, len(src_ids))
+    haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
 def _create_gmf_cache(n_sites, imts):
