@@ -42,22 +42,22 @@ class BaseRiskCalculator(base.CalculatorNext):
     functionality, including initialization procedures and the core
     distribution/execution logic.
 
-    :attribute asset_nr
+    :attribute asset_nr:
       The number of assets the calculator will work on. Assets are
       extracted from the exposure input and filtered according with the
       RiskCalculation region_constraint
 
-    :attribute output_container_ids
+    :attribute output_container_ids:
       A dictionary holding the output containers object ids (e.g. LossCurve,
       LossMap)
 
-    :attribute exposure_model_id
+    :attribute exposure_model_id:
       The exposure model used by the calculation
 
-    :attribute assets_per_task
+    :attribute assets_per_task:
       The number of assets processed by each celery task
 
-    :attribute asset_offsets
+    :attribute asset_offsets:
       A generator of asset offsets used by each celery task. Assets are
       ordered by their id. An asset offset is an int that identify the
       set of assets going from offset to offset + assets_per_task.

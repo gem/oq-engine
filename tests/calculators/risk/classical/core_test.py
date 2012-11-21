@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
-from tests.calculators.risk import general_test
+import mock
 from tests.utils import helpers
+from tests.calculators.risk import general_test
 
 from openquake.db import models
 from openquake.calculators.risk.classical import core as classical
@@ -29,6 +29,38 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         super(ClassicalRiskCalculatorTestCase, self).setUp()
 
         self.calculator = classical.ClassicalRiskCalculator(self.job)
+
+    def test_celery_task(self):
+        self.calculator.pre_execute()
+        self.job.is_running = True
+        self.job.status = 'executing'
+        self.job.save()
+
+        hazard_id = self.job.risk_calculation.hazard_output.hazardcurve.id
+
+        patch = helpers.patch(
+            'openquake.calculators.risk.general.write_loss_curve')
+        mocked_writer = patch.start()
+
+        loss_curve_id = mock.Mock()
+        exposure_model_id = self.job.risk_calculation.model('exposure').id
+        region_constraint = self.job.risk_calculation.region_constraint
+        classical.classical(self.job.id,
+                            0,
+                            assets_per_task=3,
+                            exposure_model_id=exposure_model_id,
+                            hazard_getter="one_query_per_asset",
+                            hazard_id=hazard_id,
+                            region_constraint=region_constraint,
+                            loss_curve_id=loss_curve_id,
+                            loss_map_ids={},
+                            lrem_steps_per_interval=3,
+                            conditional_loss_poes=[])
+        patch.stop()
+
+        # we expect 1 asset being filtered out by the region
+        # constraint, so there are only two loss curves to be written
+        self.assertEqual(2, mocked_writer.call_count)
 
     def test_complete_workflow(self):
         """
@@ -47,10 +79,10 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1,
                          models.LossCurve.objects.filter(
                              output__oq_job=self.job).count())
-        self.assertEqual(3,
+        self.assertEqual(2,
                          models.LossCurveData.objects.filter(
                              loss_curve__output__oq_job=self.job).count())
-        self.assertEqual(9,
+        self.assertEqual(6,
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
