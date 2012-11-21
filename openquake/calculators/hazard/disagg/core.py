@@ -188,6 +188,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             logs.log_percent_complete(job_id, 'hazard')
 
             if disagg_phase:
+                # We're in the second phase of the calculation; just keep
+                # queuing tasks (if there are any left) and wait for everything
+                # to finish.
                 try:
                     self.core_calc_task.apply_async(task_arg_gen.next())
                 except StopIteration:
