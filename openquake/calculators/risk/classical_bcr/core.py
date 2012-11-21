@@ -64,7 +64,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     """
     model = general.fetch_vulnerability_model(job_id)
     model_retrofitted = general.fetch_vulnerability_model(
-        job_id, "retrofitted")
+        job_id, "vulnerability_retrofitted")
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.bcr(
