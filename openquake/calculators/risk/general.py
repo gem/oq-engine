@@ -264,22 +264,13 @@ def hazard_getter(hazard_getter_name, hazard_id):
     return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
-def fetch_vulnerability_model(job_id):
+def fetch_vulnerability_model(job_id, input_type="vulnerability"):
     """
     Returns the vulnerability model associated with the current
     running job
     """
     job = models.OqJob.objects.get(pk=job_id)
-    return job.risk_calculation.model("vulnerability").to_risklib()
-
-
-def fetch_vulnerability_model_retrofitted(job_id):
-    """
-    Returns the vulnerability model associated with the current
-    running job
-    """
-    job = models.OqJob.objects.get(pk=job_id)
-    return job.risk_calculation.model("vulnerability_retrofitted").to_risklib()
+    return job.risk_calculation.model(input_type).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
@@ -314,6 +305,11 @@ def write_loss_map(loss_map_ids, asset_output):
 
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
+    """
+    Create a new `openquake.db.models.BCRDistributionData` from
+    `asset_output` and links it to the output container identified by
+    `bcr_distribution_id`.
+    """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
         asset_ref=asset_output.asset.asset_ref,
@@ -324,6 +320,9 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
 
 
 def store_risk_model(rc, input_type):
+    """
+    Parse and store VulnerabilityModel
+    """
     [vulnerability_input] = models.inputs4rcalc(
         rc.id, input_type=input_type)
 
