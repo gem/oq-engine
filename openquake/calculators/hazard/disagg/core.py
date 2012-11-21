@@ -76,6 +76,8 @@ def compute_disagg(job_id, points, lt_rlz_id):
 
 class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
+    core_calc_task = disagg_task
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails: parsing and
