@@ -853,7 +853,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         # The following two counters are in a dict so that we can use them in
         # the closures below.
         # When `self.progress['compute']` becomes equal to
-        # `self.progress['total']`, # `execute` can conclude.
+        # `self.progress['total']`, `execute` can conclude.
 
         task_gen = self.task_arg_gen(block_size)
 
