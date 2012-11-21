@@ -28,13 +28,34 @@ from openquake.utils import tasks as utils_tasks
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def disagg_task(job_id, calc_type, *args):
+def disagg_task(job_id, calc_type, block, lt_rlz_id):
     """
+    Task wrapper around core hazard curve/disaggregation computation functions.
+
+    :param int job_id:
+        ID of the currently running job.
+    :param calc_type:
+        'hazard_curve' or 'disagg'. This indicates more or less the calculation
+        phase; first we must computed all of the hazard curves, then we can
+        compute the disaggregation histograms.
+    :param block:
+        A sequence of work items for this task to process. In the case of
+        hazard curve computation, this is a sequence of source IDs. In the case
+        of disaggregation, this is a list of points.
+
+        For more info, see
+        :func:`openquake.calculators.hazard.classical.core.compute_hazard_curves`
+        if ``calc_type`` is 'hazard_curve' and :func:`compute_disagg` if
+        ``calc_type`` is 'disagg'.
+    :param lt_rlz_id:
+        ID of the :class:`openquake.db.models.LtRealization` for this part of
+        the computation.
     """
+    result = None
     if calc_type == 'hazard_curve':
-        return classical.compute_hazard_curves(job_id, *args)
+        result = classical.compute_hazard_curves(job_id, block, lt_rlz_id)
     elif calc_type == 'disagg':
-        return compute_disagg(job_id, *args)
+        result = compute_disagg(job_id, block, lt_rlz_id)
     else:
         msg = ('Invalid calculation type "%s";'
                ' expected "hazard_curve" or "disagg"')
@@ -43,6 +64,8 @@ def disagg_task(job_id, calc_type, *args):
 
     haz_general.signal_task_complete(
         job_id=job_id, num_items=None, calc_type=calc_type)
+
+    return result
 
 
 def compute_disagg(job_id, points, lt_rlz_id):
