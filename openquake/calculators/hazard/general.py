@@ -800,13 +800,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
             hc_prog.save()
 
-    def get_task_complete_callback(self, task_arg_gen):
+    def get_task_complete_callback(self, task_arg_gen, block_size,
+                                   concurrent_tasks):
         """
-        Create the callback which responds to a task completion signal.
+        Create the callback which responds to a task completion signal. In some
+        cases, the reponse is simply to enqueue the next task (if there is any
+        work left to be done).
 
         :param task_arg_gen:
             The task arg generator, so the callback can get the next set of
             args and enqueue the next task.
+        :param int block_size:
+            The (maximum) number of work items to pass to a given task.
+        :param int concurrent_tasks:
+            The (maximum) number of tasks that should be in queue at any time.
         :return:
             A callback function which responds to a task completion signal.
             A response typically includes enqueuing the next task and updating
@@ -884,7 +891,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(
                 task_signal_queue,
-                callbacks=[self.get_task_complete_callback(task_gen)]):
+                callbacks=[self.get_task_complete_callback(task_gen,
+                                                           block_size,
+                                                           concurrent_tasks)]):
 
                 # First: Queue up the initial tasks.
                 for _ in xrange(concurrent_tasks):
