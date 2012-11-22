@@ -396,7 +396,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             routing_key=routing_key, durable=False, auto_delete=True)
 
         def test_callback(body, message):
-            self.assertEqual(dict(job_id=self.job.id, num_sources=1),
+            self.assertEqual(dict(job_id=self.job.id, num_items=1),
                              body)
             message.ack()
 
