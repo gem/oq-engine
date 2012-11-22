@@ -170,7 +170,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # job_id, calc type, point block, lt rlz
                 yield (self.job.id, 'disagg', block, lt_rlz.id)
 
-    def get_task_complete_callback(self, hc_task_arg_gen):
+    def get_task_complete_callback(self, hc_task_arg_gen, block_size,
+                                   concurrent_tasks):
         """
         Overrides the default task complete callback, defined in the super
         class.
@@ -179,13 +180,16 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         the calculation. This method also handles task generation for the
         second phase.
 
+        :param int concurrent_tasks:
+            The (maximum) number of tasks that should be in queue at any time.
+            This parameter is used when the calculation phase changes from
+            `hazard_curve` to `disagg`, and the queue needs to be filled up
+            completely with disagg tasks.
+
         See
         :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.get_task_complete_callback`
-        for expected input and output.
+        for more info about the expected input and output.
         """
-        block_size = int(config.get('hazard', 'block_size'))
-        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
-
         # prep the disaggregation task arg gen for the second phase of the
         # calculation
         disagg_task_arg_gen = self.disagg_task_arg_gen(block_size)
