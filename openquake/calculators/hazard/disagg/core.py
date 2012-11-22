@@ -218,7 +218,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
                 try:
-                    self.core_calc_task.apply_async(disagg_task_arg_gen.next())
+                    haz_general.queue_next(
+                        self.core_calc_task, disagg_task_arg_gen.next())
                 except StopIteration:
                     # There are no more tasks to dispatch; now we just need to
                     # wait until all of the tasks signal completion.
@@ -240,7 +241,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # with disagg tasks:
                         for _ in xrange(concurrent_tasks):
                             try:
-                                self.core_calc_task.apply_async(
+                                haz_general.queue_next(
+                                    self.core_calc_task,
                                     disagg_task_arg_gen.next())
                             except StopIteration:
                                 # If we get a `StopIteration` here, that means
@@ -251,8 +253,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # we're not done computing hazard curves; enqueue the
                         # next task
                         try:
-                            self.core_calc_task.apply_async(
-                                hc_task_arg_gen.next())
+                            haz_general.queue_next(
+                                self.core_calc_task, hc_task_arg_gen.next())
                         except StopIteration:
                             pass
                         else:
