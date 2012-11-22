@@ -212,7 +212,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             calc_type = body['calc_type']
 
             assert job_id == self.job.id
-            self.progress['computed'] += num_items
 
             # Log a progress message
             logs.log_percent_complete(job_id, 'hazard')
@@ -264,7 +263,15 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         else:
                             logs.LOG.debug(
                                 '* queueing the next hazard curve task')
+                else:
+                    # we're in the hazard curve phase, but the completed
+                    # message did not have a  'hazard_curve' type
+                    raise RuntimeError(
+                        'Unexpected message `calc_type`: "%s"' % calc_type)
 
+            # Last thing, update the 'computed' counter and acknowledge the
+            # message:
+            self.progress['computed'] += num_items
             message.ack()
 
         return callback
