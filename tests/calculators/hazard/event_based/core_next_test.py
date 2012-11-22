@@ -198,7 +198,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # Now test the completion signal messaging of the task:
         def test_callback(body, message):
             self.assertEqual(
-                dict(job_id=self.job.id, num_sources=sources_per_task), body)
+                dict(job_id=self.job.id, num_items=sources_per_task), body)
             message.ack()
 
         exchange, conn_args = haz_general.exchange_and_conn_args()
