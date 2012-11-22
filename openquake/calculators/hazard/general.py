@@ -451,6 +451,22 @@ def signal_task_complete(**kwargs):
             producer.publish(msg)
 
 
+def queue_next(task_func, task_args):
+    """
+    :param task_func:
+        A Celery task function, to be enqueued with the next set of args in
+        ``task_arg_gen``.
+    :param task_args:
+        A set of arguments which match the specified ``task_func``.
+
+    .. note::
+        This utility function was added to make for easier mocking and testing
+        of the "plumbing" which handles task queuing (such as the various "task
+        complete" callback functions).
+    """
+    task_func.apply_async(task_args)
+
+
 class BaseHazardCalculatorNext(base.CalculatorNext):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -821,7 +837,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             # Once we receive a completion signal, enqueue the next
             # piece of work (if there's anything left to be done).
             try:
-                self.core_calc_task.apply_async(task_arg_gen.next())
+                queue_next(self.core_calc_task, task_arg_gen.next())
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
@@ -873,7 +889,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 # First: Queue up the initial tasks.
                 for _ in xrange(concurrent_tasks):
                     try:
-                        self.core_calc_task.apply_async(task_gen.next())
+                        queue_next(self.core_calc_task, task_gen.next())
                     except StopIteration:
                         # If we get a `StopIteration` here, that means we have
                         # a number of tasks < concurrent_tasks.
