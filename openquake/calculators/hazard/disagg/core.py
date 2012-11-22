@@ -217,6 +217,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             logs.log_percent_complete(job_id, 'hazard')
 
             if self.disagg_phase:
+                assert calc_type == 'disagg'
                 # We're in the second phase of the calculation; just keep
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
