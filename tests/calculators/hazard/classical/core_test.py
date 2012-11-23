@@ -90,6 +90,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # This is import for the logic tree processing we need to do later on.
         self.assertEqual('dissFaultModel.xml', src2ltsrc.filename)
 
+    @attr('slow')
     def test_initialize_site_model(self):
         # we need a slightly different config file for this test
         cfg = helpers.demo_file(
