@@ -32,16 +32,12 @@ from openquake.utils import tasks as utils_tasks
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def disagg_task(job_id, calc_type, block, lt_rlz_id):
+def disagg_task(job_id, block, lt_rlz_id, calc_type):
     """
     Task wrapper around core hazard curve/disaggregation computation functions.
 
     :param int job_id:
         ID of the currently running job.
-    :param calc_type:
-        'hazard_curve' or 'disagg'. This indicates more or less the calculation
-        phase; first we must computed all of the hazard curves, then we can
-        compute the disaggregation histograms.
     :param block:
         A sequence of work items for this task to process. In the case of
         hazard curve computation, this is a sequence of source IDs. In the case
@@ -54,6 +50,10 @@ def disagg_task(job_id, calc_type, block, lt_rlz_id):
     :param lt_rlz_id:
         ID of the :class:`openquake.db.models.LtRealization` for this part of
         the computation.
+    :param calc_type:
+        'hazard_curve' or 'disagg'. This indicates more or less the calculation
+        phase; first we must computed all of the hazard curves, then we can
+        compute the disaggregation histograms.
     """
     result = None
     if calc_type == 'hazard_curve':
@@ -188,8 +188,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 'parsed_source_id', flat=True)
 
             for block in general_utils.block_splitter(source_ids, block_size):
-                # job_id, calc type, source id block, lt rlz
-                yield (self.job.id, 'hazard_curve', block, lt_rlz.id)
+                # job_id, source id block, lt rlz, calc_type
+                yield (self.job.id, block, lt_rlz.id, 'hazard_curve')
 
     def disagg_task_arg_gen(self, block_size):
         """
@@ -208,8 +208,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         all_points = list(self.hc.points_to_compute())
         for lt_rlz in realizations:
             for block in general_utils.block_splitter(all_points, block_size):
-                # job_id, calc type, point block, lt rlz
-                yield (self.job.id, 'disagg', block, lt_rlz.id)
+                # job_id, point block, lt rlz, calc_type
+                yield (self.job.id, block, lt_rlz.id, 'disagg')
 
     def get_task_complete_callback(self, hc_task_arg_gen, block_size,
                                    concurrent_tasks):
