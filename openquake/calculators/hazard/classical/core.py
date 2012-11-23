@@ -272,56 +272,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def post_execute(self):
         """
-        Create the final output records for hazard curves. This is done by
-        copying the temporary results from `htemp.hazard_curve_progress` to
-        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
-        the actual curve PoE values). Foreign keys are made from
-        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
-        is need to export the full hazard curve results).
+        Post-execution actions. At the moment, all we do is finalize the hazard
+        curve results. See
+        :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.finalize_hazard_curves` for more info.
         """
-        im = self.hc.intensity_measure_types_and_levels
-        points = self.hc.points_to_compute()
-
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc.id)
-
-        for rlz in realizations:
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, imls in im.items():
-                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
-
-                hco = models.Output(
-                    owner=self.hc.owner,
-                    oq_job=self.job,
-                    display_name="hc-rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
-                )
-                hco.save()
-
-                haz_curve = models.HazardCurve(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imls,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-                haz_curve.save()
-
-                [hc_progress] = models.HazardCurveProgress.objects.filter(
-                    lt_realization=rlz.id, imt=imt)
-
-                hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
-                for i, location in enumerate(points):
-                    poes = hc_progress.result_matrix[i]
-                    hc_data_inserter.add_entry(
-                        hazard_curve_id=haz_curve.id,
-                        poes=poes.tolist(),
-                        location=location.wkt2d)
-
-                hc_data_inserter.flush()
+        self.finalize_hazard_curves()
 
     def clean_up(self):
         """
