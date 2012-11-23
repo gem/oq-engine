@@ -156,7 +156,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         num_points = len(self.hc.points_to_compute())
         self.progress['total'] += num_rlzs * num_points
 
-        # Update the progress info on the realizations:
+        # Update the progress info on the realizations, to include the disagg
+        # phase:
         for rlz in realizations:
             rlz.total_items += num_points
             rlz.save()
