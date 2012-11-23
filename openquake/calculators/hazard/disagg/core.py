@@ -160,8 +160,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             calc tasks.
         """
         realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False)
-
+            hazard_calculation=self.hc)
 
         # then distribute tasks for disaggregation histogram computation
         all_points = list(self.hc.points_to_compute())
