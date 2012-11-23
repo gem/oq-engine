@@ -1357,8 +1357,8 @@ CREATE TABLE hzrdr.lt_realization (
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     gsim_lt_path VARCHAR[] NOT NULL,
     is_complete BOOLEAN DEFAULT FALSE,
-    total_sources INTEGER NOT NULL,
-    completed_sources INTEGER NOT NULL DEFAULT 0
+    total_items INTEGER NOT NULL,
+    completed_items INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE hzrdr_ts;
 
 

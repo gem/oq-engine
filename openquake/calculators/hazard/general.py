@@ -625,8 +625,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         stats.pk_set(self.job.id, "lvr", 0)
         rs = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation)
-        total = rs.aggregate(Sum("total_sources"))
-        done = rs.aggregate(Sum("completed_sources"))
+        total = rs.aggregate(Sum("total_items"))
+        done = rs.aggregate(Sum("completed_items"))
         stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
         if done > 0:
             stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
@@ -654,8 +654,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 weight=weight,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1)
+                # we will update total_items in initialize_source_progress()
+                total_items=-1)
             lt_rlz.save()
 
             if not sm_name in hzrd_src_cache:
@@ -713,8 +713,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1
+                # we will update total_items in initialize_source_progress()
+                total_items=-1
             )
             lt_rlz.save()
 
@@ -765,7 +765,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             """ % (src_progress_tbl, parsed_src_tbl),
             [lt_rlz.id, hzrd_src.id])
         cursor.execute("""
-            UPDATE "%s" SET total_sources = (
+            UPDATE "%s" SET total_items = (
                 SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
             )""" % (lt_rlz_tbl, src_progress_tbl),
             [lt_rlz.id])
