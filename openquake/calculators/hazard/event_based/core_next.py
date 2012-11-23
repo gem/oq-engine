@@ -646,14 +646,14 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         if self.job.hazard_calculation.complete_logic_tree_gmf:
             self.initialize_complete_lt_gmf_db_records()
 
-        self.initialize_pr_data()
-
         self.record_init_stats()
 
         num_sources = models.SourceProgress.objects.filter(
             is_complete=False,
             lt_realization__hazard_calculation=self.hc).count()
         self.progress['total'] = num_sources
+
+        self.initialize_pr_data()
 
     def post_process(self):
         """
