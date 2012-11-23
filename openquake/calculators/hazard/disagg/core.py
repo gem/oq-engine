@@ -283,6 +283,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         self.disagg_phase = True
                         logs.LOG.debug('* switching to disaggregation phase')
 
+                        # Finalize the hazard curves, so the disaggregation
+                        # can find curves by their point geometry:
+                        self.finalize_hazard_curves()
+
                         logs.LOG.debug('* queuing initial disagg tasks')
                         # the task queue should be empty, so let's fill it up
                         # with disagg tasks:

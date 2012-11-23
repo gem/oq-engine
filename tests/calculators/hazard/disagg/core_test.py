@@ -40,7 +40,6 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         def ack(self):
             self.acks += 1
 
-
     def setUp(self):
         self.job = engine2.prepare_job()
         self.calc = disagg_core.DisaggHazardCalculator(self.job)
@@ -60,12 +59,21 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.queue_next_patch = helpers.patch('%s.queue_next' % general_path)
         self.queue_next_mock = self.queue_next_patch.start()
 
+        # Mock `finalize_hazard_curves`
+        self.finalize_curves_patch = helpers.patch(
+            '%s.BaseHazardCalculatorNext.finalize_hazard_curves'
+            % general_path)
+        self.finalize_curves_mock = self.finalize_curves_patch.start()
+
     def tearDown(self):
         self.disagg_tag_mock.stop()
         self.disagg_tag_patch.stop()
 
         self.queue_next_mock.stop()
         self.queue_next_patch.stop()
+
+        self.finalize_curves_mock.stop()
+        self.finalize_curves_patch.stop()
 
     def test_task_complete_call_back(self):
         # Test the workflow of the task complete callback.
@@ -99,6 +107,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(1, self.calc.progress['computed'])
         self.assertEqual(1, self.calc.progress['hc_computed'])
         self.assertEqual(2, self.queue_next_mock.call_count)
+        self.assertEqual(0, self.finalize_curves_mock.call_count)
 
         # Second call:
         callback(body, message)
@@ -107,6 +116,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(2, self.calc.progress['computed'])
         self.assertEqual(2, self.calc.progress['hc_computed'])
         self.assertEqual(3, self.queue_next_mock.call_count)
+        self.assertEqual(0, self.finalize_curves_mock.call_count)
 
         # Test that an exception is thrown when we receive a non-hazard_curve
         # completion message during the hazard curve phase.
@@ -124,6 +134,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(3, self.calc.progress['hc_computed'])
         # We should have queued 2 disagg tasks here (given concurrent_tasks=2)
         self.assertEqual(5, self.queue_next_mock.call_count)
+        self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Fourth call:
         body['calc_type'] = 'disagg'
@@ -133,6 +144,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(4, self.calc.progress['computed'])
         self.assertEqual(3, self.calc.progress['hc_computed'])
         self.assertEqual(6, self.queue_next_mock.call_count)
+        self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Fifth call:
         callback(body, message)
@@ -142,6 +154,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(3, self.calc.progress['hc_computed'])
         # Nothing else should be queued; there are no more items to enque.
         self.assertEqual(6, self.queue_next_mock.call_count)
+        self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Sixth (final) call:
         # This simulates the message from the last task. The only expected
@@ -153,3 +166,4 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.assertEqual(6, self.calc.progress['computed'])
         # Hazard curves computed counter remains at 3
         self.assertEqual(3, self.calc.progress['hc_computed'])
+        self.assertEqual(1, self.finalize_curves_mock.call_count)
