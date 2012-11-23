@@ -76,7 +76,8 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.calc.progress['total'] = 6
         self.calc.progress['hc_total'] = 3
 
-        callback = self.calc.get_task_complete_callback(hc_tag, block_size=1, concurrent_tasks=2)
+        callback = self.calc.get_task_complete_callback(
+            hc_tag, block_size=1, concurrent_tasks=2)
 
         message = self.__class__.FakeMessage()
 
