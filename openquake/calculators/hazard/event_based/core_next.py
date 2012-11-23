@@ -432,7 +432,6 @@ def _create_gmf_record(gmf_set, imt):
     return gmf
 
 
-
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
