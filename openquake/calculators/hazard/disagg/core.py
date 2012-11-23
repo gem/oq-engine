@@ -303,6 +303,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                             haz_general.queue_next(
                                 self.core_calc_task, hc_task_arg_gen.next())
                         except StopIteration:
+                            # No more hazard curve tasks left to enqueue;
+                            # now we just wait for this phase to complete.
                             pass
                         else:
                             logs.LOG.debug(
