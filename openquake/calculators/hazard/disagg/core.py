@@ -73,7 +73,9 @@ def disagg_task(job_id, calc_type, block, lt_rlz_id):
 
 
 def compute_disagg(job_id, points, lt_rlz_id):
-    logs.LOG.warn('> starting compute_disagg')
+    logs.LOG.debug(
+        '> computing disaggregation for %(np)s points for realization %(rlz)s'
+        % dict(np=len(points), rlz=lt_rlz_id))
 
     with transaction.commit_on_success():
         # Update realiation progress,
@@ -94,7 +96,7 @@ def compute_disagg(job_id, points, lt_rlz_id):
 
         lt_rlz.save()
 
-    logs.LOG.warn('< ending compute_disagg')
+    logs.LOG.debug('< done computing disaggregation')
     return None
 
 
@@ -270,12 +272,14 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             else:
                 if calc_type == 'hazard_curve':
                     # record progress specifically for hazard curve computation
+
                     self.progress['hc_computed'] += num_items
 
                     if (self.progress['hc_computed']
                         == self.progress['hc_total']):
                         # we're switching to disagg phase
                         self.disagg_phase = True
+                        logs.LOG.debug('* switching to disaggregation phase')
 
                         logs.LOG.debug('* queuing initial disagg tasks')
                         # the task queue should be empty, so let's fill it up
