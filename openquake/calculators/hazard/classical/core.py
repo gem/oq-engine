@@ -183,8 +183,8 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
         [lt_rlz] = models.LtRealization.objects.raw(
             ltr_query, [lt_rlz.id])
 
-        lt_rlz.completed_sources += len(src_ids)
-        if lt_rlz.completed_sources == lt_rlz.total_sources:
+        lt_rlz.completed_items += len(src_ids)
+        if lt_rlz.completed_items == lt_rlz.total_items:
             lt_rlz.is_complete = True
 
         lt_rlz.save()

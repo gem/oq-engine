@@ -1966,8 +1966,8 @@ class UhSpectrumData(djm.Model):
 
 class LtRealization(djm.Model):
     """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+    Keep track of logic tree realization progress. When ``completed_items``
+    becomes equal to ``total_items``, mark ``is_complete`` as `True`.
 
     Marking progress as we go gives us the ability to resume partially-
     completed calculations.
@@ -1980,8 +1980,8 @@ class LtRealization(djm.Model):
     sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
     is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField(default=0)
+    total_items = djm.IntegerField()
+    completed_items = djm.IntegerField(default=0)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
