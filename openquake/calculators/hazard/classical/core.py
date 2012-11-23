@@ -226,7 +226,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
-            self.progress['total'] += len(source_ids)
 
             for offset in xrange(0, len(source_ids), block_size):
                 task_args = (
@@ -260,9 +259,16 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-        self.initialize_pr_data()
 
         self.record_init_stats()
+
+        # Set the progress counters:
+        num_sources = models.SourceProgress.objects.filter(
+            is_complete=False,
+            lt_realization__hazard_calculation=self.hc).count()
+        self.progress['total'] = num_sources
+
+        self.initialize_pr_data()
 
     def post_execute(self):
         """
