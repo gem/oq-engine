@@ -18,6 +18,8 @@
 Disaggregation calculator core functionality
 """
 
+from django.db import transaction
+
 from openquake import logs
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.classical import core as classical
@@ -71,6 +73,28 @@ def disagg_task(job_id, calc_type, block, lt_rlz_id):
 
 
 def compute_disagg(job_id, points, lt_rlz_id):
+    logs.LOG.warn('> starting compute_disagg')
+
+    with transaction.commit_on_success():
+        # Update realiation progress,
+        # mark realization as complete if it is done
+        # First, refresh the logic tree realization record:
+        ltr_query = """
+        SELECT * FROM hzrdr.lt_realization
+        WHERE id = %s
+        FOR UPDATE
+        """
+
+        [lt_rlz] = models.LtRealization.objects.raw(
+            ltr_query, [lt_rlz_id])
+
+        lt_rlz.completed_items += len(points)
+        if lt_rlz.completed_items == lt_rlz.total_items:
+            lt_rlz.is_complete = True
+
+        lt_rlz.save()
+
+    logs.LOG.warn('< ending compute_disagg')
     return None
 
 
