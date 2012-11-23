@@ -141,6 +141,24 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         self.record_init_stats()
 
+        # Set the progress counters:
+        num_sources = models.SourceProgress.objects.filter(
+            is_complete=False,
+            lt_realization__hazard_calculation=self.hc).count()
+        self.progress['total'] += num_sources
+        self.progress['hc_total'] = num_sources
+
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False)
+        num_rlzs = realizations.count()
+        num_points = len(self.hc.points_to_compute())
+        self.progress['total'] += num_rlzs * num_points
+
+        # Update the progress info on the realizations:
+        for rlz in realizations:
+            rlz.total_items += num_points
+            rlz.save()
+
     def task_arg_gen(self, block_size):
         """
         Generate task args for the first phase of the disaggregation
@@ -165,10 +183,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             source_ids = source_progress.values_list(
                 'parsed_source_id', flat=True)
 
-            self.progress['total'] += len(source_ids)
-            # keep track of hazard curves separately, so we can know when the
-            # hazard curve phase is completed
-            self.progress['hc_total'] += len(source_ids)
             for block in general_utils.block_splitter(source_ids, block_size):
                 # job_id, calc type, source id block, lt rlz
                 yield (self.job.id, 'hazard_curve', block, lt_rlz.id)
