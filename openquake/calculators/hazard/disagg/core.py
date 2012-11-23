@@ -139,7 +139,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-        self.initialize_pr_data()
 
         self.record_init_stats()
 
@@ -161,6 +160,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         for rlz in realizations:
             rlz.total_items += num_points
             rlz.save()
+
+        self.initialize_pr_data()
 
     def task_arg_gen(self, block_size):
         """
