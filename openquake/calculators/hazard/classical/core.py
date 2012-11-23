@@ -36,6 +36,7 @@ from openquake.db.aggregate_result_writer import (MeanCurveWriter,
                                                   QuantileCurveWriter)
 from openquake.calculators.hazard.classical import post_processing
 
+
 @utils_tasks.oqtask
 @stats.count_progress('h')
 def hazard_curves(job_id, src_ids, lt_rlz_id):
@@ -190,7 +191,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
         lt_rlz.save()
 
     logs.LOG.debug('< transaction complete')
-
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
