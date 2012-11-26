@@ -42,6 +42,49 @@ class ClassicalRiskHazardCase1TestCase(risk.BaseRiskQATestCase):
 </nrml>
     """
 
+    EXPECTED_LOSS_MAP_0_1_XML = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="50.0" poE="0.01"
+           statistics="mean" lossCategory="single_asset" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <loss assetRef="a1" value="0.264586283238"/>
+    </node>
+  </lossMap>
+</nrml>
+    """
+
+    EXPECTED_LOSS_MAP_0_2_XML = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="50.0" poE="0.02"
+           statistics="mean" lossCategory="single_asset" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <loss assetRef="a1" value="0.141989823521"/>
+    </node>
+  </lossMap>
+</nrml>"""
+
+    EXPECTED_LOSS_MAP_0_5_XML = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="50.0" poE="0.05" statistics="mean" lossCategory="single_asset" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <loss assetRef="a1" value="0.0"/>
+    </node>
+  </lossMap>
+</nrml>
+    """
+
     @noseattr('qa', 'risk', 'classical')
     def test(self):
         self.run_test()
@@ -74,9 +117,12 @@ class ClassicalRiskHazardCase1TestCase(risk.BaseRiskQATestCase):
         return hd.hazard_curve.output.id
 
     def actual_data(self, job):
-        return [lcd.loss_ratios
-                for lcd in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job)]
+        return ([curve.loss_ratios
+                for curve in models.LossCurveData.objects.filter(
+                        loss_curve__output__oq_job=job)] +
+                [point.value
+                 for point in models.LossMapData.objects.filter(
+                        loss_map__output__oq_job=job)])
 
     def expected_data(self):
         return [[
@@ -84,7 +130,11 @@ class ClassicalRiskHazardCase1TestCase(risk.BaseRiskQATestCase):
             0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16,
             0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40,
             0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
-            0.92, 0.96, 1.00]]
+            0.92, 0.96, 1.00],
+            0.264586283238, 0.141989823521, 0.0]
 
     def expected_outputs(self):
-        return [self.EXPECTED_LOSS_CURVE_XML]
+        return [self.EXPECTED_LOSS_CURVE_XML,
+                self.EXPECTED_LOSS_MAP_0_1_XML,
+                self.EXPECTED_LOSS_MAP_0_2_XML,
+                self.EXPECTED_LOSS_MAP_0_5_XML]
