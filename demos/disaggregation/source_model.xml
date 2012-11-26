@@ -5,7 +5,7 @@
         <pointSource id="1" name="point" tectonicRegion="Active Shallow Crust">
           <pointGeometry>
             <gml:Point>
-              <gml:pos>0.0 0.0</gml:pos>
+              <gml:pos>9.5 39.5</gml:pos>
             </gml:Point>
             <upperSeismoDepth>0.0</upperSeismoDepth>
             <lowerSeismoDepth>20.0</lowerSeismoDepth>
@@ -26,7 +26,7 @@
             <gml:Polygon>
               <gml:exterior>
                 <gml:LinearRing>
-                  <gml:posList>-0.5 -0.5 -0.5 0.5 0.5 0.5 0.5 -0.5</gml:posList>
+                  <gml:posList>9.5 39.5 9.5 40.5 10.5 40.5 10.5 39.5</gml:posList>
                 </gml:LinearRing>
               </gml:exterior>
             </gml:Polygon>
@@ -47,7 +47,7 @@
         <simpleFaultSource id="3" name="simple fault" tectonicRegion="Active Shallow Crust">
           <simpleFaultGeometry>
             <gml:LineString>
-              <gml:posList>-0.5 -0.5 0.5 0.5</gml:posList>
+              <gml:posList>9.5 39.5 9.5 40.5</gml:posList>
             </gml:LineString>
             <dip>90.0</dip>
             <upperSeismoDepth>1.0</upperSeismoDepth>
@@ -63,12 +63,12 @@
           <complexFaultGeometry>
             <faultTopEdge>
               <gml:LineString>
-                <gml:posList>-0.5 -0.45 5.0 0.45 0.5 5.0</gml:posList>
+                <gml:posList>10.5 39.5 5.0 10.5 40.5 5.0</gml:posList>
               </gml:LineString>
             </faultTopEdge>
             <faultBottomEdge>
               <gml:LineString>
-                <gml:posList>-0.45 -0.5 10.0 0.5 0.45 10.0</gml:posList>
+                <gml:posList>10.5 39.5 10.0 10.5 40.5 10.0</gml:posList>
               </gml:LineString>
             </faultBottomEdge>
           </complexFaultGeometry>
