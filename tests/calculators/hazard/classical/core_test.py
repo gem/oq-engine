@@ -319,7 +319,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.post_process()
 
         number_of_curves = (
-            models.HazardCurveData.objects.individual_curves(self.job).count())
+            models.HazardCurveData.objects.individual_curves(
+                self.job, "PGA").count())
 
         curves_per_loc = (
             self.job.hazard_calculation.individual_curves_per_location())
