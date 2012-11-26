@@ -247,13 +247,16 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
 
 
 def run_risk_job_sp(config_file, params=None, check_output=False,
-                    silence=False):
+                    silence=False, hazard_id=None):
     """
     Given a path to a config file, run an openquake risk job as a separate
     process using `subprocess`. See `run_hazard_job_sp` for the signature
+
+    :param hazard_id:
+      ID of the hazard output used by the risk calculation
     """
 
-    hazard_curve_id = models.HazardCurve.objects.filter(
+    hazard_curve_id = hazard_id or models.HazardCurve.objects.filter(
         statistics="mean")[0].output.id
     args = ["bin/openquake", "--force-inputs", "--run-risk=%s" % config_file,
             "--hazard-output-id=%d" % hazard_curve_id]
