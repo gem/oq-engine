@@ -18,33 +18,7 @@ from scipy import sqrt, log, stats
 from numpy import array, empty, concatenate, linspace, subtract
 
 from risklib.curve import Curve
-from risklib.signals import EMPTY_CALLBACK
 from risklib.vulnerability_function import _mean_imls
-
-
-def compute(sites, assets_getter,
-            vulnerability_model, hazard_getter,
-            steps, conditional_loss_poes,
-            on_asset_complete=EMPTY_CALLBACK):
-
-    loss_ratio_exceedance_matrices = dict(
-        [(taxonomy,
-          _loss_ratio_exceedance_matrix(vulnerability_function, steps))
-         for taxonomy, vulnerability_function in vulnerability_model.items()])
-
-    for site in sites:
-        point, hazard_curve_values = hazard_getter(site)
-        assets = assets_getter(site)
-
-        for asset in assets:
-            vulnerability_function = vulnerability_model[asset.taxonomy]
-            loss_ratio_curve, loss_curve, loss_conditionals = (
-                _compute_per_asset(
-                    asset, vulnerability_function,
-                    loss_ratio_exceedance_matrices[asset.taxonomy],
-                    hazard_curve_values, steps, conditional_loss_poes))
-            on_asset_complete(asset, point, loss_ratio_curve,
-                loss_curve, loss_conditionals)
 
 
 def _loss_ratio_exceedance_matrix(vuln_function, steps):
@@ -84,16 +58,6 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
                     "Only beta or lognormal distributions are supported")
 
     return lrem
-
-
-def _compute_per_asset(asset, vulnerability_function, lrem,
-                                hazard_curve_values, steps, loss_poes):
-    loss_ratio_curve = _loss_ratio_curve(
-        vulnerability_function, lrem, hazard_curve_values, steps)
-    loss_curve = _loss_curve(loss_ratio_curve, asset.value)
-    loss_conditionals = _conditional_losses(
-        loss_curve, loss_poes)
-    return loss_ratio_curve, loss_curve, loss_conditionals
 
 
 def _conditional_losses(curve, probabilities):

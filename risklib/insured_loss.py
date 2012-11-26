@@ -16,9 +16,22 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import numpy
+def compute_insured_losses(asset, losses):
+    """
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
 
+    :param asset: the asset used to compute the loss ratios and losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
+    :param losses: an array of loss values multiplied by the asset value.
+    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
+    """
 
-def aggregate_losses(set_of_losses):
-    total_losses = sum(set_of_losses)
-    return numpy.mean(total_losses), numpy.std(total_losses, ddof=1)
+    for i, value in enumerate(losses):
+        if value < asset.deductible:
+            losses[i] = 0
+        else:
+            if value > asset.ins_limit:
+                losses[i] = asset.ins_limit
+
+    return losses

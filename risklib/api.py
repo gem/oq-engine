@@ -21,6 +21,7 @@ from risklib import classical as classical_functions
 from risklib import event_based as event_based_functions
 from risklib import benefit_cost_ratio as bcr_functions
 from risklib import scenario_damage as scenario_damage_functions
+from risklib import insured_loss as insured_loss_functions
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -102,15 +103,15 @@ def compute_on_assets(assets, hazard_getter, calculator):
 def classical(vulnerability_model, steps=10):
     """
     Classical calculator. For each asset it produces:
-        * a loss curve
-        * a loss ratio curve
-        * a set of conditional losses
+    * a loss curve
+    * a loss ratio curve
+    * a set of conditional losses
     """
 
     matrices = dict([(taxonomy,
-        classical_functions._loss_ratio_exceedance_matrix(
-        vulnerability_function, steps))
-        for taxonomy, vulnerability_function in vulnerability_model.items()])
+                      classical_functions._loss_ratio_exceedance_matrix(
+                          vulnerability_function, steps))
+                     for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     def classical_wrapped(asset, hazard):
         vulnerability_function = vulnerability_model[asset.taxonomy]
@@ -125,6 +126,7 @@ def classical(vulnerability_model, steps=10):
             asset, loss_ratio_curve, loss_curve, None)
 
     return classical_wrapped
+
 
 
 class scenario_damage(object):
@@ -160,7 +162,6 @@ class scenario_damage(object):
             self.fragility_model, hazard))
 
         self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
-
         return output.ScenarioDamageOutput(
             asset, damage_distribution_asset, collapse_map)
 
@@ -195,13 +196,13 @@ def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
     """
 
     def bcr_wrapped(asset, hazard):
-        expected_annual_loss_original = bcr_functions._mean_loss(
+        expected_annual_loss_original = bcr_functions.mean_loss(
             loss_curve_calculator_original(asset, hazard).loss_curve)
 
-        expected_annual_loss_retrofitted = bcr_functions._mean_loss(
+        expected_annual_loss_retrofitted = bcr_functions.mean_loss(
             loss_curve_calculator_retrofitted(asset, hazard).loss_curve)
 
-        bcr = bcr_functions._bcr(expected_annual_loss_original,
+        bcr = bcr_functions.bcr(expected_annual_loss_original,
             expected_annual_loss_retrofitted, interest_rate,
             asset_life_expectancy, asset.retrofitting_cost)
 
@@ -244,7 +245,7 @@ class probabilistic_event_based(object):
             vulnerability_function, hazard, asset, self.seed,
             self.correlation_type, taxonomies)
 
-        loss_ratio_curve = event_based_functions._compute_loss_ratio_curve(
+        loss_ratio_curve = event_based_functions.compute_loss_ratio_curve(
             vulnerability_function, hazard, asset, self.loss_histogram_bins,
             loss_ratios, self.seed, self.correlation_type, taxonomies)
 
@@ -270,7 +271,7 @@ def insured_losses(losses_calculator):
         asset_output = losses_calculator(asset, hazard)
 
         return asset_output._replace(
-            insured_losses=event_based_functions._compute_insured_losses(
+            insured_losses=insured_loss_functions.compute_insured_losses(
             asset, asset_output.losses))
 
     return insured_losses_wrapped
@@ -288,9 +289,13 @@ def insured_curves(vulnerability_model, loss_histogram_bins, seed,
         vulnerability_function = vulnerability_model[asset.taxonomy]
 
         insured_loss_ratio_curve = (
-            event_based_functions._compute_insured_loss_ratio_curve(
-            vulnerability_function, hazard, asset, loss_histogram_bins,
-            asset_output.insured_losses, seed, correlation_type, taxonomies))
+            event_based_functions.compute_loss_ratio_curve(
+                vulnerability_function, hazard, asset, loss_histogram_bins,
+                loss_ratios=asset_output.insured_losses, seed=seed,
+                correlation_type=correlation_type, taxonomies=taxonomies))
+
+        insured_loss_ratio_curve.x_values = (
+            insured_loss_ratio_curve.x_values / asset.value)
 
         insured_loss_curve = (
             insured_loss_ratio_curve.rescale_abscissae(asset.value))
@@ -335,7 +340,7 @@ class scenario_risk(object):
         losses = loss_ratios * asset.value
 
         if self.insured:
-            losses = event_based_functions._compute_insured_losses(
+            losses = insured_loss_functions.compute_insured_losses(
                 asset, losses)
 
         self._aggregate_losses += losses

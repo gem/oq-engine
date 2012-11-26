@@ -20,76 +20,9 @@ import numpy
 import random
 
 from risklib import curve
-from risklib.signals import EMPTY_CALLBACK
 from risklib import classical
 
 UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
-
-
-def compute(sites, assets_getter,
-            vulnerability_model,
-            hazard_getter,
-            loss_histogram_bins,
-            conditional_loss_poes,
-            compute_insured_losses,
-            seed, correlation_type,
-            on_asset_complete=EMPTY_CALLBACK):
-
-    aggregate_losses = None
-
-    taxonomies = vulnerability_model.keys()
-
-    for site in sites:
-        assets = assets_getter(site)
-
-        # the dict contains IMLs, TSES, TimeSpan
-        point, hazard_dict = hazard_getter(site)
-
-        if aggregate_losses is None:
-            aggregate_losses = numpy.zeros(len(hazard_dict["IMLs"]))
-
-        for asset in assets:
-            vulnerability_function = vulnerability_model[asset.taxonomy]
-
-            loss_ratios = _compute_loss_ratios(
-                vulnerability_function, hazard_dict, asset,
-                seed, correlation_type, taxonomies)
-
-            loss_ratio_curve = _compute_loss_ratio_curve(
-                vulnerability_function, hazard_dict,
-                asset, loss_histogram_bins, loss_ratios,
-                seed, correlation_type, taxonomies)
-
-            loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
-
-            loss_conditionals = dict([
-                (loss_poe, classical._conditional_loss(loss_curve, loss_poe))
-                for loss_poe in conditional_loss_poes])
-
-            if compute_insured_losses:
-                losses = loss_ratios * asset.value
-
-                insured_losses = _compute_insured_losses(asset, losses)
-
-                insured_loss_ratio_curve = _compute_insured_loss_ratio_curve(
-                    vulnerability_function, hazard_dict, asset,
-                    loss_histogram_bins, insured_losses,
-                    seed, correlation_type, taxonomies)
-
-                insured_loss_curve = (
-                    insured_loss_ratio_curve.rescale_abscissae(asset.value))
-            else:
-                insured_loss_curve = None
-                insured_loss_ratio_curve = None
-
-            on_asset_complete(
-                asset, point, loss_ratio_curve,
-                loss_curve, loss_conditionals,
-                insured_loss_curve, insured_loss_ratio_curve)
-
-            aggregate_losses += loss_ratios * asset.value
-
-    return aggregate_losses
 
 
 def aggregate_loss_curve(set_of_losses, tses, time_span, histogram_bins):
@@ -214,10 +147,10 @@ def _compute_loss_ratios(vuln_function, gmf_set,
         return _mean_based(vuln_function, gmf_set)
     else:
         epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
-        return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
+        return _sample_based(vuln_function, gmf_set, epsilon_provider, asset)
 
 
-def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
+def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the set of loss ratios when at least one CV
     (Coefficent of Variation) defined in the vulnerability function
     is greater than zero.
@@ -232,7 +165,7 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
         **TimeSpan** - time span parameter (float)
         **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
+        using the sample based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
@@ -375,7 +308,7 @@ def _generate_curve(losses, probs_of_exceedance):
     return curve.Curve(zip(mean_losses, probs_of_exceedance))
 
 
-def _compute_loss_ratio_curve(vuln_function, gmf_set,
+def compute_loss_ratio_curve(vuln_function, gmf_set,
                               asset, loss_histogram_bins, loss_ratios=None,
                               seed=None, correlation_type=None,
                               taxonomies=None):
@@ -408,7 +341,7 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
-    if not gmf_set["IMLs"]:
+    if len(gmf_set["IMLs"]) == 0: # works for numpy arrays too
         return curve.EMPTY_CURVE
 
     if loss_ratios is None:
@@ -425,74 +358,3 @@ def _compute_loss_ratio_curve(vuln_function, gmf_set,
         gmf_set["TimeSpan"])
 
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
-
-
-def _compute_insured_loss_curve(asset, loss_curve):
-    """
-    Compute an insured loss curve.
-    :param asset: the asset used to compute the insured loss curve.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param loss_curve: a loss curve.
-    :type loss_curve: a :py:class:`risklib.curve.Curve` instance.
-    """
-    insured_losses = _compute_insured_losses(asset, loss_curve.x_values)
-
-    return curve.Curve(zip(insured_losses, loss_curve.y_values))
-
-
-def _insurance_boundaries_defined(asset):
-    """
-    Check if limit and deductibles values have been defined for the asset.
-
-    :param asset: the asset used to compute the losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    if (asset.ins_limit >= 0 and asset.deductible >= 0):
-        return True
-    else:
-        raise RuntimeError('Insurance boundaries for asset %s are not defined'
-                           % asset.asset_ref)
-
-
-def _compute_insured_losses(asset, losses):
-    """
-    Compute insured losses for the given asset using the related set of ground
-    motion values and vulnerability function.
-
-    :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
-    :param losses: an array of loss values multiplied by the asset value.
-    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
-    """
-
-    if _insurance_boundaries_defined(asset):
-        for i, value in enumerate(losses):
-            if value < asset.deductible:
-                losses[i] = 0
-            else:
-                if value > asset.ins_limit:
-                    losses[i] = asset.ins_limit
-    return losses
-
-
-def _compute_insured_loss_ratio_curve(
-                vuln_function, gmf_set,
-                asset, loss_histogram_bins, insured_losses,
-                seed=None, correlation_type=None,
-                taxonomies=None):
-    """
-    Generates an insured loss ratio curve
-    """
-    insured_loss_ratio_curve = _compute_loss_ratio_curve(
-        vuln_function, gmf_set,
-        asset, loss_histogram_bins,
-        loss_ratios=insured_losses,
-        seed=seed, correlation_type=correlation_type,
-        taxonomies=taxonomies)
-
-    insured_loss_ratio_curve.x_values = (
-        insured_loss_ratio_curve.x_values / asset.value)
-
-    return insured_loss_ratio_curve

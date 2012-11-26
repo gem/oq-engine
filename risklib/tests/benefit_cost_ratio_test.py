@@ -17,7 +17,7 @@ import unittest
 
 from risklib.curve import Curve
 from risklib.benefit_cost_ratio import (
-    _bcr, _mean_loss_ratio_curve, _mean_loss)
+    bcr, mean_loss)
 
 
 class RiskCommonTestCase(unittest.TestCase):
@@ -31,26 +31,14 @@ class RiskCommonTestCase(unittest.TestCase):
         life_expectancy = 40
         expected_result = 0.43405
 
-        result = _bcr(eal_orig, eal_retrofitted, interest,
-                      life_expectancy, retrofitting_cost)
+        result = bcr(eal_orig, eal_retrofitted, interest,
+            life_expectancy, retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=2e-5)
 
-    def test_loss_ratio_pe_mid_curve_computation(self):
-        expected_curve = Curve([(0.0600, 0.1445),
-                (0.1200, 0.0400), (0.1800, 0.0190), (0.2400, 0.0155),
-                (0.3225, 0.0095)])
-
+    def test_mean_curve_computation(self):
         loss_ratio_curve = Curve([(0, 0.3460), (0.06, 0.12),
-                (0.12, 0.057), (0.18, 0.04),
-                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
-
-        self.assertEqual(expected_curve,
-                _mean_loss_ratio_curve(loss_ratio_curve))
-
-    def test_mean_loss_ratio_computation(self):
-        loss_ratio_curve = Curve([(0, 0.3460), (0.06, 0.12),
-                (0.12, 0.057), (0.18, 0.04),
-                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
+                                  (0.12, 0.057), (0.18, 0.04),
+                                  (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
         self.assertAlmostEqual(0.023305,
-                               _mean_loss(loss_ratio_curve), 3)
+            mean_loss(loss_ratio_curve), 3)
