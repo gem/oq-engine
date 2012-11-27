@@ -51,7 +51,7 @@ def info(version_data):
             return error
         data.append(str(datum if datum > 0 else 0))
 
-    result = "OpenQuake version [nhlib-based] %s" % ".".join(data[:3])
+    result = "OpenQuake version %s" % ".".join(data[:3])
 
     seconds_since_epoch = version_data[-1]
 
