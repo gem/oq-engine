@@ -243,7 +243,7 @@ class progress_indicator(object):   # pylint: disable=C0103
             except:
                 # Count failure
                 key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
+                    job_id, self.area, func.__name__ + ":failed", "i")
                 conn.incr(key)
                 raise
 
