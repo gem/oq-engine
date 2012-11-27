@@ -42,6 +42,6 @@ class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
             [curve] = models.HazardCurveData.objects.filter(
                 hazard_curve__output__oq_job=job.id)
 
-            aaae(expected_curve_poes, curve.poes, decimal=3)
+            aaae(expected_curve_poes, curve.poes, decimal=2)
         finally:
             shutil.rmtree(result_dir)

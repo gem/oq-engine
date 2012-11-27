@@ -310,7 +310,11 @@ CREATE TABLE uiapi.hazard_calculation (
     -- The timeout is stored in seconds and is 1 hour by default.
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
-        CHECK(calculation_mode IN ('classical', 'event_based')),
+        CHECK(calculation_mode IN (
+            'classical',
+            'event_based',
+            'disaggregation'
+        )),
     region_grid_spacing float,
     -- logic tree parameters:
     random_seed INTEGER,
@@ -337,6 +341,11 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- disaggregation calculator parameters:
+    mag_bin_width float,
+    distance_bin_width float,
+    coordinate_bin_width float,
+    num_epsilon_bins INTEGER,
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
