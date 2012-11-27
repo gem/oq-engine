@@ -19,6 +19,7 @@ Disaggregation calculator core functionality
 """
 
 import nhlib
+import numpy
 
 from django.db import transaction
 
@@ -116,8 +117,9 @@ def compute_disagg(job_id, points, lt_rlz_id):
                 hazard_curve__sa_damping=sa_damping,
             )
 
-            for poe in []:
-                pass
+            for poe in hc.poes_disagg:
+                iml = numpy.interp(poe, curve.poes[::-1], imls)
+                logs.LOG.warn('iml is %s' % iml)
                 # TODO: for each disagg poe, interpolate IML for the curve
                 # TODO: load the site model, if there is one
                 # TODO: Prepare the args for the calculator.
