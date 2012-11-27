@@ -70,11 +70,12 @@ mksafedir "$GEM_BUILD_SRC"
 
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
+# NOTE: if in the future we need modules we need to execute the following commands
+# 
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
 # git submodule foreach "git archive HEAD | (cd \"\${toplevel}/${GEM_BUILD_SRC}/\$path\" ; tar xv ) "
-
 
 cd "$GEM_BUILD_SRC"
 
@@ -82,51 +83,49 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version from setup.py
-stp_vers="$(cat setup.py | grep '^[ 	]*version=' | sed 's/^[ 	]*version="//g;s/".*//g')"
-stp_maj="$(echo "$stp_vers" | sed 's/\..*//g')"
-stp_min="$(echo "$stp_vers" | sed 's/^[^\.]*\.\([^\.]*\).*/\1/g')"
+stp_vers="$(cat setup.py | grep '^[ 	]*version=' | sed -n 's/^[ 	]*version="//g;s/".*//gp')"
+stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
+stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
+# echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
 # version info from openquake/__init__.py
-ini_maj="$(cat openquake/__init__.py | grep '# major' | sed 's/^[ ]*//g;s/,.*//g')"
-ini_min="$(cat openquake/__init__.py | grep '# minor' | sed 's/^[ ]*//g;s/,.*//g')"
-ini_spn="$(cat openquake/__init__.py | grep '# sprint number' | sed 's/^[ ]*//g;s/,.*//g')"
+ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_suf="" # currently not included into the version array structure
+# echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 
 # version info from debian/changelog
 h="$(head -n1 debian/changelog)"
-pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed 's/[-+].*//g')"
-pkg_maj="$(echo "$pkg_vers" | sed 's/\..*//g')"
-pkg_min="$(echo "$pkg_vers" | sed 's/^[^\.]*\.\([^\.]*\).*/\1/g')"
-
-if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
-      "$ini_min" != "$pkg_min" -o "$ini_min" != "$stp_min" ]; then
-    echo 
-    echo "Versions are not aligned"
-    echo "    init:  ${ini_maj}.${ini_min}"
-    echo "    setup: ${stp_maj}.${stp_min}"
-    echo "    pkg:   ${pkg_maj}.${pkg_min}"
-    echo
-    echo "press [enter] to continue, [ctrl+c] to abort"
-    read a
-fi
-
-sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+# pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
+pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
+pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
+pkg_rest="$(echo "$h" | cut -d ' ' -f 3-)"
+pkg_maj="$(echo "$pkg_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
+pkg_min="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+pkg_bfx="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+pkg_deb="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(-[^+]\+\).*/\1/gp')"
+pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)/\1/gp')"
+# echo "pkg [$pkg_vers] [$pkg_maj] [$pkg_min] [$pkg_bfx] [$pkg_deb] [$pkg_suf]"
 
 if [ $BUILD_DEVEL -eq 1 ]; then
     hash="$(git log --pretty='format:%h' -1)"
     mv debian/changelog debian/changelog.orig
-    h="$(head -n1 debian/changelog.orig)"
-    pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
-    pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"    
-    pkg_vsuf="$(echo "$pkg_vers" | sed 's/^[0-9\.\-]*//g')"
-    pkg_vrst="$(echo "$pkg_vers" | sed 's/+.*$//g')"
-    pkg_vdeb="$(echo "$pkg_vrst" | sed 's/^[0-9\.]*//g')"
-    pkg_vrst="$(echo "$pkg_vrst" | sed 's/-.*$//g')"
-    pkg_vbfx="$(echo "$pkg_vrst" | sed 's/^.*\.//g')"
-    pkg_vrst="$(echo "$pkg_vrst" | sed 's/.[0-9]*$//g')"
-    
-    pkg_rest="$(echo "$h" | cut -d ' ' -f 3-)"
 
-    ( echo "$pkg_name (${pkg_vrst}.${pkg_vbfx}${pkg_vdeb}+dev${dt}-${hash}) $pkg_rest"
+    if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
+         "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
+        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
+        pkg_deb="-$(( deb_ct + 1 ))"
+    else
+        pkg_maj="$ini_maj"
+        pkg_min="$ini_min"
+        pkg_bfx="$ini_bfx"
+        pkg_deb="-1"
+    fi
+
+    ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
       echo
       echo "  *  development version from $hash commit"
       echo
@@ -136,6 +135,22 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cat debian/changelog.orig >> debian/changelog
     rm debian/changelog.orig
 fi
+
+if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
+      "$ini_min" != "$pkg_min" -o "$ini_min" != "$stp_min" -o \
+      "$ini_bfx" != "$pkg_bfx" -o "$ini_bfx" != "$stp_bfx" ]; then
+    echo
+    echo "Versions are not aligned"
+    echo "    init:  ${ini_maj}.${ini_min}.${ini_bfx}"
+    echo "    setup: ${stp_maj}.${stp_min}.${stp_bfx}"
+    echo "    pkg:   ${pkg_maj}.${pkg_min}.${pkg_bfx}"
+    echo
+    echo "press [enter] to continue, [ctrl+c] to abort"
+    read a
+fi
+
+sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+
 # mods pre-packaging
 mv LICENSE         openquake
 mv README.txt      openquake/README
