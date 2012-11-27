@@ -798,6 +798,13 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    poes_disagg = fields.FloatArrayField(
+        help_text=('The probabilities of exceedance for which we interpolate'
+                   ' grond motion values from hazard curves. This GMV is used'
+                   ' as input for computing disaggregation histograms'),
+        null=True,
+        blank=True,
+    )
 
     ################################
     # Output/post-processing params:

@@ -346,6 +346,7 @@ CREATE TABLE uiapi.hazard_calculation (
     distance_bin_width float,
     coordinate_bin_width float,
     num_epsilon_bins INTEGER,
+    poes_disagg float[],
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
