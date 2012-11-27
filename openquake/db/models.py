@@ -632,6 +632,7 @@ class HazardCalculation(djm.Model):
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
+        (u'disaggregation', u'Disaggregation'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -745,6 +746,35 @@ class HazardCalculation(djm.Model):
     ground_motion_correlation_params = fields.DictField(
         help_text=('Parameters specific to the chosen ground motion'
                    ' correlation model'),
+        null=True,
+        blank=True,
+    )
+
+    ###################################
+    # Disaggregation Calculator params:
+    ###################################
+    mag_bin_width = djm.FloatField(
+        help_text=('Width of magnitude bins, which ultimately defines the size'
+                   ' of the magnitude dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    distance_bin_width = djm.FloatField(
+        help_text=('Width of distance bins, which ultimately defines the size'
+                   ' of the distance dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    coordinate_bin_width = djm.FloatField(
+        help_text=('Width of coordinate bins, which ultimately defines the'
+                   ' size of the longitude and latitude dimensions of a'
+                   ' disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    num_epsilon_bins = djm.IntegerField(
+        help_text=('Number of epsilon bins, which defines the size of the'
+                   ' epsilon dimension of a disaggregation matrix'),
         null=True,
         blank=True,
     )
@@ -1756,6 +1786,32 @@ class Gmf(djm.Model):
 
 
 class DisaggResult(djm.Model):
+    """
+    Storage for disaggregation historgrams. Each histogram is stored in
+    `matrix` as a 6-dimensional numpy array (pickled). The dimensions of the
+    matrix are as follows, in order:
+
+    * magnitude
+    * distance
+    * longitude
+    * latitude
+    * epsilon
+    * tectonic region type
+
+    Bin edges are defined for all of these dimensions (except tectonic region
+    type) as:
+
+    * `mag_bin_edges`
+    * `dist_bin_edges`
+    * `lat_bin_edges`
+    * `lon_bin_edges`
+    * `eps_bin_edges`
+
+    Additional metadata for the disaggregation histogram is stored, including
+    location (POINT geometry), disaggregation PoE (Probability of Exceedance)
+    and the corresponding IML (Intensity Measure Level) extracted from the
+    hazard curve, logic tree path information, and investigation time.
+    """
 
     output = djm.ForeignKey('Output')
     lt_realization = djm.ForeignKey('LtRealization')
