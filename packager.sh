@@ -43,6 +43,12 @@ while [ $# -gt 0 ]; do
     case $1 in
         -D|--development)
             BUILD_DEVEL=1
+            if [ "$DEBFULLNAME" = "" -o "$DEBEMAIL" = "" ]; then
+                echo
+                echo "error: set DEBFULLNAME and DEBEMAIL environment vars and run again the script"
+                echo
+                exit 1
+            fi
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
