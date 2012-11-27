@@ -55,8 +55,8 @@ import os
 # released OpenQuake code.
 __version__ = (
     0,  # major
-    2,  # minor
-    4,  # sprint number
+    8,  # minor
+    3,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
 
 # The path to the OpenQuake root directory
