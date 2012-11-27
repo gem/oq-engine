@@ -38,9 +38,7 @@ setup(
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools", "tests", "tests.*",
                                     "openquake.bin",
-                                    "openquake.bin.*",
-                                    "openquake.nrml.tests",
-                                    "openquake.nrml.tests.*"]),
+                                    "openquake.bin.*"]),
     py_modules=PY_MODULES,
 
     include_package_data=True,
