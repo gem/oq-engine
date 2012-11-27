@@ -160,7 +160,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         echo "celeryd has been stopped, remember to start it before running new calculations"
     fi
 
-    DDIR=/usr/share/doc/python-noq/examples/demos
+    DDIR=/usr/share/doc/python-oq/examples/demos
 
     cd $DDIR && find . | grep gz$ | xargs gunzip -f
     # Last but not least copy the smoke tests into a more prominent place.
