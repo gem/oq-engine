@@ -17,7 +17,7 @@ PY_MODULES = ['openquake.bin.cache_gc', 'openquake.bin.oqscript']
 setup(
     entry_points={
         "console_scripts": [
-            "noq = openquake.bin.oqscript:main",
+            "openquake = openquake.bin.oqscript:main",
             "oq_cache_gc = openquake.bin.cache_gc:main",
             "oq_monitor = openquake.bin.openquake_supervisor:main",
             ]},
