@@ -325,3 +325,19 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             message.ack()
 
         return callback
+
+    def clean_up(self):
+        """
+        Delete temporary database records. These records represent intermediate
+        copies of final calculation results and are no longer needed.
+
+        In this case, this includes all of the data for this calculation in the
+        tables found in the `htemp` schema space.
+        """
+        logs.LOG.debug('> cleaning up temporary DB data')
+        models.HazardCurveProgress.objects.filter(
+            lt_realization__hazard_calculation=self.hc.id).delete()
+        models.SourceProgress.objects.filter(
+            lt_realization__hazard_calculation=self.hc.id).delete()
+        models.SiteData.objects.filter(hazard_calculation=self.hc.id).delete()
+        logs.LOG.debug('< done cleaning up temporary DB data')
