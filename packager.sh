@@ -2,7 +2,7 @@
 # set -x
 set -e
 GEM_BUILD_ROOT="build-deb"
-GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-noq"
+GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
 
 GEM_ALWAYS_YES=false
 
@@ -163,7 +163,7 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/python-noq_*.deb  $GEM_BUILD_PKG
+cp  ${GEM_BUILD_ROOT}/python-oq_*.deb  $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/python-noq_*.deb .
-dpkg -e $GEM_BUILD_PKG/python-noq_*.deb 
+dpkg -x $GEM_BUILD_PKG/python-oq_*.deb .
+dpkg -e $GEM_BUILD_PKG/python-oq_*.deb
