@@ -24,7 +24,7 @@ setup(
     name="openquake",
     version="0.8.3",
     author="The OpenQuake team",
-    author_email="info@openquake.org",
+    author_email="devops@openquake.org",
     description=("Computes hazard, risk and socio-economic impact of "
                  "earthquakes."),
     license="AGPL3",
