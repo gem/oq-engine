@@ -13,15 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
-import shutil
-import tempfile
 
 from nose.plugins.attrib import attr
 from openquake.db import models
-from openquake.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
@@ -29,19 +25,15 @@ class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'event_based')
     def test(self):
-        result_dir = tempfile.mkdtemp()
         aaae = numpy.testing.assert_array_almost_equal
 
-        try:
-            cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-            expected_curve_poes = [0.54736, 0.02380, 0.00000]
+        cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+        expected_curve_poes = [0.54736, 0.02380, 0.00000]
 
-            job = self.run_hazard(cfg)
+        job = self.run_hazard(cfg)
 
-            # Test the poe values of the single curve:
-            [curve] = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id)
+        # Test the poe values of the single curve:
+        [curve] = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job.id)
 
-            aaae(expected_curve_poes, curve.poes, decimal=2)
-        finally:
-            shutil.rmtree(result_dir)
+        aaae(expected_curve_poes, curve.poes, decimal=2)
