@@ -58,11 +58,10 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         phase; first we must computed all of the hazard curves, then we can
         compute the disaggregation histograms.
     """
-    result = None
     if calc_type == 'hazard_curve':
-        result = classical.compute_hazard_curves(job_id, block, lt_rlz_id)
+        classical.compute_hazard_curves(job_id, block, lt_rlz_id)
     elif calc_type == 'disagg':
-        result = compute_disagg(job_id, block, lt_rlz_id)
+        compute_disagg(job_id, block, lt_rlz_id)
     else:
         msg = ('Invalid calculation type "%s";'
                ' expected "hazard_curve" or "disagg"')
@@ -149,7 +148,6 @@ def compute_disagg(job_id, points, lt_rlz_id):
         lt_rlz.save()
 
     logs.LOG.debug('< done computing disaggregation')
-    return None
 
 
 def _prepare_sources(hc, lt_rlz_id):
