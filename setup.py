@@ -22,7 +22,7 @@ setup(
             "oq_monitor = openquake.bin.openquake_supervisor:main",
             ]},
     name="openquake",
-    version="0.8.3",
+    version="0.9.0",
     author="The OpenQuake team",
     author_email="devops@openquake.org",
     description=("Computes hazard, risk and socio-economic impact of "
