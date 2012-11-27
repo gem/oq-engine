@@ -1444,7 +1444,7 @@ class HazardCurve(djm.Model):
         db_table = 'hzrdr\".\"hazard_curve'
 
 
-class HazardCurveDataManager(djm.Manager):
+class HazardCurveDataManager(djm.GeoManager):
     """
     Manager class to filter and create HazardCurveData objects
     """
