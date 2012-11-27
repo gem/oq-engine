@@ -57,7 +57,7 @@
             <xs:element ref="fragilityModel" />
             <xs:element ref="vulnerabilityModel" />
             <xs:element ref="logicTree" />
-            <xs:element ref="disaggregationResultField" />
+            <xs:element ref="disaggMatrices" />
             <xs:element ref="uhsResultSet" />
             <xs:element ref="rawSourceModel" />
             <xs:element ref="dmgDistPerAsset" />
