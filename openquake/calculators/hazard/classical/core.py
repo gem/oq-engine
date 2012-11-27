@@ -274,7 +274,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         """
         Post-execution actions. At the moment, all we do is finalize the hazard
         curve results. See
-        :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.finalize_hazard_curves` for more info.
+        :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.finalize_hazard_curves`
+        for more info.
         """
         self.finalize_hazard_curves()
 
