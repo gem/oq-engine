@@ -18,13 +18,16 @@
 Disaggregation calculator core functionality
 """
 
+import nhlib
+
 from django.db import transaction
 
 from openquake import logs
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.db import models
-from openquake.utils import config
+from openquake.input import logictree
+from openquake.input import source
 from openquake.utils import general as general_utils
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
@@ -69,13 +72,62 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
     haz_general.signal_task_complete(
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
-    return result
-
 
 def compute_disagg(job_id, points, lt_rlz_id):
     logs.LOG.debug(
         '> computing disaggregation for %(np)s points for realization %(rlz)s'
         % dict(np=len(points), rlz=lt_rlz_id))
+
+    # Disaggregation calculation workflow:
+    # 1. Get all sources
+    # 2. Get IMTs
+    # 3. Get the hazard curve for each point, IMT, and realization
+    # 4. For each disagg poe, interpolate IML for each curve.
+    # 5. Get GSIMs, TOM, and truncation level.
+    # 6. Get bins.
+    # 7. Prepare args.
+    # 8. Call the nhlib calculator.
+
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
+
+    # Temporal Occurence Model
+    tom = nhlib.tom.PoissonTOM(hc.investigation_time)
+
+    ltp = logictree.LogicTreeProcessor(hc.id)
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+    sources = _prepare_sources(hc, lt_rlz_id)
+    sources = (apply_uncertainties(src) for src in sources)
+
+    for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
+        nhlib_imt = haz_general.imt_to_nhlib(imt)
+        hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+        # loop over points
+        for point in points:
+            # get curve for this point/IMT/realization
+            [curve] = models.HazardCurveData.objects.filter(
+                location=point.wkt2d,
+                hazard_curve__lt_realization=lt_rlz_id,
+                hazard_curve__imt=hc_im_type,
+                hazard_curve__sa_period=sa_period,
+                hazard_curve__sa_damping=sa_damping,
+            )
+
+            for poe in []:
+                pass
+                # TODO: for each disagg poe, interpolate IML for the curve
+                # TODO: load the site model, if there is one
+                # TODO: Prepare the args for the calculator.
+                calc_kwargs = {
+                    'sources': sources,
+                    'gsims': gsims,
+                }
+                # TODO: compute the matrix
+                # TODO: save the matrix
 
     with transaction.commit_on_success():
         # Update realiation progress,
@@ -98,6 +150,19 @@ def compute_disagg(job_id, points, lt_rlz_id):
 
     logs.LOG.debug('< done computing disaggregation')
     return None
+
+
+def _prepare_sources(hc, lt_rlz_id):
+    source_progress = models.SourceProgress.objects.filter(
+        lt_realization=lt_rlz_id)
+    sources = (
+        source.nrml_to_nhlib(x.parsed_source.nrml,
+                             hc.rupture_mesh_spacing,
+                             hc.width_of_mfd_bin,
+                             hc.area_source_discretization)
+        for x in source_progress)
+
+    return sources
 
 
 class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
