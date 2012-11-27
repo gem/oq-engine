@@ -123,9 +123,9 @@ def failure_counters(job_id, area=None):
     assert area is None or area in ("g", "h", "r"), "Invalid area."
 
     if area:
-        pattern = "oqs/%s/%s/*-failures*" % (job_id, area)
+        pattern = "oqs/%s/%s/*:failed*" % (job_id, area)
     else:
-        pattern = "oqs/%s/*-failures*" % job_id
+        pattern = "oqs/%s/*:failed*" % job_id
 
     result = keys = kvs_op("keys", pattern)
     if keys:
@@ -243,7 +243,7 @@ class progress_indicator(object):   # pylint: disable=C0103
             except:
                 # Count failure
                 key = key_name(
-                    job_id, self.area, func.__name__ + "-failures", "i")
+                    job_id, self.area, func.__name__ + ":failed", "i")
                 conn.incr(key)
                 raise
 
