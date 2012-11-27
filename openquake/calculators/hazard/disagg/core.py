@@ -74,19 +74,34 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
 
 
 def compute_disagg(job_id, points, lt_rlz_id):
+    """
+    Calculate disaggregation histograms and saving the results to the database.
+
+    Here is the basic calculation workflow:
+
+    1. Get all sources
+    2. Get IMTs
+    3. Get the hazard curve for each point, IMT, and realization
+    4. For each `poes_disagg`, interpolate the IML for each curve.
+    5. Get GSIMs, TOM (Temporal Occurence Model), and truncation level.
+    6. Get histogram bin edges.
+    7. Prepare calculation args.
+    8. Call the nhlib calculator (see :func:`nhlib.calc.disagg.disaggregation`
+       for more info).
+
+    :param int job_id:
+        pass
+    :param list points:
+        `list` of :class:`nhlib.geo.point.Point` objects, which indicate the
+        locations for which we need to compute disaggregation histograms.
+    :param int lt_rlz_id:
+        ID of the :class:`openquake.db.models.LtRealization` for which we want
+        to compute disaggregation histograms. This realization will determine
+        which hazard curve results to use as a basis for the calculation.
+    """
     logs.LOG.debug(
         '> computing disaggregation for %(np)s points for realization %(rlz)s'
         % dict(np=len(points), rlz=lt_rlz_id))
-
-    # Disaggregation calculation workflow:
-    # 1. Get all sources
-    # 2. Get IMTs
-    # 3. Get the hazard curve for each point, IMT, and realization
-    # 4. For each disagg poe, interpolate IML for each curve.
-    # 5. Get GSIMs, TOM, and truncation level.
-    # 6. Get bins.
-    # 7. Prepare args.
-    # 8. Call the nhlib calculator.
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
