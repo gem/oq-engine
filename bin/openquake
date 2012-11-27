@@ -77,8 +77,8 @@ from openquake.utils import version as utils_version
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
-MISSING_HAZARD_OUTPUT_MSG = "Please specify the ID of the hazard output to be"
-" used with this calculation (using '%s')" % HAZARD_OUTPUT_ARG
+MISSING_HAZARD_OUTPUT_MSG = ("Please specify the ID of the hazard output to be"
+                             " used using '%s <id>'" % HAZARD_OUTPUT_ARG)
 
 
 def set_up_arg_parser():
