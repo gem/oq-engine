@@ -432,51 +432,6 @@ def _create_gmf_record(gmf_set, imt):
     return gmf
 
 
-@staticmethod
-def event_based_task_arg_gen(hc, job, sources_per_task, progress):
-    """
-    Loop through realizations and sources to generate a sequence of
-    task arg tuples. Each tuple of args applies to a single task.
-
-    Yielded results are quadruples of (job_id, realization_id,
-    source_id_list, random_seed). (random_seed will be used to seed
-    numpy for temporal occurence sampling.)
-
-    :param hc:
-        :class:`openquake.db.models.HazardCalculation` instance.
-    :param job:
-        :class:`openquake.db.models.OqJob` instance.
-    :param int sources_per_task:
-        The (max) number of sources to consider for each task.
-    :param dict progress:
-        A dict containing two integer values: 'total' and 'computed'. The task
-        arg generator will update the 'total' count as the generator creates
-        arguments.
-    """
-
-    rnd = random.Random()
-    rnd.seed(hc.random_seed)
-
-    realizations = models.LtRealization.objects.filter(
-            hazard_calculation=hc, is_complete=False).order_by('id')
-
-    result_grp_ordinal = 1
-    for lt_rlz in realizations:
-        source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-        source_ids = source_progress.values_list('parsed_source_id',
-                                                 flat=True)
-        progress['total'] += len(source_ids)
-
-        for offset in xrange(0, len(source_ids), sources_per_task):
-            # Since this seed will used for numpy random seeding, it needs to
-            # positive (since numpy will convert it to a unsigned long).
-            task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (job.id, source_ids[offset:offset + sources_per_task],
-                         lt_rlz.id, task_seed, result_grp_ordinal)
-            yield task_args
-            result_grp_ordinal += 1
-
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
@@ -485,7 +440,49 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
 
     core_calc_task = ses_and_gmfs
-    task_arg_gen = event_based_task_arg_gen
+
+    def task_arg_gen(self, block_size):
+        """
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
+
+        Yielded results are quadruples of (job_id, realization_id,
+        source_id_list, random_seed). (random_seed will be used to seed
+        numpy for temporal occurence sampling.)
+
+        :param int block_size:
+            The (max) number of work items for each task. In this case,
+            sources.
+        """
+        rnd = random.Random()
+        rnd.seed(self.hc.random_seed)
+
+        realizations = models.LtRealization.objects.filter(
+                hazard_calculation=self.hc, is_complete=False).order_by('id')
+
+        result_grp_ordinal = 1
+        for lt_rlz in realizations:
+            source_progress = models.SourceProgress.objects.filter(
+                    is_complete=False, lt_realization=lt_rlz).order_by('id')
+            source_ids = source_progress.values_list('parsed_source_id',
+                                                     flat=True)
+            self.progress['total'] += len(source_ids)
+
+            for offset in xrange(0, len(source_ids), block_size):
+                # Since this seed will used for numpy random seeding, it needs
+                # to be positive (since numpy will convert it to a unsigned
+                # long).
+                task_seed = rnd.randint(0, MAX_SINT_32)
+                task_args = (
+                    self.job.id,
+                    source_ids[offset:offset + block_size],
+                    lt_rlz.id,
+                    task_seed,
+                    result_grp_ordinal
+                )
+                yield task_args
+                result_grp_ordinal += 1
+
 
     def initialize_ses_db_records(self, lt_rlz):
         """
@@ -497,8 +494,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Stochastic event set ruptures computed for this realization will be
         associated to these containers.
         """
-        hc = self.job.hazard_calculation
-
         output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
@@ -508,10 +503,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             models.SES.objects.create(
                 ses_collection=ses_coll,
-                investigation_time=hc.investigation_time,
+                investigation_time=self.hc.investigation_time,
                 ordinal=i)
 
     def initialize_complete_lt_ses_db_records(self):
@@ -524,8 +519,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         copied into this collection. See :func:`_save_ses_rupture` for more
         info.
         """
-        hc = self.job.hazard_calculation
-
         # `complete logic tree` SES
         clt_ses_output = models.Output.objects.create(
             owner=self.job.owner,
@@ -536,7 +529,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         clt_ses_coll = models.SESCollection.objects.create(
             output=clt_ses_output, complete_logic_tree_ses=True)
 
-        investigation_time = self._compute_investigation_time(hc)
+        investigation_time = self._compute_investigation_time(self.hc)
 
         models.SES.objects.create(
             ses_collection=clt_ses_coll,
@@ -552,8 +545,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Throughout the course of the calculation, computed GMFs will be copied
         into this collection. See :func:`_save_gmf_nodes` for more info.
         """
-        hc = self.job.hazard_calculation
-
         # `complete logic tree` GMF
         clt_gmf_output = models.Output.objects.create(
             owner=self.job.owner,
@@ -564,7 +555,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=clt_gmf_output, complete_logic_tree_gmf=True)
 
-        investigation_time = self._compute_investigation_time(hc)
+        investigation_time = self._compute_investigation_time(self.hc)
 
         models.GmfSet.objects.create(
             gmf_collection=gmf_coll,
@@ -610,8 +601,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         GMFs for this realization will be associated to these containers.
         """
-        hc = self.job.hazard_calculation
-
         output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
@@ -621,10 +610,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         gmf_coll = models.GmfCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
-        for i in xrange(1, hc.ses_per_logic_tree_path + 1):
+        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             models.GmfSet.objects.create(
                 gmf_collection=gmf_coll,
-                investigation_time=hc.investigation_time,
+                investigation_time=self.hc.investigation_time,
                 ses_ordinal=i)
 
     def pre_execute(self):
@@ -669,14 +658,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         """
         logs.LOG.debug('> starting post processing')
 
-        hc = self.job.hazard_calculation
-        if hc.hazard_curves_from_gmfs:
+        if self.hc.hazard_curves_from_gmfs:
             post_processing.do_post_process(self.job)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
             # post-processing.
-            if hc.mean_hazard_curves or hc.quantile_hazard_curves:
+            if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
                 tasks = cls_post_processing.setup_tasks(
                     self.job, self.job.hazard_calculation,
                     curve_finder=models.HazardCurveData.objects,
