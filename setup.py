@@ -43,12 +43,7 @@ setup(
 
     include_package_data=True,
     package_data={"openquake": [
-            "db/schema/*",
-            "nrml/schema/hazard/*", "nrml/schema/risk/*", "nrml/schema/gml/*",
-            "nrml/schema/GML-SimpleFeaturesProfileSchema.xsd",
-            "nrml/schema/nrml_common.xsd", "nrml/schema/nrml.xsd",
-            "nrml/schema/xlinks/*", "openquake.cfg",
-            "README", "LICENSE"]},
+            "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
     scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
