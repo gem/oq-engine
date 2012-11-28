@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DISTUTILS_DEBUG=1
+export DH_VERBOSE=1
+export DH_OPTIONS=-v
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+bd=openquake/bin
+
+
+%:
+	dh $@ --with quilt
+
+override_dh_quilt_patch:
+	dh_quilt_patch
+	cp openquake/__init__.py /tmp
+	cat /tmp/__init__.py | sed -e "s/0)  #.*$$/`date +'%s'`)/" > openquake/__init__.py
