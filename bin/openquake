@@ -64,8 +64,11 @@ try:
 except ImportError:
     sys.path.append('/usr/openquake')
 
-import oqpath
-oqpath.set_oq_path()
+try:
+    import oqpath
+    oqpath.set_oq_path()
+except ImportError:
+    pass
 
 from openquake import __version__
 from openquake import engine2
@@ -419,7 +422,7 @@ def complain_and_exit(msg, exit_code=0):
     sys.exit(exit_code)
 
 
-if __name__ == '__main__':
+def main():
     arg_parser = set_up_arg_parser()
 
     args = arg_parser.parse_args()
@@ -456,3 +459,7 @@ if __name__ == '__main__':
                  hazard_output_id=args.hazard_output_id)
     else:
         arg_parser.print_usage()
+
+
+if __name__ == '__main__':
+    main()
