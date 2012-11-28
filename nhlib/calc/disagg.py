@@ -19,6 +19,7 @@ aggregation functions for extracting a specific PMF from the result of
 :func:`disaggregation`.
 """
 import numpy
+import warnings
 
 from nhlib.calc import filters
 from nhlib.site import SiteCollection
@@ -105,6 +106,15 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
     bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
+    if all([len(x) == 0 for x in bins_data]):
+        # No ruptures have contributed to the hazard level at this site.
+        warnings.warn(
+            'No ruptures have contributed to the hazard at site %s'
+            % site,
+            RuntimeWarning
+        )
+        return None, None
+
     bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
                              coord_bin_width, truncation_level, n_epsilons)
     diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
