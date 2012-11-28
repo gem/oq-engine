@@ -90,6 +90,27 @@ class Site(object):
         self.z1pt0 = state['z1pt0']
         self.z2pt5 = state['z2pt5']
 
+    def __eq__(self, other):
+        """
+        >>> import nhlib
+        >>> point1 = nhlib.geo.point.Point(1, 2, 3)
+        >>> point2 = nhlib.geo.point.Point(1, 2, 3)
+        >>> site1 = Site(point1, 760.0, True, 100.0, 5.0)
+        >>> site2 = Site(point2, 760.0, True, 100.0, 5.0)
+        >>> site1 == site2
+        True
+        >>> point3 = nhlib.geo.point.Point(1, 2, 4)
+        >>> site3 = Site(point3, 760.0, True, 100.0, 5.0)
+        >>> site1 != site3
+        True
+        """
+        if other is None:
+            return False
+        return self.__getstate__() == other.__getstate__()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class SiteCollection(object):
     """
