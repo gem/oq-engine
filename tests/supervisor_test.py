@@ -182,9 +182,9 @@ class SupervisorTestCase(unittest.TestCase):
         self.get_job_status.return_value = 'running'
 
         stats.delete_job_counters(self.job.id)
-        stats.incr_counter(self.job.id, "h", "a-failures")
-        stats.incr_counter(self.job.id, "r", "b-failures")
-        stats.incr_counter(self.job.id, "r", "b-failures")
+        stats.incr_counter(self.job.id, "h", "a:failed")
+        stats.incr_counter(self.job.id, "r", "b:failed")
+        stats.incr_counter(self.job.id, "r", "b:failed")
         supervisor.supervise(1, self.job.id, timeout=0.1)
 
         # the job process is terminated
