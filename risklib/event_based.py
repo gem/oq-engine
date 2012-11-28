@@ -241,8 +241,9 @@ def _mean_based(vuln_function, gmf_set):
 
 
 def _rates_of_exceedance(exceeding_times, tses):
-    """Compute the rates of exceedance for the given cumulative histogram
-    using the given tses (tses is time span * number of realizations)."""
+    """
+    Compute the rates of exceedance.
+    """
 
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
@@ -251,43 +252,38 @@ def _rates_of_exceedance(exceeding_times, tses):
 
 
 def _probs_of_exceedance(rates_of_exceedance, time_span):
-    """Compute the probabilities of exceedance using the given rates of
-    exceedance and the given time span."""
+    """
+    Compute the probabilities of exceedance using the given rates of
+    exceedance and the given time span.
+    """
 
     poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
     return numpy.array([poe(rate) for rate in rates_of_exceedance])
 
 
-def _loss_ratio_curve(ground_motion_values, loss_ratios, tses,
-                     time_span, levels_of_poe=50):
-    """Compute a loss ratio curve using the probabilistic event based approach.
+def _loss_curve(ground_motion_values, loss_ratios, tses,
+                time_span, levels_of_poe=50):
+    """
+    Compute a loss (or loss ratio) curve.
 
-    A loss ratio curve is a function that has loss ratios as X values
-    and PoEs (Probabilities of Exceendance) as Y values.
-
-    :param ground_motion_values: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+    A loss (or loss ratio) curve is a function that has losses (or loss
+    ratios) as X values and PoEs (Probabilities of Exceendance) as Y values.
     """
 
-    sorted_loss_ratios = numpy.sort(loss_ratios)
-    exceeding_times = numpy.array(
-        range(len(ground_motion_values), 0, -1))
+    loss_ratios.sort()
 
+    exceeding_times = numpy.array(range(len(ground_motion_values), 0, -1))
     rates_of_exceedance = _rates_of_exceedance(exceeding_times, tses)
 
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
-
     reference_poes = numpy.linspace(poes.min(), poes.max(), levels_of_poe)
 
-    loss_ratios = interpolate.interp1d(poes[::-1], sorted_loss_ratios[::-1])(
-        reference_poes)
+    loss_ratios = interpolate.interp1d(
+        poes[::-1], loss_ratios[::-1])(reference_poes)
 
+    # sometimes we have multiple losses with probability equals to
+    # 1.0. In this case, we just take the minimum and maximum loss.
     reference_poes = numpy.append(reference_poes, [1.0])
-    loss_ratios = numpy.append(loss_ratios, sorted_loss_ratios.min())
+    loss_ratios = numpy.append(loss_ratios, loss_ratios.min())
 
     return curve.Curve(zip(loss_ratios, reference_poes))

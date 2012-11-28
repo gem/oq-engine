@@ -220,7 +220,7 @@ class EventBasedTestCase(unittest.TestCase):
                                "RC": vulnerability_function_rc}
 
         peb_calculator = api.probabilistic_event_based(
-            vulnerability_model, 10, None, None)
+            vulnerability_model, None, None)
 
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
 
@@ -283,7 +283,7 @@ class EventBasedTestCase(unittest.TestCase):
                                "RC": vulnerability_function_rc}
 
         peb_calculator = api.probabilistic_event_based(
-            vulnerability_model, 10, None, None)
+            vulnerability_model, None, None)
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
 
         for i in range(3):
@@ -327,11 +327,11 @@ class EventBasedTestCase(unittest.TestCase):
                                "RC": vulnerability_function_rc}
 
         peb_calculator = api.probabilistic_event_based(
-            vulnerability_model, 10, None, None)
+            vulnerability_model, None, None)
         peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
         peb_insured_losses = api.insured_losses(peb_conditional_losses)
         peb_insured_curves = api.insured_curves(
-            vulnerability_model, 10, None, None, peb_insured_losses)
+            vulnerability_model, None, None, peb_insured_losses)
 
         for i in range(3):
             asset_output = peb_insured_curves(

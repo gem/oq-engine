@@ -224,13 +224,11 @@ class probabilistic_event_based(object):
         * aggregate loss curve
     """
 
-    def __init__(self, vulnerability_model, loss_histogram_bins,
-        seed, correlation_type):
+    def __init__(self, vulnerability_model, seed, correlation_type):
 
         self.seed = seed
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
-        self.loss_histogram_bins = loss_histogram_bins
 
         self._aggregate_losses = None
 
@@ -245,7 +243,7 @@ class probabilistic_event_based(object):
             vulnerability_function, hazard, asset, self.seed,
             self.correlation_type, taxonomies)
 
-        loss_ratio_curve = event_based_functions._loss_ratio_curve(
+        loss_ratio_curve = event_based_functions._loss_curve(
             hazard['IMLs'], loss_ratios, hazard['TSES'], hazard['TimeSpan'])
 
         losses = loss_ratios * asset.value
@@ -276,18 +274,15 @@ def insured_losses(losses_calculator):
     return insured_losses_wrapped
 
 
-def insured_curves(vulnerability_model, loss_histogram_bins, seed,
-    correlation_type, insured_losses_calculator):
+def insured_curves(insured_losses_calculator):
     """
     Insured (loss ratio / loss) curves calculator.
     """
 
     def insured_curves_wrapped(asset, hazard):
-        taxonomies = vulnerability_model.keys()
         asset_output = insured_losses_calculator(asset, hazard)
-        vulnerability_function = vulnerability_model[asset.taxonomy]
 
-        insured_loss_ratio_curve = event_based_functions._loss_ratio_curve(
+        insured_loss_ratio_curve = event_based_functions._loss_curve(
                 hazard['IMLs'], asset_output.insured_losses,
                 hazard['TSES'], hazard['TimeSpan'])
 
