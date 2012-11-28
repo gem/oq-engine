@@ -191,7 +191,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
 
-class SitePickleTest(unittest.TestCase):
+class SitePickleTestCase(unittest.TestCase):
     # Tests for pickling Sites.
 
     def test_dumps_and_loads(self):
