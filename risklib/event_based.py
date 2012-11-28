@@ -247,7 +247,7 @@ def _rates_of_exceedance(exceeding_times, tses):
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
 
-    return (exceeding_times / tses)
+    return numpy.array(exceeding_times).astype(float) / tses
 
 
 def _probs_of_exceedance(rates_of_exceedance, time_span):

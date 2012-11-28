@@ -19,11 +19,9 @@ import mock
 import unittest
 
 from risklib.models import input
-from risklib.curve import Curve, EMPTY_CURVE
+from risklib.curve import EMPTY_CURVE
 from risklib.vulnerability_function import VulnerabilityFunction
-from risklib.event_based import (_compute_loss_ratios,
-    _rates_of_exceedance, _probs_of_exceedance,
-    _loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
+from risklib import event_based
 
 
 GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -73,7 +71,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.0] * 8, "LN"
         )
 
-        self.cum_histogram = numpy.array([
+        self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
             4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1,
         ])
@@ -136,11 +134,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_function_produces_an_empty_set(self):
-        data = _compute_loss_ratios(EMPTY_CURVE, GMF, None)
+        data = event_based._compute_loss_ratios(EMPTY_CURVE, GMF, None)
         self.assertEqual(0, data.size)
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        data = _compute_loss_ratios(
+        data = event_based._compute_loss_ratios(
             self.vulnerability_function1, {"IMLs": ()}, None)
 
         self.assertEqual(0, data.size)
@@ -175,7 +173,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
             eps.side_effect = fake_eps
-            ratios = _compute_loss_ratios(
+            ratios = event_based._compute_loss_ratios(
                 vulnerability_function, gmf, expected_asset)
             self.assertTrue(numpy.allclose(expected_loss_ratios,
                                            ratios, atol=0.0, rtol=0.01))
@@ -210,9 +208,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                     numpy.array([0.0, 0.3176, 0.4049, 0.0902,
                                  0.2793, 0.0636, 0.0932, 0.2472,
                                  0.0, 0.3020]),
-                                 _compute_loss_ratios(
-                                     vuln_function, gmfs,
-                                     expected_asset), atol=0.0, rtol=0.01))
+                    event_based._compute_loss_ratios(
+                                    vuln_function, gmfs,
+                                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -244,7 +242,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 numpy.allclose(
                     numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                                  0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                    _compute_loss_ratios(
+                    event_based._compute_loss_ratios(
                         vuln_function, gmfs, expected_asset),
                     atol=0.0, rtol=0.01))
 
@@ -264,12 +262,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
 
         # max IML in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.700, 0.700]),
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 {"IMLs": (0.525, 0.530)}, None, None)))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -357,68 +355,54 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 GMF, None, None)))
 
-    def test_loss_ratios_range_generation(self):
-        loss_ratios = numpy.array([0.0, 2.0])
-        expected_range = numpy.array([0.0, 0.5, 1.0, 1.5, 2.0])
-
-        self.assertTrue(numpy.allclose(expected_range,
-            _compute_loss_ratios_range(loss_ratios, 5),
-            atol=0.0001))
-
-    def test_builds_the_cumulative_histogram(self):
-        loss_ratios = _compute_loss_ratios(
-            self.vulnerability_function1, GMF, None, None)
-        loss_histogram_bins = 25
-
-        loss_ratios_range = _compute_loss_ratios_range(
-            loss_ratios, loss_histogram_bins)
-
-        self.assertTrue(numpy.allclose(self.cum_histogram,
-            _compute_cumulative_histogram(
-                loss_ratios, loss_ratios_range)))
-
-    def test_computes_the_rates_of_exceedance(self):
-        expected_rates = numpy.array([0.12444444, 0.05111111, 0.02888889,
-                                      0.02, 0.01555556, 0.01333333, 0.00888889, 0.00777778,
-                                      0.00777778, 0.00666667, 0.00555556, 0.00444444,
-                                      0.00444444, 0.00444444, 0.00444444, 0.00444444, 0.00222222,
-                                      0.00111111, 0.00111111, 0.00111111, 0.00111111,
-                                      0.00111111, 0.00111111, 0.00111111])
+    def test_rates_of_exceedance(self):
+        expected_rates = numpy.array([
+            0.12444444, 0.05111111, 0.02888889,
+            0.02000000, 0.01555556, 0.01333333,
+            0.00888889, 0.00777778, 0.00777778,
+            0.00666667, 0.00555556, 0.00444444,
+            0.00444444, 0.00444444, 0.00444444,
+            0.00444444, 0.00222222, 0.00111111,
+            0.00111111, 0.00111111, 0.00111111,
+            0.00111111, 0.00111111, 0.00111111,
+        ])
 
         self.assertTrue(numpy.allclose(expected_rates,
-            _rates_of_exceedance(
-                self.cum_histogram, GMF["TSES"]), atol=0.01))
+            event_based._rates_of_exceedance(
+            self.exceeding_times, GMF["TSES"]), atol=0.01))
 
-    def test_tses_is_not_supposed_to_be_zero_or_less(self):
-        self.assertRaises(ValueError, _rates_of_exceedance,
-            self.cum_histogram, 0.0)
+    def test_TSES_greater_than_zero(self):
+        self.assertRaises(ValueError, event_based._rates_of_exceedance,
+            self.exceeding_times, 0.0)
 
-        self.assertRaises(ValueError, _rates_of_exceedance,
-            self.cum_histogram, -10.0)
+        self.assertRaises(ValueError, event_based._rates_of_exceedance,
+            self.exceeding_times, -10.0)
 
-    def test_computes_probs_of_exceedance(self):
-        expected_probs = [0.99801517, 0.92235092, 0.76412292, 0.63212056,
-                          0.54057418, 0.48658288, 0.35881961, 0.32219042, 0.32219042,
-                          0.28346869, 0.24253487, 0.1992626, 0.1992626, 0.1992626,
-                          0.1992626, 0.1992626, 0.10516068, 0.05404053, 0.05404053,
-                          0.05404053, 0.05404053, 0.05404053, 0.05404053, 0.05404053]
+    def test_probs_of_exceedance(self):
+        expected_poes = [
+            0.99801517, 0.92235092, 0.76412292, 0.63212056,
+            0.54057418, 0.48658288, 0.35881961, 0.32219042,
+            0.32219042, 0.28346869, 0.24253487, 0.19926260,
+            0.19926260, 0.19926260, 0.19926260, 0.19926260,
+            0.10516068, 0.05404053, 0.05404053, 0.05404053,
+            0.05404053, 0.05404053, 0.05404053, 0.05404053,
+        ]
 
-        self.assertTrue(numpy.allclose(expected_probs,
-            _probs_of_exceedance(
-                _rates_of_exceedance(
-                    self.cum_histogram, GMF["TSES"]),
-                GMF["TimeSpan"]), atol=0.0001))
+        self.assertTrue(numpy.allclose(expected_poes,
+            event_based._probs_of_exceedance(event_based._rates_of_exceedance(
+            self.exceeding_times, GMF["TSES"]), GMF["TimeSpan"]),
+            atol=0.0001))
 
 
 class EpsilonProviderTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.epsilon_provider1 = EpsilonProvider()
-        self.epsilon_provider2 = EpsilonProvider(
-            correlation_type=PERFECTLY_CORRELATED,
+        self.epsilon_provider1 = event_based.EpsilonProvider()
+        self.epsilon_provider2 = event_based.EpsilonProvider(
+            correlation_type=event_based.PERFECTLY_CORRELATED,
             taxonomies=["a", "b"])
         self.assets = [
             input.Asset(None, "a", None, None),
