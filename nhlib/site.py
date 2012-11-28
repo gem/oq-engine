@@ -59,6 +59,37 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
 
+    def __getstate__(self):
+        """
+        Implemented to provide information for pickling.
+
+        :returns:
+            A `dict` with all of the site attributes:
+
+            * location
+            * vs30
+            * vs30measured (`True`/`False`)
+            * z1pt0
+            * z2pt5
+        """
+        return dict(
+            location=self.location,
+            vs30=self.vs30,
+            vs30measured=self.vs30measured,
+            z1pt0=self.z1pt0,
+            z2pt5=self.z2pt5,
+        )
+
+    def __setstate__(self, state):
+        """
+        Set state when creating a :class:`Site` from pickled data.
+        """
+        self.location = state['location']
+        self.vs30 = state['vs30']
+        self.vs30measured = state['vs30measured']
+        self.z1pt0 = state['z1pt0']
+        self.z2pt5 = state['z2pt5']
+
 
 class SiteCollection(object):
     """
