@@ -16,16 +16,20 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import math
-import numpy
 import random
 
+import numpy
+from scipy import interpolate
+
 from risklib import curve
+from risklib.range import range_clip
 from risklib import classical
 
 UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
+DEFAULT_TIME_SPAN = 50
 
 
-def aggregate_loss_curve(set_of_losses, tses, time_span, histogram_bins):
+def aggregate_loss_curve(set_of_losses, tses, time_span):
     """
     Compute the aggregate loss curve obtained by summing the given
     set of losses.
@@ -37,21 +41,12 @@ def aggregate_loss_curve(set_of_losses, tses, time_span, histogram_bins):
     :param time_span: time span in which the ground motion fields (used
         to generate the given set of losses) are generated.
     :type time_span: float
-    :param histogram_bins: number of bins used when building the
-        histogram of losses.
-    :type histogram_bins: int
     :returns: the aggregate loss curve.
     :rtype: an instance of `risklib.curve.Curve`
     """
 
     losses = sum(set_of_losses)
-    loss_ratios_range = _compute_loss_ratios_range(losses, histogram_bins)
-
-    probs_of_exceedance = _compute_probs_of_exceedance(
-        _compute_rates_of_exceedance(_compute_cumulative_histogram(
-        losses, loss_ratios_range), tses), time_span)
-
-    return _generate_curve(loss_ratios_range, probs_of_exceedance)
+    raise NotImplementedError
 
 
 class EpsilonProvider(object):
@@ -245,51 +240,17 @@ def _mean_based(vuln_function, gmf_set):
     return numpy.array(loss_ratios)
 
 
-def _compute_loss_ratios_range(loss_ratios, loss_histogram_bins):
-    """Compute the range of loss ratios used to build the loss ratio curve.
-
-    The range is obtained by computing the set of evenly spaced numbers
-    over the interval [min_loss_ratio, max_loss_ratio].
-
-    :param loss_ratios: the set of loss ratios used.
-    :type loss_ratios: numpy.ndarray
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
-    """
-    return numpy.linspace(
-        loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
-
-
-def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
-    "Compute the cumulative histogram."
-
-    # ruptures (earthquake) occured but probably due to distance,
-    # magnitude and soil conditions, no ground motion was felt at that location
-    if (loss_ratios <= 0.0).all():
-        return numpy.zeros(loss_ratios_range.size - 1)
-
-    invalid_ratios = lambda ratios: numpy.where(
-        numpy.array(ratios) <= 0.0)[0].size
-
-    hist = numpy.histogram(loss_ratios, bins=loss_ratios_range)
-    hist = hist[0][::-1].cumsum()[::-1]
-
-    # ratios with value 0.0 must be deleted on the first bin
-    hist[0] = hist[0] - invalid_ratios(loss_ratios)
-    return hist
-
-
-def _compute_rates_of_exceedance(cum_histogram, tses):
+def _rates_of_exceedance(exceeding_times, tses):
     """Compute the rates of exceedance for the given cumulative histogram
     using the given tses (tses is time span * number of realizations)."""
 
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
 
-    return (numpy.array(cum_histogram).astype(float) / tses)
+    return (exceeding_times / tses)
 
 
-def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
+def _probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance using the given rates of
     exceedance and the given time span."""
 
@@ -297,64 +258,33 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     return numpy.array([poe(rate) for rate in rates_of_exceedance])
 
 
-def _generate_curve(losses, probs_of_exceedance):
-    """Generate a loss ratio (or loss) curve, given a set of losses
-    and corresponding PoEs (Probabilities of Exceedance).
-
-    This function is intended to be used internally.
-    """
-
-    mean_losses = [numpy.mean([x, y]) for x, y in zip(losses, losses[1:])]
-    return curve.Curve(zip(mean_losses, probs_of_exceedance))
-
-
-def compute_loss_ratio_curve(vuln_function, gmf_set,
-                              asset, loss_histogram_bins, loss_ratios=None,
-                              seed=None, correlation_type=None,
-                              taxonomies=None):
+def _loss_ratio_curve(ground_motion_values, loss_ratios, tses,
+                     time_span, levels_of_poe=50):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
 
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
+    :param ground_motion_values: the set of ground motion
         fields used to compute the loss ratios.
     :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
         **TSES** - Time representative of the Stochastic Event Set (float)
-    :param seed:
-      the seed used for the rnd generator
-    :param correlation_type
-      UNCORRELATED or PERFECTLY_CORRELATED
-    :param taxonomies
-      a list of considered taxonomies
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
     """
 
-    # with no gmfs (no earthquakes), an empty curve is enough
-    if len(gmf_set["IMLs"]) == 0: # works for numpy arrays too
-        return curve.EMPTY_CURVE
+    sorted_loss_ratios = numpy.sort(loss_ratios)
+    exceeding_times = numpy.array(
+        range(len(ground_motion_values) - 1, -1, -1))
 
-    if loss_ratios is None:
-        loss_ratios = _compute_loss_ratios(
-            vuln_function, gmf_set, asset,
-            seed, correlation_type, taxonomies)
+    rates_of_exceedance = _rates_of_exceedance(exceeding_times, tses)
 
-    loss_ratios_range = _compute_loss_ratios_range(
-        loss_ratios, loss_histogram_bins)
+    poes = _probs_of_exceedance(rates_of_exceedance, time_span)
 
-    probs_of_exceedance = _compute_probs_of_exceedance(
-        _compute_rates_of_exceedance(_compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), gmf_set["TSES"]),
-        gmf_set["TimeSpan"])
+    reference_poes = numpy.linspace(poes.min(), poes.max(), levels_of_poe)
 
-    return _generate_curve(loss_ratios_range, probs_of_exceedance)
+    loss_ratios = interpolate.interp1d(poes, sorted_loss_ratios)(
+        reference_poes)
+
+    return curve.Curve(zip(loss_ratios, reference_poes))

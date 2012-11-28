@@ -236,7 +236,7 @@ class InsuredLossesTestCase(unittest.TestCase):
 class InsuredCurvesTestCase(unittest.TestCase):
 
     def test_insured_curves_calculator(self):
-        hazard = {"IMLs": [0.11, 0.12, 0.13]}
+        hazard = {"IMLs": [0.11, 0.12, 0.13], 'TSES': 10, 'TimeSpan': 50}
         asset = input.Asset("a1", "RC", 1.0, None)
 
         function = vulnerability_function.VulnerabilityFunction(
@@ -251,7 +251,7 @@ class InsuredCurvesTestCase(unittest.TestCase):
         insured_losses_calculator = mock.Mock(return_value=asset_output)
 
         with mock.patch(
-            "risklib.event_based.compute_loss_ratio_curve") as stub:
+            "risklib.event_based._loss_ratio_curve") as stub:
 
             insured_loss_ratio_curve = curve.Curve(
                 [(0.5, 1.0), (0.5, 1.0), (0.5, 1.0)])
