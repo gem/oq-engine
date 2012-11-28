@@ -104,26 +104,33 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         # Requires a working version of Django models
         output = models.Output.objects.create_output(
             self.job, "fake output", "hazard_curve")
-        realization = models.LtRealization.objects.all()[0]
-        curve = models.HazardCurve.objects.create(
-            output=output,
-            lt_realization=realization,
-            investigation_time=10,
-            imt="PGA", imls=[1, 2, 3])
 
-        self.a_location = helpers.random_location_generator(max_x=50, max_y=50)
-        models.HazardCurveData.objects.create(
-            hazard_curve=curve,
-            location=self.a_location.wkt,
-            poes=[random.random()])
+        curves_per_location = (
+            self.job.hazard_calculation.individual_curves_per_location())
 
+        self.a_location = (
+            helpers.random_location_generator(max_x=50, max_y=50))
         self.a_bigger_location = helpers.random_location_generator(
-            min_x=50,
-            min_y=50)
-        models.HazardCurveData.objects.create(
-            hazard_curve=curve,
-            location=self.a_bigger_location.wkt,
-            poes=[random.random()])
+                min_x=50,
+                min_y=50)
+
+        for curve_nr in range(0, curves_per_location):
+            realization = models.LtRealization.objects.all()[curve_nr]
+            curve = models.HazardCurve.objects.create(
+                output=output,
+                lt_realization=realization,
+                investigation_time=10,
+                imt="PGA", imls=[1, 2, 3])
+
+            models.HazardCurveData.objects.create(
+                hazard_curve=curve,
+                location=self.a_location.wkt,
+                poes=[random.random()])
+
+            models.HazardCurveData.objects.create(
+                hazard_curve=curve,
+                location=self.a_bigger_location.wkt,
+                poes=[random.random()])
 
     def test_individual_curves(self):
         """
@@ -134,12 +141,9 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                          len(self.manager.individual_curves(
                              self.job, "fake imt")))
 
-        self.assertEqual(2,
-                         len(self.manager.individual_curves(
-                             self.job, "PGA")))
-
-        self.assertEqual(2,
-                         len(self.manager.individual_curves(self.job, "PGA")))
+        self.assertEqual(
+            self.job.hazard_calculation.individual_curves_per_location() * 2,
+            len(self.manager.individual_curves(self.job, "PGA")))
 
     def test_individual_curves_nr(self):
         """
@@ -150,8 +154,9 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                          self.manager.individual_curves_nr(
                              self.job, "fake imt"))
 
-        self.assertEqual(2,
-                         self.manager.individual_curves_nr(self.job, "PGA"))
+        self.assertEqual(
+            self.job.hazard_calculation.individual_curves_per_location() * 2,
+            self.manager.individual_curves_nr(self.job, "PGA"))
 
     def test_individual_curves_ordered(self):
         """
@@ -159,23 +164,29 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         """
         curves = self.manager.individual_curves_ordered(self.job, "PGA")
 
-        self.assertEqual(2, len(curves))
-        self.assertTrue(curves[0].location < curves[1].location)
+        previous_curve = curves[0]
+
+        for curve in curves[1:]:
+            if previous_curve.location > curve.location:
+                1/0
+            self.assertTrue(previous_curve.location <= curve.location.wkb)
+            previous_curve = curve
 
     def test_individual_curves_chunks(self):
         """
         Test getting individual curves in chunks
         """
-        location_block_size = 1
+        location_block_size = 2
 
         chunks = self.manager.individual_curves_chunks(
             self.job, "PGA", location_block_size=location_block_size)
 
         self.assertEqual(1, len(chunks))
 
-        chunk = chunks[0].locations
-        self.assertEqual(len(chunk), location_block_size)
-        self.assertEqual(str(chunk[0]), self.a_location.wkb)
+        locations = chunks[0].locations
+        self.assertEqual(len(locations), location_block_size)
+
+        self.assertEqual(str(locations[0]), self.a_location.wkb)
 
     def test_individual_curves_chunk(self):
         """
@@ -198,27 +209,27 @@ class ExposureContainedInTestCase(unittest.TestCase):
             'simple_fault_demo_hazard/job.ini')
         calculator = general_risk.BaseRiskCalculator(self.job)
         calculator.pre_execute()
-        original_model = self.job.risk_calculation.model('exposure')
+        self.model = self.job.risk_calculation.model('exposure')
 
         # Create a copy of the exposure_model such that we consider
         # only the new created assets and not the original assets in
         # the exposure file
-        self.model = models.ExposureModel(
-            owner=original_model.owner,
-            input=original_model.input,
-            name="test model",
-            description="test model",
-            category=original_model.category,
-            taxonomy_source=original_model.taxonomy_source,
-            area_type=original_model.area_type,
-            area_unit=original_model.area_unit,
-            stco_type=original_model.stco_type,
-            stco_unit=original_model.stco_unit,
-            reco_type=original_model.reco_type,
-            reco_unit=original_model.reco_unit,
-            coco_type=original_model.coco_type,
-            coco_unit=original_model.coco_unit)
-        self.model.save()
+        # self.model = models.ExposureModel(
+        #     owner=original_model.owner,
+        #     input=original_model.input,
+        #     name="test model",
+        #     description="test model",
+        #     category=original_model.category,
+        #     taxonomy_source=original_model.taxonomy_source,
+        #     area_type=original_model.area_type,
+        #     area_unit=original_model.area_unit,
+        #     stco_type=original_model.stco_type,
+        #     stco_unit=original_model.stco_unit,
+        #     reco_type=original_model.reco_type,
+        #     reco_unit=original_model.reco_unit,
+        #     coco_type=original_model.coco_type,
+        #     coco_unit=original_model.coco_unit)
+        # self.model.save()
 
         common_fake_args = dict(
             exposure_model=self.model,
