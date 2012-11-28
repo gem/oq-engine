@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import pickle
 import unittest
 
 import numpy
@@ -188,3 +189,14 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
                                    placeholder=100)
         data_expanded_expected = data_condensed
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
+
+
+class SitePickleTest(unittest.TestCase):
+    # Tests for pickling Sites.
+
+    def test_dumps_and_loads(self):
+        point = Point(1, 2, 3)
+        site1 = Site(point, 760.0, True, 100.0, 5.0)
+        site2 = pickle.loads(pickle.dumps(site1))
+
+        self.assertEqual(site1, site2)
