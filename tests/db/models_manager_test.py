@@ -132,6 +132,9 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                          len(self.manager.individual_curves(
                              self.job, "PGA")))
 
+        self.assertEqual(2,
+                         len(self.manager.individual_curves(self.job, "PGA")))
+
     def test_individual_curves_nr(self):
         """
         Test counting the individual curves
@@ -158,6 +161,7 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         Test getting individual curves in chunks
         """
         location_block_size = 1
+
         chunks = self.manager.individual_curves_chunks(
             self.job, "PGA", location_block_size=location_block_size)
 
