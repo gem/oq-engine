@@ -284,7 +284,7 @@ def _loss_ratio_curve(ground_motion_values, loss_ratios, tses,
 
     reference_poes = numpy.linspace(poes.min(), poes.max(), levels_of_poe)
 
-    loss_ratios = interpolate.interp1d(poes, sorted_loss_ratios)(
+    loss_ratios = interpolate.interp1d(poes[::-1], sorted_loss_ratios[::-1])(
         reference_poes)
 
     return curve.Curve(zip(loss_ratios, reference_poes))
