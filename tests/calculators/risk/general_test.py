@@ -129,17 +129,18 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
             helpers.patch(
                 '%s.%s' % (path, '_initialize_progress')),
             helpers.patch(
-                'openquake.db.models.ExposureData.objects.contained_in'))
+                'openquake.db.models.ExposureData.objects.contained_in_count'))
 
         mocks = [p.start() for p in patches]
 
-        mocks[0].return_value = models.ExposureModel.objects.all()[0]
-        mocks[4].return_value = models.ExposureData.objects.all()
+        mocks[1].return_value = models.ExposureModel.objects.all()[0]
+        mocks[4].return_value = 3
 
         self.calculator.pre_execute()
 
         for i, m in enumerate(mocks):
-            self.assertEqual(1, m.call_count)
+            self.assertEqual(1, m.call_count,
+                             "mock %d has not been called" % (i + 1))
             m.stop()
             patches[i].stop()
 
