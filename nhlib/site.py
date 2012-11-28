@@ -126,6 +126,30 @@ class Site(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __str__(self):
+        """
+        >>> import nhlib
+        >>> loc = nhlib.geo.point.Point(1, 2, 3)
+        >>> str(Site(loc, 760.0, True, 100.0, 5.0))
+        '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
+Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
+        """
+        return (
+            "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
+            "Depth2.5km=%.4f>") % (
+                self.location, self.vs30, self.vs30measured, self.z1pt0,
+                self.z2pt5)
+
+    def __repr__(self):
+        """
+        >>> import nhlib
+        >>> loc = nhlib.geo.point.Point(1, 2, 3)
+        >>> site = Site(loc, 760.0, True, 100.0, 5.0)
+        >>> str(site) == repr(site)
+        True
+        """
+        return self.__str__()
+
 
 class SiteCollection(object):
     """
