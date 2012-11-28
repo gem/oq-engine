@@ -95,7 +95,7 @@ class Site(object):
         >>> import nhlib
         >>> point1 = nhlib.geo.point.Point(1, 2, 3)
         >>> point2 = nhlib.geo.point.Point(1, 2, 3)
-        >>> site1 = Site(point1, 760.0, True, 100.0, 5.0)
+        >>> site1 = Site(point1, 760.0, True, 100.000000000001, 5.0)
         >>> site2 = Site(point2, 760.0, True, 100.0, 5.0)
         >>> site1 == site2
         True
@@ -106,7 +106,20 @@ class Site(object):
         """
         if other is None:
             return False
-        return self.__getstate__() == other.__getstate__()
+
+        self_state = self.__getstate__()
+        other_state = other.__getstate__()
+
+        for key, value in self.__getstate__().iteritems():
+            ovalue = other_state.get(key)
+
+            if isinstance(value, (int, long, float, complex)):
+                if not numpy.allclose(value, ovalue, rtol=0, atol=1e-12):
+                    return False
+            else:
+                if not value == ovalue:
+                    return False
+        return True
 
     def __ne__(self, other):
         return not self.__eq__(other)
