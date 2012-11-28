@@ -14,3 +14,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """Information about the calculators available for the Risk engine."""
+
+from __future__ import absolute_import
+
+from .classical.core import ClassicalRiskCalculator
+
+
+CALCULATORS = {
+    'classical': ClassicalRiskCalculator,
+}

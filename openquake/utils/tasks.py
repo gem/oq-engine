@@ -142,35 +142,6 @@ def get_running_job(job_id):
     return job_ctxt
 
 
-def calculator_for_task(job_id, job_type):
-    """Given the id of an in-progress calculation
-    (:class:`openquake.db.models.OqJob`), load all of the calculation
-    data from the database and KVS and instantiate the calculator required for
-    a task's computation.
-
-    :param int job_id:
-        id of a in-progress job.
-    :params job_type:
-        'hazard' or 'risk'
-    :returns:
-        An instance of a calculator classed. The type of calculator depends on
-        the ``job_type`` (hazard or risk) and the calculation mode (classical,
-        event based, etc.).
-    :rtype:
-        Subclass of :class:`openquake.calculators.base.Calculator`.
-    :raises JobCompletedError:
-        If the specified calculation is not currently running.
-    """
-    # pylint: disable=W0404
-    from openquake.engine import CALCS
-
-    job_ctxt = get_running_job(job_id)
-    calc_mode = job_ctxt.oq_job_profile.calc_mode
-    calculator = CALCS[job_type][calc_mode](job_ctxt)
-
-    return calculator
-
-
 def oqtask(task_func):
     """
     Task function decorator which sets up logging and catches (and logs) any
