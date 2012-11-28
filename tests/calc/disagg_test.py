@@ -13,9 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import mock
 import unittest
+import warnings
 
 import numpy
+
+import nhlib
 
 from nhlib.calc import disagg
 from nhlib.calc import filters
@@ -320,6 +324,43 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
             matrix[idx] = 0
 
         self.assertEqual(matrix.sum(), 0)
+
+    def test_no_contributions_from_ruptures(self):
+        # Test that the `disaggregation` function returns `None, None` if no
+        # ruptures contribute to the hazard level.
+        array = numpy.array
+        float64 = numpy.float64
+        int64 = numpy.int64
+        # This is the result we get if the sources produce no ruptures:
+        fake_bins_data = (array([], dtype=float64), array([], dtype=float64),
+                          array([], dtype=float64), array([], dtype=float64),
+                          array([], dtype=float64), array([], dtype=int64), [])
+
+        with mock.patch('nhlib.calc.disagg._collect_bins_data') as cbd:
+            with warnings.catch_warnings(record=True) as w:
+                cbd.return_value = fake_bins_data
+
+                self.gsim.truncation_level = self.truncation_level = 1
+                bin_edges, matrix = disagg.disaggregation(
+                    self.sources, self.site, self.imt, self.iml, self.gsims,
+                    self.tom, self.truncation_level, n_epsilons=3,
+                    mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4,
+                )
+
+                # We expect to get back 2 `None` values:
+                self.assertIsNone(bin_edges)
+                self.assertIsNone(matrix)
+
+                # Also check for the warning that should be raised:
+                expected_warning_msg = (
+                    'No ruptures have contributed to the hazard at site '
+                    '<Location=<Latitude=0.000000, Longitude=0.000000, '
+                    'Depth=0.0000>, Vs30=2.0000, Vs30Measured=False, '
+                    'Depth1.0km=4.0000, Depth2.5km=5.0000>'
+                )
+                self.assertEqual(1, len(w))
+                [warning] = list(w)
+                self.assertEqual(expected_warning_msg, warning.message.message)
 
 
 class PMFExtractorsTestCase(unittest.TestCase):
