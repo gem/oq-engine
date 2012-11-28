@@ -30,6 +30,7 @@ import unittest
 from openquake import kvs
 from openquake import logs
 
+
 from tests.utils import helpers
 
 LOG = logs.LOG

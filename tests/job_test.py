@@ -16,7 +16,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import textwrap
 import unittest
 
@@ -27,10 +26,7 @@ from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
-from openquake import kvs
 from openquake.db import models
-from openquake import shapes
-from openquake.engine import JobContext
 from openquake.engine import _parse_config_file
 from openquake.engine import _prepare_config_parameters
 from openquake.engine import _prepare_job
@@ -38,7 +34,6 @@ from openquake.job import config
 from openquake.job.params import config_text_to_list
 
 from tests.utils import helpers
-from tests.utils.helpers import patch
 
 
 CONFIG_FILE = "config.gem"
