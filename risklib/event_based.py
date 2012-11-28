@@ -276,7 +276,7 @@ def _loss_ratio_curve(ground_motion_values, loss_ratios, tses,
 
     sorted_loss_ratios = numpy.sort(loss_ratios)
     exceeding_times = numpy.array(
-        range(len(ground_motion_values) - 1, -1, -1))
+        range(len(ground_motion_values), 0, -1))
 
     rates_of_exceedance = _rates_of_exceedance(exceeding_times, tses)
 
@@ -286,5 +286,8 @@ def _loss_ratio_curve(ground_motion_values, loss_ratios, tses,
 
     loss_ratios = interpolate.interp1d(poes[::-1], sorted_loss_ratios[::-1])(
         reference_poes)
+
+    reference_poes = numpy.append(reference_poes, [1.0])
+    loss_ratios = numpy.append(loss_ratios, sorted_loss_ratios.min())
 
     return curve.Curve(zip(loss_ratios, reference_poes))
