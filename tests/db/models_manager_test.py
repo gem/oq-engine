@@ -25,7 +25,13 @@ Test Django custom model managers
 
 import random
 import unittest
+
+from django.contrib.gis.geos.point import Point
+from django.contrib.gis.geos.polygon import Polygon
+
 from openquake.db import models
+from openquake.calculators.risk import general as general_risk
+
 from tests.utils import helpers
 
 
@@ -183,3 +189,82 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         self.assertEqual(
             sorted(['poes', 'wkb', 'hazard_curve__lt_realization__weight']),
             sorted(curve.keys()))
+
+
+class ExposureContainedInTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job, _ = helpers.get_risk_job(
+            'classical_psha_based_risk/job.ini',
+            'simple_fault_demo_hazard/job.ini')
+        calculator = general_risk.BaseRiskCalculator(self.job)
+        calculator.pre_execute()
+        original_model = self.job.risk_calculation.model('exposure')
+
+        # Create a copy of the exposure_model such that we consider
+        # only the new created assets and not the original assets in
+        # the exposure file
+        self.model = models.ExposureModel(
+            owner=original_model.owner,
+            input=original_model.input,
+            name="test model",
+            description="test model",
+            category=original_model.category,
+            taxonomy_source=original_model.taxonomy_source,
+            area_type=original_model.area_type,
+            area_unit=original_model.area_unit,
+            stco_type=original_model.stco_type,
+            stco_unit=original_model.stco_unit,
+            reco_type=original_model.reco_type,
+            reco_unit=original_model.reco_unit,
+            coco_type=original_model.coco_type,
+            coco_unit=original_model.coco_unit)
+        self.model.save()
+
+        common_fake_args = dict(
+            exposure_model=self.model,
+            stco=1,
+            number_of_units=10,
+            reco=1,
+            taxonomy="test")
+
+        asset = models.ExposureData(site=Point(0.5, 0.5),
+                                    asset_ref="test1",
+                                    **common_fake_args)
+        asset.save()
+
+        asset = models.ExposureData(site=Point(179.1, 0),
+                                    asset_ref="test2",
+                                    **common_fake_args)
+        asset.save()
+
+    def test_simple_inclusion(self):
+        region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+
+        self.assertEqual(1, len(list(results)))
+        self.assertEqual("test1", results[0].asset_ref)
+
+    def test_inclusion_of_a_pole(self):
+        region_constraint = Polygon(
+            ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+        self.assertEqual(1, len(results))
+        self.assertEqual("test1", results[0].asset_ref)
+
+        region_constraint = Polygon(
+            ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
+
+        results = models.ExposureData.objects.contained_in(
+            self.model.id,
+            region_constraint)
+        results = [result for result in results if result.taxonomy == "test"]
+        self.assertEqual(1, len(list(results)))
+        self.assertEqual("test2", results[0].asset_ref)
