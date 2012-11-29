@@ -17,723 +17,309 @@
 
 """Common functionality for Risk calculators."""
 
-
+import os
 import math
-import random
+import functools
 
-from collections import OrderedDict
-
-from numpy import array
-from numpy import exp
-from numpy import histogram
-from numpy import linspace
-from numpy import mean
-from numpy import where
-from numpy import zeros
-from scipy import sqrt, log
-from scipy import stats
-
-from openquake.calculators.base import CalculatorNext
-from openquake import kvs
 from openquake import logs
-from openquake import shapes
+from openquake.utils import config
+from openquake.db import models
+from openquake.calculators import base
+from openquake.parser import risk
+from openquake.export import (
+    core as export_core, risk as risk_export)
+from openquake.utils import tasks
+from openquake.utils import stats
+from openquake.calculators.risk import hazard_getters
+
+# FIXME: why is a writer in a package called "input" ?
+from openquake.input import exposure as exposure_writer
 
 
-LOG = logs.LOG
-BLOCK_SIZE = 100
-
-
-def conditional_loss_poes(params):
-    """Return the PoE(s) specified in the configuration file used to
-    compute the conditional loss."""
-
-    return [float(x) for x in params.get(
-        "CONDITIONAL_LOSS_POE", "").split()]
-
-
-def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
-    """Compute the conditional loss for a loss curve and Probability of
-    Exceedance (PoE)."""
-
-    loss_conditional = _compute_conditional_loss(loss_curve, loss_poe)
-    key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
-    kvs.get_client().set(key, loss_conditional)
-
-
-def _compute_conditional_loss(curve, probability):
-    """Return the loss (or loss ratio) corresponding to the given
-    PoE (Probability of Exceendance).
-
-    Return the max loss (or loss ratio) if the given PoE is smaller
-    than the lowest PoE defined.
-
-    Return zero if the given PoE is greater than the
-    highest PoE defined.
+class BaseRiskCalculator(base.CalculatorNext):
     """
-    # dups in the curve have to be skipped
-    loss_curve = shapes.Curve(unique_curve(curve))
+    Abstract base class for risk calculators. Contains a bunch of common
+    functionality, including initialization procedures and the core
+    distribution/execution logic.
 
-    if loss_curve.ordinate_out_of_bounds(probability):
-        if probability < loss_curve.y_values[-1]:
-            return loss_curve.x_values[-1]
-        else:
-            return 0.0
+    :attribute asset_nr:
+      The number of assets the calculator will work on. Assets are
+      extracted from the exposure input and filtered according with the
+      RiskCalculation region_constraint
 
-    return loss_curve.abscissa_for(probability)
+    :attribute output_container_ids:
+      A dictionary holding the output containers object ids (e.g. LossCurve,
+      LossMap)
 
+    :attribute exposure_model_id:
+      The exposure model used by the calculation
 
-class EpsilonProvider(object):
-    """
-    Simple class for combining job configuration parameters and an `epsilon`
-    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
+    :attribute assets_per_task:
+      The number of assets processed by each celery task
+
+    :attribute asset_offsets:
+      A generator of asset offsets used by each celery task. Assets are
+      ordered by their id. An asset offset is an int that identify the
+      set of assets going from offset to offset + assets_per_task.
     """
 
-    def __init__(self, params):
+    #: in subclasses, this would be a reference to the the celery task
+    #  function used in the execute phase
+    celery_task = lambda *args, **kwargs: None
+
+    def __init__(self, job):
+        super(BaseRiskCalculator, self).__init__(job)
+        self.output_container_ids = None
+        self.assets_nr = None
+        self.exposure_model_id = None
+        self.assets_per_task = None
+        self.asset_offsets = None
+
+    def pre_execute(self):
         """
-        :param params: configuration parameters from the job configuration
-        :type params: dict
+        In this phase, the general workflow is
+
+        1. Parse the exposure input and store the exposure data (if
+        not already present)
+
+        2. Filter the exposure in order to consider only the assets of
+        interest
+
+        3. Prepare and save the output containers.
+
+        4. Initialize progress counters
         """
-        self.__dict__.update(params)
-        self.samples = None
-
-        self.rnd = random.Random()
-        eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
-        if eps_rnd_seed is not None:
-            self.rnd.seed(int(eps_rnd_seed))
-
-    def epsilon(self, asset):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        taxonomy is the same. The asset's `taxonomy` is only needed for
-        correlated jobs and unlikely to be available for uncorrelated ones.
-        """
-        correlation = getattr(self, "ASSET_CORRELATION", None)
-
-        if correlation is None or correlation == 'uncorrelated':
-            # Sample per asset
-            return self.rnd.normalvariate(0, 1)
-        elif correlation == 'perfect':
-            # Sample per building typology
-            samples = getattr(self, "samples", None)
-            if samples is None:
-                # These are two references for the same dictionary.
-                samples = self.samples = dict()
-
-            if asset.taxonomy not in samples:
-                samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
-            return samples[asset.taxonomy]
-        else:
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
-
-
-class Block(object):
-    """A block is a collection of sites to compute."""
-
-    def __init__(self, job_id, block_id, sites):
-        """
-        :param int job_id:
-            The id of a current job.
-        :param int block_id:
-            Sequence number of the site block (from 0 to N-1, where N is the
-            number of blocks).
-        :param sites:
-            `list` of :class:`openquake.shapes.Site` objects.
-        """
-        self.job_id = job_id
-        self.block_id = block_id
-        self._sites = sites
-
-    def __eq__(self, other):
-        """Compares job_id, and block_id.
-
-        This is a shallow comparison; site lists are not compared."""
-        return (self.job_id == other.job_id
-                and self.block_id == other.block_id)
-
-    @property
-    def sites(self):
-        """The `list` of :class:`openquake.shapes.Site` objects contained by
-        this Block."""
-        return self._sites
-
-    def grid(self, region):
-        """Provide an iterator across the unique grid points within a region,
-         corresponding to the sites within this block."""
-
-        used_points = []
-        for site in self.sites:
-            point = region.grid.point_at(site)
-            if point not in used_points:
-                used_points.append(point)
-                yield point
-
-    @staticmethod
-    def from_kvs(job_id, block_id):
-        """Return the block in the underlying KVS system with the given id."""
-
-        block_key = kvs.tokens.risk_block_key(job_id, block_id)
-
-        raw_sites = kvs.get_value_json_decoded(block_key)
-
-        sites = []
-
-        for raw_site in raw_sites:
-            sites.append(shapes.Site(raw_site[0], raw_site[1]))
-
-        return Block(job_id, block_id, sites)
-
-    def to_kvs(self):
-        """Store this block into the underlying KVS system."""
-
-        raw_sites = []
-
-        for site in self.sites:
-            raw_sites.append(site.coords)
-
-        block_key = kvs.tokens.risk_block_key(self.job_id,
-                                              self.block_id)
-
-        kvs.set_value_json_encoded(block_key, raw_sites)
-
-
-def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
-    """Creates a generator for splitting a list of sites into
-    :class:`openquake.calculators.risk.general.Block`s.
-
-    :param job_id:
-        The id for the current job.
-    :param sites:
-        `list` of :class:`openquake.shapes.Site` objects to be split
-        into blocks.
-    :param int block_size:
-        The maximum size for each block.
-    :returns:
-        For each call to this generator, the next block is returned.
-    :rtype:
-        :class:`openquake.calculators.risk.general.Block`
-    """
-    if block_size < 1:
-        raise RuntimeError("block_size should be at least 1.")
-
-    for block_id, i in enumerate(xrange(0, len(sites), block_size)):
-        yield Block(job_id, block_id=block_id,
-                    sites=sites[i:i + block_size])
-
-
-def compute_loss_curve(loss_ratio_curve, asset):
-    """Compute the loss curve for the given asset value.
-
-    A loss curve is obtained from a loss ratio curve by
-    multiplying each X value (loss ratio) for the given asset.
-    """
-
-    if not asset:
-        return shapes.EMPTY_CURVE
-
-    return loss_ratio_curve.rescale_abscissae(asset)
-
-
-def _compute_mid_mean_pe(loss_ratio_curve):
-    """Compute a new loss ratio curve taking the mean values."""
-
-    loss_ratios = loss_ratio_curve.abscissae
-    pes = loss_ratio_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
-
-    return shapes.Curve(zip(ratios, mid_pes))
-
-
-def _compute_mid_po(loss_ratio_pe_mid_curve):
-    """Compute a loss ratio curve that has PoOs
-    (Probabilities of Occurrence) as Y values."""
-
-    loss_ratios = loss_ratio_pe_mid_curve.abscissae
-    pes = loss_ratio_pe_mid_curve.ordinates
-
-    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
-    pos = collect(loop(pes, lambda x, y: x - y))
-
-    return shapes.Curve(zip(ratios, pos))
-
-
-def compute_mean_loss(curve):
-    """Compute the mean loss (or loss ratio) for the given curve."""
-
-    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-    return sum(i * j for i, j in zip(
-            mid_curve.abscissae, mid_curve.ordinates))
-
-
-def loop(elements, func, *args):
-    """Loop over the given elements, yielding func(current, next, *args)."""
-    for idx in xrange(elements.size - 1):
-        yield func(elements[idx], elements[idx + 1], *args)
-
-
-def collect(iterator):
-    """Simply collect the data taken from the given iterator."""
-    data = []
-
-    for element in iterator:
-        data.append(element)
-
-    return data
-
-
-def unique_curve(curve):
-    """ extracts unique values from a curve """
-    seen = OrderedDict()
-
-    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
-        seen[ordinate] = abscissa
-
-    return zip(seen.values(), seen.keys())
-
-
-def compute_bcr(eal_original, eal_retrofitted, interest_rate,
-                asset_life_expectancy, retrofitting_cost):
-    """
-    Compute the Benefit-Cost Ratio.
-
-    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
-
-    Where:
-
-    * BCR -- Benefit cost ratio
-    * EALo -- Expected annual loss for original asset
-    * EALr -- Expected annual loss for retrofitted asset
-    * r -- Interest rate
-    * t -- Life expectancy of the asset
-    * C -- Retrofitting cost
-    """
-    return ((eal_original - eal_retrofitted)
-            * (1 - exp(- interest_rate * asset_life_expectancy))
-            / (interest_rate * retrofitting_cost))
-
-
-def compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the set of loss ratios using the set of
-    ground motion fields passed.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    if vuln_function.is_empty:
-        return array([])
-
-    all_covs_are_zero = (vuln_function.covs <= 0.0).all()
-
-    if all_covs_are_zero:
-        return _mean_based(vuln_function, gmf_set)
-    else:
-        return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
-
-
-def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the set of loss ratios when at least one CV
-    (Coefficent of Variation) defined in the vulnerability function
-    is greater than zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    loss_ratios = []
-
-    means = vuln_function.loss_ratio_for(gmf_set["IMLs"])
-    covs = vuln_function.cov_for(gmf_set["IMLs"])
-
-    for mean_ratio, cov in zip(means, covs):
-        if mean_ratio <= 0.0:
-            loss_ratios.append(0.0)
-        else:
-            variance = (mean_ratio * cov) ** 2.0
-
-            epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(
-                        math.log((variance / mean_ratio ** 2.0) + 1.0))
-
-            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                    variance + mean_ratio ** 2.0))
-
-            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
-
-    return array(loss_ratios)
-
-
-def _mean_based(vuln_function, gmf_set):
-    """Compute the set of loss ratios when the vulnerability function
-    has all the CVs (Coefficent of Variation) set to zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    """
-
-    loss_ratios = []
-    retrieved = {}
-    imls = vuln_function.imls
-
-    # seems like with numpy you can only specify a single fill value
-    # if the x_new is outside the range. Here we need two different values,
-    # depending if the x_new is below or upon the defined values
-    for ground_motion_field in gmf_set["IMLs"]:
-        if ground_motion_field < imls[0]:
-            loss_ratios.append(0.0)
-        elif ground_motion_field > imls[-1]:
-            loss_ratios.append(vuln_function.loss_ratios[-1])
-        else:
-            # The actual value is computed later
-            mark = len(loss_ratios)
-            retrieved[mark] = gmf_set['IMLs'][mark]
-            loss_ratios.append(0.0)
-
-    means = vuln_function.loss_ratio_for(retrieved.values())
-
-    for mark, mean_ratio in zip(retrieved.keys(), means):
-        loss_ratios[mark] = mean_ratio
-
-    return array(loss_ratios)
-
-
-def _compute_loss_ratios_range(loss_ratios, loss_histogram_bins):
-    """Compute the range of loss ratios used to build the loss ratio curve.
-
-    The range is obtained by computing the set of evenly spaced numbers
-    over the interval [min_loss_ratio, max_loss_ratio].
-
-    :param loss_ratios: the set of loss ratios used.
-    :type loss_ratios: numpy.ndarray
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
-    """
-    return linspace(loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
-
-
-def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
-    "Compute the cumulative histogram."
-
-    # ruptures (earthquake) occured but probably due to distance,
-    # magnitude and soil conditions, no ground motion was felt at that location
-    if (loss_ratios <= 0.0).all():
-        return zeros(loss_ratios_range.size - 1)
-
-    invalid_ratios = lambda ratios: where(array(ratios) <= 0.0)[0].size
-
-    hist = histogram(loss_ratios, bins=loss_ratios_range)
-    hist = hist[0][::-1].cumsum()[::-1]
-
-    # ratios with value 0.0 must be deleted on the first bin
-    hist[0] = hist[0] - invalid_ratios(loss_ratios)
-    return hist
-
-
-def _compute_rates_of_exceedance(cum_histogram, tses):
-    """Compute the rates of exceedance for the given cumulative histogram
-    using the given tses (tses is time span * number of realizations)."""
-
-    if tses <= 0:
-        raise ValueError("TSES is not supposed to be less than zero!")
-
-    return (array(cum_histogram).astype(float) / tses)
-
-
-def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
-    """Compute the probabilities of exceedance using the given rates of
-    exceedance and the given time span."""
-
-    poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
-    return array([poe(rate) for rate in rates_of_exceedance])
-
-
-def compute_alpha(mean_loss_ratio, stddev):
-    """
-    Compute alpha value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed alpha value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-                mean_loss_ratio ** 2)
-
-
-def compute_beta(mean_loss_ratio, stddev):
-    """
-    Compute beta value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed beta value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-        (mean_loss_ratio - mean_loss_ratio ** 2))
-
-
-class Lognorm(object):
-    """ Simple Wrapper to use in a generic way survival functions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.lognorm.sf
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        position = kwargs.get('col')
-
-        vf_loss_ratio = vuln_function.loss_ratios[position]
-
-        stddev = vuln_function.covs[position] * vf_loss_ratio
-
-        variance = stddev ** 2.0
-
-        sigma = sqrt(log((variance / vf_loss_ratio ** 2.0) + 1.0))
-        mu = exp(log(vf_loss_ratio ** 2.0 /
-            sqrt(variance + vf_loss_ratio ** 2.0)))
-
-        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-
-
-class BetaDistribution(object):
-    """ Simple Wrapper to use in a generic way Beta Distributions """
-
-    @staticmethod
-    def survival_function(loss_ratio, **kwargs):
-        """
-            Static method that prepares the calculation parameters
-            to be passed to stats.beta.sf
-
-
-            :param loss_ratio: current loss ratio
-            :type loss_ratio: float
-
-            :param kwargs: convenience dictionary
-            :type kwargs: :py:class:`dict` with the following
-                keys:
-                    **vf** - vulnerability function as provided by
-                            :py:class:`openquake.shapes.VulnerabilityFunction`
-                    **col** - matrix column number
-        """
-        vuln_function = kwargs.get('vf')
-        col = kwargs.get('col')
-        vf_loss_ratio = vuln_function.loss_ratios[col]
-        stddev = vuln_function.stddevs[col]
-
-        return stats.beta.sf(loss_ratio,
-                compute_alpha(vf_loss_ratio, stddev),
-                compute_beta(vf_loss_ratio, stddev))
-
-
-def compute_loss_ratio_curve(vuln_function, gmf_set,
-        epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
-    """Compute a loss ratio curve using the probabilistic event based approach.
-
-    A loss ratio curve is a function that has loss ratios as X values
-    and PoEs (Probabilities of Exceendance) as Y values.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposureModelFile`
-    :param int loss_histogram_bins:
-        The number of bins to use in the computed loss histogram.
-    """
-
-    # with no gmfs (no earthquakes), an empty curve is enough
-    if not gmf_set["IMLs"]:
-        return shapes.EMPTY_CURVE
-
-    if loss_ratios is None:
-        loss_ratios = compute_loss_ratios(
-            vuln_function, gmf_set, epsilon_provider, asset)
-
-    loss_ratios_range = _compute_loss_ratios_range(
-            loss_ratios, loss_histogram_bins)
-
-    probs_of_exceedance = _compute_probs_of_exceedance(
-            _compute_rates_of_exceedance(_compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), gmf_set["TSES"]),
-            gmf_set["TimeSpan"])
-
-    return _generate_curve(loss_ratios_range, probs_of_exceedance)
-
-
-def _generate_curve(losses, probs_of_exceedance):
-    """Generate a loss ratio (or loss) curve, given a set of losses
-    and corresponding PoEs (Probabilities of Exceedance).
-
-    This function is intended to be used internally.
-    """
-
-    mean_losses = collect(loop(losses, lambda x, y: mean([x, y])))
-    return shapes.Curve(zip(mean_losses, probs_of_exceedance))
-
-
-class AggregateLossCurve(object):
-    """Aggregate a set of losses and produce the resulting loss curve."""
-
-    def __init__(self):
-        self.losses = None
-
-    def append(self, losses):
-        """
-        Accumulate losses into a single sum.
-
-        :param losses: an array of loss values.
-        :type losses: 1-dimensional :py:class:`numpy.ndarray`
-        """
-
-        if self.losses is None:
-            # initialize the losses with the shape
-            # we are using in the computation
-            self.losses = zeros(losses.shape)
-
-        assert self.losses.shape == losses.shape
-
-        self.losses = self.losses + losses
-
-    @property
-    def empty(self):
-        """
-        Return true is this aggregate curve has no losses
-        associated, false otherwise.
-        """
-
-        return self.losses is None or len(self.losses) == 0
-
-    def compute(self, tses, time_span, loss_histogram_bins):
-        """
-        Compute the aggregate loss curve.
-
-        :param tses: time representative of the Stochastic Event Set.
-        :type tses: float
-        :param time_span: time span parameter.
-        :type time_span: float
-        :param int loss_histogram_bins:
-            The number of bins to use in the computed loss histogram.
-        :type loss_histogram_bins: integer
-        """
-
-        if self.empty:
-            return shapes.EMPTY_CURVE
-
-        loss_range = _compute_loss_ratios_range(
-            self.losses, loss_histogram_bins)
-
-        probs_of_exceedance = _compute_probs_of_exceedance(
-                _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                self.losses, loss_range), tses), time_span)
-
-        return _generate_curve(loss_range, probs_of_exceedance)
-
-
-def load_gmvs_at(job_id, point):
-    """
-    From the KVS, load all the ground motion values for the given point. We
-    expect one ground motion value per realization of the job.
-    Since there can be tens of thousands of realizations, this could return a
-    large list.
-
-    Note(LB): In the future, we may want to refactor this (and the code which
-    uses the values) to use a generator instead.
-
-    :param point: :py:class:`openquake.shapes.GridPoint` object
-
-    :returns: List of ground motion values (as floats). Each value represents a
-                realization of the calculation for a single point.
-    """
-    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
-    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
-
-
-class BaseRiskCalculatorNext(CalculatorNext):
-    """
-    A temporary "dummy" calculator that doesn't do anything. This is currently
-    only used to be able to exercise the risk engine end-to-end.
-
-    This will eventually updated or replaced when we start to implement the new
-    set of risk calculators based oq-risklib.
-    """
+        with logs.tracing('store exposure'):
+            self.exposure_model_id = self._store_exposure().id
+
+            self.assets_nr = models.ExposureData.objects.contained_in_count(
+                self.exposure_model_id,
+                self.job.risk_calculation.region_constraint)
+
+            if not self.assets_nr:
+                raise RuntimeError(
+                    ['Region of interest is not covered by the exposure input.'
+                     ' This configuration is invalid. '
+                     ' Change the region constraint input or use a proper '
+                     ' exposure file'])
+            self.assets_per_task = int(
+                math.ceil(float(self.assets_nr) / int(
+                    config.get('risk', 'task_number'))))
+
+            self.asset_offsets = range(0, self.assets_nr, self.assets_per_task)
+
+        with logs.tracing('store risk model'):
+            self.store_risk_model()
+
+        with logs.tracing('create output containers'):
+            self.output_container_ids = self.create_outputs()
+
+        self._initialize_progress()
 
     def execute(self):
         """
-        Empty execute method, just to be able to exercise the risk engine.
+        Calculation work is parallelized over block of assets, which
+        means that each task will compute risk for only a subset of
+        the exposure considered.
+
+        The asset block size value is got by the variable `block_size`
+        in `[risk]` section of the OpenQuake config file.
         """
-        # TODO(LB): Temporary
-        print "Fake execution. Implement me!"
+
+        tf_args = dict(
+            job_id=self.job.id,
+            hazard_getter="one_query_per_asset",
+            assets_per_task=self.assets_per_task,
+            region_constraint=self.job.risk_calculation.region_constraint,
+            exposure_model_id=self.exposure_model_id,
+            hazard_id=self.hazard_id)
+        tf_args.update(self.output_container_ids)
+        tf_args.update(self.calculation_parameters)
+
+        tasks.distribute(
+            self.celery_task,
+            ("offset", self.asset_offsets),
+            tf_args=tf_args)
+
+    def export(self, *args, **kwargs):
+        """
+        If requested by the user, automatically export all result artifacts to
+        the specified format. (NOTE: The only export format supported at the
+        moment is NRML XML.
+
+        :returns:
+            A list of the export filenames, including the absolute path to each
+            file.
+        """
+
+        exported_files = []
+        with logs.tracing('exports'):
+
+            if 'exports' in kwargs and 'xml' in kwargs['exports']:
+                exported_files = sum([
+                    risk_export.export(output.id,
+                                       self.job.risk_calculation.export_dir)
+                    for output in export_core.get_outputs(self.job.id)], [])
+
+                for exp_file in exported_files:
+                    logs.LOG.debug('exported %s' % exp_file)
+        return exported_files
+
+    def _store_exposure(self):
+        """Load exposure assets and write them to database."""
+        rc = self.job.risk_calculation
+        [exposure_model_input] = models.inputs4rcalc(
+            self.job.risk_calculation, input_type='exposure')
+
+        # If this was an existing model, it was already parsed and should be in
+        # the DB.
+        if models.ExposureModel.objects.filter(
+                input=exposure_model_input).exists():
+            return exposure_model_input.exposuremodel
+
+        path = os.path.join(rc.base_path, exposure_model_input.path)
+        exposure_stream = risk.ExposureModelFile(path)
+        writer = exposure_writer.ExposureDBWriter(exposure_model_input)
+        writer.serialize(exposure_stream)
+        return writer.model
+
+    def _initialize_progress(self):
+        """Record the total/completed number of work items.
+
+        This is needed for the purpose of providing an indication of progress
+        to the end user."""
+        stats.pk_set(self.job.id, "lvr", 0)
+        stats.pk_set(self.job.id, "nrisk_total", self.assets_nr)
+        stats.pk_set(self.job.id, "nrisk_done", 0)
+
+    def store_risk_model(self):
+        """Load and store vulnerability model. It could be overriden
+        to load fragility models or multiple vulnerability models"""
+
+        rc = self.job.risk_calculation
+
+        [vulnerability_input] = models.inputs4rcalc(rc.id,
+                                                    input_type='vulnerability')
+
+        for record in risk.VulnerabilityModelFile(
+                vulnerability_input.path):
+            vulnerability_model, _ = (
+                models.VulnerabilityModel.objects.get_or_create(
+                    owner=vulnerability_input.owner,
+                    input=vulnerability_input,
+                    imt=record['IMT'].lower(), imls=record['IML'],
+                    name=record['vulnerabilitySetID'],
+                    asset_category=record['assetCategory'],
+                    loss_category=record['lossCategory']))
+
+            models.VulnerabilityFunction.objects.create(
+                vulnerability_model=vulnerability_model,
+                taxonomy=record['ID'],
+                prob_distribution=record['probabilisticDistribution'],
+                covs=record['coefficientsVariation'],
+                loss_ratios=record['lossRatio'])
+
+    def create_outputs(self):
+        """
+        Create outputs container objects (e.g. LossCurve, Output).
+
+        Derived classes should override this to create containers for
+        storing objects other than LossCurves.
+
+        The default behavior is to create a loss curve output.
+
+        :return a dictionary string -> ContainerObject ids
+        """
+
+        job = self.job
+
+        return dict(
+            loss_curve_id=models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job, "Loss Curve set", "loss_curve")).pk)
+
+
+def with_assets(fn):
+    """
+    Decorator helper for a risk calculation celery task.
+
+    It transforms an oqtask function accepting an offset as first
+    argument and a block size over a list of assets into a function
+    that accepts a list of assets contained in a region_constraint.
+
+    The exposure_model, the region constraint and the assets_per_task
+    are got by kwargs of the original function. Such arguments are
+    removed from the function signature.
+
+    It is also responsible to log the progress
+    """
+    @functools.wraps(fn)
+    def wrapped_function(job_id, offset, **kwargs):
+        """
+        The wrapped celery task function that expects in input an
+        offset over the collection of all the Asset considered
+        by the risk calculation.
+        """
+        exposure_model_id = kwargs['exposure_model_id']
+        region_constraint = kwargs['region_constraint']
+        assets_per_task = kwargs['assets_per_task']
+
+        del kwargs['exposure_model_id']
+        del kwargs['region_constraint']
+        del kwargs['assets_per_task']
+
+        assets = models.ExposureData.objects.contained_in(
+            exposure_model_id,
+            region_constraint)[offset:offset + assets_per_task]
+
+        fn(job_id, assets, **kwargs)
+        logs.log_percent_complete(job_id, "risk")
+
+    return wrapped_function
+
+
+def hazard_getter(hazard_getter_name, hazard_id):
+    """
+    Initializes and returns an hazard getter
+    """
+    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
+
+
+def fetch_vulnerability_model(job_id):
+    """
+    Returns the vulnerability model associated with the current
+    running job
+    """
+    job = models.OqJob.objects.get(pk=job_id)
+    return job.risk_calculation.model("vulnerability").to_risklib()
+
+
+def write_loss_curve(loss_curve_id, asset_output):
+    """
+    Stores a `openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the `openquake.db.models.LossCurve`
+    output container is identified by `loss_curve_id`.
+    """
+    models.LossCurveData.objects.create(
+        loss_curve_id=loss_curve_id,
+        asset_ref=asset_output.asset.asset_ref,
+        location=asset_output.asset.site,
+        poes=asset_output.loss_curve.y_values,
+        losses=asset_output.loss_curve.x_values,
+        loss_ratios=asset_output.loss_ratio_curve.x_values)
+
+
+def write_loss_map(loss_map_ids, asset_output):
+    """
+    Stores `openquake.db.models.LossMapData` objects where the data
+    are got by `asset_output` and the `openquake.db.models.LossMap`
+    output containers are got by `loss_map_ids`.
+    """
+
+    for poe, loss in asset_output.conditional_losses.items():
+        models.LossMapData.objects.create(
+            loss_map_id=loss_map_ids[poe],
+            asset_ref=asset_output.asset.asset_ref,
+            value=loss,
+            std_dev=None,
+            location=asset_output.asset.site)
