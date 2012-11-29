@@ -25,8 +25,8 @@ from tests import _utils
 
 LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
 BCR_NODE = collections.namedtuple("BCRNode",
-    "location asset_ref bcr expected_annual_loss_original "
-    "expected_annual_loss_retrofitted")
+    "location asset_ref bcr average_annual_loss_original "
+    "average_annual_loss_retrofitted")
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
 
@@ -326,14 +326,14 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 
         data = [
             BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-                bcr=15.23, expected_annual_loss_original=10.5,
-                expected_annual_loss_retrofitted=20.5),
+                bcr=15.23, average_annual_loss_original=10.5,
+                average_annual_loss_retrofitted=20.5),
             BCR_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
-                bcr=16.23, expected_annual_loss_original=11.5,
-                expected_annual_loss_retrofitted=40.5),
+                bcr=16.23, average_annual_loss_original=11.5,
+                average_annual_loss_retrofitted=40.5),
             BCR_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
-                bcr=17.23, expected_annual_loss_original=12.5,
-                expected_annual_loss_retrofitted=10.5),
+                bcr=17.23, average_annual_loss_original=12.5,
+                average_annual_loss_retrofitted=10.5),
             ]
 
         writer.serialize(data)
@@ -362,8 +362,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             loss_category="economic")
 
         data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            bcr=15.23, expected_annual_loss_original=10.5,
-            expected_annual_loss_retrofitted=20.5)]
+            bcr=15.23, average_annual_loss_original=10.5,
+            average_annual_loss_retrofitted=20.5)]
 
         writer.serialize(data)
 
@@ -391,8 +391,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             unit="USD", loss_category="economic")
 
         data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            bcr=15.23, expected_annual_loss_original=10.5,
-            expected_annual_loss_retrofitted=20.5)]
+            bcr=15.23, average_annual_loss_original=10.5,
+            average_annual_loss_retrofitted=20.5)]
 
         writer.serialize(data)
 

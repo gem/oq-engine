@@ -341,9 +341,9 @@ class BCRMapXMLWriter(object):
               representation of the location.
             * define an attribute `asset_ref`, which contains the unique
               identifier of the asset related to the (benefit cost) ratio.
-            * define an attribute `expected_annual_loss_original`,
+            * define an attribute `average_annual_loss_original`,
               TODO - Document!
-            * define an attribute `expected_annual_loss_retrofitted`,
+            * define an attribute `average_annual_loss_retrofitted`,
               TODO - Document!
             * define an attribute `bcr`, which is the value of the (
               benefit cost) ratio.
@@ -368,10 +368,10 @@ class BCRMapXMLWriter(object):
                 bcr_elem.set("ratio", str(bcr.bcr))
 
                 bcr_elem.set("aalOrig", str(
-                    bcr.expected_annual_loss_original))
+                    bcr.average_annual_loss_original))
 
                 bcr_elem.set("aalRetr", str(
-                    bcr.expected_annual_loss_retrofitted))
+                    bcr.average_annual_loss_retrofitted))
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
