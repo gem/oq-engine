@@ -23,7 +23,6 @@ Helper functions for our unit and smoke tests.
 
 import collections
 import functools
-import guppy
 import logging
 import mock as mock_module
 import numpy
@@ -329,7 +328,6 @@ def measureit(method):
     def _measured(*args, **kw):
         """Decorator that profiles memory usage"""
         result = method(*args, **kw)
-        print guppy.hpy().heap()
         return result
     try:
         import nose
