@@ -183,6 +183,8 @@ def get_input(path, input_type, owner, force_input, name=None):
     inp = None
 
     digest = _file_digest(path)
+
+    # FIXME remove me
     existing_input = _identical_input(input_type, digest, owner.id)
 
     if force_input or existing_input is None:
@@ -351,9 +353,10 @@ def run_risk(job, log_level, log_file, exports):
         supported.
     """
 
-    # TODO: instantiate a real risk calculator
-    from openquake.calculators.risk.general import BaseRiskCalculatorNext
-    calc = BaseRiskCalculatorNext(job)
+    from openquake.calculators.risk import CALCULATORS
+
+    calc_mode = job.risk_calculation.calculation_mode
+    calc = CALCULATORS[calc_mode](job)
 
     return _run_calc(job, log_level, log_file, exports, calc, 'risk')
 
