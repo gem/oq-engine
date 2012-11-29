@@ -190,6 +190,15 @@ class SiteCollection(object):
                     self.mesh.lons, self.mesh.lats):
             arr.flags.writeable = False
 
+    def __iter__(self):
+        """
+        Iterate through all :class:`sites <Site>` in the collection, yielding
+        one at a time.
+        """
+        for i, location in enumerate(self.mesh):
+            yield Site(location, self.vs30[i], self.vs30measured[i],
+                       self.z1pt0[i], self.z2pt5[i])
+
     def expand(self, data, total_sites, placeholder):
         """
         Expand an array that was created for a filtered site collection
