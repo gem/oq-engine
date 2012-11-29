@@ -365,12 +365,12 @@ class BCRMapXMLWriter(object):
 
                 bcr_elem = etree.SubElement(bcr_node, "bcr")
                 bcr_elem.set("assetRef", str(bcr.asset_ref))
-                bcr_elem.set("value", str(bcr.bcr))
+                bcr_elem.set("ratio", str(bcr.bcr))
 
-                bcr_elem.set("ealOrig", str(
+                bcr_elem.set("aalOrig", str(
                     bcr.expected_annual_loss_original))
 
-                bcr_elem.set("ealRetr", str(
+                bcr_elem.set("aalRetr", str(
                     bcr.expected_annual_loss_retrofitted))
 
             output.write(etree.tostring(

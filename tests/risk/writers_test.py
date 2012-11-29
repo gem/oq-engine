@@ -70,7 +70,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize([])
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -112,7 +112,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
@@ -142,7 +142,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class LossMapXMLWriterTestCase(unittest.TestCase):
@@ -173,7 +173,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize([])
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -212,7 +212,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_optional_metadata(self):
         expected = StringIO.StringIO("""\
@@ -239,7 +239,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_using_hazard_realization(self):
         expected = StringIO.StringIO("""\
@@ -266,7 +266,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class BCRMapXMLWriterTestCase(unittest.TestCase):
@@ -297,7 +297,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize([])
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -308,14 +308,14 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
       </gml:Point>
-      <bcr assetRef="asset_1" value="15.23" ealOrig="10.5" ealRetr="20.5"/>
-      <bcr assetRef="asset_2" value="16.23" ealOrig="11.5" ealRetr="40.5"/>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
+      <bcr assetRef="asset_2" ratio="16.23" aalOrig="11.5" aalRetr="40.5"/>
     </node>
     <node>
       <gml:Point>
         <gml:pos>2.0 2.5</gml:pos>
       </gml:Point>
-      <bcr assetRef="asset_3" value="17.23" ealOrig="12.5" ealRetr="10.5"/>
+      <bcr assetRef="asset_3" ratio="17.23" aalOrig="12.5" aalRetr="10.5"/>
     </node>
   </bcrMap>
 </nrml>
@@ -339,7 +339,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_optional_metadata(self):
         expected = StringIO.StringIO("""\
@@ -350,7 +350,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
       </gml:Point>
-      <bcr assetRef="asset_1" value="15.23" ealOrig="10.5" ealRetr="20.5"/>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
     </node>
   </bcrMap>
 </nrml>
@@ -368,7 +368,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_using_hazard_realization(self):
         expected = StringIO.StringIO("""\
@@ -379,7 +379,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
       </gml:Point>
-      <bcr assetRef="asset_1" value="15.23" ealOrig="10.5" ealRetr="20.5"/>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
     </node>
   </bcrMap>
 </nrml>
@@ -397,7 +397,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class HazardMetadataValidationTestCase(unittest.TestCase):
