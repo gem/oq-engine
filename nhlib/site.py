@@ -43,6 +43,9 @@ class Site(object):
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+
+    .. note::
+        :class:`Sites <Site>` are pickleable
     """
     __slots__ = 'location vs30 vs30measured z1pt0 z2pt5'.split()
 
@@ -58,6 +61,70 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
+
+    def __getstate__(self):
+        """
+        Implemented to provide information for pickling.
+
+        :returns:
+            A `dict` with all of the site attributes:
+
+            * location
+            * vs30
+            * vs30measured (`True`/`False`)
+            * z1pt0
+            * z2pt5
+        """
+        return dict(
+            location=self.location,
+            vs30=self.vs30,
+            vs30measured=self.vs30measured,
+            z1pt0=self.z1pt0,
+            z2pt5=self.z2pt5,
+        )
+
+    def __setstate__(self, state):
+        """
+        Set state when creating a :class:`Site` from pickled data.
+        """
+        self.location = state['location']
+        self.vs30 = state['vs30']
+        self.vs30measured = state['vs30measured']
+        self.z1pt0 = state['z1pt0']
+        self.z2pt5 = state['z2pt5']
+
+    def __eq__(self, other):
+        """
+        >>> import nhlib
+        >>> point1 = nhlib.geo.point.Point(1, 2, 3)
+        >>> point2 = nhlib.geo.point.Point(1, 2, 3)
+        >>> site1 = Site(point1, 760.0, True, 100.000000000001, 5.0)
+        >>> site2 = Site(point2, 760.0, True, 100.0, 5.0)
+        >>> site1 == site2
+        True
+        >>> point3 = nhlib.geo.point.Point(1, 2, 4)
+        >>> site3 = Site(point3, 760.0, True, 100.0, 5.0)
+        >>> site1 != site3
+        True
+        """
+        if other is None:
+            return False
+
+        other_state = other.__getstate__()
+
+        for key, value in self.__getstate__().iteritems():
+            ovalue = other_state.get(key)
+
+            if isinstance(value, (int, long, float, complex)):
+                if not numpy.allclose(value, ovalue, rtol=0, atol=1e-12):
+                    return False
+            else:
+                if not value == ovalue:
+                    return False
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class SiteCollection(object):
