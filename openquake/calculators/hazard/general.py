@@ -539,7 +539,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         sa_period=sa_period,
                         sa_damping=sa_damping,
                     )
-                    logs.LOG.warn('saving haz curve, rlz=%s, imt=%s' % (rlz.id, hc_im_type))
                     haz_curve.save()
 
                     [hc_progress] = models.HazardCurveProgress.objects.filter(
@@ -552,7 +551,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                             hazard_curve_id=haz_curve.id,
                             poes=poes.tolist(),
                             location=location.wkt2d)
-                        logs.LOG.warn('location=%s' % location.wkt2d)
 
                     hc_data_inserter.flush()
 
