@@ -110,7 +110,6 @@ class Site(object):
         if other is None:
             return False
 
-        self_state = self.__getstate__()
         other_state = other.__getstate__()
 
         for key, value in self.__getstate__().iteritems():
