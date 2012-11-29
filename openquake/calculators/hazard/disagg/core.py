@@ -119,6 +119,12 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     for src in sources:
         apply_uncertainties(src)
 
+    # Make filters for distance to source and distance to rupture:
+    src_site_filter = nhlib.calc.filters.source_site_distance_filter(
+        hc.maximum_distance)
+    rup_site_filter = nhlib.calc.filters.rupture_site_distance_filter(
+        hc.maximum_distance)
+
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
         nhlib_imt = haz_general.imt_to_nhlib(imt)
         hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
@@ -134,17 +140,33 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                 hazard_curve__sa_damping=sa_damping,
             )
 
+            # If the hazard curve is all zeros, don't even do the
+            # disagg calculation.
+            if all([x == 0.0 for x in curve.poes]):
+                continue
+
             for poe in hc.poes_disagg:
                 iml = numpy.interp(poe, curve.poes[::-1], imls)
-                logs.LOG.warn('iml is %s' % iml)
                 # TODO: for each disagg poe, interpolate IML for the curve
                 # TODO: load the site model, if there is one
                 # TODO: Prepare the args for the calculator.
                 calc_kwargs = {
                     'sources': sources,
+                    'site': site,
+                    'imt': nhlib_imt,
+                    'iml': iml,
                     'gsims': gsims,
+                    'tom': tom,
+                    'truncation_level': hc.truncation_level,
+                    'n_epsilons': hc.num_epsilon_bins,
+                    'mag_bin_width': hc.mag_bin_width,
+                    'dist_bin_width': hc.distance_bin_width,
+                    'coord_bin_width': hc.coordinate_bin_width,
+                    'source_site_filter': src_site_filter,
+                    'rupture_site_filter': rup_site_filter,
                 }
-                # TODO: compute the matrix
+                bin_edges, diss_matrix = nhlib.calc.disagg.disaggregation(
+                    **calc_kwargs)
                 # TODO: save the matrix
 
     with transaction.commit_on_success():
