@@ -104,7 +104,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         '> computing disaggregation for %(np)s sites for realization %(rlz)s'
         % dict(np=len(sites), rlz=lt_rlz_id))
 
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    job = models.OqJob.objects.get(id=job_id)
+    hc = job.hazard_calculation
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
 
     # Temporal Occurence Model
@@ -167,7 +168,11 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                 }
                 bin_edges, diss_matrix = nhlib.calc.disagg.disaggregation(
                     **calc_kwargs)
-                # TODO: save the matrix
+
+                _save_disagg_matrix(
+                    job, bin_edges, diss_matrix, lt_rlz, hc.investigation_time,
+                    hc_im_type, iml, poe, sa_period, sa_damping
+                )
 
     with transaction.commit_on_success():
         # Update realiation progress,
@@ -189,6 +194,51 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         lt_rlz.save()
 
     logs.LOG.debug('< done computing disaggregation')
+
+
+_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s'
+
+
+def _save_disagg_matrix(job, bin_edges, diss_matrix, lt_rlz,
+                        investigation_time, imt, iml, poe, sa_period,
+                        sa_damping):
+    """
+    Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
+    :class:`~openquake.db.models.DisaggResult`).
+
+    :param bin_edges, diss_matrix
+        The outputs of :func:`nhlib.calc.disagg.disaggregation`.
+    """
+    disp_name = _DISAGG_RES_NAME_FMT
+    disp_imt = imt
+    if disp_imt == 'SA':
+        disp_imt = 'SA(%s)' % sa_period
+
+    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt)
+    disp_name %= disp_name_args
+
+    output = models.Output.objects.create_output(
+        job, disp_name, 'disagg_matrix'
+    )
+
+    mag, dist, lon, lat, eps, trts = bin_edges
+    models.DisaggResult.objects.create(
+        output=output,
+        lt_realization=lt_rlz,
+        investigation_time=investigation_time,
+        imt=imt,
+        sa_period=sa_period,
+        sa_damping=sa_damping,
+        iml=iml,
+        poe=poe,
+        mag_bin_edges=mag,
+        dist_bin_edges=dist,
+        lon_bin_edges=lon,
+        lat_bin_edges=lat,
+        eps_bin_edges=eps,
+        trts=trts,
+        matrix=diss_matrix,
+    )
 
 
 def _prepare_sources(hc, lt_rlz_id):
