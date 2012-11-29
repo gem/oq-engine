@@ -108,10 +108,10 @@ def classical(vulnerability_model, steps=10):
     * a set of conditional losses
     """
 
-    matrices = dict([(taxonomy,
-                      classical_functions._loss_ratio_exceedance_matrix(
-                          vulnerability_function, steps))
-                     for taxonomy, vulnerability_function in vulnerability_model.items()])
+    matrices = dict([
+        (taxonomy, classical_functions._loss_ratio_exceedance_matrix(
+            vulnerability_function, steps))
+        for taxonomy, vulnerability_function in vulnerability_model.items()])
 
     def classical_wrapped(asset, hazard):
         vulnerability_function = vulnerability_model[asset.taxonomy]
@@ -126,7 +126,6 @@ def classical(vulnerability_model, steps=10):
             asset, loss_ratio_curve, loss_curve, None)
 
     return classical_wrapped
-
 
 
 class scenario_damage(object):
@@ -224,11 +223,14 @@ class probabilistic_event_based(object):
         * aggregate loss curve
     """
 
-    def __init__(self, vulnerability_model, seed, correlation_type):
+    def __init__(
+            self, vulnerability_model, seed, correlation_type,
+            curve_resolution=event_based_functions.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
+        self.curve_resolution = curve_resolution
 
         self._aggregate_losses = None
 
@@ -244,7 +246,8 @@ class probabilistic_event_based(object):
             self.correlation_type, taxonomies)
 
         loss_ratio_curve = event_based_functions._loss_curve(
-            loss_ratios, hazard['TSES'], hazard['TimeSpan'])
+            loss_ratios, hazard['TSES'], hazard['TimeSpan'],
+            curve_resolution=self.curve_resolution)
 
         losses = loss_ratios * asset.value
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
@@ -283,8 +286,9 @@ def insured_curves(insured_losses_calculator):
         asset_output = insured_losses_calculator(asset, hazard)
 
         insured_loss_ratio_curve = event_based_functions._loss_curve(
-                hazard['IMLs'], asset_output.insured_losses,
-                hazard['TSES'], hazard['TimeSpan'])
+                asset_output.insured_losses,
+                hazard['TSES'], hazard['TimeSpan'],
+                insured_losses_calculator.curve_resolution)
 
         insured_loss_ratio_curve.x_values = (
             insured_loss_ratio_curve.x_values / asset.value)

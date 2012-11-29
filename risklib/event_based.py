@@ -36,11 +36,17 @@ def aggregate_loss_curve(set_of_losses, tses, time_span,
 
     :param set_of_losses: the set of losses.
     :type set_of_losses: list of 1d `numpy.array`
+
     :param tses: time representative of the stochastic event set.
     :type tses: float
+
     :param time_span: time span in which the ground motion fields (used
         to generate the given set of losses) are generated.
     :type time_span: float
+
+    :param curve_resolution
+    :type curve_resolution: integer
+
     :returns: the aggregate loss curve.
     :rtype: an instance of `risklib.curve.Curve`
     """
@@ -241,50 +247,44 @@ def _mean_based(vuln_function, gmf_set):
     return numpy.array(loss_ratios)
 
 
-def _rates_of_exceedance(exceeding_times, tses):
-    """
-    Compute the rates of exceedance.
-    """
-
-    if tses <= 0:
-        raise ValueError("TSES is not supposed to be less than zero!")
-
-    return numpy.array(exceeding_times).astype(float) / tses
-
-
-def _probs_of_exceedance(rates_of_exceedance, time_span):
+def _probs_of_exceedance(rates, time_span):
     """
     Compute the probabilities of exceedance using the given rates of
     exceedance and the given time span.
     """
 
-    poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
-    return numpy.array([poe(rate) for rate in rates_of_exceedance])
+    return 1 - numpy.exp(-rates * time_span)
 
 
-def _loss_curve(loss_ratios, tses, time_span,
+def _loss_curve(loss_values, tses, time_span,
                 curve_resolution=DEFAULT_CURVE_RESOLUTION):
     """
     Compute a loss (or loss ratio) curve.
 
-    A loss (or loss ratio) curve is a function that has losses (or loss
-    ratios) as X values and PoEs (Probabilities of Exceendance) as Y values.
+    :param loss_values: The loss ratios (or the losses) computed by
+    applying the vulnerability function
+
+    :param tses: Time representative of the stochastic event set
+
+    :param time_span: Investigation Time spanned by the hazard input
+
+    :param curve_resolution: The number of points the output curve is
+    defined by
     """
 
-    sorted_loss_ratios = numpy.sort(loss_ratios)
+    num = len(loss_values)
+    sorted_loss_values = numpy.sort(loss_values)[::-1]
 
-    exceeding_times = numpy.array(range(len(sorted_loss_ratios) - 1, -1, -1))
-    rates_of_exceedance = _rates_of_exceedance(exceeding_times, tses)
+    rates_of_exceedance = numpy.linspace(0, num / tses, num)
 
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
+
     reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
-    loss_ratios = interpolate.interp1d(
-        poes[::-1], sorted_loss_ratios[::-1])(reference_poes)
+    values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
 
-    # sometimes we have multiple losses with probability equals to
-    # 1.0. In this case, we just take the minimum and maximum loss.
-    reference_poes = numpy.append(reference_poes, [1])
-    loss_ratios = numpy.append(loss_ratios, [0])
+    # Due to rounding problems occurring in the interpolation phase
+    if reference_poes[-1] == 1:
+        values[-1] = 0
 
-    return curve.Curve(zip(loss_ratios, reference_poes))
+    return curve.Curve(zip(values, reference_poes))
