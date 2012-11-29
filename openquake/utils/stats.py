@@ -359,11 +359,18 @@ def get_counter(job_id, area, key_fragment, counter_type):
 
 
 def delete_job_counters(job_id):
-    """Delete the progress indication counters for the given `job_id`."""
+    """
+    Delete the progress indication counters for the given `job_id`.
+
+    :returns:
+        The number of keys removed.
+    """
     conn = _redis()
     keys = conn.keys("oqs/%s*" % job_id)
     if keys:
         conn.delete(*keys)
+
+    return len(keys)
 
 
 def get_progress_timing_data(job):
