@@ -371,6 +371,21 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
+class ParsedRupture(djm.Model):
+    """Stores parsed hazard rupture model in serialized python object
+       tree format."""
+    input = djm.ForeignKey('Input')
+    RUPTURE_TYPE_CHOICES = (
+        (u'complex', u'Complex'),
+        (u'simple', u'Simple'),)
+    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
+    nrml = fields.PickleField(help_text="NRML object representing the rupture"
+                                        " model")
+
+    class Meta:
+        db_table = 'hzrdi\".\"parsed_rupture_model'
+
+
 ## Tables in the 'uiapi' schema.
 
 
@@ -415,6 +430,7 @@ class Input(djm.Model):
         (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'site_model', u'Site Model'),
+        (u'rupture_model', u'Rupture Model')
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -633,6 +649,7 @@ class HazardCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'disaggregation', u'Disaggregation'),
+        (u'scenario', u'Scenario'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -829,6 +846,15 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    # Scenario params:
+    #####################
+    gsim = djm.TextField(
+        help_text=('Name of the ground shaking intensity model to use in the '
+                   'calculation'),
+        null=True
+    )
+    number_of_ground_motion_fields = djm.IntegerField()
+
 
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
