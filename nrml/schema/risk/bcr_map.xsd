@@ -41,9 +41,9 @@
 
     <xs:complexType name="BCR">
         <xs:attribute name="assetRef" type="xs:ID" use="required" />
-        <xs:attribute name="ealOrig" type="PositiveDoubleType" use="required" />
-        <xs:attribute name="ealRetr" type="PositiveDoubleType" use="required" />
-        <xs:attribute name="value" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="aalOrig" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="aalRetr" type="PositiveDoubleType" use="required" />
+        <xs:attribute name="ratio" type="PositiveDoubleType" use="required" />
     </xs:complexType>
 
 </xs:schema>
