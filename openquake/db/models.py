@@ -1884,6 +1884,9 @@ class DisaggResult(djm.Model):
     * `lon_bin_edges`
     * `eps_bin_edges`
 
+    The size of the tectonic region type (TRT) dimension is simply determined
+    by the length of `trts`.
+
     Additional metadata for the disaggregation histogram is stored, including
     location (POINT geometry), disaggregation PoE (Probability of Exceedance)
     and the corresponding IML (Intensity Measure Level) extracted from the
@@ -1898,11 +1901,12 @@ class DisaggResult(djm.Model):
     poe = djm.FloatField()
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    mag_bin_edges = fields.FloatArrayField(null=True)
-    dist_bin_edges = fields.FloatArrayField(null=True)
-    lon_bin_edges = fields.FloatArrayField(null=True)
-    lat_bin_edges = fields.FloatArrayField(null=True)
-    eps_bin_edges = fields.FloatArrayField(null=True)
+    mag_bin_edges = fields.FloatArrayField()
+    dist_bin_edges = fields.FloatArrayField()
+    lon_bin_edges = fields.FloatArrayField()
+    lat_bin_edges = fields.FloatArrayField()
+    eps_bin_edges = fields.FloatArrayField()
+    trts = fields.CharArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     matrix = fields.PickleField()
 

@@ -1256,11 +1256,12 @@ CREATE TABLE hzrdr.disagg_result (
         CHECK(
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
-    mag_bin_edges float[],
-    dist_bin_edges float[],
-    lon_bin_edges float[],
-    lat_bin_edges float[],
-    eps_bin_edges float[],
+    mag_bin_edges float[] NOT NULL,
+    dist_bin_edges float[] NOT NULL,
+    lon_bin_edges float[] NOT NULL,
+    lat_bin_edges float[] NOT NULL,
+    eps_bin_edges float[] NOT NULL,
+    trts VARCHAR[] NOT NULL,
     matrix bytea NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
