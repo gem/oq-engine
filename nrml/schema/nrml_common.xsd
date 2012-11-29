@@ -148,11 +148,15 @@
             <xs:maxInclusive value="1.0"/>
         </xs:restriction>
     </xs:simpleType>
-	
+
+    <xs:simpleType name="DoubleList">
+        <xs:list itemType="xs:double" />
+    </xs:simpleType>
+
 	<xs:simpleType name="PositiveDoubleList">
         <xs:list itemType="PositiveDoubleType"/>
 	</xs:simpleType>
-	
+
 	<xs:simpleType name="NormalizedDoubleList">
         <xs:list itemType="NormalizedDoubleType"/>
     </xs:simpleType>

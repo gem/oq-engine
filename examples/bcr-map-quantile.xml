@@ -11,8 +11,8 @@
                 <gml:pos>-116.0 41.0</gml:pos>
             </gml:Point>
 
-            <bcr assetRef="asset_1" value="15.23" ealOrig="1.1" ealRetr="1.0" />
-            <bcr assetRef="asset_2" value="25.23" ealOrig="2.1" ealRetr="2.0" />
+            <bcr assetRef="asset_1" ratio="15.23" aalOrig="1.1" aalRetr="1.0" />
+            <bcr assetRef="asset_2" ratio="25.23" aalOrig="2.1" aalRetr="2.0" />
         </node>
 
         <node>
@@ -20,7 +20,7 @@
                 <gml:pos>-116.0 42.0</gml:pos>
             </gml:Point>
 
-            <bcr assetRef="asset_3" value="64.23" ealOrig="2.1" ealRetr="2.0" />
+            <bcr assetRef="asset_3" ratio="64.23" aalOrig="2.1" aalRetr="2.0" />
         </node>
     </bcrMap>
 </nrml>
