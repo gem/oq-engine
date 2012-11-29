@@ -158,6 +158,15 @@ class SiteCollection(object):
     Instances of this class are intended to represent a large collection
     of sites in a most efficient way in terms of memory usage.
 
+    .. note::
+
+        Because calculations assume that :class:`Sites <Site>` are on the
+        Earth's surface, all `depth` information in a :class:`SiteCollection`
+        is discarded. So even if a :class:`SiteCollection` is created from
+        sites containing `depth` in their geometry, iterating over the
+        collection will yield :class:`Sites <Site>` with a reference depth of
+        0.0.
+
     :param sites:
         A list of instances of :class:`Site` class.
     """
