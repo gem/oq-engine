@@ -162,10 +162,10 @@ class SiteCollection(object):
 
         Because calculations assume that :class:`Sites <Site>` are on the
         Earth's surface, all `depth` information in a :class:`SiteCollection`
-        is discarded. So even if a :class:`SiteCollection` is created from
-        sites containing `depth` in their geometry, iterating over the
-        collection will yield :class:`Sites <Site>` with a reference depth of
-        0.0.
+        is discarded. The collection `mesh` will only contain lon and lat. So
+        even if a :class:`SiteCollection` is created from sites containing
+        `depth` in their geometry, iterating over the collection will yield
+        :class:`Sites <Site>` with a reference depth of 0.0.
 
     :param sites:
         A list of instances of :class:`Site` class.
