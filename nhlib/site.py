@@ -45,6 +45,7 @@ class Site(object):
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
 
     .. note::
+
         :class:`Sites <Site>` are pickleable
     """
     __slots__ = 'location vs30 vs30measured z1pt0 z2pt5'.split()
