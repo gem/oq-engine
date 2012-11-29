@@ -282,9 +282,9 @@ class BCRMapXMLWriter(object):
     :param path:
         File path (including filename) for results to be saved to.
     :param float interest_rate:
-        TODO - Document!
+        The inflation discount rate.
     :param float asset_life_expectancy:
-        TODO - Document!
+        The period of time in which the building is expected to be used.
     :param str source_model_tree_path:
         Id of the source model tree path (obtained concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -341,10 +341,13 @@ class BCRMapXMLWriter(object):
               representation of the location.
             * define an attribute `asset_ref`, which contains the unique
               identifier of the asset related to the (benefit cost) ratio.
-            * define an attribute `average_annual_loss_original`,
-              TODO - Document!
+            * define an attribute `average_annual_loss_original`, which is
+              the expected average annual economic loss using the original
+              vulnerability of the asset.
             * define an attribute `average_annual_loss_retrofitted`,
-              TODO - Document!
+              which is the expected average annual economic loss using the
+              improved (better design or retrofitted) vulnerability
+              of the asset.
             * define an attribute `bcr`, which is the value of the (
               benefit cost) ratio.
         """
