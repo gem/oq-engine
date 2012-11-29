@@ -115,8 +115,9 @@ def compute_disagg(job_id, sites, lt_rlz_id):
             lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    sources = _prepare_sources(hc, lt_rlz_id)
-    sources = (apply_uncertainties(src) for src in sources)
+    sources = list(_prepare_sources(hc, lt_rlz_id))
+    for src in sources:
+        apply_uncertainties(src)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
         nhlib_imt = haz_general.imt_to_nhlib(imt)
