@@ -45,7 +45,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
     :param block:
         A sequence of work items for this task to process. In the case of
         hazard curve computation, this is a sequence of source IDs. In the case
-        of disaggregation, this is a list of points.
+        of disaggregation, this is a list of :class:`nhlib.site.Site` objects.
 
         For more info, see
         :func:`openquake.calculators.hazard.classical.core.compute_hazard_curves`
@@ -73,7 +73,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
 
-def compute_disagg(job_id, points, lt_rlz_id):
+def compute_disagg(job_id, sites, lt_rlz_id):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -91,17 +91,18 @@ def compute_disagg(job_id, points, lt_rlz_id):
 
     :param int job_id:
         pass
-    :param list points:
-        `list` of :class:`nhlib.geo.point.Point` objects, which indicate the
-        locations for which we need to compute disaggregation histograms.
+    :param list sites:
+        `list` of :class:`nhlib.site.Site` objects, which indicate the
+        locations (and associated soil parameters) for which we need to compute
+        disaggregation histograms.
     :param int lt_rlz_id:
         ID of the :class:`openquake.db.models.LtRealization` for which we want
         to compute disaggregation histograms. This realization will determine
         which hazard curve results to use as a basis for the calculation.
     """
     logs.LOG.debug(
-        '> computing disaggregation for %(np)s points for realization %(rlz)s'
-        % dict(np=len(points), rlz=lt_rlz_id))
+        '> computing disaggregation for %(np)s sites for realization %(rlz)s'
+        % dict(np=len(sites), rlz=lt_rlz_id))
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
@@ -121,11 +122,11 @@ def compute_disagg(job_id, points, lt_rlz_id):
         nhlib_imt = haz_general.imt_to_nhlib(imt)
         hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
-        # loop over points
-        for point in points:
+        # loop over sites
+        for site in sites:
             # get curve for this point/IMT/realization
             [curve] = models.HazardCurveData.objects.filter(
-                location=point.wkt2d,
+                location=site.location.wkt2d,
                 hazard_curve__lt_realization=lt_rlz_id,
                 hazard_curve__imt=hc_im_type,
                 hazard_curve__sa_period=sa_period,
@@ -158,7 +159,7 @@ def compute_disagg(job_id, points, lt_rlz_id):
         [lt_rlz] = models.LtRealization.objects.raw(
             ltr_query, [lt_rlz_id])
 
-        lt_rlz.completed_items += len(points)
+        lt_rlz.completed_items += len(sites)
         if lt_rlz.completed_items == lt_rlz.total_items:
             lt_rlz.is_complete = True
 
@@ -285,9 +286,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hazard_calculation=self.hc, is_complete=False)
 
         # then distribute tasks for disaggregation histogram computation
-        all_points = list(self.hc.points_to_compute())
+        site_coll = haz_general.get_site_collection(self.hc)
         for lt_rlz in realizations:
-            for block in general_utils.block_splitter(all_points, block_size):
+            for block in general_utils.block_splitter(site_coll, block_size):
                 # job_id, point block, lt rlz, calc_type
                 yield (self.job.id, block, lt_rlz.id, 'disagg')
 
