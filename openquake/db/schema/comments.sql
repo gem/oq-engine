@@ -77,7 +77,7 @@ use this polygon in distance calculations.';
 COMMENT ON TABLE hzrdi.parsed_rupture_model IS 'Stores parsed hazard rupture model in serialized python object tree format';
 COMMENT ON COLUMN hzrdi.parsed_rupture_model.nrml IS 'NRML object representing the rupture';
 COMMENT ON COLUMN hzrdi.parsed_rupture_model.input_id IS 'The foreign key to the associated input rupture model file';
-COMMENT ON COLUMN hzrdi.parsed_rupture.rupture_type IS 'The rupture''s seismic input type: can be one of: complex or simple.';
+COMMENT ON COLUMN hzrdi.parsed_rupture_model.rupture_type IS 'The rupture''s seismic input type: can be one of: complex or simple.';
 
 
 
