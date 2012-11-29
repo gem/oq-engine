@@ -170,6 +170,9 @@ def pk_get(job_id, skey, cast2int=True):
     if not key:
         return
     value = kvs_op("get", key)
+    if value is None:
+        return None
+
     if cast2int:
         return int(value) if value else 0
     else:
