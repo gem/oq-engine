@@ -244,7 +244,7 @@ class probabilistic_event_based(object):
             self.correlation_type, taxonomies)
 
         loss_ratio_curve = event_based_functions._loss_curve(
-            hazard['IMLs'], loss_ratios, hazard['TSES'], hazard['TimeSpan'])
+            loss_ratios, hazard['TSES'], hazard['TimeSpan'])
 
         losses = loss_ratios * asset.value
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)

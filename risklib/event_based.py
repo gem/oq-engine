@@ -22,14 +22,14 @@ import numpy
 from scipy import interpolate
 
 from risklib import curve
-from risklib.range import range_clip
 from risklib import classical
 
 UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
-DEFAULT_TIME_SPAN = 50
+DEFAULT_CURVE_RESOLUTION = 50
 
 
-def aggregate_loss_curve(set_of_losses, tses, time_span):
+def aggregate_loss_curve(set_of_losses, tses, time_span,
+                         curve_resolution=DEFAULT_CURVE_RESOLUTION):
     """
     Compute the aggregate loss curve obtained by summing the given
     set of losses.
@@ -45,8 +45,9 @@ def aggregate_loss_curve(set_of_losses, tses, time_span):
     :rtype: an instance of `risklib.curve.Curve`
     """
 
-    losses = sum(set_of_losses)
-    raise NotImplementedError
+    aggregate_losses = sum(set_of_losses)
+    return _loss_curve(aggregate_losses, tses, time_span,
+                       curve_resolution=curve_resolution)
 
 
 class EpsilonProvider(object):
@@ -261,8 +262,8 @@ def _probs_of_exceedance(rates_of_exceedance, time_span):
     return numpy.array([poe(rate) for rate in rates_of_exceedance])
 
 
-def _loss_curve(ground_motion_values, loss_ratios, tses,
-                time_span, levels_of_poe=50):
+def _loss_curve(loss_ratios, tses, time_span,
+                curve_resolution=DEFAULT_CURVE_RESOLUTION):
     """
     Compute a loss (or loss ratio) curve.
 
@@ -270,20 +271,20 @@ def _loss_curve(ground_motion_values, loss_ratios, tses,
     ratios) as X values and PoEs (Probabilities of Exceendance) as Y values.
     """
 
-    loss_ratios.sort()
+    sorted_loss_ratios = numpy.sort(loss_ratios)
 
-    exceeding_times = numpy.array(range(len(ground_motion_values), 0, -1))
+    exceeding_times = numpy.array(range(len(sorted_loss_ratios) - 1, -1, -1))
     rates_of_exceedance = _rates_of_exceedance(exceeding_times, tses)
 
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
-    reference_poes = numpy.linspace(poes.min(), poes.max(), levels_of_poe)
+    reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
     loss_ratios = interpolate.interp1d(
-        poes[::-1], loss_ratios[::-1])(reference_poes)
+        poes[::-1], sorted_loss_ratios[::-1])(reference_poes)
 
     # sometimes we have multiple losses with probability equals to
     # 1.0. In this case, we just take the minimum and maximum loss.
-    reference_poes = numpy.append(reference_poes, [1.0])
-    loss_ratios = numpy.append(loss_ratios, loss_ratios.min())
+    reference_poes = numpy.append(reference_poes, [1])
+    loss_ratios = numpy.append(loss_ratios, [0])
 
     return curve.Curve(zip(loss_ratios, reference_poes))
