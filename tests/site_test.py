@@ -191,6 +191,22 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
 
+class SiteCollectionIterTestCase(unittest.TestCase):
+
+    def test(self):
+        s1 = Site(location=Point(10, 20),
+                  vs30=1.2, vs30measured=True,
+                  z1pt0=3.4, z2pt5=5.6)
+        s2 = Site(location=Point(-1.2, -3.4),
+                  vs30=55.4, vs30measured=False,
+                  z1pt0=66.7, z2pt5=88.9)
+        cll = SiteCollection([s1, s2])
+
+        cll_sites = list(cll)
+        for i, s in enumerate([s1, s2]):
+            self.assertEqual(s, cll_sites[i])
+
+
 class SitePickleTestCase(unittest.TestCase):
     # Tests for pickling Sites.
 
