@@ -936,13 +936,13 @@ class RiskCalculation(djm.Model):
 
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
+        (u'classical_bcr', u'Classical BCR'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
         # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
         # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        # (u'classical_bcr', u'Classical BCR'),
         # Benefit-cost ratio calculator based on Event Based risk calc
         # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1010,6 +1010,10 @@ class RiskCalculation(djm.Model):
             return lt.sm_lt_path, lt.gsim_lt_path
         else:
             raise NotImplementedError
+
+    @property
+    def is_bcr(self):
+        return self.calculation_mode in ['classical_bcr']
 
     def model(self, input_type):
         """
