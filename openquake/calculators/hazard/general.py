@@ -544,7 +544,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     [hc_progress] = models.HazardCurveProgress.objects.filter(
                         lt_realization=rlz.id, imt=imt)
 
-                    hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
+                    hc_data_inserter = writer.BulkInserter(
+                        models.HazardCurveData)
                     for i, location in enumerate(points):
                         poes = hc_progress.result_matrix[i]
                         hc_data_inserter.add_entry(
