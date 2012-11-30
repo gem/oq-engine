@@ -186,7 +186,7 @@ CREATE TABLE hzrdi.parsed_rupture_model (
     input_id INTEGER NOT NULL,
     rupture_type VARCHAR NOT NULL
         CONSTRAINT enforce_rupture_type CHECK
-        (rupture_type IN ('complex', 'simple')),
+        (rupture_type IN ('complex_fault', 'simple_fault')),
     nrml BYTEA NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
