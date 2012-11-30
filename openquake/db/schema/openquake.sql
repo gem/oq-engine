@@ -355,8 +355,8 @@ CREATE TABLE uiapi.hazard_calculation (
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
     -- scenario calculator parameters:
-    gsim VARCHAR NOT NULL,
-    number_of_ground_motion_fields INTEGER NOT NULL,
+    gsim VARCHAR,
+    number_of_ground_motion_fields INTEGER,
     -- disaggregation calculator parameters:
     mag_bin_width float,
     distance_bin_width float,
