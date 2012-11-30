@@ -54,7 +54,7 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         aaae(test_data.RLZ_1_POE_01_PGA, rlz1.matrix)
         aaae(test_data.RLZ_2_POE_01_PGA, rlz2.matrix)
 
-        poe_01_sa= results.filter(imt='SA', poe=0.1)
+        poe_01_sa = results.filter(imt='SA', poe=0.1)
         rlz1, rlz2 = poe_01_sa.order_by('lt_realization')
 
         aaae(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
