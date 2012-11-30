@@ -31,13 +31,13 @@ class LossCurveXMLWriter(object):
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
     :param str source_model_tree_path:
-        Id of the source model tree path (obtained concatenating the IDs of
+        Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
         have been computed.
     :param str gsim_tree_path:
         Id of the gsim (ground shaking intensity model) tree path (obtained
-        concatenating the IDs of the branches the path is made of) for which
-        input hazard curves have been computed.
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
     :param str statistics:
@@ -167,13 +167,13 @@ class LossMapXMLWriter(object):
         Probability of exceedance used to interpolate the losses
         producing this loss map.
     :param str source_model_tree_path:
-        Id of the source model tree path (obtained concatenating the IDs of
+        Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
         have been computed.
     :param str gsim_tree_path:
         Id of the gsim (ground shaking intensity model) tree path (obtained
-        concatenating the IDs of the branches the path is made of) for which
-        input hazard curves have been computed.
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
     :param str loss_category:
@@ -290,13 +290,13 @@ class BCRMapXMLWriter(object):
     :param float asset_life_expectancy:
         The period of time in which the building is expected to be used.
     :param str source_model_tree_path:
-        Id of the source model tree path (obtained concatenating the IDs of
+        Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
         have been computed.
     :param str gsim_tree_path:
         Id of the gsim (ground shaking intensity model) tree path (obtained
-        concatenating the IDs of the branches the path is made of) for which
-        input hazard curves have been computed.
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
     :param str loss_category:
