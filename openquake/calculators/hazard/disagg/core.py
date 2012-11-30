@@ -389,7 +389,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         site_coll = haz_general.get_site_collection(self.hc)
         for lt_rlz in realizations:
             for block in general_utils.block_splitter(site_coll, block_size):
-                # job_id, point block, lt rlz, calc_type
+                # job_id, Site block, lt rlz, calc_type
                 yield (self.job.id, block, lt_rlz.id, 'disagg')
 
     def get_task_complete_callback(self, hc_task_arg_gen, block_size,
