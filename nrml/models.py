@@ -369,13 +369,13 @@ class SimpleFaultRuptureModel(object):
     :param geometry:
         :class:`SimpleFaultGeometry` object.
     """
-    def __init__(self, id=None, magnitude=None, rake=float, geometry=None):
+    def __init__(self, id=None, magnitude=None, rake=None, geometry=None):
         self.id = id
         self.magnitude = magnitude
         self.rake = rake
         self.geometry = geometry
     
-class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
+class ComplexFaultRuptureModel(object):
     """Basic object representation of a Complex Fault Rupture.
 
     :param str id:
@@ -384,6 +384,17 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
         Magnitude.
     :param float rake:
         Rake angle.
+    :param float rake:
+        Rake angle.
     :param geometry:
         :class:`ComplexFaultGeometry` object.
     """
+
+    def __init__(self, id=None, magnitude=None, rake=None, hypocenter=None,
+                 geometry=None):
+        self.id = id
+        self.magnitude = magnitude
+        self.rake = rake
+        self.hypocenter = hypocenter
+        self.geometry = geometry
+    

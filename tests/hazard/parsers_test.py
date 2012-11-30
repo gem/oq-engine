@@ -389,9 +389,12 @@ class RuptureModelParserTestCase(unittest.TestCase):
         models.ComplexFaultRuptureModel(
             magnitude=9.0,
             rake=0.0,
+            hypocenter=[-124.977, 41.214, 0.5088560E+01],
             geometry=models.ComplexFaultGeometry(
                 top_edge_wkt='LINESTRING(-124.704 40.363 0.5493260E+01, -124.977 41.214 0.4988560E+01, -125.140 42.096 0.4897340E+01)',
-                bottom_edge_wkt='LINESTRING(-123.829 40.347 0.2038490E+02, -124.137 41.218 0.1741390E+02, -124.252 42.115 0.1752740E+02)')),
+                bottom_edge_wkt='LINESTRING(-123.829 40.347 0.2038490E+02, -124.137 41.218 0.1741390E+02, -124.252 42.115 0.1752740E+02)',
+                int_edges=['LINESTRING(-124.704 40.363 0.5593260E+01, -124.977 41.214 0.5088560E+01, -125.140 42.096 0.4997340E+01)', 'LINESTRING(-124.704 40.363 0.5693260E+01, -124.977 41.214 0.5188560E+01, -125.140 42.096 0.5097340E+01)']
+                )),
         ]
 
     INVALID_1 = '''<?xml version='1.0' encoding='utf-8'?>
