@@ -93,6 +93,8 @@ class LossCurveXMLWriter(object):
             index.
         """
 
+        _assert_valid_input(data)
+
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
@@ -223,6 +225,8 @@ class LossMapXMLWriter(object):
             * define an attribute `value`, which is the value of the loss.
         """
 
+        _assert_valid_input(data)
+
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
@@ -352,6 +356,8 @@ class BCRMapXMLWriter(object):
               benefit cost) ratio.
         """
 
+        _assert_valid_input(data)
+
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
@@ -476,3 +482,14 @@ def _check_statistics_or_logic_tree(source_model_tree_path,
     if source_model_tree_path is not None or gsim_tree_path is not None:
         raise ValueError("You must choose `statistics` or "
             "(`source_model_tree_path`, `gsim_tree_path`), not both.")
+
+
+def _assert_valid_input(data):
+    """
+    We don't support empty outputs, so there must be at least one
+    element in the collection.
+    """
+
+    if not data or len(data) == 0:
+        raise ValueError("At least one element must be present, "
+            "an empty document is not supported by the schema.")

@@ -58,19 +58,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         self.remove_file()
 
-    def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
-""")
-
+    def test_empty_model_not_supported(self):
         writer = writers.LossCurveXMLWriter(self.filename,
             investigation_time=10.0, statistics="mean")
 
-        writer.serialize([])
-
-        _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -161,19 +154,12 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         self.remove_file()
 
-    def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
-""")
-
+    def test_empty_model_not_supported(self):
         writer = writers.LossMapXMLWriter(self.filename,
             investigation_time=10.0, poe=0.5, statistics="mean")
 
-        writer.serialize([])
-
-        _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -285,19 +271,12 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         self.remove_file()
 
-    def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
-""")
-
+    def test_empty_model_not_supported(self):
         writer = writers.BCRMapXMLWriter(self.filename,
             interest_rate=10.0, asset_life_expectancy=0.5, statistics="mean")
 
-        writer.serialize([])
-
-        _utils.assert_xml_equal(expected, self.filename)
-        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
