@@ -432,7 +432,7 @@ class SESRuptureTestCase(unittest.TestCase):
 
         lt_rlz = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
-            sm_lt_path='foo', gsim_lt_path='bar', total_sources=0)
+            sm_lt_path='foo', gsim_lt_path='bar', total_items=0)
         output = models.Output.objects.create(
             oq_job=job, owner=job.owner, display_name='test',
             output_type='ses')
