@@ -376,8 +376,8 @@ class ParsedRupture(djm.Model):
        tree format."""
     input = djm.ForeignKey('Input')
     RUPTURE_TYPE_CHOICES = (
-        (u'complex', u'Complex'),
-        (u'simple', u'Simple'),)
+        (u'complex_fault', u'Complex Fault'),
+        (u'simple_fault', u'Simple Fault'),)
     rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
     nrml = fields.PickleField(help_text="NRML object representing the rupture"
                                         " model")
@@ -795,6 +795,19 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    ################################
+    # Scenario Calculator params:
+    ################################
+    gsim = djm.TextField(
+        help_text=('Name of the ground shaking intensity model to use in the '
+                   'calculation'),
+        null=True,
+        blank=True,
+    )
+    number_of_ground_motion_fields = djm.IntegerField(
+        null=True,
+        blank=True,
+    )
 
     ################################
     # Output/post-processing params:
@@ -846,15 +859,6 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    # Scenario params:
-    #####################
-    gsim = djm.TextField(
-        help_text=('Name of the ground shaking intensity model to use in the '
-                   'calculation'),
-        null=True
-    )
-    number_of_ground_motion_fields = djm.IntegerField()
-
 
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
