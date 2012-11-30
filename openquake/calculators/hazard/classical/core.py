@@ -20,12 +20,10 @@ Core functionality for the classical PSHA hazard calculator.
 import nhlib
 import nhlib.calc
 import nhlib.imt
-import numpy
 
 from django.db import transaction
 
 from openquake import logs
-from openquake import writer
 from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.input import logictree
