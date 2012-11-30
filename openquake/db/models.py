@@ -2247,19 +2247,21 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, region_constraint):
+    def contained_in(self, exposure_model_id, region_constraint, offset, size):
         """
         :returns the asset ids (ordered by id) contained in
         `region_constraint` associated with an
         `openquake.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        return self.raw("""
+        return list(self.raw("""
     SELECT * FROM oqmif.exposure_data WHERE
     exposure_model_id = %s AND
     ST_COVERS(ST_GeographyFromText(%s), site)
     ORDER BY id
-    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+    LIMIT %s OFFSET %s
+    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt,
+          size, offset]))
 
     def contained_in_count(self, exposure_model_id, region_constraint):
         cursor = connection.cursor()
