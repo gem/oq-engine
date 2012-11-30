@@ -18,6 +18,7 @@
 Disaggregation calculator core functionality
 """
 
+import math
 import nhlib
 import numpy
 
@@ -31,6 +32,7 @@ from openquake.input import logictree
 from openquake.input import source
 from openquake.utils import general as general_utils
 from openquake.utils import stats
+from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
 
 
@@ -335,6 +337,14 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         num_rlzs = realizations.count()
         num_points = len(self.hc.points_to_compute())
         self.progress['total'] += num_rlzs * num_points
+
+        # Update stats to consider the disagg tasks as well:
+        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
+        block_size = int(config.get('hazard', 'block_size'))
+        job_stats.num_tasks += int(
+            math.ceil(float(num_points) * num_rlzs / block_size)
+        )
+        job_stats.save()
 
         # Update the progress info on the realizations, to include the disagg
         # phase:
