@@ -18,6 +18,7 @@ This module contains functions and Django model forms for carrying out job
 profile validation.
 """
 
+
 import re
 
 from django.forms import ModelForm
@@ -62,13 +63,6 @@ class BaseOQModelForm(ModelForm):
     # and files.
     # At the moment, these are common to all hazard calculation modes.
     special_fields = (
-        'region',
-        'region_grid_spacing',
-        'sites',
-        'reference_vs30_value',
-        'reference_vs30_type',
-        'reference_depth_to_2pt5km_per_sec',
-        'reference_depth_to_1pt0km_per_sec',
         'export_dir',
     )
 
@@ -127,21 +121,55 @@ class BaseOQModelForm(ModelForm):
         super_valid = super(BaseOQModelForm, self).is_valid()
         all_valid = super_valid
 
-        # HazardCalculation
-        hc = self.instance
+        # Calculation
+        calc = self.instance
 
         # First, check the calculation mode:
-        valid, errs = calculation_mode_is_valid(hc, self.calc_mode)
+        valid, errs = calculation_mode_is_valid(calc, self.calc_mode)
         all_valid &= valid
         self._add_error('calculation_mode', errs)
 
         # Exclude special fields that require contextual validation.
         for field in sorted(set(self.fields) - set(self.special_fields)):
-            valid, errs = eval('%s_is_valid' % field)(hc)
+            valid, errs = eval('%s_is_valid' % field)(calc)
             all_valid &= valid
 
             self._add_error(field, errs)
 
+        if self.exports:
+            # The user has requested that exports be performed after the
+            # calculation i.e. an 'export_dir' parameter must be present.
+            if not calc.export_dir:
+                all_valid = False
+                err = ('--exports specified on the command line but the '
+                       '"export_dir" parameter is missing in the .ini file')
+                self._add_error('export_dir', err)
+
+        return all_valid
+
+
+class BaseHazardModelForm(BaseOQModelForm):
+    """
+    Base ModelForm used to validate HazardCalculation objects
+    """
+
+    special_fields = (
+        'region',
+        'region_grid_spacing',
+        'sites',
+        'reference_vs30_value',
+        'reference_vs30_type',
+        'reference_depth_to_2pt5km_per_sec',
+        'reference_depth_to_1pt0km_per_sec',
+        'export_dir',
+    )
+
+    def is_valid(self):
+        super_valid = super(BaseHazardModelForm, self).is_valid()
+        all_valid = super_valid
+
+        # HazardCalculation
+        hc = self.instance
         # Now do checks which require more context.
 
         # Cannot specify region AND sites
@@ -191,19 +219,10 @@ class BaseOQModelForm(ModelForm):
                 all_valid &= valid
                 self._add_error(field, errs)
 
-        if self.exports:
-            # The user has requested that exports be performed after the
-            # calculation i.e. an 'export_dir' parameter must be present.
-            if not hc.export_dir:
-                all_valid = False
-                err = ('--exports specified on the command line but the '
-                       '"export_dir" parameter is missing in the .ini file')
-                self._add_error('export_dir', err)
-
         return all_valid
 
 
-class ClassicalHazardCalculationForm(BaseOQModelForm):
+class ClassicalHazardCalculationForm(BaseHazardModelForm):
 
     calc_mode = 'classical'
 
@@ -235,7 +254,7 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
         )
 
 
-class EventBasedHazardCalculationForm(BaseOQModelForm):
+class EventBasedHazardCalculationForm(BaseHazardModelForm):
 
     calc_mode = 'event_based'
 
@@ -327,7 +346,7 @@ class EventBasedHazardCalculationForm(BaseOQModelForm):
         return all_valid
 
 
-class DisaggHazardCalculationForm(BaseOQModelForm):
+class DisaggHazardCalculationForm(BaseHazardModelForm):
 
     calc_mode = 'disaggregation'
 
@@ -366,6 +385,27 @@ HAZ_VALIDATOR_MAP = {
     'event_based': EventBasedHazardCalculationForm,
     'disaggregation': DisaggHazardCalculationForm,
 }
+
+
+class ClassicalRiskCalculationForm(BaseOQModelForm):
+    calc_mode = 'classical'
+
+    class Meta:
+        model = models.RiskCalculation
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'lrem_steps_per_interval',
+            'conditional_loss_poes'
+            )
+
+
+#: Maps calculation_mode to the appropriate validator class
+RISK_VALIDATOR_MAP = {
+    'classical': ClassicalRiskCalculationForm,
+}
+
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
 # functions (the latter because some of the function names are very long).
@@ -683,6 +723,34 @@ def hazard_curves_from_gmfs_is_valid(_mdl):
     # This parameter is a simple True or False;
     # field normalization should cover all of validation necessary.
     return True, []
+
+
+def conditional_loss_poes_is_valid(mdl):
+    value = mdl.conditional_loss_poes
+
+    if value is not None:
+        if not all([0.0 <= x <= 1.0 for x in value]):
+            return (
+                False,
+                ['PoEs for conditional loss poes must be in the range [0, 1]'])
+    return True, []
+
+
+def lrem_steps_per_interval_is_valid(mdl):
+    value = mdl.lrem_steps_per_interval
+    msg = 'loss conditional exceedence matrix steps per interval must be > 0'
+
+    if value is None or not value > 0:
+        return False, [msg]
+    return True, []
+
+
+def region_constraint_is_valid(_mdl):
+    # At this stage, we just use the region_is_valid implementation to
+    # check for a consistent geometry. Further validation occurs after
+    # we have loaded the exposure.
+    _mdl.region = _mdl.region_constraint
+    return region_is_valid(_mdl)
 
 
 def mag_bin_width_is_valid(mdl):

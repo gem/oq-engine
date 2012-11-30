@@ -220,3 +220,20 @@ class AMQPLogSource(AMQPMessageConsumer):
         logger = logging.getLogger(record.name)
         if logger.isEnabledFor(record.levelno):
             logger.handle(record)
+
+
+class tracing(object):
+    """
+    Simple context manager util to handle tracing. E.g.
+
+    with log("exports"):
+       do_export()
+    """
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __enter__(self):
+        LOG.debug('> starting %s' % self.msg)
+
+    def __exit__(self, *args, **kwargs):
+        LOG.debug('< done with %s' % self.msg)
