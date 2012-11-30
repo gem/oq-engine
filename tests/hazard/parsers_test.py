@@ -370,3 +370,74 @@ class SiteModelParserTestCase(unittest.TestCase):
         actual = [x for x in parser.parse()]
 
         self.assertTrue(_utils.deep_eq(expected, actual))
+
+
+class RuptureModelParserTestCase(unittest.TestCase):
+    SAMPLE_FILES = ['examples/simple-fault-rupture.xml',
+                    'examples/complex-fault-rupture.xml']
+
+    EXPECTED_MODELS = [
+        models.SimpleFaultRuptureModel(
+            magnitude=7.65,
+            rake=15.0,
+            geometry=models.SimpleFaultGeometry(
+                wkt='LINESTRING(-124.704 40.363, 0.1 -124.977, 41.214 0.1, -125.140 42.096, 0.1)',
+                dip=50.0,
+                upper_seismo_depth=12.5,
+                lower_seismo_depth=19.5)),
+
+        models.ComplexFaultRuptureModel(
+            magnitude=9.0,
+            rake=0.0,
+            geometry=models.ComplexFaultGeometry(
+                top_edge_wkt='LINESTRING(-124.704 40.363 0.5493260E+01, -124.977 41.214 0.4988560E+01, -125.140 42.096 0.4897340E+01)',
+                bottom_edge_wkt='LINESTRING(-123.829 40.347 0.2038490E+02, -124.137 41.218 0.1741390E+02, -124.252 42.115 0.1752740E+02)')),
+        ]
+
+    INVALID_1 = '''<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <simpeFaultRupture gml:id="sfr_1">
+        <magnitude type="Mw">7.65</magnitude>
+        <rake>15.0</rake>
+
+        <simpleFaultGeometry gml:id="sfg_1">
+            <faultTrace>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -124.704 40.363 0.1
+                        -124.977 41.214 0.1
+                        -125.140 42.096 0.1
+                    </gml:posList>
+                </gml:LineString>
+            </faultTrace>
+            <dip>50.0</dip>
+            <upperSeismoDepth>12.5</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
+        </simpleFaultGeometry>
+    </simpleFaultRupture>
+</nrml>
+''' # there is a mispelled simpeFaultRupture here
+
+    INVALID_2 = '''<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+</nrml>
+''' # missing Rupture section
+
+    def test_parse(self):
+        for fname, expected_model in zip(
+                    self.SAMPLE_FILES, self.EXPECTED_MODELS):
+            parser = parsers.RuptureModelParser(fname)
+            model = parser.parse()
+            _utils._deep_eq(model, expected_model)
+    
+    def test_invalid(self):
+        inv1 = StringIO.StringIO(self.INVALID_1)
+        self.assertRaises(etree.XMLSyntaxError, 
+                          parsers.RuptureModelParser(inv1).parse)
+
+        inv2 = StringIO.StringIO(self.INVALID_2)
+        self.assertRaises(ValueError,
+                          parsers.RuptureModelParser(inv2).parse)

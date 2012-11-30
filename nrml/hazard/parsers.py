@@ -42,8 +42,65 @@ def _xpath(elem, expr):
     """
     return elem.xpath(expr, namespaces=nrml.PARSE_NS_MAP)
 
+class FaultGeometryParser(object):
+    """
+    Mixin with methods _parse_simple_geometry and _parse_complex_geometry.
+    """
 
-class SourceModelParser(object):
+    @classmethod
+    def _parse_simple_geometry(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a geometry.
+        :returns:
+            Fully populated :class:`nrml.models.SimpleFaultGeometry` object.
+        """
+        simple_geom = models.SimpleFaultGeometry()
+
+        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
+        coords = gml_pos_list.text.split()
+        simple_geom.wkt = utils.coords_to_linestr_wkt(coords, 2)
+
+        simple_geom.dip = float(
+            _xpath(src_elem, './/nrml:dip')[0].text)
+        simple_geom.upper_seismo_depth = float(
+            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
+        simple_geom.lower_seismo_depth = float(
+            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
+
+        return simple_geom
+
+    @classmethod
+    def _parse_complex_geometry(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a geometry.
+        :returns:
+            Fully populated :class:`nrml.models.ComplexFaultGeometry` object.
+        """
+        complex_geom = models.ComplexFaultGeometry()
+
+        [top_edge] = _xpath(src_elem, './/nrml:faultTopEdge//gml:posList')
+        top_coords = top_edge.text.split()
+        complex_geom.top_edge_wkt = utils.coords_to_linestr_wkt(top_coords, 3)
+
+        [bottom_edge] = _xpath(
+            src_elem, './/nrml:faultBottomEdge//gml:posList')
+        bottom_coords = bottom_edge.text.split()
+        complex_geom.bottom_edge_wkt = utils.coords_to_linestr_wkt(
+            bottom_coords, 3)
+
+        # Optional itermediate edges:
+        int_edges = _xpath(src_elem, './/nrml:intermediateEdge//gml:posList')
+        for edge in int_edges:
+            coords = edge.text.split()
+            complex_geom.int_edges.append(
+                utils.coords_to_linestr_wkt(coords, 3))
+
+        return complex_geom
+
+
+class SourceModelParser(FaultGeometryParser):
     """NRML source model parser. Reads point sources, area sources, simple
     fault sources, and complex fault sources from a given source.
 
@@ -248,20 +305,8 @@ class SourceModelParser(object):
         simple = models.SimpleFaultSource()
         cls._set_common_attrs(simple, src_elem)
 
-        simple_geom = models.SimpleFaultGeometry()
+        simple_geom = cls._parse_simple_geometry(src_elem)
         simple.geometry = simple_geom
-
-        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
-        coords = gml_pos_list.text.split()
-        simple_geom.wkt = utils.coords_to_linestr_wkt(coords, 2)
-
-        simple_geom.dip = float(
-            _xpath(src_elem, './/nrml:dip')[0].text)
-        simple_geom.upper_seismo_depth = float(
-            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
-        simple_geom.lower_seismo_depth = float(
-            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
-
         simple.mfd = cls._parse_mfd(src_elem)
         simple.rake = float(
             _xpath(src_elem, './/nrml:rake')[0].text)
@@ -278,31 +323,11 @@ class SourceModelParser(object):
         """
         complx = models.ComplexFaultSource()
         cls._set_common_attrs(complx, src_elem)
-
-        complex_geom = models.ComplexFaultGeometry()
+        complex_geom = cls._parse_complex_geometry(src_elem)
         complx.geometry = complex_geom
-
-        [top_edge] = _xpath(src_elem, './/nrml:faultTopEdge//gml:posList')
-        top_coords = top_edge.text.split()
-        complex_geom.top_edge_wkt = utils.coords_to_linestr_wkt(top_coords, 3)
-
-        [bottom_edge] = _xpath(
-            src_elem, './/nrml:faultBottomEdge//gml:posList')
-        bottom_coords = bottom_edge.text.split()
-        complex_geom.bottom_edge_wkt = utils.coords_to_linestr_wkt(
-            bottom_coords, 3)
-
-        # Optional itermediate edges:
-        int_edges = _xpath(src_elem, './/nrml:intermediateEdge//gml:posList')
-        for edge in int_edges:
-            coords = edge.text.split()
-            complex_geom.int_edges.append(
-                utils.coords_to_linestr_wkt(coords, 3))
-
         complx.mfd = cls._parse_mfd(src_elem)
         complx.rake = float(
             _xpath(src_elem, './/nrml:rake')[0].text)
-
         return complx
 
     def parse(self):
@@ -386,3 +411,60 @@ class SiteModelParser(object):
                     # the input file which are considered siblings to
                     # source elements.
                     del element.getparent()[0]
+
+
+# notice that there must be at most one rupture per file because of the
+# constraint maxOccurs="1" in nrml.xsd
+class RuptureModelParser(FaultGeometryParser):
+
+    _SIMPLE_RUPT_TAG = '{%s}simpleFaultRupture' % nrml.NAMESPACE
+    _COMPLEX_RUPT_TAG = '{%s}complexFaultRupture' % nrml.NAMESPACE
+
+    def __init__(self, source, schema_validation=True):
+        self.source = source
+        self.schema_validation = schema_validation
+        self._parse_fn_map = {
+            self._SIMPLE_RUPT_TAG: self._parse_simple_rupture,
+            self._COMPLEX_RUPT_TAG: self._parse_complex_rupture,
+        }
+
+    def _parse_simple_rupture(cls, element):
+        model = models.SimpleFaultRuptureModel()
+        magnitude_elem, rake_elem, geom_elem = list(element)
+        model.magnitude = float(magnitude_elem.text)
+        model.rake = float(rake_elem.text)
+        model.geometry = cls._parse_simple_geometry(geom_elem)
+        return model
+
+    def _parse_complex_rupture(cls, element):
+        model = models.ComplexFaultRuptureModel()
+        magnitude_elem, rake_elem, geom_elem = list(element)
+        model.magnitude = float(magnitude_elem.text)
+        model.rake = float(rake_elem.text)
+        model.geometry = cls._parse_complex_geometry(geom_elem)
+        return model
+
+    def parse(self):
+        """Parse the source XML content and generate a rupture model in object
+        form. The file must contain a single SimpleFaultRupture object or
+        a single ComplexFaultRupture object.
+
+        :returns:
+            :class:`nrml.models.SimpleFaultRuptureModel` instance or
+            :class:`nrml.models.ComplexFaultRuptureModel` instance
+        """
+
+        if self.schema_validation:
+            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+        else:
+            schema = None
+
+        tree = etree.iterparse(self.source, schema=schema)
+        for _, element in tree:
+            parse_fn = self._parse_fn_map.get(element.tag)
+            if parse_fn:
+                return parse_fn(element)
+        # If we get to here, we didn't find the right element.
+        raise ValueError('<%s> or <%s> element not found.' 
+                         % (self._SIMPLE_RUPT_TAG, 
+                            self._COMPLEX_RUPT_TAG))

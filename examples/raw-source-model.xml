@@ -7,8 +7,8 @@
             <strike>0.0</strike>
             <dip>90.0</dip>
             <rake>0.0</rake>
-            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
-            <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
             <magnitude>5.0</magnitude>
             <minMagnitude>5.0</minMagnitude>
             <maxMagnitude>7.0</maxMagnitude>
@@ -50,8 +50,8 @@
             <strike>0.0</strike>
             <dip>90.0</dip>
             <rake>0.0</rake>
-            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
-            <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
             <magnitude>5.0</magnitude>
             <minMagnitude>5.0</minMagnitude>
             <maxMagnitude>7.0</maxMagnitude>

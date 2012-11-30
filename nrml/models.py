@@ -190,6 +190,14 @@ class SimpleFaultGeometry(object):
         self.upper_seismo_depth = upper_seismo_depth
         self.lower_seismo_depth = lower_seismo_depth
 
+    # a string representation useful for tests and debugging
+    def __str__(self):
+        return '''SimpleFaultGeometry(
+wkt=%(wkt)s,
+dip=%(dip)s,
+upper_seismo_depth=%(upper_seismo_depth)s,
+lower_seismo_depth=%(lower_seismo_depth)s)
+''' % vars(self)
 
 class ComplexFaultSource(SimpleFaultSource):
     """Basic object representation of a Complex Fault Source.
@@ -235,6 +243,14 @@ class ComplexFaultGeometry(object):
         self.top_edge_wkt = top_edge_wkt
         self.bottom_edge_wkt = bottom_edge_wkt
         self.int_edges = int_edges if int_edges is not None else []
+
+    # a string representation useful for tests and debugging
+    def __str__(self):
+        return '''ComplexFaultGeometry(
+top_edge_wkt=%(top_edge_wkt)s,
+bottom_edge_wkt=%(bottom_edge_wkt)s,
+int_edges=%(int_edges)s
+''' % vars(self)
 
 
 class IncrementalMFD(object):
@@ -339,3 +355,35 @@ class SiteModel(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.wkt = wkt
+
+
+class SimpleFaultRuptureModel(object):
+    """Basic object representation of a Complex Fault Rupture.
+
+    :param str id:
+        Rupture identifier, unique within a given model.
+    :param float magnitude:
+        Magnitude.
+    :param float rake:
+        Rake angle.
+    :param geometry:
+        :class:`SimpleFaultGeometry` object.
+    """
+    def __init__(self, id=None, magnitude=None, rake=float, geometry=None):
+        self.id = id
+        self.magnitude = magnitude
+        self.rake = rake
+        self.geometry = geometry
+    
+class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
+    """Basic object representation of a Complex Fault Rupture.
+
+    :param str id:
+        Rupture identifier, unique within a given model.
+    :param float magnitude:
+        Magnitude.
+    :param float rake:
+        Rake angle.
+    :param geometry:
+        :class:`ComplexFaultGeometry` object.
+    """

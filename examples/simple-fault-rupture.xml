@@ -17,8 +17,8 @@
                 </gml:LineString>
             </faultTrace>
             <dip>50.0</dip>
-            <upperSeismogenicDepth>12.5</upperSeismogenicDepth>
-            <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            <upperSeismoDepth>12.5</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
         </simpleFaultGeometry>
     </simpleFaultRupture>
 </nrml>
