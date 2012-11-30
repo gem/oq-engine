@@ -16,8 +16,6 @@
                     <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:choice>
                         <xs:element ref="aggregateLossCurve"/>
-                        <xs:element ref="benefitCostRatioMap"/>
-                        <xs:element ref="lossMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
