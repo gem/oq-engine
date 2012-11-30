@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import mock
 import unittest
 
 from openquake import engine2
