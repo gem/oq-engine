@@ -1281,6 +1281,7 @@ CREATE TABLE hzrdr.disagg_result (
     matrix bytea NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
