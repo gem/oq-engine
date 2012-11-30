@@ -274,7 +274,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(8, save_mock.call_count)
 
-
         # Finally, test that realization data is up to date and correct:
         rlzs = models.LtRealization.objects.filter(
             hazard_calculation=self.calc.hc)
