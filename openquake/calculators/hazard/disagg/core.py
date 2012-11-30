@@ -102,6 +102,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         to compute disaggregation histograms. This realization will determine
         which hazard curve results to use as a basis for the calculation.
     """
+    # Silencing 'Too many local variables'
+    # pylint: disable=R0914
     logs.LOG.debug(
         '> computing disaggregation for %(np)s sites for realization %(rlz)s'
         % dict(np=len(sites), rlz=lt_rlz_id))
@@ -237,6 +239,8 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     :param float sa_damping:
         Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
     """
+    # Silencing 'Too many arguments', 'Too many local variables'
+    # pylint: disable=R0913,R0914
     disp_name = _DISAGG_RES_NAME_FMT
     disp_imt = imt
     if disp_imt == 'SA':
@@ -271,6 +275,19 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
 
 
 def _prepare_sources(hc, lt_rlz_id):
+    """
+    Helper function to prepare nhlib source objects for a calculation.
+
+    :param hc:
+        :class:`openquake.db.models.HazardCalculation`
+    :param int lt_rlz_id:
+        ID of a :class:`openquake.db.models.LtRealization`
+
+    :returns:
+        A generator of nhlib source objects for the given realization of the
+        given calculation. See :mod:`nhlib.source` for more info about the
+        source types.
+    """
     source_progress = models.SourceProgress.objects.filter(
         lt_realization=lt_rlz_id)
     sources = (
@@ -284,6 +301,13 @@ def _prepare_sources(hc, lt_rlz_id):
 
 
 class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
+    """
+    A calculator which performs disaggregation calculations in a distributed /
+    parallelized fashion.
+
+    See :func:`nhlib.calc.disagg.disaggregation` for more details about the
+    nature of this type of calculation.
+    """
 
     core_calc_task = disagg_task
 
