@@ -133,10 +133,6 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
                 poes=[random.random()])
 
     def test_individual_curves(self):
-        """
-        Test getting individual curves
-        """
-        # use a fake imt
         self.assertEqual(0,
                          len(self.manager.individual_curves(
                              self.job, "fake imt")))
@@ -146,9 +142,6 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
             len(self.manager.individual_curves(self.job, "PGA")))
 
     def test_individual_curves_nr(self):
-        """
-        Test counting the individual curves
-        """
         # use a fake imt
         self.assertEqual(0,
                          self.manager.individual_curves_nr(
@@ -159,23 +152,15 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
             self.manager.individual_curves_nr(self.job, "PGA"))
 
     def test_individual_curves_ordered(self):
-        """
-        Test getting individual curves ordered by location
-        """
         curves = self.manager.individual_curves_ordered(self.job, "PGA")
 
         previous_curve = curves[0]
 
         for curve in curves[1:]:
-            if previous_curve.location > curve.location:
-                1/0
             self.assertTrue(previous_curve.location <= curve.location.wkb)
             previous_curve = curve
 
     def test_individual_curves_chunks(self):
-        """
-        Test getting individual curves in chunks
-        """
         location_block_size = 2
 
         chunks = self.manager.individual_curves_chunks(
@@ -189,9 +174,6 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
         self.assertEqual(str(locations[0]), self.a_location.wkb)
 
     def test_individual_curves_chunk(self):
-        """
-        Test getting a chunk of individual curves
-        """
         curves = self.manager.individual_curves_chunk(
             self.job, "PGA", 0, 1)
         self.assertEqual(1, len(curves))
@@ -210,26 +192,6 @@ class ExposureContainedInTestCase(unittest.TestCase):
         calculator = general_risk.BaseRiskCalculator(self.job)
         calculator.pre_execute()
         self.model = self.job.risk_calculation.model('exposure')
-
-        # Create a copy of the exposure_model such that we consider
-        # only the new created assets and not the original assets in
-        # the exposure file
-        # self.model = models.ExposureModel(
-        #     owner=original_model.owner,
-        #     input=original_model.input,
-        #     name="test model",
-        #     description="test model",
-        #     category=original_model.category,
-        #     taxonomy_source=original_model.taxonomy_source,
-        #     area_type=original_model.area_type,
-        #     area_unit=original_model.area_unit,
-        #     stco_type=original_model.stco_type,
-        #     stco_unit=original_model.stco_unit,
-        #     reco_type=original_model.reco_type,
-        #     reco_unit=original_model.reco_unit,
-        #     coco_type=original_model.coco_type,
-        #     coco_unit=original_model.coco_unit)
-        # self.model.save()
 
         common_fake_args = dict(
             exposure_model=self.model,
