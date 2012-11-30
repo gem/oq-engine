@@ -174,8 +174,9 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                     **calc_kwargs)
 
                 _save_disagg_matrix(
-                    job, bin_edges, diss_matrix, lt_rlz, hc.investigation_time,
-                    hc_im_type, iml, poe, sa_period, sa_damping
+                    job, site, bin_edges, diss_matrix, lt_rlz,
+                    hc.investigation_time, hc_im_type, iml, poe, sa_period,
+                    sa_damping
                 )
 
     with transaction.commit_on_success():
@@ -203,7 +204,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s'
 
 
-def _save_disagg_matrix(job, bin_edges, diss_matrix, lt_rlz,
+def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
                         investigation_time, imt, iml, poe, sa_period,
                         sa_damping):
     """
@@ -241,6 +242,7 @@ def _save_disagg_matrix(job, bin_edges, diss_matrix, lt_rlz,
         lat_bin_edges=lat,
         eps_bin_edges=eps,
         trts=trts,
+        location=site.location.wkt2d,
         matrix=diss_matrix,
     )
 
