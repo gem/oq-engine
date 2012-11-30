@@ -211,8 +211,29 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
     :class:`~openquake.db.models.DisaggResult`).
 
+    :param job:
+        :class:`openquake.db.models.OqJob` representing the current job.
+    :param site:
+        :class:`nhlib.site.Site`, containing the location geometry for these
+        results.
     :param bin_edges, diss_matrix
         The outputs of :func:`nhlib.calc.disagg.disaggregation`.
+    :param lt_rlz:
+        :class:`openquake.db.models.LtRealization` to which these results
+        belong.
+    :param float investigation_time:
+        Investigation time (years) for the calculation.
+    :param imt:
+        Intensity measure type (PGA, SA, etc.)
+    :param float iml:
+        Intensity measure level interpolated (using ``poe``) from the hazard
+        curve at the ``site``.
+    :param float poe:
+        Disaggregation probability of exceedance value for this result.
+    :param float sa_period:
+        Spectral Acceleration period; only relevant when ``imt`` is 'SA'.
+    :param float sa_damping:
+        Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
     """
     disp_name = _DISAGG_RES_NAME_FMT
     disp_imt = imt
