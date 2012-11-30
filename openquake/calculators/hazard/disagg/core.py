@@ -92,7 +92,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
        for more info).
 
     :param int job_id:
-        pass
+        ID of the currently running :class:`openquake.db.models.OqJob`
     :param list sites:
         `list` of :class:`nhlib.site.Site` objects, which indicate the
         locations (and associated soil parameters) for which we need to compute
