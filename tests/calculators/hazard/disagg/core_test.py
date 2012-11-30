@@ -14,11 +14,17 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import getpass
+import mock
 import unittest
 
+from nose.plugins.attrib import attr
+
 from openquake import engine2
-from openquake.calculators.hazard.disagg import core as disagg_core
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.disagg import core as disagg_core
+from openquake.calculators.hazard.classical import core as cls_core
+from openquake.db import models
 
 from tests.utils import helpers
 
@@ -166,3 +172,114 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         # Hazard curves computed counter remains at 3
         self.assertEqual(3, self.calc.progress['hc_computed'])
         self.assertEqual(1, self.finalize_curves_mock.call_count)
+
+
+class DisaggHazardCalculatorTestcase(unittest.TestCase):
+
+    def setUp(self):
+        self.job, self.calc = self._setup_a_new_calculator()
+        models.JobStats.objects.create(
+            oq_job=self.job,
+            num_sites=0,
+            num_tasks=0,
+            num_realizations=0
+        )
+
+    def _setup_a_new_calculator(self):
+        cfg = helpers.demo_file('disaggregation/job.ini')
+        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        calc = disagg_core.DisaggHazardCalculator(job)
+        return job, calc
+
+    def test_pre_execute(self):
+        base_path = ('openquake.calculators.hazard.disagg.core'
+                     '.DisaggHazardCalculator')
+        init_src_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_sources'))
+        init_sm_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_site_model'))
+        init_rlz_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_realizations'))
+        record_stats_patch = helpers.patch(
+            '%s.%s' % (base_path, 'record_init_stats'))
+        init_pr_data_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_pr_data'))
+        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
+                   record_stats_patch, init_pr_data_patch)
+
+        mocks = [p.start() for p in patches]
+
+        self.calc.pre_execute()
+
+        for i, m in enumerate(mocks):
+            self.assertEqual(1, m.call_count)
+            m.stop()
+            patches[i].stop()
+
+    @attr('slow')
+    def test_workflow(self):
+        # Test `pre_execute` to ensure that all stats are properly initialized.
+        # Then test the core disaggregation function.
+        self.calc.pre_execute()
+
+        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        self.assertEqual(2, job_stats.num_realizations)
+        self.assertEqual(2, job_stats.num_sites)
+        self.assertEqual(12, job_stats.num_tasks)
+
+        self.assertEqual(
+            {'hc_computed': 0, 'total': 12, 'hc_total': 8, 'computed': 0},
+            self.calc.progress
+        )
+
+        # To test the disagg function, we first need to compute the hazard
+        # curves:
+        for args in self.calc.task_arg_gen(1):
+            # drop the calc_type from the args:
+            cls_core.compute_hazard_curves(*args[0:-1])
+        self.calc.finalize_hazard_curves()
+
+        diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
+
+        base_path = 'openquake.calculators.hazard.disagg.core'
+
+        with mock.patch('nhlib.calc.disagg.disaggregation') as disagg_mock:
+            disagg_mock.return_value = (None, None)
+            with mock.patch(
+                '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:
+
+                # Some of these tasks will not compute anything, since the
+                # hazard  curves for these few are all 0.0s.
+
+                # Here's what we expect:
+                # diss1: compute
+                # diss2: skip
+                # diss3: compute
+                # diss4: skip
+
+                disagg_core.compute_disagg(*diss1[0:-1])
+                # 2 poes * 2 imts * 1 site = 4
+                self.assertEqual(4, disagg_mock.call_count)
+                self.assertEqual(4, save_mock.call_count)
+
+                disagg_core.compute_disagg(*diss2[0:-1])
+                self.assertEqual(4, disagg_mock.call_count)
+                self.assertEqual(4, save_mock.call_count)
+
+                disagg_core.compute_disagg(*diss3[0:-1])
+                self.assertEqual(8, disagg_mock.call_count)
+                self.assertEqual(8, save_mock.call_count)
+
+                disagg_core.compute_disagg(*diss4[0:-1])
+                self.assertEqual(8, disagg_mock.call_count)
+                self.assertEqual(8, save_mock.call_count)
+
+
+        # Finally, test that realization data is up to date and correct:
+        rlzs = models.LtRealization.objects.filter(
+            hazard_calculation=self.calc.hc)
+
+        for rlz in rlzs:
+            self.assertEqual(6, rlz.total_items)
+            self.assertEqual(6, rlz.completed_items)
+            self.assertTrue(rlz.is_complete)
