@@ -144,6 +144,10 @@ def compute_disagg(job_id, sites, lt_rlz_id):
             # If the hazard curve is all zeros, don't even do the
             # disagg calculation.
             if all([x == 0.0 for x in curve.poes]):
+                logs.LOG.debug(
+                    '* hazard curve contained all 0 probability values; '
+                    'skipping'
+                )
                 continue
 
             for poe in hc.poes_disagg:
