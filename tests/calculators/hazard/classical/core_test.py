@@ -57,8 +57,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_realizations'))
         record_stats_patch = helpers.patch(
             '%s.%s' % (base_path, 'record_init_stats'))
+        init_pr_data_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_pr_data'))
         patches = (init_src_patch, init_sm_patch, init_rlz_patch,
-                   record_stats_patch)
+                   record_stats_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -243,6 +245,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(236, job_stats.num_tasks)
         self.assertEqual(120, job_stats.num_sites)
         self.assertEqual(2, job_stats.num_realizations)
+
+        # Check the calculator total/progress counters as well:
+        self.assertEqual(0, self.calc.progress['computed'])
+        self.assertEqual(236, self.calc.progress['total'])
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True
