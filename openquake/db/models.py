@@ -34,9 +34,11 @@ from datetime import datetime
 
 import numpy
 
+from django.db import connection
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
+from risklib import vulnerability_function
 from shapely import wkt
 
 from openquake.db import fields
@@ -51,8 +53,8 @@ DEFAULT_SRID = 4326
 
 
 VS30_TYPE_CHOICES = (
-   (u"measured", u"Value obtained from on-site measurements"),
-   (u"inferred", u"Estimated value"),
+    (u"measured", u"Value obtained from on-site measurements"),
+    (u"inferred", u"Estimated value"),
 )
 
 IMT_CHOICES = (
@@ -109,6 +111,24 @@ def inputs4hcalc(calc_id, input_type=None):
         A list of :class:`Input` instances.
     """
     result = Input.objects.filter(input2hcalc__hazard_calculation=calc_id)
+    if input_type is not None:
+        result = result.filter(input_type=input_type)
+    return result
+
+
+def inputs4rcalc(calc_id, input_type=None):
+    """
+    Get all of the inputs for a given hazard calculation.
+
+    :param int calc_id:
+        ID of a :class:`RiskCalculation`.
+    :param input_type:
+        A valid input type (optional). Leave as `None` if you want all inputs
+        for a given calculation.
+    :returns:
+        A list of :class:`Input` instances.
+    """
+    result = Input.objects.filter(input2rcalc__risk_calculation=calc_id)
     if input_type is not None:
         result = result.filter(input_type=input_type)
     return result
@@ -915,9 +935,9 @@ class RiskCalculation(djm.Model):
                                 "acceptable for calculations?")
 
     CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'classical', u'Classical PSHA'),
         # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
@@ -929,6 +949,10 @@ class RiskCalculation(djm.Model):
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
+
+    # the hazard output (it can point to an HazardCurve or to a
+    # GmfSet) used by the risk calculation
+    hazard_output = djm.ForeignKey("Output", null=False, blank=False)
 
     #######################
     # Classical parameters:
@@ -953,6 +977,52 @@ class RiskCalculation(djm.Model):
     def __init__(self, *args, **kwargs):
         kwargs = _prep_geometry(kwargs)
         super(RiskCalculation, self).__init__(*args, **kwargs)
+
+    @property
+    def hazard_calculation(self):
+        """
+        :returns: the hazard calculation associated with the hazard
+        output used as input in risk calculation
+        """
+        return self.hazard_output.oq_job.hazard_calculation
+
+    @property
+    def hazard_statistics(self):
+        """
+        The hazard statistics value (mean/quantile and quantile value
+        if applicable) associated with the hazard output used by this
+        risk calculation
+        """
+        if self.hazard_output.hazardcurve:
+            return (self.hazard_output.hazardcurve.statistics,
+                    self.hazard_output.hazardcurve.quantile)
+        else:
+            raise NotImplementedError
+
+    @property
+    def hazard_logic_tree_paths(self):
+        """
+        The logic tree paths associated with the hazard output used by
+        this risk calculation
+        """
+        if self.hazard_output.hazardcurve:
+            lt = self.hazard_output.hazardcurve.lt_realization
+            return lt.sm_lt_path, lt.gsim_lt_path
+        else:
+            raise NotImplementedError
+
+    def model(self, input_type):
+        """
+        The model associated with this risk calculation with input of
+        type `input_type`
+        """
+        [exposure_input] = inputs4rcalc(self, input_type)
+        if input_type == "exposure":
+            return exposure_input.exposuremodel
+        elif input_type == "vulnerability":
+            return exposure_input.vulnerabilitymodel
+        else:
+            raise RuntimeError("Unknown model")
 
 
 def _prep_geometry(kwargs):
@@ -1656,7 +1726,7 @@ class GmfCollection(djm.Model):
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
     """
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # If `lt_realization` is None, this is a `complete logic tree`
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
@@ -1925,13 +1995,7 @@ class LossMap(djm.Model):
     Holds metadata for loss maps
     '''
 
-    output = djm.ForeignKey("Output")
-    scenario = djm.BooleanField()
-    loss_map_ref = djm.TextField(null=True)
-    end_branch_label = djm.TextField(null=True)
-    category = djm.TextField(null=True)
-    unit = djm.TextField(null=True)
-    timespan = djm.FloatField(null=True)
+    output = djm.OneToOneField("Output")
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -1947,7 +2011,7 @@ class LossMapData(djm.Model):
     loss_map = djm.ForeignKey("LossMap")
     asset_ref = djm.TextField()
     value = djm.FloatField()
-    std_dev = djm.FloatField(default=0.0)
+    std_dev = djm.FloatField(default=0.0, null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
@@ -1959,11 +2023,8 @@ class LossCurve(djm.Model):
     Holds the parameters common to a set of loss curves
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
     aggregate = djm.BooleanField(default=False)
-    end_branch_label = djm.TextField(null=True)
-    category = djm.TextField(null=True)
-    unit = djm.TextField(null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -1977,6 +2038,7 @@ class LossCurveData(djm.Model):
     loss_curve = djm.ForeignKey("LossCurve")
     asset_ref = djm.TextField()
     losses = fields.FloatArrayField()
+    loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
@@ -2135,7 +2197,7 @@ class ExposureModel(djm.Model):
     '''
 
     owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
+    input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
     category = djm.TextField()
@@ -2181,6 +2243,36 @@ class Occupancy(djm.Model):
         db_table = 'oqmif\".\"occupancy'
 
 
+class AssetManager(djm.GeoManager):
+    """
+    Asset manager
+    """
+    def contained_in(self, exposure_model_id, region_constraint):
+        """
+        :returns the asset ids (ordered by id) contained in
+        `region_constraint` associated with an
+        `openquake.db.models.ExposureModel` with ID equal to
+        `exposure_model_id`
+        """
+        return self.raw("""
+    SELECT * FROM oqmif.exposure_data WHERE
+    exposure_model_id = %s AND
+    ST_COVERS(ST_GeographyFromText(%s), site)
+    ORDER BY id
+    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+
+    def contained_in_count(self, exposure_model_id, region_constraint):
+        cursor = connection.cursor()
+
+        cursor.execute("""
+        SELECT COUNT(*) FROM oqmif.exposure_data WHERE
+        exposure_model_id = %s AND
+        ST_COVERS(ST_GeographyFromText(%s), site)
+        """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+
+        return cursor.fetchone()[0]
+
+
 class ExposureData(djm.Model):
     '''
     Per-asset risk exposure data
@@ -2192,7 +2284,7 @@ class ExposureData(djm.Model):
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
     taxonomy = djm.TextField()
-    site = djm.PointField(srid=DEFAULT_SRID)
+    site = djm.PointField(geography=True)
     # Override the default manager with a GeoManager instance in order to
     # enable spatial queries.
     objects = djm.GeoManager()
@@ -2211,6 +2303,8 @@ class ExposureData(djm.Model):
         null=True, help_text="insurance deductible")
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    objects = AssetManager()
 
     @property
     def value(self):
@@ -2237,24 +2331,27 @@ class ExposureData(djm.Model):
 
 
 ## Tables in the 'riski' schema.
-
-
 class VulnerabilityModel(djm.Model):
     '''
     A risk vulnerability model
     '''
 
     owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
+    input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
     imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
     imls = fields.FloatArrayField()
-    category = djm.TextField()
+    asset_category = djm.TextField()
+    loss_category = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
         db_table = 'riski\".\"vulnerability_model'
+
+    def to_risklib(self):
+        return dict([(fn.taxonomy, fn.to_risklib())
+                     for fn in self.vulnerabilityfunction_set.all()])
 
 
 class VulnerabilityFunction(djm.Model):
@@ -2264,12 +2361,18 @@ class VulnerabilityFunction(djm.Model):
 
     vulnerability_model = djm.ForeignKey("VulnerabilityModel")
     taxonomy = djm.TextField()
+    prob_distribution = djm.TextField()
     loss_ratios = fields.FloatArrayField()
     covs = fields.FloatArrayField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
         db_table = 'riski\".\"vulnerability_function'
+
+    def to_risklib(self):
+        return vulnerability_function.VulnerabilityFunction(
+            self.vulnerability_model.imls, self.loss_ratios, self.covs,
+            distribution=self.prob_distribution)
 
 
 class FragilityModel(djm.Model):
