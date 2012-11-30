@@ -156,9 +156,6 @@ def compute_disagg(job_id, sites, lt_rlz_id):
 
             for poe in hc.poes_disagg:
                 iml = numpy.interp(poe, curve.poes[::-1], imls)
-                # TODO: for each disagg poe, interpolate IML for the curve
-                # TODO: load the site model, if there is one
-                # TODO: Prepare the args for the calculator.
                 calc_kwargs = {
                     'sources': sources,
                     'site': site,
