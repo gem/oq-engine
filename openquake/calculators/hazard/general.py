@@ -1022,6 +1022,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 lt_realization=lt_rlz).count()
             num_tasks += math.ceil(float(num_sources) / block_size)
 
-        models.JobStats.objects.filter(oq_job=self.job.id).update(
-            num_sites=num_sites, num_tasks=num_tasks,
-            num_realizations=num_rlzs)
+        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
+        job_stats.num_sites = num_sites
+        job_stats.num_tasks = num_tasks
+        job_stats.num_realizations = num_rlzs
+        job_stats.save()
