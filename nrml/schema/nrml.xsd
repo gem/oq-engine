@@ -48,7 +48,7 @@
 
     <xs:element name="nrml" type="NRML" />
     <xs:complexType name="NRML">
-        <xs:choice minOccurs="0" maxOccurs="1">
+        <xs:choice minOccurs="1" maxOccurs="1">
             <xs:element ref="hazardResult" />
             <xs:element ref="sourceModel" />
             <xs:element ref="rupture" />

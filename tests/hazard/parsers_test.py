@@ -45,12 +45,6 @@ m?ml version='1.0' encoding='utf-8'?>
 </nrml>
 </sourceModel>'''
 
-    NO_SRC_MODEL = '''\
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-  xmlns="http://openquake.org/xmlns/nrml/0.4">
-</nrml>'''
-
     INVALID_SCHEMA = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -200,17 +194,6 @@ m?ml version='1.0' encoding='utf-8'?>
             StringIO.StringIO(self.NO_NRML_ELEM_FIRST))
 
         self.assertRaises(etree.XMLSyntaxError, parser.parse)
-
-    def test_no_source_model_elem(self):
-        parser = parsers.SourceModelParser(
-            StringIO.StringIO(self.NO_SRC_MODEL))
-
-        try:
-            parser.parse()
-        except ValueError, err:
-            self.assertEqual('<sourceModel> element not found.', err.message)
-        else:
-            self.fail('NrmlError not raised.')
 
     def test_invalid_schema_validation_on(self):
         # By default, schema validation is on.

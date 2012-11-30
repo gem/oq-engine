@@ -31,13 +31,13 @@ class LossCurveXMLWriter(object):
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
     :param str source_model_tree_path:
-        Id of the source model tree path (obtained concatenating the IDs of
+        Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
         have been computed.
     :param str gsim_tree_path:
         Id of the gsim (ground shaking intensity model) tree path (obtained
-        concatenating the IDs of the branches the path is made of) for which
-        input hazard curves have been computed.
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
     :param str statistics:
@@ -92,6 +92,8 @@ class LossCurveXMLWriter(object):
             zero is related to the probability of exceedance at the same
             index.
         """
+
+        _assert_valid_input(data)
 
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
@@ -165,13 +167,13 @@ class LossMapXMLWriter(object):
         Probability of exceedance used to interpolate the losses
         producing this loss map.
     :param str source_model_tree_path:
-        Id of the source model tree path (obtained concatenating the IDs of
+        Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
         have been computed.
     :param str gsim_tree_path:
         Id of the gsim (ground shaking intensity model) tree path (obtained
-        concatenating the IDs of the branches the path is made of) for which
-        input hazard curves have been computed.
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
     :param str unit:
         Attribute describing how the value of the assets has been measured.
     :param str loss_category:
@@ -223,6 +225,8 @@ class LossMapXMLWriter(object):
             * define an attribute `value`, which is the value of the loss.
         """
 
+        _assert_valid_input(data)
+
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
 
@@ -272,6 +276,145 @@ class LossMapXMLWriter(object):
 
         if self._unit is not None:
             self._loss_map.set("unit", str(self._unit))
+
+
+class BCRMapXMLWriter(object):
+    """
+    Serializer for bcr (benefit cost ratio) maps produced with the classical
+    and probabilistic calculators.
+
+    :param path:
+        File path (including filename) for results to be saved to.
+    :param float interest_rate:
+        The inflation discount rate.
+    :param float asset_life_expectancy:
+        The period of time in which the building is expected to be used.
+    :param str source_model_tree_path:
+        Id of the source model tree path (obtained by concatenating the IDs of
+        the branches the path is made of) for which input hazard curves
+        have been computed.
+    :param str gsim_tree_path:
+        Id of the gsim (ground shaking intensity model) tree path (obtained
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
+    :param str unit:
+        Attribute describing how the value of the assets has been measured.
+    :param str loss_category:
+        Attribute describing the category (economic, population, buildings,
+        etc..) of the losses producing this bcr map.
+    :param str statistics:
+        `mean` or `quantile`. When serializing bcr values produced from
+        statistical hazard inputs, it describes the type of statistic used.
+    :param float quantile_value:
+        When serializing bcr values produced from quantile hazard inputs,
+        it describes the quantile value.
+    """
+
+    def __init__(self, path, interest_rate, asset_life_expectancy,
+                 source_model_tree_path=None, gsim_tree_path=None,
+                 statistics=None, quantile_value=None, unit=None,
+                 loss_category=None):
+
+        validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
+            statistics, quantile_value)
+
+        self._unit = unit
+        self._path = path
+        self._statistics = statistics
+        self._interest_rate = interest_rate
+        self._loss_category = loss_category
+        self._quantile_value = quantile_value
+        self._gsim_tree_path = gsim_tree_path
+        self._asset_life_expectancy = asset_life_expectancy
+        self._source_model_tree_path = source_model_tree_path
+
+        self._bcr_map = None
+        self._bcr_nodes = {}
+
+    def serialize(self, data):
+        """
+        Serialize a collection of (benefit cost) ratios.
+
+        :param data:
+            An iterable of bcr objects. Each object should:
+
+            * define an attribute `location`, which is itself an object
+              defining two attributes, `x` containing the longitude value
+              and `y` containing the latitude value. Also, it must define
+              an attribute `wkt`, which is the Well-known text
+              representation of the location.
+            * define an attribute `asset_ref`, which contains the unique
+              identifier of the asset related to the (benefit cost) ratio.
+            * define an attribute `average_annual_loss_original`, which is
+              the expected average annual economic loss using the original
+              vulnerability of the asset.
+            * define an attribute `average_annual_loss_retrofitted`,
+              which is the expected average annual economic loss using the
+              improved (better design or retrofitted) vulnerability
+              of the asset.
+            * define an attribute `bcr`, which is the value of the (
+              benefit cost) ratio.
+        """
+
+        _assert_valid_input(data)
+
+        with open(self._path, "w") as output:
+            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+
+            for bcr in data:
+                if self._bcr_map is None:
+                    self._create_bcr_map_elem(root)
+
+                bcr_node = self._bcr_nodes.get(bcr.location.wkt)
+
+                if bcr_node is None:
+                    bcr_node = etree.SubElement(self._bcr_map, "node")
+                    _append_location(bcr_node, bcr.location)
+                    self._bcr_nodes[bcr.location.wkt] = bcr_node
+
+                bcr_elem = etree.SubElement(bcr_node, "bcr")
+                bcr_elem.set("assetRef", str(bcr.asset_ref))
+                bcr_elem.set("ratio", str(bcr.bcr))
+
+                bcr_elem.set("aalOrig", str(
+                    bcr.average_annual_loss_original))
+
+                bcr_elem.set("aalRetr", str(
+                    bcr.average_annual_loss_retrofitted))
+
+            output.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+    def _create_bcr_map_elem(self, root):
+        """
+        Create the <bcrMap /> element with associated attributes.
+        """
+
+        self._bcr_map = etree.SubElement(root, "bcrMap")
+
+        self._bcr_map.set("interestRate", str(self._interest_rate))
+        self._bcr_map.set("assetLifeExpectancy",
+            str(self._asset_life_expectancy))
+
+        if self._source_model_tree_path is not None:
+            self._bcr_map.set("sourceModelTreePath",
+                str(self._source_model_tree_path))
+
+        if self._gsim_tree_path is not None:
+            self._bcr_map.set("gsimTreePath", str(self._gsim_tree_path))
+
+        if self._statistics is not None:
+            self._bcr_map.set("statistics", str(self._statistics))
+
+        if self._quantile_value is not None:
+            self._bcr_map.set("quantileValue", str(self._quantile_value))
+
+        if self._loss_category is not None:
+            self._bcr_map.set("lossCategory", str(self._loss_category))
+
+        if self._unit is not None:
+            self._bcr_map.set("unit", str(self._unit))
 
 
 def _append_location(element, location):
@@ -339,3 +482,14 @@ def _check_statistics_or_logic_tree(source_model_tree_path,
     if source_model_tree_path is not None or gsim_tree_path is not None:
         raise ValueError("You must choose `statistics` or "
             "(`source_model_tree_path`, `gsim_tree_path`), not both.")
+
+
+def _assert_valid_input(data):
+    """
+    We don't support empty outputs, so there must be at least one
+    element in the collection.
+    """
+
+    if not data or len(data) == 0:
+        raise ValueError("At least one element must be present, "
+            "an empty document is not supported by the schema.")
