@@ -481,7 +481,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 yield task_args
                 result_grp_ordinal += 1
 
-
     def initialize_ses_db_records(self, lt_rlz):
         """
         Create :class:`~openquake.db.models.Output`,
