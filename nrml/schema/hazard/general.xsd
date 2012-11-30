@@ -95,7 +95,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element name="faultTrace" type="FaultEdge"/>
+                    <xs:element ref="gml:LineString"/>
                     <xs:element name="dip" type="Dip"/>
                     <xs:element name="upperSeismoDepth" type="PositiveDoubleType"/>
                     <xs:element name="lowerSeismoDepth" type="PositiveDoubleType"/>

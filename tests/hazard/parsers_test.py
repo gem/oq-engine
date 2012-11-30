@@ -381,7 +381,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
             magnitude=7.65,
             rake=15.0,
             geometry=models.SimpleFaultGeometry(
-                wkt='LINESTRING(-124.704 40.363, 0.1 -124.977, 41.214 0.1, -125.140 42.096, 0.1)',
+                wkt='LINESTRING(-124.704 40.363, -124.977 41.214, -125.140 42.096)',
                 dip=50.0,
                 upper_seismo_depth=12.5,
                 lower_seismo_depth=19.5)),

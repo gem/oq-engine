@@ -3,19 +3,17 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <simpleFaultRupture gml:id="sfr_1">
-        <magnitude type="Mw">7.65</magnitude>
+        <magnitude>7.65</magnitude>
         <rake>15.0</rake>
 
         <simpleFaultGeometry gml:id="sfg_1">
-            <faultTrace>
-                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                <gml:LineString>
                     <gml:posList>
-                        -124.704 40.363 0.1
-                        -124.977 41.214 0.1
-                        -125.140 42.096 0.1
+                        -124.704 40.363
+                        -124.977 41.214
+                        -125.140 42.096
                     </gml:posList>
                 </gml:LineString>
-            </faultTrace>
             <dip>50.0</dip>
             <upperSeismoDepth>12.5</upperSeismoDepth>
             <lowerSeismoDepth>19.5</lowerSeismoDepth>
