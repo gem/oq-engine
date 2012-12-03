@@ -264,11 +264,22 @@ def hazard_getter(hazard_getter_name, hazard_id):
     return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
-def fetch_vulnerability_model(job_id, input_type="vulnerability"):
+def fetch_vulnerability_model(job_id, retrofitted=False):
     """
-    :returns: the `:class:risklib.db.models.Vulnerability model associated with the current
-    running job
+    Utility method to use in a celery task to get a vulnerability
+    model suitable to be used with Risklib.
+
+    :param int job_id: The ID of the current job
+
+    :param bool retrofitted: True if a retrofitted vulnerability model
+    should be returned
     """
+
+    if retrofitted:
+        input_type = "vulnerability"
+    else:
+        input_type = "vulnerability_retrofitted"
+
     return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
         input_type).to_risklib()
 
@@ -278,6 +289,13 @@ def write_loss_curve(loss_curve_id, asset_output):
     Stores a `:class:openquake.db.models.LossCurveData` where the data are
     got by `asset_output` and the `:class:openquake.db.models.LossCurve`
     output container is identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+
+    :param asset_output: an instance of
+    `:class:risklib.models.output.ClassicalOutput` or of
+    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
+    returned by risklib
     """
     models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
@@ -290,9 +308,17 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 def write_loss_map(loss_map_ids, asset_output):
     """
-    Stores `:class:openquake.db.models.LossMapData` objects where the data
-    are got by `asset_output` and the `:class:openquake.db.models.LossMap`
-    output containers are got by `loss_map_ids`.
+    Create `:class:openquake.db.models.LossMapData` objects where the
+    data are got by `asset_output` and the
+    `:class:openquake.db.models.LossMap` output containers are got by
+    `loss_map_ids`.
+
+    :param dict loss_map_ids: A dictionary storing that links poe to
+    `:class:openquake.db.models.LossMap` output container
+
+    :param asset_output: an instance of
+    `:class:risklib.models.output.ClassicalOutput` or of
+    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
     """
 
     for poe, loss in asset_output.conditional_losses.items():
@@ -309,6 +335,13 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
     Create a new `:class:openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
     `bcr_distribution_id`.
+
+    :param int bcr_distribution_id: the ID of
+    `:class:openquake.db.models.BCRDistribution` instance that holds
+    the BCR map
+    :param asset_output: an instance of
+    `:class:risklib.models.output.BCROutput` that holds BCR data for a
+    specific asset
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
