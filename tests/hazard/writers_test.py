@@ -343,10 +343,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
                 path, sm_lt_path, gsim_lt_path)
             writer.serialize(gmf_collection)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -409,10 +406,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
                 path, None, None)
             writer.serialize([gmf_set])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -521,10 +515,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
             writer.serialize([ses1, ses2])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -619,10 +610,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer = writers.SESXMLWriter(path, None, None)
             writer.serialize([complete_lt_ses])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
