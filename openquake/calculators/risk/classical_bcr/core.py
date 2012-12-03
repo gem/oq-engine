@@ -38,4 +38,3 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
 
 class ClassicalRiskCalculatorWithBCR(classical.ClassicalRiskCalculator):
     celery_task = classical_bcr
-
