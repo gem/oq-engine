@@ -825,7 +825,6 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
 
-
 class DisaggHazardCalculationFormTestCase(unittest.TestCase):
 
     def test_valid_disagg_calc(self):
