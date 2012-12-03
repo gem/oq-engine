@@ -401,11 +401,11 @@ class RuptureModelParserTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-    <simpeFaultRupture gml:id="sfr_1">
+    <simpeFaultRupture>
         <magnitude type="Mw">7.65</magnitude>
         <rake>15.0</rake>
 
-        <simpleFaultGeometry gml:id="sfg_1">
+        <simpleFaultGeometry>
             <faultTrace>
                 <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
                     <gml:posList>

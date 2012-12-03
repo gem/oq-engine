@@ -9,15 +9,11 @@
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
     <xs:include schemaLocation="../nrml_common.xsd"/>
 
-    <xs:element name="rupture" type="Rupture" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:element name="rupture" type="Rupture" abstract="true"/>
     <xs:complexType name="Rupture">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="magnitude" type="Magnitude"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+      <xs:sequence>
+        <xs:element name="magnitude" type="Magnitude"/>
+      </xs:sequence>
     </xs:complexType>
 
     <xs:element name="pointRupture" type="PointRupture" substitutionGroup="rupture"/>

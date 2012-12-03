@@ -2,7 +2,7 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-    <complexFaultRupture gml:id="cfr_1">
+    <complexFaultRupture>
         <magnitude>9.0</magnitude>
         <rake>0.0</rake>
         <hypocenter lon="-124.977" lat="41.214" depth="0.5088560E+01"/>

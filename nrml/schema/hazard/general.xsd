@@ -98,16 +98,12 @@
     </xs:complexType>
 
     <xs:complexType name="SimpleFaultRuptureGeometry">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element ref="gml:LineString"/>
                     <xs:element name="dip" type="Dip"/>
                     <xs:element name="upperSeismoDepth" type="PositiveDoubleType"/>
                     <xs:element name="lowerSeismoDepth" type="PositiveDoubleType"/>
                 </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
     </xs:complexType>
 
     <xs:complexType name="ComplexFaultRuptureGeometry">
