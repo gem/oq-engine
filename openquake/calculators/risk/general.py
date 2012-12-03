@@ -92,9 +92,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
 
-            self.assets_nr = models.ExposureData.objects.contained_in(
+            self.assets_nr = models.ExposureData.objects.contained_in_count(
                 self.exposure_model_id,
-                self.job.risk_calculation.region_constraint).count()
+                self.job.risk_calculation.region_constraint)
 
             if not self.assets_nr:
                 raise RuntimeError(
