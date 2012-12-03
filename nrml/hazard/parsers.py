@@ -43,7 +43,7 @@ def _xpath(elem, expr):
     return elem.xpath(expr, namespaces=nrml.PARSE_NS_MAP)
 
 
-class FaultGeometryParser(object):
+class FaultGeometryParserMixin(object):
     """
     Mixin with methods _parse_simple_geometry and _parse_complex_geometry.
     """
@@ -101,7 +101,7 @@ class FaultGeometryParser(object):
         return complex_geom
 
 
-class SourceModelParser(FaultGeometryParser):
+class SourceModelParser(FaultGeometryParserMixin):
     """NRML source model parser. Reads point sources, area sources, simple
     fault sources, and complex fault sources from a given source.
 
@@ -416,7 +416,7 @@ class SiteModelParser(object):
 
 # notice that there must be at most one rupture per file because of the
 # constraint maxOccurs="1" in nrml.xsd
-class RuptureModelParser(FaultGeometryParser):
+class RuptureModelParser(FaultGeometryParserMixin):
 
     _SIMPLE_RUPT_TAG = '{%s}simpleFaultRupture' % nrml.NAMESPACE
     _COMPLEX_RUPT_TAG = '{%s}complexFaultRupture' % nrml.NAMESPACE
@@ -432,10 +432,10 @@ class RuptureModelParser(FaultGeometryParser):
     @classmethod
     def _parse_simple_rupture(cls, element):
         """
-        :param elem:
-            :class:`lxml.etree._Element` instance representing a simple rupture.
+        :param element:
+            :class:`lxml.etree._Element` instance for a simple rupture.
         :returns:
-            Fully populated :class:`nrml.models.SimpleFaultRuptureModel` object.
+            Populated :class:`nrml.models.SimpleFaultRuptureModel` object.
         """
         model = models.SimpleFaultRuptureModel()
         magnitude_elem, rake_elem, geom_elem = list(element)
@@ -447,10 +447,10 @@ class RuptureModelParser(FaultGeometryParser):
     @classmethod
     def _parse_complex_rupture(cls, element):
         """
-        :param elem:
-            :class:`lxml.etree._Element` instance representing a complex rupture.
+        :param element:
+            :class:`lxml.etree._Element` instance for a complex rupture.
         :returns:
-            Fully populated :class:`nrml.models.ComplexFaultRuptureModel` object.
+            Populated :class:`nrml.models.ComplexFaultRuptureModel` object.
         """
         model = models.ComplexFaultRuptureModel()
         magnitude_elem, rake_elem, hypocenter_elem, geom_elem = list(element)
@@ -462,7 +462,8 @@ class RuptureModelParser(FaultGeometryParser):
         return model
 
     def parse(self):
-        """Parse the source XML content and generate a rupture model in object
+        """
+        Parse the source XML content and generate a rupture model in object
         form. The file must contain a single SimpleFaultRupture object or
         a single ComplexFaultRupture object.
 
