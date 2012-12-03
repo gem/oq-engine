@@ -661,9 +661,40 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
                 path, 50.0, 'SA', 0.1, **metadata)
             writer.serialize(data)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
+        finally:
+            os.unlink(path)
+
+    def test_serialize_quantile(self):
+        data = [
+            (-1.0, 1.0, 0.01),
+            (1.0, 1.0, 0.02),
+            (1.0, -1.0, 0.03),
+            (-1.0, -1.0, 0.04),
+        ]
+
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardMap IMT="SA" investigationTime="50.0" poE="0.1" statistics="quantile" quantileValue="0.85" saPeriod="0.025" saDamping="5.0">
+    <node lon="-1.0" lat="1.0" iml="0.01"/>
+    <node lon="1.0" lat="1.0" iml="0.02"/>
+    <node lon="1.0" lat="-1.0" iml="0.03"/>
+    <node lon="-1.0" lat="-1.0" iml="0.04"/>
+  </hazardMap>
+</nrml>
+""")
+
+        try:
+            _, path = tempfile.mkstemp()
+            metadata = dict(
+                sa_period=0.025, sa_damping=5.0, statistics='quantile',
+                quantile_value=0.85
+            )
+            writer = writers.HazardMapXMLWriter(
+                path, 50.0, 'SA', 0.1, **metadata)
+            writer.serialize(data)
+
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
