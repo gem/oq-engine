@@ -50,7 +50,8 @@ m?ml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <sourceModel name="Some Source Model">
-        <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="1" name="point"
+         tectonicRegion="Stable Continental Crust">
             <pointGeometry>
                 <gml:Point>
                     <gml:pos>-122.0 38.0</gml:pos>
@@ -237,7 +238,8 @@ m?ml version='1.0' encoding='utf-8'?>
             <magScaleRel>PeerMSR</magScaleRel>
             <ruptAspectRatio>1.5</ruptAspectRatio>
             <incrementalMFD minMag="6.55" binWidth="0.1">
-                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4
+                6.108288E-4 5.080653E-4</occurRates>
             </incrementalMFD>
             <nodalPlaneDist>
                 <nodalPlane probability="0.1" strike="1.0" dip="90.0" rake="0.0" />
@@ -258,7 +260,8 @@ m?ml version='1.0' encoding='utf-8'?>
                 <hypoDepth probability="0.1" depth="7.0" />
             </hypoDepthDist>
         </areaSource>
-        <pointSource id="2" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="2" name="point"
+                     tectonicRegion="Stable Continental Crust">
             <pointGeometry>
                 <gml:Point>
                     <gml:pos>-122.0 38.0</gml:pos>
@@ -268,10 +271,13 @@ m?ml version='1.0' encoding='utf-8'?>
             </pointGeometry>
             <magScaleRel>WC1994</magScaleRel>
             <ruptAspectRatio>0.5</ruptAspectRatio>
-            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
+            <truncGutenbergRichterMFD aValue="-3.5"
+             bValue="1.0" minMag="5.0" maxMag="6.5" />
             <nodalPlaneDist>
-                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
             </nodalPlaneDist>
             <hypoDepthDist>
                 <hypoDepth probability="0.5" depth="4.0" />
@@ -387,7 +393,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
         </simpleFaultGeometry>
     </simpleFaultRupture>
 </nrml>
-''' # there is a mispelled simpeFaultRupture here
+'''  # there is a mispelled simpeFaultRupture here
 
     INVALID_2 = '''<?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -415,7 +421,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
         </node>
     </bcrMap>
 </nrml>
-''' # idiot, you are trying to parse a bcrMap with a RuptureParser!
+'''  # idiot, you are trying to parse a bcrMap with a RuptureParser!
 
     def test_parse(self):
         for fname, expected_model in zip(
@@ -423,10 +429,10 @@ class RuptureModelParserTestCase(unittest.TestCase):
             parser = parsers.RuptureModelParser(fname)
             model = parser.parse()
             _utils._deep_eq(model, expected_model)
-    
+
     def test_invalid(self):
         inv1 = StringIO.StringIO(self.INVALID_1)
-        self.assertRaises(etree.XMLSyntaxError, 
+        self.assertRaises(etree.XMLSyntaxError,
                           parsers.RuptureModelParser(inv1).parse)
 
         inv2 = StringIO.StringIO(self.INVALID_2)

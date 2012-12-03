@@ -115,7 +115,7 @@ class SourceModelParser(FaultGeometryParserMixin):
     _SIMPLE_TAG = '{%s}simpleFaultSource' % nrml.NAMESPACE
     _COMPLEX_TAG = '{%s}complexFaultSource' % nrml.NAMESPACE
 
-    def __init__(self, source, schema_validation=True):
+    def __init__(self, source):
         self.source = source
         self._parse_fn_map = {
             self._PT_TAG: self._parse_point,
