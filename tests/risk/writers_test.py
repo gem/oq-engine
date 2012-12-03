@@ -24,6 +24,9 @@ from tests import _utils
 
 
 LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
+BCR_NODE = collections.namedtuple("BCRNode",
+    "location asset_ref bcr average_annual_loss_original "
+    "average_annual_loss_retrofitted")
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
 
@@ -55,19 +58,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         self.remove_file()
 
-    def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
-""")
-
+    def test_empty_model_not_supported(self):
         writer = writers.LossCurveXMLWriter(self.filename,
             investigation_time=10.0, statistics="mean")
 
-        writer.serialize([])
-
-        _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -109,7 +105,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
@@ -139,7 +135,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class LossMapXMLWriterTestCase(unittest.TestCase):
@@ -158,19 +154,12 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         self.remove_file()
 
-    def test_serialize_an_empty_model(self):
-        expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4"/>
-""")
-
+    def test_empty_model_not_supported(self):
         writer = writers.LossMapXMLWriter(self.filename,
             investigation_time=10.0, poe=0.5, statistics="mean")
 
-        writer.serialize([])
-
-        _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
@@ -209,7 +198,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_optional_metadata(self):
         expected = StringIO.StringIO("""\
@@ -236,7 +225,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
     def test_serialize_using_hazard_realization(self):
         expected = StringIO.StringIO("""\
@@ -263,7 +252,131 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
-        _utils.validates_against_xml_schema(self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+
+class BCRMapXMLWriterTestCase(unittest.TestCase):
+
+    filename = "bcr_map.xml"
+
+    def remove_file(self):
+        try:
+            os.remove(self.filename)
+        except OSError:
+            pass
+
+    def setUp(self):
+        self.remove_file()
+
+    def tearDown(self):
+        self.remove_file()
+
+    def test_empty_model_not_supported(self):
+        writer = writers.BCRMapXMLWriter(self.filename,
+            interest_rate=10.0, asset_life_expectancy=0.5, statistics="mean")
+
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
+
+    def test_serialize_a_model(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="mean">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
+      <bcr assetRef="asset_2" ratio="16.23" aalOrig="11.5" aalRetr="40.5"/>
+    </node>
+    <node>
+      <gml:Point>
+        <gml:pos>2.0 2.5</gml:pos>
+      </gml:Point>
+      <bcr assetRef="asset_3" ratio="17.23" aalOrig="12.5" aalRetr="10.5"/>
+    </node>
+  </bcrMap>
+</nrml>
+""")
+
+        writer = writers.BCRMapXMLWriter(self.filename,
+            interest_rate=10.0, asset_life_expectancy=50.0, statistics="mean")
+
+        data = [
+            BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+                bcr=15.23, average_annual_loss_original=10.5,
+                average_annual_loss_retrofitted=20.5),
+            BCR_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
+                bcr=16.23, average_annual_loss_original=11.5,
+                average_annual_loss_retrofitted=40.5),
+            BCR_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
+                bcr=17.23, average_annual_loss_original=12.5,
+                average_annual_loss_retrofitted=10.5),
+            ]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+    def test_serialize_optional_metadata(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
+    </node>
+  </bcrMap>
+</nrml>
+""")
+
+        writer = writers.BCRMapXMLWriter(self.filename,
+            interest_rate=10.0, asset_life_expectancy=50.0,
+            statistics="quantile", quantile_value=0.50, unit="USD",
+            loss_category="economic")
+
+        data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            bcr=15.23, average_annual_loss_original=10.5,
+            average_annual_loss_retrofitted=20.5)]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+    def test_serialize_using_hazard_realization(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD">
+    <node>
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <bcr assetRef="asset_1" ratio="15.23" aalOrig="10.5" aalRetr="20.5"/>
+    </node>
+  </bcrMap>
+</nrml>
+""")
+
+        writer = writers.BCRMapXMLWriter(self.filename,
+            interest_rate=10.0, asset_life_expectancy=50.0,
+            source_model_tree_path="b1|b2", gsim_tree_path="b1|b2",
+            unit="USD", loss_category="economic")
+
+        data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            bcr=15.23, average_annual_loss_original=10.5,
+            average_annual_loss_retrofitted=20.5)]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class HazardMetadataValidationTestCase(unittest.TestCase):
