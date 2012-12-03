@@ -632,14 +632,20 @@ class SESXMLWriterTestCase(unittest.TestCase):
 
 class HazardMapXMLWriterTestCase(unittest.TestCase):
 
-    def test_serialize(self):
-        data = [
+    def setUp(self):
+        self.data = [
             (-1.0, 1.0, 0.01),
             (1.0, 1.0, 0.02),
             (1.0, -1.0, 0.03),
             (-1.0, -1.0, 0.04),
         ]
 
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
+    def test_serialize(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -652,27 +658,16 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        try:
-            _, path = tempfile.mkstemp()
-            metadata = dict(
-                sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-                gsimlt_path='b1_b4_b5')
-            writer = writers.HazardMapXMLWriter(
-                path, 50.0, 'SA', 0.1, **metadata)
-            writer.serialize(data)
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5')
+        writer = writers.HazardMapXMLWriter(
+            self.path, 50.0, 'SA', 0.1, **metadata)
+        writer.serialize(self.data)
 
-            utils.assert_xml_equal(expected, path)
-        finally:
-            os.unlink(path)
+        utils.assert_xml_equal(expected, self.path)
 
     def test_serialize_quantile(self):
-        data = [
-            (-1.0, 1.0, 0.01),
-            (1.0, 1.0, 0.02),
-            (1.0, -1.0, 0.03),
-            (-1.0, -1.0, 0.04),
-        ]
-
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -685,16 +680,13 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        try:
-            _, path = tempfile.mkstemp()
-            metadata = dict(
-                sa_period=0.025, sa_damping=5.0, statistics='quantile',
-                quantile_value=0.85
-            )
-            writer = writers.HazardMapXMLWriter(
-                path, 50.0, 'SA', 0.1, **metadata)
-            writer.serialize(data)
+        _, self.path = tempfile.mkstemp()
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, statistics='quantile',
+            quantile_value=0.85
+        )
+        writer = writers.HazardMapXMLWriter(
+            self.path, 50.0, 'SA', 0.1, **metadata)
+        writer.serialize(self.data)
 
-            utils.assert_xml_equal(expected, path)
-        finally:
-            os.unlink(path)
+        utils.assert_xml_equal(expected, self.path)
