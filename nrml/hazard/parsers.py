@@ -429,7 +429,14 @@ class RuptureModelParser(FaultGeometryParser):
             self._COMPLEX_RUPT_TAG: self._parse_complex_rupture,
         }
 
+    @classmethod
     def _parse_simple_rupture(cls, element):
+        """
+        :param elem:
+            :class:`lxml.etree._Element` instance representing a simple rupture.
+        :returns:
+            Fully populated :class:`nrml.models.SimpleFaultRuptureModel` object.
+        """
         model = models.SimpleFaultRuptureModel()
         magnitude_elem, rake_elem, geom_elem = list(element)
         model.magnitude = float(magnitude_elem.text)
@@ -437,7 +444,14 @@ class RuptureModelParser(FaultGeometryParser):
         model.geometry = cls._parse_simple_geometry(geom_elem)
         return model
 
+    @classmethod
     def _parse_complex_rupture(cls, element):
+        """
+        :param elem:
+            :class:`lxml.etree._Element` instance representing a complex rupture.
+        :returns:
+            Fully populated :class:`nrml.models.ComplexFaultRuptureModel` object.
+        """
         model = models.ComplexFaultRuptureModel()
         magnitude_elem, rake_elem, hypocenter_elem, geom_elem = list(element)
         model.magnitude = float(magnitude_elem.text)
