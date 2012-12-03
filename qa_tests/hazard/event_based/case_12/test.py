@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import StringIO
 import numpy
 import os
 import shutil
@@ -21,7 +20,6 @@ import tempfile
 
 from nose.plugins.attrib import attr
 from openquake.db import models
-from openquake.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
@@ -42,6 +40,6 @@ class EventBasedHazardCase12TestCase(qa_utils.BaseQATestCase):
             [curve] = models.HazardCurveData.objects.filter(
                 hazard_curve__output__oq_job=job.id)
 
-            aaae(expected_curve_poes, curve.poes, decimal=3)
+            aaae(expected_curve_poes, curve.poes, decimal=2)
         finally:
             shutil.rmtree(result_dir)
