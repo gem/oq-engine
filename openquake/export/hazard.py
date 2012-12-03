@@ -25,7 +25,6 @@ from nrml import writers as nrml_writers
 from openquake import logs
 from openquake.db import models
 from openquake.export import core
-from openquake.export.core import makedirs
 
 
 LOG = logs.LOG
@@ -85,11 +84,9 @@ GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
-#: Used to separate node labels in a logic tree path
-LT_PATH_JOIN_TOKEN = '|'
 
 
-@makedirs
+@core.makedirs
 def export_hazard_curves(output, target_dir):
     """
     Export the specified hazard curve ``output`` to the ``target_dir``.
@@ -114,8 +111,8 @@ def export_hazard_curves(output, target_dir):
         # If the curves are for a specified logic tree realization,
         # get the tree paths
         lt_rlz = hc.lt_realization
-        smlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsimlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+        smlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsimlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
     else:
         # These curves must be statistical aggregates
         smlt_path = None
@@ -140,7 +137,7 @@ def export_hazard_curves(output, target_dir):
 # Event-Based calculator and the Scenario calculator. At the moment, this
 # exporter is intended for Event-Based GMF results. The structures for the two
 # result types are slightly different.
-@makedirs
+@core.makedirs
 def export_gmf(output, target_dir):
     """
     Export the GMF Collection specified by ``output`` to the ``target_dir``.
@@ -167,8 +164,8 @@ def export_gmf(output, target_dir):
         # output type should be `gmf`
         filename = GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
 
-        sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+        sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     path = os.path.abspath(os.path.join(target_dir, filename))
 
@@ -179,7 +176,7 @@ def export_gmf(output, target_dir):
     return [path]
 
 
-@makedirs
+@core.makedirs
 def export_ses(output, target_dir):
     """
     Export the Stochastic Event Set Collection specified by ``output`` to the
@@ -208,8 +205,8 @@ def export_ses(output, target_dir):
         # output_type should be `ses`
         filename = SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
 
-        sm_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsim_lt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+        sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     path = os.path.abspath(os.path.join(target_dir, filename))
 
@@ -244,7 +241,7 @@ def curves2nrml(target_dir, job):
     LOG.debug("< curves2nrml")
 
 
-@makedirs
+@core.makedirs
 def export_hazard_map(output, target_dir):
     """
     Export the specified hazard map ``output`` to the ``target_dir``.
@@ -268,8 +265,8 @@ def export_hazard_map(output, target_dir):
         # If the maps are for a specified logic tree realization,
         # get the tree paths
         lt_rlz = hazard_map.lt_realization
-        smlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsimlt_path = LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+        smlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsimlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
     else:
         # These maps must be constructed from mean or quantile curves
         smlt_path = None

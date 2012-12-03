@@ -215,7 +215,8 @@ COMMENT ON COLUMN riski.vulnerability_function.last_update IS 'Date/time of the 
 
 
 COMMENT ON TABLE riski.vulnerability_model IS 'A risk vulnerability model';
-COMMENT ON COLUMN riski.vulnerability_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.vulnerability_model.loss_category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.vulnerability_model.asset_category IS 'The asset category of the vulnerability function set';
 COMMENT ON COLUMN riski.vulnerability_model.description IS 'An optional description of the risk vulnerability model at hand';
 COMMENT ON COLUMN riski.vulnerability_model.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN riski.vulnerability_model.last_update IS 'Date/time of the last change of the model at hand';
@@ -225,12 +226,6 @@ COMMENT ON COLUMN riski.vulnerability_model.last_update IS 'Date/time of the las
 -- riskr schema tables ------------------------------------------
 COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
 COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN riskr.loss_map.scenario IS 'Is the loss map result of scenario calculations (scenario event-based) or not (classical psha-based or probabilistic based)';
-COMMENT ON COLUMN riskr.loss_map.loss_map_ref IS 'A simple identifier';
-COMMENT ON COLUMN riskr.loss_map.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN riskr.loss_map.category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN riskr.loss_map.unit IS 'Unit of measurement';
-COMMENT ON COLUMN riskr.loss_map.timespan IS 'timespan of years (for non scenario loss maps, i.e. classical/probabilistic)';
 COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
 
@@ -239,15 +234,12 @@ COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the los
 COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
 COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
 COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is 0)';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is NULL)';
 
 
 COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
 COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
 COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
-COMMENT ON COLUMN riskr.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN riskr.loss_curve.category IS 'The category of the losses';
-COMMENT ON COLUMN riskr.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
 
 COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
@@ -255,6 +247,7 @@ COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the
 COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
 COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 
@@ -275,11 +268,12 @@ COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of 
 
 COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
 COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
-COMMENT ON COLUMN riskr.bcr_distribution.exposure_model_id IS 'The foreign key to the exposure model for this BCR distribution.';
 
 COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
 COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.bcr_distribution_data.expected_annual_loss_original IS 'The Expected annual loss computed by using the original model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.expected_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
 COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';

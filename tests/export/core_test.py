@@ -1,3 +1,4 @@
+
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -18,15 +19,26 @@ import os
 import shutil
 import tempfile
 import unittest
-import uuid
+import nrml
 
-from django.core.exceptions import ObjectDoesNotExist
-
-from openquake.db import models
-from openquake import engine
 from openquake.export import core as export
 
-from tests.utils import helpers
+
+def number_of(elem_name, tree):
+    """
+    Given an element name (including the namespaces prefix, if applicable),
+    return the number of occurrences of the element in a given XML document.
+    """
+    expr = '//%s' % elem_name
+    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
+
+
+class BaseExportTestCase(unittest.TestCase):
+
+    def _test_exported_file(self, filename):
+        self.assertTrue(os.path.exists(filename))
+        self.assertTrue(os.path.isabs(filename))
+        self.assertTrue(os.path.getsize(filename) > 0)
 
 
 @export.makedirs
