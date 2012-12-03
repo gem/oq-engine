@@ -20,7 +20,6 @@ import unittest
 
 import numpy
 
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nose.plugins.attrib import attr
 
 from openquake import engine
@@ -29,99 +28,6 @@ from openquake.db import models
 
 from tests.utils import helpers
 from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
-
-
-class ModelEqualsTestCase(unittest.TestCase):
-    """Tests for :function:`model_equals`, a function to compare the contents
-    of two Django models objects."""
-
-    def setUp(self):
-        self.org = models.Organization(
-            name='test_name', address='test_address', url='http://test.com')
-        self.org.save()
-
-        # Now query two fresh copies of this record from the DB to test with:
-        self.o1 = models.Organization.objects.get(id=self.org.id)
-        self.o2 = models.Organization.objects.get(id=self.org.id)
-
-    def test_model_equals(self):
-        self.assertTrue(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_with_different_values(self):
-        self.o1.name = 'something different'
-        self.assertFalse(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_with_ignore(self):
-        self.o1.name = 'something different'
-        self.assertTrue(
-            models.model_equals(self.o1, self.o2, ignore=('name',)))
-
-    def test_model_equals_with_many_ignores(self):
-        self.o1.name = 'something different'
-        self.o1.url = 'http://www.somethingdiff.com'
-        self.assertTrue(
-            models.model_equals(self.o1, self.o2, ignore=('name', 'url')))
-
-    def test_model_equals_ignore_id(self):
-        """Comparing two models with different ids is a special case, thus a
-        separate test.
-
-        This is a special case because it is very likely that we could have
-        multiple records with the same contents but different ids. An example
-        of this would be two :class:`openquake.db.models.OqJobProfile`
-        records that contain the exact same config parameters, just different
-        database ids. """
-        self.o1.id = 1
-        self.o2.id = 2
-
-        self.assertTrue(models.model_equals(self.o1, self.o2, ignore=('id',)))
-
-    def test_model_equals_with_invalid_ignores(self):
-        self.assertTrue(models.model_equals(
-            self.o1, self.o2, ignore=('not_an_attr',)))
-
-    def test__state_is_always_ignored(self):
-        # Set some fake _state values on the model objects:
-        self.o1._state = 'fake_state'
-        self.o2._state = 'other_fake_state'
-
-        # Sanity check: make sure _state is in the object dict.
-        self.assertTrue('_state' in self.o1.__dict__)
-        self.assertTrue('_state' in self.o2.__dict__)
-
-        # Sanity check 2: Make sure the object dict _state is correctly set.
-        self.assertEquals('fake_state', self.o1.__dict__['_state'])
-        self.assertEquals('other_fake_state', self.o2.__dict__['_state'])
-
-        # Now finally compare the two objects:
-        self.assertTrue(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_different_classes(self):
-        gmf = models.GmfData(ground_motion=1.0)
-
-        self.assertFalse(models.model_equals(self.o1, gmf))
-
-    def test_model_equals_with_geometry(self):
-        gmf_data_1 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        gmf_data_2 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        self.assertTrue(models.model_equals(gmf_data_1, gmf_data_2))
-
-    def test_model_equals_with_different_geometry(self):
-        gmf_data_1 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        gmf_data_2 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.1)"))
-
-        self.assertFalse(models.model_equals(gmf_data_1, gmf_data_2))
 
 
 class Profile4JobTestCase(helpers.DbTestCase):
