@@ -35,7 +35,7 @@ class ClassicalBCRRiskCalculatorTestCase(
 
     def shortDescription(self):
         """
-        Use method names instead of comments for verbose output
+        Use method names instead of docstrings for verbose output
         """
         return None
 
