@@ -166,6 +166,27 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
 
+
+class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
+    """
+    Tests for the `serialize` method of the hazard curve XML writer.
+    """
+
+    def setUp(self):
+        self.data = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.1, 0.2, 0.3]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.4, 0.5, 0.6]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.7, 0.8, 0.8]),
+        ]
+
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
     def test_serialize(self):
         # Just a basic serialization test.
         expected = StringIO.StringIO("""\
