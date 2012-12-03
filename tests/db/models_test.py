@@ -173,7 +173,7 @@ class Inputs4JobTestCase(unittest.TestCase):
         inp1.save()
         models.Input2job(oq_job=self.job, input=inp1).save()
         inp2 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="rupture", size=self.sizes.next())
+                            input_type="rupture_model", size=self.sizes.next())
         inp2.save()
         models.Input2job(oq_job=self.job, input=inp2).save()
         inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
@@ -200,7 +200,7 @@ class Inputs4JobTestCase(unittest.TestCase):
         models.Input2job(oq_job=self.job, input=inp1).save()
         path = self.paths.next()
         inp2 = models.Input(owner=self.job.owner, path=path,
-                            input_type="rupture", size=self.sizes.next())
+                            input_type="rupture_model", size=self.sizes.next())
         inp2.save()
         models.Input2job(oq_job=self.job, input=inp2).save()
         self.assertEqual([inp2], models.inputs4job(self.job.id, path=path))
