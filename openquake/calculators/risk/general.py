@@ -92,9 +92,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
 
-            self.assets_nr = models.ExposureData.objects.contained_in(
+            self.assets_nr = models.ExposureData.objects.contained_in_count(
                 self.exposure_model_id,
-                self.job.risk_calculation.region_constraint).count()
+                self.job.risk_calculation.region_constraint)
 
             if not self.assets_nr:
                 raise RuntimeError(
@@ -264,20 +264,38 @@ def hazard_getter(hazard_getter_name, hazard_id):
     return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
-def fetch_vulnerability_model(job_id, input_type="vulnerability"):
+def fetch_vulnerability_model(job_id, retrofitted=False):
     """
-    Returns the vulnerability model associated with the current
-    running job
+    Utility method to use in a celery task to get a vulnerability
+    model suitable to be used with Risklib.
+
+    :param int job_id: The ID of the current job
+
+    :param bool retrofitted: True if a retrofitted vulnerability model
+    should be returned
     """
-    job = models.OqJob.objects.get(pk=job_id)
-    return job.risk_calculation.model(input_type).to_risklib()
+
+    if retrofitted:
+        input_type = "vulnerability_retrofitted"
+    else:
+        input_type = "vulnerability"
+
+    return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
+        input_type).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a `openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the `openquake.db.models.LossCurve`
+    Stores a `:class:openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the `:class:openquake.db.models.LossCurve`
     output container is identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+
+    :param asset_output: an instance of
+    `:class:risklib.models.output.ClassicalOutput` or of
+    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
+    returned by risklib
     """
     models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
@@ -290,9 +308,17 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 def write_loss_map(loss_map_ids, asset_output):
     """
-    Stores `openquake.db.models.LossMapData` objects where the data
-    are got by `asset_output` and the `openquake.db.models.LossMap`
-    output containers are got by `loss_map_ids`.
+    Create `:class:openquake.db.models.LossMapData` objects where the
+    data are got by `asset_output` and the
+    `:class:openquake.db.models.LossMap` output containers are got by
+    `loss_map_ids`.
+
+    :param dict loss_map_ids: A dictionary storing that links poe to
+    `:class:openquake.db.models.LossMap` output container
+
+    :param asset_output: an instance of
+    `:class:risklib.models.output.ClassicalOutput` or of
+    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
     """
 
     for poe, loss in asset_output.conditional_losses.items():
@@ -306,9 +332,16 @@ def write_loss_map(loss_map_ids, asset_output):
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
-    Create a new `openquake.db.models.BCRDistributionData` from
+    Create a new `:class:openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
     `bcr_distribution_id`.
+
+    :param int bcr_distribution_id: the ID of
+    `:class:openquake.db.models.BCRDistribution` instance that holds
+    the BCR map
+    :param asset_output: an instance of
+    `:class:risklib.models.output.BCROutput` that holds BCR data for a
+    specific asset
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
@@ -321,7 +354,14 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
 
 def store_risk_model(rc, input_type):
     """
-    Parse and store VulnerabilityModel
+    Parse and store `:class:openquake.db.models.VulnerabilityModel` and
+    `:class:openquake.db.models.VulnerabilityFunction`.
+
+    :param str input_type: the input type of the
+    `:class:openquake.db.models.Input` object which provides the risk models
+
+    :param rc: the current `:class:openquake.db.models.RiskCalculation`
+    instance
     """
     [vulnerability_input] = models.inputs4rcalc(
         rc.id, input_type=input_type)

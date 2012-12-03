@@ -26,11 +26,8 @@ import unittest
 import time
 import uuid
 
-from openquake import engine
 from openquake.utils import tasks
-from openquake.db.models import model_equals
 
-from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
 from tests.utils.helpers import TestStore
 from tests.utils.tasks import (

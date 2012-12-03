@@ -29,7 +29,7 @@
 	<assetDefinition gml:id="a3">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>-20.000	37.225</gml:pos>
+			<gml:pos>-120.000	37.225</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.2</reco>
