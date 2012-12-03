@@ -25,12 +25,19 @@ class ClassicalBCRRiskCalculatorTestCase(
     """
     Integration test for the classical bcr risk calculator
     """
+
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
             'classical_bcr/job.ini',
             'simple_fault_demo_hazard/job.ini')
 
         self.calculator = classical_bcr.ClassicalBCRRiskCalculator(self.job)
+
+    def shortDescription(self):
+        """
+        Use method names instead of comments for verbose output
+        """
+        return None
 
     def test_complete_workflow(self):
         """
