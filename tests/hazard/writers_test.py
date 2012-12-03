@@ -25,6 +25,8 @@ from lxml import etree
 
 from nrml.hazard import writers
 
+from tests import _utils as utils
+
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 Location = namedtuple('Location', 'x, y')
 GmfNode = namedtuple('GmfNode', 'iml, location')
@@ -216,30 +218,15 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
 </nrml>
 """)
 
-        data = [
-            HazardCurveData(location=Location(38.0, -20.1),
-                            poes=[0.1, 0.2, 0.3]),
-            HazardCurveData(location=Location(38.1, -20.2),
-                            poes=[0.4, 0.5, 0.6]),
-            HazardCurveData(location=Location(38.2, -20.3),
-                            poes=[0.7, 0.8, 0.8]),
-        ]
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5')
+        writer = writers.HazardCurveXMLWriter(
+            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+        writer.serialize(self.data)
 
-        try:
-            _, path = tempfile.mkstemp()
-            metadata = dict(
-                sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-                gsimlt_path='b1_b4_b5')
-            writer = writers.HazardCurveXMLWriter(
-                path, self.TIME, 'SA', self.IMLS, **metadata)
-            writer.serialize(data)
+        utils.assert_xml_equal(expected, self.path)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
-        finally:
-            os.unlink(path)
 
 
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
