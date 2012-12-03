@@ -266,17 +266,17 @@ def hazard_getter(hazard_getter_name, hazard_id):
 
 def fetch_vulnerability_model(job_id, input_type="vulnerability"):
     """
-    Returns the vulnerability model associated with the current
+    :returns: the `:class:risklib.db.models.Vulnerability model associated with the current
     running job
     """
-    job = models.OqJob.objects.get(pk=job_id)
-    return job.risk_calculation.model(input_type).to_risklib()
+    return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
+        input_type).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a `openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the `openquake.db.models.LossCurve`
+    Stores a `:class:openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the `:class:openquake.db.models.LossCurve`
     output container is identified by `loss_curve_id`.
     """
     models.LossCurveData.objects.create(
@@ -290,8 +290,8 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 def write_loss_map(loss_map_ids, asset_output):
     """
-    Stores `openquake.db.models.LossMapData` objects where the data
-    are got by `asset_output` and the `openquake.db.models.LossMap`
+    Stores `:class:openquake.db.models.LossMapData` objects where the data
+    are got by `asset_output` and the `:class:openquake.db.models.LossMap`
     output containers are got by `loss_map_ids`.
     """
 
@@ -306,7 +306,7 @@ def write_loss_map(loss_map_ids, asset_output):
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
-    Create a new `openquake.db.models.BCRDistributionData` from
+    Create a new `:class:openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
     `bcr_distribution_id`.
     """
@@ -321,7 +321,14 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
 
 def store_risk_model(rc, input_type):
     """
-    Parse and store VulnerabilityModel
+    Parse and store `:class:openquake.db.models.VulnerabilityModel` and
+    `:class:openquake.db.models.VulnerabilityFunction`.
+
+    :param str input_type: the input type of the
+    `:class:openquake.db.models.Input` object which provides the risk models
+
+    :param rc: the current `:class:openquake.db.models.RiskCalculation`
+    instance
     """
     [vulnerability_input] = models.inputs4rcalc(
         rc.id, input_type=input_type)
