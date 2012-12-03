@@ -411,7 +411,6 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             os.unlink(path)
 
 
-
 class SESXMLWriterTestCase(unittest.TestCase):
 
     def test_serialize(self):
@@ -613,7 +612,6 @@ class SESXMLWriterTestCase(unittest.TestCase):
             utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
-
 
     def test__create_rupture_mesh_raises_on_empty_mesh(self):
         # When creating the mesh, we should raise a `ValueError` if the mesh is
