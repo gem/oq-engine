@@ -199,6 +199,7 @@ upper_seismo_depth=%(upper_seismo_depth)s,
 lower_seismo_depth=%(lower_seismo_depth)s)
 ''' % vars(self)
 
+
 class ComplexFaultSource(SimpleFaultSource):
     """Basic object representation of a Complex Fault Source.
 
@@ -374,7 +375,8 @@ class SimpleFaultRuptureModel(object):
         self.magnitude = magnitude
         self.rake = rake
         self.geometry = geometry
-    
+
+
 class ComplexFaultRuptureModel(object):
     """Basic object representation of a Complex Fault Rupture.
 
@@ -397,4 +399,3 @@ class ComplexFaultRuptureModel(object):
         self.rake = rake
         self.hypocenter = hypocenter
         self.geometry = geometry
-    

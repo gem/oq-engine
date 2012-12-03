@@ -42,6 +42,7 @@ def _xpath(elem, expr):
     """
     return elem.xpath(expr, namespaces=nrml.PARSE_NS_MAP)
 
+
 class FaultGeometryParser(object):
     """
     Mixin with methods _parse_simple_geometry and _parse_complex_geometry.
@@ -467,6 +468,6 @@ class RuptureModelParser(FaultGeometryParser):
             if parse_fn:
                 return parse_fn(element)
         # If we get to here, we didn't find the right element.
-        raise ValueError('<%s> or <%s> element not found.' 
-                         % (self._SIMPLE_RUPT_TAG, 
+        raise ValueError('<%s> or <%s> element not found.'
+                         % (self._SIMPLE_RUPT_TAG,
                             self._COMPLEX_RUPT_TAG))
