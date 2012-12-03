@@ -97,7 +97,7 @@
       <xs:attribute name="depth" type="PositiveNonZeroDoubleType"/>
     </xs:complexType>
 
-    <xs:complexType name="SimpleFaultRuptureGeometry">
+    <xs:complexType name="SimpleFaultGeometry">
                 <xs:sequence>
                     <xs:element ref="gml:LineString"/>
                     <xs:element name="dip" type="Dip"/>
@@ -106,7 +106,7 @@
                 </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultRuptureGeometry">
+    <xs:complexType name="ComplexFaultGeometry">
         <xs:complexContent>
             <xs:restriction base="gml:MultiGeometryPropertyType">
                 <xs:sequence>

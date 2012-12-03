@@ -29,14 +29,6 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultGeometry">
-        <xs:sequence>
-            <xs:element name="faultTopEdge" type="ComplexFaultEdge" minOccurs="1" maxOccurs="1" />
-            <xs:element name="intermediateEdge" type="ComplexFaultEdge" minOccurs="0" maxOccurs="unbounded" />
-            <xs:element name="faultBottomEdge" type="ComplexFaultEdge" minOccurs="1" maxOccurs="1" />
-        </xs:sequence>
-    </xs:complexType>
-
     <xs:complexType name="ComplexFaultEdge">
         <xs:sequence>
             <xs:element ref="gml:LineString" minOccurs="1" maxOccurs="1" />
