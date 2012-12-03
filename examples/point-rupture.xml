@@ -2,7 +2,7 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-    <pointRupture gml:id="pr_1">
+    <pointRupture>
         <magnitude type="Mw">6.5</magnitude>
         <strike>20.0</strike>
         <dip>90.0</dip>
