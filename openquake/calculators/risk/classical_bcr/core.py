@@ -53,8 +53,8 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     :param int hazard_id
       ID of the Hazard Output the risk calculation is based on
     :param bcr_distribution_id
-      ID of the `openquake.db.models.BCRDistribution` output container used
-      to store the computed bcr distribution
+      ID of the `:class:openquake.db.models.BCRDistribution` output
+      container used to store the computed bcr distribution
     :param int lrem_steps_per_interval
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param float interest_rate
@@ -64,7 +64,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     """
     model = general.fetch_vulnerability_model(job_id)
     model_retrofitted = general.fetch_vulnerability_model(
-        job_id, "vulnerability_retrofitted")
+        job_id, True)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.bcr(
@@ -92,7 +92,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     @property
     def calculation_parameters(self):
         """
-        Calculation specific parameters
+        :returns: calculation specific parameters as a dictionary
+        suitable to be passed to the celery task function of the
+        calculator
         """
 
         rc = self.job.risk_calculation
@@ -105,7 +107,12 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     def create_outputs(self):
         """
-        Create BCR Distribution output container
+        Create BCR Distribution output container, i.e. a
+        `:class:openquake.db.models.BCRDistribution` instance and its
+        `:class:openquake.db.models.Output` container.
+
+        :returns: A dictionary where the created output container is
+          associated with the key bcr_distribution_id
         """
         return dict(
             bcr_distribution_id=models.BCRDistribution.objects.create(
@@ -113,6 +120,10 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                     self.job, "BCR Distribution", "bcr_distribution")).pk)
 
     def store_risk_model(self):
+        """
+        Store both the risk model for the original asset configuration
+        and the risk model for the retrofitted one.
+        """
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
         general.store_risk_model(self.job.risk_calculation,

@@ -1576,12 +1576,12 @@ CREATE TABLE oqmif.exposure_data (
     -- insurance deductible
     deductible float,
 
+    site GEOGRAPHY(point) NOT NULL,
+
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (exposure_model_id, asset_ref)
 ) TABLESPACE oqmif_ts;
-SELECT AddGeometryColumn('oqmif', 'exposure_data', 'site', 4326, 'POINT', 2);
-ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 
 
 CREATE TABLE oqmif.occupancy (
