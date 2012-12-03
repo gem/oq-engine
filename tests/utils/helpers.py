@@ -322,21 +322,6 @@ def skipit(method):
     return nose.tools.make_decorator(method)(skipme)
 
 
-def measureit(method):
-    """Decorator that profiles memory usage"""
-
-    def _measured(*args, **kw):
-        """Decorator that profiles memory usage"""
-        result = method(*args, **kw)
-        return result
-    try:
-        import nose
-        return nose.tools.make_decorator(method)(_measured)
-    except ImportError:
-        pass
-    return _measured
-
-
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     """
     Assert that two complex structures have almost equal contents.
