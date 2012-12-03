@@ -73,7 +73,7 @@ class ProgressIndicatorTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         kvs = self.connect()
         key = stats.key_name(
-            22, area, raise_exception.__name__ + "-failures", "i")
+            22, area, raise_exception.__name__ + ":failed", "i")
         previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
@@ -312,17 +312,17 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1)],
             sorted(stats.failure_counters(123, "g")))
-        self.assertEqual([('oqs/123/h/c-failures/i', 1)],
+        self.assertEqual([('oqs/123/h/c:failed/i', 1)],
                          sorted(stats.failure_counters(123, "h")))
         self.assertEqual(
-            [('oqs/123/r/d-failures/i', 1), ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/r/d:failed/i', 1), ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123, "r")))
 
     def test_failure_counters_with_invalid_area(self):
@@ -335,14 +335,14 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
         stats.delete_job_counters(123)
         fcname = itertools.cycle(string.ascii_lowercase)
         for cidx, carea in enumerate(["g", "h", "r"]):
-            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            stats.incr_counter(123, carea, "%s:failed" % fcname.next())
             if not (cidx % 2):
-                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+                stats.incr_counter(123, carea, "%s:failed" % fcname.next())
 
         self.assertEqual(
-            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1),
-             ('oqs/123/h/c-failures/i', 1), ('oqs/123/r/d-failures/i', 1),
-             ('oqs/123/r/e-failures/i', 1)],
+            [('oqs/123/g/a:failed/i', 1), ('oqs/123/g/b:failed/i', 1),
+             ('oqs/123/h/c:failed/i', 1), ('oqs/123/r/d:failed/i', 1),
+             ('oqs/123/r/e:failed/i', 1)],
             sorted(stats.failure_counters(123)))
 
     def test_failure_counters_with_no_failures(self):
@@ -366,12 +366,13 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
             return 999
 
         previous_value = stats.pk_get(11, "nhzrd_done")
+        self.assertIsNone(previous_value)
 
         # Call the wrapped function.
         self.assertEqual(999, no_exception(11, range(5)))
 
         value = stats.pk_get(11, "nhzrd_done")
-        self.assertEqual(5, (value - previous_value))
+        self.assertEqual(5, value)
 
     def test_failure_stats(self):
         """
@@ -385,12 +386,13 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
             raise NotImplementedError
 
         previous_value = stats.pk_get(22, "nrisk_failed")
+        self.assertIsNone(previous_value)
 
         # Call the wrapped function.
         self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
 
         value = stats.pk_get(22, "nrisk_failed")
-        self.assertEqual(6, (value - previous_value))
+        self.assertEqual(6, value)
 
 
 def approx_equal(expected, actual, tolerance):
