@@ -276,9 +276,9 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
     """
 
     if retrofitted:
-        input_type = "vulnerability"
-    else:
         input_type = "vulnerability_retrofitted"
+    else:
+        input_type = "vulnerability"
 
     return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
         input_type).to_risklib()
