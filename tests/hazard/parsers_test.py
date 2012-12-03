@@ -212,22 +212,11 @@ m?ml version='1.0' encoding='utf-8'?>
         else:
             self.fail('NrmlError not raised.')
 
-    def test_invalid_schema_validation_on(self):
-        # By default, schema validation is on.
+    def test_invalid_schema(self):
         parser = parsers.SourceModelParser(
             StringIO.StringIO(self.INVALID_SCHEMA))
 
         self.assertRaises(etree.XMLSyntaxError, parser.parse)
-
-    def test_invalid_schema_validation_off(self):
-        # Apart from failing to validate schema, our test input here doesn't
-        # cause any real problems for the parser. If we turn schema validation,
-        # we can be more forgiving.
-        parser = parsers.SourceModelParser(
-            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
-
-        # This should succeed with no errors.
-        parser.parse()
 
     def test_parse(self):
         parser = parsers.SourceModelParser(self.SAMPLE_FILE)
@@ -337,19 +326,13 @@ class SiteModelParserTestCase(unittest.TestCase):
     </siteModel>
 </nrml>'''
 
-    def test_invalid_schema_validation_on(self):
+    def test_invalid_schema(self):
         parser = parsers.SiteModelParser(
             StringIO.StringIO(self.INVALID_SCHEMA))
 
         # parser.parse() is a generator
         # parsing is lazy, hence the call to `list`
         self.assertRaises(etree.XMLSyntaxError, list, parser.parse())
-
-    def test_invalid_schema_validation_off(self):
-        parser = parsers.SiteModelParser(
-            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
-
-        list(parser.parse())  # Should succeed with no errors
 
     def test_parse(self):
         expected_raw = [

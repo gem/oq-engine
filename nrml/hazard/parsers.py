@@ -107,10 +107,6 @@ class SourceModelParser(FaultGeometryParserMixin):
 
     :param source:
         Filename or file-like object containing the XML data.
-    :param bool schema_validation:
-        If set to `True`, validate the input source against the current XML
-        schema. Otherwise, we will try to parse the ``source``, even if the
-        document structure or content is incorrect.
     """
 
     _SM_TAG = '{%s}sourceModel' % nrml.NAMESPACE
@@ -121,8 +117,6 @@ class SourceModelParser(FaultGeometryParserMixin):
 
     def __init__(self, source, schema_validation=True):
         self.source = source
-        self.schema_validation = schema_validation
-
         self._parse_fn_map = {
             self._PT_TAG: self._parse_point,
             self._AREA_TAG: self._parse_area,
@@ -340,10 +334,8 @@ class SourceModelParser(FaultGeometryParserMixin):
         """
         src_model = models.SourceModel()
 
-        if self.schema_validation:
-            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
-        else:
-            schema = None
+        schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+
         tree = etree.iterparse(self.source, events=('start', 'end'),
                                schema=schema)
 
@@ -368,15 +360,10 @@ class SiteModelParser(object):
 
     :param source:
         Filename or file-like object containing the XML data.
-    :param bool schema_validation:
-        If set to `True`, validate the input source against the current XML
-        schema. Otherwise, we will try to parse the ``source``, even if the
-        document structure or content is incorrect.
     """
 
-    def __init__(self, source, schema_validation=True):
+    def __init__(self, source):
         self.source = source
-        self.schema_validation = schema_validation
 
     def parse(self):
         """Parse the site model XML content and generate
@@ -385,10 +372,7 @@ class SiteModelParser(object):
         :returns:
             A iterable of :class:`nrml.model.SiteModel` objects.
         """
-        if self.schema_validation:
-            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
-        else:
-            schema = None
+        schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
         tree = etree.iterparse(self.source, events=('start',),
                                schema=schema)
 
@@ -421,9 +405,8 @@ class RuptureModelParser(FaultGeometryParserMixin):
     _SIMPLE_RUPT_TAG = '{%s}simpleFaultRupture' % nrml.NAMESPACE
     _COMPLEX_RUPT_TAG = '{%s}complexFaultRupture' % nrml.NAMESPACE
 
-    def __init__(self, source, schema_validation=True):
+    def __init__(self, source):
         self.source = source
-        self.schema_validation = schema_validation
         self._parse_fn_map = {
             self._SIMPLE_RUPT_TAG: self._parse_simple_rupture,
             self._COMPLEX_RUPT_TAG: self._parse_complex_rupture,
@@ -471,12 +454,7 @@ class RuptureModelParser(FaultGeometryParserMixin):
             :class:`nrml.models.SimpleFaultRuptureModel` instance or
             :class:`nrml.models.ComplexFaultRuptureModel` instance
         """
-
-        if self.schema_validation:
-            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
-        else:
-            schema = None
-
+        schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
         tree = etree.iterparse(self.source, schema=schema)
         for _, element in tree:
             parse_fn = self._parse_fn_map.get(element.tag)
