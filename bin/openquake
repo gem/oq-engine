@@ -64,8 +64,11 @@ try:
 except ImportError:
     sys.path.append('/usr/openquake')
 
-import oqpath
-oqpath.set_oq_path()
+try:
+    import oqpath
+    oqpath.set_oq_path()
+except ImportError:
+    pass
 
 from openquake import __version__
 from openquake import engine2
@@ -77,7 +80,8 @@ from openquake.utils import version as utils_version
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
-MISSING_HAZARD_OUTPUT_MSG = "Please, specify which Hazard output ID should be used with %s" % HAZARD_OUTPUT_ARG
+MISSING_HAZARD_OUTPUT_MSG = ("Please specify the ID of the hazard output to be"
+                             " used using '%s <id>'" % HAZARD_OUTPUT_ARG)
 
 
 def set_up_arg_parser():
@@ -134,7 +138,7 @@ def set_up_arg_parser():
     risk_grp.add_argument(
         HAZARD_OUTPUT_ARG,
         '--ho',
-        help='Use the desiderd hazard output as input for the risk job',
+        help='Use the desired hazard output as input for the risk job',
         metavar='HAZARD_OUTPUT')
     risk_grp.add_argument(
         '--list-risk-calculations',
@@ -218,6 +222,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                print 'Calculation results:'
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
@@ -395,6 +400,7 @@ def run_risk(
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
+                print 'Calculation results:'
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
@@ -416,7 +422,7 @@ def complain_and_exit(msg, exit_code=0):
     sys.exit(exit_code)
 
 
-if __name__ == '__main__':
+def main():
     arg_parser = set_up_arg_parser()
 
     args = arg_parser.parse_args()
@@ -453,3 +459,7 @@ if __name__ == '__main__':
                  hazard_output_id=args.hazard_output_id)
     else:
         arg_parser.print_usage()
+
+
+if __name__ == '__main__':
+    main()
