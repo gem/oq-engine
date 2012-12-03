@@ -14,12 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import shutil
 import tempfile
-import unittest
-
-import nrml
 
 from lxml import etree
 from nose.plugins.attrib import attr
@@ -28,23 +24,8 @@ from openquake.db import models
 from openquake.export import core as export_core
 from openquake.export import hazard
 
+from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
-
-
-def _number_of(elem_name, tree):
-    """
-    Given an element name (including the namespaces prefix, if applicable),
-    return the number of occurrences of the element in a given XML document.
-    """
-    expr = '//%s' % elem_name
-    return len(tree.xpath(expr, namespaces=nrml.PARSE_NS_MAP))
-
-class BaseExportTestCase(unittest.TestCase):
-
-    def _test_exported_file(self, filename):
-        self.assertTrue(os.path.exists(filename))
-        self.assertTrue(os.path.isabs(filename))
-        self.assertTrue(os.path.getsize(filename) > 0)
 
 
 class ClassicalExportTestcase(BaseExportTestCase):
@@ -170,7 +151,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(exported_file)
-            self.assertEqual(442, _number_of('nrml:gmf', tree))
+            self.assertEqual(442, number_of('nrml:gmf', tree))
 
             ################
             # Hazard curves:
@@ -181,5 +162,3 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
         finally:
             shutil.rmtree(target_dir)
-
-
