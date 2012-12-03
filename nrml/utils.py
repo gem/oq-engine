@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+General utility functions for NRML.
+"""
 
-"""General utility functions for NRML."""
 import numpy
 
 _LINESTRING_FMT = 'LINESTRING(%s)'
@@ -22,8 +24,9 @@ _POLYGON_FMT = 'POLYGON((%s))'
 
 
 def _group_point_coords(coords, dims):
-    """Given a 1D `list` of coordinates, group them into blocks of points with
-    a block size equal to ``dims``, return a 2D `list`.
+    """
+    Given a 1D `list` of coordinates, group them into blocks of points with a
+    block size equal to ``dims``, return a 2D `list`.
 
     :param list coords:
         `list` of coords, as `str` or `float` values.
@@ -35,8 +38,9 @@ def _group_point_coords(coords, dims):
 
 
 def _make_wkt(fmt, points):
-    """Given a format string and a `list` of point pairs or triples,
-    generate a WKT representation of the geometry.
+    """
+    Given a format string and a `list` of point pairs or triples, generate a
+    WKT representation of the geometry.
 
     :param str fmt:
         Format string for the desired type of geometry to represent with WKT.
@@ -49,7 +53,8 @@ def _make_wkt(fmt, points):
 
 
 def coords_to_poly_wkt(coords, dims):
-    """Given a 1D list of coordinates and the desired number of dimensions,
+    """
+    Given a 1D list of coordinates and the desired number of dimensions,
     generate POLYGON WKT.
 
     :param list coords:
@@ -65,7 +70,8 @@ def coords_to_poly_wkt(coords, dims):
 
 
 def coords_to_linestr_wkt(coords, dims):
-    """Given a 1D list of coordinates and the desired number of dimensions,
+    """
+    Given a 1D list of coordinates and the desired number of dimensions,
     generate LINESTRING WKT.
 
     :param list coords:
