@@ -227,6 +227,44 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
 
         utils.assert_xml_equal(expected, self.path)
 
+    def test_serialize_quantile(self):
+        # Test serialization of qunatile curves.
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves IMT="SA" investigationTime="50.0" statistics="quantile" quantileValue="0.15" saPeriod="0.025" saDamping="5.0">
+    <IMLs>0.005 0.007 0.0098</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.1 0.2 0.3</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.4 0.5 0.6</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.7 0.8 0.8</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+""")
+
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, statistics='quantile',
+            quantile_value=0.15
+        )
+        writer = writers.HazardCurveXMLWriter(
+            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+        writer.serialize(self.data)
+
+        utils.assert_xml_equal(expected, self.path)
 
 
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
