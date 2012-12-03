@@ -23,7 +23,6 @@ Helper functions for our unit and smoke tests.
 
 import collections
 import functools
-import guppy
 import logging
 import mock as mock_module
 import numpy
@@ -49,7 +48,6 @@ from openquake.engine import JobContext
 from openquake import engine
 from openquake import engine2
 from openquake import logs
-from openquake import producer
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
 
@@ -247,6 +245,35 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
             devnull.close()
 
 
+def run_risk_job_sp(config_file, params=None, check_output=False,
+                    silence=False):
+    """
+    Given a path to a config file, run an openquake risk job as a separate
+    process using `subprocess`. See `run_hazard_job_sp` for the signature
+    """
+
+    hazard_curve_id = models.HazardCurve.objects.filter(
+        statistics="mean")[0].output.id
+    args = ["bin/openquake", "--force-inputs", "--run-risk=%s" % config_file,
+            "--hazard-output-id=%d" % hazard_curve_id]
+    if params is not None:
+        args.extend(params)
+
+    devnull = None
+    if silence:
+        devnull = open(os.devnull, 'wb')
+
+    try:
+        if check_output:
+            return subprocess.check_output(args, stdout=devnull,
+                                           stderr=devnull)
+        else:
+            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
+    finally:
+        if devnull is not None:
+            devnull.close()
+
+
 def store_hazard_logic_trees(a_job):
     """Helper function to store the source model and GMPE logic trees in the
     KVS so that it can be read by the Java code.
@@ -270,16 +297,6 @@ def store_hazard_logic_trees(a_job):
     store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
                        a_job.params, lt_proc)
     store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
-
-
-class WordProducer(producer.FileProducer):
-    """Simple File parser that looks for three
-    space-separated values on each line - lat, long and value"""
-
-    def _parse(self):
-        for line in self.file:
-            col, row, value = line.strip().split(' ', 2)
-            yield ((int(col), int(row)), value)
 
 
 def timeit(method):
@@ -321,22 +338,6 @@ def skipit(method):
         raise SkipTest("skipping method %r" % method.__name__)
 
     return nose.tools.make_decorator(method)(skipme)
-
-
-def measureit(method):
-    """Decorator that profiles memory usage"""
-
-    def _measured(*args, **kw):
-        """Decorator that profiles memory usage"""
-        result = method(*args, **kw)
-        print guppy.hpy().heap()
-        return result
-    try:
-        import nose
-        return nose.tools.make_decorator(method)(_measured)
-    except ImportError:
-        pass
-    return _measured
 
 
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
@@ -957,6 +958,51 @@ def get_hazard_job(cfg, username=None):
     job.hazard_calculation = haz_calc
     job.save()
     return job
+
+
+def get_risk_job(risk_demo, hazard_demo, username=None):
+    """
+    Takes in input the paths (relative to the demos directory) to a
+    risk and hazard demo file config, respectively.
+
+    Creates the hazard outputs suitable to be used by a risk
+    calculation and then creates a :class:`openquake.db.models.OqJob`
+    object for a risk calculation. It also returns the input files
+    referenced by the risk config file.
+    """
+    username = username if username is not None else default_user().user_name
+
+    hazard_cfg = demo_file(hazard_demo)
+
+    hazard_job = get_hazard_job(hazard_cfg, username)
+    hc = hazard_job.hazard_calculation
+
+    risk_cfg = demo_file(risk_demo)
+
+    # FIXME: do we really need to create an HazardCurve to test a
+    # calculator?
+    hazard_output = models.HazardCurveData.objects.create(
+        hazard_curve=models.HazardCurve.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve"),
+            investigation_time=hc.investigation_time,
+            imt="PGA", imls=[0.1, 0.2, 0.3],
+            statistics="mean"),
+        poes=[0.1, 0.2, 0.3],
+        location="POINT(1 1)")
+
+    job = engine2.prepare_job(username)
+    params, files = engine2.parse_config(
+        open(risk_cfg, 'r'), force_inputs=True)
+
+    params.update(dict(hazard_output_id=hazard_output.hazard_curve.output.id))
+
+    risk_calc = engine2.create_risk_calculation(
+        job.owner, params, files.values())
+    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
+    job.risk_calculation = risk_calc
+    job.save()
+    return job, files
 
 
 def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
