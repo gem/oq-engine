@@ -899,7 +899,6 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
 
 
 class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
-
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
                                           'simple_fault_demo_hazard/job.ini')
@@ -938,6 +937,52 @@ class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
             rc = models.RiskCalculation(**compulsory_arguments)
 
             form = validation.ClassicalRiskCalculationForm(
+                instance=rc, files=None)
+
+            self.assertFalse(form.is_valid(), fields)
+
+
+class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
+    def setUp(self):
+        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
+                                      'simple_fault_demo_hazard/job.ini')
+        self.compulsory_arguments = dict(
+            calculation_mode="classical_bcr",
+            lrem_steps_per_interval=5,
+            interest_rate=0.05,
+            asset_life_expectancy=40)
+
+        self.other_args = dict(
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=job.risk_calculation.hazard_output)
+
+    def test_valid_form(self):
+        args = dict(self.compulsory_arguments.items())
+        args.update(self.other_args)
+
+        rc = models.RiskCalculation(**args)
+
+        form = validation.ClassicalRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form(self):
+        def powerset(iterable):
+            s = list(iterable)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s) + 1))
+
+        for fields in list(powerset(self.compulsory_arguments))[1:]:
+            compulsory_arguments = dict(self.compulsory_arguments.items())
+            for field in fields:
+                compulsory_arguments[field] = None
+            compulsory_arguments.update(self.other_args)
+            rc = models.RiskCalculation(**compulsory_arguments)
+
+            form = validation.ClassicalRiskCalculationWithBCRForm(
                 instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
