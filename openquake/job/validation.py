@@ -416,10 +416,22 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'asset_life_expectancy')
 
 
+class EventBasedRiskCalculationForm(BaseOQModelForm):
+    calc_model = 'event_based'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'loss_curve_resolution')
+
+
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
-    'classical_bcr': ClassicalRiskCalculationWithBCRForm
+    'classical_bcr': ClassicalRiskCalculationWithBCRForm,
+    'event_based': EventBasedRiskCalculationForm
 }
 
 
@@ -804,4 +816,12 @@ def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
             return False, ['Interest Rate must be > 0']
+    return True, []
+
+
+def loss_curve_resolution_is_valid(mdl):
+    if mdl.calc_mode == 'event_based':
+        if (mdl.loss_curve_resolution is not None and
+            mdl.loss_curve_resolution < 1):
+            return False, ['Loss Curve Resolution must be > 1']
     return True, []
