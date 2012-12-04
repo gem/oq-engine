@@ -183,21 +183,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     with transaction.commit_on_success():
         # Update realiation progress,
         # mark realization as complete if it is done
-        # First, refresh the logic tree realization record:
-        ltr_query = """
-        SELECT * FROM hzrdr.lt_realization
-        WHERE id = %s
-        FOR UPDATE
-        """
-
-        [lt_rlz] = models.LtRealization.objects.raw(
-            ltr_query, [lt_rlz_id])
-
-        lt_rlz.completed_items += len(sites)
-        if lt_rlz.completed_items == lt_rlz.total_items:
-            lt_rlz.is_complete = True
-
-        lt_rlz.save()
+        haz_general.update_realization(lt_rlz_id, len(sites))
 
     logs.LOG.debug('< done computing disaggregation')
 
