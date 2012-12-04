@@ -302,6 +302,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_aggregate_poes, aggregate_curve.y_values)
 
+    # we skip the following test as we lack reliable data
     @unittest.skip
     def test_sample_based_beta(self):
         vulnerability_function_rm = (
@@ -346,6 +347,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.x_values)
 
+    # we skip the following test as we lack reliable data
     @unittest.skip
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
