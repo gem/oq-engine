@@ -91,24 +91,28 @@
 
     <!-- Geometry defintions. Used by rupture and source models. -->
 
-    <xs:complexType name="SimpleFaultRuptureGeometry">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="faultTrace" type="FaultEdge"/>
-                    <xs:element name="dip" type="Dip"/>
-                    <xs:element name="upperSeismogenicDepth" type="PositiveDoubleType"/>
-                    <xs:element name="lowerSeismogenicDepth" type="PositiveDoubleType"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:complexType name="Hypocenter">
+      <xs:attribute name="lon" type="Longitude"/>
+      <xs:attribute name="lat" type="Latitude"/>
+      <xs:attribute name="depth" type="PositiveNonZeroDoubleType"/>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultRuptureGeometry">
+    <xs:complexType name="SimpleFaultGeometry">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="upperSeismoDepth" type="PositiveDoubleType"/>
+                    <xs:element name="lowerSeismoDepth" type="PositiveDoubleType"/>
+                </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultGeometry">
         <xs:complexContent>
             <xs:restriction base="gml:MultiGeometryPropertyType">
                 <xs:sequence>
-                    <xs:element ref="faultEdges"/>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="intermediateEdge" minOccurs="0" maxOccurs="unbounded" />
+                    <xs:element ref="faultBottomEdge"/>
                 </xs:sequence>
             </xs:restriction>
         </xs:complexContent>
@@ -127,6 +131,7 @@
     </xs:complexType>
 
     <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>    
     <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
     <xs:complexType name="FaultEdge">
         <xs:complexContent>

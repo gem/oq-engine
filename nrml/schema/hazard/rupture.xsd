@@ -9,15 +9,11 @@
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
     <xs:include schemaLocation="../nrml_common.xsd"/>
 
-    <xs:element name="rupture" type="Rupture" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:element name="rupture" type="Rupture" abstract="true"/>
     <xs:complexType name="Rupture">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="magnitude" type="Magnitude"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+      <xs:sequence>
+        <xs:element name="magnitude" type="Magnitude"/>
+      </xs:sequence>
     </xs:complexType>
 
     <xs:element name="pointRupture" type="PointRupture" substitutionGroup="rupture"/>
@@ -40,7 +36,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element name="simpleFaultGeometry" type="SimpleFaultRuptureGeometry"/>
+                    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -52,7 +48,8 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element name="complexFaultGeometry" type="ComplexFaultRuptureGeometry"/>
+                    <xs:element name="hypocenter" type="Hypocenter"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

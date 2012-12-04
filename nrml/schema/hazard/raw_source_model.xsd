@@ -30,8 +30,8 @@
                     <xs:element name="strike" type="Strike"/>
                     <xs:element name="dip" type="Dip"/>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element name="upperSeismogenicDepth" type="PositiveDoubleType"/>
-                    <xs:element name="lowerSeismogenicDepth" type="PositiveDoubleType"/>
+                    <xs:element name="upperSeismoDepth" type="PositiveDoubleType"/>
+                    <xs:element name="lowerSeismoDepth" type="PositiveDoubleType"/>
                     <xs:element name="magnitude" type="Magnitude"/>
                     <xs:element name="minMagnitude" type="Magnitude"/>
                     <xs:element name="maxMagnitude" type="Magnitude"/>

@@ -50,7 +50,8 @@ m?ml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <sourceModel name="Some Source Model">
-        <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="1" name="point"
+         tectonicRegion="Stable Continental Crust">
             <pointGeometry>
                 <gml:Point>
                     <gml:pos>-122.0 38.0</gml:pos>
@@ -195,22 +196,11 @@ m?ml version='1.0' encoding='utf-8'?>
 
         self.assertRaises(etree.XMLSyntaxError, parser.parse)
 
-    def test_invalid_schema_validation_on(self):
-        # By default, schema validation is on.
+    def test_invalid_schema(self):
         parser = parsers.SourceModelParser(
             StringIO.StringIO(self.INVALID_SCHEMA))
 
         self.assertRaises(etree.XMLSyntaxError, parser.parse)
-
-    def test_invalid_schema_validation_off(self):
-        # Apart from failing to validate schema, our test input here doesn't
-        # cause any real problems for the parser. If we turn schema validation,
-        # we can be more forgiving.
-        parser = parsers.SourceModelParser(
-            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
-
-        # This should succeed with no errors.
-        parser.parse()
 
     def test_parse(self):
         parser = parsers.SourceModelParser(self.SAMPLE_FILE)
@@ -248,7 +238,8 @@ m?ml version='1.0' encoding='utf-8'?>
             <magScaleRel>PeerMSR</magScaleRel>
             <ruptAspectRatio>1.5</ruptAspectRatio>
             <incrementalMFD minMag="6.55" binWidth="0.1">
-                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4
+                6.108288E-4 5.080653E-4</occurRates>
             </incrementalMFD>
             <nodalPlaneDist>
                 <nodalPlane probability="0.1" strike="1.0" dip="90.0" rake="0.0" />
@@ -269,7 +260,8 @@ m?ml version='1.0' encoding='utf-8'?>
                 <hypoDepth probability="0.1" depth="7.0" />
             </hypoDepthDist>
         </areaSource>
-        <pointSource id="2" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="2" name="point"
+                     tectonicRegion="Stable Continental Crust">
             <pointGeometry>
                 <gml:Point>
                     <gml:pos>-122.0 38.0</gml:pos>
@@ -279,10 +271,13 @@ m?ml version='1.0' encoding='utf-8'?>
             </pointGeometry>
             <magScaleRel>WC1994</magScaleRel>
             <ruptAspectRatio>0.5</ruptAspectRatio>
-            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
+            <truncGutenbergRichterMFD aValue="-3.5"
+             bValue="1.0" minMag="5.0" maxMag="6.5" />
             <nodalPlaneDist>
-                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
             </nodalPlaneDist>
             <hypoDepthDist>
                 <hypoDepth probability="0.5" depth="4.0" />
@@ -320,19 +315,13 @@ class SiteModelParserTestCase(unittest.TestCase):
     </siteModel>
 </nrml>'''
 
-    def test_invalid_schema_validation_on(self):
+    def test_invalid_schema(self):
         parser = parsers.SiteModelParser(
             StringIO.StringIO(self.INVALID_SCHEMA))
 
         # parser.parse() is a generator
         # parsing is lazy, hence the call to `list`
         self.assertRaises(etree.XMLSyntaxError, list, parser.parse())
-
-    def test_invalid_schema_validation_off(self):
-        parser = parsers.SiteModelParser(
-            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
-
-        list(parser.parse())  # Should succeed with no errors
 
     def test_parse(self):
         expected_raw = [
@@ -353,3 +342,99 @@ class SiteModelParserTestCase(unittest.TestCase):
         actual = [x for x in parser.parse()]
 
         self.assertTrue(_utils.deep_eq(expected, actual))
+
+
+class RuptureModelParserTestCase(unittest.TestCase):
+    SAMPLE_FILES = ['examples/simple-fault-rupture.xml',
+                    'examples/complex-fault-rupture.xml']
+
+    EXPECTED_MODELS = [
+        models.SimpleFaultRuptureModel(
+            magnitude=7.65,
+            rake=15.0,
+            geometry=models.SimpleFaultGeometry(
+                wkt='LINESTRING(-124.704 40.363, -124.977 41.214, -125.140 42.096)',
+                dip=50.0,
+                upper_seismo_depth=12.5,
+                lower_seismo_depth=19.5)),
+
+        models.ComplexFaultRuptureModel(
+            magnitude=9.0,
+            rake=0.0,
+            hypocenter=[-124.977, 41.214, 0.5088560E+01],
+            geometry=models.ComplexFaultGeometry(
+                top_edge_wkt='LINESTRING(-124.704 40.363 0.5493260E+01, -124.977 41.214 0.4988560E+01, -125.140 42.096 0.4897340E+01)',
+                bottom_edge_wkt='LINESTRING(-123.829 40.347 0.2038490E+02, -124.137 41.218 0.1741390E+02, -124.252 42.115 0.1752740E+02)',
+                int_edges=['LINESTRING(-124.704 40.363 0.5593260E+01, -124.977 41.214 0.5088560E+01, -125.140 42.096 0.4997340E+01)', 'LINESTRING(-124.704 40.363 0.5693260E+01, -124.977 41.214 0.5188560E+01, -125.140 42.096 0.5097340E+01)']
+                )),
+        ]
+
+    INVALID_1 = '''<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <simpeFaultRupture>
+        <magnitude type="Mw">7.65</magnitude>
+        <rake>15.0</rake>
+
+        <simpleFaultGeometry>
+            <faultTrace>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -124.704 40.363 0.1
+                        -124.977 41.214 0.1
+                        -125.140 42.096 0.1
+                    </gml:posList>
+                </gml:LineString>
+            </faultTrace>
+            <dip>50.0</dip>
+            <upperSeismoDepth>12.5</upperSeismoDepth>
+            <lowerSeismoDepth>19.5</lowerSeismoDepth>
+        </simpleFaultGeometry>
+    </simpleFaultRupture>
+</nrml>
+'''  # there is a mispelled simpeFaultRupture here
+
+    INVALID_2 = '''<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <bcrMap sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
+            lossCategory="economic_loss" unit="EUR" interestRate="1.0"
+            assetLifeExpectancy="20">
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 41.0</gml:pos>
+            </gml:Point>
+
+            <bcr assetRef="asset_1" ratio="15.23" aalOrig="1.1" aalRetr="1.0" />
+            <bcr assetRef="asset_2" ratio="25.23" aalOrig="2.1" aalRetr="2.0" />
+        </node>
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 42.0</gml:pos>
+            </gml:Point>
+
+            <bcr assetRef="asset_3" ratio="64.23" aalOrig="2.1" aalRetr="2.0" />
+        </node>
+    </bcrMap>
+</nrml>
+'''  # idiot, you are trying to parse a bcrMap with a RuptureParser!
+
+    def test_parse(self):
+        for fname, expected_model in zip(
+                    self.SAMPLE_FILES, self.EXPECTED_MODELS):
+            parser = parsers.RuptureModelParser(fname)
+            model = parser.parse()
+            _utils._deep_eq(model, expected_model)
+
+    def test_invalid(self):
+        inv1 = StringIO.StringIO(self.INVALID_1)
+        self.assertRaises(etree.XMLSyntaxError,
+                          parsers.RuptureModelParser(inv1).parse)
+
+        inv2 = StringIO.StringIO(self.INVALID_2)
+        self.assertRaises(ValueError,
+                          parsers.RuptureModelParser(inv2).parse)

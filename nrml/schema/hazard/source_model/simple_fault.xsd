@@ -29,13 +29,4 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="SimpleFaultGeometry">
-        <xs:sequence>
-            <xs:element ref="gml:LineString" />
-            <xs:element name="dip" type="Dip" />
-            <xs:element ref="upperSeismoDepth" />
-            <xs:element ref="lowerSeismoDepth" />
-        </xs:sequence>
-    </xs:complexType>
-
 </xs:schema>
