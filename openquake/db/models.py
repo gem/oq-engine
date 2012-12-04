@@ -36,7 +36,6 @@ import numpy
 
 from django.db import connection
 from django.contrib.gis.db import models as djm
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
 from shapely import wkt
