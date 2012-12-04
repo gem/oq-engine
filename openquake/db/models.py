@@ -66,6 +66,9 @@ IMT_CHOICES = (
     (u'MMI', u'Modified Mercalli Intensity'),
 )
 
+#: Default Loss Curve Resolution used for probabilistic risk calculators
+DEFAULT_LOSS_CURVE_RESOLUTION = 50
+
 
 def profile4job(job_id):
     """Return the job profile for the given job.
@@ -910,7 +913,8 @@ class RiskCalculation(djm.Model):
     #########################
     # Event-Based parameters:
     #########################
-    curve_resolution = djm.IntegerField(null=True, blank=True)
+    loss_curve_resolution = djm.IntegerField(
+        null=True, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
