@@ -20,9 +20,23 @@ Classes for serializing various NRML XML artifacts.
 import nrml
 
 from lxml import etree
+from collections import OrderedDict
 
 SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
+
+#: Optional keywords (args) to element attributes map
+_OPT_KW_TO_ATTR_MAP = OrderedDict([
+    ('statistics', 'statistics'),
+    ('quantile_value', 'quantileValue'),
+    ('smlt_path', 'sourceModelTreePath'),
+    ('gsimlt_path', 'gsimTreePath'),
+    ('imt', 'IMT'),
+    ('investigation_time', 'investigationTime'),
+    ('sa_period', 'saPeriod'),
+    ('sa_damping', 'saDamping'),
+    ('poe', 'poE'),
+])
 
 
 def _validate_hazard_metadata(md):
@@ -77,20 +91,28 @@ def _validate_hazard_metadata(md):
             raise ValueError('`sa_damping` is required for IMT == `SA`')
 
 
+def _set_optional_metadata(element, metadata):
+    for kw, attr in _OPT_KW_TO_ATTR_MAP.iteritems():
+        value = metadata.get(kw)
+        if value is not None:
+            element.set(attr, str(value))
+
+
 class HazardCurveXMLWriter(object):
     """
     :param path:
         File path (including filename) for XML results to be saved to.
-    :param float investigation_time:
-        Investigation time (in years) defined in the calculation which produced
-        these results.
-    :param str imt:
-        Intensity measure type used to compute these hazard curves.
-    :param list imls:
-        Intensity measure levels, which represent the x-axis values of each
-        curve.
     :param metadata:
-        A combination of the following keyword arguments:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these hazard curves.
+        * imls: Intensity measure levels, which represent the x-axis values of
+          each curve.
+
+        The following are more or less optional (combinational rules noted
+        below where applicable):
 
         * statistics: 'mean' or 'quantile'
         * quantile_value: Only required if statistics = 'quantile'.
@@ -100,23 +122,14 @@ class HazardCurveXMLWriter(object):
           produced these curves. Only required for non-statisical curves.
         * sa_period: Only used with imt = 'SA'.
         * sa_damping: Only used with imt = 'SA'.
+
+
     """
 
-    def __init__(self, path, investigation_time, imt, imls, **metadata):
+    def __init__(self, path, **metadata):
         self.path = path
-        self.investigation_time = investigation_time
-        self.imt = imt
-        self.imls = imls
-
-        metadata['imt'] = imt
+        self.metadata = metadata
         _validate_hazard_metadata(metadata)
-
-        self.statistics = metadata.get('statistics')
-        self.quantile_value = metadata.get('quantile_value')
-        self.smlt_path = metadata.get('smlt_path')
-        self.gsimlt_path = metadata.get('gsimlt_path')
-        self.sa_period = metadata.get('sa_period')
-        self.sa_damping = metadata.get('sa_damping')
 
     def serialize(self, data):
         """
@@ -138,24 +151,10 @@ class HazardCurveXMLWriter(object):
             hazard_curves = etree.SubElement(root, 'hazardCurves')
 
             # set metadata attributes
-            hazard_curves.set('IMT', str(self.imt))
-            hazard_curves.set('investigationTime',
-                              str(self.investigation_time))
-            if self.statistics is not None:
-                hazard_curves.set('statistics', self.statistics)
-            if self.quantile_value is not None:
-                hazard_curves.set('quantileValue', str(self.quantile_value))
-            if self.smlt_path is not None:
-                hazard_curves.set(SM_TREE_PATH, self.smlt_path)
-            if self.gsimlt_path is not None:
-                hazard_curves.set(GSIM_TREE_PATH, self.gsimlt_path)
-            if self.sa_period is not None:
-                hazard_curves.set('saPeriod', str(self.sa_period))
-            if self.sa_damping is not None:
-                hazard_curves.set('saDamping', str(self.sa_damping))
+            _set_optional_metadata(hazard_curves, self.metadata)
 
             imls_elem = etree.SubElement(hazard_curves, 'IMLs')
-            imls_elem.text = ' '.join([str(x) for x in self.imls])
+            imls_elem.text = ' '.join([str(x) for x in self.metadata['imls']])
 
             for hc in data:
                 hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
@@ -421,16 +420,17 @@ class HazardMapXMLWriter(object):
     """
     :param path:
         File path (including filename) for XML results to be saved to.
-    :param float investigation_time:
-        Investigation time (in years) defined in the calculation which produced
-        these results.
-    :param str imt:
-        Intensity measure type used to compute these hazard curves.
-    :param poe:
-        The Probability of Exceedance level for which this hazard map was
-        produced.
     :param metadata:
-        A combination of the following keyword arguments:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these hazard curves.
+        * poe: The Probability of Exceedance level for which this hazard map
+          was produced.
+
+        The following are more or less optional (combinational rules noted
+        below where applicable):
 
         * statistics: 'mean' or 'quantile'
         * quantile_value: Only required if statistics = 'quantile'.
@@ -442,21 +442,10 @@ class HazardMapXMLWriter(object):
         * sa_damping: Only used with imt = 'SA'.
     """
 
-    def __init__(self, path, investigation_time, imt, poe, **metadata):
+    def __init__(self, path, **metadata):
         self.path = path
-        self.investigation_time = investigation_time
-        self.imt = imt
-        self.poe = poe
-
-        metadata['imt'] = imt
+        self.metadata = metadata
         _validate_hazard_metadata(metadata)
-
-        self.statistics = metadata.get('statistics')
-        self.quantile_value = metadata.get('quantile_value')
-        self.smlt_path = metadata.get('smlt_path')
-        self.gsimlt_path = metadata.get('gsimlt_path')
-        self.sa_period = metadata.get('sa_period')
-        self.sa_damping = metadata.get('sa_damping')
 
     def serialize(self, data):
         """
@@ -473,23 +462,7 @@ class HazardMapXMLWriter(object):
             hazard_map = etree.SubElement(root, 'hazardMap')
 
             # set metadata attributes
-            hazard_map.set('IMT', str(self.imt))
-            hazard_map.set('investigationTime',
-                           str(self.investigation_time))
-            hazard_map.set('poE', str(self.poe))
-
-            if self.statistics is not None:
-                hazard_map.set('statistics', self.statistics)
-            if self.quantile_value is not None:
-                hazard_map.set('quantileValue', str(self.quantile_value))
-            if self.smlt_path is not None:
-                hazard_map.set(SM_TREE_PATH, self.smlt_path)
-            if self.gsimlt_path is not None:
-                hazard_map.set(GSIM_TREE_PATH, self.gsimlt_path)
-            if self.sa_period is not None:
-                hazard_map.set('saPeriod', str(self.sa_period))
-            if self.sa_damping is not None:
-                hazard_map.set('saDamping', str(self.sa_damping))
+            _set_optional_metadata(hazard_map, self.metadata)
 
             for lon, lat, iml in data:
                 node = etree.SubElement(hazard_map, 'node')
