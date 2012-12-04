@@ -36,7 +36,6 @@ import numpy
 
 from django.db import connection
 from django.contrib.gis.db import models as djm
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
 from shapely import wkt
@@ -173,58 +172,6 @@ def per_asset_value(exd):
         elif exd.area_type == "per_asset":
             return exd.cost * exd.area * exd.number_of_units
     raise ValueError("Invalid input: '%s'" % str(exd))
-
-
-def model_equals(model_a, model_b, ignore=None):
-    """Compare two Django model objects for equality. The two objects are
-    considered equal if the values of the all of the fields of both models are
-    equal.
-
-    If you want to ignore some attributes (such as `id`) and compare the rest
-    of the attributes, you can specify a list or tuple of attributes to ignore.
-
-    :param model_a:
-        A :class:`django.db.models.Model` instance.
-    :param model_b:
-        A :class:`django.db.models.Model` instance.
-    :param ignore:
-        Optional. A list or tuple of attribute names (as strings) to ignore in
-        the comparison. For example::
-        ('id', 'last_updated')
-
-    :returns:
-        `True` if the contents each model object are equal, taking into account
-        any ignores.
-    """
-    if not model_a.__class__ == model_b.__class__:
-        # Not the same class type; these are definitely not equal.
-        return False
-
-    # Now get each field name and compare the attributes in both objects.
-    for field_name in model_a.__dict__.keys():
-        # Ignore _state; this is an ever-present attribute of the model
-        # __dict__ which we don't care about. It doesn't affect our equality
-        # comparison.
-        if field_name == '_state':
-            continue
-
-        # Make sure we ignore the attributes that were specified.
-        if ignore is not None and field_name in ignore:
-            continue
-
-        a_val = getattr(model_a, field_name)
-        b_val = getattr(model_b, field_name)
-
-        # If the attribute is a geometry object,
-        # use the GEOSGeometry.equals method to compare:
-        if isinstance(a_val, GEOSGeometry):
-            if not a_val.equals(b_val):
-                return False
-        else:
-            if not a_val == b_val:
-                return False
-
-    return True
 
 
 ## Tables in the 'admin' schema.
@@ -1053,7 +1000,7 @@ class RiskCalculation(djm.Model):
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
-        elif input_type == "vulnerability":
+        elif input_type in ["vulnerability", "vulnerability_retrofitted"]:
             return exposure_input.vulnerabilitymodel
         else:
             raise RuntimeError("Unknown model")
