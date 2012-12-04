@@ -45,14 +45,12 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
     logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
                    % (job_id, lt_rlz_id))
 
-    result = compute_hazard_curves(job_id, src_ids, lt_rlz_id)
+    compute_hazard_curves(job_id, src_ids, lt_rlz_id)
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
     haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
-
-    return result
 
 
 # Silencing 'Too many local variables'
