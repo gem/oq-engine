@@ -198,7 +198,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         vulnerability_model = {"RC": function}
 
         asset_output = api.probabilistic_event_based(
-            vulnerability_model, 10, 37, "perfect")(asset, hazard)
+            vulnerability_model, 37, "perfect")(asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -236,13 +236,8 @@ class InsuredLossesTestCase(unittest.TestCase):
 class InsuredCurvesTestCase(unittest.TestCase):
 
     def test_insured_curves_calculator(self):
-        hazard = {"IMLs": [0.11, 0.12, 0.13]}
+        hazard = {"IMLs": [0.11, 0.12, 0.13], 'TSES': 10, 'TimeSpan': 50}
         asset = input.Asset("a1", "RC", 1.0, None)
-
-        function = vulnerability_function.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
-
-        vulnerability_model = {"RC": function}
 
         asset_output = utils.new(
             output.ProbabilisticEventBasedOutput,
@@ -251,15 +246,15 @@ class InsuredCurvesTestCase(unittest.TestCase):
         insured_losses_calculator = mock.Mock(return_value=asset_output)
 
         with mock.patch(
-            "risklib.event_based.compute_loss_ratio_curve") as stub:
+            "risklib.event_based._loss_curve") as stub:
 
             insured_loss_ratio_curve = curve.Curve(
                 [(0.5, 1.0), (0.5, 1.0), (0.5, 1.0)])
 
             stub.return_value = insured_loss_ratio_curve
 
-            asset_output = api.insured_curves(vulnerability_model, 10, 37,
-                "perfect", insured_losses_calculator)(asset, hazard)
+            asset_output = api.insured_curves(
+                insured_losses_calculator)(asset, hazard)
 
             insured_losses_calculator.assert_called_with(asset, hazard)
 

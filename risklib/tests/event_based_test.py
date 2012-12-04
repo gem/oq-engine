@@ -18,13 +18,10 @@ import numpy
 import mock
 import unittest
 
-from risklib.models import input
-from risklib.curve import Curve, EMPTY_CURVE
+from risklib.models import input as input_models
+from risklib.curve import EMPTY_CURVE
 from risklib.vulnerability_function import VulnerabilityFunction
-from risklib.event_based import (_compute_loss_ratios,
-    _compute_loss_ratios_range, _compute_cumulative_histogram,
-    _compute_rates_of_exceedance, _compute_probs_of_exceedance,
-    compute_loss_ratio_curve, EpsilonProvider, PERFECTLY_CORRELATED)
+from risklib import event_based
 
 
 GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -74,7 +71,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.0] * 8, "LN"
         )
 
-        self.cum_histogram = numpy.array([
+        self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
             4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1,
         ])
@@ -137,11 +134,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_function_produces_an_empty_set(self):
-        data = _compute_loss_ratios(EMPTY_CURVE, GMF, None)
+        data = event_based._compute_loss_ratios(EMPTY_CURVE, GMF, None)
         self.assertEqual(0, data.size)
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        data = _compute_loss_ratios(
+        data = event_based._compute_loss_ratios(
             self.vulnerability_function1, {"IMLs": ()}, None)
 
         self.assertEqual(0, data.size)
@@ -176,7 +173,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
             eps.side_effect = fake_eps
-            ratios = _compute_loss_ratios(
+            ratios = event_based._compute_loss_ratios(
                 vulnerability_function, gmf, expected_asset)
             self.assertTrue(numpy.allclose(expected_loss_ratios,
                                            ratios, atol=0.0, rtol=0.01))
@@ -211,9 +208,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                     numpy.array([0.0, 0.3176, 0.4049, 0.0902,
                                  0.2793, 0.0636, 0.0932, 0.2472,
                                  0.0, 0.3020]),
-                                 _compute_loss_ratios(
-                                     vuln_function, gmfs,
-                                     expected_asset), atol=0.0, rtol=0.01))
+                    event_based._compute_loss_ratios(
+                                    vuln_function, gmfs,
+                                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -245,7 +242,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 numpy.allclose(
                     numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                                  0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                    _compute_loss_ratios(
+                    event_based._compute_loss_ratios(
                         vuln_function, gmfs, expected_asset),
                     atol=0.0, rtol=0.01))
 
@@ -265,12 +262,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
 
         # max IML in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.700, 0.700]),
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 {"IMLs": (0.525, 0.530)}, None, None)))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -283,225 +280,112 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
 
         # manually computed values by Vitor Silva
-        expected_loss_ratios = numpy.array([0.0605584000000000,
-                                            0.273100266666667, 0.0958560000000000, 0.0184384000000000,
-                                            0.270366933333333, 0.0,
-                                            0.0252480000000000, 0.0795669333333333,
-                                            0.0529024000000000, 0.0,
-                                            0.0154928000000000, 0.00222080000000000,
-                                            0.0109232000000000, 0.0,
-                                            0.0, 0.0, 0.0175088000000000, 0.0230517333333333,
-                                            0.00300480000000000,
-                                            0.0, 0.0475973333333333, 0.0, 0.00794400000000000,
-                                            0.00213120000000000, 0.0, 0.0172848000000000,
-                                            0.00908640000000000,
-                                            0.0365850666666667, 0.0, 0.0, 0.0238096000000000,
-                                            0.0, 0.0, 0.0,
-                                            0.0, 0.00782080000000000, 0.0115952000000000,
-                                            0.0, 0.0, 0.0,
-                                            0.0, 0.0619504000000000, 0.0, 0.0118976000000000,
-                                            0.0329968000000000,
-                                            0.0, 0.00245600000000000, 0.0, 0.0, 0.0,
-                                            0.0, 0.0114608000000000,
-                                            0.00217600000000000, 0.0131856000000000,
-                                            0.0, 0.0, 0.186080000000000,
-                                            0.0, 0.00413600000000000, 0.0196480000000000,
-                                            0.104992000000000, 0.0,
-                                            0.0, 0.00498720000000000, 0.0, 0.0, 0.0,
-                                            0.00612960000000000, 0.0,
-                                            0.0450453333333333, 0.0143728000000000,
-                                            0.0, 0.00546880000000000,
-                                            0.0, 0.0, 0.0, 0.00838080000000000,
-                                            0.0, 0.00201920000000000, 0.0,
-                                            0.0112816000000000, 0.0110128000000000,
-                                            0.106928000000000, 0.0,
-                                            0.0, 0.0113376000000000, 0.0, 0.0118080000000000, 0.0,
-                                            0.427215466666667, 0.00366560000000000,
-                                            0.0, 0.161776000000000,
-                                            0.0212384000000000, 0.0107216000000000,
-                                            0.0, 0.00392320000000000,
-                                            0.0, 0.0697610666666667, 0.0, 0.00906400000000000, 0.0, 0.0,
-                                            0.0455712000000000, 0.0,
-                                            0.00508800000000000, 0.00278080000000000,
-                                            0.0136896000000000, 0.0, 0.0, 0.0118752000000000, 0.0,
-                                            0.0925280000000000, 0.0458960000000000, 0.00676800000000000,
-                                            0.0, 0.0, 0.00438240000000000, 0.0, 0.0232218666666667, 0.0,
-                                            0.00530080000000000, 0.0, 0.0, 0.0, 0.0, 0.00953440000000000,
-                                            0.0, 0.0, 0.0268101333333333, 0.0369098666666667, 0.0,
-                                            0.00125760000000000, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                            0.290899733333333, 0.0, 0.0, 0.0, 0.0, 0.0348064000000000,
-                                            0.0279392000000000, 0.00296000000000000, 0.0171504000000000,
-                                            0.0147760000000000, 0.0,
-                                            0.00870560000000000, 0.00627520000000000,
-                                            0.0, 0.00522240000000000, 0.00293760000000000, 0.0, 0.0, 0.0,
-                                            0.0259749333333333, 0.0101504000000000,
-                                            0.00326240000000000, 0.0,
-                                            0.00804480000000000, 0.0, 0.0216528000000000, 0.0, 0.0, 0.0,
-                                            0.0578208000000000, 0.0939840000000000,
-                                            0.0, 0.0345898666666667,
-                                            0.0106544000000000, 0.00313920000000000,
-                                            0.0, 0.0, 0.00164960000000000,
-                                            0.0238405333333333, 0.0,
-                                            0.0238714666666667, 0.0189648000000000,
-                                            0.0162320000000000, 0.0, 0.0,
-                                            0.0293466666666667, 0.0142608000000000,
-                                            0.0, 0.00179520000000000,
-                                            0.0119984000000000, 0.0, 0.0, 0.0, 0.0,
-                                            0.0501648000000000, 0.00209760000000000, 0.00503200000000000,
-                                            0.00150400000000000, 0.0, 0.146192000000000,
-                                            0.0, 0.00325120000000000,
-                                            0.0, 0.0, 0.0344970666666667, 0.0, 0.0, 0.00879520000000000,
-                                            0.0146976000000000, 0.00306080000000000,
-                                            0.0, 0.0, 0.00158240000000000,
-                                            0.0810400000000000, 0.0,
-                                            0.00307200000000000, 0.0199728000000000])
+        expected_loss_ratios = numpy.array([
+            0.0605584000000000,
+            0.273100266666667, 0.0958560000000000, 0.0184384000000000,
+            0.270366933333333, 0.0,
+            0.0252480000000000, 0.0795669333333333,
+            0.0529024000000000, 0.0,
+            0.0154928000000000, 0.00222080000000000,
+            0.0109232000000000, 0.0,
+            0.0, 0.0, 0.0175088000000000, 0.0230517333333333,
+            0.00300480000000000,
+            0.0, 0.0475973333333333, 0.0, 0.00794400000000000,
+            0.00213120000000000, 0.0, 0.0172848000000000,
+            0.00908640000000000,
+            0.0365850666666667, 0.0, 0.0, 0.0238096000000000,
+            0.0, 0.0, 0.0,
+            0.0, 0.00782080000000000, 0.0115952000000000,
+            0.0, 0.0, 0.0,
+            0.0, 0.0619504000000000, 0.0, 0.0118976000000000,
+            0.0329968000000000,
+            0.0, 0.00245600000000000, 0.0, 0.0, 0.0,
+            0.0, 0.0114608000000000,
+            0.00217600000000000, 0.0131856000000000,
+            0.0, 0.0, 0.186080000000000,
+            0.0, 0.00413600000000000, 0.0196480000000000,
+            0.104992000000000, 0.0,
+            0.0, 0.00498720000000000, 0.0, 0.0, 0.0,
+            0.00612960000000000, 0.0,
+            0.0450453333333333, 0.0143728000000000,
+            0.0, 0.00546880000000000,
+            0.0, 0.0, 0.0, 0.00838080000000000,
+            0.0, 0.00201920000000000, 0.0,
+            0.0112816000000000, 0.0110128000000000,
+            0.106928000000000, 0.0,
+            0.0, 0.0113376000000000, 0.0, 0.0118080000000000, 0.0,
+            0.427215466666667, 0.00366560000000000,
+            0.0, 0.161776000000000,
+            0.0212384000000000, 0.0107216000000000,
+            0.0, 0.00392320000000000,
+            0.0, 0.0697610666666667, 0.0, 0.00906400000000000, 0.0, 0.0,
+            0.0455712000000000, 0.0,
+            0.00508800000000000, 0.00278080000000000,
+            0.0136896000000000, 0.0, 0.0, 0.0118752000000000, 0.0,
+            0.0925280000000000, 0.0458960000000000, 0.00676800000000000,
+            0.0, 0.0, 0.00438240000000000, 0.0, 0.0232218666666667, 0.0,
+            0.00530080000000000, 0.0, 0.0, 0.0, 0.0, 0.00953440000000000,
+            0.0, 0.0, 0.0268101333333333, 0.0369098666666667, 0.0,
+            0.00125760000000000, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.290899733333333, 0.0, 0.0, 0.0, 0.0, 0.0348064000000000,
+            0.0279392000000000, 0.00296000000000000, 0.0171504000000000,
+            0.0147760000000000, 0.0,
+            0.00870560000000000, 0.00627520000000000,
+            0.0, 0.00522240000000000, 0.00293760000000000, 0.0, 0.0, 0.0,
+            0.0259749333333333, 0.0101504000000000,
+            0.00326240000000000, 0.0,
+            0.00804480000000000, 0.0, 0.0216528000000000, 0.0, 0.0, 0.0,
+            0.0578208000000000, 0.0939840000000000,
+            0.0, 0.0345898666666667,
+            0.0106544000000000, 0.00313920000000000,
+            0.0, 0.0, 0.00164960000000000,
+            0.0238405333333333, 0.0,
+            0.0238714666666667, 0.0189648000000000,
+            0.0162320000000000, 0.0, 0.0,
+            0.0293466666666667, 0.0142608000000000,
+            0.0, 0.00179520000000000,
+            0.0119984000000000, 0.0, 0.0, 0.0, 0.0,
+            0.0501648000000000, 0.00209760000000000, 0.00503200000000000,
+            0.00150400000000000, 0.0, 0.146192000000000,
+            0.0, 0.00325120000000000,
+            0.0, 0.0, 0.0344970666666667, 0.0, 0.0, 0.00879520000000000,
+            0.0146976000000000, 0.00306080000000000,
+            0.0, 0.0, 0.00158240000000000,
+            0.0810400000000000, 0.0,
+            0.00307200000000000, 0.0199728000000000])
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-            _compute_loss_ratios(self.vulnerability_function1,
+            event_based._compute_loss_ratios(self.vulnerability_function1,
                 GMF, None, None)))
 
-    def test_loss_ratios_range_generation(self):
-        loss_ratios = numpy.array([0.0, 2.0])
-        expected_range = numpy.array([0.0, 0.5, 1.0, 1.5, 2.0])
+    def test_probs_of_exceedance(self):
+        expected_poes = [
+            0.99801517, 0.92235092, 0.76412292, 0.63212056,
+            0.54057418, 0.48658288, 0.35881961, 0.32219042,
+            0.32219042, 0.28346869, 0.24253487, 0.19926260,
+            0.19926260, 0.19926260, 0.19926260, 0.19926260,
+            0.10516068, 0.05404053, 0.05404053, 0.05404053,
+            0.05404053, 0.05404053, 0.05404053, 0.05404053,
+        ]
 
-        self.assertTrue(numpy.allclose(expected_range,
-            _compute_loss_ratios_range(loss_ratios, 5),
-            atol=0.0001))
-
-    def test_builds_the_cumulative_histogram(self):
-        loss_ratios = _compute_loss_ratios(
-            self.vulnerability_function1, GMF, None, None)
-        loss_histogram_bins = 25
-
-        loss_ratios_range = _compute_loss_ratios_range(
-            loss_ratios, loss_histogram_bins)
-
-        self.assertTrue(numpy.allclose(self.cum_histogram,
-            _compute_cumulative_histogram(
-                loss_ratios, loss_ratios_range)))
-
-    def test_computes_the_rates_of_exceedance(self):
-        expected_rates = numpy.array([0.12444444, 0.05111111, 0.02888889,
-                                      0.02, 0.01555556, 0.01333333, 0.00888889, 0.00777778,
-                                      0.00777778, 0.00666667, 0.00555556, 0.00444444,
-                                      0.00444444, 0.00444444, 0.00444444, 0.00444444, 0.00222222,
-                                      0.00111111, 0.00111111, 0.00111111, 0.00111111,
-                                      0.00111111, 0.00111111, 0.00111111])
-
-        self.assertTrue(numpy.allclose(expected_rates,
-            _compute_rates_of_exceedance(
-                self.cum_histogram, GMF["TSES"]), atol=0.01))
-
-    def test_tses_is_not_supposed_to_be_zero_or_less(self):
-        self.assertRaises(ValueError, _compute_rates_of_exceedance,
-            self.cum_histogram, 0.0)
-
-        self.assertRaises(ValueError, _compute_rates_of_exceedance,
-            self.cum_histogram, -10.0)
-
-    def test_computes_probs_of_exceedance(self):
-        expected_probs = [0.99801517, 0.92235092, 0.76412292, 0.63212056,
-                          0.54057418, 0.48658288, 0.35881961, 0.32219042, 0.32219042,
-                          0.28346869, 0.24253487, 0.1992626, 0.1992626, 0.1992626,
-                          0.1992626, 0.1992626, 0.10516068, 0.05404053, 0.05404053,
-                          0.05404053, 0.05404053, 0.05404053, 0.05404053, 0.05404053]
-
-        self.assertTrue(numpy.allclose(expected_probs,
-            _compute_probs_of_exceedance(
-                _compute_rates_of_exceedance(
-                    self.cum_histogram, GMF["TSES"]),
-                GMF["TimeSpan"]), atol=0.0001))
-
-    def test_computes_the_loss_ratio_curve(self):
-        # manually computed results from V. Silva
-        expected_curve = Curve([(0.085255, 0.988891),
-                                       (0.255765, 0.82622606), (0.426275, 0.77686984),
-                                       (0.596785, 0.52763345), (0.767295, 0.39346934)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmf1,
-            None, 6))
-
-        expected_curve = Curve([(0.0935225, 0.99326205),
-                                       (0.2640675, 0.917915), (0.4346125, 0.77686984),
-                                       (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmf2,
-            None, 6))
-
-        expected_curve = Curve([(0.1047, 0.99326205),
-                                       (0.2584, 0.89460078), (0.4121, 0.63212056),
-                                       (0.5658, 0.39346934), (0.7195, 0.39346934)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmf3,
-            None, 6))
-
-        expected_curve = Curve([(0.09012, 0.99326205),
-                                       (0.25551, 0.93607214), (0.4209, 0.77686984),
-                                       (0.58629, 0.52763345), (0.75168, 0.39346934)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmf4,
-            None, 6))
-
-        expected_curve = Curve([(0.08089, 0.99326205),
-                                       (0.23872, 0.95021293), (0.39655, 0.7134952),
-                                       (0.55438, 0.52763345), (0.71221, 0.39346934)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmfs_5,
-            None, 6))
-
-        expected_curve = Curve([(0.0717025, 0.99326205),
-                                       (0.2128575, 0.917915), (0.3540125, 0.82622606),
-                                       (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function2, self.gmf6,
-            None, 6))
-
-    def test_with_not_earthquakes_we_have_an_empty_curve(self):
-        gmfs = dict(GMF)
-        gmfs["IMLs"] = ()
-
-        curve = compute_loss_ratio_curve(
-            self.vulnerability_function1, gmfs, None, None, 25)
-
-        self.assertEqual(EMPTY_CURVE, curve)
-
-    def test_with_no_ground_motion_the_curve_is_a_single_point(self):
-        gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                "TSES": 900, "TimeSpan": 50}
-
-        # sounds like a curve, but it's a point :-)
-        expected_curve = Curve([
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
-
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-            self.vulnerability_function1, gmfs, None, 25))
+        numpy.testing.assert_allclose(expected_poes,
+            event_based._probs_of_exceedance(
+                self.exceeding_times / float(GMF["TSES"]), GMF["TimeSpan"]),
+                atol=0.001)
 
 
 class EpsilonProviderTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.epsilon_provider1 = EpsilonProvider()
-        self.epsilon_provider2 = EpsilonProvider(
-            correlation_type=PERFECTLY_CORRELATED,
+        self.epsilon_provider1 = event_based.EpsilonProvider()
+        self.epsilon_provider2 = event_based.EpsilonProvider(
+            correlation_type=event_based.PERFECTLY_CORRELATED,
             taxonomies=["a", "b"])
         self.assets = [
-            input.Asset(None, "a", None, None),
-            input.Asset(None, "b", None, None),
-            input.Asset(None, "a", None, None),
+            input_models.Asset(None, "a", None, None),
+            input_models.Asset(None, "b", None, None),
+            input_models.Asset(None, "a", None, None),
         ]
 
     def test_uncorrelated(self):
