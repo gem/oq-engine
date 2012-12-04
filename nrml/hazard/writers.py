@@ -25,10 +25,10 @@ SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
 
-def _validate_hc_hm_metadata(md):
+def _validate_hazard_metadata(md):
     """
-    Validate metadata `dict`, which is same for both hazard curves and hazard
-    maps.
+    Validate metadata `dict` of attributes, which are more or less the same for
+    hazard curves, hazard maps, and disaggregation histograms.
 
     :param dict md:
         `dict` which can contain the following keys:
@@ -109,7 +109,7 @@ class HazardCurveXMLWriter(object):
         self.imls = imls
 
         metadata['imt'] = imt
-        _validate_hc_hm_metadata(metadata)
+        _validate_hazard_metadata(metadata)
 
         self.statistics = metadata.get('statistics')
         self.quantile_value = metadata.get('quantile_value')
@@ -449,7 +449,7 @@ class HazardMapXMLWriter(object):
         self.poe = poe
 
         metadata['imt'] = imt
-        _validate_hc_hm_metadata(metadata)
+        _validate_hazard_metadata(metadata)
 
         self.statistics = metadata.get('statistics')
         self.quantile_value = metadata.get('quantile_value')
