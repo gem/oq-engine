@@ -286,15 +286,15 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a `:class:openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the `:class:openquake.db.models.LossCurve`
+    Stores a :class:`openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
     output container is identified by `loss_curve_id`.
 
     :param int loss_curve_id: the ID of the output container
 
     :param asset_output: an instance of
-    `:class:risklib.models.output.ClassicalOutput` or of
-    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     returned by risklib
     """
     models.LossCurveData.objects.create(
@@ -308,17 +308,17 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 def write_loss_map(loss_map_ids, asset_output):
     """
-    Create `:class:openquake.db.models.LossMapData` objects where the
+    Create :class:`openquake.db.models.LossMapData` objects where the
     data are got by `asset_output` and the
-    `:class:openquake.db.models.LossMap` output containers are got by
+    :class:`openquake.db.models.LossMap` output containers are got by
     `loss_map_ids`.
 
     :param dict loss_map_ids: A dictionary storing that links poe to
-    `:class:openquake.db.models.LossMap` output container
+    :class:`openquake.db.models.LossMap` output container
 
     :param asset_output: an instance of
-    `:class:risklib.models.output.ClassicalOutput` or of
-    `:class:risklib.models.output.ProbabilisticEventBasedOutput`
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     """
 
     for poe, loss in asset_output.conditional_losses.items():
@@ -332,15 +332,15 @@ def write_loss_map(loss_map_ids, asset_output):
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
-    Create a new `:class:openquake.db.models.BCRDistributionData` from
+    Create a new :class:`openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
     `bcr_distribution_id`.
 
     :param int bcr_distribution_id: the ID of
-    `:class:openquake.db.models.BCRDistribution` instance that holds
+    :class:`openquake.db.models.BCRDistribution` instance that holds
     the BCR map
     :param asset_output: an instance of
-    `:class:risklib.models.output.BCROutput` that holds BCR data for a
+    :class:`risklib.models.output.BCROutput` that holds BCR data for a
     specific asset
     """
     models.BCRDistributionData.objects.create(
@@ -354,13 +354,13 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
 
 def store_risk_model(rc, input_type):
     """
-    Parse and store `:class:openquake.db.models.VulnerabilityModel` and
-    `:class:openquake.db.models.VulnerabilityFunction`.
+    Parse and store :class:`openquake.db.models.VulnerabilityModel` and
+    :class:`openquake.db.models.VulnerabilityFunction`.
 
     :param str input_type: the input type of the
-    `:class:openquake.db.models.Input` object which provides the risk models
+    :class:`openquake.db.models.Input` object which provides the risk models
 
-    :param rc: the current `:class:openquake.db.models.RiskCalculation`
+    :param rc: the current :class:`openquake.db.models.RiskCalculation`
     instance
     """
     [vulnerability_input] = models.inputs4rcalc(
