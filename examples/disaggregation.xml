@@ -6,7 +6,7 @@
                     investigationTime="50.0"
                     sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7"
                     lon="1.0" lat="0.1"
-                    magBinEdges="3 4 5" distBinEdges="0 10 20" epsBinEdges="-3 3">
+                    magBinEdges="3, 4, 5" distBinEdges="0, 10, 20" epsBinEdges="-3, 3">
 
         <disaggMatrix type="Mag" dims="2" poE="0.1" iml="0.5">
             <prob index="0" value="0.57" />
