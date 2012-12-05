@@ -137,8 +137,6 @@ class HazardCurveXMLWriter(object):
           produced these curves. Only required for non-statisical curves.
         * sa_period: Only used with imt = 'SA'.
         * sa_damping: Only used with imt = 'SA'.
-
-
     """
 
     def __init__(self, path, **metadata):
