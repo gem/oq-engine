@@ -1002,7 +1002,7 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskValidationForm(
+        form = validation.EventBasedRiskCalculationForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1016,7 +1016,7 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskValidationForm(
+        form = validation.EventBasedRiskCalculationForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1030,6 +1030,6 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskValidationForm(
+        form = validation.EventBasedRiskCalculationForm(
             instance=rc, files=None)
-        self.assertTrue(form.is_valid(), dict(form.errors))
+        self.assertFalse(form.is_valid())

@@ -417,7 +417,7 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
 
 
 class EventBasedRiskCalculationForm(BaseOQModelForm):
-    calc_model = 'event_based'
+    calc_mode = 'event_based'
 
     class Meta:
         fields = (
@@ -820,8 +820,8 @@ def interest_rate_is_valid(mdl):
 
 
 def loss_curve_resolution_is_valid(mdl):
-    if mdl.calc_mode == 'event_based':
+    if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
             mdl.loss_curve_resolution < 1):
-            return False, ['Loss Curve Resolution must be > 1']
+            return False, ['Loss Curve Resolution must be > 1.']
     return True, []
