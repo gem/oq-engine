@@ -53,7 +53,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     :param int hazard_id
       ID of the Hazard Output the risk calculation is based on
     :param bcr_distribution_id
-      ID of the `:class:openquake.db.models.BCRDistribution` output
+      ID of the :class:`openquake.db.models.BCRDistribution` output
       container used to store the computed bcr distribution
     :param int lrem_steps_per_interval
       Steps per interval used to compute the Loss Ratio Exceedance matrix
@@ -108,8 +108,8 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     def create_outputs(self):
         """
         Create BCR Distribution output container, i.e. a
-        `:class:openquake.db.models.BCRDistribution` instance and its
-        `:class:openquake.db.models.Output` container.
+        :class:`openquake.db.models.BCRDistribution` instance and its
+        :class:`openquake.db.models.Output` container.
 
         :returns: A dictionary where the created output container is
           associated with the key bcr_distribution_id
