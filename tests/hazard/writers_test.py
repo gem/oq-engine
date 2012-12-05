@@ -102,71 +102,111 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     def test_validate_metadata_stats_and_smlt_path(self):
         # statistics + smlt path
-        metadata = dict(statistics='mean', smlt_path='foo')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            statistics='mean', smlt_path='foo'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_stats_and_gsimlt_path(self):
         # statistics + gsimlt path
-        metadata = dict(statistics='mean', gsimlt_path='foo')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            statistics='mean', gsimlt_path='foo'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_only_smlt_path(self):
         # only 1 logic tree path specified
-        metadata = dict(smlt_path='foo')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            smlt_path='foo'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_only_gsimlt_path(self):
         # only 1 logic tree path specified
-        metadata = dict(gsimlt_path='foo')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            gsimlt_path='foo'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_invalid_stats(self):
         # invalid stats type
-        metadata = dict(statistics='invalid')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            statistics='invalid'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_quantile_stats_with_no_value(self):
         # quantile statistics with no quantile value
-        metadata = dict(statistics='quantile')
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            statistics='quantile'
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_sa_with_no_period(self):
         # damping but no sa period
-        metadata = dict(statistics='mean', sa_damping=5.0)
+        metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
+            statistics='mean', sa_damping=5.0
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'SA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_sa_with_no_damping(self):
         # sa period but no damping
-        metadata = dict(statistics='mean', sa_period=5.0)
+        metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
+            statistics='mean', sa_period=5.0
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'SA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_mean_stats_with_quantile_value(self):
-        metadata = dict(statistics='mean', quantile_value=5.0)
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            statistics='mean', quantile_value=5.0
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
     def test_validate_metadata_no_stats_with_quantile_value(self):
-        metadata = dict(quantile_value=5.0)
+        metadata = dict(
+            investigation_time=self.TIME, imt='PGA', imls=self.IMLS,
+            quantile_value=5.0
+        )
         self.assertRaises(
             ValueError, writers.HazardCurveXMLWriter,
-            self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
+            self.FAKE_PATH, **metadata
+        )
 
 
 class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
@@ -194,7 +234,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="SA" investigationTime="50.0" sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" saPeriod="0.025" saDamping="5.0">
+  <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0">
     <IMLs>0.005 0.007 0.0098</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -219,10 +259,11 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
 """)
 
         metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
             sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-            gsimlt_path='b1_b4_b5')
-        writer = writers.HazardCurveXMLWriter(
-            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+            gsimlt_path='b1_b4_b5'
+        )
+        writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
@@ -232,7 +273,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="SA" investigationTime="50.0" statistics="quantile" quantileValue="0.15" saPeriod="0.025" saDamping="5.0">
+  <hazardCurves statistics="quantile" quantileValue="0.15" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0">
     <IMLs>0.005 0.007 0.0098</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -257,11 +298,11 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
 """)
 
         metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
             sa_period=0.025, sa_damping=5.0, statistics='quantile',
             quantile_value=0.15
         )
-        writer = writers.HazardCurveXMLWriter(
-            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+        writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
@@ -649,7 +690,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardMap IMT="SA" investigationTime="50.0" poE="0.1" sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" saPeriod="0.025" saDamping="5.0">
+  <hazardMap sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0" poE="0.1">
     <node lon="-1.0" lat="1.0" iml="0.01"/>
     <node lon="1.0" lat="1.0" iml="0.02"/>
     <node lon="1.0" lat="-1.0" iml="0.03"/>
@@ -659,10 +700,9 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 """)
 
         metadata = dict(
-            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-            gsimlt_path='b1_b4_b5')
-        writer = writers.HazardMapXMLWriter(
-            self.path, 50.0, 'SA', 0.1, **metadata)
+            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
+            sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5')
+        writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
@@ -671,7 +711,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardMap IMT="SA" investigationTime="50.0" poE="0.1" statistics="quantile" quantileValue="0.85" saPeriod="0.025" saDamping="5.0">
+  <hazardMap statistics="quantile" quantileValue="0.85" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0" poE="0.1">
     <node lon="-1.0" lat="1.0" iml="0.01"/>
     <node lon="1.0" lat="1.0" iml="0.02"/>
     <node lon="1.0" lat="-1.0" iml="0.03"/>
@@ -682,11 +722,10 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 
         _, self.path = tempfile.mkstemp()
         metadata = dict(
-            sa_period=0.025, sa_damping=5.0, statistics='quantile',
-            quantile_value=0.85
+            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
+            sa_damping=5.0, statistics='quantile', quantile_value=0.85
         )
-        writer = writers.HazardMapXMLWriter(
-            self.path, 50.0, 'SA', 0.1, **metadata)
+        writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
