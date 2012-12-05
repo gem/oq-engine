@@ -32,6 +32,7 @@
         <xs:attribute name="lonBinEdges" type="DoubleList" use="optional" />
         <xs:attribute name="latBinEdges" type="DoubleList" use="optional" />
         <xs:attribute name="epsBinEdges" type="DoubleList" use="optional" />
+        <xs:attribute name="tectonicRegionTypes" type="xs:string" use="optional" />
     </xs:complexType>
 
     <xs:complexType name="DisaggMatrix">
