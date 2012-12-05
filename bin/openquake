@@ -226,6 +226,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
                 print 'Job %s failed' % completed_job.id
+                sys.exit(1)
     except IOError as e:
         print str(e)
     except Exception as e:
