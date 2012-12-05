@@ -898,6 +898,65 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
 
+class ScenarioCalculationFormTestCase(unittest.TestCase):
+
+    def test_valid_scenario_calc(self):
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='scenario',
+            random_seed=37,
+            rupture_mesh_spacing=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            gsim='BooreAtkinson2008',
+            ground_motion_correlation_model = 'JB2009',
+            number_of_ground_motion_fields=10,
+        )
+        form = validation.ScenarioHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_scenario_calc(self):
+        expected_errors = {
+
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='scenario',
+            random_seed=37,
+            rupture_mesh_spacing=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            gsim='BooreAtkinson208',
+            ground_motion_correlation_model = 'JB2009',
+            number_of_ground_motion_fields=-10,
+        )
+        form = validation.ScenarioHazardCalculationForm(
+            instance=hc, files=None
+        )
+
+        # import pdb; pdb.set_trace()
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+
 class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
