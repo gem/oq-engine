@@ -413,21 +413,9 @@ CREATE TABLE uiapi.risk_calculation (
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
 
     -- event-based parameters:
-    loss_curve_resolution INTEGER
+    loss_curve_resolution INTEGER NOT NULL DEFAULT 50
         CONSTRAINT loss_curve_resolution_is_set
-        CHECK (
-            ((calculation_mode in ('event_based', 'event_based_bcr'))
-            AND
-            (
-                 (loss_curve_resolution is NOT NULL)
-                 AND (loss_curve_resolution >= 1)
-            ))
-            OR
-            (
-                (calculation_mode NOT IN ('event_based', 'event_based_bcr')
-                 AND (loss_curve_resolution IS NULL))
-            )),
-
+        CHECK  (loss_curve_resolution >= 1),
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
     asset_life_expectancy float
