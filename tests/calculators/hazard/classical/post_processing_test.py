@@ -595,7 +595,8 @@ class Bug1086719TestCase(unittest.TestCase):
     Here's a brief summary of the bug:
 
     With certain calculation parameters, hazard map creation was causing
-    calculations to crash. The issue was isolated to an uncomitted transaction.
+    calculations to crash. The issue was isolated to an uncommitted
+    transaction.
     """
 
     @attr('slow')
