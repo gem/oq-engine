@@ -917,13 +917,11 @@ class RiskCalculation(djm.Model):
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
+        (u'event_based', u'Probabilistic Event-Based'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        # Benefit-cost ratio calculator based on Event Based risk calc
         # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
@@ -944,7 +942,7 @@ class RiskCalculation(djm.Model):
     # Event-Based parameters:
     #########################
     loss_curve_resolution = djm.IntegerField(
-        null=True, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
+        null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
