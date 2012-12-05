@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
     <exposureModel gml:id="ep">
         <exposureList gml:id="Messina" stcoType="aggregated" stcoUnit="USD" assetCategory="buildings">
             <gml:description>Collection of existing building in the region of Messina, Italy

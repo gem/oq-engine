@@ -96,11 +96,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         The specific calculation parameters passed as kwargs to the
         celery task function
         """
-        rc = self.job.risk_calculation
 
         return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'conditional_loss_poes': rc.conditional_loss_poes
+            'lrem_steps_per_interval': self.rc.lrem_steps_per_interval,
+            'conditional_loss_poes': self.rc.conditional_loss_poes
             }
 
     @property
@@ -109,14 +108,18 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         The ID of the :class:`openquake.db.models.HazardCurve` object that
         stores the hazard curves used by the risk calculation
         """
-        return self.job.risk_calculation.hazard_output.hazardcurve.id
+        if not self.rc.hazard_output.is_hazard_curve():
+            raise RuntimeError(
+                "The provided hazard output is not an hazard curve")
+
+        return self.rc.hazard_output.hazardcurve.id
 
     def create_outputs(self):
         """
         Add loss map ids when conditional loss poes are specified
         """
         outputs = super(ClassicalRiskCalculator, self).create_outputs()
-        poes = self.job.risk_calculation.conditional_loss_poes or []
+        poes = self.rc.conditional_loss_poes or []
 
         def create_loss_map(poe):
             """
