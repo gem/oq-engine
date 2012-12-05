@@ -25,8 +25,8 @@ from collections import OrderedDict
 SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
-#: Optional keywords (args) to element attributes map
-_OPT_KW_TO_ATTR_MAP = OrderedDict([
+#: Maps XML writer constructor keywords to XML attribute names
+_ATTR_MAP = OrderedDict([
     ('statistics', 'statistics'),
     ('quantile_value', 'quantileValue'),
     ('smlt_path', 'sourceModelTreePath'),
@@ -91,11 +91,12 @@ def _validate_hazard_metadata(md):
             raise ValueError('`sa_damping` is required for IMT == `SA`')
 
 
-def _set_optional_metadata(element, metadata):
-    for kw, attr in _OPT_KW_TO_ATTR_MAP.iteritems():
+def _set_metadata(element, metadata, attr_map, transform=str):
+    # TODO: add docstring
+    for kw, attr in attr_map.iteritems():
         value = metadata.get(kw)
         if value is not None:
-            element.set(attr, str(value))
+            element.set(attr, transform(value))
 
 
 class HazardCurveXMLWriter(object):
@@ -150,8 +151,7 @@ class HazardCurveXMLWriter(object):
 
             hazard_curves = etree.SubElement(root, 'hazardCurves')
 
-            # set metadata attributes
-            _set_optional_metadata(hazard_curves, self.metadata)
+            _set_metadata(hazard_curves, self.metadata, _ATTR_MAP)
 
             imls_elem = etree.SubElement(hazard_curves, 'IMLs')
             imls_elem.text = ' '.join([str(x) for x in self.metadata['imls']])
@@ -461,8 +461,7 @@ class HazardMapXMLWriter(object):
 
             hazard_map = etree.SubElement(root, 'hazardMap')
 
-            # set metadata attributes
-            _set_optional_metadata(hazard_map, self.metadata)
+            _set_metadata(hazard_map, self.metadata, _ATTR_MAP)
 
             for lon, lat, iml in data:
                 node = etree.SubElement(hazard_map, 'node')
