@@ -17,10 +17,12 @@
 Classes for serializing various NRML XML artifacts.
 """
 
-import nrml
-
 from lxml import etree
 from collections import OrderedDict
+
+import nrml
+from nrml import utils
+
 
 SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
@@ -480,6 +482,126 @@ class HazardMapXMLWriter(object):
                 node.set('lon', str(lon))
                 node.set('lat', str(lat))
                 node.set('iml', str(iml))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
+
+
+class DisaggXMLWriter(object):
+    """
+    :param path:
+        File path (including filename) for XML results to be saved to.
+    :param metadata:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these matrices.
+        * lon, lat: Longitude and latitude associated with these results.
+
+        The following attributes define dimension context for the result
+        matrices:
+
+        * mag_bin_edges: List of magnitude bin edges (floats)
+        * dist_bin_edges: List of distance bin edges (floats)
+        * lon_bin_edges: List of longitude bin edges (floats)
+        * lat_bin_edges: List of latitude bin edges (floats)
+        * eps_bin_edges: List of epsilon bin edges (floats)
+        * tectonic_region_types: List of tectonic region types (strings)
+
+        The following are more or less optional (combinational rules noted
+        below where applicable):
+
+        * statistics: 'mean' or 'quantile'
+        * quantile_value: Only required if statistics = 'quantile'.
+        * smlt_path: String representing the logic tree path which produced
+          these results. Only required for non-statistical results.
+        * gsimlt_path: String represeting the GSIM logic tree path which
+          produced these results. Only required for non-statistical results.
+        * sa_period: Only used with imt = 'SA'.
+        * sa_damping: Only used with imt = 'SA'.
+    """
+
+    #: Maps metadata keywords to XML attribute names for bin edge information
+    #: passed to the constructor.
+    #: The dict here is an `OrderedDict` so as to give consistent ordering of
+    #: result attributes.
+    BIN_EDGE_ATTR_MAP = OrderedDict([
+        ('mag_bin_edges', 'magBinEdges'),
+        ('dist_bin_edges', 'distBinEdges'),
+        ('lon_bin_edges', 'lonBinEdges'),
+        ('lat_bin_edges', 'latBinEdges'),
+        ('eps_bin_edges', 'epsBinEdges'),
+        ('tectonic_region_types', 'tectonicRegionTypes'),
+    ])
+
+    DIM_LABEL_TO_BIN_EDGE_MAP = dict([
+        ('Mag', 'mag_bin_edges'),
+        ('Dist', 'dist_bin_edges'),
+        ('Lon', 'lon_bin_edges'),
+        ('Lat', 'lat_bin_edges'),
+        ('Eps', 'eps_bin_edges'),
+        ('TRT', 'tectonic_region_types'),
+    ])
+
+    def __init__(self, path, **metadata):
+        self.path = path
+        self.metadata = metadata
+        _validate_hazard_metadata(self.metadata)
+
+    def serialize(self, data):
+        """
+        :param data:
+            A sequence of data where each datum has the following attributes:
+
+            * matrix: N-dimensional numpy array containing the disaggregation
+              histogram.
+            * dim_labels: A list of strings which label the dimensions of a
+              given histogram. For example, for a Magnitude-Distance-Epsilon
+              histogram, we would expect `dim_labels` to be
+              ``['Mag', 'Dist', 'Eps']``.
+            * poe: The disaggregation Probability of Exceedance level for which
+              these results were produced.
+            * iml: Intensity measure level, interpolated from the source hazard
+              curve at the given ``poe``.
+        """
+
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+
+            diss_matrices = etree.SubElement(root, 'disaggMatrices')
+
+            _set_metadata(diss_matrices, self.metadata, _ATTR_MAP)
+
+            transform = lambda val: ', '.join([str(x) for x in val])
+            _set_metadata(diss_matrices, self.metadata, self.BIN_EDGE_ATTR_MAP,
+                          transform=transform)
+
+            for result in data:
+                diss_matrix = etree.SubElement(diss_matrices, 'disaggMatrix')
+
+                # Check that we have bin edges defined for each dimension label
+                # (mag, dist, lon, lat, eps, TRT)
+                for label in result.dim_labels:
+                    bin_edge_attr = self.DIM_LABEL_TO_BIN_EDGE_MAP.get(label)
+                    assert self.metadata.get(bin_edge_attr) is not None
+
+                result_type = ','.join(result.dim_labels)
+                diss_matrix.set('type', result_type)
+
+                dims = ','.join([str(x) for x in result.matrix.shape])
+                diss_matrix.set('dims', dims)
+
+                diss_matrix.set('poE', str(result.poe))
+                diss_matrix.set('iml', str(result.iml))
+
+                for idxs, value in utils.ndenumerate(result.matrix):
+                    prob = etree.SubElement(diss_matrix, 'prob')
+
+                    index = ','.join([str(x) for x in idxs])
+                    prob.set('index', index)
+                    prob.set('value', str(value))
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
