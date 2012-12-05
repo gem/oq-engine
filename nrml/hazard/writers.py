@@ -92,7 +92,19 @@ def _validate_hazard_metadata(md):
 
 
 def _set_metadata(element, metadata, attr_map, transform=str):
-    # TODO: add docstring
+    """
+    Set metadata attributes on a given ``element``.
+
+    :param element:
+        :class:`lxml.etree._Element` instance
+    :param metadata:
+        Dictionary of metadata items containing attribute data for ``element``.
+    :param attr_map:
+        Dictionary mapping of metadata key->attribute name.
+    :param transform:
+        A function accepting and returning a single value to be applied to each
+        attribute value. Defaults to `str`.
+    """
     for kw, attr in attr_map.iteritems():
         value = metadata.get(kw)
         if value is not None:
