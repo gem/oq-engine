@@ -225,8 +225,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 print 'Calculation results:'
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
-                print 'Job %s failed' % completed_job.id
-                sys.exit(1)
+                complain_and_exit('Job %s failed' % completed_job.id,
+                                  exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
@@ -404,7 +404,8 @@ def run_risk(
                 print 'Calculation results:'
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
-                print 'Job %s failed' % completed_job.id
+                complain_and_exit('Job %s failed' % completed_job.id,
+                                  exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
