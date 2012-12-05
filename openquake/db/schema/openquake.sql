@@ -416,15 +416,15 @@ CREATE TABLE uiapi.risk_calculation (
     loss_curve_resolution INTEGER
         CONSTRAINT loss_curve_resolution_is_set
         CHECK (
-            ((calc_mode in ('event_based', 'event_based_bcr'))
+            ((calculation_mode in ('event_based', 'event_based_bcr'))
             AND
             (
-                 AND (loss_curve_resolution is NOT NULL)
+                 (loss_curve_resolution is NOT NULL)
                  AND (loss_curve_resolution >= 1)
             ))
             OR
             (
-                (calc_mode NOT IN ('event_based', 'event_based_bcr')
+                (calculation_mode NOT IN ('event_based', 'event_based_bcr')
                  AND (loss_curve_resolution IS NULL))
             )),
 
