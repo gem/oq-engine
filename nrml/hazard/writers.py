@@ -36,6 +36,8 @@ _ATTR_MAP = OrderedDict([
     ('sa_period', 'saPeriod'),
     ('sa_damping', 'saDamping'),
     ('poe', 'poE'),
+    ('lon', 'lon'),
+    ('lat', 'lat'),
 ])
 
 
