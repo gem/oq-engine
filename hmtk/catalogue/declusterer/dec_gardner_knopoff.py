@@ -11,9 +11,19 @@ from hmtk.catalogue.declusterer.base import BaseCatalogueDecluster
 from hmtk.catalogue.declusterer.utils import decimal_year, haversine
 
 class GardnerKnopoffType1(BaseCatalogueDecluster):
-    '''Gardner Knopoff algorithm'''
+    """
+    This class implements the Gardner Knopoff algorithm as described in 
+    the following paper:
+    Gardner, J. K. and Knopoff, L. (1974). Is the sequence of aftershocks 
+    in Southern California, with afterhoscks removed, poissonian?. Bull.
+    Seism. Soc. Am., 64(5): 1363-1367
+    """
     
     def _check_config(self, config):
+        """
+        Check that the configuration dictionary contains all the necessary 
+        information
+        """
         if not config.has_key('time_distance_window'):
             raise RuntimeError('Declustering configuration not complete: ' +
                                'time_distance_window missing')
