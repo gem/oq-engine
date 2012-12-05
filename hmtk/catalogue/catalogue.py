@@ -1,29 +1,34 @@
-""" Prototype of a 'Catalogue' class
+# -*- coding: utf-8 -*-
+
+""" 
+Prototype of a 'Catalogue' class
 """
 
 import numpy as np
 
 class Catalogue(object):
-    """General Catalogue Class"""
-
-    TOTAL_ATTRIBUTE_LIST = ['eventID', 'Agency', 'Identifier', 'year', 'month', 
-                        'day', 'hour', 'minute', 'second', 'timeError', 
-                        'longitude', 'latitude', 'SemiMajor90', 'SemiMinor90', 
-                        'ErrorStrike','depth','depthError','magnitude', 
-                        'sigmaMagnitude', 'magnitudeType', 'focalMechanism', 
-                        'validIndex']
+    """
+    General Catalogue Class
+    """
 
     FLOAT_ATTRIBUTE_LIST = ['second', 'timeError', 'longitude', 'latitude', 
                         'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
                         'depthError', 'magnitude', 'sigmaMagnitude']
 
-    INT_ATTRIBUTE_LIST = ['eventID','year', 'month', 'day', 'hour', 'minute']
+    INT_ATTRIBUTE_LIST = ['eventID','year', 'month', 'day', 'hour', 'minute',
+                          'flag']
 
-    STRING_ATTRIBUTE_LIST = ['Agency', 'magnitudeType']
-
+    STRING_ATTRIBUTE_LIST = ['Agency', 'magnitudeType','comment']
+    
+    TOTAL_ATTRIBUTE_LIST = list( 
+        (set(FLOAT_ATTRIBUTE_LIST).union(
+            set(INT_ATTRIBUTE_LIST))).union(
+                 set(STRING_ATTRIBUTE_LIST)))
 
     def __init__(self):
-        '''Initilise the catalogue dictionary'''
+        """
+        Initialise the catalogue dictionary
+        """
         self.data = {}
         self.processes = {'declustering': None,
                           'completeness': None,

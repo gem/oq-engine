@@ -1,0 +1,7 @@
+year,month,day,longitude,latitude,magnitude,flag,comment
+1980,1,1,0.00,0.00,7.0,0,Mainshock1
+1979,12,31,0.65,0.00,5.0,0,Smaller mainshock >> d
+1979,12,31,0.60,0.00,5.0,-1,Foreshock of M1
+1980,1,31,0.60,0.00,5.0,-1,Aftershock of M1
+1982,7,30,0.00,0.00,5.0,0,Smaller mainshock >> t
+1982,6,30,0.00,0.00,5.0,-1,Aftershock of M1

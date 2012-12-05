@@ -14,9 +14,13 @@ class BaseCatalogueDecluster(object):
     def decluster(self, catalogue, config):
         """
         Implements declustering algorithms
-        :param catalogue: Catalogue of earthquakes
-        :type catalogue: Dictionary
-        :param config: Configation parameters
+        :param catalogue: 
+            Catalogue of earthquakes
+        :type catalogue: 
+        :param config: 
+            Declustering configuration dictionary
         :type config: Dictionary
+        
+        Returns two vectors 
         """
         return

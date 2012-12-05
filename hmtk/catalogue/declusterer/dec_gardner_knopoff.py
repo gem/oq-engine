@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+
+"""
+Module :mod:`hmtk.catalogue.declusterer.dec_gardner_knopoff' defines the 
+Gardner and Knopoff declustering algorithm 
+"""
+
 import numpy as np
 
 from hmtk.catalogue.declusterer.base import BaseCatalogueDecluster
@@ -6,36 +13,53 @@ from hmtk.catalogue.declusterer.utils import decimal_year, haversine
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     '''Gardner Knopoff algorithm'''
     
+    def _check_config(self, config):
+        if not config.has_key('time_distance_window'):
+            raise RuntimeError('Declustering configuration not complete: ' +
+                               'time_distance_window missing')
+        if not config.has_key('fs_time_prop'):
+            raise RuntimeError('Declustering configuration not complete: ' +
+                               'fs_time_prop missing')
+        
     def decluster(self, catalogue, config):
         """
-        :param catalogue: Catalogue of earthquakes
+        The configuration of this declustering algorithm requires two 
+        objects:
+        - A time-distance window object (key is 'time_distance_window')
+        - A value in the interval [0,1] expressing the fraction of the 
+        time window used for aftershocks (key is 'fs_time_prop')
+        
+        :param catalogue: 
+            Catalogue of earthquakes
         :type catalogue: Dictionary
-        :param config: Configation parameters
+        :param config: 
+            Configuration parameters
         :type config: Dictionary
 
         :returns: 
           **vcl vector** indicating cluster number, 
-              **flagvector** indicating which eq events belong to a cluster
+          **flagvector** indicating which eq events belong to a cluster
         :rtype: numpy.ndarray
         """
-
-        # Get relevent parameters
-        neq = len(catalogue['magnitude'])  # Number of earthquakes
+        
+        # Check declustering configuration
+        self._check_config(config)
+        # Get relevant parameters
+        neq = len(catalogue.data['magnitude'])  # Number of earthquakes
         # Get decimal year (needed for time windows)
         year_dec = decimal_year(
-            catalogue['year'], catalogue['month'], catalogue['day'])
+            catalogue.data['year'], catalogue.data['month'], catalogue.data['day'])
         # Get space and time windows corresponding to each event
         sw_space, sw_time = (
-            config['time_distance_window'].calc(catalogue['magnitude']))
+            config['time_distance_window'].calc(catalogue.data['magnitude']))
         # Initial Position Identifier
         eqid = np.arange(0, neq, 1)  
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
         # Sort magnitudes into descending order
-        id0 = np.flipud(np.argsort(catalogue['magnitude'], kind='heapsort'))
-        #mag = catalogue['magnitude'][id0]
-        longitude = catalogue['longitude'][id0]
-        latitude = catalogue['latitude'][id0]
+        id0 = np.flipud(np.argsort(catalogue.data['magnitude'], kind='heapsort'))
+        longitude = catalogue.data['longitude'][id0]
+        latitude = catalogue.data['latitude'][id0]
         sw_space = sw_space[id0]
         sw_time = sw_time[id0]
         year_dec = year_dec[id0]

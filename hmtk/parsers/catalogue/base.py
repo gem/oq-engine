@@ -13,6 +13,7 @@ class BaseCatalogueParser(object):
 
     def __init__(self, input_file):
         """ 
+        Initialise the object and check input file existance
         """
         self.input_file = input_file
         if not os.path.exists(self.input_file):

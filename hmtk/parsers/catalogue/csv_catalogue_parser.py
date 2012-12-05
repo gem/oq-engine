@@ -17,13 +17,13 @@ class CsvCatalogueParser(BaseCatalogueParser):
         """
         filedata = open(self.input_file, 'rt')
         catalogue = Catalogue()
+        # Reading the data file
         data = csv.DictReader(filedata)
-
+        # Parsing the data content
         for irow, row in enumerate(data):
             if irow == 0:
                 valid_key_list = self._header_check(row.keys(), 
                     catalogue.TOTAL_ATTRIBUTE_LIST)
-            
             for key in valid_key_list:
                 if key in catalogue.FLOAT_ATTRIBUTE_LIST:
                     catalogue.data[key] = self._float_check(
@@ -40,6 +40,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
     def _header_check(self, input_keys, catalogue_keys):
         valid_key_list = []
         for element in input_keys:
+            print element
             if element in catalogue_keys:
                 valid_key_list.append(element)
             else:
