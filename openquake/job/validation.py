@@ -399,7 +399,7 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'no_progress_timeout',
             'region_constraint',
             'lrem_steps_per_interval',
-            'conditional_loss_poes'
+            'conditional_loss_poes',
             )
 
 
@@ -413,7 +413,8 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'region_constraint',
             'lrem_steps_per_interval',
             'interest_rate',
-            'asset_life_expectancy')
+            'asset_life_expectancy',
+            )
 
 
 class EventBasedRiskCalculationForm(BaseOQModelForm):
@@ -424,7 +425,8 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'loss_curve_resolution')
+            'loss_curve_resolution',
+            )
 
 
 #: Maps calculation_mode to the appropriate validator class

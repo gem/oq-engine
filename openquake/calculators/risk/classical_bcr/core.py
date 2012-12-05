@@ -97,12 +97,10 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         calculator
         """
 
-        rc = self.job.risk_calculation
-
         return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'interest_rate': rc.interest_rate,
-            'asset_life_expectancy': rc.asset_life_expectancy
+            'lrem_steps_per_interval': self.rc.lrem_steps_per_interval,
+            'interest_rate': self.rc.interest_rate,
+            'asset_life_expectancy': self.rc.asset_life_expectancy
             }
 
     def create_outputs(self):
@@ -126,5 +124,4 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         """
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
-        general.store_risk_model(self.job.risk_calculation,
-                                 "vulnerability_retrofitted")
+        general.store_risk_model(self.rc, "vulnerability_retrofitted")

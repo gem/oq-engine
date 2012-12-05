@@ -94,7 +94,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
             self.assets_nr = models.ExposureData.objects.contained_in_count(
                 self.exposure_model_id,
-                self.job.risk_calculation.region_constraint)
+                self.rc.region_constraint)
 
             if not self.assets_nr:
                 raise RuntimeError(
@@ -130,7 +130,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             job_id=self.job.id,
             hazard_getter="one_query_per_asset",
             assets_per_task=self.assets_per_task,
-            region_constraint=self.job.risk_calculation.region_constraint,
+            region_constraint=self.rc.region_constraint,
             exposure_model_id=self.exposure_model_id,
             hazard_id=self.hazard_id)
         tf_args.update(self.output_container_ids)
@@ -158,18 +158,48 @@ class BaseRiskCalculator(base.CalculatorNext):
             if 'exports' in kwargs and 'xml' in kwargs['exports']:
                 exported_files = sum([
                     risk_export.export(output.id,
-                                       self.job.risk_calculation.export_dir)
+                                       self.rc.export_dir)
                     for output in export_core.get_outputs(self.job.id)], [])
 
                 for exp_file in exported_files:
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
+    def hazard_id(self):
+        """
+        :returns: The ID of the output container of the hazard used
+        for this risk calculation. E.g. an `openquake.db.models.HazardCurve'
+
+        :raises: `RuntimeError` if the hazard associated with the
+        current risk calculation is not suitable to be used with this
+        calculator
+        """
+
+        # Calculator must override this to select from the hazard
+        # output the proper hazard output container
+        raise NotImplementedError
+
+    @property
+    def rc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.RiskCalculation`.
+        """
+        return self.job.risk_calculation
+
+    @property
+    def calculation_parameters(self):
+        """
+        The specific calculation parameters passed as kwargs to the
+        celery task function. Calculators should override this to
+        provide custom arguments to its celery task
+        """
+        return dict()
+
     def _store_exposure(self):
         """Load exposure assets and write them to database."""
-        rc = self.job.risk_calculation
         [exposure_model_input] = models.inputs4rcalc(
-            self.job.risk_calculation, input_type='exposure')
+            self.rc, input_type='exposure')
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
@@ -177,7 +207,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 input=exposure_model_input).exists():
             return exposure_model_input.exposuremodel
 
-        path = os.path.join(rc.base_path, exposure_model_input.path)
+        path = os.path.join(self.rc.base_path, exposure_model_input.path)
         exposure_stream = risk.ExposureModelFile(path)
         writer = exposure_writer.ExposureDBWriter(exposure_model_input)
         writer.serialize(exposure_stream)
@@ -196,7 +226,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """Load and store vulnerability model. It could be overriden
         to load fragility models or multiple vulnerability models"""
 
-        store_risk_model(self.job.risk_calculation, "vulnerability")
+        store_risk_model(self.rc, "vulnerability")
 
     def create_outputs(self):
         """
