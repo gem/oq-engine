@@ -22,7 +22,7 @@ profile validation.
 import re
 
 from django.forms import ModelForm
-from nhlib import imt as nhlib_imt
+import nhlib
 
 from openquake.db import models
 
@@ -133,7 +133,7 @@ class BaseOQModelForm(ModelForm):
         fields = self.__class__.Meta.fields
 
         for field in sorted(set(fields) - set(self.special_fields)):
-            valid, errs = eval('%s_is_valid' % field)(calc)
+            valid, errs = globals()['%s_is_valid' % field](calc)
             all_valid &= valid
 
             self._add_error(field, errs)
@@ -381,11 +381,37 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
         )
 
 
+class ScenarioHazardCalculationForm(BaseHazardModelForm):
+
+    calc_mode = 'scenario'
+
+    class Meta:
+        model = models.HazardCalculation
+        fields = (
+            'description',
+            'region',
+            'region_grid_spacing',
+            'sites',
+            'random_seed',
+            'rupture_mesh_spacing',
+            'reference_vs30_value',
+            'reference_vs30_type',
+            'reference_depth_to_2pt5km_per_sec',
+            'reference_depth_to_1pt0km_per_sec',
+            'intensity_measure_types',
+            'truncation_level',
+            'maximum_distance',
+            'number_of_ground_motion_fields',
+            'gsim',
+            'export_dir', 
+        )
+
 #: Maps calculation_mode to the appropriate validator class
 HAZ_VALIDATOR_MAP = {
     'classical': ClassicalHazardCalculationForm,
     'event_based': EventBasedHazardCalculationForm,
     'disaggregation': DisaggHazardCalculationForm,
+    'scenario': ScenarioHazardCalculationForm,
 }
 
 
@@ -567,7 +593,7 @@ def _validate_imt(imt):
     errors = []
 
     # SA intensity measure configs need special handling
-    valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
+    valid_imts = list(set(nhlib.imt.__all__) - set(['SA']))
 
     if 'SA' in imt:
         match = re.match(r'^SA\(([^)]+?)\)$', imt)
@@ -805,3 +831,14 @@ def interest_rate_is_valid(mdl):
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
             return False, ['Interest Rate must be > 0']
     return True, []
+
+def gsim_is_valid(gsim):
+    if gsim in nhlib.gsim.AVAILABLE_GSIMS:
+        return True, []
+    return False, ['The gsim %r is not in in nhlib.gsim' % gsim]
+
+def number_of_ground_motion_fields_is_valid(gmfno):
+    if isinstance(gmfno, int) and gmfno > 0:
+        return True, []
+    return False, ['The number of ground field calculations must be a positive'
+                   ' integer, got %r' % gmfno]
