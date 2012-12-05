@@ -125,9 +125,11 @@ def export_hazard_curves(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'sa_period': hc.sa_period,
         'sa_damping': hc.sa_damping,
+        'investigation_time': hc.investigation_time,
+        'imt': hc.imt,
+        'imls': hc.imls,
     }
-    writer = nrml_writers.HazardCurveXMLWriter(
-        path, hc.investigation_time, hc.imt, hc.imls, **metadata)
+    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
     writer.serialize(hcd)
 
     return [path]
@@ -279,10 +281,11 @@ def export_hazard_map(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'sa_period': hazard_map.sa_period,
         'sa_damping': hazard_map.sa_damping,
+        'investigation_time': hazard_map.investigation_time,
+        'imt': hazard_map.imt,
+        'poe': hazard_map.poe,
     }
 
-    writer = nrml_writers.HazardMapXMLWriter(
-        path, hazard_map.investigation_time, hazard_map.imt, hazard_map.poe,
-        **metadata)
+    writer = nrml_writers.HazardMapXMLWriter(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return [path]
