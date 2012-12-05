@@ -376,8 +376,8 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
         asset_ref=asset_output.asset.asset_ref,
-        expected_annual_loss_original=asset_output.eal_original,
-        expected_annual_loss_retrofitted=asset_output.eal_retrofitted,
+        average_annual_loss_original=asset_output.eal_original,
+        average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
         location=asset_output.asset.site)
 
