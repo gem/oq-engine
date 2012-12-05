@@ -180,6 +180,19 @@ SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2
 ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
+-- Parsed Rupture models
+CREATE TABLE hzrdi.parsed_rupture_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    rupture_type VARCHAR NOT NULL
+        CONSTRAINT enforce_rupture_type CHECK
+        (rupture_type IN ('complex_fault', 'simple_fault')),
+    nrml BYTEA NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -218,7 +231,7 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
-                             'exposure', 'fragility', 'rupture',
+                             'exposure', 'fragility', 'rupture_model',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
@@ -341,6 +354,9 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- scenario calculator parameters:
+    gsim VARCHAR,
+    number_of_ground_motion_fields INTEGER,
     -- disaggregation calculator parameters:
     mag_bin_width float,
     distance_bin_width float,
@@ -1764,6 +1780,9 @@ ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
