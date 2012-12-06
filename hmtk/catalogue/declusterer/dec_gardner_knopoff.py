@@ -15,7 +15,7 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
     This class implements the Gardner Knopoff algorithm as described in 
     this paper:
     Gardner, J. K. and Knopoff, L. (1974). Is the sequence of aftershocks 
-    in Southern California, with afterhoscks removed, poissonian?. Bull.
+    in Southern California, with aftershocks removed, poissonian?. Bull.
     Seism. Soc. Am., 64(5): 1363-1367.
     """
     
@@ -88,7 +88,7 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                     flagvector == 0)
                 # Of those events inside time window, find those inside distance
                 # window
-                vsel1 = haversine(longitude, latitude, longitude[i], 
+                vsel1 = haversine(longitude[vsel], latitude[vsel], longitude[i], 
                                   latitude[i]) <= sw_space[i]
                 vsel[vsel] = vsel1
                 temp_vsel = np.copy(vsel)

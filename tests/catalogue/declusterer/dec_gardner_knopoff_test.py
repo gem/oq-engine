@@ -38,4 +38,4 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         vcl, flagvector = dec.decluster(self.cat, config)
         print 'vcl:',vcl
         print 'flagvector:',flagvector, self.cat.data['flag']
-        self.assertIs(np.allclose(flagvector,self.cat.data['flag']),True)
+        self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
