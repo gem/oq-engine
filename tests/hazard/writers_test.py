@@ -25,6 +25,8 @@ from lxml import etree
 
 from nrml.hazard import writers
 
+from tests import _utils as utils
+
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 Location = namedtuple('Location', 'x, y')
 GmfNode = namedtuple('GmfNode', 'iml, location')
@@ -166,6 +168,27 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             ValueError, writers.HazardCurveXMLWriter,
             self.FAKE_PATH, self.TIME, 'PGA', self.IMLS, **metadata)
 
+
+class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
+    """
+    Tests for the `serialize` method of the hazard curve XML writer.
+    """
+
+    def setUp(self):
+        self.data = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.1, 0.2, 0.3]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.4, 0.5, 0.6]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.7, 0.8, 0.8]),
+        ]
+
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
     def test_serialize(self):
         # Just a basic serialization test.
         expected = StringIO.StringIO("""\
@@ -195,30 +218,53 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        data = [
-            HazardCurveData(location=Location(38.0, -20.1),
-                            poes=[0.1, 0.2, 0.3]),
-            HazardCurveData(location=Location(38.1, -20.2),
-                            poes=[0.4, 0.5, 0.6]),
-            HazardCurveData(location=Location(38.2, -20.3),
-                            poes=[0.7, 0.8, 0.8]),
-        ]
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5')
+        writer = writers.HazardCurveXMLWriter(
+            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+        writer.serialize(self.data)
 
-        try:
-            _, path = tempfile.mkstemp()
-            metadata = dict(
-                sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-                gsimlt_path='b1_b4_b5')
-            writer = writers.HazardCurveXMLWriter(
-                path, self.TIME, 'SA', self.IMLS, **metadata)
-            writer.serialize(data)
+        utils.assert_xml_equal(expected, self.path)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
-        finally:
-            os.unlink(path)
+    def test_serialize_quantile(self):
+        # Test serialization of qunatile curves.
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves IMT="SA" investigationTime="50.0" statistics="quantile" quantileValue="0.15" saPeriod="0.025" saDamping="5.0">
+    <IMLs>0.005 0.007 0.0098</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.1 0.2 0.3</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.4 0.5 0.6</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.7 0.8 0.8</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+""")
+
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, statistics='quantile',
+            quantile_value=0.15
+        )
+        writer = writers.HazardCurveXMLWriter(
+            self.path, self.TIME, 'SA', self.IMLS, **metadata)
+        writer.serialize(self.data)
+
+        utils.assert_xml_equal(expected, self.path)
 
 
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
@@ -297,10 +343,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
                 path, sm_lt_path, gsim_lt_path)
             writer.serialize(gmf_collection)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -363,10 +406,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
                 path, None, None)
             writer.serialize([gmf_set])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -474,10 +514,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
             writer.serialize([ses1, ses2])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -572,10 +609,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer = writers.SESXMLWriter(path, None, None)
             writer.serialize([complete_lt_ses])
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
+            utils.assert_xml_equal(expected, path)
         finally:
             os.unlink(path)
 
@@ -598,14 +632,20 @@ class SESXMLWriterTestCase(unittest.TestCase):
 
 class HazardMapXMLWriterTestCase(unittest.TestCase):
 
-    def test_serialize(self):
-        data = [
+    def setUp(self):
+        self.data = [
             (-1.0, 1.0, 0.01),
             (1.0, 1.0, 0.02),
             (1.0, -1.0, 0.03),
             (-1.0, -1.0, 0.04),
         ]
 
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
+    def test_serialize(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -618,18 +658,35 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        try:
-            _, path = tempfile.mkstemp()
-            metadata = dict(
-                sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-                gsimlt_path='b1_b4_b5')
-            writer = writers.HazardMapXMLWriter(
-                path, 50.0, 'SA', 0.1, **metadata)
-            writer.serialize(data)
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5')
+        writer = writers.HazardMapXMLWriter(
+            self.path, 50.0, 'SA', 0.1, **metadata)
+        writer.serialize(self.data)
 
-            expected_text = expected.readlines()
-            fh = open(path, 'r')
-            text = fh.readlines()
-            self.assertEqual(expected_text, text)
-        finally:
-            os.unlink(path)
+        utils.assert_xml_equal(expected, self.path)
+
+    def test_serialize_quantile(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardMap IMT="SA" investigationTime="50.0" poE="0.1" statistics="quantile" quantileValue="0.85" saPeriod="0.025" saDamping="5.0">
+    <node lon="-1.0" lat="1.0" iml="0.01"/>
+    <node lon="1.0" lat="1.0" iml="0.02"/>
+    <node lon="1.0" lat="-1.0" iml="0.03"/>
+    <node lon="-1.0" lat="-1.0" iml="0.04"/>
+  </hazardMap>
+</nrml>
+""")
+
+        _, self.path = tempfile.mkstemp()
+        metadata = dict(
+            sa_period=0.025, sa_damping=5.0, statistics='quantile',
+            quantile_value=0.85
+        )
+        writer = writers.HazardMapXMLWriter(
+            self.path, 50.0, 'SA', 0.1, **metadata)
+        writer.serialize(self.data)
+
+        utils.assert_xml_equal(expected, self.path)
