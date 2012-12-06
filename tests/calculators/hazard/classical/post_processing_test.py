@@ -490,6 +490,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_test_job2.ini')
         cls.job = helpers.run_hazard_job(cfg)
+        models.JobStats.objects.create(oq_job=cls.job)
 
     def _test_maps(self, curve, hm_0_1, hm_0_02, lt_rlz=None):
         self.assertEqual(lt_rlz, hm_0_1.lt_realization)

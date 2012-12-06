@@ -228,7 +228,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             logs.LOG.debug('< done saving GMF results to DB')
 
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id, len(src_ids))
+    haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
 def _create_gmf_cache(n_sites, imts):
@@ -432,7 +432,6 @@ def _create_gmf_record(gmf_set, imt):
     return gmf
 
 
-
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
@@ -466,7 +465,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
-            self.progress['total'] += len(source_ids)
 
             for offset in xrange(0, len(source_ids), block_size):
                 # Since this seed will used for numpy random seeding, it needs
@@ -482,7 +480,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 )
                 yield task_args
                 result_grp_ordinal += 1
-
 
     def initialize_ses_db_records(self, lt_rlz):
         """
@@ -647,9 +644,14 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         if self.job.hazard_calculation.complete_logic_tree_gmf:
             self.initialize_complete_lt_gmf_db_records()
 
-        self.initialize_pr_data()
-
         self.record_init_stats()
+
+        num_sources = models.SourceProgress.objects.filter(
+            is_complete=False,
+            lt_realization__hazard_calculation=self.hc).count()
+        self.progress['total'] = num_sources
+
+        self.initialize_pr_data()
 
     def post_process(self):
         """
