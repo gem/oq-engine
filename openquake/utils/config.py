@@ -85,6 +85,7 @@ class Config(object):
         """Return `True` if at least one config file exists."""
         return any(os.path.exists(path) for path in self._get_paths())
 
+
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
     return Config().get(section)
