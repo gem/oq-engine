@@ -216,31 +216,6 @@ def export_ses(output, target_dir):
     return [path]
 
 
-def curves2nrml(target_dir, job):
-    """Write hazard curves to NRML files.
-
-    :param str target_dir: where should the output files go?
-    :param int job_id: the database key of the job at hand.
-    """
-    LOG.debug("> curves2nrml")
-    hc_outputs = models.Output.objects.filter(oq_job=job,
-                                              output_type="hazard_curve")
-
-    for hc_output in hc_outputs:
-        export_hazard_curves(hc_output, target_dir)
-
-    hco_count = len(hc_outputs)
-    if hco_count > 1:
-        logs.log_progress(
-            "%s hazard curves exported to %s" % (hco_count, target_dir), 2)
-    elif hco_count == 1:
-        logs.log_progress("One hazard curve exported to %s" % target_dir, 2)
-    else:
-        logs.log_progress("No hazard curves found for export", 2)
-
-    LOG.debug("< curves2nrml")
-
-
 @core.makedirs
 def export_hazard_map(output, target_dir):
     """
