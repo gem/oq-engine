@@ -479,7 +479,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         == self.progress['hc_total']):
                         # we're switching to disagg phase
                         self.disagg_phase = True
-                        logs.LOG.debug('* switching to disaggregation phase')
+                        logs.LOG.progress('Hazard curve computation complete',
+                                          indent=True)
+                        logs.LOG.progress('Starting disaggregation',
+                                          indent=True)
 
                         # Finalize the hazard curves, so the disaggregation
                         # can find curves by their point geometry:
