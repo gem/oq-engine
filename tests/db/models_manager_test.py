@@ -214,8 +214,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
         region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
 
         results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
+            self.model.id, region_constraint, 0, 10)
         results = [result for result in results if result.taxonomy == "test"]
 
         self.assertEqual(1, len(list(results)))
@@ -226,8 +225,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
             ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
 
         results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
+            self.model.id, region_constraint, 0, 10)
         results = [result for result in results if result.taxonomy == "test"]
         self.assertEqual(1, len(results))
         self.assertEqual("test1", results[0].asset_ref)
@@ -236,8 +234,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
             ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
 
         results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
+            self.model.id, region_constraint, 0, 10)
         results = [result for result in results if result.taxonomy == "test"]
         self.assertEqual(1, len(list(results)))
         self.assertEqual("test2", results[0].asset_ref)
