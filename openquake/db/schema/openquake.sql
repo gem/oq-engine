@@ -180,6 +180,19 @@ SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2
 ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
+-- Parsed Rupture models
+CREATE TABLE hzrdi.parsed_rupture_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    rupture_type VARCHAR NOT NULL
+        CONSTRAINT enforce_rupture_type CHECK
+        (rupture_type IN ('complex_fault', 'simple_fault')),
+    nrml BYTEA NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -218,7 +231,7 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
-                             'exposure', 'fragility', 'rupture',
+                             'exposure', 'fragility', 'rupture_model',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
@@ -341,6 +354,9 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- scenario calculator parameters:
+    gsim VARCHAR,
+    number_of_ground_motion_fields INTEGER,
     -- disaggregation calculator parameters:
     mag_bin_width float,
     distance_bin_width float,
@@ -1428,16 +1444,16 @@ ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
 -- Benefit-cost ratio distribution
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL, -- FK to output.id
-    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+    output_id INTEGER NOT NULL -- FK to output.id
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    bcr float NOT NULL CONSTRAINT bcr_value
-        CHECK (bcr >= 0.0)
+    expected_annual_loss_original float NOT NULL ,   
+    expected_annual_loss_retrofitted float NOT NULL,
+    bcr float NOT NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
@@ -1753,6 +1769,9 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
+ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -2004,10 +2023,6 @@ FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RE
 ALTER TABLE riskr.bcr_distribution
 ADD CONSTRAINT riskr_bcr_distribution_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.bcr_distribution
-ADD CONSTRAINT riskr_bcr_distribution_exposure_model_fk
-FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
 
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
