@@ -362,6 +362,7 @@ CREATE TABLE uiapi.hazard_calculation (
     distance_bin_width float,
     coordinate_bin_width float,
     num_epsilon_bins INTEGER,
+    poes_disagg float[],
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
@@ -1271,14 +1272,16 @@ CREATE TABLE hzrdr.disagg_result (
         CHECK(
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
-    mag_bin_edges float[],
-    dist_bin_edges float[],
-    lon_bin_edges float[],
-    lat_bin_edges float[],
-    eps_bin_edges float[],
+    mag_bin_edges float[] NOT NULL,
+    dist_bin_edges float[] NOT NULL,
+    lon_bin_edges float[] NOT NULL,
+    lat_bin_edges float[] NOT NULL,
+    eps_bin_edges float[] NOT NULL,
+    trts VARCHAR[] NOT NULL,
     matrix bytea NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
@@ -1357,8 +1360,8 @@ CREATE TABLE hzrdr.lt_realization (
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     gsim_lt_path VARCHAR[] NOT NULL,
     is_complete BOOLEAN DEFAULT FALSE,
-    total_sources INTEGER NOT NULL,
-    completed_sources INTEGER NOT NULL DEFAULT 0
+    total_items INTEGER NOT NULL,
+    completed_items INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE hzrdr_ts;
 
 
