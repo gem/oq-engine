@@ -73,26 +73,58 @@ class HazardCurveGetterPerAsset(object):
         return hazard
 
 
-# TODO: Add cache!
-# TODO: Change constructor parameters
-class GroundMotionFieldGetter(object):
+class GroundMotionValuesGetter(object):
+    """
+    Hazard getter for loading ground motion values.
+    It caches the ground motion values on a per-location basis.
+
+    :param integer hazard_output_id:
+        The id of hazard output (`openquake.db.models.Output`) used to
+        look up the ground motion values. This implementation only supports
+        plain `gmf` output types.
+    :param str imt:
+        The intensity measure type with which the ground motion
+        values have been computed.
+    :param float time_span:
+        Time span (also known as investigation time).
+    :param float tses:
+        Time representative of the stochastic event set.
+        It is computed as: time span * number of logic tree branches *
+        number of seismicity histories.
+    """
 
     def __init__(self, hazard_output_id, imt, time_span, tses):
         self._imt = imt
         self._tses = tses
         self._time_span = time_span
 
-        self._gmf_set_ids = self._load_gmf_sets(hazard_output_id)
+        self._cache = {}
+
+        self._gmf_set_ids = tuple(
+            [x.id for x in models.GmfSet.objects.filter(
+            gmf_collection__output=hazard_output_id)])
 
     def __call__(self, site):
+        """
+        Return the closest ground motion values to the given location.
+
+        :param site:
+            The reference location. The closest ground motion values
+            to this location are returned.
+        :type site: `django.contrib.gis.geos.point.Point` object
+        """
+
+        if site.wkt in self._cache:
+            return self._cache[site.wkt]
+
         cursor = connection.cursor()
 
         query = """
-        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %s)
+        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %s))
         AS min_distance FROM (
             SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
-            WHERE imt = %s AND gmf_set_id IN (%s)
-            ORDER BY gmf_set_id, result_grp_ordinal
+            WHERE imt = %s AND gmf_set_id IN %s
+            ORDER BY result_grp_ordinal
         ) n GROUP BY location ORDER BY min_distance LIMIT 1;"""
 
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
@@ -100,15 +132,15 @@ class GroundMotionFieldGetter(object):
         cursor.execute(query, args)
         ground_motion_values = cursor.fetchone()[0]
 
-        return {"IMLs": ground_motion_values,
+        # temporary format, to be changed.
+        result = {"IMLs": ground_motion_values,
             "TimeSpan": self._time_span, "TSES": self._tses}
 
-    def _load_gmf_sets(self, hazard_output_id):
-        return models.GmfSet.objects.filter(
-            gmf_collection__output=hazard_output_id).values("id")
+        self._cache[site.wkt] = result
+        return result
 
 
 HAZARD_GETTERS = dict(
     one_query_per_asset=HazardCurveGetterPerAsset,
-    event_based=GroundMotionFieldGetter,
+    event_based=GroundMotionValuesGetter,
 )
