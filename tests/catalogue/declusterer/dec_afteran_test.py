@@ -11,9 +11,9 @@ from hmtk.catalogue.declusterer.dec_afteran import Afteran
 from hmtk.catalogue.declusterer.distance_time_windows import GardnerKnopoffWindow
 from hmtk.parsers.catalogue import CsvCatalogueParser
 
-class GardnerKnopoffType1TestCase(unittest.TestCase):
+class AfteranTestCase(unittest.TestCase):
     """ 
-    Unit tests for the Gardner and Knopoff declustering algorithm class.
+    Unit tests for the Afteran declustering algorithm class.
     """
     
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -32,6 +32,7 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         Testing the Afteran algorithm 
         """
         config = {'time_distance_window' : GardnerKnopoffWindow(),
+                  'time_window' : 60.,
                   'fs_time_prop' : 1.0}
         # Instantiate the declusterer and process the sample catalogue 
         dec = Afteran()

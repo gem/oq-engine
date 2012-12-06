@@ -88,7 +88,9 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                     flagvector == 0)
                 # Of those events inside time window, find those inside distance
                 # window
-                vsel1 = haversine(longitude[vsel], latitude[vsel], longitude[i], 
+                vsel1 = haversine(longitude[vsel], 
+                                  latitude[vsel], 
+                                  longitude[i], 
                                   latitude[i]) <= sw_space[i]
                 vsel[vsel] = vsel1
                 temp_vsel = np.copy(vsel)
