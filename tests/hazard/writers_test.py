@@ -268,6 +268,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
 
     def test_serialize_quantile(self):
         # Test serialization of qunatile curves.
@@ -307,6 +308,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
 
 
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
@@ -386,6 +388,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             writer.serialize(gmf_collection)
 
             utils.assert_xml_equal(expected, path)
+            utils.validates_against_xml_schema(path)
         finally:
             os.unlink(path)
 
@@ -449,6 +452,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             writer.serialize([gmf_set])
 
             utils.assert_xml_equal(expected, path)
+            utils.validates_against_xml_schema(path)
         finally:
             os.unlink(path)
 
@@ -557,6 +561,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer.serialize([ses1, ses2])
 
             utils.assert_xml_equal(expected, path)
+            utils.validates_against_xml_schema(path)
         finally:
             os.unlink(path)
 
@@ -652,6 +657,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer.serialize([complete_lt_ses])
 
             utils.assert_xml_equal(expected, path)
+            utils.validates_against_xml_schema(path)
         finally:
             os.unlink(path)
 
@@ -707,6 +713,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
 
     def test_serialize_quantile(self):
         expected = StringIO.StringIO("""\
@@ -730,6 +737,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
 
 
 class DisaggXMLWriterTestCase(unittest.TestCase):
@@ -1007,6 +1015,7 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
 
         expected = StringIO.StringIO(self.expected_xml)
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
 
     def test_serialize_quantile(self):
         self.metadata['statistics'] = 'quantile'
@@ -1027,3 +1036,4 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
 
         expected = StringIO.StringIO(self.expected_xml)
         utils.assert_xml_equal(expected, self.path)
+        utils.validates_against_xml_schema(self.path)
