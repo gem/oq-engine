@@ -268,7 +268,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
 
     def test_serialize_quantile(self):
         # Test serialization of qunatile curves.
@@ -308,7 +308,7 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
 
 
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
@@ -388,7 +388,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             writer.serialize(gmf_collection)
 
             utils.assert_xml_equal(expected, path)
-            utils.validates_against_xml_schema(path)
+            self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
             os.unlink(path)
 
@@ -452,7 +452,7 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
             writer.serialize([gmf_set])
 
             utils.assert_xml_equal(expected, path)
-            utils.validates_against_xml_schema(path)
+            self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
             os.unlink(path)
 
@@ -561,7 +561,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer.serialize([ses1, ses2])
 
             utils.assert_xml_equal(expected, path)
-            utils.validates_against_xml_schema(path)
+            self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
             os.unlink(path)
 
@@ -657,7 +657,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             writer.serialize([complete_lt_ses])
 
             utils.assert_xml_equal(expected, path)
-            utils.validates_against_xml_schema(path)
+            self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
             os.unlink(path)
 
@@ -713,7 +713,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
 
     def test_serialize_quantile(self):
         expected = StringIO.StringIO("""\
@@ -737,7 +737,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
 
 
 class DisaggXMLWriterTestCase(unittest.TestCase):
@@ -942,6 +942,9 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
             eps_bin_edges=[-0.5, 0.5, 1.5, 2.5],
             tectonic_region_types=['active shallow crust',
                                    'stable continental'],
+            smlt_path='b1_b2_b3',
+            gsimlt_path='b1_b7_b15',
+
         )
         _, self.path = tempfile.mkstemp()
 
@@ -997,8 +1000,6 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
         os.unlink(self.path)
 
     def test_serialize(self):
-        self.metadata['smlt_path'] = 'b1_b2_b3'
-        self.metadata['gsimlt_path'] = 'b1_b7_b15'
         metaelem = (
             '<disaggMatrices sourceModelTreePath="b1_b2_b3" '
             'gsimTreePath="b1_b7_b15" IMT="SA" investigationTime="50.0" '
@@ -1015,25 +1016,4 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
 
         expected = StringIO.StringIO(self.expected_xml)
         utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
-
-    def test_serialize_quantile(self):
-        self.metadata['statistics'] = 'quantile'
-        self.metadata['quantile_value'] = 0.15
-        metaelem = (
-            '<disaggMatrices statistics="quantile" quantileValue="0.15" '
-            'IMT="SA" investigationTime="50.0" saPeriod="0.1" saDamping="5.0" '
-            'lon="8.33" lat="47.22" magBinEdges="5, 6" '
-            'distBinEdges="0, 20, 40" lonBinEdges="6, 7, 8, 9, 10" '
-            'latBinEdges="46, 47, 48, 49, 50" '
-            'epsBinEdges="-0.5, 0.5, 1.5, 2.5" '
-            'tectonicRegionTypes="active shallow crust, stable continental">'
-        )
-        self.expected_xml %= dict(metaelem=metaelem)
-
-        writer = writers.DisaggXMLWriter(self.path, **self.metadata)
-        writer.serialize(self.data)
-
-        expected = StringIO.StringIO(self.expected_xml)
-        utils.assert_xml_equal(expected, self.path)
-        utils.validates_against_xml_schema(self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
