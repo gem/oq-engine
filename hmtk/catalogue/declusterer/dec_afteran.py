@@ -54,16 +54,17 @@ class Afteran(BaseCatalogueDecluster):
         i = 0
         clust_index = 0
         while i < neq:
+            # Earthquake not allocated to cluster - perform calculation
             if vcl[i] == 0:
-                # Earthquake not allocated to cluster - perform calculation
                 # Perform distance calculation
                 mdist = haversine(longitude, latitude,
                                   longitude[i], latitude[i])
                 # Select earthquakes inside distance window and not in cluster
-                vsel = np.logical_and(mdist <= sw_space[i], vcl == 0).flatten()
+                vsel = np.logical_and(mdist <= sw_space[i], vcl == 0)
                 dtime = year_dec[vsel] - year_dec[i]
-                nval = np.shape(dtime)[0] #Number of events inside valid window
-                # Pre-allocate boolean array (all True)
+                # Number of events inside valid window
+                nval = np.shape(dtime)[0] 
+                # 
                 vsel1 = self._find_aftershocks(dtime, nval, time_window)
                 vsel2 = self._find_foreshocks(dtime, nval, time_window, vsel1)
                 temp_vsel = np.copy(vsel)
@@ -103,8 +104,10 @@ class Afteran(BaseCatalogueDecluster):
         :returns: **vsel** index vector for aftershocks
         :rtype: numpy.ndarray
         """
-        vsel = np.array(np.ones(nval), dtype=bool)
-        initval = dtime[0]  # Start with the mainshock
+        # Pre-allocate boolean array (all True)
+        vsel = np.ones(nval, dtype=bool)
+        # Start with the mainshock
+        initval = dtime[0] 
         j = 1
         while j < nval:
             ddt = dtime[j] - initval
