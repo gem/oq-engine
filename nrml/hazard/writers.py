@@ -509,16 +509,13 @@ class DisaggXMLWriter(object):
         * lat_bin_edges: List of latitude bin edges (floats)
         * eps_bin_edges: List of epsilon bin edges (floats)
         * tectonic_region_types: List of tectonic region types (strings)
-
-        The following are more or less optional (combinational rules noted
-        below where applicable):
-
-        * statistics: 'mean' or 'quantile'
-        * quantile_value: Only required if statistics = 'quantile'.
         * smlt_path: String representing the logic tree path which produced
           these results. Only required for non-statistical results.
         * gsimlt_path: String represeting the GSIM logic tree path which
           produced these results. Only required for non-statistical results.
+
+        The following are optional, depending on the `imt`:
+
         * sa_period: Only used with imt = 'SA'.
         * sa_damping: Only used with imt = 'SA'.
     """
