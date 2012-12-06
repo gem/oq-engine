@@ -775,6 +775,13 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    poes_disagg = fields.FloatArrayField(
+        help_text=('The probabilities of exceedance for which we interpolate'
+                   ' grond motion values from hazard curves. This GMV is used'
+                   ' as input for computing disaggregation histograms'),
+        null=True,
+        blank=True,
+    )
 
     ################################
     # Output/post-processing params:
@@ -1437,7 +1444,7 @@ class HazardCurve(djm.Model):
         db_table = 'hzrdr\".\"hazard_curve'
 
 
-class HazardCurveDataManager(djm.Manager):
+class HazardCurveDataManager(djm.GeoManager):
     """
     Manager class to filter and create HazardCurveData objects
     """
@@ -1858,6 +1865,9 @@ class DisaggResult(djm.Model):
     * `lon_bin_edges`
     * `eps_bin_edges`
 
+    The size of the tectonic region type (TRT) dimension is simply determined
+    by the length of `trts`.
+
     Additional metadata for the disaggregation histogram is stored, including
     location (POINT geometry), disaggregation PoE (Probability of Exceedance)
     and the corresponding IML (Intensity Measure Level) extracted from the
@@ -1872,11 +1882,12 @@ class DisaggResult(djm.Model):
     poe = djm.FloatField()
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    mag_bin_edges = fields.FloatArrayField(null=True)
-    dist_bin_edges = fields.FloatArrayField(null=True)
-    lon_bin_edges = fields.FloatArrayField(null=True)
-    lat_bin_edges = fields.FloatArrayField(null=True)
-    eps_bin_edges = fields.FloatArrayField(null=True)
+    mag_bin_edges = fields.FloatArrayField()
+    dist_bin_edges = fields.FloatArrayField()
+    lon_bin_edges = fields.FloatArrayField()
+    lat_bin_edges = fields.FloatArrayField()
+    eps_bin_edges = fields.FloatArrayField()
+    trts = fields.CharArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     matrix = fields.PickleField()
 
@@ -1947,8 +1958,8 @@ class UhSpectrumData(djm.Model):
 
 class LtRealization(djm.Model):
     """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+    Keep track of logic tree realization progress. When ``completed_items``
+    becomes equal to ``total_items``, mark ``is_complete`` as `True`.
 
     Marking progress as we go gives us the ability to resume partially-
     completed calculations.
@@ -1961,8 +1972,8 @@ class LtRealization(djm.Model):
     sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
     is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField(default=0)
+    total_items = djm.IntegerField()
+    completed_items = djm.IntegerField(default=0)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
