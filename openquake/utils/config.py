@@ -81,6 +81,9 @@ class Config(object):
         else:
             return False
 
+    def exists(self):
+        """Return `True` if at least one config file exists."""
+        return any(os.path.exists(path) for path in self._get_paths())
 
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
@@ -95,7 +98,14 @@ def get(section, key):
 
 def abort_if_no_config_available():
     """Call sys.exit() if no openquake configuration file is readable."""
-    if not Config().is_readable():
+    conf = Config()
+    if not conf.exists():
+        msg = ('Could not find a configuration file in %s. '
+               'Probably your are not in the right directory'
+               % conf._get_paths())
+        print msg
+        sys.exit(2)
+    if not conf.is_readable():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
