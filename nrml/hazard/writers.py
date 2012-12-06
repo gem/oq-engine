@@ -582,7 +582,9 @@ class DisaggXMLWriter(object):
                 # (mag, dist, lon, lat, eps, TRT)
                 for label in result.dim_labels:
                     bin_edge_attr = self.DIM_LABEL_TO_BIN_EDGE_MAP.get(label)
-                    assert self.metadata.get(bin_edge_attr) is not None
+                    assert self.metadata.get(bin_edge_attr) is not None, (
+                        "Writer is missing '%s' metadata" % bin_edge_attr
+                    )
 
                 result_type = ','.join(result.dim_labels)
                 diss_matrix.set('type', result_type)
