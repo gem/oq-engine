@@ -5,7 +5,7 @@ implements :class:`CsvCatalogueParser`.
 import csv
 import numpy as np
 
-from hmtk.catalogue.catalogue import Catalogue
+from hmtk.seismicity.catalogue import Catalogue
 from hmtk.parsers.catalogue.base import BaseCatalogueParser
 
 class CsvCatalogueParser(BaseCatalogueParser):

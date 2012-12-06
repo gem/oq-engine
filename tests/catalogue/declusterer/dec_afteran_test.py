@@ -7,8 +7,8 @@ import unittest
 import os
 import numpy as np
 
-from hmtk.catalogue.declusterer.dec_afteran import Afteran
-from hmtk.catalogue.declusterer.distance_time_windows import GardnerKnopoffWindow
+from hmtk.seismicity.declusterer.dec_afteran import Afteran
+from hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from hmtk.parsers.catalogue import CsvCatalogueParser
 
 class AfteranTestCase(unittest.TestCase):

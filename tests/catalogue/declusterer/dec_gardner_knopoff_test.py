@@ -7,8 +7,8 @@ import unittest
 import os
 import numpy as np
 
-from hmtk.catalogue.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
-from hmtk.catalogue.declusterer.distance_time_windows import GardnerKnopoffWindow
+from hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
+from hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from hmtk.parsers.catalogue import CsvCatalogueParser
 
 class GardnerKnopoffType1TestCase(unittest.TestCase):
