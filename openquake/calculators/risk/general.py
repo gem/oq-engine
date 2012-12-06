@@ -196,28 +196,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """Load and store vulnerability model. It could be overriden
         to load fragility models or multiple vulnerability models"""
 
-        rc = self.job.risk_calculation
-
-        [vulnerability_input] = models.inputs4rcalc(rc.id,
-                                                    input_type='vulnerability')
-
-        for record in risk.VulnerabilityModelFile(
-                vulnerability_input.path):
-            vulnerability_model, _ = (
-                models.VulnerabilityModel.objects.get_or_create(
-                    owner=vulnerability_input.owner,
-                    input=vulnerability_input,
-                    imt=record['IMT'].lower(), imls=record['IML'],
-                    name=record['vulnerabilitySetID'],
-                    asset_category=record['assetCategory'],
-                    loss_category=record['lossCategory']))
-
-            models.VulnerabilityFunction.objects.create(
-                vulnerability_model=vulnerability_model,
-                taxonomy=record['ID'],
-                prob_distribution=record['probabilisticDistribution'],
-                covs=record['coefficientsVariation'],
-                loss_ratios=record['lossRatio'])
+        store_risk_model(self.job.risk_calculation, "vulnerability")
 
     def create_outputs(self):
         """
@@ -285,20 +264,38 @@ def hazard_getter(hazard_getter_name, hazard_id):
     return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
 
 
-def fetch_vulnerability_model(job_id):
+def fetch_vulnerability_model(job_id, retrofitted=False):
     """
-    Returns the vulnerability model associated with the current
-    running job
+    Utility method to use in a celery task to get a vulnerability
+    model suitable to be used with Risklib.
+
+    :param int job_id: The ID of the current job
+
+    :param bool retrofitted: True if a retrofitted vulnerability model
+    should be returned
     """
-    job = models.OqJob.objects.get(pk=job_id)
-    return job.risk_calculation.model("vulnerability").to_risklib()
+
+    if retrofitted:
+        input_type = "vulnerability_retrofitted"
+    else:
+        input_type = "vulnerability"
+
+    return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
+        input_type).to_risklib()
 
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a `openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the `openquake.db.models.LossCurve`
+    Stores a :class:`openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
     output container is identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+
+    :param asset_output: an instance of
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
+    returned by risklib
     """
     models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
@@ -311,9 +308,17 @@ def write_loss_curve(loss_curve_id, asset_output):
 
 def write_loss_map(loss_map_ids, asset_output):
     """
-    Stores `openquake.db.models.LossMapData` objects where the data
-    are got by `asset_output` and the `openquake.db.models.LossMap`
-    output containers are got by `loss_map_ids`.
+    Create :class:`openquake.db.models.LossMapData` objects where the
+    data are got by `asset_output` and the
+    :class:`openquake.db.models.LossMap` output containers are got by
+    `loss_map_ids`.
+
+    :param dict loss_map_ids: A dictionary storing that links poe to
+    :class:`openquake.db.models.LossMap` output container
+
+    :param asset_output: an instance of
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     """
 
     for poe, loss in asset_output.conditional_losses.items():
@@ -323,3 +328,58 @@ def write_loss_map(loss_map_ids, asset_output):
             value=loss,
             std_dev=None,
             location=asset_output.asset.site)
+
+
+def write_bcr_distribution(bcr_distribution_id, asset_output):
+    """
+    Create a new :class:`openquake.db.models.BCRDistributionData` from
+    `asset_output` and links it to the output container identified by
+    `bcr_distribution_id`.
+
+    :param int bcr_distribution_id: the ID of
+    :class:`openquake.db.models.BCRDistribution` instance that holds
+    the BCR map
+    :param asset_output: an instance of
+    :class:`risklib.models.output.BCROutput` that holds BCR data for a
+    specific asset
+    """
+    models.BCRDistributionData.objects.create(
+        bcr_distribution_id=bcr_distribution_id,
+        asset_ref=asset_output.asset.asset_ref,
+        expected_annual_loss_original=asset_output.eal_original,
+        expected_annual_loss_retrofitted=asset_output.eal_retrofitted,
+        bcr=asset_output.bcr,
+        location=asset_output.asset.site)
+
+
+def store_risk_model(rc, input_type):
+    """
+    Parse and store :class:`openquake.db.models.VulnerabilityModel` and
+    :class:`openquake.db.models.VulnerabilityFunction`.
+
+    :param str input_type: the input type of the
+    :class:`openquake.db.models.Input` object which provides the risk models
+
+    :param rc: the current :class:`openquake.db.models.RiskCalculation`
+    instance
+    """
+    [vulnerability_input] = models.inputs4rcalc(
+        rc.id, input_type=input_type)
+
+    for record in risk.VulnerabilityModelFile(
+            vulnerability_input.path):
+        vulnerability_model, _ = (
+            models.VulnerabilityModel.objects.get_or_create(
+                owner=vulnerability_input.owner,
+                input=vulnerability_input,
+                imt=record['IMT'].lower(), imls=record['IML'],
+                name=record['vulnerabilitySetID'],
+                asset_category=record['assetCategory'],
+                loss_category=record['lossCategory']))
+
+        models.VulnerabilityFunction.objects.create(
+            vulnerability_model=vulnerability_model,
+            taxonomy=record['ID'],
+            prob_distribution=record['probabilisticDistribution'],
+            covs=record['coefficientsVariation'],
+            loss_ratios=record['lossRatio'])

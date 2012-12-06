@@ -130,7 +130,9 @@ class BaseOQModelForm(ModelForm):
         self._add_error('calculation_mode', errs)
 
         # Exclude special fields that require contextual validation.
-        for field in sorted(set(self.fields) - set(self.special_fields)):
+        fields = self.__class__.Meta.fields
+
+        for field in sorted(set(fields) - set(self.special_fields)):
             valid, errs = eval('%s_is_valid' % field)(calc)
             all_valid &= valid
 
@@ -401,9 +403,23 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             )
 
 
+class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
+    calc_mode = 'classical_bcr'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'lrem_steps_per_interval',
+            'interest_rate',
+            'asset_life_expectancy')
+
+
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
+    'classical_bcr': ClassicalRiskCalculationWithBCRForm
 }
 
 
@@ -774,4 +790,18 @@ def coordinate_bin_width_is_valid(mdl):
 def num_epsilon_bins_is_valid(mdl):
     if not mdl.num_epsilon_bins > 0:
         return False, ['Number of epsilon bins must be > 0']
+    return True, []
+
+
+def asset_life_expectancy_is_valid(mdl):
+    if mdl.is_bcr:
+        if mdl.asset_life_expectancy is None or mdl.asset_life_expectancy <= 0:
+            return False, ['Asset Life Expectancy must be > 0']
+    return True, []
+
+
+def interest_rate_is_valid(mdl):
+    if mdl.is_bcr:
+        if mdl.interest_rate is None or mdl.interest_rate <= 0:
+            return False, ['Interest Rate must be > 0']
     return True, []
