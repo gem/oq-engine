@@ -36,7 +36,6 @@ import numpy
 
 from django.db import connection
 from django.contrib.gis.db import models as djm
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
 from shapely import wkt
@@ -173,58 +172,6 @@ def per_asset_value(exd):
         elif exd.area_type == "per_asset":
             return exd.cost * exd.area * exd.number_of_units
     raise ValueError("Invalid input: '%s'" % str(exd))
-
-
-def model_equals(model_a, model_b, ignore=None):
-    """Compare two Django model objects for equality. The two objects are
-    considered equal if the values of the all of the fields of both models are
-    equal.
-
-    If you want to ignore some attributes (such as `id`) and compare the rest
-    of the attributes, you can specify a list or tuple of attributes to ignore.
-
-    :param model_a:
-        A :class:`django.db.models.Model` instance.
-    :param model_b:
-        A :class:`django.db.models.Model` instance.
-    :param ignore:
-        Optional. A list or tuple of attribute names (as strings) to ignore in
-        the comparison. For example::
-        ('id', 'last_updated')
-
-    :returns:
-        `True` if the contents each model object are equal, taking into account
-        any ignores.
-    """
-    if not model_a.__class__ == model_b.__class__:
-        # Not the same class type; these are definitely not equal.
-        return False
-
-    # Now get each field name and compare the attributes in both objects.
-    for field_name in model_a.__dict__.keys():
-        # Ignore _state; this is an ever-present attribute of the model
-        # __dict__ which we don't care about. It doesn't affect our equality
-        # comparison.
-        if field_name == '_state':
-            continue
-
-        # Make sure we ignore the attributes that were specified.
-        if ignore is not None and field_name in ignore:
-            continue
-
-        a_val = getattr(model_a, field_name)
-        b_val = getattr(model_b, field_name)
-
-        # If the attribute is a geometry object,
-        # use the GEOSGeometry.equals method to compare:
-        if isinstance(a_val, GEOSGeometry):
-            if not a_val.equals(b_val):
-                return False
-        else:
-            if not a_val == b_val:
-                return False
-
-    return True
 
 
 ## Tables in the 'admin' schema.
@@ -391,6 +338,21 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
+class ParsedRupture(djm.Model):
+    """Stores parsed hazard rupture model in serialized python object
+       tree format."""
+    input = djm.ForeignKey('Input')
+    RUPTURE_TYPE_CHOICES = (
+        (u'complex_fault', u'Complex Fault'),
+        (u'simple_fault', u'Simple Fault'),)
+    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
+    nrml = fields.PickleField(help_text="NRML object representing the rupture"
+                                        " model")
+
+    class Meta:
+        db_table = 'hzrdi\".\"parsed_rupture_model'
+
+
 ## Tables in the 'uiapi' schema.
 
 
@@ -435,6 +397,7 @@ class Input(djm.Model):
         (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'site_model', u'Site Model'),
+        (u'rupture_model', u'Rupture Model')
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -653,6 +616,7 @@ class HazardCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'disaggregation', u'Disaggregation'),
+        (u'scenario', u'Scenario'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -798,6 +762,19 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    ################################
+    # Scenario Calculator params:
+    ################################
+    gsim = djm.TextField(
+        help_text=('Name of the ground shaking intensity model to use in the '
+                   'calculation'),
+        null=True,
+        blank=True,
+    )
+    number_of_ground_motion_fields = djm.IntegerField(
+        null=True,
+        blank=True,
+    )
 
     ################################
     # Output/post-processing params:
@@ -936,13 +913,13 @@ class RiskCalculation(djm.Model):
 
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
+        (u'classical_bcr', u'Classical BCR'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
         # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
         # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        # (u'classical_bcr', u'Classical BCR'),
         # Benefit-cost ratio calculator based on Event Based risk calc
         # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1011,6 +988,10 @@ class RiskCalculation(djm.Model):
         else:
             raise NotImplementedError
 
+    @property
+    def is_bcr(self):
+        return self.calculation_mode in ['classical_bcr']
+
     def model(self, input_type):
         """
         The model associated with this risk calculation with input of
@@ -1019,7 +1000,7 @@ class RiskCalculation(djm.Model):
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
-        elif input_type == "vulnerability":
+        elif input_type in ["vulnerability", "vulnerability_retrofitted"]:
             return exposure_input.vulnerabilitymodel
         else:
             raise RuntimeError("Unknown model")
@@ -2092,7 +2073,6 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.ForeignKey("Output")
-    exposure_model = djm.ForeignKey("ExposureModel")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2105,6 +2085,8 @@ class BCRDistributionData(djm.Model):
 
     bcr_distribution = djm.ForeignKey("BCRDistribution")
     asset_ref = djm.TextField()
+    expected_annual_loss_original = djm.FloatField()
+    expected_annual_loss_retrofitted = djm.FloatField()
     bcr = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
