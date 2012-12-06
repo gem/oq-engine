@@ -427,7 +427,7 @@ class SESXMLWriter(object):
             corner_elem = etree.SubElement(ps_elem, el_name)
             corner_elem.set('lon', str(corner[0]))
             corner_elem.set('lat', str(corner[1]))
-            corner_elem.set('depths', str(corner[2]))
+            corner_elem.set('depth', str(corner[2]))
 
 
 class HazardMapXMLWriter(object):
