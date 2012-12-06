@@ -47,10 +47,6 @@ LOG = logging.getLogger()
 HAZARD_LOG = logging.getLogger('hazard')
 
 
-# Progress report message prefixes
-PR_PREFIXES = ["**", "**  >"]
-
-
 def _log_progress(msg, *args, **kwargs):
     """
     Log the message using the progress reporting logging level.
