@@ -32,6 +32,7 @@ class AfteranTestCase(unittest.TestCase):
         Testing the Afteran algorithm 
         """
         config = {'time_distance_window' : GardnerKnopoffWindow(),
+                  'time_window' : 60.,
                   'fs_time_prop' : 1.0}
         # Instantiate the declusterer and process the sample catalogue 
         dec = Afteran()

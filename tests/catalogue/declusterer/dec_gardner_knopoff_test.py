@@ -32,11 +32,8 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         Testing the Gardner and Knopoff algorithm 
         """
         config = {'time_distance_window' : GardnerKnopoffWindow(),
-                  'time_window'
                   'fs_time_prop' : 1.0}
         # Instantiate the declusterer and process the sample catalogue 
         dec = GardnerKnopoffType1()
-        vcl, flagvector = dec.decluster(self.cat, config)
-        print 'vcl:',vcl
-        print 'flagvector:',flagvector, self.cat.data['flag']
+        _, flagvector = dec.decluster(self.cat, config)
         self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
