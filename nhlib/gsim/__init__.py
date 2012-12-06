@@ -17,11 +17,18 @@
 Package :mod:`nhlib.gsim` contains base and specific implementations of
 ground shaking intensity models. See :mod:`nhlib.gsim.base`.
 """
+import os, inspect, importlib
 from nhlib.gsim.base import GMPE, IPE, CoeffsTable
-# the import is needed otherwise GMPE.__subclasses__() is empty
-from nhlib.gsim import (
-    abrahamson_silva_2008, akkar_cagnan_2010, boore_atkinson_2008,
-    chiou_youngs_2008, sadigh_1997, chiou_youngs_2008, zhao_2006)
 
 
-AVAILABLE_GSIMS = [cls.__name__ for cls in GMPE.__subclasses__()]
+def get_available_gsims():
+    gsims = []
+    for fname in os.listdir(os.path.dirname(__file__)):
+        if fname.endswith('.py'):
+            modname, _ext = os.path.splitext(fname)
+            mod = importlib.import_module('nhlib.gsim.' + modname)
+            for cls in mod.__dict__.itervalues():
+                if (inspect.isclass(cls) and issubclass(cls, GMPE) 
+                    and cls is not GMPE):
+                    gsims.append(cls.__name__)
+    return gsims
