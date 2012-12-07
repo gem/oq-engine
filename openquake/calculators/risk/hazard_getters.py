@@ -40,10 +40,7 @@ class HazardCurveGetterPerAsset(object):
     def __call__(self, site):
         """
         :param location:
-            `django.contrib.gis.geos.point.Point` object
-        :param int hazard_curve_id:
-            ID of a `hzrdr.hazard_curve` record, telling us which set of hazard
-            curves to query for the closest curve.
+            `django.contrib.gis.geos.point.Point` object.
         """
         if site.wkt in self._cache:
             return self._cache[site.wkt]
@@ -79,7 +76,7 @@ class GroundMotionValuesGetter(object):
     It caches the ground motion values on a per-location basis.
 
     :param integer hazard_output_id:
-        The id of hazard output (`openquake.db.models.Output`) used to
+        Id of the hazard output (`openquake.db.models.Output`) used to
         look up the ground motion values. This implementation only supports
         plain `gmf` output types.
     :param str imt:
