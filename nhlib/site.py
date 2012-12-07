@@ -99,14 +99,19 @@ class Site(object):
         >>> import nhlib
         >>> point1 = nhlib.geo.point.Point(1, 2, 3)
         >>> point2 = nhlib.geo.point.Point(1, 2, 3)
-        >>> site1 = Site(point1, 760.0, True, 100.000000000001, 5.0)
-        >>> site2 = Site(point2, 760.0, True, 100.0, 5.0)
+        >>> site1 = Site(point2, 760.0, True, 100.0, 5.0)
+        >>> site2 = Site(point1, 760.0, True, 100.000000000001, 5.0)
         >>> site1 == site2
         True
+        >>> site4 = Site(point1, 760.0, True, 100.00000000001, 5.0)
+        >>> site1 == site4
+        False
         >>> point3 = nhlib.geo.point.Point(1, 2, 4)
         >>> site3 = Site(point3, 760.0, True, 100.0, 5.0)
         >>> site1 != site3
         True
+        >>> site1 == None
+        False
         """
         if other is None:
             return False
