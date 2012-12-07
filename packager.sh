@@ -48,8 +48,10 @@ pkgtest_run () {
     #  check if an istance with the same address already exists
     export haddr="10.0.3.$le_addr"
     if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
-        echo "The $haddr machine seems to be already configured"
-        return 1
+        echo -n "The $haddr machine seems to be already configured ... "
+        previous_name="$(ssh $haddr hostname 2>/dev/null)"
+        sudo lxc-shutdown -n $previous_name -w -t 10
+        echo "turned off"
     fi
 
     #
