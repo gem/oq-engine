@@ -44,10 +44,10 @@ class Catalogue(object):
                 self.data[attribute] = []
 
         # Consider removing
-        self.data['xyz'] = None
-        self.data['flag_vector'] = None
+#        self.data['xyz'] = None
+#        self.data['flag_vector'] = None
         self.number_earthquakes = 0
-        self.default_completeness = None
+#        self.default_completeness = None
     
     def get_number_events(self):
         return len(self.data[self.data.keys()[0]])
@@ -59,3 +59,28 @@ class Catalogue(object):
     def write_catalogue(self, output_file, filetype):
         # TODO 
         raise AttributeError('Not implemented yet!')
+    
+    def load_from_array(self, keys, data_array):
+        """
+        This loads the data contained in an array into the catalogue object
+        """
+        for i,key in enumerate(keys):
+            self.data[key] = data_array[:,i]
+    
+    def catalogue_mt_filter(self, mt_table):
+        """
+        Filter the catalogue using a magnitude-time table. The table has 
+        two columns and n-rows. The first column contains the magnitude 
+        the second years.
+        """
+        flag = np.ones(np.shape(self.data['magnitude'])[0], dtype=bool)
+        for comp_val in mt_table:
+            id0 = np.logical_and(self.data['year'] < comp_val[0],
+                                 self.data['magnitude'] < comp_val[1])
+            flag[id0] = False
+        print 'Non zero',np.nonzero(flag)
+        for key in self.data.keys():
+            print key
+            if len(self.data[key]):
+                self.data[key] = self.data[key][np.nonzero(flag)]
+
