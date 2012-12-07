@@ -17,6 +17,7 @@
 
 import math
 import random
+import itertools
 
 import numpy
 from scipy import interpolate
@@ -272,10 +273,31 @@ def _loss_curve(loss_values, tses, time_span,
     defined by
     """
 
-    num = len(loss_values)
     sorted_loss_values = numpy.sort(loss_values)[::-1]
 
-    rates_of_exceedance = numpy.linspace(0, num / tses, num)
+    num = len(loss_values)
+
+    # when loss values are enough well-separated their rates of
+    # exceedance are evenly spaced.
+    rates_of_exceedance = numpy.linspace(0, num - 1, num) / tses
+
+    # if two loss values are close, we need to fix the previous
+    # approximation
+
+    def pairwise(iterable):
+        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+        a, b = itertools.tee(iterable)
+        next(b, None)
+        return itertools.izip(a, b)
+
+    def _close(a, b):
+        return numpy.allclose(a, b)
+    close = numpy.vectorize(_close)
+
+    if close(*zip(*pairwise(sorted_loss_values))).any():
+        for i, (previous, val) in enumerate(pairwise(sorted_loss_values)):
+            if numpy.allclose(val, previous):
+                rates_of_exceedance[i + 1] = rates_of_exceedance[i]
 
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
 
