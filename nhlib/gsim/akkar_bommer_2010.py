@@ -9,15 +9,16 @@ from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
 from nhlib.imt import PGA, PGV, SA
 
+
 class AkB_2010_AttenRel(GMPE):
     """
-    Implements GMPE developed by Sinan Akkar and Julian J. Bommer 
-    and published as "Empirical Equations for the Prediction of PGA, PGV, 
-    and Spectral Accelerations in Europe, the Mediterranean Region, and 
+    Implements GMPE developed by Sinan Akkar and Julian J. Bommer
+    and published as "Empirical Equations for the Prediction of PGA, PGV,
+    and Spectral Accelerations in Europe, the Mediterranean Region, and
     the Middle East", Seismological Research Letters, 81(2), 195-206.
     """
     #: Supported region type is Europe, Mediterranean and Middle East
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST 
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can
     #: calculate. A set should contain classes from module :mod:`nhlib.imt`.
@@ -42,14 +43,14 @@ class AkB_2010_AttenRel(GMPE):
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and stiff and soft soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', )) 
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude and rake (eq. 1, page 199).
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
     #: Required distance measure is RRup (eq. 1, page 199).
     REQUIRES_DISTANCES = set(('rjb', ))
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -58,20 +59,20 @@ class AkB_2010_AttenRel(GMPE):
         """
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
-        C = self.COEFFS[imt]        
+        C = self.COEFFS[imt]
 
         imean = self._compute_magnitude(rup, C) + \
             self._compute_distance(rup, dists, imt, C) + \
             self._get_site_amplification(sites, imt, C) + \
             self._get_mechanism(sites, rup, imt, C)
-        
+
         # Changing the base of the logarithm, from 10 to exp and units
-        # output in m/s2 
+        # output in m/s2
         mean = np.log(10.0**(imean - 2.0))
-        
+
         istddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
         stddevs = (np.array(istddevs) - 2.0)
-        
+
         return mean, stddevs
 
     def _get_stddevs(self, C, stddev_types, num_sites):
@@ -88,49 +89,49 @@ class AkB_2010_AttenRel(GMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['Sigma2'] + np.zeros(num_sites))
         return stddevs
-         
-    def _compute_magnitude(self, rup, C):        
-        
+
+    def _compute_magnitude(self, rup, C):
+
         # b1 + b2*M + b3*(M**2)
         return C['b1'] + (C['b2']*rup.mag) + (C['b3']*(rup.mag**2))
-      
-    def _compute_distance(self, rup, dists, imt, C):        
-        
+
+    def _compute_distance(self, rup, dists, imt, C):
+
         # ((b4 + b5*M)*(sqrt(rjb**2 + b6**2)))
-        return ((C['b4'] + C['b5']*rup.mag)*np.log10((np.sqrt(dists.rjb**2.0 + C['b6']**2.0)))) 
+        return ((C['b4'] + C['b5']*rup.mag)*np.log10((np.sqrt(dists.rjb**2.0 + C['b6']**2.0))))
 
 
-    def _get_site_amplification(self, sites, imt, C):        
-                
+    def _get_site_amplification(self, sites, imt, C):
+
         Ss, Sa = self._get_site_type_dummy_variables(sites)
-        
+
         # b7*Ss + b8*Sa
         return (C['b7']*Ss) + (C['b8']*Sa)
 
-    def _get_site_type_dummy_variables(self,sites):        
-               
+    def _get_site_type_dummy_variables(self,sites):
+
         Ss = np.zeros((len(sites.vs30),))
         Sa = np.zeros((len(sites.vs30),))
         # Soft soil; Vs30 < 360 m/s. Page 199.
-        idxSs = (sites.vs30 < 360.0) 
+        idxSs = (sites.vs30 < 360.0)
         # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
-        idxSa = (sites.vs30 >= 360.0)&(sites.vs30 <= 750.0) 
+        idxSa = (sites.vs30 >= 360.0)&(sites.vs30 <= 750.0)
         Ss[idxSs] = 1
         Sa[idxSa] = 1
-        return Ss, Sa 
-        
-        
+        return Ss, Sa
+
+
     def _get_mechanism(self, sites, rup, imt, C):
-                
-        Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)        
+
+        Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)
         # b9*Fn + b10*Fr
-        return (C['b9']*Fn) + (C['b10']*Fr)        
-    
-    # Same classificcation of SadighEtAl1997. Akkar and Bommer 2010 
-    # is based on Akkar and Bommer 2007b; read Strong-Motion Dataset 
+        return (C['b9']*Fn) + (C['b10']*Fr)
+
+    # Same classificcation of SadighEtAl1997. Akkar and Bommer 2010
+    # is based on Akkar and Bommer 2007b; read Strong-Motion Dataset
     # and record Processing in page 514 (Akkar and Bommer 2007b).
-    def _get_fault_type_dummy_variables(self, sites, rup, imt):        
-                
+    def _get_fault_type_dummy_variables(self, sites, rup, imt):
+
         Fn, Fr = 0, 0
         if rup.rake >= -135 and rup.rake <= -45:
             # normal
@@ -138,7 +139,7 @@ class AkB_2010_AttenRel(GMPE):
         elif rup.rake >= 45 and rup.rake <= 135:
             # reverse
             Fr = 1
-        return Fn, Fr  
+        return Fn, Fr
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
