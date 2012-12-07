@@ -38,9 +38,10 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries]    build debian source package."
+    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned]    build debian source package."
     echo "       if -B argument is present binary package is build too."
     echo "       if -D argument is present a package with self-computed version is produced."
+    echo "       if -U argoment is present no sign are perfomed using gpg key related to the mantainer."
     echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
     echo
     exit $ret
@@ -66,7 +67,7 @@ pkgtest_run () {
 
         fi
     else
-        $0 -D -B
+        $0 -D -B -U
     fi
 
     #
@@ -122,6 +123,7 @@ pkgtest_run () {
 #
 BUILD_BINARIES=0
 BUILD_DEVEL=0
+BUILD_UNSIGN=0
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
@@ -136,6 +138,9 @@ while [ $# -gt 0 ]; do
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
+            ;;
+        -U|--unsigned)
+            BUILD_UNSIGN=1
             ;;
         -h|--help)
             usage 0
@@ -155,12 +160,14 @@ while [ $# -gt 0 ]; do
 done
 
 DPBP_FLAG=""
-if [ "$BUILD_BINARIES" -eq 0 ]; then
+if [ $BUILD_BINARIES -eq 0 ]; then
     DPBP_FLAG="-S"
+fi
+if [ $BUILD_UNSIGN -eq 1 ]; then
+    DPBP_FLAG="$DPBP_FLAG -us -uc"
 fi
 
 mksafedir "$GEM_BUILD_ROOT"
-
 mksafedir "$GEM_BUILD_SRC"
 
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
