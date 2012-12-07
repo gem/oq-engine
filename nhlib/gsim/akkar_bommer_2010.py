@@ -76,10 +76,10 @@ class AkkarBommer2010(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
 
-        imean = self._compute_magnitude(rup, C) + \
-            self._compute_distance(rup, dists, imt, C) + \
-            self._get_site_amplification(sites, imt, C) + \
-            self._get_mechanism(sites, rup, imt, C)
+        imean = (self._compute_magnitude(rup, C) +
+                 self._compute_distance(rup, dists, imt, C) +
+                 self._get_site_amplification(sites, imt, C) +
+                 self._get_mechanism(sites, rup, imt, C))
 
         # Changing the base of the logarithm, from 10 to exp and units
         # output in m/s2
