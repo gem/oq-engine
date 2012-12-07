@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AkB_2010_AttenRel`.
+Module exports :class:`AkkarBommer2010`.
 """
 from __future__ import division
 
@@ -25,7 +25,7 @@ from nhlib import const
 from nhlib.imt import PGA, PGV, SA
 
 
-class AkB_2010_AttenRel(GMPE):
+class AkkarBommer2010(GMPE):
     """
     Implements GMPE developed by Sinan Akkar and Julian J. Bommer
     and published as "Empirical Equations for the Prediction of PGA, PGV,
