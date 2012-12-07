@@ -1,10 +1,4 @@
 #!/bin/sh
-
-#
-#  no gpg sign
-#
-
-set -x
 set -e
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
@@ -67,7 +61,7 @@ pkgtest_run () {
 
         fi
     else
-        $0 -D -B -U
+        $0 $BUILD_FLAGS
     fi
 
     #
@@ -124,6 +118,7 @@ pkgtest_run () {
 BUILD_BINARIES=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
+BUILD_FLAGS=""
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
@@ -156,6 +151,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
+    BUILD_FLAGS="$BUILD_FLAGS $1"    
     shift
 done
 
