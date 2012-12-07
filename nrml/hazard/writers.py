@@ -17,18 +17,36 @@
 Classes for serializing various NRML XML artifacts.
 """
 
-import nrml
-
 from lxml import etree
+from collections import OrderedDict
+
+import nrml
+from nrml import utils
+
 
 SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
+#: Maps XML writer constructor keywords to XML attribute names
+_ATTR_MAP = OrderedDict([
+    ('statistics', 'statistics'),
+    ('quantile_value', 'quantileValue'),
+    ('smlt_path', 'sourceModelTreePath'),
+    ('gsimlt_path', 'gsimTreePath'),
+    ('imt', 'IMT'),
+    ('investigation_time', 'investigationTime'),
+    ('sa_period', 'saPeriod'),
+    ('sa_damping', 'saDamping'),
+    ('poe', 'poE'),
+    ('lon', 'lon'),
+    ('lat', 'lat'),
+])
 
-def _validate_hc_hm_metadata(md):
+
+def _validate_hazard_metadata(md):
     """
-    Validate metadata `dict`, which is same for both hazard curves and hazard
-    maps.
+    Validate metadata `dict` of attributes, which are more or less the same for
+    hazard curves, hazard maps, and disaggregation histograms.
 
     :param dict md:
         `dict` which can contain the following keys:
@@ -77,20 +95,41 @@ def _validate_hc_hm_metadata(md):
             raise ValueError('`sa_damping` is required for IMT == `SA`')
 
 
+def _set_metadata(element, metadata, attr_map, transform=str):
+    """
+    Set metadata attributes on a given ``element``.
+
+    :param element:
+        :class:`lxml.etree._Element` instance
+    :param metadata:
+        Dictionary of metadata items containing attribute data for ``element``.
+    :param attr_map:
+        Dictionary mapping of metadata key->attribute name.
+    :param transform:
+        A function accepting and returning a single value to be applied to each
+        attribute value. Defaults to `str`.
+    """
+    for kw, attr in attr_map.iteritems():
+        value = metadata.get(kw)
+        if value is not None:
+            element.set(attr, transform(value))
+
+
 class HazardCurveXMLWriter(object):
     """
     :param path:
         File path (including filename) for XML results to be saved to.
-    :param float investigation_time:
-        Investigation time (in years) defined in the calculation which produced
-        these results.
-    :param str imt:
-        Intensity measure type used to compute these hazard curves.
-    :param list imls:
-        Intensity measure levels, which represent the x-axis values of each
-        curve.
     :param metadata:
-        A combination of the following keyword arguments:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these hazard curves.
+        * imls: Intensity measure levels, which represent the x-axis values of
+          each curve.
+
+        The following are more or less optional (combinational rules noted
+        below where applicable):
 
         * statistics: 'mean' or 'quantile'
         * quantile_value: Only required if statistics = 'quantile'.
@@ -102,21 +141,10 @@ class HazardCurveXMLWriter(object):
         * sa_damping: Only used with imt = 'SA'.
     """
 
-    def __init__(self, path, investigation_time, imt, imls, **metadata):
+    def __init__(self, path, **metadata):
         self.path = path
-        self.investigation_time = investigation_time
-        self.imt = imt
-        self.imls = imls
-
-        metadata['imt'] = imt
-        _validate_hc_hm_metadata(metadata)
-
-        self.statistics = metadata.get('statistics')
-        self.quantile_value = metadata.get('quantile_value')
-        self.smlt_path = metadata.get('smlt_path')
-        self.gsimlt_path = metadata.get('gsimlt_path')
-        self.sa_period = metadata.get('sa_period')
-        self.sa_damping = metadata.get('sa_damping')
+        self.metadata = metadata
+        _validate_hazard_metadata(metadata)
 
     def serialize(self, data):
         """
@@ -137,25 +165,10 @@ class HazardCurveXMLWriter(object):
 
             hazard_curves = etree.SubElement(root, 'hazardCurves')
 
-            # set metadata attributes
-            hazard_curves.set('IMT', str(self.imt))
-            hazard_curves.set('investigationTime',
-                              str(self.investigation_time))
-            if self.statistics is not None:
-                hazard_curves.set('statistics', self.statistics)
-            if self.quantile_value is not None:
-                hazard_curves.set('quantileValue', str(self.quantile_value))
-            if self.smlt_path is not None:
-                hazard_curves.set(SM_TREE_PATH, self.smlt_path)
-            if self.gsimlt_path is not None:
-                hazard_curves.set(GSIM_TREE_PATH, self.gsimlt_path)
-            if self.sa_period is not None:
-                hazard_curves.set('saPeriod', str(self.sa_period))
-            if self.sa_damping is not None:
-                hazard_curves.set('saDamping', str(self.sa_damping))
+            _set_metadata(hazard_curves, self.metadata, _ATTR_MAP)
 
             imls_elem = etree.SubElement(hazard_curves, 'IMLs')
-            imls_elem.text = ' '.join([str(x) for x in self.imls])
+            imls_elem.text = ' '.join([str(x) for x in self.metadata['imls']])
 
             for hc in data:
                 hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
@@ -414,23 +427,24 @@ class SESXMLWriter(object):
             corner_elem = etree.SubElement(ps_elem, el_name)
             corner_elem.set('lon', str(corner[0]))
             corner_elem.set('lat', str(corner[1]))
-            corner_elem.set('depths', str(corner[2]))
+            corner_elem.set('depth', str(corner[2]))
 
 
 class HazardMapXMLWriter(object):
     """
     :param path:
         File path (including filename) for XML results to be saved to.
-    :param float investigation_time:
-        Investigation time (in years) defined in the calculation which produced
-        these results.
-    :param str imt:
-        Intensity measure type used to compute these hazard curves.
-    :param poe:
-        The Probability of Exceedance level for which this hazard map was
-        produced.
     :param metadata:
-        A combination of the following keyword arguments:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these hazard curves.
+        * poe: The Probability of Exceedance level for which this hazard map
+          was produced.
+
+        The following are more or less optional (combinational rules noted
+        below where applicable):
 
         * statistics: 'mean' or 'quantile'
         * quantile_value: Only required if statistics = 'quantile'.
@@ -442,21 +456,10 @@ class HazardMapXMLWriter(object):
         * sa_damping: Only used with imt = 'SA'.
     """
 
-    def __init__(self, path, investigation_time, imt, poe, **metadata):
+    def __init__(self, path, **metadata):
         self.path = path
-        self.investigation_time = investigation_time
-        self.imt = imt
-        self.poe = poe
-
-        metadata['imt'] = imt
-        _validate_hc_hm_metadata(metadata)
-
-        self.statistics = metadata.get('statistics')
-        self.quantile_value = metadata.get('quantile_value')
-        self.smlt_path = metadata.get('smlt_path')
-        self.gsimlt_path = metadata.get('gsimlt_path')
-        self.sa_period = metadata.get('sa_period')
-        self.sa_damping = metadata.get('sa_damping')
+        self.metadata = metadata
+        _validate_hazard_metadata(metadata)
 
     def serialize(self, data):
         """
@@ -472,30 +475,132 @@ class HazardMapXMLWriter(object):
 
             hazard_map = etree.SubElement(root, 'hazardMap')
 
-            # set metadata attributes
-            hazard_map.set('IMT', str(self.imt))
-            hazard_map.set('investigationTime',
-                           str(self.investigation_time))
-            hazard_map.set('poE', str(self.poe))
-
-            if self.statistics is not None:
-                hazard_map.set('statistics', self.statistics)
-            if self.quantile_value is not None:
-                hazard_map.set('quantileValue', str(self.quantile_value))
-            if self.smlt_path is not None:
-                hazard_map.set(SM_TREE_PATH, self.smlt_path)
-            if self.gsimlt_path is not None:
-                hazard_map.set(GSIM_TREE_PATH, self.gsimlt_path)
-            if self.sa_period is not None:
-                hazard_map.set('saPeriod', str(self.sa_period))
-            if self.sa_damping is not None:
-                hazard_map.set('saDamping', str(self.sa_damping))
+            _set_metadata(hazard_map, self.metadata, _ATTR_MAP)
 
             for lon, lat, iml in data:
                 node = etree.SubElement(hazard_map, 'node')
                 node.set('lon', str(lon))
                 node.set('lat', str(lat))
                 node.set('iml', str(iml))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
+
+
+class DisaggXMLWriter(object):
+    """
+    :param path:
+        File path (including filename) for XML results to be saved to.
+    :param metadata:
+        The following keyword args are required:
+
+        * investigation_time: Investigation time (in years) defined in the
+          calculation which produced these results.
+        * imt: Intensity measure type used to compute these matrices.
+        * lon, lat: Longitude and latitude associated with these results.
+
+        The following attributes define dimension context for the result
+        matrices:
+
+        * mag_bin_edges: List of magnitude bin edges (floats)
+        * dist_bin_edges: List of distance bin edges (floats)
+        * lon_bin_edges: List of longitude bin edges (floats)
+        * lat_bin_edges: List of latitude bin edges (floats)
+        * eps_bin_edges: List of epsilon bin edges (floats)
+        * tectonic_region_types: List of tectonic region types (strings)
+        * smlt_path: String representing the logic tree path which produced
+          these results. Only required for non-statistical results.
+        * gsimlt_path: String represeting the GSIM logic tree path which
+          produced these results. Only required for non-statistical results.
+
+        The following are optional, depending on the `imt`:
+
+        * sa_period: Only used with imt = 'SA'.
+        * sa_damping: Only used with imt = 'SA'.
+    """
+
+    #: Maps metadata keywords to XML attribute names for bin edge information
+    #: passed to the constructor.
+    #: The dict here is an `OrderedDict` so as to give consistent ordering of
+    #: result attributes.
+    BIN_EDGE_ATTR_MAP = OrderedDict([
+        ('mag_bin_edges', 'magBinEdges'),
+        ('dist_bin_edges', 'distBinEdges'),
+        ('lon_bin_edges', 'lonBinEdges'),
+        ('lat_bin_edges', 'latBinEdges'),
+        ('eps_bin_edges', 'epsBinEdges'),
+        ('tectonic_region_types', 'tectonicRegionTypes'),
+    ])
+
+    DIM_LABEL_TO_BIN_EDGE_MAP = dict([
+        ('Mag', 'mag_bin_edges'),
+        ('Dist', 'dist_bin_edges'),
+        ('Lon', 'lon_bin_edges'),
+        ('Lat', 'lat_bin_edges'),
+        ('Eps', 'eps_bin_edges'),
+        ('TRT', 'tectonic_region_types'),
+    ])
+
+    def __init__(self, path, **metadata):
+        self.path = path
+        self.metadata = metadata
+        _validate_hazard_metadata(self.metadata)
+
+    def serialize(self, data):
+        """
+        :param data:
+            A sequence of data where each datum has the following attributes:
+
+            * matrix: N-dimensional numpy array containing the disaggregation
+              histogram.
+            * dim_labels: A list of strings which label the dimensions of a
+              given histogram. For example, for a Magnitude-Distance-Epsilon
+              histogram, we would expect `dim_labels` to be
+              ``['Mag', 'Dist', 'Eps']``.
+            * poe: The disaggregation Probability of Exceedance level for which
+              these results were produced.
+            * iml: Intensity measure level, interpolated from the source hazard
+              curve at the given ``poe``.
+        """
+
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+
+            diss_matrices = etree.SubElement(root, 'disaggMatrices')
+
+            _set_metadata(diss_matrices, self.metadata, _ATTR_MAP)
+
+            transform = lambda val: ', '.join([str(x) for x in val])
+            _set_metadata(diss_matrices, self.metadata, self.BIN_EDGE_ATTR_MAP,
+                          transform=transform)
+
+            for result in data:
+                diss_matrix = etree.SubElement(diss_matrices, 'disaggMatrix')
+
+                # Check that we have bin edges defined for each dimension label
+                # (mag, dist, lon, lat, eps, TRT)
+                for label in result.dim_labels:
+                    bin_edge_attr = self.DIM_LABEL_TO_BIN_EDGE_MAP.get(label)
+                    assert self.metadata.get(bin_edge_attr) is not None, (
+                        "Writer is missing '%s' metadata" % bin_edge_attr
+                    )
+
+                result_type = ','.join(result.dim_labels)
+                diss_matrix.set('type', result_type)
+
+                dims = ','.join([str(x) for x in result.matrix.shape])
+                diss_matrix.set('dims', dims)
+
+                diss_matrix.set('poE', str(result.poe))
+                diss_matrix.set('iml', str(result.iml))
+
+                for idxs, value in utils.ndenumerate(result.matrix):
+                    prob = etree.SubElement(diss_matrix, 'prob')
+
+                    index = ','.join([str(x) for x in idxs])
+                    prob.set('index', index)
+                    prob.set('value', str(value))
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,

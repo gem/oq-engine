@@ -27,11 +27,12 @@
         <xs:attribute name="lon" type="xs:double" use="required" />
         <xs:attribute name="lat" type="xs:double" use="required" />
 
-        <xs:attribute name="magBinEdges" type="PositiveDoubleList" use="optional" />
-        <xs:attribute name="distBinEdges" type="PositiveDoubleList" use="optional" />
-        <xs:attribute name="lonBinEdges" type="DoubleList" use="optional" />
-        <xs:attribute name="latBinEdges" type="DoubleList" use="optional" />
-        <xs:attribute name="epsBinEdges" type="DoubleList" use="optional" />
+        <xs:attribute name="magBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="distBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="lonBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="latBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="epsBinEdges" type="xs:string" use="optional" />
+        <xs:attribute name="tectonicRegionTypes" type="xs:string" use="optional" />
     </xs:complexType>
 
     <xs:complexType name="DisaggMatrix">
