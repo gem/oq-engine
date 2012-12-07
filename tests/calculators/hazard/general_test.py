@@ -410,7 +410,7 @@ class SignalTestCase(unittest.TestCase):
         num_sources = 10
 
         def test_callback(body, message):
-            self.assertEqual(dict(job_id=job_id, num_sources=num_sources),
+            self.assertEqual(dict(job_id=job_id, num_items=num_sources),
                              body)
             message.ack()
 
@@ -426,5 +426,6 @@ class SignalTestCase(unittest.TestCase):
                                callbacks=[test_callback]):
 
                 # send the signal:
-                general.signal_task_complete(job_id, num_sources)
+                general.signal_task_complete(
+                    job_id=job_id, num_items=num_sources)
                 conn.drain_events()

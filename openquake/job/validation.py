@@ -377,6 +377,7 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
             'distance_bin_width',
             'coordinate_bin_width',
             'num_epsilon_bins',
+            'poes_disagg',
             'export_dir',
         )
 
@@ -685,10 +686,14 @@ def quantile_hazard_curves_is_valid(mdl):
 
 def poes_hazard_maps_is_valid(mdl):
     phm = mdl.poes_hazard_maps
+    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+    return _validate_poe_list(phm, error_msg)
 
-    if phm is not None:
-        if not all([0.0 <= x <= 1.0 for x in phm]):
-            return False, ['PoEs for hazard maps must be in the range [0, 1]']
+
+def _validate_poe_list(poes, error_msg):
+    if poes is not None:
+        if not all([0.0 <= x <= 1.0 for x in poes]):
+            return False, [error_msg]
     return True, []
 
 
@@ -805,3 +810,11 @@ def interest_rate_is_valid(mdl):
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
             return False, ['Interest Rate must be > 0']
     return True, []
+
+
+def poes_disagg_is_valid(mdl):
+    poesd = mdl.poes_disagg
+    if len(poesd) == 0:
+        return False, ['`poes_disagg` must contain at least 1 value']
+    error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
+    return _validate_poe_list(poesd, error_msg)
