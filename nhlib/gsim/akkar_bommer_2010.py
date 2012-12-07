@@ -85,7 +85,8 @@ class AkkarBommer2010(GMPE):
         # output in m/s2
         mean = np.log(10.0 ** (imean - 2.0))
 
-        istddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        istddevs = self._get_stddevs(C, stddev_types,
+                                     num_sites=len(sites.vs30))
         stddevs = (np.array(istddevs) - 2.0)
 
         return mean, stddevs
@@ -113,7 +114,8 @@ class AkkarBommer2010(GMPE):
     def _compute_distance(self, rup, dists, imt, C):
 
         # ((b4 + b5*M)*(sqrt(rjb**2 + b6**2)))
-        return ((C['b4'] + C['b5'] * rup.mag) * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0))))
+        return (((C['b4'] + C['b5'] * rup.mag)
+                * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
 
     def _get_site_amplification(self, sites, imt, C):
