@@ -177,10 +177,11 @@ class BaseRiskCalculator(base.CalculatorNext):
                 input=exposure_model_input).exists():
             return exposure_model_input.exposuremodel
 
-        path = os.path.join(rc.base_path, exposure_model_input.path)
-        exposure_stream = risk.ExposureModelFile(path)
-        writer = exposure_writer.ExposureDBWriter(exposure_model_input)
-        writer.serialize(exposure_stream)
+        with logs.tracing('storing exposure'):
+            path = os.path.join(rc.base_path, exposure_model_input.path)
+            exposure_stream = risk.ExposureModelFile(path)
+            writer = exposure_writer.ExposureDBWriter(exposure_model_input)
+            writer.serialize(exposure_stream)
         return writer.model
 
     def _initialize_progress(self):
@@ -247,9 +248,10 @@ def with_assets(fn):
         del kwargs['region_constraint']
         del kwargs['assets_per_task']
 
-        assets = models.ExposureData.objects.contained_in(
-            exposure_model_id,
-            region_constraint)[offset:offset + assets_per_task]
+        with logs.tracing("getting assets"):
+            assets = models.ExposureData.objects.contained_in(
+                exposure_model_id,
+                region_constraint, offset, assets_per_task)
 
         fn(job_id, assets, **kwargs)
         logs.log_percent_complete(job_id, "risk")
