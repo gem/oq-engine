@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from nhlib.gsim.akkar_bommer_2010 import AkB_2010_AttenRel
+from nhlib.gsim.akkar_bommer_2010 import AkkarBommer2010
 from tests.gsim.utils import BaseGSIMTestCase
 
 class AkkarBommer2010TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AkB_2010_AttenRel
+    GSIM_CLASS = AkkarBommer2010
     
     # Test data were obtained from a tool given by the authors
     # The data of the values of the mean PGA and SA are in m/s2.
