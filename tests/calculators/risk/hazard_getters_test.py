@@ -51,7 +51,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
         output = self._hazard_output("gmf")
 
         # we don't use an output type `complete_lt_gmf` here, the
-        # flag is just to avoid the creation of all the realizations
+        # flag is just to avoid the creation of all the realization
         # data model.
         collection = models.GmfCollection(output=output,
             complete_logic_tree_gmf=True)
@@ -67,11 +67,11 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
         getter = hazard_getters.GroundMotionValuesGetter(
             hazard_output_id=output.id,
-            imt="PGA", time_span=50.0, tses=20)
+            imt="PGA", time_span=50.0, tses=20.0)
 
         # to the event based risk calculator, we must pass all the
         # ground motion values coming from all the stochastic event sets.
-        expected = {"TSES": 20, "IMLs": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
             "TimeSpan": 50.0}
 
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
@@ -80,7 +80,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
         output = self._hazard_output("gmf")
 
         # we don't use an output type `complete_lt_gmf` here, the
-        # flag is just to avoid the creation of all the realizations
+        # flag is just to avoid the creation of all the realization
         # data model.
         collection = models.GmfCollection(output=output,
             complete_logic_tree_gmf=True)
@@ -97,12 +97,19 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
         getter = hazard_getters.GroundMotionValuesGetter(
             hazard_output_id=output.id,
-            imt="PGA", time_span=50.0, tses=20)
+            imt="PGA", time_span=50.0, tses=20.0)
 
-        expected = {"TSES": 20, "IMLs": [0.1, 0.2, 0.3],
+        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3],
             "TimeSpan": 50.0}
 
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
+
+    def test_only_specific_branches_are_supported(self):
+        output = self._hazard_output("complete_lt_gmf")
+
+        self.assertRaises(ValueError,
+            hazard_getters.GroundMotionValuesGetter,
+            output.id, "PGA", 50.0, 20.0)
 
     def _gmf_set(self, collection, ses_ordinal, investigation_time=50.0):
         gmf_set = models.GmfSet(gmf_collection=collection,
