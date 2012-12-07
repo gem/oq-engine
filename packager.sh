@@ -1,10 +1,22 @@
 #!/bin/sh
-# set -x
+
+#
+#  no gpg sign
+#
+
+set -x
 set -e
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
 
 GEM_ALWAYS_YES=false
+
+NL="
+"
+TB="	"
+
+#
+#  functions
 
 mksafedir () {
     local dname
@@ -26,16 +38,88 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] build debian source package."
+    echo "    $0 [-D|--development] [-B|--binaries]    build debian source package."
     echo "       if -B argument is present binary package is build too."
     echo "       if -D argument is present a package with self-computed version is produced."
+    echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
     echo
     exit $ret
 }
 
+pkgtest_run () {
+    local le_addr="$1" haddr
+
+    #
+    #  check if an istance with the same address already exists
+    export haddr="10.0.3.$le_addr"
+    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+        echo "The $haddr machine seems to be already configured"
+        return 1
+    fi
+
+    #
+    #  run build of package
+    if [ -d build-deb ]; then
+        if [ ! -f build-deb/python-oq*.deb ]; then
+            echo "'build-deb' directory already exists but .deb file package was not found"
+            return 1
+
+        fi
+    else
+        $0 -D -B
+    fi
+
+    #
+    #  run the VM and get the VM name
+    sudo lxc-start-ephemeral-gem -i $le_addr -d -o ubuntu-lxc >${haddr}.lxc.log 2>&1
+
+    #
+    #  prepare repo and install python-oq package
+    cd build-deb
+    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+    dpkg-scansources . | gzip > Sources.gz
+    cd -
+
+    # waiting VM startup
+    for i in $(seq 1 60); do
+        if ssh $haddr "echo VM Running" 2>/dev/null; then
+            lxc-ls | tail -n +2
+            machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
+            echo "MACHINE NAME: [$machine_name]"
+            break
+        fi
+        sleep 1
+    done
+    if [ $i -eq 60 ]; then
+        echo "VM not responding"
+        return 2
+    fi
+
+    # install package to manage repository properly
+    ssh $haddr "sudo apt-get install python-software-properties"
+
+    # create a remote "local repo" where place python-oq package
+    ssh $haddr mkdir repo
+    scp build-deb/python-oq_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
+    ssh $haddr "sudo apt-get update"
+
+    # packaging related tests (install, remove, purge, install, reinstall)
+    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
+    ssh $haddr "sudo apt-get remove --force-yes -y python-oq"
+    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
+    ssh $haddr "sudo apt-get install --reinstall --force-yes -y python-oq"
+
+    sudo lxc-shutdown -n $machine_name -w -t 10
+
+    # app related tests (run demos)
+    # TODO
+
+}
+
 #
 #  MAIN
-
+#
 BUILD_BINARIES=0
 BUILD_DEVEL=0
 #  args management
@@ -55,6 +139,11 @@ while [ $# -gt 0 ]; do
             ;;
         -h|--help)
             usage 0
+            break
+            ;;
+        pkgtest)
+            pkgtest_run $2
+            return $?
             break
             ;;
         *)
