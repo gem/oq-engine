@@ -78,7 +78,7 @@ class GroundMotionValuesGetter(object):
     :param integer hazard_output_id:
         Id of the hazard output (`openquake.db.models.Output`) used to
         look up the ground motion values. This implementation only supports
-        plain `gmf` output types.
+        plain `gmf` output types (single logic tree branch or realization).
     :param str imt:
         The intensity measure type with which the ground motion
         values have been computed.
@@ -94,12 +94,26 @@ class GroundMotionValuesGetter(object):
         self._imt = imt
         self._tses = tses
         self._time_span = time_span
+        self._hazard_output_id = hazard_output_id
 
         self._cache = {}
 
-        self._gmf_set_ids = tuple(
-            [x.id for x in models.GmfSet.objects.filter(
-            gmf_collection__output=hazard_output_id)])
+        self._gmf_set_ids = self._load_gmf_set_ids()
+
+    def _load_gmf_set_ids(self):
+        """
+        At the moment, we only support risk calculations using ground motion
+        fields coming from a specific realization.
+        """
+        output = models.Output.objects.get(id=self._hazard_output_id)
+
+        if output.output_type == "gmf":
+            return tuple([x.id for x in models.GmfSet.objects.filter(
+                gmf_collection__output=output)])
+        else:
+            raise ValueError("Output must be of type `gmf`. "
+                "At the moment, we only support computation of loss curves "
+                "for a specific logic tree branch.")
 
     def __call__(self, site):
         """
@@ -121,7 +135,7 @@ class GroundMotionValuesGetter(object):
         AS min_distance FROM (
             SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
             WHERE imt = %s AND gmf_set_id IN %s
-            ORDER BY result_grp_ordinal
+            ORDER BY gmf_set_id, result_grp_ordinal
         ) n GROUP BY location ORDER BY min_distance LIMIT 1;"""
 
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
