@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+# export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
+# set -x
 set -e
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
@@ -11,7 +13,6 @@ TB="	"
 
 #
 #  functions
-
 mksafedir () {
     local dname
 
@@ -41,56 +42,10 @@ usage () {
     exit $ret
 }
 
-pkgtest_run () {
-    local le_addr="$1" haddr
+_pkgtest_innervm_run () {
+    local haddr="$1"
 
-    #
-    #  check if an istance with the same address already exists
-    export haddr="10.0.3.$le_addr"
-    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
-        echo -n "The $haddr machine seems to be already configured ... "
-        previous_name="$(ssh $haddr hostname 2>/dev/null)"
-        sudo lxc-shutdown -n $previous_name -w -t 10
-        echo "turned off"
-    fi
-
-    #
-    #  run build of package
-    if [ -d build-deb ]; then
-        if [ ! -f build-deb/python-oq*.deb ]; then
-            echo "'build-deb' directory already exists but .deb file package was not found"
-            return 1
-
-        fi
-    else
-        $0 $BUILD_FLAGS
-    fi
-
-    #
-    #  run the VM and get the VM name
-    sudo lxc-start-ephemeral-gem -i $le_addr -d -o ubuntu-lxc >${haddr}.lxc.log 2>&1
-
-    #
-    #  prepare repo and install python-oq package
-    cd build-deb
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-    dpkg-scansources . | gzip > Sources.gz
-    cd -
-
-    # waiting VM startup
-    for i in $(seq 1 60); do
-        if ssh $haddr "echo VM Running" 2>/dev/null; then
-            lxc-ls | tail -n +2
-            machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
-            echo "MACHINE NAME: [$machine_name]"
-            break
-        fi
-        sleep 1
-    done
-    if [ $i -eq 60 ]; then
-        echo "VM not responding"
-        return 2
-    fi
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     # install package to manage repository properly
     ssh $haddr "sudo apt-get install python-software-properties"
@@ -107,11 +62,70 @@ pkgtest_run () {
     ssh $haddr "sudo apt-get install --force-yes -y python-oq"
     ssh $haddr "sudo apt-get install --reinstall --force-yes -y python-oq"
 
+    trap ERR
+
+    return
+}
+
+pkgtest_run () {
+    local le_addr="$1" haddr
+
+    #
+    #  run build of package
+    if [ -d build-deb ]; then
+        if [ ! -f build-deb/python-oq*.deb ]; then
+            echo "'build-deb' directory already exists but .deb file package was not found"
+            return 1
+
+        fi
+    else
+        $0 $BUILD_FLAGS
+    fi
+
+    #
+    #  prepare repo and install python-oq package
+    cd build-deb
+    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+    dpkg-scansources . | gzip > Sources.gz
+    cd -
+
+    #
+    #  check if an istance with the same address already exists
+    export haddr="10.0.3.$le_addr"
+    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+        echo -n "The $haddr machine seems to be already configured ... "
+        previous_name="$(ssh $haddr hostname 2>/dev/null)"
+        sudo lxc-shutdown -n $previous_name -w -t 10
+        echo "turned off"
+    fi
+
+    #
+    #  run the VM and get the VM name
+    sudo lxc-start-ephemeral-gem -i $le_addr -d -o ubuntu-lxc >${haddr}.lxc.log 2>&1
+
+    # waiting VM startup
+    for i in $(seq 1 60); do
+        if grep -q "is running" ${haddr}.lxc.log; then
+            machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
+            echo "MACHINE NAME: [$machine_name]"
+            break
+        fi
+        sleep 1
+    done
+    if [ $i -eq 60 ]; then
+        echo "VM not responding"
+        return 2
+    fi
+    set +e
+    _pkgtest_innervm_run $haddr
+    inner_ret=$?
+    set -e
     sudo lxc-shutdown -n $machine_name -w -t 10
 
-    # app related tests (run demos)
     # TODO
+    # app related tests (run demos)
 
+    return $inner_ret
 }
 
 #
@@ -145,7 +159,7 @@ while [ $# -gt 0 ]; do
             ;;
         pkgtest)
             pkgtest_run $2
-            return $?
+            exit $?
             break
             ;;
         *)
