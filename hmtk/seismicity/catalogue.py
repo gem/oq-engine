@@ -78,9 +78,7 @@ class Catalogue(object):
             id0 = np.logical_and(self.data['year'] < comp_val[0],
                                  self.data['magnitude'] < comp_val[1])
             flag[id0] = False
-        print 'Non zero',np.nonzero(flag)
         for key in self.data.keys():
-            print key
             if len(self.data[key]):
                 self.data[key] = self.data[key][np.nonzero(flag)]
 

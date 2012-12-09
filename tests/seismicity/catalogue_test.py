@@ -4,7 +4,6 @@
 
 """
 
-import os
 import unittest
 import numpy as np
 
@@ -14,7 +13,6 @@ class CatalogueTestCase(unittest.TestCase):
     """ 
     Unit tests for the Catalogue class
     """
-    
     def setUp(self):
         self.data_array = np.array([
                                [1900, 5.00], # E 
@@ -33,7 +31,7 @@ class CatalogueTestCase(unittest.TestCase):
         
     def test_load_from_array(self):
         """
-        This tests the creation of a catalogue from an array and a key list 
+        Tests the creation of a catalogue from an array and a key list 
         """
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
@@ -42,14 +40,13 @@ class CatalogueTestCase(unittest.TestCase):
     
     def test_catalogue_mt_filter(self):
         """
-        Testing the catalogue magnitude-time filter
+        Tests the catalogue magnitude-time filter
         """
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
-        print cat.data['magnitude']
-        print len(cat.data['magnitude'])
         cat.catalogue_mt_filter(self.mt_table)
-        print cat.data['magnitude']
         mag = np.array([7.0, 5.5, 5.01, 6.99])
+        yea = np.array([1920, 1970, 1960, 1960])
         self.assertTrue(np.allclose(cat.data['magnitude'],mag))
+        self.assertTrue(np.allclose(cat.data['year'],yea))
         
