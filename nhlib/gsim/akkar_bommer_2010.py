@@ -117,7 +117,6 @@ class AkkarBommer2010(GMPE):
         return (((C['b4'] + C['b5'] * rup.mag)
                 * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
-
     def _get_site_amplification(self, sites, imt, C):
 
         Ss, Sa = self._get_site_type_dummy_variables(sites)
@@ -136,7 +135,6 @@ class AkkarBommer2010(GMPE):
         Ss[idxSs] = 1
         Sa[idxSa] = 1
         return Ss, Sa
-
 
     def _get_mechanism(self, sites, rup, imt, C):
 
@@ -157,7 +155,6 @@ class AkkarBommer2010(GMPE):
             # reverse
             Fr = 1
         return Fn, Fr
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT     b1          b2          b3          b4          b5          b6          b7           b8          b9           b10          Sigma1    Sigma2    SigmaTot
