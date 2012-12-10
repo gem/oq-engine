@@ -377,6 +377,7 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
             'distance_bin_width',
             'coordinate_bin_width',
             'num_epsilon_bins',
+            'poes_disagg',
             'export_dir',
         )
 
@@ -403,7 +404,7 @@ class ScenarioHazardCalculationForm(BaseHazardModelForm):
             'maximum_distance',
             'number_of_ground_motion_fields',
             'gsim',
-            'export_dir', 
+            'export_dir',
         )
 
 #: Maps calculation_mode to the appropriate validator class
@@ -711,10 +712,14 @@ def quantile_hazard_curves_is_valid(mdl):
 
 def poes_hazard_maps_is_valid(mdl):
     phm = mdl.poes_hazard_maps
+    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+    return _validate_poe_list(phm, error_msg)
 
-    if phm is not None:
-        if not all([0.0 <= x <= 1.0 for x in phm]):
-            return False, ['PoEs for hazard maps must be in the range [0, 1]']
+
+def _validate_poe_list(poes, error_msg):
+    if poes is not None:
+        if not all([0.0 <= x <= 1.0 for x in poes]):
+            return False, [error_msg]
     return True, []
 
 
@@ -832,13 +837,23 @@ def interest_rate_is_valid(mdl):
             return False, ['Interest Rate must be > 0']
     return True, []
 
+
 def gsim_is_valid(gsim):
     if gsim in nhlib.gsim.AVAILABLE_GSIMS:
         return True, []
     return False, ['The gsim %r is not in in nhlib.gsim' % gsim]
 
+
 def number_of_ground_motion_fields_is_valid(gmfno):
     if isinstance(gmfno, int) and gmfno > 0:
         return True, []
-    return False, ['The number of ground field calculations must be a positive'
-                   ' integer, got %r' % gmfno]
+    return False, ['The number_of_ground_motion_fields must be a positive '
+                   'integer, got %r' % gmfno]
+
+
+def poes_disagg_is_valid(mdl):
+    poesd = mdl.poes_disagg
+    if len(poesd) == 0:
+        return False, ['`poes_disagg` must contain at least 1 value']
+    error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
+    return _validate_poe_list(poesd, error_msg)
