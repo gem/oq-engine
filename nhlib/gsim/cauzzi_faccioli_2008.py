@@ -43,7 +43,7 @@ class CauzziFaccioli2008(GMPE):
     spectrum  (DSR) values (as provided by the original equations) using the
     following formula ::
 
-        SA = DSR * 2 * π / (T ** 2)
+        SA = DSR * (2 * π / T) ** 2
 
     """
 
