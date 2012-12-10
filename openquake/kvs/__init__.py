@@ -27,6 +27,7 @@ import redis
 from openquake import logs
 from openquake.kvs import tokens
 from openquake.utils import config
+from openquake.utils import stats
 
 
 LOG = logs.LOG
@@ -163,6 +164,8 @@ def cache_gc(job_id):
         # do the garbage collection
         keys = client.keys('*%s*' % tokens.generate_job_key(job_id))
 
+        num_deleted = 0
+
         if len(keys) > 0:
 
             success = client.delete(*keys)
@@ -179,7 +182,12 @@ def cache_gc(job_id):
         msg %= (len(keys), job_id)
         LOG.debug(msg)
 
-        return len(keys)
+        num_deleted += len(keys)
+
+        # clear stats counters too:
+        num_deleted += stats.delete_job_counters(job_id)
+
+        return num_deleted
     else:
         # does not match a current job
         msg = 'KVS garbage collection was called with an invalid job key: ' \

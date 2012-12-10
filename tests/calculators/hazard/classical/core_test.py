@@ -57,8 +57,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_realizations'))
         record_stats_patch = helpers.patch(
             '%s.%s' % (base_path, 'record_init_stats'))
+        init_pr_data_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_pr_data'))
         patches = (init_src_patch, init_sm_patch, init_rlz_patch,
-                   record_stats_patch)
+                   record_stats_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -90,6 +92,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # This is import for the logic tree processing we need to do later on.
         self.assertEqual('dissFaultModel.xml', src2ltsrc.filename)
 
+    @attr('slow')
     def test_initialize_site_model(self):
         # we need a slightly different config file for this test
         cfg = helpers.demo_file(
@@ -174,16 +177,16 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertFalse(ltr1.is_complete)
         self.assertEqual(['b1'], ltr1.sm_lt_path)
         self.assertEqual(['b1'], ltr1.gsim_lt_path)
-        self.assertEqual(118, ltr1.total_sources)
-        self.assertEqual(0, ltr1.completed_sources)
+        self.assertEqual(118, ltr1.total_items)
+        self.assertEqual(0, ltr1.completed_items)
 
         self.assertEqual(1, ltr2.ordinal)
         self.assertEqual(1685488378, ltr2.seed)
         self.assertFalse(ltr2.is_complete)
         self.assertEqual(['b1'], ltr2.sm_lt_path)
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
-        self.assertEqual(118, ltr2.total_sources)
-        self.assertEqual(0, ltr2.completed_sources)
+        self.assertEqual(118, ltr2.total_items)
+        self.assertEqual(0, ltr2.completed_items)
 
         for ltr in (ltr1, ltr2):
             # Now check that we have source_progress records for each
@@ -199,15 +202,15 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         ltr1, ltr2 = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation.id).order_by("id")
 
-        ltr1.completed_sources = 11
+        ltr1.completed_items = 11
         ltr1.save()
 
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_sources()
@@ -225,8 +228,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertFalse(ltr.is_complete)
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
-        self.assertEqual(118, ltr.total_sources)
-        self.assertEqual(0, ltr.completed_sources)
+        self.assertEqual(118, ltr.total_items)
+        self.assertEqual(0, ltr.completed_items)
 
         self._check_logic_tree_realization_source_progress(ltr)
 
@@ -242,6 +245,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(236, job_stats.num_tasks)
         self.assertEqual(120, job_stats.num_sites)
         self.assertEqual(2, job_stats.num_realizations)
+
+        # Check the calculator total/progress counters as well:
+        self.assertEqual(0, self.calc.progress['computed'])
+        self.assertEqual(236, self.calc.progress['total'])
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True
@@ -262,7 +269,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # Now we test that the htemp results were copied to the final location
         # in `hzrdr.hazard_curve` and `hzrdr.hazard_curve_data`.
         for rlz in lt_rlzs:
-            self.assertEqual(rlz.total_sources, rlz.completed_sources)
+            self.assertEqual(rlz.total_items, rlz.completed_items)
             self.assertTrue(rlz.is_complete)
 
             # get hazard curves for this realization
@@ -299,8 +306,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_post_process(self):
-        self.job, self.calc = self._setup_a_new_calculator()
-
         self.calc.pre_execute()
         self.job.is_running = True
 
@@ -396,7 +401,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             routing_key=routing_key, durable=False, auto_delete=True)
 
         def test_callback(body, message):
-            self.assertEqual(dict(job_id=self.job.id, num_sources=1),
+            self.assertEqual(dict(job_id=self.job.id, num_items=1),
                              body)
             message.ack()
 
