@@ -47,9 +47,9 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
 
     This class extends
     :class: `~nhlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008` because the
-    functional form is almost identical - the only difference is in the second
+    functional form is almost identical - the only difference is in the third
     term which rather then using hypocentral distance, uses closest distance
-    to the rupture and considers a magnitude dependence.
+    to the rupture and additionaly considers a magnitude dependence.
     """
 
     #: Supported intensity measure types are spectral acceleration,
@@ -97,17 +97,6 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
                  self._compute_faulting_style_term(C, rake))
 
          return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations.
-        """
-        stddevs = []
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
-        return stddevs
 
     def _compute_term_3 (self, C, rrup, mag):
          """
