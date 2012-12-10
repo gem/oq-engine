@@ -130,7 +130,9 @@ class BaseOQModelForm(ModelForm):
         self._add_error('calculation_mode', errs)
 
         # Exclude special fields that require contextual validation.
-        for field in sorted(set(self.fields) - set(self.special_fields)):
+        fields = self.__class__.Meta.fields
+
+        for field in sorted(set(fields) - set(self.special_fields)):
             valid, errs = eval('%s_is_valid' % field)(calc)
             all_valid &= valid
 
@@ -375,6 +377,7 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
             'distance_bin_width',
             'coordinate_bin_width',
             'num_epsilon_bins',
+            'poes_disagg',
             'export_dir',
         )
 
@@ -401,9 +404,23 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             )
 
 
+class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
+    calc_mode = 'classical_bcr'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'lrem_steps_per_interval',
+            'interest_rate',
+            'asset_life_expectancy')
+
+
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
+    'classical_bcr': ClassicalRiskCalculationWithBCRForm
 }
 
 
@@ -669,10 +686,14 @@ def quantile_hazard_curves_is_valid(mdl):
 
 def poes_hazard_maps_is_valid(mdl):
     phm = mdl.poes_hazard_maps
+    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+    return _validate_poe_list(phm, error_msg)
 
-    if phm is not None:
-        if not all([0.0 <= x <= 1.0 for x in phm]):
-            return False, ['PoEs for hazard maps must be in the range [0, 1]']
+
+def _validate_poe_list(poes, error_msg):
+    if poes is not None:
+        if not all([0.0 <= x <= 1.0 for x in poes]):
+            return False, [error_msg]
     return True, []
 
 
@@ -775,3 +796,25 @@ def num_epsilon_bins_is_valid(mdl):
     if not mdl.num_epsilon_bins > 0:
         return False, ['Number of epsilon bins must be > 0']
     return True, []
+
+
+def asset_life_expectancy_is_valid(mdl):
+    if mdl.is_bcr:
+        if mdl.asset_life_expectancy is None or mdl.asset_life_expectancy <= 0:
+            return False, ['Asset Life Expectancy must be > 0']
+    return True, []
+
+
+def interest_rate_is_valid(mdl):
+    if mdl.is_bcr:
+        if mdl.interest_rate is None or mdl.interest_rate <= 0:
+            return False, ['Interest Rate must be > 0']
+    return True, []
+
+
+def poes_disagg_is_valid(mdl):
+    poesd = mdl.poes_disagg
+    if len(poesd) == 0:
+        return False, ['`poes_disagg` must contain at least 1 value']
+    error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
+    return _validate_poe_list(poesd, error_msg)

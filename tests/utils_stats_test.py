@@ -366,12 +366,13 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
             return 999
 
         previous_value = stats.pk_get(11, "nhzrd_done")
+        self.assertIsNone(previous_value)
 
         # Call the wrapped function.
         self.assertEqual(999, no_exception(11, range(5)))
 
         value = stats.pk_get(11, "nhzrd_done")
-        self.assertEqual(5, (value - previous_value))
+        self.assertEqual(5, value)
 
     def test_failure_stats(self):
         """
@@ -385,12 +386,13 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
             raise NotImplementedError
 
         previous_value = stats.pk_get(22, "nrisk_failed")
+        self.assertIsNone(previous_value)
 
         # Call the wrapped function.
         self.assertRaises(NotImplementedError, raise_exception, 22, range(6))
 
         value = stats.pk_get(22, "nrisk_failed")
-        self.assertEqual(6, (value - previous_value))
+        self.assertEqual(6, value)
 
 
 def approx_equal(expected, actual, tolerance):
