@@ -1,0 +1,199 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Module exports :class:`FaccioliEtAl2010`.
+"""
+from __future__ import division
+
+import numpy as np
+# standard acceleration of gravity in m/s**2
+from scipy.constants import g
+
+from nhlib.gsim.base import CoeffsTable, GMPE
+from nhlib import const
+from nhlib.imt import PGA, SA
+
+
+class FaccioliEtAl2010(GMPE):
+    """
+    Implements GMPE developed by Ezio Faccioli, Aldo Bianchini and Manuela
+    Villani and published as "New ground motion prediction equations for T>1 s
+    and their influence on seismic hazard assessment" (Proceedings of the
+    University of Tokyo Symposium on Long-Period Ground Motion and Urban
+    Disaster Mitigation, March 17-18, 2010).
+    This class implements the prediction equations for horizontal peak ground
+    acceleration, and 5%-damped spectral acceleration - equation 2 page 2,
+    plus site and faulting style terms (equations 3 and 5, page 3).
+    Spectral acceleration (SA) values are obtained from displacement response
+    spectrum  (DSR) values (as provided by the original equations) using the
+    following formula ::
+
+        SA = DSR * (2 * π / T) ** 2
+
+    """
+
+    #: Supported tectonic region type is active shallow crust,
+    #: since the equations have been derived from the Cauzzi and Faccioli
+    #: 2008 database, see paragraph 'New GMPEs and their applicability to the
+    #: Italian context', page 2.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    #: Supported intensity measure types are spectral acceleration,
+    #: and peak ground acceleration. Spectral acceleration values are derived
+    #: from displacement responce spectrum values (as provided by the original
+    #: equations).
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([ 
+        PGA,
+        SA ])
+    
+    #: Supported intensity measure component is the geometric mean of two
+    #: horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`, as
+    #: for :class:`~nhlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+
+    #: Supported standard deviation type is only total, see equation 2, page 2.
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    #: Required site parameter is Vs30
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+
+    #: Required rupture parameters are magnitude and rake, equation 2, page 2.
+    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+
+    #: Required distance measure is rrup, equation 2, page 2.
+    REQUIRES_DISTANCES = set(('rrup', ))
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extract dictionaries of coefficients specific to required
+        # intensity measure type
+        C = self.COEFFS[imt]
+
+        mean = self._compute_mean(C, rup.mag, dists.rrup, sites.vs30,
+                                  rup.rake, imt)
+
+        # convert from cm/s**2 to g for SA and PGA, and also convert from
+        # base 10 to base e.
+        if isinstance(imt, PGA):
+            mean = np.log((10 ** mean) / g)
+        elif isinstance(imt, SA):
+            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
+                          1e-2 / g)
+
+        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+
+        return mean, stddevs      
+
+    def _compute_mean(self, C, mag, rrup, vs30, rake, imt):
+         """
+         Return mean value computed using equation 2, page 2, plus site
+         term and faulting style term, equations 3 and 5, page 3.
+         """
+         mean = (self._compute_term_1_2(C, mag) +
+                 self._compute_term_3(C, rrup, mag) +
+                 self._compute_site_term(C, vs30) +
+                 self._compute_faulting_style_term(C, rake))
+
+         return mean
+
+    def _get_stddevs(self, C, stddev_types, num_sites):
+        """
+        Return standard deviations.
+        """
+        stddevs = []
+
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
+        return stddevs
+
+    def _compute_term_1_2 (self, C, mag):
+         """
+         This computes the first and second terms in equation 2, page 2.
+         """
+         return C['a1'] + C['a2'] * mag
+        
+    def _compute_term_3 (self, C, rrup, mag):
+         """
+         This computes the third term in equation 2, page 2.
+         """
+         return (C['a3'] *
+                 np.log10(rrup +  C['a4'] * np.power(10, C['a5'] * mag)))
+
+    def _compute_site_term(self, C, vs30):
+        """
+        this computes the site term as a function of 
+        vs30, equation 3, page 3.
+        """
+        # for rock sites the site term is zero
+        site_term = np.zeros_like(vs30)
+
+         # hard soil
+        site_term[(vs30 >= 360) & (vs30 < 800)] = C['SB']
+
+        # medium soil
+        site_term[(vs30 >= 180) & (vs30 < 360)] = C['SC']
+
+        # soft soil
+        site_term[vs30 < 180] = C['SD']
+
+        return site_term
+
+    def _compute_faulting_style_term(self, C, rake):
+        """
+        this computes the site term as a function of 
+        rake angle value in Equation (5) page 465
+        """
+        if rake > -120.0 and rake < -60.0:
+            return C['EN']
+        elif rake > 30.0 and rake < 150.0:
+            return C['ER']
+        else :
+            return C['ES']  
+
+    #: Coefficient table as from table 1 page 7 
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT       a1        a2        a3        a4        a5        SB        SC        SD        EN        ER        ES        sigma
+    pga       -1.1800   0.5590    -1.6240   0.0180    0.4450    0.2500    0.3100    0.3300    -0.0100   0.0900    -0.0500   0.3600
+    0.05      -2.9600   0.6040    -1.8780   0.0520    0.3960    0.2000    0.2100    0.1800    -0.0200   0.0800    -0.0300   0.3800
+    0.10      -2.0200   0.5590    -1.8370   0.0700    0.3730    0.2600    0.2400    0.1900    0.0100    0.0800    -0.0500   0.4000
+    0.20      -1.9700   0.5270    -1.5120   0.0310    0.3910    0.3000    0.4200    0.4000    0.0400    0.0500    -0.0500   0.4000
+    0.30      -2.1100   0.5700    -1.4210   0.0090    0.4590    0.2300    0.4200    0.4500    0.0200    0.0300    -0.0300   0.4000
+    0.40      -2.2300   0.5960    -1.3550   0.0050    0.4780    0.1900    0.4200    0.5300    0.0400    0.0100    -0.0200   0.4100
+    0.50      -2.3500   0.6130    -1.2950   0.0010    0.5560    0.2000    0.4200    0.6200    0.0500    0.0000    -0.0200   0.4100
+    0.60      -2.4600   0.6410    -1.2820   0.0010    0.5660    0.1900    0.4200    0.6800    0.0600    -0.0100   -0.0200   0.4100
+    0.70      -2.5000   0.6640    -1.2930   0.0010    0.5800    0.1700    0.4200    0.7000    0.0700    -0.0200   -0.0200   0.4100
+    0.80      -2.5700   0.6930    -1.3130   0.0020    0.5360    0.1700    0.4100    0.7200    0.0600    -0.0300   -0.0100   0.4000
+    0.90      -2.6300   0.7170    -1.3340   0.0030    0.5260    0.1700    0.4200    0.7300    0.0700    -0.0400   -0.0100   0.4000
+    1.00      -2.6800   0.7310    -1.3350   0.0020    0.5290    0.1700    0.4200    0.7200    0.0800    -0.0400   -0.0100   0.4000
+    1.25      -2.8400   0.7670    -1.3200   0.0010    0.5810    0.1600    0.4000    0.6700    0.0900    -0.0500   -0.0100   0.4000
+    1.50      -2.9500   0.8010    -1.3420   0.0020    0.5290    0.1500    0.3900    0.6300    0.0900    -0.0500   -0.0100   0.4000
+    2.00      -3.0900   0.8700    -1.4240   0.0180    0.4230    0.1200    0.3400    0.5500    0.0400    -0.0400   0.0100    0.4000
+    2.50      -3.1400   0.9040    -1.4540   0.0780    0.3420    0.1100    0.3100    0.5000    0.0200    -0.0300   0.0100    0.3900
+    3.00      -3.2000   0.9330    -1.4700   0.2620    0.2720    0.1100    0.2900    0.4900    0.0200    -0.0200   0.0000    0.3800
+    4.00      -3.4900   1.0140    -1.4960   0.3870    0.2680    0.1100    0.2700    0.4400    0.0100    -0.0300   0.0100    0.3700
+    5.00      -3.7100   1.0690    -1.4970   0.5270    0.2600    0.1000    0.2400    0.3900    0.0100    -0.0500   0.0200    0.3600
+    7.50      -4.1500   1.0970    -1.3200   0.4550    0.2660    0.0900    0.2200    0.3400    0.0400    -0.0900   0.0400    0.3300
+    10.00     -4.2800   1.0680    -1.1870   0.2100    0.2980    0.0800    0.2000    0.3200    0.0500    -0.1100   0.0400    0.3100
+    15.00     -4.1700   1.0210    -1.1430   0.0890    0.3340    0.0900    0.1900    0.3200    0.0700    -0.1100   0.0400    0.2900
+    20.00     -4.0200   0.9930    -1.1670   0.0650    0.3430    0.1100    0.2100    0.3300    0.0800    -0.1100   0.0300    0.3000
+    """)
