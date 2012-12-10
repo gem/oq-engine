@@ -50,10 +50,7 @@ class ClassicalExportTestcase(BaseExportTestCase):
 
     @attr('slow')
     def test_classical_risk_export(self):
-        """
-        Tests that outputs of a risk classical calculation are
-        exported
-        """
+        # Tests that outputs of a risk classical calculation are exported
         target_dir = tempfile.mkdtemp()
 
         try:
