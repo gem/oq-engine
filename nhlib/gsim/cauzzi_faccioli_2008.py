@@ -37,8 +37,9 @@ class CauzziFaccioli2008(GMPE):
     This class implements the prediction equations for horizontal peak ground
     acceleration, peak ground velocity and 5%-damped spectral acceleration
     (equation 2, page 462, plus faulting style term as given in equation 5,
-    page 465). Hypocentral distances are clipped at 15 km (Faccioli's personal
-    communication).
+    page 465). Coefficients for PGV developed for the SHARE
+    (http://www.share-eu.org/) project. Hypocentral distances are clipped at
+    15 km (Faccioli's personal communication).
     Spectral acceleration (SA) values are obtained from displacement response
     spectrum  (DSR) values (as provided by the original equations) using the
     following formula ::
