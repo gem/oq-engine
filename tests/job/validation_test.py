@@ -850,6 +850,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=10.0,
             coordinate_bin_width=0.02,  # decimal degrees
             num_epsilon_bins=4,
+            poes_disagg=[0.02, 0.1],
         )
         form = validation.DisaggHazardCalculationForm(
             instance=hc, files=None
@@ -864,6 +865,8 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
             'truncation_level': ['Truncation level must be > 0 for'
                                  ' disaggregation calculations'],
+            'poes_disagg': ['PoEs for disaggregation must be in the range'
+                            ' [0, 1]'],
         }
 
         hc = models.HazardCalculation(
@@ -888,11 +891,19 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=0.0,
             coordinate_bin_width=0.0,  # decimal degrees
             num_epsilon_bins=0,
+            poes_disagg=[1.00001, -0.5, 0.0],
         )
-        form = validation.DisaggHazardCalculationForm(
-            instance=hc, files=None
-        )
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
 
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+        # test with an empty `poes_disagg` list
+        hc.poes_disagg = []
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        expected_errors['poes_disagg'] = [(
+            '`poes_disagg` must contain at least 1 value')]
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
