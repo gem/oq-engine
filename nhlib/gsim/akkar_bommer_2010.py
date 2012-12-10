@@ -49,7 +49,7 @@ class AkkarBommer2010(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see equation 2, pag 199.
+    #: and total, see equation 2, page 199.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -93,7 +93,7 @@ class AkkarBommer2010(GMPE):
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations as defined in table 1, pag 200.
+        Return standard deviations as defined in table 1, p. 200.
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -107,25 +107,40 @@ class AkkarBommer2010(GMPE):
         return stddevs
 
     def _compute_magnitude(self, rup, C):
+        """
+        Compute the first term of the equation described on p. 199:
 
-        # b1 + b2*M + b3*(M**2)
+        ``b1 + b2 * M + b3 * M**2``
+        """
+        # b1 + b2 * M + b3 * M ** 2
         return C['b1'] + (C['b2'] * rup.mag) + (C['b3'] * (rup.mag ** 2))
 
     def _compute_distance(self, rup, dists, imt, C):
+        """
+        Compute the second term of the equation described on p. 199:
 
-        # ((b4 + b5*M)*(sqrt(rjb**2 + b6**2)))
+        ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
+        """
+        # ((b4 + b5 * M) * (sqrt(rjb ** 2 + b6 ** 2)))
         return (((C['b4'] + C['b5'] * rup.mag)
                 * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
     def _get_site_amplification(self, sites, imt, C):
+        """
+        Compute the third term of the equation described on p. 199:
 
+        ``b7 * Ss + b8 * Sa``
+        """
         Ss, Sa = self._get_site_type_dummy_variables(sites)
 
-        # b7*Ss + b8*Sa
+        # b7 * Ss + b8 * Sa
         return (C['b7'] * Ss) + (C['b8'] * Sa)
 
     def _get_site_type_dummy_variables(self, sites):
-
+        """
+        Get site type dummy variables, ``Ss`` (for soft and stiff soil sites)
+        and ``Sa`` (for rock sites).
+        """
         Ss = np.zeros((len(sites.vs30),))
         Sa = np.zeros((len(sites.vs30),))
         # Soft soil; Vs30 < 360 m/s. Page 199.
@@ -137,15 +152,21 @@ class AkkarBommer2010(GMPE):
         return Ss, Sa
 
     def _get_mechanism(self, sites, rup, imt, C):
+        """
+        Compute the fourth term of the equation described on p. 199:
 
+        ``b9 * Fn + b10 * Fr``
+        """
         Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)
         # b9*Fn + b10*Fr
         return (C['b9'] * Fn) + (C['b10'] * Fr)
 
-    # Same classificcation of SadighEtAl1997. Akkar and Bommer 2010
-    # is based on Akkar and Bommer 2007b; read Strong-Motion Dataset
-    # and record Processing in page 514 (Akkar and Bommer 2007b).
     def _get_fault_type_dummy_variables(self, sites, rup, imt):
+        """
+        Same classification of SadighEtAl1997. Akkar and Bommer 2010 is based
+        on Akkar and Bommer 2007b; read Strong-Motion Dataset and Record
+        Processing on p. 514 (Akkar and Bommer 2007b).
+        """
 
         Fn, Fr = 0, 0
         if rup.rake >= -135 and rup.rake <= -45:
@@ -156,6 +177,7 @@ class AkkarBommer2010(GMPE):
             Fr = 1
         return Fn, Fr
 
+    #: Equation coefficients, described in Table 1 on pp. 200-201
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT     b1          b2          b3          b4          b5          b6          b7           b8          b9           b10          Sigma1    Sigma2    SigmaTot
     pga     1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
