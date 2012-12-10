@@ -31,6 +31,8 @@ import numpy
 import random
 import unittest
 
+from nose.plugins.attrib import attr
+
 from tests.utils import helpers
 from tests.utils.helpers import random_location_generator
 
@@ -488,6 +490,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_test_job2.ini')
         cls.job = helpers.run_hazard_job(cfg)
+        models.JobStats.objects.create(oq_job=cls.job)
 
     def _test_maps(self, curve, hm_0_1, hm_0_02, lt_rlz=None):
         self.assertEqual(lt_rlz, hm_0_1.lt_realization)
@@ -584,3 +587,30 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
                         quantile=quantile).order_by('-poe')
 
                     self._test_maps(curve, hm_0_1, hm_0_02)
+
+
+class Bug1086719TestCase(unittest.TestCase):
+    """
+    Tests for bug https://bugs.launchpad.net/openquake/+bug/1086719.
+
+    Here's a brief summary of the bug:
+
+    With certain calculation parameters, hazard map creation was causing
+    calculations to crash. The issue was isolated to an uncommitted
+    transaction.
+    """
+
+    @attr('slow')
+    def test(self):
+        # The bug can be reproduced with any hazard calculation profile which
+        # the following parameters set:
+        #
+        # * number_of_logic_tree_samples = 1
+        # * mean_hazard_curves = false
+        # * quantile_hazard_curves =
+        # * poes_hazard_maps = at least one PoE
+        cfg = helpers.get_data_path(
+            'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
+        )
+        retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+        self.assertEqual(0, retcode)

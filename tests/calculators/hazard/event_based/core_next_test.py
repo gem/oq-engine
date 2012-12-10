@@ -78,15 +78,15 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         ltr1, ltr2 = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by("id")
 
-        ltr1.completed_sources = 12
+        ltr1.completed_items = 12
         ltr1.save()
 
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
 
     def test_initialize_gmf_db_records(self):
         hc = self.job.hazard_calculation
@@ -126,15 +126,15 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         ltr1, ltr2 = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by("id")
 
-        ltr1.completed_sources = 13
+        ltr1.completed_items = 13
         ltr1.save()
 
         self.calc.initialize_pr_data()
 
         total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_sources + ltr2.total_sources, total)
+        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_sources + ltr2.completed_sources, done)
+        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
 
     def test_initialize_complete_lt_ses_db_records_branch_enum(self):
         # Set hazard_calculation.number_of_logic_tree_samples = 0
@@ -198,7 +198,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # Now test the completion signal messaging of the task:
         def test_callback(body, message):
             self.assertEqual(
-                dict(job_id=self.job.id, num_sources=sources_per_task), body)
+                dict(job_id=self.job.id, num_items=sources_per_task), body)
             message.ack()
 
         exchange, conn_args = haz_general.exchange_and_conn_args()

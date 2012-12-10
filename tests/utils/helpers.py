@@ -190,6 +190,8 @@ def run_hazard_job(cfg, exports=None):
     job.is_running = True
     job.save()
 
+    models.JobStats.objects.create(oq_job=job)
+
     calc_mode = job.hazard_calculation.calculation_mode
     calc = hazard.CALCULATORS_NEXT[calc_mode](job)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')

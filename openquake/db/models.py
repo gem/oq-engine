@@ -639,13 +639,20 @@ class HazardCalculation(djm.Model):
     rupture_mesh_spacing = djm.FloatField(
         help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
                    'fault sources rupture discretization'),
+        null=True,
+        blank=True,
+
     )
     width_of_mfd_bin = djm.FloatField(
         help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
-              'Distribution) bin width'),
+                   'Distribution) bin width'),
+        null=True,
+        blank=True,
     )
     area_source_discretization = djm.FloatField(
         help_text='Area Source Disretization, in kilometers',
+        null=True,
+        blank=True,
     )
 
     ##################
@@ -683,6 +690,8 @@ class HazardCalculation(djm.Model):
     investigation_time = djm.FloatField(
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
+        null=True,
+        blank=True,
     )
     intensity_measure_types_and_levels = fields.DictField(
         help_text=(
@@ -772,6 +781,13 @@ class HazardCalculation(djm.Model):
         blank=True,
     )
     number_of_ground_motion_fields = djm.IntegerField(
+        null=True,
+        blank=True,
+    )
+    poes_disagg = fields.FloatArrayField(
+        help_text=('The probabilities of exceedance for which we interpolate'
+                   ' grond motion values from hazard curves. This GMV is used'
+                   ' as input for computing disaggregation histograms'),
         null=True,
         blank=True,
     )
@@ -1437,7 +1453,7 @@ class HazardCurve(djm.Model):
         db_table = 'hzrdr\".\"hazard_curve'
 
 
-class HazardCurveDataManager(djm.Manager):
+class HazardCurveDataManager(djm.GeoManager):
     """
     Manager class to filter and create HazardCurveData objects
     """
@@ -1858,6 +1874,9 @@ class DisaggResult(djm.Model):
     * `lon_bin_edges`
     * `eps_bin_edges`
 
+    The size of the tectonic region type (TRT) dimension is simply determined
+    by the length of `trts`.
+
     Additional metadata for the disaggregation histogram is stored, including
     location (POINT geometry), disaggregation PoE (Probability of Exceedance)
     and the corresponding IML (Intensity Measure Level) extracted from the
@@ -1872,11 +1891,12 @@ class DisaggResult(djm.Model):
     poe = djm.FloatField()
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    mag_bin_edges = fields.FloatArrayField(null=True)
-    dist_bin_edges = fields.FloatArrayField(null=True)
-    lon_bin_edges = fields.FloatArrayField(null=True)
-    lat_bin_edges = fields.FloatArrayField(null=True)
-    eps_bin_edges = fields.FloatArrayField(null=True)
+    mag_bin_edges = fields.FloatArrayField()
+    dist_bin_edges = fields.FloatArrayField()
+    lon_bin_edges = fields.FloatArrayField()
+    lat_bin_edges = fields.FloatArrayField()
+    eps_bin_edges = fields.FloatArrayField()
+    trts = fields.CharArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     matrix = fields.PickleField()
 
@@ -1947,8 +1967,8 @@ class UhSpectrumData(djm.Model):
 
 class LtRealization(djm.Model):
     """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+    Keep track of logic tree realization progress. When ``completed_items``
+    becomes equal to ``total_items``, mark ``is_complete`` as `True`.
 
     Marking progress as we go gives us the ability to resume partially-
     completed calculations.
@@ -1961,8 +1981,8 @@ class LtRealization(djm.Model):
     sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
     is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField(default=0)
+    total_items = djm.IntegerField()
+    completed_items = djm.IntegerField(default=0)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
@@ -2229,19 +2249,21 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, region_constraint):
+    def contained_in(self, exposure_model_id, region_constraint, offset, size):
         """
         :returns the asset ids (ordered by id) contained in
         `region_constraint` associated with an
         `openquake.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        return self.raw("""
+        return list(self.raw("""
     SELECT * FROM oqmif.exposure_data WHERE
     exposure_model_id = %s AND
     ST_COVERS(ST_GeographyFromText(%s), site)
     ORDER BY id
-    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+    LIMIT %s OFFSET %s
+    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt,
+          size, offset]))
 
     def contained_in_count(self, exposure_model_id, region_constraint):
         cursor = connection.cursor()
