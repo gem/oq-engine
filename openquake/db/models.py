@@ -639,13 +639,20 @@ class HazardCalculation(djm.Model):
     rupture_mesh_spacing = djm.FloatField(
         help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
                    'fault sources rupture discretization'),
+        null=True,
+        blank=True,
+
     )
     width_of_mfd_bin = djm.FloatField(
         help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
-              'Distribution) bin width'),
+                   'Distribution) bin width'),
+        null=True,
+        blank=True,
     )
     area_source_discretization = djm.FloatField(
         help_text='Area Source Disretization, in kilometers',
+        null=True,
+        blank=True,
     )
 
     ##################
@@ -683,6 +690,8 @@ class HazardCalculation(djm.Model):
     investigation_time = djm.FloatField(
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
+        null=True,
+        blank=True,
     )
     intensity_measure_types_and_levels = fields.DictField(
         help_text=(
