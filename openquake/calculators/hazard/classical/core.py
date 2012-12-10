@@ -20,12 +20,10 @@ Core functionality for the classical PSHA hazard calculator.
 import nhlib
 import nhlib.calc
 import nhlib.imt
-import numpy
 
 from django.db import transaction
 
 from openquake import logs
-from openquake import writer
 from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.input import logictree
@@ -35,6 +33,7 @@ from openquake.utils import tasks as utils_tasks
 from openquake.db.aggregate_result_writer import (MeanCurveWriter,
                                                   QuantileCurveWriter)
 from openquake.calculators.hazard.classical import post_processing
+
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
@@ -46,14 +45,12 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
     logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
                    % (job_id, lt_rlz_id))
 
-    result = compute_hazard_curves(job_id, src_ids, lt_rlz_id)
+    compute_hazard_curves(job_id, src_ids, lt_rlz_id)
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id, len(src_ids))
-
-    return result
+    haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
 # Silencing 'Too many local variables'
@@ -173,24 +170,9 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
 
         # Update realiation progress,
         # mark realization as complete if it is done
-        # First, refresh the logic tree realization record:
-        ltr_query = """
-        SELECT * FROM hzrdr.lt_realization
-        WHERE id = %s
-        FOR UPDATE
-        """
-
-        [lt_rlz] = models.LtRealization.objects.raw(
-            ltr_query, [lt_rlz.id])
-
-        lt_rlz.completed_sources += len(src_ids)
-        if lt_rlz.completed_sources == lt_rlz.total_sources:
-            lt_rlz.is_complete = True
-
-        lt_rlz.save()
+        haz_general.update_realization(lt_rlz.id, len(src_ids))
 
     logs.LOG.debug('< transaction complete')
-
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
@@ -226,7 +208,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
-            self.progress['total'] += len(source_ids)
 
             for offset in xrange(0, len(source_ids), block_size):
                 task_args = (
@@ -260,62 +241,25 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-        self.initialize_pr_data()
 
         self.record_init_stats()
 
+        # Set the progress counters:
+        num_sources = models.SourceProgress.objects.filter(
+            is_complete=False,
+            lt_realization__hazard_calculation=self.hc).count()
+        self.progress['total'] = num_sources
+
+        self.initialize_pr_data()
+
     def post_execute(self):
         """
-        Create the final output records for hazard curves. This is done by
-        copying the temporary results from `htemp.hazard_curve_progress` to
-        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
-        the actual curve PoE values). Foreign keys are made from
-        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
-        is need to export the full hazard curve results).
+        Post-execution actions. At the moment, all we do is finalize the hazard
+        curve results. See
+        :meth:`openquake.calculators.hazard.general.BaseHazardCalculatorNext.finalize_hazard_curves`
+        for more info.
         """
-        im = self.hc.intensity_measure_types_and_levels
-        points = self.hc.points_to_compute()
-
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc.id)
-
-        for rlz in realizations:
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, imls in im.items():
-                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
-
-                hco = models.Output(
-                    owner=self.hc.owner,
-                    oq_job=self.job,
-                    display_name="hc-rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
-                )
-                hco.save()
-
-                haz_curve = models.HazardCurve(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imls,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-                haz_curve.save()
-
-                [hc_progress] = models.HazardCurveProgress.objects.filter(
-                    lt_realization=rlz.id, imt=imt)
-
-                hc_data_inserter = writer.BulkInserter(models.HazardCurveData)
-                for i, location in enumerate(points):
-                    poes = hc_progress.result_matrix[i]
-                    hc_data_inserter.add_entry(
-                        hazard_curve_id=haz_curve.id,
-                        poes=poes.tolist(),
-                        location=location.wkt2d)
-
-                hc_data_inserter.flush()
+        self.finalize_hazard_curves()
 
     def clean_up(self):
         """
