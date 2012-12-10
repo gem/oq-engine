@@ -23,6 +23,7 @@ import unittest
 
 from openquake import kvs
 from openquake import logs
+from openquake.utils import stats
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
@@ -155,7 +156,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.client = kvs.get_client()
-        self.client.flushdb()
+        self.client.flushall()
 
         self.test_job = 1
         kvs.mark_job_as_current(self.test_job)
@@ -175,7 +176,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         kvs.mark_job_as_current(self.dataless_job)
 
     def tearDown(self):
-        self.client.flushdb()
+        self.client.flushall()
 
     def test_gc_some_job_data(self):
         """
@@ -236,6 +237,27 @@ class GarbageCollectionTestCase(unittest.TestCase):
             delete_mock.return_value = False
 
             self.assertRaises(RuntimeError, kvs.cache_gc, self.test_job)
+
+    def test_gc_clears_stats(self):
+        # redis garbage collection should clear stats counters as well
+        stats.pk_set(self.test_job, 'nhzrd_total', 10)
+        stats.pk_set(self.test_job, 'nhzrd_done', 7)
+        stats.pk_set(self.test_job, 'nhzrd_failed', 3)
+
+        # Sanity check:
+        self.assertEqual(10, stats.pk_get(self.test_job, 'nhzrd_total'))
+        self.assertEqual(7, stats.pk_get(self.test_job, 'nhzrd_done'))
+        self.assertEqual(3, stats.pk_get(self.test_job, 'nhzrd_failed'))
+
+        result = kvs.cache_gc(self.test_job)
+
+        # 6 keys should be deleted, including the stats keys:
+        self.assertEqual(6, result)
+
+        # explicitly test that the stats keys are deleted
+        self.assertIsNone(stats.pk_get(self.test_job, 'nhzrd_total'))
+        self.assertIsNone(stats.pk_get(self.test_job, 'nhzrd_done'))
+        self.assertIsNone(stats.pk_get(self.test_job, 'nhzrd_failed'))
 
 
 class GetClientTestCase(unittest.TestCase):
