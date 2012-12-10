@@ -52,7 +52,7 @@ INPUT_FILE_TYPES = {
     'FRAGILITY': 'fragility',
     'VULNERABILITY': 'vulnerability',
     'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
-    'SINGLE_RUPTURE_MODEL': 'rupture',
+    'SINGLE_RUPTURE_MODEL': 'rupture_model',
     'SITE_MODEL': 'site_model',
 }
 

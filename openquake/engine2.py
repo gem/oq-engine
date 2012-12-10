@@ -76,6 +76,7 @@ _FILE_PARAMS_TO_INPUT_TYPE = {
     'gsim_logic_tree_file': 'lt_gsim',
     'site_model_file': 'site_model',
     'vulnerability_file': 'vulnerability',
+    'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
     'exposure_file': 'exposure',
 }
 
