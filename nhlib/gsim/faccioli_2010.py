@@ -1,3 +1,4 @@
+# coding: utf-8
 # nhlib: A New Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
@@ -23,11 +24,12 @@ import numpy as np
 from scipy.constants import g
 
 from nhlib.gsim.base import CoeffsTable, GMPE
+from nhlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
 from nhlib import const
 from nhlib.imt import PGA, SA
 
 
-class FaccioliEtAl2010(GMPE):
+class FaccioliEtAl2010(CauzziFaccioli2008):
     """
     Implements GMPE developed by Ezio Faccioli, Aldo Bianchini and Manuela
     Villani and published as "New ground motion prediction equations for T>1 s
@@ -43,37 +45,18 @@ class FaccioliEtAl2010(GMPE):
 
         SA = DSR * (2 * π / T) ** 2
 
+    This class extends
+    :class: `~nhlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008` because the
+    functional form is almost identical - the only difference is in the second
+    term which rather then using hypocentral distance, uses closest distance
+    to the rupture and considers a magnitude dependence.
     """
 
-    #: Supported tectonic region type is active shallow crust,
-    #: since the equations have been derived from the Cauzzi and Faccioli
-    #: 2008 database, see paragraph 'New GMPEs and their applicability to the
-    #: Italian context', page 2.
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
     #: Supported intensity measure types are spectral acceleration,
-    #: and peak ground acceleration. Spectral acceleration values are derived
-    #: from displacement responce spectrum values (as provided by the original
-    #: equations).
+    #: and peak ground acceleration, see table 1, page 7.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([ 
         PGA,
         SA ])
-    
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`, as
-    #: for :class:`~nhlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
-    #: Supported standard deviation type is only total, see equation 2, page 2.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
-
-    #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
-
-    #: Required rupture parameters are magnitude and rake, equation 2, page 2.
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
     #: Required distance measure is rrup, equation 2, page 2.
     REQUIRES_DISTANCES = set(('rrup', ))
@@ -126,12 +109,6 @@ class FaccioliEtAl2010(GMPE):
             stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
         return stddevs
 
-    def _compute_term_1_2 (self, C, mag):
-         """
-         This computes the first and second terms in equation 2, page 2.
-         """
-         return C['a1'] + C['a2'] * mag
-        
     def _compute_term_3 (self, C, rrup, mag):
          """
          This computes the third term in equation 2, page 2.
@@ -139,40 +116,9 @@ class FaccioliEtAl2010(GMPE):
          return (C['a3'] *
                  np.log10(rrup +  C['a4'] * np.power(10, C['a5'] * mag)))
 
-    def _compute_site_term(self, C, vs30):
-        """
-        this computes the site term as a function of 
-        vs30, equation 3, page 3.
-        """
-        # for rock sites the site term is zero
-        site_term = np.zeros_like(vs30)
-
-         # hard soil
-        site_term[(vs30 >= 360) & (vs30 < 800)] = C['SB']
-
-        # medium soil
-        site_term[(vs30 >= 180) & (vs30 < 360)] = C['SC']
-
-        # soft soil
-        site_term[vs30 < 180] = C['SD']
-
-        return site_term
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        this computes the site term as a function of 
-        rake angle value in Equation (5) page 465
-        """
-        if rake > -120.0 and rake < -60.0:
-            return C['EN']
-        elif rake > 30.0 and rake < 150.0:
-            return C['ER']
-        else :
-            return C['ES']  
-
     #: Coefficient table as from table 1 page 7 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT       a1        a2        a3        a4        a5        SB        SC        SD        EN        ER        ES        sigma
+    IMT       a1        a2        a3        a4        a5        aB        aC        aD        aN        aR        aS        sigma
     pga       -1.1800   0.5590    -1.6240   0.0180    0.4450    0.2500    0.3100    0.3300    -0.0100   0.0900    -0.0500   0.3600
     0.05      -2.9600   0.6040    -1.8780   0.0520    0.3960    0.2000    0.2100    0.1800    -0.0200   0.0800    -0.0300   0.3800
     0.10      -2.0200   0.5590    -1.8370   0.0700    0.3730    0.2600    0.2400    0.1900    0.0100    0.0800    -0.0500   0.4000
