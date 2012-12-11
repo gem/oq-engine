@@ -31,6 +31,8 @@ MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a signed 32-bit int
 MAX_SINT_32 = (2 ** 31) - 1
 
+AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
+
 
 class BaseOQModelForm(ModelForm):
     """
@@ -838,13 +840,14 @@ def interest_rate_is_valid(mdl):
     return True, []
 
 
-def gsim_is_valid(gsim):
-    if gsim in nhlib.gsim.AVAILABLE_GSIMS:
+def gsim_is_valid(mdl):
+    if mdl.gsim in AVAILABLE_GSIMS:
         return True, []
-    return False, ['The gsim %r is not in in nhlib.gsim' % gsim]
+    return False, ['The gsim %r is not in in nhlib.gsim' % mdl.gsim]
 
 
-def number_of_ground_motion_fields_is_valid(gmfno):
+def number_of_ground_motion_fields_is_valid(mdl):
+    gmfno = mdl.number_of_ground_motion_fields
     if isinstance(gmfno, int) and gmfno > 0:
         return True, []
     return False, ['The number_of_ground_motion_fields must be a positive '
