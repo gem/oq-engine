@@ -927,7 +927,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
             truncation_level=0.1,
             maximum_distance=100.0,
             gsim='BooreAtkinson2008',
-            ground_motion_correlation_model = 'JB2009',
+            ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=10,
         )
         form = validation.ScenarioHazardCalculationForm(
@@ -937,7 +937,10 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
 
     def test_invalid_scenario_calc(self):
         expected_errors = {
-
+            'gsim': ["The gsim u'BooreAtkinson208' is not in in nhlib.gsim"],
+            'number_of_ground_motion_fields': [
+                'The number_of_ground_motion_fields must be a positive '
+                'integer, got -10']
         }
 
         hc = models.HazardCalculation(
@@ -955,7 +958,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
             truncation_level=0.1,
             maximum_distance=100.0,
             gsim='BooreAtkinson208',
-            ground_motion_correlation_model = 'JB2009',
+            ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=-10,
         )
         form = validation.ScenarioHazardCalculationForm(
@@ -971,7 +974,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
 class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
-                                          'simple_fault_demo_hazard/job.ini')
+                                      'simple_fault_demo_hazard/job.ini')
         self.compulsory_arguments = dict(
             calculation_mode="classical",
             lrem_steps_per_interval=5)

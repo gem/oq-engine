@@ -631,7 +631,7 @@ class HazardCalculation(djm.Model):
     # Logic Tree parameters:
     ########################
     random_seed = djm.IntegerField()
-    number_of_logic_tree_samples = djm.IntegerField()
+    number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
 
     ###############################################
     # ERF (Earthquake Rupture Forecast) parameters:
