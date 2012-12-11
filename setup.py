@@ -66,7 +66,8 @@ setup(
     description="Natural hazards' Risk Markup Language",
     long_description=__doc__,
     platforms=['any'],
-    packages=find_packages(exclude=['tests', 'tests.*']),
+    packages=find_packages(exclude=['tests', 'tests.*', 'nrml.hazard', 'nrml.hazard.*',
+                                    'nrml.risk', 'nrml.risk.*' ]),
     package_data={'nrml': package_data},
     requires=['lxml'],  # Shows up when running `python setup.py --requires`
     provides=['nrml (0.4)'],
