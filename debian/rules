@@ -14,4 +14,4 @@ export DH_OPTIONS=-v
 
 
 %:
-	dh --with python2 --buildsystem=python_distutils $@ 
+	dh --with python2 --with quilt --buildsystem=python_distutils $@ 
