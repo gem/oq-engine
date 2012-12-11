@@ -15,10 +15,3 @@ export DH_OPTIONS=-v
 
 %:
 	dh --with python2 --buildsystem=python_distutils $@ 
-
-override_dh_installdocs:
-	mkdir -p debian/python-nrml/usr/share/doc/python-nrml
-	cp -a examples debian/python-nrml/usr/share/doc/python-nrml
-	chown -R 0:0 debian/python-nrml/usr/share/doc
-	chmod -R go=rX debian/python-nrml/usr/share/doc
-	chmod -R u\+rw debian/python-nrml/usr/share/doc
