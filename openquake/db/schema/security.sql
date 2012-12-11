@@ -34,6 +34,7 @@ GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE hzrdi.parsed_source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.site_model_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdi.parsed_rupture_model_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.gmf_collection_id_seq to GROUP openquake;
@@ -130,6 +131,10 @@ GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
 -- hzrdi.parsed_source
 GRANT SELECT ON hzrdi.parsed_source TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON hzrdi.parsed_source TO oq_job_init;
+
+-- hzrdi.parsed_rupture_model
+GRANT SELECT ON hzrdi.parsed_rupture_model TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdi.parsed_rupture_model TO oq_job_init;
 
 -- hzrdi.site_model
 GRANT SELECT ON hzrdi.site_model TO GROUP openquake;
