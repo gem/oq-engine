@@ -965,7 +965,6 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
             instance=hc, files=None
         )
 
-        # import pdb; pdb.set_trace()
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
