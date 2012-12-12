@@ -24,7 +24,7 @@ Copyright (C) 2012 GEM Foundation.
 from setuptools import setup, find_packages
 
 
-version = "0.01"
+version = "0.1.0"
 url = "http://github.com/gem/oq-risklib"
 
 
@@ -37,7 +37,8 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'numpy',
-        'scipy'
+        'scipy',
+        'Django'
     ],
     maintainer='GEM',
     maintainer_email='info@openquake.org',
