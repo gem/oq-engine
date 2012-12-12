@@ -21,13 +21,26 @@ import os
 import random
 from cStringIO import StringIO
 
+from nrml.hazard.parsers import RuptureModelParser
+
+# NHLIB
+from nhlib.calc import ground_motion_fields
+from nhlib import correlation
+import nhlib.gsim
+
 from openquake.calculators.hazard import general as haz_general
 from openquake import utils, logs, engine2
 from openquake.db import models
 from openquake.input import source
 from openquake.job.validation import MAX_SINT_32
 
-from nrml.hazard.parsers import RuptureModelParser
+# FIXME! Duplication in EventBased Hazard Calculator
+#: Ground motion correlation model map
+GM_CORRELATION_MODEL_MAP = {
+    'JB2009': correlation.JB2009CorrelationModel,
+}
+
+AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
 
 @utils.tasks.oqtask
@@ -52,6 +65,21 @@ def gmfs(job_id, rupture_ids, task_seed, task_no):
 # pylint: disable=R0914
 def compute_gmfs(job_id, rupture_ids, task_seed, task_no):
     print job_id, rupture_ids, task_seed, task_no, '***********************'
+    
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    rupture_mdl = source.nrml_to_nhlib(
+                    models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
+                    hc.rupture_mesh_spacing, None, None)
+    sites = haz_general.get_site_collection(hc)
+    imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
+    GSIM = AVAILABLE_GSIMS[hc.gsim]
+    
+    print '############################'
+    print ground_motion_fields(rupture_mdl, sites, imts, GSIM(),
+                    hc.truncation_level, realizations=1,
+                    correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
+    print '############################'
+    
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
@@ -114,7 +142,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rnd.seed(self.hc.random_seed)
 
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
-        ruptures = models.ParsedRupture.objects.filter(input_id=inp.id)
+        ruptures = models.ParsedRupture.objects.filter(input__id=inp.id - 1)
         rupture_ids = [rupture.id for rupture in ruptures]
         for task_no in range(self.hc.number_of_ground_motion_fields):
             task_seed = rnd.randint(0, MAX_SINT_32)
