@@ -286,7 +286,7 @@ def _simple_rupture_to_nhlib(src, mesh_spacing):
 
     rupture = NhlibRupture(
         mag=src.magnitude, rake=src.rake,
-        tectonic_region_type=None, hypocenter=None,
+        tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
         surface=surface, source_typology=geo.SimpleFaultSurface)
 
     return rupture
@@ -327,7 +327,7 @@ def _complex_rupture_to_nhlib(src, mesh_spacing):
 
     rupture = NhlibRupture(
         mag=src.magnitude, rake=src.rake,
-        tectonic_region_type=None, hypocenter=src.hypocenter,
+        tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
         surface=surface, source_typology=geo.ComplexFaultSurface)
 
     return rupture
