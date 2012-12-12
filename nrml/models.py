@@ -367,8 +367,8 @@ class SimpleFaultRuptureModel(object):
         Magnitude.
     :param float rake:
         Rake angle.
-    :param float rake:
-        Rake angle.
+    :param hypocenter:
+        Hypocenter.
     :param geometry:
         :class:`SimpleFaultGeometry` object.
     """
@@ -391,8 +391,8 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
          Magnitude.
      :param float rake:
          Rake angle.
-     :param float rake:
-         Rake angle.
+     :param hypocenter:
+         Hypocenter.
      :param geometry:
          :class:`ComplexFaultGeometry` object.
     """
