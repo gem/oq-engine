@@ -47,26 +47,35 @@ LOG = logging.getLogger()
 HAZARD_LOG = logging.getLogger('hazard')
 
 
-# Progress report message prefixes
-PR_PREFIXES = ["**", "**  >"]
-
-
 def _log_progress(msg, *args, **kwargs):
-    """Log the message using the progress reporting logging level."""
-    LOG._log(logging.PROGRESS, msg, args, **kwargs)
-
-
-def log_progress(msg, ilvl=1):
-    """Log the progress message observing the indentation level.
-
-    :param str msg: the progress report message to log
-    :param int ilvl: indentation level
     """
-    if ilvl < 1 or ilvl > len(PR_PREFIXES):
-        ilvl = 0
+    Log the message using the progress reporting logging level.
+
+    ``args`` and ``kwargs`` are the same as :meth:`logging.Logger.debug`,
+    except that this method has an additional possible keyword: ``indent``.
+
+    Normally, progress messages are logged with a '** ' prefix. If ``indent``
+    is `True`, messages will be logged with a '**  >' prefix.
+
+    If ``indent`` is not specified, it will default to `False`.
+    """
+    indent = kwargs.get('indent')
+
+    if indent is None:
+        indent = False
     else:
-        ilvl -= 1
-    _log_progress("%s %s" % (PR_PREFIXES[ilvl], msg))
+        # 'indent' is an invalid kwarg for the logger's _log method
+        # we need to remove it before we call _log:
+        del kwargs['indent']
+
+    if indent:
+        prefix = '**  >'
+    else:
+        prefix = '** '
+
+    msg = '%s %s' % (prefix, msg)
+    LOG._log(logging.PROGRESS, msg, args, **kwargs)
+LOG.progress = _log_progress
 
 
 def log_percent_complete(job_id, ctype):
@@ -96,7 +105,9 @@ def log_percent_complete(job_id, ctype):
 
     # Only report the percentage completed if it is above the last value shown
     if percent_complete > lvr:
-        log_progress("%s %3d%% complete" % (ctype, percent_complete), 2)
+        LOG.progress(
+            "%s %3d%% complete" % (ctype, percent_complete), indent=True
+        )
         stats.pk_set(job_id, "lvr", percent_complete)
 
     return percent_complete
