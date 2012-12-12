@@ -421,9 +421,11 @@ class RuptureModelParser(FaultGeometryParserMixin):
             Populated :class:`nrml.models.SimpleFaultRuptureModel` object.
         """
         model = models.SimpleFaultRuptureModel()
-        magnitude_elem, rake_elem, geom_elem = list(element)
+        magnitude_elem, rake_elem, hypocenter_elem, geom_elem = list(element)
         model.magnitude = float(magnitude_elem.text)
         model.rake = float(rake_elem.text)
+        h = hypocenter_elem.attrib
+        model.hypocenter = map(float, [h['lon'], h['lat'], h['depth']])
         model.geometry = cls._parse_simple_geometry(geom_elem)
         return model
 

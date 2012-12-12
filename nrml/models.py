@@ -359,7 +359,7 @@ class SiteModel(object):
 
 
 class SimpleFaultRuptureModel(object):
-    """Basic object representation of a Complex Fault Rupture.
+    """Basic object representation of a Simple Fault Rupture.
 
     :param str id:
         Rupture identifier, unique within a given model.
@@ -367,29 +367,10 @@ class SimpleFaultRuptureModel(object):
         Magnitude.
     :param float rake:
         Rake angle.
+    :param list hypocenter:
+        Floats representing lon, lat and depth.
     :param geometry:
         :class:`SimpleFaultGeometry` object.
-    """
-    def __init__(self, id=None, magnitude=None, rake=None, geometry=None):
-        self.id = id
-        self.magnitude = magnitude
-        self.rake = rake
-        self.geometry = geometry
-
-
-class ComplexFaultRuptureModel(object):
-    """Basic object representation of a Complex Fault Rupture.
-
-    :param str id:
-        Rupture identifier, unique within a given model.
-    :param float magnitude:
-        Magnitude.
-    :param float rake:
-        Rake angle.
-    :param float rake:
-        Rake angle.
-    :param geometry:
-        :class:`ComplexFaultGeometry` object.
     """
 
     def __init__(self, id=None, magnitude=None, rake=None, hypocenter=None,
@@ -399,3 +380,19 @@ class ComplexFaultRuptureModel(object):
         self.rake = rake
         self.hypocenter = hypocenter
         self.geometry = geometry
+
+
+class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
+    """Basic object representation of a Complex Fault Rupture.
+
+     :param str id:
+         Rupture identifier, unique within a given model.
+     :param float magnitude:
+         Magnitude.
+     :param float rake:
+         Rake angle.
+     :param list hypocenter:
+         Floats representing lon, lat and depth.
+     :param geometry:
+         :class:`ComplexFaultGeometry` object.
+    """

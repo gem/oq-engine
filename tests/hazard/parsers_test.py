@@ -352,6 +352,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
         models.SimpleFaultRuptureModel(
             magnitude=7.65,
             rake=15.0,
+            hypocenter=[0.0, 0.0, 15.0],
             geometry=models.SimpleFaultGeometry(
                 wkt='LINESTRING(-124.704 40.363, -124.977 41.214, -125.140 42.096)',
                 dip=50.0,
