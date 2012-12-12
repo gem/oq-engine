@@ -188,7 +188,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     logs.LOG.debug('< done computing disaggregation')
 
 
-_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s'
+_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
 def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
@@ -229,7 +229,8 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     if disp_imt == 'SA':
         disp_imt = 'SA(%s)' % sa_period
 
-    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt)
+    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt,
+                          wkt=site.location.wkt2d)
     disp_name %= disp_name_args
 
     output = models.Output.objects.create_output(
