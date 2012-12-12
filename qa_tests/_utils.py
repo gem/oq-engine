@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import nrml
 import unittest
 
 from lxml import etree
@@ -57,3 +58,13 @@ class BaseQATestCase(unittest.TestCase):
         contents_b = etree.tostring(etree.parse(b), pretty_print=True)
 
         self.assertEqual(contents_a, contents_b)
+
+
+def validates_against_xml_schema(xml_instance_path,
+                                 schema_path=nrml.nrml_schema_file()):
+    """
+    Check whether an XML file validates against an XML schema.
+    """
+    xml_doc = etree.parse(xml_instance_path)
+    xmlschema = etree.XMLSchema(etree.parse(schema_path))
+    return xmlschema.validate(xml_doc)
