@@ -13,11 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import StringIO
 import numpy
 import os
+import shutil
+import tempfile
 
 from nose.plugins.attrib import attr
+
 from openquake.db import models
+from openquake.export import hazard as haz_export
+
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.disagg.case_1 import _test_data as test_data
 
@@ -59,3 +65,19 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
 
         aaae(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
         aaae(test_data.RLZ_2_POE_01_SA, rlz2.matrix)
+
+        # Lastly, we should an export of at least one of these results to
+        # ensure that the disagg export/serialization is working properly.
+        # The export isn't just a simple dump from the database; it requires
+        # extraction of PMFs (Probability Mass Function) from a 6d matrix,
+        # which are then serialized to XML.
+        # This is not a trivial operation.
+        try:
+            target_dir = tempfile.mkdtemp()
+            [result_file] = haz_export.export(rlz1.output.id, target_dir)
+
+            expected = StringIO.StringIO(test_data.EXPECTED_XML_DISAGG)
+            self.assert_xml_equal(expected, result_file)
+            self.assertTrue(qa_utils.validates_against_xml_schema(result_file))
+        finally:
+            shutil.rmtree(target_dir)
