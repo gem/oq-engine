@@ -32,5 +32,8 @@ class AvailableGSIMTestCase(unittest.TestCase):
                 '__init__.py', 'base.py', 'atkinson_boore_2006.py',
                 'zhao_2006.py', 'README.txt']
             with mock.patch('importlib.import_module', fake_import):
-                assert_equal(get_available_gsims(),
+                assert_equal(get_available_gsims().keys(),
                              ['AtkinsonBoore2006', 'BooreAtkinson2008'])
+                assert_equal(get_available_gsims().values(),
+                             [FakeModule.AtkinsonBoore2006,
+                              FakeModule.BooreAtkinson2008])
