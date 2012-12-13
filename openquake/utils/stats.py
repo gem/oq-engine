@@ -278,7 +278,6 @@ class count_progress(object):   # pylint: disable=C0103
     @staticmethod
     def get_task_data(*args):
         """Return the job_id and the number of work items."""
-    
         return args[0], len(args[1])
 
     def __call__(self, func):
