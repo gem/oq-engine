@@ -9,7 +9,7 @@ Homepage: http://github.com/gem/nhlib
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/python-dateutil.git;a=summary
 
 Package: python-nhlib
-Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml, python-django
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy, python-scipy, python-shapely
 Description:  TODO
  asdasd asd asd 
