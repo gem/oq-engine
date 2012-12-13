@@ -34,7 +34,7 @@ from setuptools import setup, find_packages, Extension
 import numpy
 
 
-version = "0.1.0"
+version = "0.9.1"
 url = "http://github.com/gem/nhlib"
 
 geoutils_speedups = Extension('nhlib.geo._utils_speedups',
