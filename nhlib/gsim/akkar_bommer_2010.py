@@ -32,7 +32,10 @@ class AkkarBommer2010(GMPE):
     and Spectral Accelerations in Europe, the Mediterranean Region, and
     the Middle East", Seismological Research Letters, 81(2), 195-206.
     """
-    #: Supported region type is Europe, Mediterranean and Middle East
+    #: Supported tectonic region type is 'active shallow crust' because the
+    #: equations have been derived from data from Southern Europe, North
+    #: Africa, and active areas of the Middle East, as explained in the
+    # 'Introduction', page 195.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can
