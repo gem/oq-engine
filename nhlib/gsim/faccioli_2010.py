@@ -74,8 +74,8 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
         mean = self._compute_mean(C, rup.mag, dists.rrup, sites.vs30,
                                   rup.rake, imt)
 
-        # convert from cm/s**2 to g for SA and PGA, and also convert from
-        # base 10 to base e.
+        # convert from cm/s**2 to g for SA (PGA is already computed in m/s**2),
+        # and also convert from base 10 to base e.
         if isinstance(imt, PGA):
             mean = np.log((10 ** mean) / g)
         elif isinstance(imt, SA):
