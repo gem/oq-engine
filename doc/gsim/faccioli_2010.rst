@@ -1,0 +1,8 @@
+=============
+Faccioli 2010
+=============
+
+.. module:: nhlib.gsim.faccioli_2010
+
+.. autoclass:: FaccioliEtAl2010
+    :members:

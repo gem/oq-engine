@@ -11,14 +11,15 @@ Built-in GSIMs
 
 .. toctree::
 
-    chiou_youngs_2008
-    sadigh_1997
-    boore_atkinson_2008
-    zhao_2006
-    atkinson_boore_2006
-    akkar_cagnan_2010
     abrahamson_silva_2008
+    akkar_cagnan_2010
+    atkinson_boore_2006
+    boore_atkinson_2008
     cauzzi_faccioli_2008
+    chiou_youngs_2008
+    faccioli_2010
+    sadigh_1997
+    zhao_2006
 
 
 -----------------------------------
