@@ -23,9 +23,8 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-from nhlib.gsim.base import CoeffsTable, GMPE
+from nhlib.gsim.base import CoeffsTable
 from nhlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
-from nhlib import const
 from nhlib.imt import PGA, SA
 
 
@@ -54,27 +53,25 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 1, page 7.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([ 
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
-        SA ])
+        SA
+    ])
 
     #: Required distance measure is rrup, equation 2, page 2.
     REQUIRES_DISTANCES = set(('rrup', ))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def _compute_mean(self, C, mag, dists, vs30, rake, imt):
         """
-        See :meth:`superclass method
-        <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
+        Return mean value computed using equation 2, page 2, plus site
+        term and faulting style term, equations 3 and 5, page 3.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
+        mean = (self._compute_term_1_2(C, mag) +
+                self._compute_term_3(C, dists.rrup, mag) +
+                self._compute_site_term(C, vs30) +
+                self._compute_faulting_style_term(C, rake))
 
-        mean = self._compute_mean(C, rup.mag, dists.rrup, sites.vs30,
-                                  rup.rake, imt)
-
-        # convert from cm/s**2 to g for SA (PGA is already computed in m/s**2),
+        # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA,
         # and also convert from base 10 to base e.
         if isinstance(imt, PGA):
             mean = np.log((10 ** mean) / g)
@@ -82,30 +79,16 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
             mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
                           1e-2 / g)
 
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        return mean
 
-        return mean, stddevs      
+    def _compute_term_3(self, C, rrup, mag):
+        """
+        This computes the third term in equation 2, page 2.
+        """
+        return (C['a3'] *
+                np.log10(rrup + C['a4'] * np.power(10, C['a5'] * mag)))
 
-    def _compute_mean(self, C, mag, rrup, vs30, rake, imt):
-         """
-         Return mean value computed using equation 2, page 2, plus site
-         term and faulting style term, equations 3 and 5, page 3.
-         """
-         mean = (self._compute_term_1_2(C, mag) +
-                 self._compute_term_3(C, rrup, mag) +
-                 self._compute_site_term(C, vs30) +
-                 self._compute_faulting_style_term(C, rake))
-
-         return mean
-
-    def _compute_term_3 (self, C, rrup, mag):
-         """
-         This computes the third term in equation 2, page 2.
-         """
-         return (C['a3'] *
-                 np.log10(rrup +  C['a4'] * np.power(10, C['a5'] * mag)))
-
-    #: Coefficient table as from table 1 page 7 
+    #: Coefficient table as from table 1 page 7
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT       a1        a2        a3        a4        a5        aB        aC        aD        aN        aR        aS        sigma
     pga       -1.1800   0.5590    -1.6240   0.0180    0.4450    0.2500    0.3100    0.3300    -0.0100   0.0900    -0.0500   0.3600
