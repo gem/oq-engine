@@ -15,9 +15,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Disaggregation calculator core functionality
+Scenario calculator core functionality
 """
-import os
 import random
 from cStringIO import StringIO
 from django.db import transaction
@@ -31,7 +30,7 @@ from nhlib import correlation
 import nhlib.gsim
 
 from openquake.calculators.hazard import general as haz_general
-from openquake import utils, logs, engine2
+from openquake import utils, logs
 from openquake.db import models
 from openquake.input import source
 from openquake import writer
@@ -111,8 +110,6 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
 
     inserter.flush()
 
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
 
 def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
@@ -123,13 +120,14 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
     GSIM = AVAILABLE_GSIMS[hc.gsim]
 
-    gmf = ground_motion_fields(rupture_mdl, sites, imts, GSIM(),
-                    hc.truncation_level, realizations=1,
-                    correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
+    gmf = ground_motion_fields(
+        rupture_mdl, sites, imts, GSIM(),
+        hc.truncation_level, realizations=1,
+        correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
     points_to_compute = hc.points_to_compute()
 
     save_gmf(output_id, gmf, points_to_compute, task_no)
- 
+
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
@@ -140,7 +138,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         """
         logs.log_progress("initializing sources", 2)
 
-		# Get the rupture model in input
+        # Get the rupture model in input
         [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
 
         # Associate the source input to the calculation:
@@ -169,7 +167,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # for all sites.
         self.initialize_site_model()
         self.progress['total'] = self.hc.number_of_ground_motion_fields
-        
+
         # Store a record in the output table.
         self.output = models.Output.objects.create(
             owner=self.job.owner,
@@ -177,7 +175,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
             display_name="gmf",
             output_type="gmf")
         self.output.save()
-
 
     def task_arg_gen(self, block_size):
         """
@@ -199,5 +196,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rupture_ids = [rupture.id for rupture in ruptures]
         for task_no in range(self.hc.number_of_ground_motion_fields):
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (self.job.id, rupture_ids, self.output.id, task_seed, task_no)
+            task_args = (self.job.id, rupture_ids,
+                         self.output.id, task_seed, task_no)
             yield task_args
