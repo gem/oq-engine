@@ -1851,6 +1851,26 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+class GmfScenario(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    output = djm.ForeignKey('Output')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    # Spectral acceleration
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    result_grp_ordinal = djm.IntegerField()
+
+    objects = djm.GeoManager()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_scenario'
+    
+
 
 class DisaggResult(djm.Model):
     """
