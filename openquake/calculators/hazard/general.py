@@ -255,7 +255,7 @@ def store_site_data(hc_id, site_model_inp, mesh):
         ID of a :class:`~openquake.db.models.HazardCalculation`.
     :param site_model_inp:
         An :class:`~openquake.db.models.Input` with an
-        `input_type`=='site_model'. This tells us which site model dataset to
+        `input_type` == 'site_model'. This tells us which site model dataset to
         query.
     :param mesh:
         Calculation points of interest, as a :class:`nhlib.geo.mesh.Mesh`.
