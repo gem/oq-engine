@@ -115,7 +115,6 @@ class AkkarBommer2010(GMPE):
 
         ``b1 + b2 * M + b3 * M**2``
         """
-        # b1 + b2 * M + b3 * M ** 2
         return C['b1'] + (C['b2'] * rup.mag) + (C['b3'] * (rup.mag ** 2))
 
     def _compute_distance(self, rup, dists, imt, C):
@@ -124,7 +123,6 @@ class AkkarBommer2010(GMPE):
 
         ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
         """
-        # ((b4 + b5 * M) * (sqrt(rjb ** 2 + b6 ** 2)))
         return (((C['b4'] + C['b5'] * rup.mag)
                 * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
 
@@ -135,8 +133,6 @@ class AkkarBommer2010(GMPE):
         ``b7 * Ss + b8 * Sa``
         """
         Ss, Sa = self._get_site_type_dummy_variables(sites)
-
-        # b7 * Ss + b8 * Sa
         return (C['b7'] * Ss) + (C['b8'] * Sa)
 
     def _get_site_type_dummy_variables(self, sites):
@@ -161,7 +157,6 @@ class AkkarBommer2010(GMPE):
         ``b9 * Fn + b10 * Fr``
         """
         Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)
-        # b9*Fn + b10*Fr
         return (C['b9'] * Fn) + (C['b10'] * Fr)
 
     def _get_fault_type_dummy_variables(self, sites, rup, imt):
