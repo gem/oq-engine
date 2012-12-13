@@ -34,7 +34,7 @@ from setuptools import setup, find_packages, Extension
 import numpy
 
 
-version = "0.01"
+version = "0.1.0"
 url = "http://github.com/gem/nhlib"
 
 geoutils_speedups = Extension('nhlib.geo._utils_speedups',
@@ -62,8 +62,8 @@ setup(
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
     scripts=['tests/gsim/check_gsim.py'],
-    maintainer='Anton Gritsay',
-    maintainer_email='anton@openquake.org',
+    maintainer='GEM',
+    maintainer_email='info@openquake.org',
     classifiers=(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Education',
