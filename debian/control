@@ -10,7 +10,7 @@ Homepage: http://github.com/gem/oq-risklib
 
 Package: python-oq-risklib
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml, python-scipy, python-numpy, python-django
 Description:  Risklib is an opensource library for seismic risk assessment, which includes
  several modules capable of calculating losses and damage distribution for a
  scenario earthquake (deterministic event) or probabilistic risk from all the
