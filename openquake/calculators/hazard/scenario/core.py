@@ -20,6 +20,8 @@ Disaggregation calculator core functionality
 import os
 import random
 from cStringIO import StringIO
+from django.db import transaction
+import numpy
 
 from nrml.hazard.parsers import RuptureModelParser
 
@@ -32,6 +34,7 @@ from openquake.calculators.hazard import general as haz_general
 from openquake import utils, logs, engine2
 from openquake.db import models
 from openquake.input import source
+from openquake import writer
 from openquake.job.validation import MAX_SINT_32
 
 # FIXME! Duplication in EventBased Hazard Calculator
@@ -45,7 +48,7 @@ AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
 @utils.tasks.oqtask
 @utils.stats.count_progress('h')
-def gmfs(job_id, rupture_ids, task_seed, task_no):
+def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
@@ -53,7 +56,7 @@ def gmfs(job_id, rupture_ids, task_seed, task_no):
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
                    % (job_id, task_no))
 
-    compute_gmfs(job_id, rupture_ids, task_seed, task_no)
+    compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no)
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
@@ -61,11 +64,57 @@ def gmfs(job_id, rupture_ids, task_seed, task_no):
     haz_general.signal_task_complete(job_id=job_id, num_items=1)
 
 
+@transaction.commit_on_success(using='reslt_writer')
+def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
+    """
+    Helper method to save computed GMF data to the database.
+
+    :param int output_id:
+        Output_id identifies the reference to the output record.
+    :param dict gmf_dict:
+        The GMF results during the calculation.
+    :param points_to_compute:
+        An :class:`nhlib.geo.mesh.Mesh` object, representing all of the points
+        of interest for a calculation.
+    :param int result_grp_ordinal:
+        The sequence number (1 to N) of the task which computed these results.
+
+        A calculation consists of N tasks, so this tells us which task computed
+        the data.
+    """
+
+    inserter = writer.BulkInserter(models.GmfScenario)
+
+    for imt, gmfs in gmf_dict.iteritems():
+        # ``gmfs`` comes in as a numpy.matrix
+        # we want it is an array; it handles subscripting
+        # in the way that we want
+        gmfs = numpy.array(gmfs)
+
+        sa_period = None
+        sa_damping = None
+        if isinstance(imt, nhlib.imt.SA):
+            sa_period = imt.period
+            sa_damping = imt.damping
+        imt_name = imt.__class__.__name__
+
+        for i, location in enumerate(points_to_compute):
+            inserter.add_entry(
+                output_id=output_id,
+                imt=imt_name,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                location=location.wkt2d,
+                gmvs=gmfs[i].tolist(),
+                result_grp_ordinal=result_grp_ordinal,
+            )
+
+    inserter.flush()
+
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
-def compute_gmfs(job_id, rupture_ids, task_seed, task_no):
-    print job_id, rupture_ids, task_seed, task_no, '***********************'
 
+def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
@@ -74,11 +123,13 @@ def compute_gmfs(job_id, rupture_ids, task_seed, task_no):
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
     GSIM = AVAILABLE_GSIMS[hc.gsim]
 
-    print ground_motion_fields(
-        rupture_mdl, sites, imts, GSIM(),
-        hc.truncation_level, realizations=1,
-        correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
+    gmf = ground_motion_fields(rupture_mdl, sites, imts, GSIM(),
+                    hc.truncation_level, realizations=1,
+                    correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
+    points_to_compute = hc.points_to_compute()
 
+    save_gmf(output_id, gmf, points_to_compute, task_no)
+ 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
@@ -110,7 +161,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         basically defines the work to be done in the `execute` phase.)
         """
 
-        # Parse logic trees and create source Inputs.
+        # Create source Inputs.
         self.initialize_sources()
 
         # Deal with the site model and compute site data for the calculation
@@ -118,6 +169,15 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # for all sites.
         self.initialize_site_model()
         self.progress['total'] = self.hc.number_of_ground_motion_fields
+        
+        # Store a record in the output table.
+        self.output = models.Output.objects.create(
+            owner=self.job.owner,
+            oq_job=self.job,
+            display_name="gmf",
+            output_type="gmf")
+        self.output.save()
+
 
     def task_arg_gen(self, block_size):
         """
@@ -139,5 +199,5 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rupture_ids = [rupture.id for rupture in ruptures]
         for task_no in range(self.hc.number_of_ground_motion_fields):
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (self.job.id, rupture_ids, task_seed, task_no)
+            task_args = (self.job.id, rupture_ids, self.output.id, task_seed, task_no)
             yield task_args
