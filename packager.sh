@@ -98,7 +98,9 @@ pkgtest_run () {
         if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
             echo -n "The $haddr machine seems to be already configured ... "
             previous_name="$(ssh $haddr hostname 2>/dev/null)"
+            set +e
             sudo lxc-shutdown -n $previous_name -w -t 10
+            set -e
             echo "turned off"
         fi
     done
@@ -123,8 +125,8 @@ pkgtest_run () {
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    set -e
     sudo lxc-shutdown -n $machine_name -w -t 10
+    set -e
 
     # TODO
     # app related tests (run demos)
