@@ -1,9 +1,10 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
+GEM_DEB_PACKAGE="python-nrml"
 GEM_BUILD_ROOT="build-deb"
-GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-nrml"
+GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
@@ -50,17 +51,17 @@ _pkgtest_innervm_run () {
     # install package to manage repository properly
     ssh $haddr "sudo apt-get install python-software-properties"
 
-    # create a remote "local repo" where place python-oq package
+    # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/python-oq_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get remove --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get install --reinstall --force-yes -y python-oq"
+    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get remove --force-yes -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install --reinstall --force-yes -y ${GEM_DEB_PACKAGE}"
 
     trap ERR
 
@@ -73,7 +74,7 @@ pkgtest_run () {
     #
     #  run build of package
     if [ -d build-deb ]; then
-        if [ ! -f build-deb/python-oq*.deb ]; then
+        if [ ! -f build-deb/${GEM_DEB_PACKAGE}_*.deb ]; then
             echo "'build-deb' directory already exists but .deb file package was not found"
             return 1
 
@@ -83,7 +84,7 @@ pkgtest_run () {
     fi
 
     #
-    #  prepare repo and install python-oq package
+    #  prepare repo and install $GEM_DEB_PACKAGE package
     cd build-deb
     dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
     dpkg-scansources . | gzip > Sources.gz
@@ -92,11 +93,14 @@ pkgtest_run () {
     #
     #  check if an istance with the same address already exists
     export haddr="10.0.3.$le_addr"
-    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
-        echo -n "The $haddr machine seems to be already configured ... "
-        previous_name="$(ssh $haddr hostname 2>/dev/null)"
-        sudo lxc-shutdown -n $previous_name -w -t 10
-        echo "turned off"
+    running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
+    for running_machine in $running_machines ; do 
+        if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+            echo -n "The $haddr machine seems to be already configured ... "
+            previous_name="$(ssh $haddr hostname 2>/dev/null)"
+            sudo lxc-shutdown -n $previous_name -w -t 10
+            echo "turned off"
+        fi
     fi
 
     #
@@ -249,7 +253,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
       echo
-      echo "  *  development version from $hash commit"
+      echo "  * Development version from $hash commit"
       echo
       echo " -- $DEBFULLNAME <$DEBEMAIL>  $(date -d@$dt -R)"
       echo
@@ -303,7 +307,7 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/python-oq_*.deb  $GEM_BUILD_PKG
+cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb  $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/python-oq_*.deb .
-dpkg -e $GEM_BUILD_PKG/python-oq_*.deb
+dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
+dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
