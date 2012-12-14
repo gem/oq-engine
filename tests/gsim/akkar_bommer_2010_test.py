@@ -24,16 +24,8 @@ class AkkarBommer2010TestCase(BaseGSIMTestCase):
     # Test data were obtained from a tool given by the authors
     # The data of the values of the mean PGA and SA are in m/s2.
 
-    def test_mean_normal(self):
-        self.check('AKBO10/AK10_MEDIAN_NM.csv',
-                    max_discrep_percentage=0.6)
-
-    def test_mean_reverse(self):
-        self.check('AKBO10/AK10_MEDIAN_RV.csv',
-                    max_discrep_percentage=0.6)
-
-    def test_mean_strike_slip(self):
-        self.check('AKBO10/AK10_MEDIAN_SS.csv',
+    def test_mean(self):
+        self.check('AKBO10/AK10_MEAN.csv',
                     max_discrep_percentage=0.6)
 
     def test_std_intra(self):
