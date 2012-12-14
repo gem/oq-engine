@@ -86,12 +86,18 @@ class AkkarBommer2010(GMPE):
                  self._get_site_amplification(sites, imt, C) +
                  self._get_mechanism(sites, rup, imt, C))
 
-        # Convert units to g:
-        mean = np.log((10.0 ** (imean - 2.0)) / g)
+        # Convert units to g,
+        # but only for PGA and SA (not PGV):
+        if isinstance(imt, (PGA, SA)):
+            mean = np.log((10.0 ** (imean - 2.0)) / g)
+        else:
+            # PGV:
+            mean = np.log(10.0 ** imean)
 
         istddevs = self._get_stddevs(C, stddev_types,
                                      num_sites=len(sites.vs30))
-        stddevs = (np.array(istddevs) - 2.0)
+
+        stddevs = np.log(10 ** np.array(istddevs))
 
         return mean, stddevs
 
