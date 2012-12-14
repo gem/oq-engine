@@ -20,6 +20,8 @@ from __future__ import division
 
 import numpy as np
 
+from scipy.constants import g
+
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
 from nhlib.imt import PGA, PGV, SA
@@ -84,9 +86,8 @@ class AkkarBommer2010(GMPE):
                  self._get_site_amplification(sites, imt, C) +
                  self._get_mechanism(sites, rup, imt, C))
 
-        # Changing the base of the logarithm, from 10 to exp and units
-        # output in m/s2
-        mean = np.log(10.0 ** (imean - 2.0))
+        # Convert units to g:
+        mean = np.log((10.0 ** (imean - 2.0)) / g)
 
         istddevs = self._get_stddevs(C, stddev_types,
                                      num_sites=len(sites.vs30))
