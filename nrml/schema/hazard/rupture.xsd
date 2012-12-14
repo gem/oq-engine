@@ -36,6 +36,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
+                    <xs:element name="hypocenter" type="Hypocenter"/>
                     <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
