@@ -101,7 +101,7 @@ pkgtest_run () {
             sudo lxc-shutdown -n $previous_name -w -t 10
             echo "turned off"
         fi
-    fi
+    done
 
     #
     #  run the VM and get the VM name
