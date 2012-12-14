@@ -49,7 +49,7 @@ _pkgtest_innervm_run () {
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     # install package to manage repository properly
-    ssh $haddr "sudo apt-get install python-software-properties"
+    ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
