@@ -195,7 +195,7 @@ def export_gmf_scenario(output, target_dir):
         A list of exported file names (including the absolute path to each
         file).
     """
-    gmfs = models.GmfScenario.objects.get(output=output.id)
+    gmfs = models.get_gmfs_scenario(output)
     filename = GMF_SCENARIO_FMT % dict(output_id=output.id)
     path = os.path.abspath(os.path.join(target_dir, filename))
     writer = nrml_writers.ScenarioGMFXMLWriter(path)
