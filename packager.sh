@@ -87,8 +87,22 @@ pkgtest_run () {
     #
     #  prepare repo and install $GEM_DEB_PACKAGE package
     cd build-deb
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+    dpkg-scanpackages . /dev/null >Packages
+    cat Packages | gzip -9c > Packages.gz
     dpkg-scansources . | gzip > Sources.gz
+    cat > Release <<EOF
+Archive: precise
+Origin: Ubuntu
+Label: Local Ubuntu Precise Repository
+Architecture: amd64
+MD5Sum:
+EOF
+    printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
+        $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz' \
+        $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
+    gpg --armor --detach-sign --output Release.gpg Release
+
     cd -
 
     #
