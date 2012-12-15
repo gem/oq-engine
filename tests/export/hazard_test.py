@@ -180,7 +180,6 @@ class ScenarioExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            import pdb; pdb.set_trace()
 
             self.assertEqual(1, len(outputs))  # 1 GMF
 
@@ -197,7 +196,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
 
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(exported_files[0])
-            self.assertEqual(442, number_of('nrml:gmf', tree))
+            self.assertEqual(30, number_of('nrml:gmf', tree))
 
         finally:
             shutil.rmtree(target_dir)
