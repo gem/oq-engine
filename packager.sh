@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_DEB_PACKAGE="python-oq-risklib"
 GEM_BUILD_ROOT="build-deb"
@@ -49,7 +49,7 @@ _pkgtest_innervm_run () {
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     # install package to manage repository properly
-    ssh $haddr "sudo apt-get install python-software-properties"
+    ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
@@ -93,12 +93,17 @@ pkgtest_run () {
     #
     #  check if an istance with the same address already exists
     export haddr="10.0.3.$le_addr"
-    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
-        echo -n "The $haddr machine seems to be already configured ... "
-        previous_name="$(ssh $haddr hostname 2>/dev/null)"
-        sudo lxc-shutdown -n $previous_name -w -t 10
-        echo "turned off"
-    fi
+    running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
+    for running_machine in $running_machines ; do
+        if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+            echo -n "The $haddr machine seems to be already configured ... "
+            previous_name="$(ssh $haddr hostname 2>/dev/null)"
+            set +e
+            sudo lxc-shutdown -n $previous_name -w -t 10
+            set -e
+            echo "turned off"
+        fi
+    done
 
     #
     #  run the VM and get the VM name
@@ -120,8 +125,8 @@ pkgtest_run () {
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    set -e
     sudo lxc-shutdown -n $machine_name -w -t 10
+    set -e
 
     # TODO
     # app related tests (run demos)
