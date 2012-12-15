@@ -55,6 +55,7 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
                    % (job_id, task_no))
 
+    numpy.random.seed(task_seed)
     compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no)
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
