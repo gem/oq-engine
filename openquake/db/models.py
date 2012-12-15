@@ -1852,6 +1852,7 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+
 class GmfScenario(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
@@ -1870,7 +1871,30 @@ class GmfScenario(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_scenario'
-    
+
+
+def get_gmfs_scenario(output):
+    """
+    Iterator for walking through all child :class:`Gmf` objects.
+    """
+    job = output.oq_job
+    hc = job.hazard_calculation
+    imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    for imt, sa_period, sa_damping in imts:
+        gmfs = GmfScenario.objects.filter(
+            output__id=output.id,
+            imt=imt,
+            sa_period=sa_period,
+            sa_damping=sa_damping,
+        ).order_by('location')
+        for gmf in gmfs:
+            gmf_nodes = []
+            for gmv in gmf.gmvs:
+                gmf_nodes.append(
+                    _GroundMotionFieldNode(iml=gmv, location=gmf.location))
+            yield _GroundMotionField(
+                imt=imt, sa_period=sa_period,
+                sa_damping=sa_damping, gmf_nodes=gmf_nodes)
 
 
 class DisaggResult(djm.Model):
