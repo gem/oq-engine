@@ -58,10 +58,10 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get remove --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --reinstall --force-yes -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     trap ERR
 
