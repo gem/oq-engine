@@ -20,7 +20,6 @@
 """
 Utility functions related to keeping job progress information and statistics.
 """
-from collections import Sequence
 from datetime import datetime
 from functools import wraps
 import redis
@@ -286,8 +285,9 @@ class count_progress(object):   # pylint: disable=C0103
         def wrapper(*args, **kwargs):
             """Call the wrapped function and step the done/failed counters in
                case of success/failure."""
-            if not (isinstance(args[0], int) and
-                    isinstance(args[1], Sequence)):
+            id_and_sequence = (isinstance(args[0], (int, long))
+                               and hasattr(args[1], '__len__'))
+            if not id_and_sequence:
                 raise TypeError(
                     '%s should have arguments job_id and a list of ids, '
                     'got %r and %r instead' % (func, args[0], args[1]))
