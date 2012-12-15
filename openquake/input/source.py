@@ -319,11 +319,7 @@ def _complex_rupture_to_nhlib(src, mesh_spacing):
         line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
         edges.append(line)
 
-    geom = src.geometry
-
-    surface = geo.ComplexFaultSurface.from_fault_data(
-        edges, geom.upper_seismo_depth, geom.lower_seismo_depth,
-        geom.dip, mesh_spacing)
+    surface = geo.ComplexFaultSurface.from_fault_data(edges, mesh_spacing)
 
     rupture = NhlibRupture(
         mag=src.magnitude, rake=src.rake,
