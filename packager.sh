@@ -54,7 +54,7 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages* build-deb/Release* build-deb/Sources.gz $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
@@ -89,7 +89,8 @@ pkgtest_run () {
     cd build-deb
     dpkg-scanpackages . /dev/null >Packages
     cat Packages | gzip -9c > Packages.gz
-    dpkg-scansources . | gzip > Sources.gz
+    dpkg-scansources . > Sources
+    cat Sources | gzip > Sources.gz
     cat > Release <<EOF
 Archive: precise
 Origin: Ubuntu
@@ -99,8 +100,12 @@ MD5Sum:
 EOF
     printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
         $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz' \
+    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
         $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+        $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+        $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
 
     cd -
@@ -140,7 +145,7 @@ EOF
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    sudo lxc-shutdown -n $machine_name -w -t 10
+    # sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     # TODO
