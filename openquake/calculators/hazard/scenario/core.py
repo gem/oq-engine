@@ -137,8 +137,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
     def initialize_sources(self):
         """
         """
-        logs.log_progress("initializing sources", 2)
-
         # Get the rupture model in input
         [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
 
