@@ -48,20 +48,21 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    gpg -a --export | ssh $haddr "sudo apt-key add -"
     # install package to manage repository properly
     ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages* build-deb/Release* build-deb/Sources.gz $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get remove --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --force-yes -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --reinstall --force-yes -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     trap ERR
 
@@ -86,15 +87,34 @@ pkgtest_run () {
     #
     #  prepare repo and install $GEM_DEB_PACKAGE package
     cd build-deb
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-    dpkg-scansources . | gzip > Sources.gz
+    dpkg-scanpackages . /dev/null >Packages
+    cat Packages | gzip -9c > Packages.gz
+    dpkg-scansources . > Sources
+    cat Sources | gzip > Sources.gz
+    cat > Release <<EOF
+Archive: precise
+Origin: Ubuntu
+Label: Local Ubuntu Precise Repository
+Architecture: amd64
+MD5Sum:
+EOF
+    printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
+        $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
+        $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+        $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+        $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
+    gpg --armor --detach-sign --output Release.gpg Release
+
     cd -
 
     #
     #  check if an istance with the same address already exists
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
-    for running_machine in $running_machines ; do 
+    for running_machine in $running_machines ; do
         if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
             echo -n "The $haddr machine seems to be already configured ... "
             previous_name="$(ssh $haddr hostname 2>/dev/null)"
