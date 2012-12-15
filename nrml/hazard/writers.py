@@ -605,3 +605,52 @@ class DisaggXMLWriter(object):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class ScenarioGMFXMLWriter(object):
+    """
+    :param str path:
+        File path (including filename) for XML results to be saved to.
+    """
+
+    def __init__(self, path):
+        self.path = path
+
+    def serialize(self, data):
+        """
+        Serialize a collection of ground motion fields to XML.
+
+        :param data:
+            An iterable of "GMFScenario" objects.
+
+            Each "GMFScenario" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * an `iml` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            gmfset = etree.SubElement(root, 'gmfSet')
+            for gmf in data:
+                gmf_elem = etree.SubElement(gmfset, 'gmf')
+                gmf_elem.set('IMT', gmf.imt)
+                if gmf.imt == 'SA':
+                    gmf_elem.set('saPeriod', str(gmf.sa_period))
+                    gmf_elem.set('saDamping', str(gmf.sa_damping))
+                for gmf_node in gmf:
+                    node_elem = etree.SubElement(gmf_elem, 'node')
+                    node_elem.set('iml', str(gmf_node.iml))
+                    node_elem.set('lon', str(gmf_node.location.x))
+                    node_elem.set('lat', str(gmf_node.location.y))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
