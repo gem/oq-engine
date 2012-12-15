@@ -145,7 +145,7 @@ EOF
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    # sudo lxc-shutdown -n $machine_name -w -t 10
+    sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     # TODO
