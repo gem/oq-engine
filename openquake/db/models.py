@@ -2137,7 +2137,7 @@ class BCRDistribution(djm.Model):
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2150,8 +2150,8 @@ class BCRDistributionData(djm.Model):
 
     bcr_distribution = djm.ForeignKey("BCRDistribution")
     asset_ref = djm.TextField()
-    expected_annual_loss_original = djm.FloatField()
-    expected_annual_loss_retrofitted = djm.FloatField()
+    average_annual_loss_original = djm.FloatField()
+    average_annual_loss_retrofitted = djm.FloatField()
     bcr = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
