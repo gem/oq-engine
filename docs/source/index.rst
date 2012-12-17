@@ -20,7 +20,6 @@ Contents:
     kvs
     logs
     input
-    producer
     risk
     schema
     shapes
