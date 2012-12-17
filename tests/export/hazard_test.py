@@ -189,14 +189,14 @@ class ScenarioExportTestCase(BaseExportTestCase):
             exported_files = hazard.export(gmf_outputs[0].id, target_dir)
 
             self.assertEqual(1, len(exported_files))
-            # Check the file paths exist, are absolute, and the files aren't
+            # Check the file paths exist, is absolute, and the file isn't
             # empty.
-            for f in exported_files:
-                self._test_exported_file(f)
+            f = exported_files[0]
+            self._test_exported_file(f)
 
             # Check for the correct number of GMFs in the file:
-            tree = etree.parse(exported_files[0])
-            self.assertEqual(30, number_of('nrml:gmf', tree))
+            tree = etree.parse(f)
+            self.assertEqual(1, number_of('nrml:gmf', tree))
 
         finally:
             shutil.rmtree(target_dir)
