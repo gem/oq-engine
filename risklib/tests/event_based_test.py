@@ -18,7 +18,7 @@ import numpy
 import mock
 import unittest
 
-from risklib.models import input as input_models
+from risklib import models
 from risklib.curve import EMPTY_CURVE
 from risklib.vulnerability_function import VulnerabilityFunction
 from risklib import event_based
@@ -383,9 +383,9 @@ class EpsilonProviderTestCase(unittest.TestCase):
             correlation_type=event_based.PERFECTLY_CORRELATED,
             taxonomies=["a", "b"])
         self.assets = [
-            input_models.Asset(None, "a", None, None),
-            input_models.Asset(None, "b", None, None),
-            input_models.Asset(None, "a", None, None),
+            models.input.Asset(None, "a", None, None),
+            models.input.Asset(None, "b", None, None),
+            models.input.Asset(None, "a", None, None),
         ]
 
     def test_uncorrelated(self):
