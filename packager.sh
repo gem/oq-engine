@@ -3,6 +3,10 @@
 set -x
 set -e
 GEM_DEB_PACKAGE="python-nrml"
+GEM_DEB_SERIE="master"
+if [ -z "$GEM_DEB_REPO" ]; then
+    GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
+fi
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
@@ -54,7 +58,9 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages* build-deb/Release* build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        build-deb/Packages* build-deb/Release* build-deb/Sources* $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
@@ -108,6 +114,17 @@ EOF
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
 
+    if [ -d "${GEM_DEB_REPO}" ]; then
+        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
+        repo_tmpdir=mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX"
+        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            build-deb/Packages* build-deb/Release* build-deb/Sources* "${repo_tmpdir}"
+        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        fi
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+    fi
     cd -
 
     #
