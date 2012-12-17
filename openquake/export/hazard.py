@@ -73,6 +73,7 @@ def _export_fn_map():
     fn_map = {
         'hazard_curve': export_hazard_curves,
         'gmf': export_gmf,
+        'gmf_scenario': export_gmf_scenario,
         'ses': export_ses,
         'complete_lt_ses': export_ses,
         'complete_lt_gmf': export_gmf,
@@ -88,6 +89,7 @@ GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
 COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
+GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
 
 
 @core.makedirs
@@ -139,10 +141,6 @@ def export_hazard_curves(output, target_dir):
     return [path]
 
 
-# TODO(LB): We may need to differentiate between GMFs calculated by the
-# Event-Based calculator and the Scenario calculator. At the moment, this
-# exporter is intended for Event-Based GMF results. The structures for the two
-# result types are slightly different.
 @core.makedirs
 def export_gmf(output, target_dir):
     """
@@ -179,6 +177,29 @@ def export_gmf(output, target_dir):
         path, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
+    return [path]
+
+
+@core.makedirs
+def export_gmf_scenario(output, target_dir):
+    """
+    Export the GMFs specified by ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output`
+        with an `output_type` of `gmf_scenario`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file names (including the absolute path to each
+        file).
+    """
+    gmfs = models.get_gmfs_scenario(output)
+    filename = GMF_SCENARIO_FMT % dict(output_id=output.id)
+    path = os.path.abspath(os.path.join(target_dir, filename))
+    writer = nrml_writers.ScenarioGMFXMLWriter(path)
+    writer.serialize(gmfs)
     return [path]
 
 

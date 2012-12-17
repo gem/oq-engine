@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import itertools
+import operator
 import os
 import re
 
@@ -1316,6 +1317,7 @@ class Output(djm.Model):
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'gmf', u'Ground Motion Field'),
+        (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
@@ -1851,6 +1853,7 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+
 class GmfScenario(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
@@ -1869,7 +1872,42 @@ class GmfScenario(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_scenario'
-    
+
+
+def get_gmfs_scenario(output):
+    """
+    Iterator for walking through all :class:`Gmf` objects associated
+    to a given output. Notice that values for the same site are
+    displayed together and then ordered according to the iml, so that
+    it is possible to get reproducible outputs in the test cases.
+
+    :param output: instance of :class:`openquake.db.models.Output`
+    :returns: an iterator over
+              :class:`openquake.db.models._GroundMotionField` instances
+    """
+    job = output.oq_job
+    hc = job.hazard_calculation
+    imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    for imt, sa_period, sa_damping in imts:
+        gmfs = GmfScenario.objects.filter(
+            output__id=output.id,
+            imt=imt,
+            sa_period=sa_period,
+            sa_damping=sa_damping,
+        ).order_by('location')
+        # yield all the nodes associated to a given location
+        for loc, rows in itertools.groupby(
+                gmfs, operator.attrgetter('location')):
+            gmf_nodes = []
+            for gmf in rows:
+                for gmv in gmf.gmvs:
+                    gmf_nodes.append(
+                        _GroundMotionFieldNode(iml=gmv, location=loc))
+            yield _GroundMotionField(
+                imt=imt,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('iml')))
 
 
 class DisaggResult(djm.Model):
