@@ -38,10 +38,11 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned]    build debian source package."
-    echo "       if -B argument is present binary package is build too."
-    echo "       if -D argument is present a package with self-computed version is produced."
-    echo "       if -U argoment is present no sign are perfomed using gpg key related to the mantainer."
+    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -B is present binary package is build too."
+    echo "       if -R is present update the local repository to the new current package"
+    echo "       if -D is present a package with self-computed version is produced."
+    echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
     echo
     exit $ret
@@ -113,18 +114,6 @@ EOF
     printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
-
-    if [ -d "${GEM_DEB_REPO}" ]; then
-        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
-        repo_tmpdir=mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX"
-        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
-            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-            build-deb/Packages* build-deb/Release* build-deb/Sources* "${repo_tmpdir}"
-        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
-            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
-        fi
-        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
-    fi
     cd -
 
     #
@@ -165,16 +154,33 @@ EOF
     sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+
+    if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
+        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
+        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            build-deb/Packages* build-deb/Release* build-deb/Sources* "${repo_tmpdir}"
+        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        fi
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+    fi
+
     # TODO
     # app related tests (run demos)
 
-    return $inner_ret
+    return
 }
 
 #
 #  MAIN
 #
 BUILD_BINARIES=0
+BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
@@ -192,6 +198,9 @@ while [ $# -gt 0 ]; do
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
+            ;;
+        -R|--repository)
+            BUILD_REPOSITORY=1
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
