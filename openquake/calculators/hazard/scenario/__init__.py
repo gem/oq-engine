@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -13,20 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""This package contains Hazard calculator classes and utilities."""
-
-
-from openquake.calculators.hazard.classical.core import (
-    ClassicalHazardCalculator)
-from openquake.calculators.hazard.event_based.core_next import (
-    EventBasedHazardCalculator)
-from openquake.calculators.hazard.disagg.core import DisaggHazardCalculator
-from openquake.calculators.hazard.scenario.core import ScenarioHazardCalculator
-
-
-CALCULATORS_NEXT = {
-    'classical': ClassicalHazardCalculator,
-    'event_based': EventBasedHazardCalculator,
-    'disaggregation': DisaggHazardCalculator,
-    'scenario': ScenarioHazardCalculator,
-}
+"""
+Scenario hazard calculator
+"""
