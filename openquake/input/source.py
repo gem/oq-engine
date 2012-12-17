@@ -72,10 +72,10 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
         return _complex_to_nhlib(src, mesh_spacing, bin_width)
     elif isinstance(src, nrml_models.SimpleFaultSource):
         return _simple_to_nhlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
-        return _simple_rupture_to_nhlib(src, mesh_spacing)
     elif isinstance(src, nrml_models.ComplexFaultRuptureModel):
         return _complex_rupture_to_nhlib(src, mesh_spacing)
+    elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
+        return _simple_rupture_to_nhlib(src, mesh_spacing)
 
 
 def _point_to_nhlib(src, mesh_spacing, bin_width):
