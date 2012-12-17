@@ -715,7 +715,6 @@ def mean_hazard_curves_is_valid(_mdl):
     # We don't need to check anything here.
     return True, []
 
-
 def quantile_hazard_curves_is_valid(mdl):
     qhc = mdl.quantile_hazard_curves
 
@@ -851,6 +850,12 @@ def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
             return False, ['Interest Rate must be > 0']
+    return True, []
+
+
+def insured_losses_is_valid(_mdl):
+    # The validation form should normalize the type to a boolean.
+    # We don't need to check anything here.
     return True, []
 
 

@@ -418,6 +418,8 @@ CREATE TABLE uiapi.risk_calculation (
     loss_curve_resolution INTEGER NOT NULL DEFAULT 50
         CONSTRAINT loss_curve_resolution_is_set
         CHECK  (loss_curve_resolution >= 1),
+    insured_losses boolean DEFAULT false,
+
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
     asset_life_expectancy float
