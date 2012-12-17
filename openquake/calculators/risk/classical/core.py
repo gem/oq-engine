@@ -41,17 +41,17 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param int job_id:
       ID of the currently running job
     :param assets:
-      iterator over `openquake.db.models.ExposureData` to take into
+      iterator over :class:`openquake.db.models.ExposureData` to take into
       account
     :param hazard_getter:
       Strategy used to get the hazard curves
     :param int hazard_id:
       ID of the Hazard Output the risk calculation is based on
     :param loss_curve_id:
-      ID of the `openquake.db.models.LossCurve` output container used
+      ID of the :class:`openquake.db.models.LossCurve` output container used
       to store the computed loss curves
     :param loss_map_ids:
-      Dictionary poe->ID of the `openquake.db.models.LossMap` output
+      Dictionary poe->ID of the :class:`openquake.db.models.LossMap` output
       container used to store the computed loss maps
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
@@ -106,7 +106,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     @property
     def hazard_id(self):
         """
-        The ID of the `openquake.db.models.HazardCurve` object that
+        The ID of the :class:`openquake.db.models.HazardCurve` object that
         stores the hazard curves used by the risk calculation
         """
         return self.job.risk_calculation.hazard_output.hazardcurve.id

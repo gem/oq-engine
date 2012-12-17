@@ -255,7 +255,7 @@ def store_site_data(hc_id, site_model_inp, mesh):
         ID of a :class:`~openquake.db.models.HazardCalculation`.
     :param site_model_inp:
         An :class:`~openquake.db.models.Input` with an
-        `input_type`=='site_model'. This tells us which site model dataset to
+        `input_type` == 'site_model'. This tells us which site model dataset to
         query.
     :param mesh:
         Calculation points of interest, as a :class:`nhlib.geo.mesh.Mesh`.
@@ -418,7 +418,7 @@ def imt_to_nhlib(imt):
         return imt_class()
 
 
-def signal_task_complete(job_id, num_sources):
+def signal_task_complete(**kwargs):
     """
     Send a signal back through a dedicated queue to the 'control node' to
     notify of task completion and the number of sources computed.
@@ -426,15 +426,20 @@ def signal_task_complete(job_id, num_sources):
     Signalling back this metric is needed to tell the control node when it can
     conclude its `execute` phase.
 
-    :param int job_id:
-        ID of a currently running :class:`~openquake.db.models.OqJob`.
-    :param int num_sources:
-        Number of sources computed in the completed task.
+    :param kwargs:
+        Arbitrary message parameters. Anything in this dict will go into the
+        "task complete" message.
+
+        Typical message parameters would include `job_id` and `num_items` (to
+        indicate the number of work items that the task has processed).
+
+        .. note::
+            `job_id` is required for routing the message. All other parameters
+            can be treated as optional.
     """
-    # The job ID may be redundant (since it's in the routing key), but
-    # we can put this here for a sanity check on the receiver side.
-    # Maybe we can remove this
-    msg = dict(job_id=job_id, num_sources=num_sources)
+    msg = kwargs
+    # here we make the assumption that the job_id is in the message kwargs
+    job_id = kwargs['job_id']
 
     exchange, conn_args = exchange_and_conn_args()
 
@@ -444,6 +449,57 @@ def signal_task_complete(job_id, num_sources):
         with conn.Producer(exchange=exchange,
                            routing_key=routing_key) as producer:
             producer.publish(msg)
+
+
+def queue_next(task_func, task_args):
+    """
+    :param task_func:
+        A Celery task function, to be enqueued with the next set of args in
+        ``task_arg_gen``.
+    :param task_args:
+        A set of arguments which match the specified ``task_func``.
+
+    .. note::
+        This utility function was added to make for easier mocking and testing
+        of the "plumbing" which handles task queuing (such as the various "task
+        complete" callback functions).
+    """
+    task_func.apply_async(task_args)
+
+
+def update_realization(lt_rlz_id, num_items):
+    """
+    Call this function when a task is complete to update realization counters
+    with the ``num_items`` completed.
+
+    If the `completed_items` becomes equal to the `total_items` for the
+    realization, the realization will be marked as complete.
+
+    .. note::
+        Because this function performs a SELECT FOR UPDATE query, it is
+        expected that this should be called in the context of a transaction, to
+        avoid race conditions.
+
+    :param int lt_rlz_id:
+        ID of the :class:`openquake.db.models.LtRealization` we want to update.
+    :param int num_items:
+        The number of items by which we want to increment the realization's
+        `completed_items` counter.
+    """
+    ltr_query = """
+    SELECT * FROM hzrdr.lt_realization
+    WHERE id = %s
+    FOR UPDATE
+    """
+
+    [lt_rlz] = models.LtRealization.objects.raw(
+        ltr_query, [lt_rlz_id])
+
+    lt_rlz.completed_items += num_items
+    if lt_rlz.completed_items == lt_rlz.total_items:
+        lt_rlz.is_complete = True
+
+    lt_rlz.save()
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
@@ -458,7 +514,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
-
         self.progress = dict(total=0, computed=0)
 
     @property
@@ -480,6 +535,61 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         raise NotImplementedError
 
+    def finalize_hazard_curves(self):
+        """
+        Create the final output records for hazard curves. This is done by
+        copying the temporary results from `htemp.hazard_curve_progress` to
+        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
+        the actual curve PoE values). Foreign keys are made from
+        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
+        is need to export the full hazard curve results).
+        """
+        with transaction.commit_on_success(using='reslt_writer'):
+            im = self.hc.intensity_measure_types_and_levels
+            points = self.hc.points_to_compute()
+
+            realizations = models.LtRealization.objects.filter(
+                hazard_calculation=self.hc.id)
+
+            for rlz in realizations:
+                # create a new `HazardCurve` 'container' record for each
+                # realization for each intensity measure type
+                for imt, imls in im.items():
+                    hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+                    hco = models.Output(
+                        owner=self.hc.owner,
+                        oq_job=self.job,
+                        display_name="hc-rlz-%s" % rlz.id,
+                        output_type='hazard_curve',
+                    )
+                    hco.save()
+
+                    haz_curve = models.HazardCurve(
+                        output=hco,
+                        lt_realization=rlz,
+                        investigation_time=self.hc.investigation_time,
+                        imt=hc_im_type,
+                        imls=imls,
+                        sa_period=sa_period,
+                        sa_damping=sa_damping,
+                    )
+                    haz_curve.save()
+
+                    [hc_progress] = models.HazardCurveProgress.objects.filter(
+                        lt_realization=rlz.id, imt=imt)
+
+                    hc_data_inserter = writer.BulkInserter(
+                        models.HazardCurveData)
+                    for i, location in enumerate(points):
+                        poes = hc_progress.result_matrix[i]
+                        hc_data_inserter.add_entry(
+                            hazard_curve_id=haz_curve.id,
+                            poes=poes.tolist(),
+                            location=location.wkt2d)
+
+                    hc_data_inserter.flush()
+
     def initialize_sources(self):
         """
         Parse and validation logic trees (source and gsim). Then get all
@@ -488,7 +598,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         then, and save the parsed sources to the `parsed_source` table
         (see :class:`openquake.db.models.ParsedSource`).
         """
-        logs.log_progress("initializing sources", 2)
+        logs.LOG.progress("initializing sources")
 
         [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
         [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='lt_gsim')
@@ -538,7 +648,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         starting the calculation is optimal, since each task will need to
         consider all sites.)
         """
-        logs.log_progress("initializing site model", 2)
+        logs.LOG.progress("initializing site model")
 
         site_model_inp = get_site_model(self.hc.id)
         if site_model_inp is not None:
@@ -587,7 +697,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             Callbacks should accept a single argument:
             A :class:`~openquake.db.models.LtRealization` object.
         """
-        logs.log_progress("initializing realizations", 2)
+        logs.LOG.progress("initializing realizations")
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
             self._initialize_realizations_montecarlo(
@@ -605,8 +715,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         stats.pk_set(self.job.id, "lvr", 0)
         rs = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation)
-        total = rs.aggregate(Sum("total_sources"))
-        done = rs.aggregate(Sum("completed_sources"))
+        total = rs.aggregate(Sum("total_items"))
+        done = rs.aggregate(Sum("completed_items"))
         stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
         if done > 0:
             stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
@@ -634,8 +744,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 weight=weight,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1)
+                # we will update total_items in initialize_source_progress()
+                total_items=-1)
             lt_rlz.save()
 
             if not sm_name in hzrd_src_cache:
@@ -693,8 +803,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_sources in initialize_source_progress()
-                total_sources=-1
+                # we will update total_items in initialize_source_progress()
+                total_items=-1
             )
             lt_rlz.save()
 
@@ -745,7 +855,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             """ % (src_progress_tbl, parsed_src_tbl),
             [lt_rlz.id, hzrd_src.id])
         cursor.execute("""
-            UPDATE "%s" SET total_sources = (
+            UPDATE "%s" SET total_items = (
                 SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
             )""" % (lt_rlz_tbl, src_progress_tbl),
             [lt_rlz.id])
@@ -780,13 +890,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
             hc_prog.save()
 
-    def get_task_complete_callback(self, task_arg_gen):
+    def get_task_complete_callback(self, task_arg_gen, block_size,
+                                   concurrent_tasks):
         """
-        Create the callback which responds to a task completion signal.
+        Create the callback which responds to a task completion signal. In some
+        cases, the reponse is simply to enqueue the next task (if there is any
+        work left to be done).
 
         :param task_arg_gen:
             The task arg generator, so the callback can get the next set of
             args and enqueue the next task.
+        :param int block_size:
+            The (maximum) number of work items to pass to a given task.
+        :param int concurrent_tasks:
+            The (maximum) number of tasks that should be in queue at any time.
         :return:
             A callback function which responds to a task completion signal.
             A response typically includes enqueuing the next task and updating
@@ -797,7 +914,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             """
             :param dict body:
                 ``body`` is the message sent by the task. The dict should
-                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                contain 2 keys: `job_id` and `num_items` (to indicate the
                 number of sources computed).
 
                 Both values are `int`.
@@ -807,17 +924,17 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 etc.). See kombu docs for more details.
             """
             job_id = body['job_id']
-            num_sources = body['num_sources']
+            num_items = body['num_items']
 
             assert job_id == self.job.id
-            self.progress['computed'] += num_sources
+            self.progress['computed'] += num_items
 
             logs.log_percent_complete(job_id, "hazard")
 
             # Once we receive a completion signal, enqueue the next
             # piece of work (if there's anything left to be done).
             try:
-                self.core_calc_task.apply_async(task_arg_gen.next())
+                queue_next(self.core_calc_task, task_arg_gen.next())
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
@@ -846,11 +963,10 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         block_size = int(config.get('hazard', 'block_size'))
         concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
-        self.progress = dict(total=0, computed=0)
         # The following two counters are in a dict so that we can use them in
         # the closures below.
         # When `self.progress['compute']` becomes equal to
-        # `self.progress['total']`, # `execute` can conclude.
+        # `self.progress['total']`, `execute` can conclude.
 
         task_gen = self.task_arg_gen(block_size)
 
@@ -865,12 +981,14 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(
                 task_signal_queue,
-                callbacks=[self.get_task_complete_callback(task_gen)]):
+                callbacks=[self.get_task_complete_callback(task_gen,
+                                                           block_size,
+                                                           concurrent_tasks)]):
 
                 # First: Queue up the initial tasks.
                 for _ in xrange(concurrent_tasks):
                     try:
-                        self.core_calc_task.apply_async(task_gen.next())
+                        queue_next(self.core_calc_task, task_gen.next())
                     except StopIteration:
                         # If we get a `StopIteration` here, that means we have
                         # a number of tasks < concurrent_tasks.
@@ -885,7 +1003,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
-        logs.log_progress("hazard calculation 100% complete", 2)
+        logs.LOG.progress("hazard calculation 100% complete")
 
     def export(self, *args, **kwargs):
         """
@@ -939,6 +1057,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 lt_realization=lt_rlz).count()
             num_tasks += math.ceil(float(num_sources) / block_size)
 
-        models.JobStats.objects.filter(oq_job=self.job.id).update(
-            num_sites=num_sites, num_tasks=num_tasks,
-            num_realizations=num_rlzs)
+        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
+        job_stats.num_sites = num_sites
+        job_stats.num_tasks = num_tasks
+        job_stats.num_realizations = num_rlzs
+        job_stats.save()

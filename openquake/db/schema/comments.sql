@@ -74,6 +74,13 @@ When considering a parsed_source record given a minimum integration distance,
 use this polygon in distance calculations.';
 
 
+COMMENT ON TABLE hzrdi.parsed_rupture_model IS 'Stores parsed hazard rupture model in serialized python object tree format';
+COMMENT ON COLUMN hzrdi.parsed_rupture_model.nrml IS 'NRML object representing the rupture';
+COMMENT ON COLUMN hzrdi.parsed_rupture_model.input_id IS 'The foreign key to the associated input rupture model file';
+COMMENT ON COLUMN hzrdi.parsed_rupture_model.rupture_type IS 'The rupture''s seismic input type: can be one of: complex_fault or simple_fault.';
+
+
+
 -- hzrdr schema tables ------------------------------------------
 COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
 COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
@@ -261,11 +268,12 @@ COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of 
 
 COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
 COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
-COMMENT ON COLUMN riskr.bcr_distribution.exposure_model_id IS 'The foreign key to the exposure model for this BCR distribution.';
 
 COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
 COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.bcr_distribution_data.expected_annual_loss_original IS 'The Expected annual loss computed by using the original model';
+COMMENT ON COLUMN riskr.bcr_distribution_data.expected_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
 COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
