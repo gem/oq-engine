@@ -397,6 +397,33 @@ class PolygonDilateTestCase(unittest.TestCase):
         self.assertEqual(len(dilated._polygon2d.boundary.coords),
                          len(elons) + 1)
 
+    def test_extremely_convex(self):
+        # Exercise a case where the area polygon is so convex that holes will
+        # appear after dilating a certain distance.
+        # This test data is based on sample data which produced this failure:
+        # https://bugs.launchpad.net/openquake/+bug/1091130
+        poly_coords = [
+            [16.956879, 41.628004],
+            [16.966878, 41.932705],
+            [17.606256, 41.897445],
+            [19.181572, 41.046135],
+            [19.06223673, 40.58765479],
+            [18.61629494, 39.63362123],
+            [18.919869, 39.501369],
+            [18.968954, 39.479085],
+            [19.22257, 40.290941],
+            [20.203748, 38.900256],
+            [20.2, 38.6],
+            [19.67226639, 38.00730337],
+            [19.67226639, 38.00730337],
+            [18.812336, 38.816193],
+            [18.540406, 39.043834],
+            [16.956879, 41.628004],
+        ]
+        poly = polygon.Polygon([geo.Point(*x) for x in poly_coords])
+        dilation = 15.554238346616508
+        poly.dilate(dilation)
+
 
 class PolygonWKTTestCase(unittest.TestCase):
     """
