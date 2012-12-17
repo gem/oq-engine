@@ -282,6 +282,9 @@ def _loss_curve(loss_values, tses, time_span,
         next(b, None)
         return itertools.izip(a, b)
 
+    # We compute the rates of exceedances by iterating over loss
+    # values and counting the number of distinct loss values less than
+    # the current loss.
     times = [index
              for index, (previous_val, val) in
              enumerate(pairwise(sorted_loss_values))
