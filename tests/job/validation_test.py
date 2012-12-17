@@ -850,6 +850,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=10.0,
             coordinate_bin_width=0.02,  # decimal degrees
             num_epsilon_bins=4,
+            poes_disagg=[0.02, 0.1],
         )
         form = validation.DisaggHazardCalculationForm(
             instance=hc, files=None
@@ -864,6 +865,8 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
             'truncation_level': ['Truncation level must be > 0 for'
                                  ' disaggregation calculations'],
+            'poes_disagg': ['PoEs for disaggregation must be in the range'
+                            ' [0, 1]'],
         }
 
         hc = models.HazardCalculation(
@@ -888,18 +891,25 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=0.0,
             coordinate_bin_width=0.0,  # decimal degrees
             num_epsilon_bins=0,
+            poes_disagg=[1.00001, -0.5, 0.0],
         )
-        form = validation.DisaggHazardCalculationForm(
-            instance=hc, files=None
-        )
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
 
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+        # test with an empty `poes_disagg` list
+        hc.poes_disagg = []
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        expected_errors['poes_disagg'] = [(
+            '`poes_disagg` must contain at least 1 value')]
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
 
 class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
-
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
                                           'simple_fault_demo_hazard/job.ini')
@@ -938,6 +948,52 @@ class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
             rc = models.RiskCalculation(**compulsory_arguments)
 
             form = validation.ClassicalRiskCalculationForm(
+                instance=rc, files=None)
+
+            self.assertFalse(form.is_valid(), fields)
+
+
+class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
+    def setUp(self):
+        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
+                                      'simple_fault_demo_hazard/job.ini')
+        self.compulsory_arguments = dict(
+            calculation_mode="classical_bcr",
+            lrem_steps_per_interval=5,
+            interest_rate=0.05,
+            asset_life_expectancy=40)
+
+        self.other_args = dict(
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=job.risk_calculation.hazard_output)
+
+    def test_valid_form(self):
+        args = dict(self.compulsory_arguments.items())
+        args.update(self.other_args)
+
+        rc = models.RiskCalculation(**args)
+
+        form = validation.ClassicalRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form(self):
+        def powerset(iterable):
+            s = list(iterable)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s) + 1))
+
+        for fields in list(powerset(self.compulsory_arguments))[1:]:
+            compulsory_arguments = dict(self.compulsory_arguments.items())
+            for field in fields:
+                compulsory_arguments[field] = None
+            compulsory_arguments.update(self.other_args)
+            rc = models.RiskCalculation(**compulsory_arguments)
+
+            form = validation.ClassicalRiskCalculationWithBCRForm(
                 instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
