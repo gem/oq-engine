@@ -18,6 +18,7 @@ Built-in GSIMs
     cauzzi_faccioli_2008
     chiou_youngs_2008
     faccioli_2010
+    lin_lee_2008
     sadigh_1997
     zhao_2006
 
