@@ -959,6 +959,7 @@ class RiskCalculation(djm.Model):
     #########################
     loss_curve_resolution = djm.IntegerField(
         null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
+    insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
