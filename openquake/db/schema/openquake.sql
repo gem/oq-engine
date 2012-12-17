@@ -1454,8 +1454,8 @@ CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    expected_annual_loss_original float NOT NULL ,   
-    expected_annual_loss_retrofitted float NOT NULL,
+    average_annual_loss_original float NOT NULL ,   
+    average_annual_loss_retrofitted float NOT NULL,
     bcr float NOT NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
