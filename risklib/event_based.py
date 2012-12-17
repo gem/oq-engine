@@ -278,6 +278,7 @@ def _loss_curve(loss_values, tses, time_span,
     def pairwise(iterable):
         "s -> (s0,s1), (s1,s2), (s2, s3), ..."
         a, b = itertools.tee(iterable)
+        # b ahead one step (None is for the empty iteratable case)
         next(b, None)
         return itertools.izip(a, b)
 
