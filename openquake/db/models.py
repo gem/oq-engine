@@ -1887,14 +1887,14 @@ def get_gmfs_scenario(output):
             sa_period=sa_period,
             sa_damping=sa_damping,
         ).order_by('location')
+        gmf_nodes = []
         for gmf in gmfs:
-            gmf_nodes = []
             for gmv in gmf.gmvs:
                 gmf_nodes.append(
                     _GroundMotionFieldNode(iml=gmv, location=gmf.location))
-            yield _GroundMotionField(
-                imt=imt, sa_period=sa_period,
-                sa_damping=sa_damping, gmf_nodes=gmf_nodes)
+        yield _GroundMotionField(
+            imt=imt, sa_period=sa_period,
+            sa_damping=sa_damping, gmf_nodes=gmf_nodes)
 
 
 class DisaggResult(djm.Model):
