@@ -22,7 +22,7 @@ profile validation.
 import re
 
 from django.forms import ModelForm
-from nhlib import imt as nhlib_imt
+import nhlib
 
 from openquake.db import models
 
@@ -30,6 +30,8 @@ from openquake.db import models
 MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a signed 32-bit int
 MAX_SINT_32 = (2 ** 31) - 1
+
+AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
 
 class BaseOQModelForm(ModelForm):
@@ -133,7 +135,7 @@ class BaseOQModelForm(ModelForm):
         fields = self.__class__.Meta.fields
 
         for field in sorted(set(fields) - set(self.special_fields)):
-            valid, errs = eval('%s_is_valid' % field)(calc)
+            valid, errs = globals()['%s_is_valid' % field](calc)
             all_valid &= valid
 
             self._add_error(field, errs)
@@ -377,15 +379,42 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
             'distance_bin_width',
             'coordinate_bin_width',
             'num_epsilon_bins',
+            'poes_disagg',
             'export_dir',
         )
 
+
+class ScenarioHazardCalculationForm(BaseHazardModelForm):
+
+    calc_mode = 'scenario'
+
+    class Meta:
+        model = models.HazardCalculation
+        fields = (
+            'description',
+            'region',
+            'region_grid_spacing',
+            'sites',
+            'random_seed',
+            'rupture_mesh_spacing',
+            'reference_vs30_value',
+            'reference_vs30_type',
+            'reference_depth_to_2pt5km_per_sec',
+            'reference_depth_to_1pt0km_per_sec',
+            'intensity_measure_types',
+            'truncation_level',
+            'maximum_distance',
+            'number_of_ground_motion_fields',
+            'gsim',
+            'export_dir',
+        )
 
 #: Maps calculation_mode to the appropriate validator class
 HAZ_VALIDATOR_MAP = {
     'classical': ClassicalHazardCalculationForm,
     'event_based': EventBasedHazardCalculationForm,
     'disaggregation': DisaggHazardCalculationForm,
+    'scenario': ScenarioHazardCalculationForm,
 }
 
 
@@ -581,7 +610,7 @@ def _validate_imt(imt):
     errors = []
 
     # SA intensity measure configs need special handling
-    valid_imts = list(set(nhlib_imt.__all__) - set(['SA']))
+    valid_imts = list(set(nhlib.imt.__all__) - set(['SA']))
 
     if 'SA' in imt:
         match = re.match(r'^SA\(([^)]+?)\)$', imt)
@@ -699,10 +728,14 @@ def quantile_hazard_curves_is_valid(mdl):
 
 def poes_hazard_maps_is_valid(mdl):
     phm = mdl.poes_hazard_maps
+    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+    return _validate_poe_list(phm, error_msg)
 
-    if phm is not None:
-        if not all([0.0 <= x <= 1.0 for x in phm]):
-            return False, ['PoEs for hazard maps must be in the range [0, 1]']
+
+def _validate_poe_list(poes, error_msg):
+    if poes is not None:
+        if not all([0.0 <= x <= 1.0 for x in poes]):
+            return False, [error_msg]
     return True, []
 
 
@@ -827,3 +860,25 @@ def loss_curve_resolution_is_valid(mdl):
             mdl.loss_curve_resolution < 1):
             return False, ['Loss Curve Resolution must be > 1.']
     return True, []
+
+
+def gsim_is_valid(mdl):
+    if mdl.gsim in AVAILABLE_GSIMS:
+        return True, []
+    return False, ['The gsim %r is not in in nhlib.gsim' % mdl.gsim]
+
+
+def number_of_ground_motion_fields_is_valid(mdl):
+    gmfno = mdl.number_of_ground_motion_fields
+    if gmfno > 0:
+        return True, []
+    return False, ['The number_of_ground_motion_fields must be a positive '
+                   'integer, got %r' % gmfno]
+
+
+def poes_disagg_is_valid(mdl):
+    poesd = mdl.poes_disagg
+    if len(poesd) == 0:
+        return False, ['`poes_disagg` must contain at least 1 value']
+    error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
+    return _validate_poe_list(poesd, error_msg)

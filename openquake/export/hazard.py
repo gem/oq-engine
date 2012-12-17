@@ -20,6 +20,9 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 import os
 
+from collections import OrderedDict
+
+from nhlib.calc import disagg
 from nrml import writers as nrml_writers
 
 from openquake import logs
@@ -74,6 +77,7 @@ def _export_fn_map():
         'complete_lt_ses': export_ses,
         'complete_lt_gmf': export_gmf,
         'hazard_map': export_hazard_map,
+        'disagg_matrix': export_disagg,
     }
     return fn_map
 
@@ -125,9 +129,11 @@ def export_hazard_curves(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'sa_period': hc.sa_period,
         'sa_damping': hc.sa_damping,
+        'investigation_time': hc.investigation_time,
+        'imt': hc.imt,
+        'imls': hc.imls,
     }
-    writer = nrml_writers.HazardCurveXMLWriter(
-        path, hc.investigation_time, hc.imt, hc.imls, **metadata)
+    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
     writer.serialize(hcd)
 
     return [path]
@@ -216,31 +222,6 @@ def export_ses(output, target_dir):
     return [path]
 
 
-def curves2nrml(target_dir, job):
-    """Write hazard curves to NRML files.
-
-    :param str target_dir: where should the output files go?
-    :param int job_id: the database key of the job at hand.
-    """
-    LOG.debug("> curves2nrml")
-    hc_outputs = models.Output.objects.filter(oq_job=job,
-                                              output_type="hazard_curve")
-
-    for hc_output in hc_outputs:
-        export_hazard_curves(hc_output, target_dir)
-
-    hco_count = len(hc_outputs)
-    if hco_count > 1:
-        logs.log_progress(
-            "%s hazard curves exported to %s" % (hco_count, target_dir), 2)
-    elif hco_count == 1:
-        logs.log_progress("One hazard curve exported to %s" % target_dir, 2)
-    else:
-        logs.log_progress("No hazard curves found for export", 2)
-
-    LOG.debug("< curves2nrml")
-
-
 @core.makedirs
 def export_hazard_map(output, target_dir):
     """
@@ -279,10 +260,112 @@ def export_hazard_map(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'sa_period': hazard_map.sa_period,
         'sa_damping': hazard_map.sa_damping,
+        'investigation_time': hazard_map.investigation_time,
+        'imt': hazard_map.imt,
+        'poe': hazard_map.poe,
     }
 
-    writer = nrml_writers.HazardMapXMLWriter(
-        path, hazard_map.investigation_time, hazard_map.imt, hazard_map.poe,
-        **metadata)
+    writer = nrml_writers.HazardMapXMLWriter(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
+    return [path]
+
+
+class _DisaggMatrix(object):
+    """
+    A simple data model into which disaggregation matrix information can be
+    packed. The :class:`nrml.hazard.writers.DisaggXMLWriter` expects a sequence
+    of objects which match this interface.
+
+    :param matrix:
+        A n-dimensional numpy array representing a probability mass function
+        produced by the disaggregation calculator. The calculator produces a 6d
+        matrix, but the final results which are saved to XML are "subsets" of
+        matrix showing contributions to hazard from different combinations of
+        magnitude, distance, longitude, latitude, epsilon, and tectonic region
+        type.
+    :param dim_labels:
+        Expected values are (as tuples, lists, or similar) one of the
+        following, depending on the result `matrix` type:
+
+        * ['Mag']
+        * ['Dist']
+        * ['TRT']
+        * ['Mag', 'Dist']
+        * ['Mag', 'Dist', 'Eps']
+        * ['Lon', 'Lat']
+        * ['Mag', 'Lon', 'Lat']
+        * ['Lon', 'Lat', 'TRT']
+    :param float poe:
+        Probability of exceedence (specified in the calculation config file).
+    :param float iml:
+        Interpolated intensity value, corresponding to the ``poe``, extracted
+        from the aggregated hazard curve (which was used as input to compute
+        the ``matrix``).
+    """
+
+    def __init__(self, matrix, dim_labels, poe, iml):
+        self.matrix = matrix
+        self.dim_labels = dim_labels
+        self.poe = poe
+        self.iml = iml
+
+
+@core.makedirs
+def export_disagg(output, target_dir):
+    """
+    Export disaggregation histograms to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` with an `output_type` of
+        `disagg_matrix`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file name (including the absolute path to each
+        file).
+    """
+    # We expect 1 result per `Output`
+    [disagg_result] = models.DisaggResult.objects.filter(output=output)
+    lt_rlz = disagg_result.lt_realization
+
+    filename = '%s.xml' % output.display_name
+    path = os.path.abspath(os.path.join(target_dir, filename))
+
+    pmf_map = OrderedDict([
+        (('Mag', ), disagg.mag_pmf),
+        (('Dist', ), disagg.dist_pmf),
+        (('TRT', ), disagg.trt_pmf),
+        (('Mag', 'Dist'), disagg.mag_dist_pmf),
+        (('Mag', 'Dist', 'Eps'), disagg.mag_dist_eps_pmf),
+        (('Lon', 'Lat'), disagg.lon_lat_pmf),
+        (('Mag', 'Lon', 'Lat'), disagg.mag_lon_lat_pmf),
+        (('Lon', 'Lat', 'TRT'), disagg.lon_lat_trt_pmf),
+    ])
+
+    writer_kwargs = dict(
+        investigation_time=disagg_result.investigation_time,
+        imt=disagg_result.imt,
+        lon=disagg_result.location.x,
+        lat=disagg_result.location.y,
+        sa_period=disagg_result.sa_period,
+        sa_damping=disagg_result.sa_damping,
+        mag_bin_edges=disagg_result.mag_bin_edges,
+        dist_bin_edges=disagg_result.dist_bin_edges,
+        lon_bin_edges=disagg_result.lon_bin_edges,
+        lat_bin_edges=disagg_result.lat_bin_edges,
+        eps_bin_edges=disagg_result.eps_bin_edges,
+        tectonic_region_types=disagg_result.trts,
+        smlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path),
+        gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
+    )
+
+    writer = nrml_writers.DisaggXMLWriter(path, **writer_kwargs)
+
+    data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
+                          disagg_result.poe, disagg_result.iml)
+            for dim_labels, pmf_fn in pmf_map.iteritems())
+
+    writer.serialize(data)
+
     return [path]

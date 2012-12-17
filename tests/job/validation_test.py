@@ -850,6 +850,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=10.0,
             coordinate_bin_width=0.02,  # decimal degrees
             num_epsilon_bins=4,
+            poes_disagg=[0.02, 0.1],
         )
         form = validation.DisaggHazardCalculationForm(
             instance=hc, files=None
@@ -864,6 +865,8 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             'num_epsilon_bins': ['Number of epsilon bins must be > 0'],
             'truncation_level': ['Truncation level must be > 0 for'
                                  ' disaggregation calculations'],
+            'poes_disagg': ['PoEs for disaggregation must be in the range'
+                            ' [0, 1]'],
         }
 
         hc = models.HazardCalculation(
@@ -888,8 +891,77 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             distance_bin_width=0.0,
             coordinate_bin_width=0.0,  # decimal degrees
             num_epsilon_bins=0,
+            poes_disagg=[1.00001, -0.5, 0.0],
         )
-        form = validation.DisaggHazardCalculationForm(
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+        # test with an empty `poes_disagg` list
+        hc.poes_disagg = []
+        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        expected_errors['poes_disagg'] = [(
+            '`poes_disagg` must contain at least 1 value')]
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
+
+class ScenarioCalculationFormTestCase(unittest.TestCase):
+
+    def test_valid_scenario_calc(self):
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='scenario',
+            random_seed=37,
+            rupture_mesh_spacing=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            gsim='BooreAtkinson2008',
+            ground_motion_correlation_model='JB2009',
+            number_of_ground_motion_fields=10,
+        )
+        form = validation.ScenarioHazardCalculationForm(
+            instance=hc, files=None
+        )
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_scenario_calc(self):
+        expected_errors = {
+            'gsim': ["The gsim u'BooreAtkinson208' is not in in nhlib.gsim"],
+            'number_of_ground_motion_fields': [
+                'The number_of_ground_motion_fields must be a positive '
+                'integer, got -10']
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='scenario',
+            random_seed=37,
+            rupture_mesh_spacing=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            gsim='BooreAtkinson208',
+            ground_motion_correlation_model='JB2009',
+            number_of_ground_motion_fields=-10,
+        )
+        form = validation.ScenarioHazardCalculationForm(
             instance=hc, files=None
         )
 
@@ -901,7 +973,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
 class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
-                                          'simple_fault_demo_hazard/job.ini')
+                                      'simple_fault_demo_hazard/job.ini')
         self.compulsory_arguments = dict(
             calculation_mode="classical",
             lrem_steps_per_interval=5)
