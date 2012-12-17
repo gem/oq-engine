@@ -136,8 +136,8 @@ class Polygon(object):
 
         .. note::
             In extreme cases where dilation of a polygon creates holes, thus
-            resulting in a multi-polygon, we ignore the holes and simply return
-            the 'exterior' of the shape.
+            resulting in a multi-polygon, we discard the holes and simply
+            return the 'exterior' of the shape.
 
         :param dilation:
             Distance in km to extend polygon borders to.
