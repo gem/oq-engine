@@ -25,7 +25,7 @@ from openquake.db import models
 from qa_tests import _utils as qa_utils
 
 
-class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
+class ScenarioHazardCase2TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'scenario')
     def test(self):
@@ -36,6 +36,6 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
                         oqjob=job.id).number_of_ground_motion_fields
 
         actual = list(qa_utils.get_medians(realizations, output))
-        expected_medians = [0.48155582, 0.21123045, 0.14484586]
+        expected_medians = [0.37412136, 0.19021782, 0.1365383]
 
         assert_almost_equal(actual, expected_medians, decimal=2)
