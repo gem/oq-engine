@@ -29,7 +29,7 @@ class ClassicalHazardCase2TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1" gsimTreePath="b1">
+  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
