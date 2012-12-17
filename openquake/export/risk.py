@@ -90,7 +90,7 @@ def export_loss_curve(output, target_dir):
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.losscurve.id})
     writers.LossCurveXMLWriter(**args).serialize(
-        output.losscurve.losscurvedata_set.all())
+        output.losscurve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
 
 
@@ -109,7 +109,7 @@ def export_loss_map(output, target_dir):
             poe=output.lossmap.poe,
             loss_category=risk_calculation.model('exposure').category))
     writers.LossMapXMLWriter(**args).serialize(
-        output.lossmap.lossmapdata_set.all())
+        output.lossmap.lossmapdata_set.all().order_by('asset_ref'))
     return [args['path']]
 
 
