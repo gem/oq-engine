@@ -15,7 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Disaggregation calculator core functionality
+Scenario calculator core functionality
 """
 
 from openquake.calculators.hazard import general as haz_general

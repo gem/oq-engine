@@ -334,7 +334,7 @@ CREATE TABLE uiapi.hazard_calculation (
     random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
     -- ERF parameters:
-    rupture_mesh_spacing float NULL,
+    rupture_mesh_spacing float,
     width_of_mfd_bin float NULL,
     area_source_discretization float NULL,
     -- site parameters:
