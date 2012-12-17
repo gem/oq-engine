@@ -180,6 +180,19 @@ SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2
 ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
+-- Parsed Rupture models
+CREATE TABLE hzrdi.parsed_rupture_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    rupture_type VARCHAR NOT NULL
+        CONSTRAINT enforce_rupture_type CHECK
+        (rupture_type IN ('complex_fault', 'simple_fault')),
+    nrml BYTEA NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -218,7 +231,7 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
-                             'exposure', 'fragility', 'rupture',
+                             'exposure', 'fragility', 'rupture_model',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
@@ -341,11 +354,15 @@ CREATE TABLE uiapi.hazard_calculation (
     ses_per_logic_tree_path INTEGER,
     ground_motion_correlation_model VARCHAR,
     ground_motion_correlation_params bytea, -- stored as a pickled Python `dict`
+    -- scenario calculator parameters:
+    gsim VARCHAR,
+    number_of_ground_motion_fields INTEGER,
     -- disaggregation calculator parameters:
     mag_bin_width float,
     distance_bin_width float,
     coordinate_bin_width float,
     num_epsilon_bins INTEGER,
+    poes_disagg float[],
     -- output/post-processing parameters:
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
@@ -1255,14 +1272,16 @@ CREATE TABLE hzrdr.disagg_result (
         CHECK(
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
-    mag_bin_edges float[],
-    dist_bin_edges float[],
-    lon_bin_edges float[],
-    lat_bin_edges float[],
-    eps_bin_edges float[],
+    mag_bin_edges float[] NOT NULL,
+    dist_bin_edges float[] NOT NULL,
+    lon_bin_edges float[] NOT NULL,
+    lat_bin_edges float[] NOT NULL,
+    eps_bin_edges float[] NOT NULL,
+    trts VARCHAR[] NOT NULL,
     matrix bytea NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
@@ -1341,8 +1360,8 @@ CREATE TABLE hzrdr.lt_realization (
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     gsim_lt_path VARCHAR[] NOT NULL,
     is_complete BOOLEAN DEFAULT FALSE,
-    total_sources INTEGER NOT NULL,
-    completed_sources INTEGER NOT NULL DEFAULT 0
+    total_items INTEGER NOT NULL,
+    completed_items INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1751,6 +1770,9 @@ ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
