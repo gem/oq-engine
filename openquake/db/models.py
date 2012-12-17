@@ -1827,6 +1827,9 @@ class _GroundMotionField(object):
     def __iter__(self):
         return iter(self.gmf_nodes)
 
+    def __getitem__(self, key):
+        return self.gmf_nodes[key]
+
 
 class _GroundMotionFieldNode(object):
 
