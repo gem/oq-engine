@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import itertools
+import operator
 import os
 import re
 
@@ -1875,7 +1876,14 @@ class GmfScenario(djm.Model):
 
 def get_gmfs_scenario(output):
     """
-    Iterator for walking through all child :class:`Gmf` objects.
+    Iterator for walking through all :class:`Gmf` objects associated
+    to a given output. Notice that values for the same site are
+    displayed together and then ordered according to the iml, so that
+    it is possible to get reproducible outputs in the test cases.
+
+    :param output: instance of :class:`openquake.db.models.Output`
+    :returns: an iterator over
+              :class:`openquake.db.models._GroundMotionField` instances
     """
     job = output.oq_job
     hc = job.hazard_calculation
@@ -1887,14 +1895,19 @@ def get_gmfs_scenario(output):
             sa_period=sa_period,
             sa_damping=sa_damping,
         ).order_by('location')
-        gmf_nodes = []
-        for gmf in gmfs:
-            for gmv in gmf.gmvs:
-                gmf_nodes.append(
-                    _GroundMotionFieldNode(iml=gmv, location=gmf.location))
-        yield _GroundMotionField(
-            imt=imt, sa_period=sa_period,
-            sa_damping=sa_damping, gmf_nodes=gmf_nodes)
+        # yield all the nodes associated to a given location
+        for loc, rows in itertools.groupby(
+                gmfs, operator.attrgetter('location')):
+            gmf_nodes = []
+            for gmf in rows:
+                for gmv in gmf.gmvs:
+                    gmf_nodes.append(
+                        _GroundMotionFieldNode(iml=gmv, location=loc))
+            yield _GroundMotionField(
+                imt=imt,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('iml')))
 
 
 class DisaggResult(djm.Model):
