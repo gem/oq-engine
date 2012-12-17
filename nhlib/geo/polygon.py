@@ -96,6 +96,9 @@ class Polygon(object):
         # avoid calling class' constructor
         polygon = object.__new__(cls)
         # project polygon2d back on the sphere
+        # NOTE(LB): We use 'exterior' here in case the `polygon2d` has
+        # interiors (holes) defined. In our use cases, we don't care about
+        # polygon interiors, so we simply discard these exteriors.
         xx, yy = numpy.transpose(polygon2d.exterior.coords)
         # need to cut off the last point -- it repeats the first one
         polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
