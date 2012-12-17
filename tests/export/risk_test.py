@@ -89,3 +89,34 @@ class ClassicalExportTestcase(BaseExportTestCase):
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
+
+    @attr('slow')
+    def test_bcr_risk_export(self):
+        # Tests that outputs of a risk classical calculation are
+        # exported
+
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('classical_bcr/job.ini')
+
+            # run the calculation to create something to export
+            retcode = helpers.run_risk_job_sp(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+            expected_outputs = 1  # 1 bcr distribution
+            self.assertEqual(expected_outputs, len(outputs))
+
+            # Export the loss curves:
+            distribution = outputs.filter(output_type='bcr_distribution')[0]
+            rc_files = risk.export(distribution.id, target_dir)
+
+            self.assertEqual(1, len(rc_files))
+
+            for f in rc_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
