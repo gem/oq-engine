@@ -61,8 +61,7 @@ _pkgtest_innervm_run () {
     ssh $haddr mkdir repo
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Release* $haddr:repo
-#X build-deb/Sources* $haddr:repo
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
@@ -97,8 +96,8 @@ pkgtest_run () {
     cd build-deb
     dpkg-scanpackages . /dev/null >Packages
     cat Packages | gzip -9c > Packages.gz
-#X    dpkg-scansources . > Sources
-#X    cat Sources | gzip > Sources.gz
+    dpkg-scansources . > Sources
+    cat Sources | gzip > Sources.gz
     cat > Release <<EOF
 Archive: precise
 Origin: Ubuntu
@@ -110,10 +109,10 @@ EOF
         $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
     printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
         $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
-#X    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
-#X        $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
-#X    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
-#X        $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+        $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+        $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
@@ -122,7 +121,7 @@ EOF
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
     for running_machine in $running_machines ; do
-        if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+        if sudo grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
             echo -n "The $haddr machine seems to be already configured ... "
             previous_name="$(ssh $haddr hostname 2>/dev/null)"
             set +e
@@ -164,8 +163,7 @@ EOF
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
         cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-            build-deb/Packages* build-deb/Release* "${repo_tmpdir}"
-#X build-deb/Sources* "${repo_tmpdir}"
+            build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
         if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
             rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
         fi
