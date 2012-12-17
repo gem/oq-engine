@@ -171,8 +171,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
-            display_name="gmf",
-            output_type="gmf")
+            display_name="gmf_scenario",
+            output_type="gmf_scenario")
         self.output.save()
 
     def task_arg_gen(self, block_size):
