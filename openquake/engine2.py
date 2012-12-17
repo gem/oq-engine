@@ -78,6 +78,7 @@ _FILE_PARAMS_TO_INPUT_TYPE = {
     'vulnerability_file': 'vulnerability',
     'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
     'exposure_file': 'exposure',
+    'rupture_model_file': 'rupture_model'
 }
 
 
