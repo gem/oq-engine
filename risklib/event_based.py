@@ -275,24 +275,23 @@ def _loss_curve(loss_values, tses, time_span,
 
     sorted_loss_values = numpy.sort(loss_values)[::-1]
 
-    num = len(loss_values)
+    def pairwise(iterable):
+        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+        a, b = itertools.tee(iterable)
+        next(b, None)
+        return itertools.izip(a, b)
 
-    # when loss values are enough well-separated their rates of
-    # exceedance are evenly spaced.
-    rates_of_exceedance = numpy.linspace(0, num - 1, num) / tses
+    times = [index
+             for index, (previous_val, val) in
+             enumerate(pairwise(sorted_loss_values))
+             if not numpy.allclose([val], [previous_val])]
+
+    sorted_loss_values = sorted_loss_values[times]
+    rates_of_exceedance = numpy.array(times) / float(tses)
 
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
     reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
     values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
 
-    # Due to rounding problems occurring in the interpolation phase
-    if reference_poes[-1] == 1:
-        values[-1] = 0
-
-    # Do not use the default constructor to populate the curve object
-    # as it is not reliable (it modifies the ordering of the points)
-    c = curve.Curve(())
-    c.x_values = values[::-1]
-    c.y_values = reference_poes[::-1]
-    return c
+    return curve.Curve(zip(values, reference_poes))

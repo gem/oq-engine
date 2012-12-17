@@ -17,7 +17,7 @@
 
 
 import numpy
-import event_based
+from risklib import event_based
 
 
 # FIXME: does this function really deserve a to live in a separate

@@ -15,8 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-import json
-from numpy import empty, allclose
+import numpy
 from scipy.interpolate import interp1d
 from risklib.range import range_clip
 
@@ -24,13 +23,6 @@ from risklib.range import range_clip
 class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
-
-    @classmethod
-    def from_json(cls, json_str):
-        """Construct a curve from a serialized version in
-        json format."""
-        as_list = json.JSONDecoder().decode(json_str)
-        return cls.from_list(as_list)
 
     @classmethod
     def from_list(cls, values):
@@ -63,22 +55,22 @@ class Curve(object):
         """
 
         # sort the values on x axis
-        values = sorted(values, key=lambda data: data[0])
+        values = sorted(values)
 
         elements = len(values)
-        self.x_values = empty(elements)
-        self.y_values = empty(elements)
+        self.x_values = numpy.empty(elements)
+        self.y_values = numpy.empty(elements)
 
         if elements and type(values[0][1]) in (tuple, list):
-            self.y_values = empty((elements, len(values[0][1])))
+            self.y_values = numpy.empty((elements, len(values[0][1])))
 
         for index, (key, val) in enumerate(values):
             self.x_values[index] = key
             self.y_values[index] = val
 
     def __eq__(self, other):
-        return allclose(self.x_values, other.x_values)\
-        and allclose(self.y_values, other.y_values)
+        return numpy.allclose(self.x_values, other.x_values)\
+        and numpy.allclose(self.y_values, other.y_values)
 
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (
@@ -101,7 +93,7 @@ class Curve(object):
 
     @property
     def is_empty(self):
-        """Return true if this curve is empty, false otherwise."""
+        """Return true if this curve is numpy.empty, false otherwise."""
         return self.abscissae.size == 0
 
     @property
@@ -162,17 +154,5 @@ class Curve(object):
             seen[ordinate] = abscissa
 
         return self.__class__(zip(seen.values(), seen.keys()))
-
-    def to_json(self):
-        """Serialize this curve in json format."""
-        curve = []
-
-        for index, x_value in enumerate(self.x_values):
-            if self.y_values.ndim > 1:
-                curve.append([x_value, list(self.y_values[index])])
-            else:
-                curve.append([x_value, self.y_values[index]])
-
-        return json.JSONEncoder().encode(curve)
 
 EMPTY_CURVE = Curve(())
