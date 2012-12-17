@@ -36,8 +36,10 @@ class YoungsEtAl1997SInter(GMPE):
     This class implements the equations for 'Subduction Interface' (that's why
     the class name ends with 'SInter').
     Mean value for SA at 4 s on rock (not originally supported) is obtained
-    from mean value at 3 s divided by a factor equal to 0.399
-    (scaling factor computed in the context of the SHARE project.)
+    from mean value at 3 s scaled by a factor equal to 0.399
+    (scaling factor computed in the context of the SHARE project obtained as
+    average ratio between median values at 4 and 3 seconds as predicted by
+    SHARE subduction GMPEs).
     """
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -99,7 +101,7 @@ class YoungsEtAl1997SInter(GMPE):
             self._compute_std(C, rup.mag, stddevs, idx_rock)
 
             if imt == SA(period=4.0, damping=5.0):
-                mean = mean / 0.399
+                mean = mean * 0.399
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
@@ -118,7 +120,7 @@ class YoungsEtAl1997SInter(GMPE):
         Compute mean for subduction interface events, as explained in table 2,
         page 67.
         """
-        mean[idx]  = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag)**3 +
+        mean[idx] = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag) ** 3 +
                      C['C3'] * np.log(rrup[idx] + A4 * np.exp(A5 * mag)) +
                      A6 * hypo_depth)
 
@@ -126,14 +128,14 @@ class YoungsEtAl1997SInter(GMPE):
         """
         Compute total standard deviation, as explained in table 2, page 67.
         """
-        if mag > 8.0: 
-           mag = 8.0
+        if mag > 8.0:
+            mag = 8.0
 
         for stddev in stddevs:
             stddev[idx] += C['C4'] + C['C5'] * mag
 
     #: Coefficient table containing soil coefficients,
-    #: taken from table 2, p. 67 
+    #: taken from table 2, p. 67
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT       C1        C2         C3       C4       C5
     pga       0.000    -0.0019    -2.329    1.45    -0.1
@@ -197,7 +199,9 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
     the class name ends with 'SSlab').
     Mean value for SA at 4 s on rock (not originally supported) is obtained
     from mean value at 3 s divided by a factor equal to 0.399
-    (scaling factor computed in the context of the SHARE project.)
+    (scaling factor computed in the context of the SHARE project obtained as
+    average ratio between median values at 4 and 3 seconds as predicted by
+    SHARE subduction GMPEs).
     """
 
     #: Supported tectonic region type is subduction intraslab
@@ -216,7 +220,7 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
         idx_soil = sites.vs30 < self.ROCK_VS30
 
         if imt == SA(period=4.0, damping=5.0):
-            mean[idx_rock] += 0.3846 / 0.399
+            mean[idx_rock] += 0.3846 * 0.399
         else:
             mean[idx_rock] += 0.3846
 

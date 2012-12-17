@@ -19,6 +19,7 @@ Built-in GSIMs
     chiou_youngs_2008
     faccioli_2010
     sadigh_1997
+    youngs_1997
     zhao_2006
 
 
