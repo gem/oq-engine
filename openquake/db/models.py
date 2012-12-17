@@ -36,7 +36,6 @@ import numpy
 
 from django.db import connection
 from django.contrib.gis.db import models as djm
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
 from shapely import wkt
@@ -339,6 +338,21 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
+class ParsedRupture(djm.Model):
+    """Stores parsed hazard rupture model in serialized python object
+       tree format."""
+    input = djm.ForeignKey('Input')
+    RUPTURE_TYPE_CHOICES = (
+        (u'complex_fault', u'Complex Fault'),
+        (u'simple_fault', u'Simple Fault'),)
+    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
+    nrml = fields.PickleField(help_text="NRML object representing the rupture"
+                                        " model")
+
+    class Meta:
+        db_table = 'hzrdi\".\"parsed_rupture_model'
+
+
 ## Tables in the 'uiapi' schema.
 
 
@@ -383,6 +397,7 @@ class Input(djm.Model):
         (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'site_model', u'Site Model'),
+        (u'rupture_model', u'Rupture Model')
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -601,6 +616,7 @@ class HazardCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'disaggregation', u'Disaggregation'),
+        (u'scenario', u'Scenario'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -743,6 +759,26 @@ class HazardCalculation(djm.Model):
     num_epsilon_bins = djm.IntegerField(
         help_text=('Number of epsilon bins, which defines the size of the'
                    ' epsilon dimension of a disaggregation matrix'),
+        null=True,
+        blank=True,
+    )
+    ################################
+    # Scenario Calculator params:
+    ################################
+    gsim = djm.TextField(
+        help_text=('Name of the ground shaking intensity model to use in the '
+                   'calculation'),
+        null=True,
+        blank=True,
+    )
+    number_of_ground_motion_fields = djm.IntegerField(
+        null=True,
+        blank=True,
+    )
+    poes_disagg = fields.FloatArrayField(
+        help_text=('The probabilities of exceedance for which we interpolate'
+                   ' grond motion values from hazard curves. This GMV is used'
+                   ' as input for computing disaggregation histograms'),
         null=True,
         blank=True,
     )
@@ -1408,7 +1444,7 @@ class HazardCurve(djm.Model):
         db_table = 'hzrdr\".\"hazard_curve'
 
 
-class HazardCurveDataManager(djm.Manager):
+class HazardCurveDataManager(djm.GeoManager):
     """
     Manager class to filter and create HazardCurveData objects
     """
@@ -1829,6 +1865,9 @@ class DisaggResult(djm.Model):
     * `lon_bin_edges`
     * `eps_bin_edges`
 
+    The size of the tectonic region type (TRT) dimension is simply determined
+    by the length of `trts`.
+
     Additional metadata for the disaggregation histogram is stored, including
     location (POINT geometry), disaggregation PoE (Probability of Exceedance)
     and the corresponding IML (Intensity Measure Level) extracted from the
@@ -1843,11 +1882,12 @@ class DisaggResult(djm.Model):
     poe = djm.FloatField()
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    mag_bin_edges = fields.FloatArrayField(null=True)
-    dist_bin_edges = fields.FloatArrayField(null=True)
-    lon_bin_edges = fields.FloatArrayField(null=True)
-    lat_bin_edges = fields.FloatArrayField(null=True)
-    eps_bin_edges = fields.FloatArrayField(null=True)
+    mag_bin_edges = fields.FloatArrayField()
+    dist_bin_edges = fields.FloatArrayField()
+    lon_bin_edges = fields.FloatArrayField()
+    lat_bin_edges = fields.FloatArrayField()
+    eps_bin_edges = fields.FloatArrayField()
+    trts = fields.CharArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     matrix = fields.PickleField()
 
@@ -1918,8 +1958,8 @@ class UhSpectrumData(djm.Model):
 
 class LtRealization(djm.Model):
     """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+    Keep track of logic tree realization progress. When ``completed_items``
+    becomes equal to ``total_items``, mark ``is_complete`` as `True`.
 
     Marking progress as we go gives us the ability to resume partially-
     completed calculations.
@@ -1932,8 +1972,8 @@ class LtRealization(djm.Model):
     sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
     is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField(default=0)
+    total_items = djm.IntegerField()
+    completed_items = djm.IntegerField(default=0)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
@@ -2200,19 +2240,21 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, region_constraint):
+    def contained_in(self, exposure_model_id, region_constraint, offset, size):
         """
         :returns the asset ids (ordered by id) contained in
         `region_constraint` associated with an
         `openquake.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        return self.raw("""
+        return list(self.raw("""
     SELECT * FROM oqmif.exposure_data WHERE
     exposure_model_id = %s AND
     ST_COVERS(ST_GeographyFromText(%s), site)
     ORDER BY id
-    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
+    LIMIT %s OFFSET %s
+    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt,
+          size, offset]))
 
     def contained_in_count(self, exposure_model_id, region_constraint):
         cursor = connection.cursor()
