@@ -230,12 +230,3 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
         # because the scientific logic is tested elsewhere
         self.assertIsNotNone(asset_output.mean)
         self.assertIsNotNone(asset_output.standard_deviation)
-
-        # same, but with an insured calculator
-        asset_output = api.scenario_risk(
-            vulnerability_model, 37, "perfect")(asset, hazard)
-
-        self.assertEquals(asset, asset_output.asset)
-
-        self.assertIsNotNone(asset_output.mean)
-        self.assertIsNotNone(asset_output.standard_deviation)
