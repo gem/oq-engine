@@ -23,7 +23,6 @@ Helper functions for our unit and smoke tests.
 
 import collections
 import functools
-import guppy
 import logging
 import mock as mock_module
 import numpy
@@ -191,6 +190,8 @@ def run_hazard_job(cfg, exports=None):
     job.is_running = True
     job.save()
 
+    models.JobStats.objects.create(oq_job=job)
+
     calc_mode = job.hazard_calculation.calculation_mode
     calc = hazard.CALCULATORS_NEXT[calc_mode](job)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
@@ -342,22 +343,6 @@ def skipit(method):
         raise SkipTest("skipping method %r" % method.__name__)
 
     return nose.tools.make_decorator(method)(skipme)
-
-
-def measureit(method):
-    """Decorator that profiles memory usage"""
-
-    def _measured(*args, **kw):
-        """Decorator that profiles memory usage"""
-        result = method(*args, **kw)
-        print guppy.hpy().heap()
-        return result
-    try:
-        import nose
-        return nose.tools.make_decorator(method)(_measured)
-    except ImportError:
-        pass
-    return _measured
 
 
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):

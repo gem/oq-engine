@@ -20,7 +20,6 @@ import unittest
 
 import numpy
 
-from django.contrib.gis.geos.geometry import GEOSGeometry
 from nose.plugins.attrib import attr
 
 from openquake import engine
@@ -29,99 +28,6 @@ from openquake.db import models
 
 from tests.utils import helpers
 from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
-
-
-class ModelEqualsTestCase(unittest.TestCase):
-    """Tests for :function:`model_equals`, a function to compare the contents
-    of two Django models objects."""
-
-    def setUp(self):
-        self.org = models.Organization(
-            name='test_name', address='test_address', url='http://test.com')
-        self.org.save()
-
-        # Now query two fresh copies of this record from the DB to test with:
-        self.o1 = models.Organization.objects.get(id=self.org.id)
-        self.o2 = models.Organization.objects.get(id=self.org.id)
-
-    def test_model_equals(self):
-        self.assertTrue(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_with_different_values(self):
-        self.o1.name = 'something different'
-        self.assertFalse(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_with_ignore(self):
-        self.o1.name = 'something different'
-        self.assertTrue(
-            models.model_equals(self.o1, self.o2, ignore=('name',)))
-
-    def test_model_equals_with_many_ignores(self):
-        self.o1.name = 'something different'
-        self.o1.url = 'http://www.somethingdiff.com'
-        self.assertTrue(
-            models.model_equals(self.o1, self.o2, ignore=('name', 'url')))
-
-    def test_model_equals_ignore_id(self):
-        """Comparing two models with different ids is a special case, thus a
-        separate test.
-
-        This is a special case because it is very likely that we could have
-        multiple records with the same contents but different ids. An example
-        of this would be two :class:`openquake.db.models.OqJobProfile`
-        records that contain the exact same config parameters, just different
-        database ids. """
-        self.o1.id = 1
-        self.o2.id = 2
-
-        self.assertTrue(models.model_equals(self.o1, self.o2, ignore=('id',)))
-
-    def test_model_equals_with_invalid_ignores(self):
-        self.assertTrue(models.model_equals(
-            self.o1, self.o2, ignore=('not_an_attr',)))
-
-    def test__state_is_always_ignored(self):
-        # Set some fake _state values on the model objects:
-        self.o1._state = 'fake_state'
-        self.o2._state = 'other_fake_state'
-
-        # Sanity check: make sure _state is in the object dict.
-        self.assertTrue('_state' in self.o1.__dict__)
-        self.assertTrue('_state' in self.o2.__dict__)
-
-        # Sanity check 2: Make sure the object dict _state is correctly set.
-        self.assertEquals('fake_state', self.o1.__dict__['_state'])
-        self.assertEquals('other_fake_state', self.o2.__dict__['_state'])
-
-        # Now finally compare the two objects:
-        self.assertTrue(models.model_equals(self.o1, self.o2))
-
-    def test_model_equals_different_classes(self):
-        gmf = models.GmfData(ground_motion=1.0)
-
-        self.assertFalse(models.model_equals(self.o1, gmf))
-
-    def test_model_equals_with_geometry(self):
-        gmf_data_1 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        gmf_data_2 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        self.assertTrue(models.model_equals(gmf_data_1, gmf_data_2))
-
-    def test_model_equals_with_different_geometry(self):
-        gmf_data_1 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.0)"))
-
-        gmf_data_2 = models.GmfData(
-            ground_motion=5.0,
-            location=GEOSGeometry("POINT (30.0 10.1)"))
-
-        self.assertFalse(models.model_equals(gmf_data_1, gmf_data_2))
 
 
 class Profile4JobTestCase(helpers.DbTestCase):
@@ -173,7 +79,7 @@ class Inputs4JobTestCase(unittest.TestCase):
         inp1.save()
         models.Input2job(oq_job=self.job, input=inp1).save()
         inp2 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="rupture", size=self.sizes.next())
+                            input_type="rupture_model", size=self.sizes.next())
         inp2.save()
         models.Input2job(oq_job=self.job, input=inp2).save()
         inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
@@ -200,7 +106,7 @@ class Inputs4JobTestCase(unittest.TestCase):
         models.Input2job(oq_job=self.job, input=inp1).save()
         path = self.paths.next()
         inp2 = models.Input(owner=self.job.owner, path=path,
-                            input_type="rupture", size=self.sizes.next())
+                            input_type="rupture_model", size=self.sizes.next())
         inp2.save()
         models.Input2job(oq_job=self.job, input=inp2).save()
         self.assertEqual([inp2], models.inputs4job(self.job.id, path=path))
@@ -432,7 +338,7 @@ class SESRuptureTestCase(unittest.TestCase):
 
         lt_rlz = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
-            sm_lt_path='foo', gsim_lt_path='bar', total_sources=0)
+            sm_lt_path='foo', gsim_lt_path='bar', total_items=0)
         output = models.Output.objects.create(
             oq_job=job, owner=job.owner, display_name='test',
             output_type='ses')
@@ -661,66 +567,3 @@ class PrepGeometryTestCase(unittest.TestCase):
         }
 
         self.assertEqual(expected, models._prep_geometry(the_input))
-
-
-from django.contrib.gis.geos.point import Point
-from django.contrib.gis.geos.polygon import Polygon
-from openquake.calculators.risk import general as general_risk
-
-
-class ExposureContainedInTestCase(unittest.TestCase):
-    def setUp(self):
-        self.job, _ = helpers.get_risk_job(
-            'classical_psha_based_risk/job.ini',
-            'simple_fault_demo_hazard/job.ini')
-        calculator = general_risk.BaseRiskCalculator(self.job)
-        calculator.pre_execute()
-        self.model = self.job.risk_calculation.model('exposure')
-
-        common_fake_args = dict(
-            exposure_model=self.model,
-            stco=1,
-            number_of_units=10,
-            reco=1,
-            taxonomy="test")
-
-        asset = models.ExposureData(site=Point(0.5, 0.5),
-                                    asset_ref="test1",
-                                    **common_fake_args)
-        asset.save()
-
-        asset = models.ExposureData(site=Point(179.1, 0),
-                                    asset_ref="test2",
-                                    **common_fake_args)
-        asset.save()
-
-    def test_simple_inclusion(self):
-        region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
-
-        results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
-        results = [result for result in results if result.taxonomy == "test"]
-        self.assertEqual(1, len(list(results)))
-        self.assertEqual("test1", results[0].asset_ref)
-
-    def test_inclusion_of_a_pole(self):
-        region_constraint = Polygon(
-            ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
-
-        results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
-        results = [result for result in results if result.taxonomy == "test"]
-        self.assertEqual(1, len(results))
-        self.assertEqual("test1", results[0].asset_ref)
-
-        region_constraint = Polygon(
-            ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
-
-        results = models.ExposureData.objects.contained_in(
-            self.model.id,
-            region_constraint)
-        results = [result for result in results if result.taxonomy == "test"]
-        self.assertEqual(1, len(list(results)))
-        self.assertEqual("test2", results[0].asset_ref)
