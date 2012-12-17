@@ -334,9 +334,9 @@ CREATE TABLE uiapi.hazard_calculation (
     random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
     -- ERF parameters:
-    rupture_mesh_spacing float NULL,
-    width_of_mfd_bin float NULL,
-    area_source_discretization float NULL,
+    rupture_mesh_spacing float,
+    width_of_mfd_bin float,
+    area_source_discretization float,
     -- site parameters:
     reference_vs30_value float,
     reference_vs30_type VARCHAR CONSTRAINT vs30_type
@@ -346,7 +346,7 @@ CREATE TABLE uiapi.hazard_calculation (
     reference_depth_to_2pt5km_per_sec float,
     reference_depth_to_1pt0km_per_sec float,
     -- calculation parameters:
-    investigation_time float NULL,
+    investigation_time float,
     intensity_measure_types_and_levels bytea NOT NULL,  -- stored as a pickled Python `dict`
     truncation_level float NOT NULL,
     maximum_distance float NOT NULL,
@@ -1475,8 +1475,8 @@ CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    expected_annual_loss_original float NOT NULL ,   
-    expected_annual_loss_retrofitted float NOT NULL,
+    average_annual_loss_original float NOT NULL ,   
+    average_annual_loss_retrofitted float NOT NULL,
     bcr float NOT NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);

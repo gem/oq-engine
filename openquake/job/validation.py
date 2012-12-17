@@ -848,7 +848,7 @@ def gsim_is_valid(mdl):
 
 def number_of_ground_motion_fields_is_valid(mdl):
     gmfno = mdl.number_of_ground_motion_fields
-    if isinstance(gmfno, int) and gmfno > 0:
+    if gmfno > 0:
         return True, []
     return False, ['The number_of_ground_motion_fields must be a positive '
                    'integer, got %r' % gmfno]
