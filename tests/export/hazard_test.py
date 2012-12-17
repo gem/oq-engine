@@ -162,3 +162,41 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
         finally:
             shutil.rmtree(target_dir)
+
+
+class ScenarioExportTestCase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_export_for_scenario(self):
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('scenario_hazard/job.ini')
+
+            # run the calculation to create something to export
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+
+            self.assertEqual(1, len(outputs))  # 1 GMF
+
+            gmf_outputs = outputs.filter(output_type='gmf_scenario')
+            self.assertEqual(1, len(gmf_outputs))
+
+            exported_files = hazard.export(gmf_outputs[0].id, target_dir)
+
+            self.assertEqual(1, len(exported_files))
+            # Check the file paths exist, is absolute, and the file isn't
+            # empty.
+            f = exported_files[0]
+            self._test_exported_file(f)
+
+            # Check for the correct number of GMFs in the file:
+            tree = etree.parse(f)
+            self.assertEqual(3, number_of('nrml:gmf', tree))
+            # 3 because there are 3 sites in the job.ini file
+        finally:
+            shutil.rmtree(target_dir)
