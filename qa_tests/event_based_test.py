@@ -162,7 +162,7 @@ il = TestData(  # insured loss test data
         a2=input_models.Asset(
             "a2", "RC", 2000, None, ins_limit=500, deductible=15),
         a3=input_models.Asset(
-            "a3", "RM", 1000, None, ins_limit=240, deductible=13),
+            "a3", "RM", 1000, None, ins_limit=40, deductible=13),
         ),
 
     expected_poes=Triplet(
@@ -189,11 +189,9 @@ il = TestData(  # insured loss test data
                         30.431686, 30.600101, 30.768516, 30.811904, 30.83271,
                         30.853515, 30.874321, 30.895127, 30.915933, 30.936739,
                         30.957545, 30.97835, 30.999156, 31.019962, 31.040768]),
-        a3=numpy.array([0., 31.381558, 33.437738, 35.367516, 37.238111,
-                        39.108706, 40.9793, 42.849895, 43.599068, 44.145696,
-                        44.692323, 45.238951, 45.785579, 46.332206, 46.878834,
-                        47.425462, 47.972089, 48.518717, 49.065345,
-                        49.611972]),
+        a3=numpy.array([0., 31.61793758, 33.63854731, 35.29819646, 36.47667918,
+                        37.65516189,  38.8336446, 40, 40, 40, 40, 40,
+                        40, 40, 40, 40, 40, 40, 40, 40]),
         ),
 
     expected_loss_map=None)
@@ -362,8 +360,10 @@ class EventBasedTestCase(unittest.TestCase):
                 il.input_models_asset[i],
                 {"IMLs": gmf[i], "TSES": 50, "TimeSpan": 50})
 
-            numpy.set_printoptions(precision=6)
-            print asset_output.insured_losses.y_values
+            # if i == 2:
+            #     numpy.set_printoptions(precision=6)
+            #     for x in asset_output.insured_losses.x_values:
+            #         print x
 
             self.assert_allclose(
                 il.expected_poes[i],

@@ -17,7 +17,7 @@
 import unittest
 import numpy
 
-from risklib.models import input
+from risklib.models import input as input_models
 
 from risklib.insured_loss import compute_insured_losses
 
@@ -29,14 +29,3 @@ class InsuredLossesTestCase(unittest.TestCase):
                                    250.77079384, 39.45861103, 114.54372035,
                                    288.28653452, 473.38307021, 488.47447798,
                                    ])
-
-    def test_compute_insured_losses(self):
-        asset = input.Asset("a14", "a taxonomy", None, None, 1, 300, 150)
-
-        expected = numpy.array([
-            0, 300, 180.02423357, 171.02684563,
-            250.77079384, 0, 0, 288.28653452, 300, 300,
-            ])
-
-        self.assertTrue(numpy.allclose(expected,
-            compute_insured_losses(asset, self.losses)))

@@ -209,66 +209,6 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         self.assertIsNotNone(asset_output.loss_ratio_curve)
 
 
-class InsuredLossesTestCase(unittest.TestCase):
-
-    def test_insured_losses_calculator(self):
-        asset = input.Asset("a1", "RC", 1.0, None)
-        hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
-
-        asset_output = utils.new(
-            output.ProbabilisticEventBasedOutput,
-            losses=[0.5, 0.5, 0.5])
-
-        losses_calculator = mock.Mock(return_value=asset_output)
-
-        with mock.patch(
-            "risklib.insured_loss.compute_insured_losses") as stub:
-            stub.return_value = [0.5, 0.5, 0.5]
-
-            asset_output = api.insured_losses(losses_calculator)(asset, hazard)
-            losses_calculator.assert_called_with(asset, hazard)
-
-            # as output we have the output from the given losses
-            # calculator, plus the insured losses
-            self.assertEquals([0.5, 0.5, 0.5], asset_output.insured_losses)
-
-
-class InsuredCurvesTestCase(unittest.TestCase):
-
-    def test_insured_curves_calculator(self):
-        hazard = {"IMLs": [0.11, 0.12, 0.13], 'TSES': 10, 'TimeSpan': 50}
-        asset = input.Asset("a1", "RC", 1.0, None)
-
-        asset_output = utils.new(
-            output.ProbabilisticEventBasedOutput,
-            insured_losses=[0.5, 0.5, 0.5])
-
-        insured_losses_calculator = mock.Mock(return_value=asset_output)
-
-        with mock.patch(
-            "risklib.event_based._loss_curve") as stub:
-
-            insured_loss_ratio_curve = curve.Curve(
-                [(0.5, 1.0), (0.5, 1.0), (0.5, 1.0)])
-
-            stub.return_value = insured_loss_ratio_curve
-
-            asset_output = api.insured_curves(
-                insured_losses_calculator)(asset, hazard)
-
-            insured_losses_calculator.assert_called_with(asset, hazard)
-
-            # as output we have the output from the given insured losses
-            # calculator, plus the insured loss ratio and loss curves
-            self.assertEquals(insured_loss_ratio_curve,
-                asset_output.insured_loss_ratio_curve)
-
-            # the loss curve is equal to the loss ratio curve since the
-            # asset value is 1.0
-            self.assertEquals(insured_loss_ratio_curve,
-                asset_output.insured_loss_curve)
-
-
 class ScenarioRiskCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_risk_calculator(self):
@@ -293,7 +233,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
 
         # same, but with an insured calculator
         asset_output = api.scenario_risk(
-            vulnerability_model, 37, "perfect", insured=True)(asset, hazard)
+            vulnerability_model, 37, "perfect")(asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)
 

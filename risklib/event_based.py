@@ -281,26 +281,7 @@ def _loss_curve(loss_values, tses, time_span,
     # exceedance are evenly spaced.
     rates_of_exceedance = numpy.linspace(0, num - 1, num) / tses
 
-    # if two loss values are close, we need to fix the previous
-    # approximation
-
-    def pairwise(iterable):
-        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-        a, b = itertools.tee(iterable)
-        next(b, None)
-        return itertools.izip(a, b)
-
-    def _close(a, b):
-        return numpy.allclose(a, b)
-    close = numpy.vectorize(_close)
-
-    if close(*zip(*pairwise(sorted_loss_values))).any():
-        for i, (previous, val) in enumerate(pairwise(sorted_loss_values)):
-            if numpy.allclose(val, previous):
-                rates_of_exceedance[i + 1] = rates_of_exceedance[i]
-
     poes = _probs_of_exceedance(rates_of_exceedance, time_span)
-
     reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
     values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
@@ -309,4 +290,9 @@ def _loss_curve(loss_values, tses, time_span,
     if reference_poes[-1] == 1:
         values[-1] = 0
 
-    return curve.Curve(zip(values, reference_poes))
+    # Do not use the default constructor to populate the curve object
+    # as it is not reliable (it modifies the ordering of the points)
+    c = curve.Curve(())
+    c.x_values = values[::-1]
+    c.y_values = reference_poes[::-1]
+    return c
