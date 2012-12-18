@@ -189,7 +189,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     logs.LOG.debug('< done computing disaggregation')
 
 
-_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s'
+_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
 def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
@@ -230,7 +230,8 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     if disp_imt == 'SA':
         disp_imt = 'SA(%s)' % sa_period
 
-    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt)
+    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt,
+                          wkt=site.location.wkt2d)
     disp_name %= disp_name_args
 
     output = models.Output.objects.create_output(
@@ -480,7 +481,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         == self.progress['hc_total']):
                         # we're switching to disagg phase
                         self.disagg_phase = True
-                        logs.LOG.debug('* switching to disaggregation phase')
+                        logs.LOG.progress('Hazard curve computation complete',
+                                          indent=True)
+                        logs.LOG.progress('Starting disaggregation',
+                                          indent=True)
 
                         # Finalize the hazard curves, so the disaggregation
                         # can find curves by their point geometry:
