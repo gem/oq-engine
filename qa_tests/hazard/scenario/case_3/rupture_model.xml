@@ -3,19 +3,19 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <simpleFaultRupture>
-        <magnitude>7.1</magnitude>
-        <rake>-118.0</rake>
-
+        <magnitude>6.5</magnitude>
+        <rake>0</rake>
+        <hypocenter lat="0.0" lon="0.0" depth="6.0"/>
         <simpleFaultGeometry>
                 <gml:LineString>
                     <gml:posList>
-			15.5826 37.6943 1.0
-			15.5173 38.2324 1.0
+                        -0.104328 -0.104328
+                         0.104328  0.104328
                     </gml:posList>
                 </gml:LineString>
-            <dip>42.0</dip>
-            <upperSeismoDepth>1.0</upperSeismoDepth>
-            <lowerSeismoDepth>21.0</lowerSeismoDepth>
+            <dip>90.0</dip>
+            <upperSeismoDepth>2.0</upperSeismoDepth>
+            <lowerSeismoDepth>10.0</lowerSeismoDepth>
         </simpleFaultGeometry>
     </simpleFaultRupture>
 </nrml>
