@@ -1017,3 +1017,59 @@ class DisaggXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO(self.expected_xml)
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
+
+
+class ScenarioGMFXMLWriterTestCase(unittest.TestCase):
+
+    def test_serialize(self):
+        locations = [Location(i * 0.1, i * 0.1) for i in xrange(12)]
+        gmf_nodes = [GmfNode(i * 0.2, locations[i]) for i in xrange(12)]
+        gmfs = [
+            Gmf('SA', 0.1, 5.0, gmf_nodes[:2]),
+            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4]),
+            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6]),
+            Gmf('PGA', None, None, gmf_nodes[6:8]),
+            Gmf('PGA', None, None, gmf_nodes[8:10]),
+            Gmf('PGA', None, None, gmf_nodes[10:]),
+        ]
+
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <gmfSet>
+    <gmf IMT="SA" saPeriod="0.1" saDamping="5.0">
+      <node iml="0.0" lon="0.0" lat="0.0"/>
+      <node iml="0.2" lon="0.1" lat="0.1"/>
+    </gmf>
+    <gmf IMT="SA" saPeriod="0.2" saDamping="5.0">
+      <node iml="0.4" lon="0.2" lat="0.2"/>
+      <node iml="0.6" lon="0.3" lat="0.3"/>
+    </gmf>
+    <gmf IMT="SA" saPeriod="0.3" saDamping="5.0">
+      <node iml="0.8" lon="0.4" lat="0.4"/>
+      <node iml="1.0" lon="0.5" lat="0.5"/>
+    </gmf>
+    <gmf IMT="PGA">
+      <node iml="1.2" lon="0.6" lat="0.6"/>
+      <node iml="1.4" lon="0.7" lat="0.7"/>
+    </gmf>
+    <gmf IMT="PGA">
+      <node iml="1.6" lon="0.8" lat="0.8"/>
+      <node iml="1.8" lon="0.9" lat="0.9"/>
+    </gmf>
+    <gmf IMT="PGA">
+      <node iml="2.0" lon="1.0" lat="1.0"/>
+      <node iml="2.2" lon="1.1" lat="1.1"/>
+    </gmf>
+  </gmfSet>
+</nrml>
+""")
+        try:
+            # Make a temp file to save the results to:
+            _, path = tempfile.mkstemp()
+            writer = writers.ScenarioGMFXMLWriter(path)
+            writer.serialize(gmfs)
+            utils.assert_xml_equal(expected, path)
+            self.assertTrue(utils.validates_against_xml_schema(path))
+        finally:
+            os.unlink(path)
