@@ -198,7 +198,7 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
     This class implements the equations for 'Subduction IntraSlab' (that's why
     the class name ends with 'SSlab').
     Mean value for SA at 4 s on rock (not originally supported) is obtained
-    from mean value at 3 s divided by a factor equal to 0.399
+    from mean value at 3 s scaled by a factor equal to 0.399
     (scaling factor computed in the context of the SHARE project obtained as
     average ratio between median values at 4 and 3 seconds as predicted by
     SHARE subduction GMPEs).
