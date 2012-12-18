@@ -2,8 +2,13 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 # set -x
 set -e
+GEM_DEB_PACKAGE="python-oq"
+GEM_DEB_SERIE="master"
+if [ -z "$GEM_DEB_REPO" ]; then
+    GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
+fi
 GEM_BUILD_ROOT="build-deb"
-GEM_BUILD_SRC="${GEM_BUILD_ROOT}/python-oq"
+GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
@@ -33,10 +38,11 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned]    build debian source package."
-    echo "       if -B argument is present binary package is build too."
-    echo "       if -D argument is present a package with self-computed version is produced."
-    echo "       if -U argoment is present no sign are perfomed using gpg key related to the mantainer."
+    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -B is present binary package is build too."
+    echo "       if -R is present update the local repository to the new current package"
+    echo "       if -D is present a package with self-computed version is produced."
+    echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
     echo
     exit $ret
@@ -47,20 +53,23 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    gpg -a --export | ssh $haddr "sudo apt-key add -"
     # install package to manage repository properly
-    ssh $haddr "sudo apt-get install python-software-properties"
+    ssh $haddr "sudo apt-get install -y python-software-properties"
 
-    # create a remote "local repo" where place python-oq package
+    # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/python-oq_*.deb build-deb/Packages.gz  build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get remove --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get install --force-yes -y python-oq"
-    ssh $haddr "sudo apt-get install --reinstall --force-yes -y python-oq"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     trap ERR
 
@@ -73,7 +82,7 @@ pkgtest_run () {
     #
     #  run build of package
     if [ -d build-deb ]; then
-        if [ ! -f build-deb/python-oq*.deb ]; then
+        if [ ! -f build-deb/${GEM_DEB_PACKAGE}_*.deb ]; then
             echo "'build-deb' directory already exists but .deb file package was not found"
             return 1
 
@@ -83,21 +92,44 @@ pkgtest_run () {
     fi
 
     #
-    #  prepare repo and install python-oq package
+    #  prepare repo and install $GEM_DEB_PACKAGE package
     cd build-deb
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-    dpkg-scansources . | gzip > Sources.gz
+    dpkg-scanpackages . /dev/null >Packages
+    cat Packages | gzip -9c > Packages.gz
+    dpkg-scansources . > Sources
+    cat Sources | gzip > Sources.gz
+    cat > Release <<EOF
+Archive: precise
+Origin: Ubuntu
+Label: Local Ubuntu Precise Repository
+Architecture: amd64
+MD5Sum:
+EOF
+    printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
+        $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
+        $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+        $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
+    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+        $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
+    gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
     #
     #  check if an istance with the same address already exists
     export haddr="10.0.3.$le_addr"
-    if sudo sh -c "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/ubuntu-lxc-*/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
-        echo -n "The $haddr machine seems to be already configured ... "
-        previous_name="$(ssh $haddr hostname 2>/dev/null)"
-        sudo lxc-shutdown -n $previous_name -w -t 10
-        echo "turned off"
-    fi
+    running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
+    for running_machine in $running_machines ; do
+        if sudo grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
+            echo -n "The $haddr machine seems to be already configured ... "
+            previous_name="$(ssh $haddr hostname 2>/dev/null)"
+            set +e
+            sudo lxc-shutdown -n $previous_name -w -t 10
+            set -e
+            echo "turned off"
+        fi
+    done
 
     #
     #  run the VM and get the VM name
@@ -119,19 +151,36 @@ pkgtest_run () {
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    set -e
     sudo lxc-shutdown -n $machine_name -w -t 10
+    set -e
+
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+
+    if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
+        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
+        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
+        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        fi
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+    fi
 
     # TODO
     # app related tests (run demos)
 
-    return $inner_ret
+    return
 }
 
 #
 #  MAIN
 #
 BUILD_BINARIES=0
+BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
@@ -149,6 +198,9 @@ while [ $# -gt 0 ]; do
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
+            ;;
+        -R|--repository)
+            BUILD_REPOSITORY=1
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
@@ -197,19 +249,26 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version from setup.py
-stp_vers="$(cat setup.py | grep '^[ 	]*version=' | sed -n 's/^[ 	]*version="//g;s/".*//gp')"
+stp_vers="$(cat setup.py | grep "^version[ 	]*=[ 	]*['\"]" | sed -n "s/^version[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
 # echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
-# version info from openquake/__init__.py
-ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_suf="" # currently not included into the version array structure
-# echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
+if [ 1 -eq 1 ]; then
+    # version info from openquake/__init__.py
+    ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_suf="" # currently not included into the version array structure
+    # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
+else
+    ini_maj="$stp_maj"
+    ini_min="$stp_min"
+    ini_bfx="$stp_bfx"
+    ini_suf="$stp_suf"
+fi
 
 # version info from debian/changelog
 h="$(head -n1 debian/changelog)"
@@ -241,7 +300,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     ( echo "$pkg_name (${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}) $pkg_rest"
       echo
-      echo "  *  development version from $hash commit"
+      echo "  * Development version from $hash commit"
       echo
       echo " -- $DEBFULLNAME <$DEBEMAIL>  $(date -d@$dt -R)"
       echo
@@ -263,18 +322,21 @@ if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
     read a
 fi
 
-sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+if [ 1 -eq 1 ]; then
+    sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
-# mods pre-packaging
-mv LICENSE         openquake
-mv README.txt      openquake/README
-mv celeryconfig.py openquake
-mv openquake.cfg   openquake
+    # mods pre-packaging
+    mv LICENSE         openquake
+    mv README.txt      openquake/README
+    mv celeryconfig.py openquake
+    mv openquake.cfg   openquake
 
-mv bin/openquake   bin/oqscript.py
-mv bin             openquake/bin
+    mv bin/openquake   bin/oqscript.py
+    mv bin             openquake/bin
 
-rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
+    rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
+fi
+
 dpkg-buildpackage $DPBP_FLAG
 cd -
 
@@ -292,7 +354,7 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/python-oq_*.deb  $GEM_BUILD_PKG
+cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb  $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/python-oq_*.deb .
-dpkg -e $GEM_BUILD_PKG/python-oq_*.deb
+dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
+dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
