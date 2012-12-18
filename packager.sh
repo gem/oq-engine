@@ -3,6 +3,10 @@
 set -x
 set -e
 GEM_DEB_PACKAGE="python-nhlib"
+GEM_DEB_SERIE="master"
+if [ -z "$GEM_DEB_REPO" ]; then
+    GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
+fi
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
@@ -34,10 +38,11 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned]    build debian source package."
-    echo "       if -B argument is present binary package is build too."
-    echo "       if -D argument is present a package with self-computed version is produced."
-    echo "       if -U argoment is present no sign are perfomed using gpg key related to the mantainer."
+    echo "    $0 [-D|--development] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -B is present binary package is build too."
+    echo "       if -R is present update the local repository to the new current package"
+    echo "       if -D is present a package with self-computed version is produced."
+    echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
     echo
     exit $ret
@@ -54,7 +59,9 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $haddr mkdir repo
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/Packages* build-deb/Release* build-deb/Sources.gz $haddr:repo
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
     ssh $haddr "sudo apt-get update"
 
@@ -107,7 +114,6 @@ EOF
     printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
-
     cd -
 
     #
@@ -115,7 +121,7 @@ EOF
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
     for running_machine in $running_machines ; do
-        if sudo "grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1"; then
+        if sudo grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
             echo -n "The $haddr machine seems to be already configured ... "
             previous_name="$(ssh $haddr hostname 2>/dev/null)"
             set +e
@@ -148,16 +154,33 @@ EOF
     sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+
+    if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
+        mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
+        repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
+        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
+        if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
+            rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        fi
+        mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+    fi
+
     # TODO
     # app related tests (run demos)
 
-    return $inner_ret
+    return
 }
 
 #
 #  MAIN
 #
 BUILD_BINARIES=0
+BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
@@ -175,6 +198,9 @@ while [ $# -gt 0 ]; do
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
+            ;;
+        -R|--repository)
+            BUILD_REPOSITORY=1
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
