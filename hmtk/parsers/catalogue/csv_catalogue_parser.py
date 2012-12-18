@@ -5,7 +5,7 @@ implements :class:`CsvCatalogueParser`.
 import csv
 import numpy as np
 
-from hmtk.catalogue.catalogue import Catalogue
+from hmtk.seismicity.catalogue import Catalogue
 from hmtk.parsers.catalogue.base import BaseCatalogueParser
 
 class CsvCatalogueParser(BaseCatalogueParser):
@@ -40,7 +40,6 @@ class CsvCatalogueParser(BaseCatalogueParser):
     def _header_check(self, input_keys, catalogue_keys):
         valid_key_list = []
         for element in input_keys:
-            print element
             if element in catalogue_keys:
                 valid_key_list.append(element)
             else:
@@ -64,7 +63,6 @@ class CsvCatalogueParser(BaseCatalogueParser):
         value = value.strip(' ')
         if value:
             attribute_array = np.hstack([attribute_array, int(value)])
-            print int(value)
         else:    
             attribute_array = np.hstack([attribute_array, np.nan])
         return attribute_array

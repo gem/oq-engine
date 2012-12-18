@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Module :mod:`hmtk.catalogue.declusterer.dec_gardner_knopoff' defines the 
+Module :mod:`hmtk.seismicity.declusterer.dec_gardner_knopoff' defines the 
 Gardner and Knopoff declustering algorithm 
 """
 
 import numpy as np
 
-from hmtk.catalogue.declusterer.base import BaseCatalogueDecluster
-from hmtk.catalogue.declusterer.utils import decimal_year, haversine
+from hmtk.seismicity.declusterer.base import BaseCatalogueDecluster
+from hmtk.seismicity.declusterer.utils import decimal_year, haversine
 
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     """

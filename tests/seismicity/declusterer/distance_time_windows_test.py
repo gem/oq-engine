@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 
-from hmtk.catalogue.declusterer.distance_time_windows import (
+from hmtk.seismicity.declusterer.distance_time_windows import (
     GardnerKnopoffWindow, GruenthalWindow, UhrhammerWindow)
 
 class CsvCatalogueParserTestCase(unittest.TestCase):
