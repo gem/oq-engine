@@ -250,7 +250,7 @@ def store_site_data(hc_id, site_model_inp, mesh):
         ID of a :class:`~openquake.db.models.HazardCalculation`.
     :param site_model_inp:
         An :class:`~openquake.db.models.Input` with an
-        `input_type`=='site_model'. This tells us which site model dataset to
+        `input_type` == 'site_model'. This tells us which site model dataset to
         query.
     :param mesh:
         Calculation points of interest, as a :class:`nhlib.geo.mesh.Mesh`.
@@ -524,7 +524,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         then, and save the parsed sources to the `parsed_source` table
         (see :class:`openquake.db.models.ParsedSource`).
         """
-        logs.log_progress("initializing sources", 2)
+        logs.LOG.progress("initializing sources")
 
         [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
         [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='lt_gsim')
@@ -574,7 +574,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         starting the calculation is optimal, since each task will need to
         consider all sites.)
         """
-        logs.log_progress("initializing site model", 2)
+        logs.LOG.progress("initializing site model")
 
         site_model_inp = get_site_model(self.hc.id)
         if site_model_inp is not None:
@@ -623,7 +623,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             Callbacks should accept a single argument:
             A :class:`~openquake.db.models.LtRealization` object.
         """
-        logs.log_progress("initializing realizations", 2)
+        logs.LOG.progress("initializing realizations")
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
             self._initialize_realizations_montecarlo(
