@@ -22,21 +22,69 @@ class AfteranTestCase(unittest.TestCase):
         """
         Read the sample catalogue 
         """
-        flnme = 'gardner_knopoff_test_catalogue.csv'
+        flnme = 'afteran_test_catalogue.csv'
         filename = os.path.join(self.BASE_DATA_PATH, flnme)
         parser = CsvCatalogueParser(filename)
         self.cat = parser.read_file()
+        self.dec = Afteran()
         
-    def test_dec_gardner_knopoff(self):
+    def test_dec_afteran(self):
         """
         Testing the Afteran algorithm 
         """
-        config = {'time_distance_window' : GardnerKnopoffWindow(),
+        config = {
+                  'time_distance_window' : GardnerKnopoffWindow(),
                   'time_window' : 60.,
-                  'fs_time_prop' : 1.0}
+                  }
         # Instantiate the declusterer and process the sample catalogue 
-        dec = Afteran()
-        vcl, flagvector = dec.decluster(self.cat, config)
+        #self.dec = Afteran()
+        print dir(self.dec)
+        vcl, flagvector = self.dec.decluster(self.cat, config)
         print 'vcl:',vcl
         print 'flagvector:',flagvector, self.cat.data['flag']
-        self.assertIs(np.allclose(flagvector,self.cat.data['flag']),True)
+        self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
+
+    def test_find_aftershocks(self):
+        '''
+        Tests the find aftershocks function
+        '''
+        # Test when aftershocks are in array
+        year_dec = np.array([0.10, 0.20, 0.5, 0.60, 0.80, 1.2])
+        vsel = np.array([3, 4, 5])
+        time_window = 0.25
+        expected_result = (np.array([False, False, False, True, True, False]), 
+                           True)
+        model_result = self.dec._find_aftershocks(vsel, year_dec, 0.25, 2, 6)
+        self.assertTrue(np.all(expected_result[0] == model_result[0]))
+        self.assertTrue(model_result[1])
+
+        # Test when no aftershocks are found - reduce window to < 0.1
+        expected_result = (
+            np.array([False, False, False, False, False, False]), False)
+        model_result = self.dec._find_aftershocks(vsel, year_dec, 0.09, 2, 6)
+        self.assertTrue(np.all(expected_result[0] == model_result[0]))
+        self.assertFalse(model_result[1])
+
+
+    def test_find_foreshocks(self):
+        '''
+        Tests the find_foreshocks function
+        '''
+        # Test when aftershocks are in array
+        year_dec = np.array([0.10, 0.40, 0.5, 0.60, 0.80, 1.2])
+        vsel = np.array([0, 1])
+        time_window = 0.25
+        expected_result = (
+            np.array([False, True, False, False, False, False]), True)
+        model_result = self.dec._find_foreshocks(vsel, year_dec, 0.25, 2, 6)
+        self.assertTrue(np.all(expected_result[0] == model_result[0]))
+        self.assertTrue(model_result[1])
+
+        # Test when no aftershocks are found - reduce window to < 0.1
+        expected_result = (
+            np.array([False, False, False, False, False, False]), False)
+        model_result = self.dec._find_foreshocks(vsel, year_dec, 0.09, 2, 6)
+        self.assertTrue(np.all(expected_result[0] == model_result[0]))
+        self.assertFalse(model_result[1])
+
+
