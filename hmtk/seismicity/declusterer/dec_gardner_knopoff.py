@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-:
 
 """
 Module :mod:`hmtk.seismicity.declusterer.dec_gardner_knopoff' defines the 
@@ -68,7 +68,8 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
         # Sort magnitudes into descending order
-        id0 = np.flipud(np.argsort(catalogue.data['magnitude'], kind='heapsort'))
+        id0 = np.flipud(np.argsort(catalogue.data['magnitude'], 
+                                   kind='heapsort'))
         longitude = catalogue.data['longitude'][id0]
         latitude = catalogue.data['latitude'][id0]
         sw_space = sw_space[id0]
@@ -87,8 +88,8 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                     np.logical_and(
                          dt >= (-sw_time[i] * config['fs_time_prop']),
                          dt <= sw_time[i])) 
-                # Of those events inside time window, find those inside distance
-                # window
+                # Of those events inside time window, 
+                # find those inside distance window
                 vsel1 = haversine(longitude[vsel], 
                                   latitude[vsel], 
                                   longitude[i], 

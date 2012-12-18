@@ -6,15 +6,16 @@ from hmtk.seismicity.declusterer.utils import decimal_year, haversine
 class Afteran(BaseCatalogueDecluster):
     """ 
     This implements the Afteran algorithm as described in this paper:
-    Musson, R. 
-    
+    Musson, R. (1999), Probabilistic seismic hazard maps for the North 
+    Balkan Region, Annali Di Geofisica, 42(6), 1109 - 1124
     """
     def decluster(self, catalogue, config):
         """
         catalogue_matrix, window_opt=TDW_GARDNERKNOPOFF, time_window=60.):
 
         :param catalogue: a catalogue object
-        :type catalogue: TO ADD HERE
+        :type catalogue: Instance of the hmtk.seismicity.catalogue.Catalogue()
+                         class
         :keyword window_opt: method used in calculating distance and time 
             windows
         :type window_opt: string
@@ -108,6 +109,17 @@ class Afteran(BaseCatalogueDecluster):
         '''
         Function to identify aftershocks from a set of potential 
         events inside the distance window of an earthquake. 
+        :param vsel: Pointer vector to the location of the events in distance
+                     window
+        :type vsel: numpy.ndarray
+        :param year_dec: Vector of decimal catalogue event times
+        :type year_dec: numpy.ndarray
+        :param time_window: Moving time window for selection of time clusters
+        :type time_window: float
+        :param imarker: Index of the mainshock in the catalogue vector
+        :type imarker: Integer
+        :param neq: Number of events in distance window of mainshock
+        :type neq: Integer
         '''
         temp_vsel1 = np.zeros(neq, dtype=bool)
         has_aftershocks = False 
@@ -134,6 +146,17 @@ class Afteran(BaseCatalogueDecluster):
         '''
         Finds foreshocks from a set of potential events within
         the distance window of a mainshock.
+        :param vsel: Pointer vector to the location of the events in distance
+                     window
+        :type vsel: numpy.ndarray
+        :param year_dec: Vector of decimal catalogue event times
+        :type year_dec: numpy.ndarray
+        :param time_window: Moving time window for selection of time clusters
+        :type time_window: float
+        :param imarker: Index of the mainshock in the catalogue vector
+        :type imarker: Integer
+        :param neq: Number of events in distance window of mainshock
+        :type neq: Integer
         '''
 
         temp_vsel2 = np.zeros(neq, dtype=bool)
