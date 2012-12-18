@@ -72,12 +72,9 @@ def validates_against_xml_schema(xml_instance_path,
     return xmlschema.validate(xml_doc)
 
 
-def get_medians(realizations, output):
+def get_medians(output):
     """
     Compute the median of ground motion fields on a per site basis.
     """
-
-    gmfs_per_site = list(models.get_gmfs_scenario(output))
-
-    for i, gmf_site in enumerate(gmfs_per_site):
-        yield median([gmf_site[x].iml for x in range(realizations)])
+    for gmf in models.get_gmfs_scenario(output):
+        yield median([gmfnode.iml for gmfnode in gmf])  # don't use a genexp
