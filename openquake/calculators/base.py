@@ -135,7 +135,7 @@ class CalculatorNext(object):
                     # (The `task_complete_callback` will handle additional
                     # queuing.)
                     conn.drain_events()
-        logs.log_progress("calculation 100% complete", 2)
+        logs.LOG.progress("calculation 100% complete")
 
     def post_execute(self):
         """
