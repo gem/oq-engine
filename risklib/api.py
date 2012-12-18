@@ -224,7 +224,7 @@ class probabilistic_event_based(object):
     """
 
     def __init__(
-            self, vulnerability_model, seed, correlation_type,
+            self, vulnerability_model, seed=None, correlation_type=None,
             curve_resolution=event_based_functions.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
@@ -232,6 +232,7 @@ class probabilistic_event_based(object):
         self.vulnerability_model = vulnerability_model
         self.curve_resolution = curve_resolution
 
+        self.loss_ratios = None
         self._aggregate_losses = None
 
     def __call__(self, asset, hazard):
@@ -241,15 +242,15 @@ class probabilistic_event_based(object):
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
 
-        loss_ratios = event_based_functions._compute_loss_ratios(
+        self.loss_ratios = event_based_functions._compute_loss_ratios(
             vulnerability_function, hazard, asset, self.seed,
             self.correlation_type, taxonomies)
 
         loss_ratio_curve = event_based_functions._loss_curve(
-            loss_ratios, hazard['TSES'], hazard['TimeSpan'],
+            self.loss_ratios, hazard['TSES'], hazard['TimeSpan'],
             curve_resolution=self.curve_resolution)
 
-        losses = loss_ratios * asset.value
+        losses = self.loss_ratios * asset.value
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
         self._aggregate_losses += losses
@@ -270,37 +271,17 @@ def insured_losses(losses_calculator):
     def insured_losses_wrapped(asset, hazard):
         asset_output = losses_calculator(asset, hazard)
 
+        loss_curve = insured_loss_functions.compute_insured_losses(
+            asset, losses_calculator.loss_ratios * asset.value,
+            hazard['TSES'], hazard['TimeSpan'],
+            losses_calculator.curve_resolution)
+
         return asset_output._replace(
-            insured_losses=insured_loss_functions.compute_insured_losses(
-            asset, asset_output.losses))
+            insured_losses=loss_curve,
+            insured_loss_ratio_curve=loss_curve.rescale_abscissae(
+                1 / asset.value))
 
     return insured_losses_wrapped
-
-
-def insured_curves(insured_losses_calculator):
-    """
-    Insured (loss ratio / loss) curves calculator.
-    """
-
-    def insured_curves_wrapped(asset, hazard):
-        asset_output = insured_losses_calculator(asset, hazard)
-
-        insured_loss_ratio_curve = event_based_functions._loss_curve(
-                asset_output.insured_losses,
-                hazard['TSES'], hazard['TimeSpan'],
-                insured_losses_calculator.curve_resolution)
-
-        insured_loss_ratio_curve.x_values = (
-            insured_loss_ratio_curve.x_values / asset.value)
-
-        insured_loss_curve = (
-            insured_loss_ratio_curve.rescale_abscissae(asset.value))
-
-        return asset_output._replace(
-            insured_loss_ratio_curve=insured_loss_ratio_curve,
-            insured_loss_curve=insured_loss_curve)
-
-    return insured_curves_wrapped
 
 
 class scenario_risk(object):
@@ -313,10 +294,9 @@ class scenario_risk(object):
     """
 
     def __init__(self, vulnerability_model, seed,
-        correlation_type, insured=False):
+        correlation_type):
 
         self.seed = seed
-        self.insured = insured
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
 
@@ -334,10 +314,6 @@ class scenario_risk(object):
             self.seed, self.correlation_type, taxonomies)
 
         losses = loss_ratios * asset.value
-
-        if self.insured:
-            losses = insured_loss_functions.compute_insured_losses(
-                asset, losses)
 
         self._aggregate_losses += losses
 

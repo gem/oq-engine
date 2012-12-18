@@ -16,7 +16,15 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-def compute_insured_losses(asset, losses):
+import numpy
+from risklib import event_based
+
+
+# FIXME: does this function really deserve a to live in a separate
+# module?
+
+
+def compute_insured_losses(asset, losses, tses, timespan, curve_resolution):
     """
     Compute insured losses for the given asset using the related set of ground
     motion values and vulnerability function.
@@ -27,11 +35,13 @@ def compute_insured_losses(asset, losses):
     :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
     """
 
-    for i, value in enumerate(losses):
-        if value < asset.deductible:
-            losses[i] = 0
-        else:
-            if value > asset.ins_limit:
-                losses[i] = asset.ins_limit
+    undeductible_losses = losses[losses >= asset.deductible]
 
-    return losses
+    insured_losses = numpy.concatenate((
+        numpy.zeros(losses[losses < asset.deductible].shape),
+        numpy.min(
+            [undeductible_losses,
+             numpy.ones(undeductible_losses.shape) * asset.ins_limit], 0)))
+
+    return event_based._loss_curve(insured_losses,
+                                   tses, timespan, curve_resolution)
