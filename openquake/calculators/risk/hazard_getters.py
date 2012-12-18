@@ -22,6 +22,8 @@ An HazardGetter is responsible to get hazard outputs needed by a risk
 calculation.
 """
 
+import string
+
 from openquake.db import models
 from django.db import connection
 
@@ -75,7 +77,7 @@ class GroundMotionValuesGetter(object):
     Hazard getter for loading ground motion values.
     It caches the ground motion values on a per-location basis.
 
-    :param integer hazard_output_id:
+    :param int hazard_output_id:
         Id of the hazard output (`openquake.db.models.Output`) used to
         look up the ground motion values. This implementation only supports
         plain `gmf` output types (single logic tree branch or realization).
@@ -88,12 +90,26 @@ class GroundMotionValuesGetter(object):
         Time representative of the stochastic event set.
         It is computed as: time span * number of logic tree branches *
         number of seismicity histories.
+    :param float sa_period:
+        When the intensity measure type is `SA` (
+        spectral acceleration), it specifies its period (in seconds).
+    :param float sa_damping:
+        When the intensity measure type is `SA` (
+        spectral acceleration), it specifies its damping factor
+        (percentage). Default to 5.0.
     """
 
-    def __init__(self, hazard_output_id, imt, time_span, tses):
+    def __init__(self, hazard_output_id, imt, time_span, tses,
+                 sa_period=None, sa_damping=5.0):
+
+        if imt == "SA" and sa_period is None:
+            raise ValueError("With IMT==`SA`, `sa_period` must be specified.")
+
         self._imt = imt
         self._tses = tses
         self._time_span = time_span
+        self._sa_period = sa_period
+        self._sa_damping = sa_damping
         self._hazard_output_id = hazard_output_id
 
         self._cache = {}
@@ -130,15 +146,24 @@ class GroundMotionValuesGetter(object):
 
         cursor = connection.cursor()
 
-        query = """
+        spectral_filters = ""
+
+        if self._imt == "SA":
+            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
+
+        query = string.Template("""
         SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %s))
         AS min_distance FROM (
             SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
-            WHERE imt = %s AND gmf_set_id IN %s
+            WHERE imt = %s AND gmf_set_id IN %s ${sa}
             ORDER BY gmf_set_id, result_grp_ordinal
-        ) n GROUP BY location ORDER BY min_distance LIMIT 1;"""
+        ) n GROUP BY location ORDER BY min_distance LIMIT 1;""").substitute(
+        dict(sa=spectral_filters))
 
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
+
+        if self._imt == "SA":
+            args = args + (self._sa_period, self._sa_damping)
 
         cursor.execute(query, args)
         ground_motion_values = cursor.fetchone()[0]

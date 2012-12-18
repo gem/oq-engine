@@ -111,6 +111,46 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             hazard_getters.GroundMotionValuesGetter,
             output.id, "PGA", 50.0, 20.0)
 
+    def test_intensity_type_sa_period_required(self):
+        output = self._hazard_output("gmf")
+
+        self.assertRaises(ValueError,
+            hazard_getters.GroundMotionValuesGetter,
+            hazard_output_id=output.id, imt="SA", time_span=50.0, tses=20.0)
+
+    def test_intensity_type_sa(self):
+        output = self._hazard_output("gmf")
+
+        # we don't use an output type `complete_lt_gmf` here, the
+        # flag is just to avoid the creation of all the realization
+        # data model.
+        collection = models.GmfCollection(output=output,
+            complete_logic_tree_gmf=True)
+        collection.save()
+
+        # when IMT==SA we should filter also for `sa_period`
+        # and `sa_damping`
+        models.Gmf(gmf_set=self._gmf_set(collection, 1), imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.1, 0.2, 0.3], sa_period=1.0,
+            sa_damping=2.0, result_grp_ordinal=1).save()
+
+        # different `sa_period`
+        models.Gmf(gmf_set=self._gmf_set(collection, 2), imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.4, 0.5, 0.6], sa_period=2.0,
+            sa_damping=2.0, result_grp_ordinal=2).save()
+
+        # different `sa_damping`
+        models.Gmf(gmf_set=self._gmf_set(collection, 3), imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.7, 0.8, 0.9], sa_period=1.0,
+            sa_damping=1.0, result_grp_ordinal=3).save()
+
+        getter = hazard_getters.GroundMotionValuesGetter(
+            hazard_output_id=output.id, imt="SA", time_span=50.0,
+            tses=20.0, sa_period=1.0, sa_damping=2.0)
+
+        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3], "TimeSpan": 50.0}
+        self.assertEqual(expected, getter(Point(0.5, 0.5)))
+
     def _gmf_set(self, collection, ses_ordinal, investigation_time=50.0):
         gmf_set = models.GmfSet(gmf_collection=collection,
             investigation_time=investigation_time, ses_ordinal=ses_ordinal)
