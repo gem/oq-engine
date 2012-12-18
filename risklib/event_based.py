@@ -278,13 +278,14 @@ def _loss_curve(loss_values, tses, time_span,
     def pairwise(iterable):
         "s -> (s0,s1), (s1,s2), (s2, s3), ..."
         a, b = itertools.tee(iterable)
-        # b ahead one step (None is for the empty iteratable case)
+        # b ahead one step; if b is empty do not raise StopIteration
         next(b, None)
-        return itertools.izip(a, b)
+        return itertools.izip(a, b)  # if a is empty will return an empty iter
 
     # We compute the rates of exceedances by iterating over loss
     # values and counting the number of distinct loss values less than
-    # the current loss.
+    # the current loss. This is a workaround for a rounding error, ask Luigi
+    # for the gory details
     times = [index
              for index, (previous_val, val) in
              enumerate(pairwise(sorted_loss_values))
