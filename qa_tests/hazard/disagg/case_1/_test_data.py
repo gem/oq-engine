@@ -609,3 +609,94 @@ RLZ_2_POE_01_SA = numpy.array([
     0.0,
     0.0,
     0.0]).reshape(SHAPE)
+
+#: In this test case, we test the export of a single result.
+#: This is the expected XML output.
+EXPECTED_XML_DISAGG = """\
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <disaggMatrices sourceModelTreePath="b1" gsimTreePath="b1" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0" lon="10.1" lat="40.1" magBinEdges="5.0, 6.0, 7.0, 8.0" distBinEdges="0.0, 25.0, 50.0, 75.0, 100.0" lonBinEdges="9.0, 10.5, 12.0" latBinEdges="39.0, 40.5" epsBinEdges="-3.0, -1.0, 1.0, 3.0" tectonicRegionTypes="Active Shallow Crust">
+    <disaggMatrix type="Mag" dims="3" poE="0.1" iml="0.0311513188906">
+      <prob index="0" value="0.770325878992"/>
+      <prob index="1" value="0.215382265096"/>
+      <prob index="2" value="0.0142918559121"/>
+    </disaggMatrix>
+    <disaggMatrix type="Dist" dims="4" poE="0.1" iml="0.0311513188906">
+      <prob index="0" value="0.2073256051"/>
+      <prob index="1" value="0.513544917117"/>
+      <prob index="2" value="0.249588411498"/>
+      <prob index="3" value="0.0295410662849"/>
+    </disaggMatrix>
+    <disaggMatrix type="TRT" dims="1" poE="0.1" iml="0.0311513188906">
+      <prob index="0" value="1.0"/>
+    </disaggMatrix>
+    <disaggMatrix type="Mag,Dist" dims="3,4" poE="0.1" iml="0.0311513188906">
+      <prob index="0,0" value="0.18022220362"/>
+      <prob index="0,1" value="0.406789777516"/>
+      <prob index="0,2" value="0.174450997362"/>
+      <prob index="0,3" value="0.0088629004946"/>
+      <prob index="1,0" value="0.0229594059874"/>
+      <prob index="1,1" value="0.103497364964"/>
+      <prob index="1,2" value="0.0682473283537"/>
+      <prob index="1,3" value="0.0206781657903"/>
+      <prob index="2,0" value="0.00414399549325"/>
+      <prob index="2,1" value="0.00325777463652"/>
+      <prob index="2,2" value="0.00689008578228"/>
+      <prob index="2,3" value="0.0"/>
+    </disaggMatrix>
+    <disaggMatrix type="Mag,Dist,Eps" dims="3,4,3" poE="0.1" iml="0.0311513188906">
+      <prob index="0,0,0" value="0.0160010291099"/>
+      <prob index="0,0,1" value="0.132732460219"/>
+      <prob index="0,0,2" value="0.0314887142909"/>
+      <prob index="0,1,0" value="0.000616170675351"/>
+      <prob index="0,1,1" value="0.268518659163"/>
+      <prob index="0,1,2" value="0.137654947677"/>
+      <prob index="0,2,0" value="0.0"/>
+      <prob index="0,2,1" value="0.0889843837313"/>
+      <prob index="0,2,2" value="0.0854666136308"/>
+      <prob index="0,3,0" value="0.0"/>
+      <prob index="0,3,1" value="0.00181521330878"/>
+      <prob index="0,3,2" value="0.00704768718582"/>
+      <prob index="1,0,0" value="0.00356383909886"/>
+      <prob index="1,0,1" value="0.0157633701443"/>
+      <prob index="1,0,2" value="0.00363219674432"/>
+      <prob index="1,1,0" value="0.00899762421588"/>
+      <prob index="1,1,1" value="0.0765338418832"/>
+      <prob index="1,1,2" value="0.0179658988653"/>
+      <prob index="1,2,0" value="0.000689460390427"/>
+      <prob index="1,2,1" value="0.0518612081449"/>
+      <prob index="1,2,2" value="0.0156966598183"/>
+      <prob index="1,3,0" value="0.0"/>
+      <prob index="1,3,1" value="0.0116478130098"/>
+      <prob index="1,3,2" value="0.00903035278044"/>
+      <prob index="2,0,0" value="0.000653593472678"/>
+      <prob index="2,0,1" value="0.00283675642577"/>
+      <prob index="2,0,2" value="0.000653645594807"/>
+      <prob index="2,1,0" value="0.000485839237954"/>
+      <prob index="2,1,1" value="0.00225283663811"/>
+      <prob index="2,1,2" value="0.000519098760453"/>
+      <prob index="2,2,0" value="0.000531137989167"/>
+      <prob index="2,2,1" value="0.00515350058569"/>
+      <prob index="2,2,2" value="0.00120544720743"/>
+      <prob index="2,3,0" value="0.0"/>
+      <prob index="2,3,1" value="0.0"/>
+      <prob index="2,3,2" value="0.0"/>
+    </disaggMatrix>
+    <disaggMatrix type="Lon,Lat" dims="2,1" poE="0.1" iml="0.0311513188906">
+      <prob index="0,0" value="1.0"/>
+      <prob index="1,0" value="0.0"/>
+    </disaggMatrix>
+    <disaggMatrix type="Mag,Lon,Lat" dims="3,2,1" poE="0.1" iml="0.0311513188906">
+      <prob index="0,0,0" value="0.770325878992"/>
+      <prob index="0,1,0" value="0.0"/>
+      <prob index="1,0,0" value="0.215382265096"/>
+      <prob index="1,1,0" value="0.0"/>
+      <prob index="2,0,0" value="0.0142918559121"/>
+      <prob index="2,1,0" value="0.0"/>
+    </disaggMatrix>
+    <disaggMatrix type="Lon,Lat,TRT" dims="2,1,1" poE="0.1" iml="0.0311513188906">
+      <prob index="0,0,0" value="1.0"/>
+      <prob index="1,0,0" value="0.0"/>
+    </disaggMatrix>
+  </disaggMatrices>
+</nrml>
+"""

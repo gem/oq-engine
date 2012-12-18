@@ -631,7 +631,7 @@ class HazardCalculation(djm.Model):
     # Logic Tree parameters:
     ########################
     random_seed = djm.IntegerField()
-    number_of_logic_tree_samples = djm.IntegerField()
+    number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
 
     ###############################################
     # ERF (Earthquake Rupture Forecast) parameters:
@@ -639,13 +639,20 @@ class HazardCalculation(djm.Model):
     rupture_mesh_spacing = djm.FloatField(
         help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
                    'fault sources rupture discretization'),
+        null=True,
+        blank=True,
+
     )
     width_of_mfd_bin = djm.FloatField(
         help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
-              'Distribution) bin width'),
+                   'Distribution) bin width'),
+        null=True,
+        blank=True,
     )
     area_source_discretization = djm.FloatField(
         help_text='Area Source Disretization, in kilometers',
+        null=True,
+        blank=True,
     )
 
     ##################
@@ -683,6 +690,8 @@ class HazardCalculation(djm.Model):
     investigation_time = djm.FloatField(
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
+        null=True,
+        blank=True,
     )
     intensity_measure_types_and_levels = fields.DictField(
         help_text=(
@@ -2083,7 +2092,7 @@ class BCRDistribution(djm.Model):
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = djm.ForeignKey("Output")
+    output = djm.OneToOneField("Output")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2096,8 +2105,8 @@ class BCRDistributionData(djm.Model):
 
     bcr_distribution = djm.ForeignKey("BCRDistribution")
     asset_ref = djm.TextField()
-    expected_annual_loss_original = djm.FloatField()
-    expected_annual_loss_retrofitted = djm.FloatField()
+    average_annual_loss_original = djm.FloatField()
+    average_annual_loss_retrofitted = djm.FloatField()
     bcr = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
