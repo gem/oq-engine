@@ -29,7 +29,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1|b2" gsimTreePath="b1">
+  <hazardCurves sourceModelTreePath="b1|b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -43,7 +43,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B3 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1|b3" gsimTreePath="b1">
+  <hazardCurves sourceModelTreePath="b1|b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -57,7 +57,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B4 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" sourceModelTreePath="b1|b4" gsimTreePath="b1">
+  <hazardCurves sourceModelTreePath="b1|b4" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -71,7 +71,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_MEAN = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" statistics="mean">
+  <hazardCurves statistics="mean" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -84,7 +84,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_QUANTILE_0_9 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" statistics="quantile" quantileValue="0.9">
+  <hazardCurves statistics="quantile" quantileValue="0.9" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -98,27 +98,13 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_QUANTILE_0_1 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" statistics="quantile" quantileValue="0.1">
+  <hazardCurves statistics="quantile" quantileValue="0.1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
       <poEs>0.0055270921432 0.000421641883053 5.75154102291e-05 0.0</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-"""
-
-    EXPECTED_XML_QUANTILE_0_9 = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves IMT="PGA" investigationTime="1.0" statistics="quantile" quantileValue="0.9">
-    <IMLs>0.1 0.4 0.6 1.0</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>0.0 0.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0139823386509 0.00104434716355 0.000117128094079 0.0</poEs>
     </hazardCurve>
   </hazardCurves>
 </nrml>
