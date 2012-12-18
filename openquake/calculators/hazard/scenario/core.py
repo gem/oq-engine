@@ -64,6 +64,23 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     haz_general.signal_task_complete(job_id=job_id, num_items=1)
 
 
+def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    rupture_mdl = source.nrml_to_nhlib(
+        models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
+        hc.rupture_mesh_spacing, None, None)
+    sites = haz_general.get_site_collection(hc)
+    imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
+    GSIM = AVAILABLE_GSIMS[hc.gsim]
+
+    gmf = ground_motion_fields(
+        rupture_mdl, sites, imts, GSIM(),
+        hc.truncation_level, realizations=1,
+        correlation_model=None)
+    points_to_compute = hc.points_to_compute()
+    save_gmf(output_id, gmf, points_to_compute, task_no)
+
+
 @transaction.commit_on_success(using='reslt_writer')
 def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
     """
@@ -110,24 +127,6 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
             )
 
     inserter.flush()
-
-
-def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    rupture_mdl = source.nrml_to_nhlib(
-        models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
-        hc.rupture_mesh_spacing, None, None)
-    sites = haz_general.get_site_collection(hc)
-    imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
-    GSIM = AVAILABLE_GSIMS[hc.gsim]
-
-    gmf = ground_motion_fields(
-        rupture_mdl, sites, imts, GSIM(),
-        hc.truncation_level, realizations=1,
-        correlation_model=None)
-    points_to_compute = hc.points_to_compute()
-
-    save_gmf(output_id, gmf, points_to_compute, task_no)
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
