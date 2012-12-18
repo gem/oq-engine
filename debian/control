@@ -11,5 +11,4 @@ Homepage: http://github.com/gem/nhlib
 Package: python-nhlib
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy, python-scipy, python-shapely
-Description:  TODO
- asdasd asd asd 
+Description: nhlib is a library for performing seismic hazard analysis
