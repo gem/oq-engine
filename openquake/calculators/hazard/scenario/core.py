@@ -124,7 +124,7 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     gmf = ground_motion_fields(
         rupture_mdl, sites, imts, GSIM(),
         hc.truncation_level, realizations=1,
-        correlation_model=GM_CORRELATION_MODEL_MAP['JB2009'](True))
+        correlation_model=None)
     points_to_compute = hc.points_to_compute()
 
     save_gmf(output_id, gmf, points_to_compute, task_no)
