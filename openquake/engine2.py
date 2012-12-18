@@ -78,6 +78,7 @@ _FILE_PARAMS_TO_INPUT_TYPE = {
     'vulnerability_file': 'vulnerability',
     'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
     'exposure_file': 'exposure',
+    'rupture_model_file': 'rupture_model'
 }
 
 
@@ -448,7 +449,7 @@ def _switch_to_job_phase(job, ctype, status):
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
                                         ctype=ctype)
-    logs.log_progress("%s (%s)" % (status, ctype), 1)
+    logs.LOG.progress("%s (%s)" % (status, ctype))
     if status == "executing":
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
