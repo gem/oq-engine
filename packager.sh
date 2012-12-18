@@ -58,11 +58,26 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
-    ssh $haddr mkdir repo
+    ssh $haddr mkdir -p repo/oq-engine
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/oq-engine
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/oq-engine ./\""
+    #
+    #  dependencies repos
+
+    # python-nrml
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nrml $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nrml ./\""
+
+    # python-nhlib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nhlib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nhlib ./\""
+
+    # python-oq-risklib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-risklib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-risklib ./\""
+
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
@@ -151,7 +166,7 @@ EOF
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    sudo lxc-shutdown -n $machine_name -w -t 10
+    # sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
