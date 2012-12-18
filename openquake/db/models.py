@@ -1877,7 +1877,7 @@ class GmfScenario(djm.Model):
         db_table = 'hzrdr\".\"gmf_scenario'
 
 
-def get_gmfs_scenario(output):
+def get_gmfs_scenario(output, imt=None):
     """
     Iterator for walking through all :class:`Gmf` objects associated
     to a given output. Notice that values for the same site are
@@ -1885,12 +1885,19 @@ def get_gmfs_scenario(output):
     it is possible to get reproducible outputs in the test cases.
 
     :param output: instance of :class:`openquake.db.models.Output`
+
+    :param string imt: a string with the IMT to extract; the default
+                       is None, all the IMT in the job.ini file are extracted
+
     :returns: an iterator over
               :class:`openquake.db.models._GroundMotionField` instances
     """
     job = output.oq_job
     hc = job.hazard_calculation
-    imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    if imt is None:
+        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    else:
+        imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
         gmfs = GmfScenario.objects.filter(
             output__id=output.id,

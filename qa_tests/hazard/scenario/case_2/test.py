@@ -28,7 +28,7 @@ class ScenarioHazardCase2TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id)
-        actual = list(qa_utils.get_medians(output))
+        actual = list(qa_utils.get_medians(output, 'PGA'))
         expected_medians = [0.37412136, 0.19021782, 0.1365383]
 
         assert_almost_equal(actual, expected_medians, decimal=2)
