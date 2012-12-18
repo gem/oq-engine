@@ -22,7 +22,7 @@ import numpy
 
 from nose.plugins.attrib import attr
 
-from openquake.calculators.hazard import general
+from openquake.calculators import base
 from openquake.calculators.hazard.classical import core
 from openquake.db import models
 from openquake.utils import stats
@@ -393,11 +393,11 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         src_id = src_prog.parsed_source.id
         lt_rlz = src_prog.lt_realization
 
-        exchange, conn_args = general.exchange_and_conn_args()
+        exchange, conn_args = base.exchange_and_conn_args()
 
-        routing_key = general.ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        routing_key = base.ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % self.job.id, exchange=exchange,
+            'tasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
 
         def test_callback(body, message):

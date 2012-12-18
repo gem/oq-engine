@@ -24,6 +24,7 @@ import nhlib.imt
 from django.db import transaction
 
 from openquake import logs
+from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
 from openquake.db import models
 from openquake.input import logictree
@@ -50,7 +51,7 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id=job_id, num_items=len(src_ids))
+    base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
 # Silencing 'Too many local variables'
