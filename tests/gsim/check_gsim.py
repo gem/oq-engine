@@ -87,7 +87,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
 
         if debug and errors:
             break
-
     return errors, _format_stats(time.time() - started, discrepancies, errors)
 
 
@@ -170,7 +169,6 @@ def _parse_csv(datafile, debug):
             (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
             = (sctx2, rctx2, dctx2, stddev_types2,
                expected_results2, result_type2)
-
     yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 

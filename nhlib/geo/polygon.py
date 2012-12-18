@@ -96,7 +96,10 @@ class Polygon(object):
         # avoid calling class' constructor
         polygon = object.__new__(cls)
         # project polygon2d back on the sphere
-        xx, yy = numpy.transpose(polygon2d.boundary.coords)
+        # NOTE(LB): We use 'exterior' here in case the `polygon2d` has
+        # interiors (holes) defined. In our use cases, we don't care about
+        # polygon interiors, so we simply discard these exteriors.
+        xx, yy = numpy.transpose(polygon2d.exterior.coords)
         # need to cut off the last point -- it repeats the first one
         polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
         # initialize the instance (as constructor would do)
@@ -133,6 +136,11 @@ class Polygon(object):
     def dilate(self, dilation):
         """
         Extend the polygon to a specified buffer distance.
+
+        .. note::
+            In extreme cases where dilation of a polygon creates holes, thus
+            resulting in a multi-polygon, we discard the holes and simply
+            return the 'exterior' of the shape.
 
         :param dilation:
             Distance in km to extend polygon borders to.

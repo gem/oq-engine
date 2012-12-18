@@ -60,7 +60,8 @@ class CauzziFaccioli2008(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
-        SA])
+        SA
+    ])
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`,
@@ -94,18 +95,7 @@ class CauzziFaccioli2008(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup.mag, dists.rhypo, sites.vs30,
-                                  rup.rake, imt)
-
-        # convert from cm/s**2 to g for SA and PGA (PGV is already in cm/s)
-        # and also convert from base 10 to base e.
-        if isinstance(imt, PGA):
-            mean = np.log((10 ** mean) / g)
-        elif isinstance(imt, SA):
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
+        mean = self._compute_mean(C, rup.mag, dists, sites.vs30, rup.rake, imt)
 
         stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
@@ -159,16 +149,27 @@ class CauzziFaccioli2008(GMPE):
         else:
             return C['aS']
 
-    def _compute_mean(self, C, mag, rhypo, vs30, rake, imt):
+    def _compute_mean(self, C, mag, dists, vs30, rake, imt):
         """
         Compute mean value for PGV, PGA and Displacement responce spectrum,
         as given in equation 2, page 462 with the addition of the faulting
-        style term as given in equation 5, page 465.
+        style term as given in equation 5, page 465. Converts also
+        displacement responce spectrum values to SA.
         """
         mean = (self._compute_term_1_2(C, mag) +
-                self._compute_term_3(C, rhypo) +
+                self._compute_term_3(C, dists.rhypo) +
                 self._compute_site_term(C, vs30) +
                 self._compute_faulting_style_term(C, rake))
+
+        # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
+        # is already in cm/s) and also convert from base 10 to base e.
+        if isinstance(imt, PGA):
+            mean = np.log((10 ** mean) / g)
+        elif isinstance(imt, SA):
+            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
+                          1e-2 / g)
+        else:
+            mean = np.log(10 ** mean)
 
         return mean
 
