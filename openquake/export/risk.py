@@ -27,6 +27,7 @@ from nrml.risk import writers
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
+BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 
 
 def export(output_id, target_dir):
@@ -49,6 +50,7 @@ def _export_fn_map():
     fn_map = {
         'loss_curve': export_loss_curve,
         'loss_map': export_loss_map,
+        'bcr_distribution': export_bcr_distribution
         }
     return fn_map
 
@@ -88,7 +90,7 @@ def export_loss_curve(output, target_dir):
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.losscurve.id})
     writers.LossCurveXMLWriter(**args).serialize(
-        output.losscurve.losscurvedata_set.all())
+        output.losscurve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
 
 
@@ -107,5 +109,26 @@ def export_loss_map(output, target_dir):
             poe=output.lossmap.poe,
             loss_category=risk_calculation.model('exposure').category))
     writers.LossMapXMLWriter(**args).serialize(
-        output.lossmap.lossmapdata_set.all())
+        output.lossmap.lossmapdata_set.all().order_by('asset_ref'))
+    return [args['path']]
+
+
+@core.makedirs
+def export_bcr_distribution(output, target_dir):
+    """
+    Export `output` to `target_dir` by using a nrml bcr distribution
+    serializer
+    """
+    risk_calculation = output.oq_job.risk_calculation
+    args = _export_common(output)
+
+    args.update(
+        dict(path=os.path.join(target_dir, BCR_FILENAME_FMT % {
+            'bcr_distribution_id': output.bcrdistribution.id}),
+            interest_rate=risk_calculation.interest_rate,
+            asset_life_expectancy=risk_calculation.asset_life_expectancy))
+    del args['investigation_time']
+
+    writers.BCRMapXMLWriter(**args).serialize(
+        output.bcrdistribution.bcrdistributiondata_set.all())
     return [args['path']]
