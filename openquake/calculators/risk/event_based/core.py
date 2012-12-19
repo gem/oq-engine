@@ -22,15 +22,26 @@ from openquake.calculators.risk import general
 from openquake.utils import tasks
 from openquake.utils import stats
 
+from risklib import api
+
 
 @tasks.oqtask
 @general.with_assets
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard_id, loss_curve_id):
+def event_based(job_id, assets, hazard_getter, hazard_id,
+                loss_curve_id, loss_map_ids, insured_curve_id,
+                conditional_loss_poes, insured_losses,
+                loss_curve_resolution, seed, asset_correlation):
     """
     Celery task for the event based risk calculator.
     """
-    raise NotImplementedError("Implement me, please")
+    general.loss_curve_calculator(
+        api.probabilistic_event_based,
+        job_id, assets, hazard_getter, hazard_id,
+        loss_curve_id, loss_map_ids, insured_curve_id,
+        conditional_loss_poes, insured_losses,
+        loss_curve_resolution, seed, asset_correlation)
+event_based.ignore_result = False
 
 
 class EventBasedRiskCalculator(general.BaseRiskCalculator):
@@ -50,3 +61,32 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field")
 
         return self.rc.hazard_output.gmfcollection.id
+
+    @property
+    def calculation_parameters(self):
+        return dict(
+            loss_curve_resolution=self.rc.loss_curve_resolution,
+            seed=self.rc.master_seed,
+            asset_correlation=self.rc.asset_correlation)
+
+    def create_outputs(self):
+        """
+        Add loss map ids when conditional loss poes are specified
+        """
+        outputs = super(ClassicalRiskCalculator, self).create_outputs()
+        poes = self.rc.conditional_loss_poes or []
+
+        def create_loss_map(poe):
+            """
+            Given a poe create a loss map output container associated
+            with the current job
+            """
+            return models.LossMap.objects.create(
+                 output=models.Output.objects.create_output(
+                     self.job,
+                     "Loss Map Set with poe %s" % poe,
+                     "loss_map"),
+                     poe=poe).pk
+        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
+                                       for poe in poes)
+        return outputs
