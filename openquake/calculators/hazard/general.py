@@ -514,7 +514,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
-        self.progress = dict(total=0, computed=0)
+        self.progress = dict(total=0, computed=0, in_queue=0)
         self._computation_mesh = None
 
     @property
@@ -951,9 +951,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
-                pass
+                self.progress['in_queue'] -= 1
 
             message.ack()
+            logs.LOG.info('A task was completed. Items now in queue: %s'
+                          % self.progress['in_queue'])
 
         return callback
 
@@ -1008,6 +1010,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         # This basically just means that we could be
                         # under-utilizing worker node resources.
                         break
+                    else:
+                        self.progress['in_queue'] += 1
+
+                logs.LOG.info('Items now in queue: %s'
+                              % self.progress['in_queue'])
 
                 while (self.progress['computed'] < self.progress['total']):
                     # This blocks until a message is received.
