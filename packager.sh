@@ -86,6 +86,28 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    # configure the machine to run tests
+    echo "local	all		$USER		trust" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf
+    sudo sed 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf
+
+    sudo service postgresql restart
+    sudo -u postgres  createuser -d -e -i -l -s -w $USER
+    oq_create_db --yes --db-user=$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/db/schema
+
+    # run celeryd daemon
+    cd /usr/openquake/
+    celeryd >/tmp/celeryd.log 2>&1 3>&1 &
+    cd -
+
+    # copy demos file to $HOME
+    cp -a /usr/share/doc/python-oq/examples/demos .
+
+    # run all demos found
+    cd demos
+    for ini in $(find . -name job.ini); do
+        DJANGO_SETTINGS_MODULE=openquake.settings openquake --run-hazard  $ini --exports xml
+    done
+
     trap ERR
 
     return
@@ -166,7 +188,7 @@ EOF
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    # sudo lxc-shutdown -n $machine_name -w -t 10
+    sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
