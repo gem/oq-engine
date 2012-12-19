@@ -100,32 +100,34 @@ def compute_on_assets(assets, hazard_getter, calculator):
         yield calculator(asset, hazard)
 
 
-def classical(vulnerability_model, steps=10):
+class classical(object):
     """
     Classical calculator. For each asset it produces:
     * a loss curve
     * a loss ratio curve
     * a set of conditional losses
     """
+    def __init__(self, vulnerability_model, steps=10):
+        self.vulnerability_model = vulnerability_model
+        self.steps = steps
+        self.matrices = dict(
+            (taxonomy, classical_functions._loss_ratio_exceedance_matrix(
+                vulnerability_function, steps))
+            for taxonomy, vulnerability_function
+            in vulnerability_model.iteritems())
 
-    matrices = dict([
-        (taxonomy, classical_functions._loss_ratio_exceedance_matrix(
-            vulnerability_function, steps))
-        for taxonomy, vulnerability_function in vulnerability_model.items()])
-
-    def classical_wrapped(asset, hazard):
-        vulnerability_function = vulnerability_model[asset.taxonomy]
+    def __call__(self, asset, hazard):
+        vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
         loss_ratio_curve = classical_functions._loss_ratio_curve(
-            vulnerability_function, matrices[asset.taxonomy], hazard, steps)
+            vulnerability_function, self.matrices[asset.taxonomy],
+            hazard, self.steps)
 
         loss_curve = classical_functions._loss_curve(
             loss_ratio_curve, asset.value)
 
         return output.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
-
-    return classical_wrapped
 
 
 class scenario_damage(object):
@@ -150,15 +152,16 @@ class scenario_damage(object):
         taxonomy = asset.taxonomy
 
         damage_distribution_asset, fractions = (
-            scenario_damage_functions._damage_distribution_per_asset(asset,
-            (self.fragility_model, self.fragility_functions[taxonomy]),
-            hazard))
+            scenario_damage_functions._damage_distribution_per_asset(
+                asset,
+                (self.fragility_model, self.fragility_functions[taxonomy]),
+                hazard))
 
         collapse_map = scenario_damage_functions._collapse_map(fractions)
 
-        asset_fractions = self._fractions_per_taxonomy.get(taxonomy,
-            scenario_damage_functions._make_damage_distribution_matrix(
-            self.fragility_model, hazard))
+        ddmatrix = scenario_damage_functions._make_damage_distribution_matrix(
+            self.fragility_model, hazard)
+        asset_fractions = self._fractions_per_taxonomy.get(taxonomy, ddmatrix)
 
         self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
         return output.ScenarioDamageOutput(
@@ -169,47 +172,52 @@ class scenario_damage(object):
         return self._fractions_per_taxonomy
 
 
-def conditional_losses(conditional_loss_poes, loss_curve_calculator):
+class conditional_losses(object):
     """
     Compute the conditional losses for each Probability
     of Exceedance given as input.
     """
+    def __init__(self, conditional_loss_poes, loss_curve_calculator):
+        self.conditional_loss_poes = conditional_loss_poes
+        self.loss_curve_calculator = loss_curve_calculator
 
-    def conditional_losses_wrapped(asset, hazard):
-        asset_output = loss_curve_calculator(asset, hazard)
-
+    def __call__(self, asset, hazard):
+        asset_output = self.loss_curve_calculator(asset, hazard)
         return asset_output._replace(
             conditional_losses=classical_functions._conditional_losses(
-            asset_output.loss_curve, conditional_loss_poes))
-
-    return conditional_losses_wrapped
+                asset_output.loss_curve, self.conditional_loss_poes))
 
 
-def bcr(loss_curve_calculator_original, loss_curve_calculator_retrofitted,
-    interest_rate, asset_life_expectancy):
+class bcr(object):
     """
     Compute the Benefit Cost Ratio. For each asset, it produces:
-        * the benefit cost ratio
-        * the expected annual loss
-        * the expect annual loss retrofitted
+    * the benefit cost ratio
+    * the expected annual loss
+    * the expect annual loss retrofitted
     """
+    def __init__(self, loss_curve_calculator_original,
+                 loss_curve_calculator_retrofitted,
+                 interest_rate, asset_life_expectancy):
+        self.lcc_original = loss_curve_calculator_original
+        self.lcc_retrofitted = loss_curve_calculator_retrofitted
+        self.interest_rate = interest_rate
+        self.asset_life_expectancy = asset_life_expectancy
 
-    def bcr_wrapped(asset, hazard):
+    def __call__(self, asset, hazard):
         expected_annual_loss_original = bcr_functions.mean_loss(
-            loss_curve_calculator_original(asset, hazard).loss_curve)
+            self.lcc_original(asset, hazard).loss_curve)
 
         expected_annual_loss_retrofitted = bcr_functions.mean_loss(
-            loss_curve_calculator_retrofitted(asset, hazard).loss_curve)
+            self.lcc_retrofitted(asset, hazard).loss_curve)
 
-        bcr = bcr_functions.bcr(expected_annual_loss_original,
-            expected_annual_loss_retrofitted, interest_rate,
-            asset_life_expectancy, asset.retrofitting_cost)
+        bcr = bcr_functions.bcr(
+            expected_annual_loss_original,
+            expected_annual_loss_retrofitted, self.interest_rate,
+            self.asset_life_expectancy, asset.retrofitting_cost)
 
         return output.BCROutput(
             asset, bcr, expected_annual_loss_original,
             expected_annual_loss_retrofitted)
-
-    return bcr_wrapped
 
 
 class probabilistic_event_based(object):
@@ -255,33 +263,34 @@ class probabilistic_event_based(object):
 
         self._aggregate_losses += losses
 
-        return output.ProbabilisticEventBasedOutput(asset, losses,
-            loss_ratio_curve, loss_curve, None, None, None, None)
+        return output.ProbabilisticEventBasedOutput(
+            asset, losses, loss_ratio_curve, loss_curve,
+            None, None, None, None)
 
     @property
     def aggregate_losses(self):
         return self._aggregate_losses
 
 
-def insured_losses(losses_calculator):
+class insured_losses(object):
     """
     Insured losses calculator.
     """
+    def __init__(self, losses_calculator):
+        self.losses_calculator = losses_calculator
 
-    def insured_losses_wrapped(asset, hazard):
-        asset_output = losses_calculator(asset, hazard)
+    def __call__(self, asset, hazard):
+        asset_output = self.losses_calculator(asset, hazard)
 
         loss_curve = insured_loss_functions.compute_insured_losses(
-            asset, losses_calculator.loss_ratios * asset.value,
+            asset, self.losses_calculator.loss_ratios * asset.value,
             hazard['TSES'], hazard['TimeSpan'],
-            losses_calculator.curve_resolution)
+            self.losses_calculator.curve_resolution)
 
         return asset_output._replace(
             insured_losses=loss_curve,
             insured_loss_ratio_curve=loss_curve.rescale_abscissae(
                 1 / asset.value))
-
-    return insured_losses_wrapped
 
 
 class scenario_risk(object):
@@ -293,8 +302,7 @@ class scenario_risk(object):
         * aggregate losses
     """
 
-    def __init__(self, vulnerability_model, seed,
-        correlation_type):
+    def __init__(self, vulnerability_model, seed, correlation_type):
 
         self.seed = seed
         self.correlation_type = correlation_type
@@ -318,7 +326,7 @@ class scenario_risk(object):
         self._aggregate_losses += losses
 
         return output.ScenarioRiskOutput(asset, numpy.mean(losses),
-            numpy.std(losses, ddof=1))
+                                         numpy.std(losses, ddof=1))
 
     @property
     def aggregate_losses(self):
