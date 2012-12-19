@@ -35,6 +35,7 @@ from datetime import datetime
 import numpy
 
 from django.db import connection
+from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
@@ -947,6 +948,26 @@ class RiskCalculation(djm.Model):
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=False, blank=False)
+
+    # A seed used to generate random values to be applied to
+    # vulnerability functions
+    master_seed = djm.IntegerField()
+
+    ##################################
+    # Probabilistic shared parameters
+    ##################################
+    ASSET_CORRELATION_CHOICES = (
+        (u'perfect', u'Perfect'),
+        (u'uncorrelated', u'Uncorrelated'),
+    )
+    asset_correlation = djm.TextField(null=True,
+                                      choices=ASSET_CORRELATION_CHOICES)
+
+    # the intensity measure type used to filter hazard ground motion
+    # collection.
+    imt = djm.TextField(null=True, validators=[
+        validators.RegexValidator("PGA|'SA\(([^)]+?)\)'"),
+        "Incorrect intensity measure type"])
 
     #######################
     # Classical parameters:
