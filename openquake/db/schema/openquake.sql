@@ -1421,7 +1421,7 @@ ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
 -- levels of losses for the whole exposure model.
 CREATE TABLE riskr.aggregate_loss_curve_data (
     id SERIAL PRIMARY KEY,
-    loss_curve_id INTEGER NOT NULL,
+    output_id INTEGER NOT NULL,
 
     losses float[] NOT NULL CONSTRAINT non_negative_losses
         CHECK (0 <= ALL(losses)),
@@ -2036,8 +2036,8 @@ ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.aggregate_loss_curve_data
-ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
-FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
+ADD CONSTRAINT riskr_aggregate_loss_curve_data_output_fk
+FOREIGN KEY (loss_curve_id) REFERENCES riskr.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
