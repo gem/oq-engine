@@ -51,12 +51,16 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
+
+    :param task_seed:
+        Value for seeding numpy/scipy in the computation of ground motion fields.
     """
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
                    % (job_id, task_no))
 
     numpy.random.seed(task_seed)
-    compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no)
+    compute_gmfs(job_id, rupture_ids, output_id, task_no)
+
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
@@ -64,17 +68,33 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     haz_general.signal_task_complete(job_id=job_id, num_items=1)
 
 
-def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
+def compute_gmfs(job_id, rupture_ids, output_id, task_no):
+    """
+    Compute ground motion fields and store them in the db.
+
+    :param job_id:
+        ID of the currently running job.
+    :param rupture_ids:
+        List of ids of parsed rupture model from which we will generate
+        ground motion fields.
+    :param output_id:
+        output_id idenfitifies the reference to the output record.
+    :param task_no:
+        The task_no in which the calculation results will be placed.
+        This ID basically corresponds to the sequence number of the task,
+        in the context of the entire calculation.
+    """
+
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
         hc.rupture_mesh_spacing, None, None)
     sites = haz_general.get_site_collection(hc)
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
-    GSIM = AVAILABLE_GSIMS[hc.gsim]
+    gsim = AVAILABLE_GSIMS[hc.gsim]
 
     gmf = ground_motion_fields(
-        rupture_mdl, sites, imts, GSIM(),
+        rupture_mdl, sites, imts, gsim(),
         hc.truncation_level, realizations=1,
         correlation_model=None)
     points_to_compute = hc.points_to_compute()
@@ -139,6 +159,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         parsed version of it in the database (see
         :class:`openquake.db.models.ParsedRupture``) in pickle format.
         """
+
         # Get the rupture model in input
         [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
 
