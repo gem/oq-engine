@@ -25,15 +25,14 @@ from openquake import logs
 from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base
+from openquake import export
 from openquake.parser import risk
-from openquake.export import (
-    core as export_core, risk as risk_export)
 from openquake.utils import tasks
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
 from risklib import api
 from django.db import transaction
-
+from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
@@ -160,9 +159,8 @@ class BaseRiskCalculator(base.CalculatorNext):
 
             if 'exports' in kwargs and 'xml' in kwargs['exports']:
                 exported_files = sum([
-                    risk_export.export(output.id,
-                                       self.rc.export_dir)
-                    for output in export_core.get_outputs(self.job.id)], [])
+                    export.risk.export(output.id, self.rc.export_dir)
+                    for output in export.core.get_outputs(self.job.id)], [])
 
                 for exp_file in exported_files:
                     logs.LOG.debug('exported %s' % exp_file)
@@ -212,7 +210,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         with logs.tracing('storing exposure'):
             path = os.path.join(self.rc.base_path, exposure_model_input.path)
-            exposure_stream = risk.ExposureModelFile(path)
+            exposure_stream = parsers.ExposureModelParser(path)
             writer = exposure_writer.ExposureDBWriter(exposure_model_input)
             writer.serialize(exposure_stream)
         return writer.model
@@ -237,9 +235,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         Create outputs container objects (e.g. LossCurve, Output).
 
         Derived classes should override this to create containers for
-        storing objects other than LossCurves.
+        storing objects other than LossCurves, LossMaps and Insured
+        Loss Curve
 
-        The default behavior is to create a loss curve output.
+        The default behavior is to create a loss curve, map and
+        insured loss output.
 
         :return a dictionary string -> ContainerObject ids
         """
@@ -319,39 +319,6 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
         input_type).to_risklib()
 
 
-def write_loss_curve(loss_curve_id, asset_output):
-    """
-    Stores a :class:`openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
-    output container is identified by `loss_curve_id`.
-
-    :param int loss_curve_id: the ID of the output container
-
-    :param asset_output: an instance of
-    :class:`risklib.models.output.ClassicalOutput` or of
-    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
-    returned by risklib
-    """
-    pass
-
-
-def write_loss_map(loss_map_ids, asset_output):
-    """
-    Create :class:`openquake.db.models.LossMapData` objects where the
-    data are got by `asset_output` and the
-    :class:`openquake.db.models.LossMap` output containers are got by
-    `loss_map_ids`.
-
-    :param dict loss_map_ids: A dictionary storing that links poe to
-    :class:`openquake.db.models.LossMap` output container
-
-    :param asset_output: an instance of
-    :class:`risklib.models.output.ClassicalOutput` or of
-    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
-    """
-
-    pass
-
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
     Create a new :class:`openquake.db.models.BCRDistributionData` from
@@ -407,17 +374,17 @@ def store_risk_model(rc, input_type):
             loss_ratios=record['lossRatio'])
 
 
-def loss_curve_calculator(risklib_calculator,
+def loss_curve_calculator_task(risklib_calculator,
         job_id, assets, hazard_getter_name, hazard_id,
         loss_curve_id, loss_map_ids, insured_curve_id=None,
         conditional_loss_poes=None, insured_losses=None,
-        **calculator_params):
+        *calculator_params):
 
     vulnerability_model = fetch_vulnerability_model(job_id)
 
     an_hazard_getter = hazard_getter(hazard_getter_name, hazard_id)
 
-    calculator = risklib_calculator(vulnerability_model, **calculator_params)
+    calculator = risklib_calculator(vulnerability_model, *calculator_params)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
