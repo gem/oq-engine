@@ -192,7 +192,7 @@ def _to_site(element):
         '%spos' % GML).text.split()]
 
 
-class VulnerabilityModelFile(object):
+class VulnerabilityModelParser(object):
     """
     Vulnerability model parser. This class is implemented as a generator.
 

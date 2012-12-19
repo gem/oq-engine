@@ -147,3 +147,89 @@ class ExposureModelParserTestCase(unittest.TestCase):
             self.assertEqual(expected_result[ctr][0], exposure_point)
             self.assertEqual(expected_result[ctr][1], occupancy_data)
             self.assertEqual(expected_result[ctr][2], exposure_data)
+
+
+class VulnerabilityModelParserTestCase(unittest.TestCase):
+
+    def test_schema_validation(self):
+        invalid_vulnerability_model = """\
+<?xml version='1.0' encoding='utf-8'?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+    xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <vulnerabilityModel/>
+</nrml>
+"""
+
+        self.assertRaises(ValueError, parsers.VulnerabilityModelParser,
+            StringIO.StringIO(invalid_vulnerability_model))
+
+    def test_parsing(self):
+        vulnerability_model = """\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+  xmlns:gml="http://www.opengis.net/gml">
+
+  <vulnerabilityModel>
+    <config/>
+    <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
+      assetCategory="population" lossCategory="fatalities">
+      <IML IMT="MMI">5.00 5.50 6.00 6.50</IML>
+      <discreteVulnerability vulnerabilityFunctionID="IR" probabilisticDistribution="LN">
+        <lossRatio>0.18 0.36 0.36 0.36</lossRatio>
+        <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
+      </discreteVulnerability>
+      <discreteVulnerability vulnerabilityFunctionID="PK" probabilisticDistribution="LN">
+        <lossRatio>0.18 0.36 0.36 0.36</lossRatio>
+        <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
+      </discreteVulnerability>
+    </discreteVulnerabilitySet>
+    <discreteVulnerabilitySet vulnerabilitySetID="NPAGER"
+      assetCategory="population" lossCategory="fatalities">
+      <IML IMT="MMI">6.00 6.50 7.00 7.50</IML>
+      <discreteVulnerability vulnerabilityFunctionID="AA" probabilisticDistribution="LN">
+        <lossRatio>0.00 0.00 0.00 0.00</lossRatio>
+        <coefficientsVariation>0.50 0.50 0.50 0.50</coefficientsVariation>
+      </discreteVulnerability>
+      <discreteVulnerability vulnerabilityFunctionID="BB" probabilisticDistribution="LN">
+        <lossRatio>0.06 0.18 0.36 0.36</lossRatio>
+        <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
+      </discreteVulnerability>
+    </discreteVulnerabilitySet>
+  </vulnerabilityModel>
+</nrml>
+"""
+
+        model = self._load_model(StringIO.StringIO(vulnerability_model))
+
+        self.assertEqual("MMI", model["PK"]["IMT"])
+        self.assertEqual("fatalities", model["PK"]["lossCategory"])
+        self.assertEqual("PAGER", model["PK"]["vulnerabilitySetID"])
+        self.assertEqual("population", model["PK"]["assetCategory"])
+        self.assertEqual("LN", model["PK"]["probabilisticDistribution"])
+
+        self.assertEqual([0.18, 0.36, 0.36, 0.36], model["PK"]["lossRatio"])
+
+        self.assertEqual([0.30, 0.30, 0.30, 0.30],
+            model["PK"]["coefficientsVariation"])
+
+        self.assertEqual([5.00, 5.50, 6.00, 6.50], model["PK"]["IML"])
+        self.assertEqual([0.18, 0.36, 0.36, 0.36], model["IR"]["lossRatio"])
+
+        self.assertEqual([0.30, 0.30, 0.30, 0.30],
+            model["IR"]["coefficientsVariation"])
+
+        self.assertEqual([5.00, 5.50, 6.00, 6.50], model["IR"]["IML"])
+        self.assertEqual("NPAGER", model["AA"]["vulnerabilitySetID"])
+        self.assertEqual([6.00, 6.50, 7.00, 7.50], model["AA"]["IML"])
+
+        self.assertEqual([0.50, 0.50, 0.50, 0.50],
+            model["AA"]["coefficientsVariation"])
+
+    def _load_model(self, source):
+        model = dict()
+        parser = parsers.VulnerabilityModelParser(source)
+
+        for vulnerability_function in parser:
+            model[vulnerability_function["ID"]] = vulnerability_function
+
+        return model
