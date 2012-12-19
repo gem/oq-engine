@@ -153,20 +153,17 @@ EOF
 
     #
     #  check if an istance with the same address already exists
-set -x
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
     for running_machine in $running_machines ; do
         if sudo grep -q "[^#]*address[ 	]\+$haddr[ 	]*$" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
             echo -n "The $haddr machine seems to be already configured ... "
-            previous_name="$(ssh $haddr hostname 2>/dev/null)"
             set +e
-            sudo lxc-shutdown -n $previous_name -w -t 10
+            sudo lxc-shutdown -n $running_machine -w -t 10
             set -e
             echo "turned off"
         fi
     done
-exit 123
 
     #
     #  run the VM and get the VM name
@@ -188,7 +185,7 @@ exit 123
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    # sudo lxc-shutdown -n $machine_name -w -t 10
+    sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
