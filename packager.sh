@@ -87,26 +87,24 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     # configure the machine to run tests
-    echo "local	all		$USER		trust" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf
-    sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf
+    ssh $haddr "echo \"local	all		\$USER		trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+    ssh $haddr "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
-    sudo service postgresql restart
-    sudo -u postgres  createuser -d -e -i -l -s -w $USER
-    oq_create_db --yes --db-user=$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/db/schema
+    ssh $haddr "sudo service postgresql restart"
+    ssh $haddr "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
+    ssh $haddr "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/db/schema"
 
     # run celeryd daemon
-    cd /usr/openquake/
-    celeryd >/tmp/celeryd.log 2>&1 3>&1 &
-    cd -
+    ssh $haddr "cd /usr/openquake/ ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     # copy demos file to $HOME
-    cp -a /usr/share/doc/python-oq/examples/demos .
+    ssh $haddr "cp -a /usr/share/doc/python-oq/examples/demos ."
 
     # run all demos found
-    cd demos
-    for ini in $(find . -name job.ini); do
-        DJANGO_SETTINGS_MODULE=openquake.settings openquake --run-hazard  $ini --exports xml
-    done
+    ssh $haddr "cd demos
+    for ini in \$(find . -name job.ini); do
+        DJANGO_SETTINGS_MODULE=openquake.settings openquake --run-hazard  \$ini --exports xml
+    done"
 
     trap ERR
 
@@ -155,10 +153,11 @@ EOF
 
     #
     #  check if an istance with the same address already exists
+set -x
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
     for running_machine in $running_machines ; do
-        if sudo grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
+        if sudo grep -q "[^#]*address[ 	]\+$haddr[ 	]*$" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
             echo -n "The $haddr machine seems to be already configured ... "
             previous_name="$(ssh $haddr hostname 2>/dev/null)"
             set +e
@@ -167,6 +166,7 @@ EOF
             echo "turned off"
         fi
     done
+exit 123
 
     #
     #  run the VM and get the VM name
