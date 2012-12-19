@@ -24,7 +24,7 @@ class Curve(object):
     This class defines a curve (discrete function)
     used in the risk domain.
     """
-    def __init__(self, values):
+    def __init__(self, pairs):
         """
         Construct a curve from a sequence of tuples.
 
@@ -39,35 +39,41 @@ class Curve(object):
 
         Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
         """
-        # sort the values on x axis
-        values = sorted(values)
+        pairs = sorted(pairs)  # sort the pairs on x axis
+        npairs = len(pairs)
+        self.abscissae = numpy.empty(npairs)
+        self.ordinates = numpy.empty(npairs)
 
-        elements = len(values)
-        self.abscissae = numpy.empty(elements)
-        self.ordinates = numpy.empty(elements)
+        if npairs and type(pairs[0][1]) in (tuple, list):
+            self.ordinates = numpy.empty((npairs, len(pairs[0][1])))
 
-        if elements and type(values[0][1]) in (tuple, list):
-            self.ordinates = numpy.empty((elements, len(values[0][1])))
-
-        for index, (key, val) in enumerate(values):
+        for index, (key, val) in enumerate(pairs):
             self.abscissae[index] = key
             self.ordinates[index] = val
+
+    # so that the curve is pickeable even if self.interp has been instantiated
+    def __getstate__(self):
+        return dict(abscissae=self.abscissae, ordinates=self.ordinates)
 
     def __eq__(self, other):
         return numpy.allclose(self.abscissae, other.abscissae)\
             and numpy.allclose(self.ordinates, other.ordinates)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (self.abscissae, self.ordinates)
 
     def rescale_abscissae(self, value):
-        """Return a new curve with each abscissa value multiplied
-        by the value passed as parameter."""
-
-        result = Curve(())
-        result.abscissae = self.abscissae * value
-        result.ordinates = self.ordinates
-        return result
+        """
+        Return a new curve with each abscissa value multiplied
+        by the value passed as parameter.
+        """
+        newcurve = Curve(())
+        newcurve.abscissae = self.abscissae * value
+        newcurve.ordinates = self.ordinates
+        return newcurve
 
     def with_unique_ordinates(self):
         """
@@ -92,29 +98,30 @@ class Curve(object):
     def ordinate_for(self, x_value, y_index=0):
         """
         Return the y value corresponding to the given x value.
-        interp1d parameters can be a list of abscissae, ordinates
-        this is very useful to speed up the computation and feed
+        interp1d parameters are a list of abscissae, ordinates.
+        This is very useful to speed up the computation and feed
         "directly" numpy.
         """
-        x_value = range_clip(x_value, self.abscissae)
-        if self.ordinates.ndim > 1:
-            ordinates = self.ordinates[:, y_index]
-        else:
-            ordinates = self.ordinates
-        return interp1d(self.abscissae, ordinates)(x_value)
+        if hasattr(self, 'interp'):  # cached interpolated curve
+            return self.interp(range_clip(x_value, self.abscissae))
+        self.interp = interp1d(self.abscissae, self.ordinates[:, y_index]
+                               if self.is_multi_value else self.ordinates)
+        return self.interp(range_clip(x_value, self.abscissae))
 
     def abscissa_for(self, y_value):
-        """Return the x value corresponding to the given y value."""
-
+        """
+        Return the x value corresponding to the given y value.
+        """
         # inverting the function
         inverted_func = [(ordinate, x_value) for ordinate, x_value in
                          zip(self.ordinate_for(self.abscissae),
                              self.abscissae)]
-
         return Curve(inverted_func).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
-        """Check if the given value is outside the Y values boundaries."""
+        """
+        Check if the given value is outside the Y values boundaries.
+        """
         return y_value < min(self.ordinates) or y_value > max(self.ordinates)
 
 

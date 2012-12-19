@@ -43,14 +43,15 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
             loss_ratio_stddev = vuln_function.stddevs[col]
 
             if vuln_function.distribution == "BT":
-                lrem[row][col] = stats.beta.sf(loss_ratio,
+                lrem[row][col] = stats.beta.sf(
+                    loss_ratio,
                     _alpha_value(mean_loss_ratio, loss_ratio_stddev),
                     _beta_value(mean_loss_ratio, loss_ratio_stddev))
             elif vuln_function.distribution == "LN":
                 variance = loss_ratio_stddev ** 2.0
                 sigma = sqrt(log((variance / mean_loss_ratio ** 2.0) + 1.0))
                 mu = exp(log(mean_loss_ratio ** 2.0 /
-                     sqrt(variance + mean_loss_ratio ** 2.0)))
+                             sqrt(variance + mean_loss_ratio ** 2.0)))
 
                 lrem[row][col] = stats.lognorm.sf(loss_ratio, sigma, scale=mu)
             else:
@@ -125,8 +126,8 @@ def _conditional_loss(curve, probability):
     loss_curve = curve.with_unique_ordinates()
 
     if loss_curve.ordinate_out_of_bounds(probability):
-        if probability < loss_curve.y_values[-1]:
-            return loss_curve.x_values[-1]
+        if probability < loss_curve.ordinates[-1]:
+            return loss_curve.abscissae[-1]
         else:
             return 0.0
 
@@ -218,9 +219,9 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps):
         steps = 3 produces [1.0, 1.33, 1.66, 2.0]
     :type steps: integer
     """
-
-    return (concatenate([concatenate([linspace(x, y, num=steps + 1)[:-1]
-        for x, y in zip(loss_ratios, loss_ratios[1:])]), [loss_ratios[-1]]]))
+    ls = [linspace(x, y, num=steps + 1)[:-1]
+          for x, y in zip(loss_ratios, loss_ratios[1:])]
+    return concatenate([concatenate(ls), [loss_ratios[-1]]])
 
 
 def _poos(hazard_curve_values, imls):
