@@ -58,11 +58,11 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
-    ssh $haddr mkdir -p repo/oq-engine
+    ssh $haddr mkdir -p repo/${GEM_DEB_PACKAGE}
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/oq-engine
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/oq-engine ./\""
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/${GEM_DEB_PACKAGE}
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
     #
     #  dependencies repos
 
