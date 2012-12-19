@@ -948,32 +948,11 @@ class RiskCalculation(djm.Model):
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=False, blank=False)
 
-    # A seed used to generate random values to be applied to
-    # vulnerability functions
-    master_seed = djm.IntegerField()
-
     #######################
     # Classical parameters:
     #######################
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
     conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
-
-    ##################################
-    # Probabilistic shared parameters
-    ##################################
-    ASSET_CORRELATION_CHOICES = (
-        (u'perfect', u'Perfect'),
-        (u'uncorrelated', u'Uncorrelated'),
-    )
-    asset_correlation = djm.TextField(null=True,
-                                      choices=ASSET_CORRELATION_CHOICES)
-
-    #########################
-    # Event-Based parameters:
-    #########################
-    loss_curve_resolution = djm.IntegerField(
-        null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
-    insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
