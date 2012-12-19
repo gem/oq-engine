@@ -35,7 +35,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     """
     Celery task for the event based risk calculator.
     """
-    general.loss_curve_calculator(
+    general.loss_curve_calculator_task(
         api.probabilistic_event_based,
         job_id, assets, hazard_getter, hazard_id,
         loss_curve_id, loss_map_ids, insured_curve_id,
@@ -68,25 +68,3 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             loss_curve_resolution=self.rc.loss_curve_resolution,
             seed=self.rc.master_seed,
             asset_correlation=self.rc.asset_correlation)
-
-    def create_outputs(self):
-        """
-        Add loss map ids when conditional loss poes are specified
-        """
-        outputs = super(ClassicalRiskCalculator, self).create_outputs()
-        poes = self.rc.conditional_loss_poes or []
-
-        def create_loss_map(poe):
-            """
-            Given a poe create a loss map output container associated
-            with the current job
-            """
-            return models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
-        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
-                                       for poe in poes)
-        return outputs
