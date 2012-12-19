@@ -13,3 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import classical
+import event_based
+import scenario_damage
+import benefit_cost_ratio
+import insured_loss
