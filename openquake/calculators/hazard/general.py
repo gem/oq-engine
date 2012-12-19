@@ -461,6 +461,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         raise NotImplementedError
 
+    def block_size(self):
+        """
+        For hazard calculators, the number of work items per task
+        is specified in the configuration file.
+        """
+        return int(config.get('hazard', 'block_size'))
+
+    def concurrent_tasks(self):
+        """
+        For hazard calculators, the number of tasks to be in queue
+        at any given time is specified in the configuration file.
+        """
+        return int(config.get('hazard', 'concurrent_tasks'))
+
     def finalize_hazard_curves(self):
         """
         Create the final output records for hazard curves. This is done by
