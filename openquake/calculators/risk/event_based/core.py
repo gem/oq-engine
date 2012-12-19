@@ -18,9 +18,12 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+from django import db
+
 from openquake.calculators.risk import general
-from openquake.utils import tasks
-from openquake.utils import stats
+from openquake.db import models
+from openquake.utils import tasks, stats
+from openquake import logs
 
 from risklib import api
 
@@ -29,18 +32,48 @@ from risklib import api
 @general.with_assets
 @stats.count_progress('r')
 def event_based(job_id, assets, hazard_getter, hazard_id,
-                loss_curve_id, loss_map_ids, insured_curve_id,
+                loss_curve_id, loss_map_ids,
+                insured_curve_id, aggregate_loss_curve_id,
                 conditional_loss_poes, insured_losses,
                 loss_curve_resolution, seed, asset_correlation):
     """
     Celery task for the event based risk calculator.
     """
-    general.loss_curve_calculator_task(
-        api.probabilistic_event_based,
-        job_id, assets, hazard_getter, hazard_id,
-        loss_curve_id, loss_map_ids, insured_curve_id,
-        conditional_loss_poes, insured_losses,
-        loss_curve_resolution, seed, asset_correlation)
+    vulnerability_model = general.fetch_vulnerability_model(job_id)
+
+    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+
+    calculator = api.probabilistic_event_based(
+        vulnerability_model, loss_curve_resolution, seed, asset_correlation)
+
+    # if we need to compute the loss maps, we add the proper risk
+    # aggregator
+    if conditional_loss_poes:
+        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+
+    # if we need to compute the insured losses, we add the proper
+    # risklib aggregator
+    if insured_losses:
+        calculator = api.insured_losses(calculator)
+
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        logs.LOG.debug(
+            'launching compute_on_assets over %d assets' % len(assets))
+        for asset_output in api.compute_on_assets(
+            assets, hazard_getter, calculator):
+
+            general.write_loss_curve(loss_curve_id, asset_output)
+
+            if asset_output.conditional_losses:
+                general.write_loss_map(loss_map_ids, asset_output)
+
+            if asset_output.insured_losses:
+                general.write_loss_curve(insured_curve_id, asset_output)
+
+    # by using #filter and #update django prevents possible race conditions
+    models.AggregateLossData.objects.filter(
+        output__id=aggregate_loss_curve_id).update(
+            losses=db.models.F('losses') + calculator.aggregate_losses)
 event_based.ignore_result = False
 
 
@@ -68,3 +101,13 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             loss_curve_resolution=self.rc.loss_curve_resolution,
             seed=self.rc.master_seed,
             asset_correlation=self.rc.asset_correlation)
+
+    def create_outputs(self):
+        outputs = super(EventBasedRiskCalculator, self).create_outputs()
+        outputs['aggregate_loss_curve_id'] = (
+            models.AggregateLossCurveData.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "Aggregate Loss Curve Set",
+                    "agg_loss_curve")).id)
+        return outputs

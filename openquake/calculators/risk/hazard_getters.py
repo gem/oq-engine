@@ -22,8 +22,6 @@ An HazardGetter is responsible to get hazard outputs needed by a risk
 calculation.
 """
 
-import string
-
 from openquake.db import models
 from django.db import connection
 
@@ -151,14 +149,15 @@ class GroundMotionValuesGetter(object):
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
 
-        query = string.Template("""
-        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %s))
+        query = """
+        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %%s))
         AS min_distance FROM (
             SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
-            WHERE imt = %s AND gmf_set_id IN %s ${sa}
+            WHERE imt = %%s AND gmf_set_id IN %%s %s
             ORDER BY gmf_set_id, result_grp_ordinal
-        ) n GROUP BY location ORDER BY min_distance LIMIT 1;""").substitute(
-        dict(sa=spectral_filters))
+        ) n GROUP BY location ORDER BY min_distance LIMIT 1;"""
+
+        query = query % spectral_filters
 
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
 
@@ -168,7 +167,8 @@ class GroundMotionValuesGetter(object):
         cursor.execute(query, args)
         ground_motion_values = cursor.fetchone()[0]
 
-        # temporary format, to be changed.
+        # FIXME(lp): temporary format, to be changed.
+        # Do these values depends on the site?
         result = {"IMLs": ground_motion_values,
             "TimeSpan": self._time_span, "TSES": self._tses}
 
@@ -177,6 +177,6 @@ class GroundMotionValuesGetter(object):
 
 
 HAZARD_GETTERS = dict(
-    one_query_per_asset=HazardCurveGetterPerAsset,
-    event_based=GroundMotionValuesGetter,
+    hazard_curve_getter_by_query=HazardCurveGetterPerAsset,
+    ground_motion_field_getter_by_query=GroundMotionValuesGetter,
 )
