@@ -88,7 +88,7 @@ _pkgtest_innervm_run () {
 
     # configure the machine to run tests
     echo "local	all		$USER		trust" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf
-    sudo sed 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf
+    sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf
 
     sudo service postgresql restart
     sudo -u postgres  createuser -d -e -i -l -s -w $USER
@@ -188,7 +188,7 @@ EOF
     set +e
     _pkgtest_innervm_run $haddr
     inner_ret=$?
-    sudo lxc-shutdown -n $machine_name -w -t 10
+    # sudo lxc-shutdown -n $machine_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
