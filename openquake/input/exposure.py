@@ -66,16 +66,19 @@ class ExposureDBWriter(object):
         """
         Insert a single asset entry.
 
-        :param point: asset location
-        :type point: :class:`openquake.shapes.Site`
-        :param list occupancy: a potentially empty list of named tuples
-            each having an 'occupants' and a 'description' property
-        :param values: dictionary of values (see
-            :class:`openquake.parser.exposure.ExposureModelFile`)
+        :param list point:
+            Asset location (format [lon, lat]).
+        :param list occupancy:
+            A potentially empty list of named tuples
+            each one having an 'occupants' and a 'description' property.
+        :param dict values:
+            Asset attributes (see
+            :class:`nrml.risk.parsers.ExposureModelParser`).
 
-        it also inserts the main exposure model entry if not already
-        present,
+        It also inserts the main exposure model entry if
+        not already present.
         """
+
         if not self.model:
             self.model = models.ExposureModel(
                 owner=self.owner, input=self.smi,
@@ -91,7 +94,7 @@ class ExposureDBWriter(object):
         data = models.ExposureData(
             exposure_model=self.model, asset_ref=values["assetID"],
             taxonomy=values.get("taxonomy"),
-            site="POINT(%s %s)" % (point.point.x, point.point.y))
+            site="POINT(%s %s)" % (point[0], point[1]))
         for key, tag in [
             ("coco", "coco"), ("reco", "reco"), ("stco", "stco"),
             ("area", "area"), ("number_of_units", "number"),
