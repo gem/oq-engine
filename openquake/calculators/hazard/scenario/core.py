@@ -135,6 +135,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def initialize_sources(self):
         """
+        Get the rupture_model file from the job.ini file, and store a
+        parsed version of it in the database (see
+        :class:`openquake.db.models.ParsedRupture``) in pickle format.
         """
         # Get the rupture model in input
         [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
