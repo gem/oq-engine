@@ -2037,7 +2037,7 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.aggregate_loss_curve_data
 ADD CONSTRAINT riskr_aggregate_loss_curve_data_output_fk
-FOREIGN KEY (loss_curve_id) REFERENCES riskr.output(id) ON DELETE CASCADE;
+FOREIGN KEY (loss_curve_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
