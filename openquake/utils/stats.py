@@ -291,7 +291,7 @@ class count_progress(object):   # pylint: disable=C0103
                 raise TypeError(
                     '%s should have arguments job_id and a list of ids, '
                     'got %r and %r instead' % (func, args[0], args[1]))
-            job_id, num_items = self.get_task_data(*args, **kwargs)
+            job_id, num_items = self.get_task_data(*args)
             try:
                 result = func(*args, **kwargs)
                 key = "nhzrd_done" if self.area == "h" else "nrisk_done"
