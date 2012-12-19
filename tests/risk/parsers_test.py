@@ -113,7 +113,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 "stcoUnit": "USD",
                 "taxonomy": "RC/DMRF-D/LR",
                 "taxonomySource": "Pavia taxonomy",
-                }),
+            }),
             ([9.15333, 45.12200], [
             parsers.OCCUPANCY(12, "day"), parsers.OCCUPANCY(50, "night")], {
                  "area": 119.0,
@@ -137,8 +137,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
                  "stcoUnit": "USD",
                  "taxonomy": "RC/DMRF-D/HR",
                  "taxonomySource": "Pavia taxonomy",
-                 }),
-            ]
+            }),
+        ]
 
         parser = parsers.ExposureModelParser(StringIO.StringIO(exposure))
         for ctr, (exposure_point, occupancy_data, exposure_data)\
