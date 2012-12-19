@@ -26,40 +26,6 @@ from openquake.utils import config
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
-class Calculator(object):
-    """Base abstract class for all calculators."""
-
-    def __init__(self, job_ctxt):
-        """
-        :param job_ctxt: :class:`openquake.engine.JobContext` instance.
-        """
-        self.job_ctxt = job_ctxt
-
-    def initialize(self, *args, **kwargs):
-        """Implement this method in subclasses to record pre-execution stats,
-        estimate the calculation size, etc."""
-
-    def pre_execute(self, *args, **kwargs):
-        """Implement this method in subclasses to perform pre-execution
-        functions, such as instantiating objects need for the calculation and
-        loading calculation data into a cache."""
-
-    def execute(self, *args, **kwargs):
-        """This is only method that subclasses are required to implement. This
-        should contain all of the calculation logic."""
-        raise NotImplementedError()
-
-    def post_execute(self, *args, **kwargs):
-        """Implement this method in subclasses to perform post-execution
-           functions, such as result serialization."""
-
-    def clean_up(self, *args, **kwargs):
-        """Implement this method in subclasses to perform clean-up actions
-           like garbage collection, etc."""
-
-
-# TODO: make concurrent_tasks and block_size as properties
-# TODO: change config.get_section hazard task_exchange type=direct
 class CalculatorNext(object):
     """
     Base class for all calculators.
@@ -75,6 +41,18 @@ class CalculatorNext(object):
         Override this method in subclasses to record pre-execution stats,
         initialize result records, perform detailed parsing of input data, etc.
         """
+
+    def block_size(self):
+        """
+        Number of work items per task.
+        """
+        raise NotImplementedError()
+
+    def concurrent_tasks(self):
+        """
+        Number of tasks to be in queue at any given time.
+        """
+        raise NotImplementedError()
 
     def execute(self):
         """
@@ -92,16 +70,12 @@ class CalculatorNext(object):
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
         """
-        block_size = int(config.get('hazard', 'block_size'))
-        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
-
         # The following two counters are in a dict so that we can use them in
         # the closures below.
         # When `self.progress['compute']` becomes equal to
         # `self.progress['total']`, `execute` can conclude.
 
-        task_gen = self.task_arg_gen(block_size)
-
+        task_gen = self.task_arg_gen(self.block_size())
         exchange, conn_args = exchange_and_conn_args()
 
         routing_key = ROUTING_KEY_FMT % dict(job_id=self.job.id)
@@ -114,11 +88,11 @@ class CalculatorNext(object):
             with conn.Consumer(
                 task_signal_queue,
                 callbacks=[self.get_task_complete_callback(task_gen,
-                    block_size,
-                    concurrent_tasks)]):
+                    self.block_size(),
+                    self.concurrent_tasks())]):
 
                 # First: Queue up the initial tasks.
-                for _ in xrange(concurrent_tasks):
+                for _ in xrange(self.concurrent_tasks()):
                     try:
                         queue_next(self.core_calc_task, task_gen.next())
                     except StopIteration:
@@ -164,16 +138,15 @@ def exchange_and_conn_args():
     needed to create a broker connection.
     """
 
-    exchange = kombu.Exchange(
-        config.get_section('hazard')['task_exchange'], type='direct')
-
     amqp_cfg = config.get_section('amqp')
+    exchange = kombu.Exchange(amqp_cfg['task_exchange'], type='direct')
+
     conn_args = {
         'hostname': amqp_cfg['host'],
         'userid': amqp_cfg['user'],
         'password': amqp_cfg['password'],
         'virtual_host': amqp_cfg['vhost'],
-        }
+    }
 
     return exchange, conn_args
 
