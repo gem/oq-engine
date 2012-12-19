@@ -6,22 +6,22 @@ from hmtk.seismicity.declusterer.utils import decimal_year, haversine
 class Afteran(BaseCatalogueDecluster):
     """ 
     This implements the Afteran algorithm as described in this paper:
-    Musson, R. 
-    
+    Musson, R. (1999), Probabilistic seismic hazard maps for the North 
+    Balkan Region, Annali Di Geofisica, 42(6), 1109 - 1124
     """
     def decluster(self, catalogue, config):
         """
         catalogue_matrix, window_opt=TDW_GARDNERKNOPOFF, time_window=60.):
 
         :param catalogue: a catalogue object
-        :type catalogue: TO ADD HERE
+        :type catalogue: Instance of the hmtk.seismicity.catalogue.Catalogue()
+                         class
         :keyword window_opt: method used in calculating distance and time 
             windows
         :type window_opt: string
         :keyword time_window: Length (in days) of moving time window
         :type time_window: positive float
         :returns: **vcl vector** indicating cluster number, 
-                  **vmain_shock catalog** containing non-clustered events, 
                   **flagvector** indicating which earthquakes belong to a 
                   cluster
         :rtype: numpy.ndarray
@@ -33,122 +33,152 @@ class Afteran(BaseCatalogueDecluster):
         mag = catalogue.data['magnitude']
         neq = np.shape(mag)[0]  # Number of earthquakes
         # Get decimal year (needed for time windows)
-        year_dec = decimal_year(catalogue.data['year'], catalogue.data['month'],
+        year_dec = decimal_year(catalogue.data['year'], 
+                                catalogue.data['month'],
                                 catalogue.data['day'])
         # Get space windows corresponding to each event
         sw_space, _ = (
             config['time_distance_window'].calc(catalogue.data['magnitude']))
-        # Initial Position Identifier
-        eqid = np.arange(0, neq, 1)  
+        
         # Pre-allocate cluster index vectors
-        vcl = np.zeros((neq, 1), dtype=int)
-        flagvector = np.zeros((neq, 1), dtype=int)
-        # Sort magnitudes into descending order
+        vcl = np.zeros(neq, dtype=int)
+        flagvector = np.zeros(neq, dtype=int)
+        # Rank magnitudes into descending order
         id0 = np.flipud(np.argsort(mag, kind='heapsort'))
-        mag = mag[id0]
-        longitude = catalogue.data['longitude'][id0]
-        latitude = catalogue.data['latitude'][id0]
-        sw_space = sw_space[id0]
-        year_dec = year_dec[id0]
-        eqid = eqid[id0]
-        i = 0
+        
+        iloc = 0
         clust_index = 0
-        while i < neq:
+        for imarker in id0:
             # Earthquake not allocated to cluster - perform calculation
-            if vcl[i] == 0:
+            if vcl[imarker] == 0:
                 # Perform distance calculation
-                mdist = haversine(longitude, latitude,
-                                  longitude[i], latitude[i])
-                # Select earthquakes inside distance window and not in cluster
-                vsel = np.logical_and(mdist <= sw_space[i], vcl == 0)
-                dtime = year_dec[vsel] - year_dec[i]
-                # Number of events inside valid window
-                nval = np.shape(dtime)[0] 
-                # 
-                vsel1 = self._find_aftershocks(dtime, nval, time_window)
-                vsel2 = self._find_foreshocks(dtime, nval, time_window, vsel1)
-                temp_vsel = np.copy(vsel)
-                temp_vsel[vsel] = np.logical_or(vsel1, vsel2)
-                if np.shape(np.nonzero(temp_vsel)[0])[0] > 1:
-                    # Contains clustered events - allocate a cluster index
-                    vcl[temp_vsel] = clust_index + 1
-                    # Remove mainshock from cluster
-                    vsel1[0] = False
-                    # Assign markers to aftershocks and foreshocks
-                    temp_vsel = np.copy(vsel)
-                    temp_vsel[vsel] = vsel1
-                    flagvector[temp_vsel] = 1
-                    vsel[vsel] = vsel2
-                    flagvector[vsel] = -1
+                mdist = haversine(
+                    catalogue.data['longitude'], 
+                    catalogue.data['latitude'],
+                    catalogue.data['longitude'][imarker],
+                    catalogue.data['latitude'][imarker]).flatten()
+                
+                # Select earthquakes inside distance window, later than 
+                # mainshock and not already assigned to a cluster
+                vsel1 = np.where(
+                    np.logical_and(vcl==0, 
+                        np.logical_and(mdist <= sw_space[imarker], 
+                                       year_dec > year_dec[imarker])))[0]
+                has_aftershocks = False
+                if len(vsel1) > 0:
+                    # Earthquakes after event inside distance window
+                    temp_vsel1, has_aftershocks = self._find_aftershocks(
+                        vsel1,
+                        year_dec,
+                        time_window,
+                        imarker,
+                        neq)
+                    if has_aftershocks:
+                        flagvector[temp_vsel1] = 1
+                        vcl[temp_vsel1] = clust_index + 1
+                
+                # Select earthquakes inside distance window, earlier than 
+                # mainshock and not already assigned to a cluster
+                has_foreshocks = False
+                vsel2 = np.where(
+                    np.logical_and(vcl == 0,
+                        np.logical_and(mdist <= sw_space[imarker],
+                                       year_dec < year_dec[imarker])))[0]
+                if len(vsel2) > 0:
+                    # Earthquakes before event inside distance window
+                    temp_vsel2, has_foreshocks = self._find_foreshocks(
+                        vsel2,
+                        year_dec,
+                        time_window,
+                        imarker,
+                        neq)
+                    if has_foreshocks:
+                        flagvector[temp_vsel2] = -1
+                        vcl[temp_vsel2] = clust_index + 1
+
+                if has_aftershocks or has_foreshocks:
+                    # Assign mainshock to cluster 
+                    vcl[imarker] = clust_index + 1  
                     clust_index += 1
-            i += 1
-        # Now have events - re-sort array back into chronological order
-        # Re-sort the data into original order
-        id1 = np.argsort(eqid, kind='heapsort')
-        eqid = eqid[id1]
-        #catalogue_matrix = catalogue_matrix[id1, :]
-        vcl = vcl[id1]
-        flagvector = flagvector[id1]
-        return vcl.flatten(), flagvector.flatten()
+            iloc += 1
 
-    def _find_aftershocks(self, dtime, nval, time_window):
-        """
-        Searches for aftershocks within the moving
-        time window
-        :param dtime: time since main event
-        :type dtime: numpy.ndarray
-        :param nval: number of events in search window
-        :type nval: int
-        :param time_window: Length (in days) of moving time window
-        :type time_window: positive float
-        :returns: **vsel** index vector for aftershocks
-        :rtype: numpy.ndarray
-        """
-        # Pre-allocate boolean array (all True)
-        vsel = np.ones(nval, dtype=bool)
-        # Start with the mainshock
-        initval = dtime[0] 
-        j = 1
-        while j < nval:
-            ddt = dtime[j] - initval
-            # Is event after previous event and within time window?
-            vsel[j] = np.logical_and(ddt >= 0.0, ddt <= time_window)
-            if vsel[j]:
-                # Reset time window to new event time
-                initval = dtime[j]
-            j += 1
-        return vsel
+        return vcl, flagvector
 
 
-    def _find_foreshocks(self, dtime, nval, time_window, vsel_aftershocks):
-        """
-        Searches for foreshocks within the moving
-        time window
-        :param dtime: time since main event
-        :type dtime: numpy.ndarray
-        :param nval: number of events in search window
-        :type nval: int
-        :param time_window: Length (in days) of moving time window
-        :type time_window: positive float
-        :param vsel_aftershocks: index vector for aftershocks
-        :type vsel_aftershocks: numpy.ndarray
-        :returns: **vsel** index vector for foreshocks
-        :rtype: numpy.ndarray
-        """
-        j = 1
-        vsel = np.array(np.zeros(nval), dtype=bool)
-        initval = dtime[0]
-        while j < nval:
-            if vsel_aftershocks[j]:
-            # Event already allocated as an aftershock - skip
-                j += 1
+    def _find_aftershocks(self, vsel, year_dec, time_window, imarker, neq):
+        '''
+        Function to identify aftershocks from a set of potential 
+        events inside the distance window of an earthquake. 
+        :param vsel: Pointer vector to the location of the events in distance
+                     window
+        :type vsel: numpy.ndarray
+        :param year_dec: Vector of decimal catalogue event times
+        :type year_dec: numpy.ndarray
+        :param time_window: Moving time window for selection of time clusters
+        :type time_window: float
+        :param imarker: Index of the mainshock in the catalogue vector
+        :type imarker: Integer
+        :param neq: Number of events in distance window of mainshock
+        :type neq: Integer
+        '''
+        temp_vsel1 = np.zeros(neq, dtype=bool)
+        has_aftershocks = False 
+
+        # Finds the time difference between events
+        delta_time = np.diff(
+            np.hstack([year_dec[imarker], year_dec[vsel]]))
+        for iloc in range(0, len(vsel)):
+            # If time difference between event is smaller than
+            # time window - is an aftershock -> continue
+
+            if delta_time[iloc] < time_window:
+                temp_vsel1[vsel[iloc]] = True
+                has_aftershocks = True
             else:
-                ddt = dtime[j] - initval
-                # Is event before previous event and within time window?
-                vsel[j] = np.logical_and(ddt <= 0.0,
-                                          ddt >= -(time_window))
-                if vsel[j]:
-                # Yes, reset time window to new event
-                    initval = dtime[j]
-            j += 1
-        return vsel
+                # Time difference between events is larger than
+                # window -> no more aftershocks -> return
+                return temp_vsel1, has_aftershocks
+                
+        return temp_vsel1, has_aftershocks
+
+    
+    def _find_foreshocks(self, vsel, year_dec, time_window, imarker, neq):
+        '''
+        Finds foreshocks from a set of potential events within
+        the distance window of a mainshock.
+        :param vsel: Pointer vector to the location of the events in distance
+                     window
+        :type vsel: numpy.ndarray
+        :param year_dec: Vector of decimal catalogue event times
+        :type year_dec: numpy.ndarray
+        :param time_window: Moving time window for selection of time clusters
+        :type time_window: float
+        :param imarker: Index of the mainshock in the catalogue vector
+        :type imarker: Integer
+        :param neq: Number of events in distance window of mainshock
+        :type neq: Integer
+        '''
+
+        temp_vsel2 = np.zeros(neq, dtype=bool)
+        has_foreshocks = False
+         
+        # The initial time is the time of the mainshock
+        initial_time = year_dec[imarker]
+        year_dec = year_dec[vsel]
+        for jloc in range(len(vsel) - 1, -1, -1):
+            # If the time between the mainshock and the preceeding
+            # event is smaller than the time_window then event
+            # is a foreshock
+
+            if (initial_time - year_dec[jloc]) < time_window:
+                temp_vsel2[vsel[jloc]] = True
+                has_foreshocks = True
+                # Update target time to consider current foreshock
+                # Then continue
+                initial_time = year_dec[jloc]
+            else:
+                # No events inside time window
+                # end of foreshock sequence - return
+                return temp_vsel2, has_foreshocks
+        
+        return temp_vsel2, has_foreshocks

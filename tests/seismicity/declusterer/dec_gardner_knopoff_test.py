@@ -35,5 +35,7 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
                   'fs_time_prop' : 1.0}
         # Instantiate the declusterer and process the sample catalogue 
         dec = GardnerKnopoffType1()
-        _, flagvector = dec.decluster(self.cat, config)
+        vcl, flagvector = dec.decluster(self.cat, config)
+        print 'vcl:',vcl
+        print 'flagvector:',flagvector, self.cat.data['flag']
         self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
