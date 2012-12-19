@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- Please note: The branch weights here are not relevant.
+             With this test, we do not compute any weighted aggregate of the results.
+             These weights were simply defined such that they sum to 1. -->
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute" branchSetID="bs2" applyToSources="1">
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>2.2 0.8</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>2.0 1.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>1.8 1.2</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
