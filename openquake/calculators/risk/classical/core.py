@@ -62,12 +62,12 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     vulnerability_model = general.fetch_vulnerability_model(job_id)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.classical(vulnerability_model, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_model, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.conditional_losses(
+        calculator = api.ConditionalLosses(
             conditional_loss_poes, calculator)
 
     with transaction.commit_on_success(using='reslt_writer'):
