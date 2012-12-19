@@ -432,7 +432,16 @@ class SourceDBWriter(object):
 
 
 class RuptureDBWriter(object):
-    """
+    """Takes a rupture and saves it to the
+    `hzrdi.parsed_rupture_model` table in the database, in pickled blob form.
+
+    :param inp:
+        :class:`~openquake.db.models.Input` object, the top-level container for
+        the sources written to the database. Should have an `input_type` of
+        'simple_fault' or 'complex_fault'.
+    :param rupture_model:
+        :class:`nrml.models.SimpleFaultRuptureModel` object or
+        :class:`nrml.models.ComplexFaultRuptureModel`
     """
 
     def __init__(self, inp, rupture_model):
@@ -441,6 +450,10 @@ class RuptureDBWriter(object):
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedRupture))
     def serialize(self):
+        """
+        Serialize the rupture_model in hzrdi.parsed_rupture_model, with a
+        reference to the `openquake.db.models.Input` object.
+        """
         src = self.rupture_model
         if isinstance(src, nrml.models.SimpleFaultRuptureModel):
             rupture_type = 'simple_fault'

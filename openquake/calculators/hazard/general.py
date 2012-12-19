@@ -633,7 +633,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def initialize_site_model(self):
         """
-        If a site model is specified in the calculation configuration. parse
+        If a site model is specified in the calculation configuration, parse
         it and load it into the `hzrdi.site_model` table. This includes a
         validation step to ensure that the area covered by the site model
         completely envelops the calculation geometry. (If this requirement is
