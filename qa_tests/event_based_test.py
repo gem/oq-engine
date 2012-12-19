@@ -211,21 +211,21 @@ class EventBasedTestCase(unittest.TestCase):
     def test_mean_based(self):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, None, None)
 
-        peb_conditional_losses = api.conditional_losses(
+        peb_conditional_losses = api.ConditionalLosses(
             [CONDITIONAL_LOSS_POES], peb_calculator)
 
         for i in range(3):
@@ -288,7 +288,7 @@ class EventBasedTestCase(unittest.TestCase):
                                      115.8386574, 55.3134][::-1]
 
         aggregate_curve = event_based.aggregate_loss_curve(
-           [peb_calculator.aggregate_losses], 50, 50)
+            [peb_calculator.aggregate_losses], 50, 50)
 
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.x_values)
@@ -312,9 +312,9 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, None, None)
-        peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
+        peb_conditional_losses = api.ConditionalLosses([0.99], peb_calculator)
 
         for i in range(3):
             asset_output = peb_conditional_losses(
@@ -326,9 +326,9 @@ class EventBasedTestCase(unittest.TestCase):
             [peb_calculator.aggregate_losses], 2500, 50, 10)
 
         expected_aggregate_poes = [1.0, 0.732864698034, 0.228948414196,
-                                    0.147856211034, 0.0768836536134,
-                                    0.0768836536134, 0.0198013266932,
-                                    0.0198013266932, 0.0198013266932]
+                                   0.147856211034, 0.0768836536134,
+                                   0.0768836536134, 0.0198013266932,
+                                   0.0198013266932, 0.0198013266932]
 
         expected_aggregate_losses = [
             102.669407618, 308.008222854, 513.347038089,
@@ -344,21 +344,21 @@ class EventBasedTestCase(unittest.TestCase):
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, curve_resolution=20)
 
-        peb_insured_losses = api.insured_losses(peb_calculator)
+        peb_insured_losses = api.InsuredLosses(peb_calculator)
 
         for i in range(3):
             asset_output = peb_insured_losses(
