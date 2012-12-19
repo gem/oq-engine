@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
 GEM_DEB_PACKAGE="python-oq-risklib"
 GEM_DEB_SERIE="master"
@@ -58,11 +58,11 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
-    ssh $haddr mkdir repo
+    ssh $haddr mkdir -p repo/${GEM_DEB_PACKAGE}
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo ./\""
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/${GEM_DEB_PACKAGE}
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
     ssh $haddr "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
@@ -121,11 +121,10 @@ EOF
     export haddr="10.0.3.$le_addr"
     running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
     for running_machine in $running_machines ; do
-        if sudo grep -q \"[^#]*address[ 	]\+$haddr[ 	]*$\" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
+        if sudo grep -q "[^#]*address[ 	]\+$haddr[ 	]*$" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
             echo -n "The $haddr machine seems to be already configured ... "
-            previous_name="$(ssh $haddr hostname 2>/dev/null)"
             set +e
-            sudo lxc-shutdown -n $previous_name -w -t 10
+            sudo lxc-shutdown -n $running_machine -w -t 10
             set -e
             echo "turned off"
         fi
@@ -248,7 +247,6 @@ cd "$GEM_BUILD_SRC"
 # date
 dt="$(date +%s)"
 
-set -x
 # version from setup.py
 stp_vers="$(cat setup.py | grep "^version[ 	]*=[ 	]*['\"]" | sed -n "s/^version[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
