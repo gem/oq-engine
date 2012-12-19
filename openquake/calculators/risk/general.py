@@ -30,8 +30,6 @@ from openquake.parser import risk
 from openquake.utils import tasks
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
-from risklib import api
-from django.db import transaction
 from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
@@ -130,7 +128,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         tf_args = dict(
             job_id=self.job.id,
-            hazard_getter="one_query_per_asset",
+            hazard_getter=self.hazard_getter,
             assets_per_task=self.assets_per_task,
             region_constraint=self.rc.region_constraint,
             exposure_model_id=self.exposure_model_id,
@@ -187,6 +185,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         :class:`~openquake.db.models.RiskCalculation`.
         """
         return self.job.risk_calculation
+
+    @property
+    def hazard_getter(self):
+        """
+        :returns: a key for the dict
+        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
+        to get the hazard getter used by the calculator.
+        """
+        raise NotImplementedError
 
     @property
     def calculation_parameters(self):
@@ -246,10 +253,27 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         job = self.job
 
-        return dict(
+        outputs = dict(
             loss_curve_id=models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Loss Curve set", "loss_curve")).pk)
+
+        poes = self.rc.conditional_loss_poes or []
+
+        def create_loss_map(poe):
+            """
+            Given a poe create a loss map output container associated
+            with the current job
+            """
+            return models.LossMap.objects.create(
+                 output=models.Output.objects.create_output(
+                     self.job,
+                     "Loss Map Set with poe %s" % poe,
+                     "loss_map"),
+                     poe=poe).pk
+        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
+                                       for poe in poes)
+        return outputs
 
 
 def with_assets(fn):
@@ -319,6 +343,52 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
         input_type).to_risklib()
 
 
+def write_loss_curve(loss_curve_id, asset_output):
+    """
+    Stores a :class:`openquake.db.models.LossCurveData` where the data are
+    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
+    output container is identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+
+    :param asset_output: an instance of
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
+    returned by risklib
+    """
+    models.LossCurveData.objects.create(
+        loss_curve_id=loss_curve_id,
+        asset_ref=asset_output.asset.asset_ref,
+        location=asset_output.asset.site,
+        poes=asset_output.loss_curve.y_values,
+        losses=asset_output.loss_curve.x_values,
+        loss_ratios=asset_output.loss_ratio_curve.x_values)
+
+
+def write_loss_map(loss_map_ids, asset_output):
+    """
+    Create :class:`openquake.db.models.LossMapData` objects where the
+    data are got by `asset_output` and the
+    :class:`openquake.db.models.LossMap` output containers are got by
+    `loss_map_ids`.
+
+    :param dict loss_map_ids: A dictionary storing that links poe to
+    :class:`openquake.db.models.LossMap` output container
+
+    :param asset_output: an instance of
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
+    """
+
+    for poe, loss in asset_output.conditional_losses.items():
+        models.LossMapData.objects.create(
+            loss_map_id=loss_map_ids[poe],
+            asset_ref=asset_output.asset.asset_ref,
+            value=loss,
+            std_dev=None,
+            location=asset_output.asset.site)
+
+
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
     Create a new :class:`openquake.db.models.BCRDistributionData` from
@@ -372,58 +442,3 @@ def store_risk_model(rc, input_type):
             prob_distribution=record['probabilisticDistribution'],
             covs=record['coefficientsVariation'],
             loss_ratios=record['lossRatio'])
-
-
-def loss_curve_calculator_task(risklib_calculator,
-        job_id, assets, hazard_getter_name, hazard_id,
-        loss_curve_id, loss_map_ids, insured_curve_id=None,
-        conditional_loss_poes=None, insured_losses=None,
-        *calculator_params):
-
-    vulnerability_model = fetch_vulnerability_model(job_id)
-
-    an_hazard_getter = hazard_getter(hazard_getter_name, hazard_id)
-
-    calculator = risklib_calculator(vulnerability_model, *calculator_params)
-
-    # if we need to compute the loss maps, we add the proper risk
-    # aggregator
-    if conditional_loss_poes:
-        calculator = api.conditional_losses(conditional_loss_poes, calculator)
-
-    # if we need to compute the insured losses, we add the proper
-    # risklib aggregator
-    if insured_losses:
-        calculator = api.insured_losses(calculator)
-
-    with transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
-        for asset_output in api.compute_on_assets(
-            assets, an_hazard_getter, calculator):
-
-            models.LossCurveData.objects.create(
-                loss_curve_id=loss_curve_id,
-                asset_ref=asset_output.asset.asset_ref,
-                location=asset_output.asset.site,
-                poes=asset_output.loss_curve.y_values,
-                losses=asset_output.loss_curve.x_values,
-                loss_ratios=asset_output.loss_ratio_curve.x_values)
-
-            if asset_output.conditional_losses:
-                for poe, loss in asset_output.conditional_losses.items():
-                    models.LossMapData.objects.create(
-                        loss_map_id=loss_map_ids[poe],
-                        asset_ref=asset_output.asset.asset_ref,
-                        value=loss,
-                        std_dev=None,
-                        location=asset_output.asset.site)
-
-            if asset_output.insured_losses:
-                models.LossCurveData.objects.create(
-                    loss_curve_id=insured_curve_id,
-                    asset_ref=asset_output.asset.asset_ref,
-                    location=asset_output.asset.site,
-                    poes=asset_output.insured_losses.y_values,
-                    losses=asset_output.insured_losses.x_values,
-                    loss_ratios=asset_output.insured_loss_ratio_curve.x_values)
