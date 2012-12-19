@@ -84,4 +84,4 @@ CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
 
 -- htemp indexes
 CREATE INDEX htemp_source_progress_lt_realization_id_idx on htemp.source_progress(lt_realization_id);
-CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progres(lt_realization_id);
+CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progress(lt_realization_id);
