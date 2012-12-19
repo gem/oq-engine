@@ -81,3 +81,7 @@ CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site
 CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
 CREATE INDEX uiapi_job2profile_job_id_idx on uiapi.job2profile(oq_job_id);
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
+
+-- htemp indexes
+CREATE INDEX htemp_source_progress_lt_realization_id_idx on htemp.source_progress(lt_realization_id);
+CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progres(lt_realization_id);
