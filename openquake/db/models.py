@@ -2061,7 +2061,7 @@ class AggregateLossCurveData(djm.Model):
     Holds the probabilities of exceedance for the whole exposure model
     '''
 
-    loss_curve = djm.ForeignKey("LossCurve")
+    output = djm.OneToOneField("Output")
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
 
