@@ -35,23 +35,24 @@ class ExposureModelParser(object):
 
     For each `assetDefinition` element in the parsed document,
     it yields a tuple, where:
-        * the first element is a list with the geographical information,
-          in the following format: [lon, lat]
-        * the second element is a list of occupancy objects, each one with
-          a property called `occupants` (the number of
-          occupants), and a property called `description` (the context
-          in which the number of occupants has been measured, for example
-          during the day or night)
-        * the third element is a dictionary with all the other information
-          related to the asset. The attributes dictionary looks like this:
-          {'listID': 'PAV01',
-           'listDescription': 'Collection of existing building in Pavia',
-           'assetID': 'asset_02',
-           'assetCategory': 'buildings',
-           'taxonomy': 'RC/DMRF-D/LR',
-           'structureCategory': 'RC-LR-PC',
-           'assetValue': 250000.0,
-           'assetValueUnit': 'EUR'}
+
+    * the first element is a list with the geographical information,
+      in the following format: [lon, lat].
+    * the second element is a list of occupancy objects, each one with
+      a property called `occupants` (the number of
+      occupants), and a property called `description` (the context
+      in which the number of occupants has been measured, for example
+      during the day or night).
+    * the third element is a dictionary with all the other information
+      related to the asset. The attributes dictionary looks like this:
+      {'listID': 'PAV01',
+       'listDescription': 'Collection of existing building in Pavia',
+       'assetID': 'asset_02',
+       'assetCategory': 'buildings',
+       'taxonomy': 'RC/DMRF-D/LR',
+       'structureCategory': 'RC-LR-PC',
+       'assetValue': 250000.0,
+       'assetValueUnit': 'EUR'}
 
     :param source:
         Filename or file-like object containing the XML data.
