@@ -31,6 +31,9 @@ from openquake.export import (
 from openquake.utils import tasks
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
+from risklib import api
+from django.db import transaction
+
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
@@ -329,13 +332,7 @@ def write_loss_curve(loss_curve_id, asset_output):
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     returned by risklib
     """
-    models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset_output.asset.asset_ref,
-        location=asset_output.asset.site,
-        poes=asset_output.loss_curve.y_values,
-        losses=asset_output.loss_curve.x_values,
-        loss_ratios=asset_output.loss_ratio_curve.x_values)
+    pass
 
 
 def write_loss_map(loss_map_ids, asset_output):
@@ -353,14 +350,7 @@ def write_loss_map(loss_map_ids, asset_output):
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     """
 
-    for poe, loss in asset_output.conditional_losses.items():
-        models.LossMapData.objects.create(
-            loss_map_id=loss_map_ids[poe],
-            asset_ref=asset_output.asset.asset_ref,
-            value=loss,
-            std_dev=None,
-            location=asset_output.asset.site)
-
+    pass
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
     """
@@ -415,3 +405,58 @@ def store_risk_model(rc, input_type):
             prob_distribution=record['probabilisticDistribution'],
             covs=record['coefficientsVariation'],
             loss_ratios=record['lossRatio'])
+
+
+def loss_curve_calculator(risklib_calculator,
+        job_id, assets, hazard_getter_name, hazard_id,
+        loss_curve_id, loss_map_ids, insured_curve_id=None,
+        conditional_loss_poes=None, insured_losses=None,
+        **calculator_params):
+
+    vulnerability_model = fetch_vulnerability_model(job_id)
+
+    an_hazard_getter = hazard_getter(hazard_getter_name, hazard_id)
+
+    calculator = risklib_calculator(vulnerability_model, **calculator_params)
+
+    # if we need to compute the loss maps, we add the proper risk
+    # aggregator
+    if conditional_loss_poes:
+        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+
+    # if we need to compute the insured losses, we add the proper
+    # risklib aggregator
+    if insured_losses:
+        calculator = api.insured_losses(calculator)
+
+    with transaction.commit_on_success(using='reslt_writer'):
+        logs.LOG.debug(
+            'launching compute_on_assets over %d assets' % len(assets))
+        for asset_output in api.compute_on_assets(
+            assets, an_hazard_getter, calculator):
+
+            models.LossCurveData.objects.create(
+                loss_curve_id=loss_curve_id,
+                asset_ref=asset_output.asset.asset_ref,
+                location=asset_output.asset.site,
+                poes=asset_output.loss_curve.y_values,
+                losses=asset_output.loss_curve.x_values,
+                loss_ratios=asset_output.loss_ratio_curve.x_values)
+
+            if asset_output.conditional_losses:
+                for poe, loss in asset_output.conditional_losses.items():
+                    models.LossMapData.objects.create(
+                        loss_map_id=loss_map_ids[poe],
+                        asset_ref=asset_output.asset.asset_ref,
+                        value=loss,
+                        std_dev=None,
+                        location=asset_output.asset.site)
+
+            if asset_output.insured_losses:
+                models.LossCurveData.objects.create(
+                    loss_curve_id=insured_curve_id,
+                    asset_ref=asset_output.asset.asset_ref,
+                    location=asset_output.asset.site,
+                    poes=asset_output.insured_losses.y_values,
+                    losses=asset_output.insured_losses.x_values,
+                    loss_ratios=asset_output.insured_loss_ratio_curve.x_values)
