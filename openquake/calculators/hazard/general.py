@@ -369,7 +369,7 @@ def get_site_collection(hc):
             for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
     else:
         # Use the calculation reference parameters to make a site collection.
-        points = self.computation_mesh
+        points = hc.points_to_compute()
         measured = hc.reference_vs30_type == 'measured'
         sites = [
             nhlib.site.Site(pt, hc.reference_vs30_value, measured,
