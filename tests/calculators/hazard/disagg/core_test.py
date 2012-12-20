@@ -83,21 +83,26 @@ class TaskCompleteCallbackTest(unittest.TestCase):
     def test_task_complete_call_back(self):
         # Test the workflow of the task complete callback.
 
-        # Fake task arg generator:
-        hc_tag = iter(xrange(3))
+        block_size = 1
+        concurrent_tasks = 2
 
-        self.calc.progress['total'] = 6
-        self.calc.progress['hc_total'] = 3
+        # Fake task arg generator:
+        hc_tag = iter(xrange(4))
+
+        self.calc.progress['total'] = 7
+        self.calc.progress['hc_total'] = 4
 
         callback = self.calc.get_task_complete_callback(
-            hc_tag, block_size=1, concurrent_tasks=2)
+            hc_tag, block_size=block_size, concurrent_tasks=concurrent_tasks)
 
         message = self.__class__.FakeMessage()
 
-        # "pre-queue" a single hazard curve task
-        # use a fake function
+        # "pre-queue" two hazard curve tasks,
+        # and use a fake function
         haz_general.queue_next(lambda x: x, hc_tag.next())
-        self.assertEqual(1, self.queue_next_mock.call_count)
+        haz_general.queue_next(lambda x: x, hc_tag.next())
+        self.assertEqual(2, self.queue_next_mock.call_count)
+        self.calc.progress['in_queue'] = 2
 
         # message body:
         body = dict(job_id=self.job.id)
@@ -109,18 +114,20 @@ class TaskCompleteCallbackTest(unittest.TestCase):
 
         self.assertEqual(1, message.acks)
         self.assertFalse(self.calc.disagg_phase)
-        self.assertEqual(1, self.calc.progress['computed'])
-        self.assertEqual(1, self.calc.progress['hc_computed'])
-        self.assertEqual(2, self.queue_next_mock.call_count)
+        self.assertEqual(
+            dict(total=7, computed=1, hc_total=4, hc_computed=1, in_queue=2),
+            self.calc.progress)
+        self.assertEqual(3, self.queue_next_mock.call_count)
         self.assertEqual(0, self.finalize_curves_mock.call_count)
 
         # Second call:
         callback(body, message)
         self.assertEqual(2, message.acks)
         self.assertFalse(self.calc.disagg_phase)
-        self.assertEqual(2, self.calc.progress['computed'])
-        self.assertEqual(2, self.calc.progress['hc_computed'])
-        self.assertEqual(3, self.queue_next_mock.call_count)
+        self.assertEqual(
+            dict(total=7, computed=2, hc_total=4, hc_computed=2, in_queue=2),
+            self.calc.progress)
+        self.assertEqual(4, self.queue_next_mock.call_count)
         self.assertEqual(0, self.finalize_curves_mock.call_count)
 
         # Test that an exception is thrown when we receive a non-hazard_curve
@@ -133,32 +140,49 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         body['calc_type'] = 'hazard_curve'
         callback(body, message)
         self.assertEqual(3, message.acks)
+        self.assertFalse(self.calc.disagg_phase)
+        self.assertEqual(
+            # There is one hazard curve task left in the queue.
+            dict(total=7, computed=3, hc_total=4, hc_computed=3, in_queue=1),
+            self.calc.progress)
+        self.assertEqual(4, self.queue_next_mock.call_count)
+
+        # Fourth call (the last hazard curve task):
+        body['calc_type'] = 'hazard_curve'
+        callback(body, message)
+        self.assertEqual(4, message.acks)
         # Hazard curves are done, so here we should switch to the disagg phase
         self.assertTrue(self.calc.disagg_phase)
-        self.assertEqual(3, self.calc.progress['computed'])
-        self.assertEqual(3, self.calc.progress['hc_computed'])
+        self.assertEqual(
+            dict(total=7, computed=4, hc_total=4, hc_computed=4, in_queue=2),
+            self.calc.progress)
+
         # We should have queued 2 disagg tasks here (given concurrent_tasks=2)
-        self.assertEqual(5, self.queue_next_mock.call_count)
+        self.assertEqual(6, self.queue_next_mock.call_count)
         self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Fourth call:
         body['calc_type'] = 'disagg'
         callback(body, message)
-        self.assertEqual(4, message.acks)
+        self.assertEqual(5, message.acks)
         self.assertTrue(self.calc.disagg_phase)
-        self.assertEqual(4, self.calc.progress['computed'])
-        self.assertEqual(3, self.calc.progress['hc_computed'])
-        self.assertEqual(6, self.queue_next_mock.call_count)
+        self.assertEqual(
+            dict(total=7, computed=5, hc_total=4, hc_computed=4, in_queue=2),
+            self.calc.progress)
+
+        self.assertEqual(7, self.queue_next_mock.call_count)
         self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Fifth call:
         callback(body, message)
-        self.assertEqual(5, message.acks)
+        self.assertEqual(6, message.acks)
         self.assertTrue(self.calc.disagg_phase)
-        self.assertEqual(5, self.calc.progress['computed'])
-        self.assertEqual(3, self.calc.progress['hc_computed'])
+        self.assertEqual(
+            dict(total=7, computed=6, hc_total=4, hc_computed=4, in_queue=1),
+            self.calc.progress)
+
         # Nothing else should be queued; there are no more items to enque.
-        self.assertEqual(6, self.queue_next_mock.call_count)
+        self.assertEqual(7, self.queue_next_mock.call_count)
         self.assertEqual(1, self.finalize_curves_mock.call_count)
 
         # Sixth (final) call:
@@ -167,10 +191,12 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         #   - message ack
         #   - updated 'computed' counter
         callback(body, message)
-        self.assertEqual(6, message.acks)
-        self.assertEqual(6, self.calc.progress['computed'])
+        self.assertEqual(7, message.acks)
         # Hazard curves computed counter remains at 3
-        self.assertEqual(3, self.calc.progress['hc_computed'])
+        self.assertEqual(
+            dict(total=7, computed=7, hc_total=4, hc_computed=4, in_queue=0),
+            self.calc.progress)
+
         self.assertEqual(1, self.finalize_curves_mock.call_count)
 
 
@@ -228,7 +254,8 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         self.assertEqual(12, job_stats.num_tasks)
 
         self.assertEqual(
-            {'hc_computed': 0, 'total': 12, 'hc_total': 8, 'computed': 0},
+            {'hc_computed': 0, 'total': 12, 'hc_total': 8, 'computed': 0,
+             'in_queue': 0},
             self.calc.progress
         )
 
