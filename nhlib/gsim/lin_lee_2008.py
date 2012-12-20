@@ -19,8 +19,6 @@ Module exports :class:`LinLee2008SInter`, class:`LinLee2008SSlab`
 from __future__ import division
 
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
 
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
