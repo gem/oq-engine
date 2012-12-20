@@ -37,8 +37,7 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'numpy',
-        'scipy',
-        'Django'
+        'scipy'
     ],
     maintainer='GEM',
     maintainer_email='info@openquake.org',
