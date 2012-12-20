@@ -24,7 +24,7 @@ Copyright (C) 2012 GEM Foundation.
 from setuptools import setup, find_packages
 
 
-version = "0.01"
+version = "0.1.0"
 url = "http://github.com/gem/oq-risklib"
 
 
