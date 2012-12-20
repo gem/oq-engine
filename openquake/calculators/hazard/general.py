@@ -514,7 +514,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
-        self.progress = dict(total=0, computed=0)
+        self.progress = dict(total=0, computed=0, in_queue=0)
+        self._computation_mesh = None
+
+    @property
+    def computation_mesh(self):
+        """
+        :class:`nhlib.geo.mesh.Mesh` representing the points of interest for
+        the calculation.
+        """
+        if self._computation_mesh is None:
+            # for large geometries, the creation of this mesh can take a long
+            # time... so we cache the mesh
+            self._computation_mesh = self.hc.points_to_compute()
+        return self._computation_mesh
 
     @property
     def hc(self):
@@ -546,7 +559,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         with transaction.commit_on_success(using='reslt_writer'):
             im = self.hc.intensity_measure_types_and_levels
-            points = self.hc.points_to_compute()
+            points = self.computation_mesh
 
             realizations = models.LtRealization.objects.filter(
                 hazard_calculation=self.hc.id)
@@ -660,7 +673,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
-            mesh = self.job.hazard_calculation.points_to_compute()
+            mesh = self.computation_mesh
 
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
@@ -880,7 +893,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             :class:`openquake.db.models.LtRealization` object to associate
             with these inital hazard curve values.
         """
-        num_points = len(self.hc.points_to_compute())
+        num_points = len(self.computation_mesh)
 
         im_data = self.hc.intensity_measure_types_and_levels
         for imt, imls in im_data.items():
@@ -938,9 +951,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
-                pass
+                self.progress['in_queue'] -= 1
 
             message.ack()
+            logs.LOG.info('A task was completed. Items now in queue: %s'
+                          % self.progress['in_queue'])
 
         return callback
 
@@ -995,6 +1010,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         # This basically just means that we could be
                         # under-utilizing worker node resources.
                         break
+                    else:
+                        self.progress['in_queue'] += 1
+
+                logs.LOG.info('Items now in queue: %s'
+                              % self.progress['in_queue'])
 
                 while (self.progress['computed'] < self.progress['total']):
                     # This blocks until a message is received.
@@ -1040,7 +1060,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.hc.points_to_compute())
+        num_sites = len(self.computation_mesh)
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
