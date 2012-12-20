@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-
+import pickle
 from risklib.curve import Curve
 
 
@@ -97,3 +97,8 @@ class CurveTestCase(unittest.TestCase):
         self.assertEqual(1.0, curve.ordinate_for(0.5))
         self.assertEqual(2.0, curve.ordinate_for(0.4))
         self.assertEqual(2.0, curve.ordinate_for(0.3))
+
+    def test_can_pickle(self):
+        curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
+        curve.ordinate_for(0.35)
+        self.assertEqual(pickle.loads(pickle.dumps(curve)), curve)
