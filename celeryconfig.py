@@ -42,6 +42,7 @@ BROKER_PASSWORD = amqp.get("password")
 BROKER_VHOST = amqp.get("vhost")
 
 CELERY_RESULT_BACKEND = "amqp"
+CELERYD_PREFETCH_MULTIPLIER = 1
 
 
 CELERY_IMPORTS = (
