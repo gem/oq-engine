@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhlib.gsim.toro_2002 import ToroEtAl2002
+from nhlib.gsim.toro_2002 import ToroEtAl2002, ToroEtAl2002SHARE
 
 from tests.gsim.utils import BaseGSIMTestCase
 
@@ -30,4 +30,15 @@ class ToroEtAl2002TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('TORO02/T02_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+class ToroEtAl2002SHARETestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ToroEtAl2002SHARE
+
+    def test_mean(self):
+        self.check('TORO02/T02SHARE_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('TORO02/T02SHARE_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
