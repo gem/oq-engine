@@ -191,25 +191,14 @@ class Campbell2003SHARE(Campbell2003):
 
         # apply faulting style and rock adjustment factor for mean and std
         mean = np.log(np.exp(mean) *
-                      self._compute_faulting_style_term(C_ADJ, rup.rake) *
-                      C_ADJ['AFrock'])
+                      _compute_faulting_style_term(C_ADJ['Frss'],
+                                                   self.CONSTS_FS['pR'],
+                                                   self.CONSTS_FS['Fnss'],
+                                                   self.CONSTS_FS['pN'],
+                                                   rup.rake) * C_ADJ['AFrock'])
         stddevs = np.array(stddevs) * C_ADJ['sig_AFrock']
 
         return mean, stddevs
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute faulting style term.
-        """
-        if rake > -120.0 and rake <= -60.0:
-            return (np.power(C['Frss'], 1 - self.CONSTS_FS['pR']) *
-                    np.power(self.CONSTS_FS['Fnss'], -self.CONSTS_FS['pN']))
-        elif rake > 30.0 and rake <= 150.0:
-            return (np.power(C['Frss'], - self.CONSTS_FS['pR']) *
-                    np.power(self.CONSTS_FS['Fnss'], 1 - self.CONSTS_FS['pN']))
-        else:
-            return (np.power(C['Frss'], - self.CONSTS_FS['pR']) *
-                    np.power(self.CONSTS_FS['Fnss'], - self.CONSTS_FS['pN']))
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
@@ -234,3 +223,15 @@ class Campbell2003SHARE(Campbell2003):
 
     #: Constants for faulting style adjustment
     CONSTS_FS = {'Fnss': 0.95, 'pN': 0.01, 'pR': 0.81}
+
+
+def _compute_faulting_style_term(Frss, pR, Fnss, pN, rake):
+    """
+    Compute SHARE faulting style adjustment term.
+    """
+    if rake > -120.0 and rake <= -60.0:
+        return np.power(Frss, 1 - pR) * np.power(Fnss, -pN)
+    elif rake > 30.0 and rake <= 150.0:
+        return np.power(Frss, - pR) * np.power(Fnss, 1 - pN)
+    else:
+        return np.power(Frss, - pR) * np.power(Fnss, - pN)
