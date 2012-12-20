@@ -29,24 +29,12 @@ class Curve(object):
         Construct a curve from a sequence of tuples.
 
         The value on the first position of the tuple is the x value,
-        the value(s) on the second position is the y value(s). This class
-        supports multiple y values for the same x value, for example:
-
-        Curve([(0.1, 1.0), (0.2, 2.0)]) # single y value
-        Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.5))]) # multiple y values
-
-        You can also pass lists instead of tuples, like:
-
-        Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
+        the value(s) on the second position is the y value(s).
         """
         pairs = sorted(pairs)  # sort the pairs on x axis
         npairs = len(pairs)
         self.abscissae = numpy.empty(npairs)
         self.ordinates = numpy.empty(npairs)
-
-        if npairs and type(pairs[0][1]) in (tuple, list):
-            self.ordinates = numpy.empty((npairs, len(pairs[0][1])))
-
         for index, (key, val) in enumerate(pairs):
             self.abscissae[index] = key
             self.ordinates[index] = val
@@ -89,13 +77,7 @@ class Curve(object):
         """Return true if this curve is numpy.empty, false otherwise."""
         return self.abscissae.size == 0
 
-    @property
-    def is_multi_value(self):
-        """Return true if this curve describes multiple ordinate values,
-        false otherwise."""
-        return self.ordinates.ndim > 1
-
-    def ordinate_for(self, x_value, y_index=0):
+    def ordinate_for(self, x_value):
         """
         Return the y value corresponding to the given x value.
         interp1d parameters are a list of abscissae, ordinates.
@@ -104,8 +86,7 @@ class Curve(object):
         """
         if hasattr(self, 'interp'):  # cached interpolated curve
             return self.interp(range_clip(x_value, self.abscissae))
-        self.interp = interp1d(self.abscissae, self.ordinates[:, y_index]
-                               if self.is_multi_value else self.ordinates)
+        self.interp = interp1d(self.abscissae, self.ordinates)
         return self.interp(range_clip(x_value, self.abscissae))
 
     def abscissa_for(self, y_value):
@@ -123,6 +104,5 @@ class Curve(object):
         Check if the given value is outside the Y values boundaries.
         """
         return y_value < min(self.ordinates) or y_value > max(self.ordinates)
-
 
 EMPTY_CURVE = Curve(())

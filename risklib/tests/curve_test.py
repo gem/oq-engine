@@ -87,16 +87,9 @@ class CurveTestCase(unittest.TestCase):
         curve1 = Curve([(0.1, 1.0), (0.2, 2.0)])
         curve2 = Curve([(0.1, 1.0), (0.2, 2.0)])
         curve3 = Curve([(0.1, 1.0), (0.2, 5.0)])
-        curve4 = Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve5 = Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve6 = Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.3))])
 
         self.assertEquals(curve1, curve2)
         self.assertNotEquals(curve1, curve3)
-        self.assertNotEquals(curve1, curve4)
-        self.assertNotEquals(curve3, curve4)
-        self.assertEquals(curve4, curve5)
-        self.assertNotEquals(curve5, curve6)
 
     def test_can_construct_with_unordered_values(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
