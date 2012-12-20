@@ -19,8 +19,6 @@ Module exports :class:`YoungsEtAl1997SInter`, class:`YoungsEtAl1997SSlab`.
 from __future__ import division
 
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
 
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
@@ -36,7 +34,7 @@ class YoungsEtAl1997SInter(GMPE):
     This class implements the equations for 'Subduction Interface' (that's why
     the class name ends with 'SInter').
     Mean value for SA at 4 s on rock (not originally supported) is obtained
-    from mean value at 3 s scaled by a factor equal to 0.399
+    from mean value at 3 s divided by a factor equal to 0.399
     (scaling factor computed in the context of the SHARE project obtained as
     average ratio between median values at 4 and 3 seconds as predicted by
     SHARE subduction GMPEs).
@@ -101,7 +99,7 @@ class YoungsEtAl1997SInter(GMPE):
             self._compute_std(C, rup.mag, stddevs, idx_rock)
 
             if imt == SA(period=4.0, damping=5.0):
-                mean = mean * 0.399
+                mean = mean / 0.399
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
@@ -198,7 +196,7 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
     This class implements the equations for 'Subduction IntraSlab' (that's why
     the class name ends with 'SSlab').
     Mean value for SA at 4 s on rock (not originally supported) is obtained
-    from mean value at 3 s scaled by a factor equal to 0.399
+    from mean value at 3 s divided by a factor equal to 0.399
     (scaling factor computed in the context of the SHARE project obtained as
     average ratio between median values at 4 and 3 seconds as predicted by
     SHARE subduction GMPEs).
@@ -220,7 +218,7 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
         idx_soil = sites.vs30 < self.ROCK_VS30
 
         if imt == SA(period=4.0, damping=5.0):
-            mean[idx_rock] += 0.3846 * 0.399
+            mean[idx_rock] += 0.3846 / 0.399
         else:
             mean[idx_rock] += 0.3846
 
