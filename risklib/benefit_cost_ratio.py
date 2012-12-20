@@ -41,12 +41,12 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 
 
 def mean(values):
-	"Averages between a value and the next value in a sequence"
+    "Averages between a value and the next value in a sequence"
     return map(numpy.mean, zip(values, values[1:]))
 
 
 def diff(values):
-	"Differences between a value and the next value in a sequence"
+    "Differences between a value and the next value in a sequence"
     return [x - y for x, y in zip(values, values[1:])]
 
 
