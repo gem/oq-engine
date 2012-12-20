@@ -426,7 +426,7 @@ def complain_and_exit(msg, exit_code=0):
 
 def expuser(path):
     """
-    Shorthand wrapped around :func:`os.path.expanduser`.
+    Shorthand wrapper around :func:`os.path.expanduser`.
     """
     return os.path.expanduser(path)
 
