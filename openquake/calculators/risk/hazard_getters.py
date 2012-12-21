@@ -177,6 +177,6 @@ class GroundMotionValuesGetter(object):
 
 
 HAZARD_GETTERS = dict(
-    hazard_curve_getter_by_query=HazardCurveGetterPerAsset,
-    ground_motion_field_getter_by_query=GroundMotionValuesGetter,
+    hazard_curve=HazardCurveGetterPerAsset,
+    ground_motion_field=GroundMotionValuesGetter,
 )
