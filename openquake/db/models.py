@@ -121,7 +121,7 @@ def inputs4hcalc(calc_id, input_type=None):
 
 def inputs4rcalc(calc_id, input_type=None):
     """
-    Get all of the inputs for a given hazard calculation.
+    Get all of the inputs for a given risk calculation.
 
     :param int calc_id:
         ID of a :class:`RiskCalculation`.
@@ -407,19 +407,6 @@ class Input(djm.Model):
     # Number of bytes in the file:
     size = djm.IntegerField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def model(self):
-        """The model associated with this input or `None`.
-
-        :returns: the appropriate model if one exists or `None`
-        """
-        assert self.input_type in ("exposure", "fragility"), (
-            "unsupported model type (%s)" % self.input_type)
-        attr = "%smodel_set" % self.input_type
-        qm = getattr(self, attr)
-        models = qm.all()
-        if models:
-            return models[0]
 
     def __str__(self):
         path_suffix = "/".join(self.path.rsplit(os.sep, 2)[1:])
@@ -951,7 +938,7 @@ class RiskCalculation(djm.Model):
 
     # A seed used to generate random values to be applied to
     # vulnerability functions
-    master_seed = djm.IntegerField()
+    master_seed = djm.IntegerField(null=True, blank=True)
 
     ##################################
     # Probabilistic shared parameters
@@ -960,14 +947,8 @@ class RiskCalculation(djm.Model):
         (u'perfect', u'Perfect'),
         (u'uncorrelated', u'Uncorrelated'),
     )
-    asset_correlation = djm.TextField(null=True,
+    asset_correlation = djm.TextField(null=True, blank=True,
                                       choices=ASSET_CORRELATION_CHOICES)
-
-    # the intensity measure type used to filter hazard ground motion
-    # collection.
-    imt = djm.TextField(null=True, validators=[
-        validators.RegexValidator("PGA|'SA\(([^)]+?)\)'"),
-        "Incorrect intensity measure type"])
 
     #######################
     # Classical parameters:
@@ -1037,6 +1018,9 @@ class RiskCalculation(djm.Model):
         The model associated with this risk calculation with input of
         type `input_type`
         """
+
+        # FIXME(lp). Although we store all the risk models we only use
+        # the first one
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
@@ -2374,7 +2358,9 @@ class VulnerabilityModel(djm.Model):
     input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
-    imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
+    imt = djm.TextField(null=True, blank=True, validators=[
+        validators.RegexValidator("PGA|SA\([^)]+?\)",
+                                  "Incorrect intensity measure type")])
     imls = fields.FloatArrayField()
     asset_category = djm.TextField()
     loss_category = djm.TextField()

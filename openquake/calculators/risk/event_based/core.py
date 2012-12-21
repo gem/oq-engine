@@ -37,6 +37,25 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     celery_task = event_based
 
+    def pre_execute(self):
+        """
+        In Event Based we get the intensity measure type considered
+        from the vulnerability model, then we check that the hazard
+        calculation includes outputs with that intensity measure type
+        """
+        super(EventBasedRiskCalculator, self).pre_execute()
+
+        imt = self.rc.model("vulnerability").imt
+
+        hc = self.rc.hazard_output.oq_job.hazard_calculation
+
+        allowed_imts = hc.intensity_measure_types_and_levels.keys()
+
+        if not imt in allowed_imts:
+            raise RuntimeError(
+                "There is not ground motion field in the intensity measure %s" %
+                imt)
+
     @property
     def hazard_id(self):
         """
