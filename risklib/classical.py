@@ -27,11 +27,12 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
     :param vuln_function:
         The vulnerability function used to compute the LREM.
     :type vuln_function:
-        :class:`openquake.shapes.VulnerabilityFunction`
+        :class:`risklib.vulnerability_function.VulnerabilityFunction`
     :param int steps:
         Number of steps between loss ratios.
     """
-    loss_ratios = _loss_ratios(vuln_function, steps)
+    loss_ratios = _evenly_spaced_loss_ratios(
+        vuln_function.loss_ratios, steps, [0.0], [1.0])
 
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number of imls
@@ -129,7 +130,7 @@ def _loss_ratio_curve(vuln_function, lrem, hazard_curve_values, steps):
 
     :param vuln_function: the vulnerability function used
         to compute the curve.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
     :param hazard_curve_values: the hazard curve used to compute the curve.
     :type hazard_curve_values: an association list with the
     imls/values of the hazard curve
@@ -138,7 +139,8 @@ def _loss_ratio_curve(vuln_function, lrem, hazard_curve_values, steps):
     """
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
         vuln_function, lrem, hazard_curve_values)
-    loss_ratios = _loss_ratios(vuln_function, steps)
+    loss_ratios = _evenly_spaced_loss_ratios(
+        vuln_function.loss_ratios, steps, [0.0], [1.0])
     return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
 
@@ -148,7 +150,7 @@ def _loss_ratio_exceedance_matrix_per_poos(
 
     :param vuln_function: the vulnerability function used
         to compute the matrix.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
     :param hazard_curve: the hazard curve used to compute the matrix.
     :type hazard_curve_values: an association list with the hazard
     curve imls/values
@@ -166,37 +168,22 @@ def _loss_ratio_exceedance_matrix_per_poos(
     return lrem_po
 
 
-def _loss_ratios(vuln_function, steps):
-    """Generate the set of loss ratios used to compute the LREM
-    (Loss Ratio Exceedance Matrix).
-
-    :param vuln_function:
-        The vulnerability function where the loss ratios are taken from.
-    :type vuln_function:
-        :class:`risklib.vulnerability_function.VulnerabilityFunction`
-    :param int steps:
-        Number of steps between loss ratios.
-    """
-    # we manually add 0.0 as first loss ratio and 1.0 as last loss ratio
-    loss_ratios = concatenate(
-        (array([0.0]), vuln_function.loss_ratios, array([1.0])))
-    return _evenly_spaced_loss_ratios(loss_ratios, steps)
-
-
-def _evenly_spaced_loss_ratios(loss_ratios, steps):
+def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     """
     Split the loss ratios, producing a new set of loss ratios.
 
     :param loss_ratios: the loss ratios to split.
     :type loss_ratios: list of floats
-    :param steps: the number of steps we make to go from one loss
+    :param int steps: the number of steps we make to go from one loss
         ratio to the next. For example, if we have [1.0, 2.0]:
 
         steps = 1 produces [1.0, 2.0]
         steps = 2 produces [1.0, 1.5, 2.0]
         steps = 3 produces [1.0, 1.33, 1.66, 2.0]
-    :type steps: integer
+    :param first: optional array of ratios to put first (ex. [0.0])
+    :param last: optional array of ratios to put last (ex. [1.0])
     """
-    ls = [linspace(x, y, num=steps + 1)[:-1]
-          for x, y in zip(loss_ratios, loss_ratios[1:])]
-    return concatenate([concatenate(ls), [loss_ratios[-1]]])
+    loss_ratios = concatenate([first, loss_ratios, last])
+    ls = concatenate([linspace(x, y, num=steps + 1)[:-1]
+                      for x, y in zip(loss_ratios, loss_ratios[1:])])
+    return concatenate([ls, [loss_ratios[-1]]])

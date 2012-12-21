@@ -156,8 +156,8 @@ class ScenarioDamage(object):
 
         ddmatrix = scenario_damage._make_damage_distribution_matrix(
             self.fragility_model, hazard)
-        asset_fractions = self._fractions_per_taxonomy.get(taxonomy, ddmatrix)
 
+        asset_fractions = self._fractions_per_taxonomy.get(taxonomy, ddmatrix)
         self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
         return output.ScenarioDamageOutput(
             asset, damage_distribution_asset, collapse_map)
