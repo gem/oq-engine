@@ -126,15 +126,23 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def create_outputs(self):
         """
-        Add Aggregate loss curve output containers
+        Add Aggregate loss curve and Insured Curve output containers
         """
         outputs = super(EventBasedRiskCalculator, self).create_outputs()
         outputs['aggregate_loss_curve_id'] = (
-            models.AggregateLossCurveData.objects.create(
+            models.LossCurve.objects.create(
+                aggregate=True,
                 output=models.Output.objects.create_output(
                     self.job,
                     "Aggregate Loss Curve Set",
                     "agg_loss_curve")).id)
+        outputs['insured_curve_id'] = (
+            models.LossCurve.objects.create(
+                insured=True,
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "Insured Loss Curve Set",
+                    "insured_loss_curve")).id)
         return outputs
 
     @property
