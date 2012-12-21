@@ -455,6 +455,9 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'no_progress_timeout',
             'region_constraint',
             'loss_curve_resolution',
+            'insured_losses',
+            'master_seed',
+            'asset_correlation',
             )
 
 
@@ -864,6 +867,16 @@ def loss_curve_resolution_is_valid(mdl):
         if (mdl.loss_curve_resolution is not None and
             mdl.loss_curve_resolution < 1):
             return False, ['Loss Curve Resolution must be > 1.']
+    return True, []
+
+
+def asset_correlation_is_valid(_mdl):
+    # The validation form should check if it is in the list
+    # We don't need to check anything here.
+    return True, []
+
+
+def master_seed_is_valid(_mdl):
     return True, []
 
 
