@@ -18,7 +18,6 @@ from scipy import sqrt, log, stats
 from numpy import array, empty, concatenate, linspace
 
 from risklib.curve import Curve
-from risklib.vulnerability_function import _mean_imls
 
 
 def _loss_ratio_exceedance_matrix(vuln_function, steps):
@@ -108,9 +107,10 @@ def _conditional_loss(curve, probability):
     Return zero if the given PoE is greater than the
     highest PoE defined.
     """
+    # the loss curve is always decreasing
     if curve.ordinate_out_of_bounds(probability):
-        if probability < curve.ordinates[-1]:
-            return curve.abscissae[-1]
+        if probability < curve.ordinates[-1]:  # min PoE
+            return curve.abscissae[-1]  # max loss
         else:
             return 0.0
 
@@ -157,12 +157,12 @@ def _loss_ratio_exceedance_matrix_per_poos(
     """
     lrem = array(lrem)
     lrem_po = empty(lrem.shape)
-    imls = _mean_imls(vuln_function)
+    imls = vuln_function.mean_imls()
     if hazard_curve_values:
         # compute the PoOs (Probability of Occurence) from the PoEs
         pos = Curve(hazard_curve_values).ordinate_diffs(imls)
         for idx, po in enumerate(pos):
-            lrem_po[:, idx] = lrem[:, idx] * po
+            lrem_po[:, idx] = lrem[:, idx] * po  # column * po
     return lrem_po
 
 

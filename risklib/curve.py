@@ -43,10 +43,15 @@ class Curve(object):
         self._inverse = None  # set by abscissa_for
 
     @property
-    def interp(self):
-        """Cached attribute. Returns the interpolated function."""
+    def ordinate_for(self):
+        """
+        Cached attribute. Returns the interpolated function.
+        This is very useful to speed up the computation and feed
+        "directly" numpy.
+        """
         if self._interp is None:
-            self._interp = interp1d(self.abscissae, self.ordinates)
+            i1d = interp1d(self.abscissae, self.ordinates)
+            self._interp = lambda x: i1d(range_clip(x, self.abscissae))
         return self._interp
 
     @property
@@ -85,16 +90,10 @@ class Curve(object):
         newcurve.ordinates = self.ordinates
         return newcurve
 
-    def ordinate_for(self, x_value):
-        """
-        Return the y value corresponding to the given x value.
-        interp1d parameters are a list of abscissae, ordinates.
-        This is very useful to speed up the computation and feed
-        "directly" numpy.
-        """
-        return self.interp(range_clip(x_value, self.abscissae))
-
     def ordinate_diffs(self, xs):
+        """
+        Returns the differences y_i - y_{i+1} for the given x_i
+        """
         ys = self.ordinate_for(xs)
         return [i - j for i, j in zip(ys, ys[1:])]
 
