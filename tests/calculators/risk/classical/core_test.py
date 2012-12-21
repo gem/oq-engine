@@ -49,7 +49,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
                             0,
                             assets_per_task=3,
                             exposure_model_id=exposure_model_id,
-                            hazard_getter="one_query_per_asset",
+                            hazard_getter="hazard_curve",
                             hazard_id=hazard_id,
                             region_constraint=region_constraint,
                             loss_curve_id=loss_curve_id,

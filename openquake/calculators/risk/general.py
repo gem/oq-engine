@@ -179,6 +179,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         raise NotImplementedError
 
     @property
+    def hazard_getter(self):
+        """
+        :returns: a key for the dict
+        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
+        to get the hazard getter used by the calculator.
+        """
+        raise NotImplementedError
+
+    @property
     def rc(self):
         """
         A shorter and more convenient way of accessing the
