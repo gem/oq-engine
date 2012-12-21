@@ -69,3 +69,13 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field")
 
         return self.rc.hazard_output.gmfcollection.id
+
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "ground_motion_field"
