@@ -965,7 +965,7 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_demo, hazard_demo, username=None):
+def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     """
     Takes in input the paths (relative to the demos directory) to a
     risk and hazard demo file config, respectively.
@@ -974,6 +974,8 @@ def get_risk_job(risk_demo, hazard_demo, username=None):
     calculation and then creates a :class:`openquake.db.models.OqJob`
     object for a risk calculation. It also returns the input files
     referenced by the risk config file.
+
+    :param output_type: gmf or curve
     """
     username = username if username is not None else default_user().user_name
 
@@ -984,23 +986,41 @@ def get_risk_job(risk_demo, hazard_demo, username=None):
 
     risk_cfg = demo_file(risk_demo)
 
-    # FIXME: do we really need to create an HazardCurve to test a
-    # calculator?
-    hazard_output = models.HazardCurveData.objects.create(
-        hazard_curve=models.HazardCurve.objects.create(
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "hazard_curve"),
-            investigation_time=hc.investigation_time,
-            imt="PGA", imls=[0.1, 0.2, 0.3],
-            statistics="mean"),
-        poes=[0.1, 0.2, 0.3],
-        location="POINT(1 1)")
+    if output_type == "curve":
+        hazard_output = models.HazardCurveData.objects.create(
+            hazard_curve=models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    hazard_job, "Test Hazard output", "hazard_curve"),
+                    investigation_time=hc.investigation_time,
+                    imt="PGA", imls=[0.1, 0.2, 0.3],
+                    statistics="mean"),
+                    poes=[0.1, 0.2, 0.3],
+                    location="POINT(1 1)")
+    else:
+        hazard_output = models.Gmf.objects.create(
+            gmf_set=models.GmfSet.objects.create(
+                gmf_collection=models.GmfCollection.objects.create(
+                    output=models.Output.objects.create_output(
+                        hazard_job, "Test Hazard output", "gmf"),
+                    lt_realization=None,
+                    complete_logic_tree_gmf=True),
+                investigation_time=hc.investigation_time,
+                ses_ordinal=None,
+                complete_logic_tree_gmf=True),
+                imt="PGA", gmvs=[0.1, 0.2, 0.3],
+                result_grp_ordinal=1,
+                location="POINT(1 1)")
 
     job = engine2.prepare_job(username)
     params, files = engine2.parse_config(
         open(risk_cfg, 'r'), force_inputs=True)
 
-    params.update(dict(hazard_output_id=hazard_output.hazard_curve.output.id))
+    if output_type == "curve":
+        params.update(
+            dict(hazard_output_id=hazard_output.hazard_curve.output.id))
+    else:
+        output = hazard_output.gmf_set.gmf_collection.output
+        params.update(dict(hazard_output_id=output.id))
 
     risk_calc = engine2.create_risk_calculation(
         job.owner, params, files.values())
