@@ -405,7 +405,7 @@ def store_risk_model(rc, input_type):
             models.VulnerabilityModel.objects.get_or_create(
                 owner=vulnerability_input.owner,
                 input=vulnerability_input,
-                imt=record['IMT'].lower(), imls=record['IML'],
+                imt=record['IMT'], imls=record['IML'],
                 name=record['vulnerabilitySetID'],
                 asset_category=record['assetCategory'],
                 loss_category=record['lossCategory']))

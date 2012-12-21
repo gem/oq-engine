@@ -409,6 +409,10 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
+    -- probabilistic parameters
+    asset_correlation VARCHAR NULL,
+    master_seed INTEGER NULL,
+  
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
@@ -1623,8 +1627,7 @@ CREATE TABLE riski.vulnerability_model (
     input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
+    imt VARCHAR NOT NULL,
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     asset_category VARCHAR NOT NULL,
