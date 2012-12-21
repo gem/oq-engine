@@ -97,7 +97,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         if not imt in allowed_imts:
             raise RuntimeError(
-                "There is not ground motion field in the intensity measure %s" %
+                "There is no ground motion field in the intensity measure %s" %
                 imt)
 
     @property
