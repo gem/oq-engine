@@ -53,7 +53,13 @@ def diff(values):
 def mean_loss(curve):
     """
     Compute the mean loss (or loss ratio) for the given curve.
+    For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
+    (x4, y4)], returns
+
+      x1 + 2x2 + x3  y1 - y3    x2 + 2x3 + x4  y2 - y4
+    [(-------------, -------), (-------------, -------)]
+           4             2            4           4
     """
     mean_ratios = mean(mean(curve.abscissae))  # not clear why it is done twice
-    mean_pes = diff(mean(curve.ordinates))  # was the original code stupid?
+    mean_pes = diff(mean(curve.ordinates))
     return numpy.dot(mean_ratios, mean_pes)
