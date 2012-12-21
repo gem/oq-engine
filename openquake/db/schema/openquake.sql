@@ -409,6 +409,10 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
+    -- probabilistic parameters
+    asset_correlation VARCHAR NULL,
+    master_seed INTEGER NULL,
+  
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
@@ -1421,7 +1425,7 @@ ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
 -- levels of losses for the whole exposure model.
 CREATE TABLE riskr.aggregate_loss_curve_data (
     id SERIAL PRIMARY KEY,
-    loss_curve_id INTEGER NOT NULL,
+    output_id INTEGER NOT NULL,
 
     losses float[] NOT NULL CONSTRAINT non_negative_losses
         CHECK (0 <= ALL(losses)),
@@ -1623,8 +1627,7 @@ CREATE TABLE riski.vulnerability_model (
     input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
+    imt VARCHAR NOT NULL,
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     asset_category VARCHAR NOT NULL,
@@ -2036,8 +2039,8 @@ ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.aggregate_loss_curve_data
-ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
-FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
+ADD CONSTRAINT riskr_aggregate_loss_curve_data_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
