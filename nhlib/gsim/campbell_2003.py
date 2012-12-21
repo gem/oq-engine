@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`Campbell2003`,class:`Campbell2003SHARE`
+Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`
 """
 from __future__ import division
 
@@ -169,7 +169,7 @@ class Campbell2003(GMPE):
 
 class Campbell2003SHARE(Campbell2003):
     """
-    Extends :class:`~nhlib.gsim.campbell2003.Campbell2003` and introduces
+    Extends :class:`~nhlib.gsim.campbell_2003.Campbell2003` and introduces
     adjustments for style of faulting and default rock soil conditions as
     needed by the SHARE (http://www.share-eu.org/) project.
     """
