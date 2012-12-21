@@ -1,5 +1,5 @@
 ====================
-Faccioli at al. 2010
+Faccioli et al. 2010
 ====================
 
 .. module:: nhlib.gsim.faccioli_2010
