@@ -33,6 +33,9 @@ class AkkarBommer2010(GMPE):
     and published as "Empirical Equations for the Prediction of PGA, PGV,
     and Spectral Accelerations in Europe, the Mediterranean Region, and
     the Middle East", Seismological Research Letters, 81(2), 195-206.
+    SA at 4 s (not supported by the original equations) has been added in the
+    context of the SHARE project and assumed to be equal to SA at 3 s but
+    scaled with proper factor.
     """
     #: Supported tectonic region type is 'active shallow crust' because the
     #: equations have been derived from data from Southern Europe, North
@@ -93,6 +96,10 @@ class AkkarBommer2010(GMPE):
         else:
             # PGV:
             mean = np.log(10.0 ** imean)
+
+        # apply scaling factor for SA at 4 s
+        if isinstance(imt, SA) and imt.period == 4.0:
+            mean /= 0.8
 
         istddevs = self._get_stddevs(C, stddev_types,
                                      num_sites=len(sites.vs30))
@@ -250,5 +257,6 @@ class AkkarBommer2010(GMPE):
     2.90    -6.99332    2.52699    -0.16303    -1.89704    0.15039    7.45038    0.30362     0.13776    -0.04203    -0.02615    0.2874    0.1784    0.338268119
     2.95    -6.95669    2.51006    -0.16142    -1.90132    0.15081    7.60234    0.29987     0.13584    -0.03863    -0.02487    0.2872    0.1783    0.338045456
     3.00    -6.92924    2.45899    -0.15513    -1.76801    0.13314    7.21950    0.29772     0.13198    -0.03855    -0.02469    0.2876    0.1785    0.338490783
+    4.00    -6.92924    2.45899    -0.15513    -1.76801    0.13314    7.21950    0.29772     0.13198    -0.03855    -0.02469    0.2876    0.1785    0.338490783
     pgv    -2.12833    1.21448    -0.08137    -2.46942    0.22349    6.41443    0.20354     0.08484    -0.05856     0.01305    0.2562    0.1083    0.278149834
     """)
