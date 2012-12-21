@@ -1398,7 +1398,8 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    aggregate BOOLEAN NOT NULL DEFAULT false
+    aggregate BOOLEAN NOT NULL DEFAULT false,
+    insured BOOLEAN NOT NULL DEFAULT false
 ) TABLESPACE riskr_ts;
 
 

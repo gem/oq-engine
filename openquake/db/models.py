@@ -956,6 +956,13 @@ class RiskCalculation(djm.Model):
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
     conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
 
+    #########################
+    # Event-Based parameters:
+    #########################
+    loss_curve_resolution = djm.IntegerField(
+        null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
+    insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
+
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
     ######################################
@@ -2033,6 +2040,7 @@ class LossCurve(djm.Model):
 
     output = djm.OneToOneField("Output")
     aggregate = djm.BooleanField(default=False)
+    insured = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'

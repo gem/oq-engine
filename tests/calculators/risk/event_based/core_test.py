@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import mock
 from tests.utils import helpers
 from tests.calculators.risk import general_test
 
@@ -67,3 +68,40 @@ class EventBasedRiskCalculatorTestCase(
         patch.start()
         self.assertRaises(RuntimeError, self.calculator.pre_execute)
         patch.stop()
+
+    def test_celery_task(self):
+        # Test that the celery task when called properly call the
+        # specific method to write loss curves
+
+        self.calculator.pre_execute()
+        self.job.is_running = True
+        self.job.status = 'executing'
+        self.job.save()
+
+        hazard_id = self.job.risk_calculation.hazard_output.gmfcollection.id
+
+        patch = helpers.patch(
+            'openquake.calculators.risk.general.write_loss_curve')
+        mocked_writer = patch.start()
+
+        loss_curve_id = mock.Mock()
+        exposure_model_id = self.job.risk_calculation.model('exposure').id
+        region_constraint = self.job.risk_calculation.region_constraint
+        event_based.event_based(self.job.id,
+                            0,
+                            assets_per_task=3,
+                            exposure_model_id=exposure_model_id,
+                            hazard_getter="ground_motion_field",
+                            hazard_id=hazard_id,
+                            region_constraint=region_constraint,
+                            loss_curve_id=loss_curve_id,
+                            insured_curve_id=None,
+                            loss_map_ids={},
+                            insured_losses=False,
+                            conditional_loss_poes=[],
+                            seed=None)
+        patch.stop()
+
+        # we expect 1 asset being filtered out by the region
+        # constraint, so there are only two loss curves to be written
+        self.assertEqual(2, mocked_writer.call_count)
