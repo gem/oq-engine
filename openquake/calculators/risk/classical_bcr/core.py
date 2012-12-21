@@ -125,3 +125,13 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
         general.store_risk_model(self.rc, "vulnerability_retrofitted")
+
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "hazard_curve"

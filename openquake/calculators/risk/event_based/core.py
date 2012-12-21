@@ -116,12 +116,18 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     @property
     def calculation_parameters(self):
+        """
+        Calculator specific parameters
+        """
         return dict(
             loss_curve_resolution=self.rc.loss_curve_resolution,
             seed=self.rc.master_seed,
             asset_correlation=self.rc.asset_correlation)
 
     def create_outputs(self):
+        """
+        Add Aggregate loss curve output containers
+        """
         outputs = super(EventBasedRiskCalculator, self).create_outputs()
         outputs['aggregate_loss_curve_id'] = (
             models.AggregateLossCurveData.objects.create(
@@ -130,3 +136,13 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                     "Aggregate Loss Curve Set",
                     "agg_loss_curve")).id)
         return outputs
+
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "ground_motion_field"
