@@ -253,26 +253,18 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         job = self.job
 
+        # add loss curve containers
         outputs = dict(
             loss_curve_id=models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
-                    job, "Loss Curve set", "loss_curve")).pk)
+                    job, "Loss Curve set", "loss_curve")).pk,
+            loss_map_ids=dict())
 
-        poes = self.rc.conditional_loss_poes or []
-
-        def create_loss_map(poe):
-            """
-            Given a poe create a loss map output container associated
-            with the current job
-            """
-            return models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
-        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
-                                       for poe in poes)
+        # loss maps containers
+        for poe in self.rc.conditional_loss_poes:
+            outputs['loss_map_ids'][poe] = models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    job, "Loss Map poe=%s" % poe, "loss_map")).pk
         return outputs
 
 
@@ -422,8 +414,7 @@ def store_risk_model(rc, input_type):
     :param rc: the current :class:`openquake.db.models.RiskCalculation`
     instance
     """
-    [vulnerability_input] = models.inputs4rcalc(
-        rc.id, input_type=input_type)
+    [vulnerability_input] = models.inputs4rcalc(rc.id, input_type=input_type)
 
     for record in risk.VulnerabilityModelFile(
             vulnerability_input.path):
