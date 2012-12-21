@@ -15,3 +15,8 @@
 
 """This package contains functionality for querying and exporting calculation
 results"""
+
+
+from openquake.export import risk
+
+__all__ = (risk.__name__,)
