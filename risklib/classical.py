@@ -108,15 +108,13 @@ def _conditional_loss(curve, probability):
     Return zero if the given PoE is greater than the
     highest PoE defined.
     """
-    loss_curve = curve.with_unique_ordinates()
-
-    if loss_curve.ordinate_out_of_bounds(probability):
-        if probability < loss_curve.ordinates[-1]:
-            return loss_curve.abscissae[-1]
+    if curve.ordinate_out_of_bounds(probability):
+        if probability < curve.ordinates[-1]:
+            return curve.abscissae[-1]
         else:
             return 0.0
 
-    return loss_curve.abscissa_for(probability)
+    return curve.abscissa_for(probability)
 
 
 def _loss_ratio_curve(vuln_function, lrem, hazard_curve_values, steps):

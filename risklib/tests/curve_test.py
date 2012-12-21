@@ -76,7 +76,7 @@ class CurveTestCase(unittest.TestCase):
 
         curve = Curve(zip(vals, vals))
 
-        self.assertRaises(AssertionError, curve.abscissa_for, vals)
+        self.assertRaises(ValueError, curve.abscissa_for, vals)
 
     def test_abscissa_for_with_multiple_yvals(self):
         """ tests the correctness of the abscissa method """
@@ -102,6 +102,7 @@ class CurveTestCase(unittest.TestCase):
     def test_can_pickle(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
         curve.ordinate_for(0.35)
+        curve.abscissa_for(1.35)
         self.assertEqual(pickle.loads(pickle.dumps(curve)), curve)
 
     def test_ordinate_diffs(self):

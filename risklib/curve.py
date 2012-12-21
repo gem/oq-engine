@@ -39,11 +39,12 @@ class Curve(object):
             self.abscissae[index] = key
             self.ordinates[index] = val
         self.interp = None  # set by ordinate_for
+        self.inverse = None  # set by abscissa_for
 
     # so that the curve is pickeable even if self.interp has been instantiated
     def __getstate__(self):
         return dict(abscissae=self.abscissae, ordinates=self.ordinates,
-                    interp=None)
+                    interp=None, inverse=self.inverse)
 
     def __eq__(self, other):
         return numpy.allclose(self.abscissae, other.abscissae)\
@@ -64,15 +65,6 @@ class Curve(object):
         newcurve.abscissae = self.abscissae * value
         newcurve.ordinates = self.ordinates
         return newcurve
-
-    def with_unique_ordinates(self):
-        """
-        Given `curve` return a new curve with unique ordinates. Points
-        are just copied except for points with the same ordinate for
-        which only the last one is kept.
-        """
-        reverse = dict(zip(self.ordinates, self.abscissae))
-        return self.__class__((v, k) for k, v in reverse.iteritems())
 
     @property
     def is_empty(self):
@@ -98,10 +90,15 @@ class Curve(object):
     def abscissa_for(self, y_value):
         """
         Return the x value corresponding to the given y value.
+        Notice that non-invertible function are inverted by
+        discarding duplicated y values for the same x!
+        Mathematicians would cry.
         """
-        # inverting the function
-        inverted_func = zip(self.ordinate_for(self.abscissae), self.abscissae)
-        return Curve(inverted_func).ordinate_for(y_value)
+        if self.inverse is not None:  # already computed
+            return self.inverse.ordinate_for(y_value)
+        with_unique_ys = dict(zip(self.ordinates, self.abscissae))
+        self.inverse = self.__class__(with_unique_ys.iteritems())
+        return self.inverse.ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
         """
