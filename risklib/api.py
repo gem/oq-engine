@@ -119,8 +119,7 @@ class Classical(object):
             vulnerability_function, self.matrices[asset.taxonomy],
             hazard, self.steps)
 
-        loss_curve = classical._loss_curve(
-            loss_ratio_curve, asset.value)
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
         return output.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
@@ -179,9 +178,10 @@ class ConditionalLosses(object):
 
     def __call__(self, asset, hazard):
         asset_output = self.loss_curve_calculator(asset, hazard)
-        return asset_output._replace(
-            conditional_losses=classical._conditional_losses(
-                asset_output.loss_curve, self.conditional_loss_poes))
+        cl = dict((poe,
+                   classical._conditional_loss(asset_output.loss_curve, poe))
+                  for poe in self.conditional_loss_poes)
+        return asset_output._replace(conditional_losses=cl)
 
 
 class BCR(object):

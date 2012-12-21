@@ -38,10 +38,12 @@ class Curve(object):
         for index, (key, val) in enumerate(pairs):
             self.abscissae[index] = key
             self.ordinates[index] = val
+        self.interp = None  # set by ordinate_for
 
     # so that the curve is pickeable even if self.interp has been instantiated
     def __getstate__(self):
-        return dict(abscissae=self.abscissae, ordinates=self.ordinates)
+        return dict(abscissae=self.abscissae, ordinates=self.ordinates,
+                    interp=None)
 
     def __eq__(self, other):
         return numpy.allclose(self.abscissae, other.abscissae)\
@@ -84,19 +86,21 @@ class Curve(object):
         This is very useful to speed up the computation and feed
         "directly" numpy.
         """
-        if hasattr(self, 'interp'):  # cached interpolated curve
+        if self.interp is not None:  # cached interpolated curve
             return self.interp(range_clip(x_value, self.abscissae))
         self.interp = interp1d(self.abscissae, self.ordinates)
         return self.interp(range_clip(x_value, self.abscissae))
+
+    def ordinate_diffs(self, xs):
+        ys = self.ordinate_for(xs)
+        return [i - j for i, j in zip(ys, ys[1:])]
 
     def abscissa_for(self, y_value):
         """
         Return the x value corresponding to the given y value.
         """
         # inverting the function
-        inverted_func = [(ordinate, x_value) for ordinate, x_value in
-                         zip(self.ordinate_for(self.abscissae),
-                             self.abscissae)]
+        inverted_func = zip(self.ordinate_for(self.abscissae), self.abscissae)
         return Curve(inverted_func).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):

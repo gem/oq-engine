@@ -128,23 +128,23 @@ sb = TestData(  # sample based test data
 
     expected_losses=Triplet(
         a1=numpy.array([
-                0.0234332852886, 0.0702998558659,
-                0.117166426443, 0.16403299702,
-                0.210899567598, 0.257766138175,
-                0.304632708752, 0.351499279329,
-                0.398365849907]),
+            0.0234332852886, 0.0702998558659,
+            0.117166426443, 0.16403299702,
+            0.210899567598, 0.257766138175,
+            0.304632708752, 0.351499279329,
+            0.398365849907]),
         a2=numpy.array([
-                0.0112780780331, 0.0338342340993,
-                0.0563903901655, 0.0789465462317,
-                0.101502702298, 0.124058858364,
-                0.14661501443, 0.169171170497,
-                0.191727326563]),
+            0.0112780780331, 0.0338342340993,
+            0.0563903901655, 0.0789465462317,
+            0.101502702298, 0.124058858364,
+            0.14661501443, 0.169171170497,
+            0.191727326563]),
         a3=numpy.array([
-                0.00981339568577, 0.0294401870573,
-                0.0490669784288, 0.0686937698004,
-                0.0883205611719, 0.107947352543,
-                0.127574143915, 0.147200935287,
-                0.166827726658]),
+            0.00981339568577, 0.0294401870573,
+            0.0490669784288, 0.0686937698004,
+            0.0883205611719, 0.107947352543,
+            0.127574143915, 0.147200935287,
+            0.166827726658]),
         ),
 
     expected_loss_map=Triplet(
@@ -239,17 +239,17 @@ class EventBasedTestCase(unittest.TestCase):
                 delta=0.05 * mb.expected_loss_map[i])
 
             self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_ratio_curve.y_values)
+                                 asset_output.loss_ratio_curve.ordinates)
 
             self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_curve.y_values)
+                                 asset_output.loss_curve.ordinates)
 
             self.assert_allclose(mb.expected_losses[i],
-                                 asset_output.loss_curve.x_values)
+                                 asset_output.loss_curve.abscissae)
 
             self.assert_allclose(
                 mb.expected_losses[i] / mb.input_models_asset[i].value,
-                asset_output.loss_ratio_curve.x_values)
+                asset_output.loss_ratio_curve.abscissae)
 
         expected_aggregate_poes = [0, 0.020408606, 0.04081678, 0.061224955,
                                    0.08163313, 0.102041305, 0.12244948,
@@ -291,10 +291,10 @@ class EventBasedTestCase(unittest.TestCase):
             [peb_calculator.aggregate_losses], 50, 50)
 
         self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.x_values)
+            expected_aggregate_losses, aggregate_curve.abscissae)
 
         self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.y_values)
+            expected_aggregate_poes, aggregate_curve.ordinates)
 
     # we skip the following test as we lack reliable data
     @unittest.skip
@@ -336,10 +336,10 @@ class EventBasedTestCase(unittest.TestCase):
             1334.70229903, 1540.04111427, 1745.3799295]
 
         self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.y_values)
+            expected_aggregate_poes, aggregate_curve.ordinates)
 
         self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.x_values)
+            expected_aggregate_losses, aggregate_curve.abscissae)
 
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
@@ -367,12 +367,12 @@ class EventBasedTestCase(unittest.TestCase):
 
             self.assert_allclose(
                 il.expected_poes[i],
-                asset_output.insured_losses.y_values)
+                asset_output.insured_losses.ordinates)
 
             if not numpy.allclose(il.expected_losses[i],
-                                  asset_output.insured_losses.x_values):
+                                  asset_output.insured_losses.abscissae):
                 print asset_output.insured_losses
 
             self.assert_allclose(
                 il.expected_losses[i],
-                asset_output.insured_losses.x_values)
+                asset_output.insured_losses.abscissae)

@@ -19,9 +19,10 @@ from numpy import allclose, array
 
 from risklib.curve import Curve
 from risklib.vulnerability_function import VulnerabilityFunction, _mean_imls
-from risklib.classical import (_loss_ratio_exceedance_matrix,
+from risklib.classical import (
+    _loss_ratio_exceedance_matrix,
     _loss_ratio_curve, _alpha_value, _beta_value,
-    _conditional_loss, _poos, _loss_ratio_exceedance_matrix_per_poos,
+    _conditional_loss, _loss_ratio_exceedance_matrix_per_poos,
     _evenly_spaced_loss_ratios)
 
 
@@ -35,7 +36,8 @@ class ClassicalTestCase(unittest.TestCase):
 
     def test_alpha_value(self):
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-        alphas = [_alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
+        alphas = [
+            _alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
             stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
         self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
@@ -43,7 +45,7 @@ class ClassicalTestCase(unittest.TestCase):
     def test_beta_value(self):
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
         betas = [_beta_value(mean_loss_ratio, stddev) for mean_loss_ratio,
-            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
         self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
 
@@ -155,21 +157,6 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertTrue(allclose(0.47, lrem_po[5][3], atol=0.005))
         self.assertTrue(allclose(0.23, lrem_po[8][3], atol=0.005))
         self.assertTrue(allclose(0.00, lrem_po[10][0], atol=0.005))
-
-    def test_poos(self):
-        hazard_curve = [
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01),
-        ]
-
-        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
-        pes = [0.05, 0.15, 0.3, 0.5, 0.7]
-
-        self.assertTrue(allclose(expected_pos,
-            _poos(hazard_curve, pes),
-            atol=0.00005))
 
     def test_bin_width_from_imls(self):
         imls = [0.1, 0.2, 0.4, 0.6]
