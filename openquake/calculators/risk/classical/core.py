@@ -113,25 +113,3 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not an hazard curve")
 
         return self.rc.hazard_output.hazardcurve.id
-
-    def create_outputs(self):
-        """
-        Add loss map ids when conditional loss poes are specified
-        """
-        outputs = super(ClassicalRiskCalculator, self).create_outputs()
-        poes = self.rc.conditional_loss_poes or []
-
-        def create_loss_map(poe):
-            """
-            Given a poe create a loss map output container associated
-            with the current job
-            """
-            return models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
-        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
-                                       for poe in poes)
-        return outputs
