@@ -44,6 +44,10 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
         return 0
 
     @property
+    def hazard_getter(self):
+        return "hazard_getter"
+
+    @property
     def calculation_parameters(self):
         return {}
 
@@ -171,7 +175,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
             self.job.risk_calculation.region_constraint)
         expected_model_id = self.calculator.exposure_model_id
         expected_kwargs = dict(job_id=self.job.id,
-                               hazard_getter="one_query_per_asset",
+                               hazard_getter="hazard_getter",
                                assets_per_task=1,
                                region_constraint=expected_region_constraint,
                                exposure_model_id=expected_model_id,

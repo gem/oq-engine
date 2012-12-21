@@ -129,7 +129,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         tf_args = dict(
             job_id=self.job.id,
-            hazard_getter="one_query_per_asset",
+            hazard_getter=self.hazard_getter,
             assets_per_task=self.assets_per_task,
             region_constraint=self.rc.region_constraint,
             exposure_model_id=self.exposure_model_id,
@@ -178,6 +178,15 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         # Calculator must override this to select from the hazard
         # output the proper hazard output container
+        raise NotImplementedError
+
+    @property
+    def hazard_getter(self):
+        """
+        :returns: a key for the dict
+        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
+        to get the hazard getter used by the calculator.
+        """
         raise NotImplementedError
 
     @property
