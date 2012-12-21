@@ -17,6 +17,7 @@ Built-in GSIMs
     atkinson_boore_2003
     atkinson_boore_2006
     boore_atkinson_2008
+    campbell_2003
     cauzzi_faccioli_2008
     chiou_youngs_2008
     faccioli_2010
