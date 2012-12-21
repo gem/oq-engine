@@ -140,7 +140,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
-    if vuln_function.is_empty:
+    if not vuln_function:
         return numpy.array([])
 
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()

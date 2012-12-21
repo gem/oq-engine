@@ -24,6 +24,7 @@ class Curve(object):
     This class defines a curve (discrete function)
     used in the risk domain.
     """
+
     def __init__(self, pairs):
         """
         Construct a curve from a sequence of tuples.
@@ -38,13 +39,32 @@ class Curve(object):
         for index, (key, val) in enumerate(pairs):
             self.abscissae[index] = key
             self.ordinates[index] = val
-        self.interp = None  # set by ordinate_for
-        self.inverse = None  # set by abscissa_for
+        self._interp = None  # set by ordinate_for
+        self._inverse = None  # set by abscissa_for
+
+    @property
+    def interp(self):
+        """Cached attribute. Returns the interpolated function."""
+        if self._interp is None:
+            self._interp = interp1d(self.abscissae, self.ordinates)
+        return self._interp
+
+    @property
+    def inverse(self):
+        """Cached attribute. Returns the inverse function."""
+        if self._inverse is None:
+            with_unique_ys = dict(zip(self.ordinates, self.abscissae))
+            self._inverse = self.__class__(with_unique_ys.iteritems())
+        return self._inverse
+
+    # so that if the idiom ``if curve:`` is possible
+    def __nonzero__(self):
+        return self.abscissae.size != 0
 
     # so that the curve is pickeable even if self.interp has been instantiated
     def __getstate__(self):
         return dict(abscissae=self.abscissae, ordinates=self.ordinates,
-                    interp=None, inverse=self.inverse)
+                    _interp=None, _inverse=self._inverse)
 
     def __eq__(self, other):
         return numpy.allclose(self.abscissae, other.abscissae)\
@@ -52,6 +72,9 @@ class Curve(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __len__(self):
+        return len(self.abscissae)
 
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (self.abscissae, self.ordinates)
@@ -66,11 +89,6 @@ class Curve(object):
         newcurve.ordinates = self.ordinates
         return newcurve
 
-    @property
-    def is_empty(self):
-        """Return true if this curve is numpy.empty, false otherwise."""
-        return self.abscissae.size == 0
-
     def ordinate_for(self, x_value):
         """
         Return the y value corresponding to the given x value.
@@ -78,9 +96,6 @@ class Curve(object):
         This is very useful to speed up the computation and feed
         "directly" numpy.
         """
-        if self.interp is not None:  # cached interpolated curve
-            return self.interp(range_clip(x_value, self.abscissae))
-        self.interp = interp1d(self.abscissae, self.ordinates)
         return self.interp(range_clip(x_value, self.abscissae))
 
     def ordinate_diffs(self, xs):
@@ -94,10 +109,6 @@ class Curve(object):
         discarding duplicated y values for the same x!
         Mathematicians would cry.
         """
-        if self.inverse is not None:  # already computed
-            return self.inverse.ordinate_for(y_value)
-        with_unique_ys = dict(zip(self.ordinates, self.abscissae))
-        self.inverse = self.__class__(with_unique_ys.iteritems())
         return self.inverse.ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
