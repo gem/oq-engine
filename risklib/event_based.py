@@ -139,7 +139,6 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
-
     if not vuln_function:
         return numpy.array([])
 

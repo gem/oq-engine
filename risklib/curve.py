@@ -57,10 +57,6 @@ class Curve(object):
             self._inverse = self.__class__(with_unique_ys.iteritems())
         return self._inverse
 
-    # so that if the idiom ``if curve:`` is possible
-    def __nonzero__(self):
-        return self.abscissae.size != 0
-
     # so that the curve is pickeable even if self.interp has been instantiated
     def __getstate__(self):
         return dict(abscissae=self.abscissae, ordinates=self.ordinates,
