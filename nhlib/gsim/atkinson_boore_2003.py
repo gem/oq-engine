@@ -114,7 +114,7 @@ class AtkinsonBoore2003SInter(GMPE):
         # periods 0.4 s (2.5 Hz) and 0.2 s (5 Hz) need a special case because
         # of the erratum. SA for 0.4s and 0.2s is computed and a weighted sum
         # is returned
-        if isinstance(imt, SA) and (imt.period == 0.2) | (imt.period == 0.4):
+        if isinstance(imt, SA) and imt.period in (0.2, 0.4):
             C04 = self.COEFFS_SINTER[SA(period=0.4, damping=5.0)]
             C02 = self.COEFFS_SINTER[SA(period=0.2, damping=5.0)]
             mean04 = self._compute_mean(C04, G, mag, rup.hypo_depth,
@@ -195,8 +195,7 @@ class AtkinsonBoore2003SInter(GMPE):
             pga_between_100_500 = (pga_rock > 100) & (pga_rock < 500)
             pga_greater_equal_500 = pga_rock >= 500
 
-            is_SA_between_05_1 = isinstance(imt, SA) and (imt.period > 0.5) &\
-                (imt.period < 1)
+            is_SA_between_05_1 = isinstance(imt, SA) and 0.5 < imt.period < 1
 
             is_SA_less_equal_05 = isinstance(imt, SA) and (imt.period <= 0.5)
 
