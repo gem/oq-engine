@@ -64,6 +64,9 @@ class EventBasedRiskCalculatorTestCase(
                              pk=self.calculator.hazard_id).count())
 
     def test_imt_validation(self):
+        # Test the validation of the imt associated with the
+        # vulnerability model that must match the one of the hazard
+        # output
         self.calculator.pre_execute()
         model = self.calculator.rc.model('vulnerability')
         model.imt = 'fake'
@@ -116,3 +119,51 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(2, mocked_loss_writer.call_count)
 
         self.assertEqual(1, mocked_agg_loss_writer.call_count)
+
+    def test_complete_workflow(self):
+        """
+        Test the complete risk classical calculation workflow and test
+        for the presence of the outputs
+        """
+        self.calculator.pre_execute()
+
+        self.job.is_running = True
+        self.job.status = 'executing'
+        self.job.save()
+        self.calculator.execute()
+
+        # 1 loss curve + 3 loss maps + 1 aggregate curve + 1 insured curve
+        self.assertEqual(6,
+                         models.Output.objects.filter(oq_job=self.job).count())
+        self.assertEqual(1,
+                         models.LossCurve.objects.filter(
+                             output__oq_job=self.job,
+                             insured=False,
+                             aggregate=False).count())
+        self.assertEqual(1,
+                         models.LossCurve.objects.filter(
+                             output__oq_job=self.job,
+                             insured=True,
+                             aggregate=False).count())
+        self.assertEqual(1,
+                         models.LossCurve.objects.filter(
+                             output__oq_job=self.job,
+                             insured=False,
+                             aggregate=True).count())
+        # 2 individual loss curves, 2 insured ones
+        self.assertEqual(4,
+                         models.LossCurveData.objects.filter(
+                             loss_curve__output__oq_job=self.job).count())
+        self.assertEqual(1,
+                         models.AggregateLossCurveData.objects.filter(
+                             loss_curve__output__oq_job=self.job).count())
+        self.assertEqual(3,
+                         models.LossMap.objects.filter(
+                             output__oq_job=self.job).count())
+        self.assertEqual(6,
+                         models.LossMapData.objects.filter(
+                             loss_map__output__oq_job=self.job).count())
+
+        # FIXME(lp). Skipped atm
+        #files = self.calculator.export(exports='xml')
+        #self.assertEqual(4, len(files))
