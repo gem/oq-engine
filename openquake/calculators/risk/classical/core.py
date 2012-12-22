@@ -83,8 +83,8 @@ classical.ignore_result = False
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
     """
-    Classical PSHA risk calculator. Computes loss curves and loss
-    params for a given set of assets.
+    Classical PSHA risk calculator. Computes loss curves and loss maps
+    for a given set of assets.
     """
 
     #: The core calculation celery task function
