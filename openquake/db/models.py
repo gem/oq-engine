@@ -991,11 +991,11 @@ class RiskCalculation(djm.Model):
         if applicable) associated with the hazard output used by this
         risk calculation
         """
-        if self.hazard_output.hazardcurve:
+        if self.hazard_output.is_hazard_curve():
             return (self.hazard_output.hazardcurve.statistics,
                     self.hazard_output.hazardcurve.quantile)
         else:
-            raise NotImplementedError
+            return None, None  # no mean/quantile for gmf
 
     @property
     def hazard_logic_tree_paths(self):
@@ -1003,11 +1003,11 @@ class RiskCalculation(djm.Model):
         The logic tree paths associated with the hazard output used by
         this risk calculation
         """
-        if self.hazard_output.hazardcurve:
+        if self.hazard_output.is_hazard_curve():
             lt = self.hazard_output.hazardcurve.lt_realization
-            return lt.sm_lt_path, lt.gsim_lt_path
         else:
-            raise NotImplementedError
+            lt = self.hazard_output.gmfcollection.lt_realization
+        return lt.sm_lt_path, lt.gsim_lt_path
 
     @property
     def is_bcr(self):

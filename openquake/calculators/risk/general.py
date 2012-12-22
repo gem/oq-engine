@@ -198,15 +198,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         return self.job.risk_calculation
 
     @property
-    def hazard_getter(self):
-        """
-        :returns: a key for the dict
-        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
-        to get the hazard getter used by the calculator.
-        """
-        raise NotImplementedError
-
-    @property
     def calculation_parameters(self):
         """
         The specific calculation parameters passed as kwargs to the
@@ -393,16 +384,29 @@ def write_loss_map(loss_map_ids, asset_output):
             location=asset_output.asset.site)
 
 
+@db.transaction.commit_on_success
 def update_aggregate_losses(curve_id, losses, poes):
     """
     Update an aggregate loss curve with new `losses` (that will be
     added) and `poes`
+
+    :type losses: numpy array
     """
-    # by using #filter and #update django prevents possible race conditions
-    models.AggregateLossCurveData.objects.filter(
-        loss_curve__id=curve_id).update(
-            losses=losses + db.models.F('losses'),
-            poes=poes)
+
+    # to avoid race conditions we lock the table
+    query = """
+      SELECT * FROM riskr.aggregate_loss_curve_data WHERE
+      loss_curve_id = %s FOR UPDATE
+    """
+
+    [curve_data] = models.AggregateLossCurveData.objects.raw(query, [curve_id])
+
+    if curve_data.losses:
+        curve_data.losses = losses + curve_data.losses
+    else:
+        curve_data.losses = losses
+        curve_data.poes = poes
+    curve_data.save()
 
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):

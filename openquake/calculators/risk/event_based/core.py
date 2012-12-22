@@ -53,15 +53,19 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
         seed=seed,
         correlation_type=asset_correlation)
 
-    # if we need to compute the loss maps, we add the proper risk
-    # aggregator
-    if conditional_loss_poes:
-        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+    # FIXME. Save unmodified calculator, as the decorated one does not
+    # support aggregate losses at the moment.
+    eb_calculator = calculator
 
     # if we need to compute the insured losses, we add the proper
     # risklib aggregator
     if insured_losses:
         calculator = api.insured_losses(calculator)
+
+    # if we need to compute the loss maps, we add the proper risk
+    # aggregator
+    if conditional_loss_poes:
+        calculator = api.conditional_losses(conditional_loss_poes, calculator)
 
     with db.transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
@@ -81,7 +85,8 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     # ground motion values and the loss curve resolution, which are
     # both constants in the calculation. So, as we poes we take
     general.update_aggregate_losses(
-        aggregate_loss_curve_id, calculator.aggregate_losses, loss_curve.poes)
+        aggregate_loss_curve_id,
+        eb_calculator.aggregate_losses, loss_curve.poes)
 event_based.ignore_result = False
 
 
@@ -91,9 +96,15 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def pre_execute(self):
         """
-        In Event Based we get the intensity measure type considered
+        Override the default pre_execute to provide more detailed
+        validation.
+
+        1) In Event Based we get the intensity measure type considered
         from the vulnerability model, then we check that the hazard
         calculation includes outputs with that intensity measure type
+
+        2) If insured losses are required we check for the presence of
+        the deductible and insurance limit
         """
         super(EventBasedRiskCalculator, self).pre_execute()
 
@@ -105,6 +116,13 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             raise RuntimeError(
                 "There is no ground motion field in the intensity measure %s" %
                 self.imt)
+
+        if self.rc.insured_losses and models.ExposureData.objects.filter(
+                exposure_model__id=self.exposure_model_id).filter(
+                    (db.models.Q(deductible__isnull=True) |
+                     db.models.Q(ins_limit__isnull=True))).exists():
+            raise RuntimeError(
+                "Deductible or insured limit missing in exposure")
 
     @property
     def imt(self):
@@ -143,6 +161,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         time_span = hc.investigation_time
 
         return dict(
+            insured_losses=self.rc.insured_losses,
+            conditional_loss_poes=self.rc.conditional_loss_poes,
             tses=tses,
             time_span=time_span,
             imt=self.imt,
