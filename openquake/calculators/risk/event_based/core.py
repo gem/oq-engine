@@ -91,6 +91,12 @@ event_based.ignore_result = False
 
 
 class EventBasedRiskCalculator(general.BaseRiskCalculator):
+    """
+    Probabilistic Event Based PSHA risk calculator. Computes loss
+    curves, loss maps, aggregate losses and insured losses for a given
+    set of assets.
+    """
+
     #: The core calculation celery task function
     celery_task = event_based
 
