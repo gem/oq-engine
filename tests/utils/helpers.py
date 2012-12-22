@@ -1002,11 +1002,15 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 gmf_collection=models.GmfCollection.objects.create(
                     output=models.Output.objects.create_output(
                         hazard_job, "Test Hazard output", "gmf"),
-                    lt_realization=None,
-                    complete_logic_tree_gmf=True),
+                    lt_realization=models.LtRealization.objects.create(
+                        hazard_calculation=hazard_job.hazard_calculation,
+                        ordinal=1, seed=1, weight=None,
+                        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+                        is_complete=False, total_items=1, completed_items=1),
+                    complete_logic_tree_gmf=False),
                 investigation_time=hc.investigation_time,
-                ses_ordinal=None,
-                complete_logic_tree_gmf=True),
+                ses_ordinal=1,
+                complete_logic_tree_gmf=False),
                 imt="PGA", gmvs=[0.1, 0.2, 0.3],
                 result_grp_ordinal=1,
                 location="POINT(1 1)")
