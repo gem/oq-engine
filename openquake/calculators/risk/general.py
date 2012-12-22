@@ -21,6 +21,8 @@ import os
 import math
 import functools
 
+from django import db
+
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
@@ -317,11 +319,11 @@ def with_assets(fn):
     return wrapped_function
 
 
-def hazard_getter(hazard_getter_name, hazard_id):
+def hazard_getter(hazard_getter_name, hazard_id, *args):
     """
     Initializes and returns an hazard getter
     """
-    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
+    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id, *args)
 
 
 def fetch_vulnerability_model(job_id, retrofitted=False):
@@ -346,9 +348,10 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a :class:`openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
-    output container is identified by `loss_curve_id`.
+    Stores and returns a :class:`openquake.db.models.LossCurveData`
+    where the data are got by `asset_output` and the
+    :class:`openquake.db.models.LossCurve` output container is
+    identified by `loss_curve_id`.
 
     :param int loss_curve_id: the ID of the output container
 
@@ -357,7 +360,7 @@ def write_loss_curve(loss_curve_id, asset_output):
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     returned by risklib
     """
-    models.LossCurveData.objects.create(
+    return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset_output.asset.asset_ref,
         location=asset_output.asset.site,
@@ -388,6 +391,18 @@ def write_loss_map(loss_map_ids, asset_output):
             value=loss,
             std_dev=None,
             location=asset_output.asset.site)
+
+
+def update_aggregate_losses(curve_id, losses, poes):
+    """
+    Update an aggregate loss curve with new `losses` (that will be
+    added) and `poes`
+    """
+    # by using #filter and #update django prevents possible race conditions
+    models.AggregateLossCurveData.objects.filter(
+        loss_curve__id=curve_id).update(
+            losses=losses + db.models.F('losses'),
+            poes=poes)
 
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):

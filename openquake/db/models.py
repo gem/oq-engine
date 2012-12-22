@@ -1326,6 +1326,7 @@ class Output(djm.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
+        (u'insured_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'ses', u'Stochastic Event Set'),

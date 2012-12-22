@@ -1011,6 +1011,7 @@ CREATE TABLE uiapi.output (
             'gmf',
             'hazard_curve',
             'hazard_map',
+            'insured_loss_curve',
             'loss_curve',
             'loss_map',
             'ses',
