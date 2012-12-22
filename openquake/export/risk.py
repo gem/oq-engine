@@ -66,9 +66,11 @@ def _export_common(output):
 
     source_model_tree_path, gsim_tree_path = None, None
     if not statistics:
-        source_model_tree_path, gsim_tree_path = [
-            core.LT_PATH_JOIN_TOKEN.join(x) for x in
-            risk_calculation.hazard_logic_tree_paths]
+        lt_paths = risk_calculation.hazard_logic_tree_paths
+
+        if lt_paths:
+            source_model_tree_path, gsim_tree_path = [
+                core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
 
     unit = risk_calculation.model('exposure').stco_unit
 
