@@ -81,27 +81,17 @@ class GroundMotionValuesGetter(object):
         plain `gmf` output types (single logic tree branch or realization).
     :param str imt:
         The intensity measure type with which the ground motion
-        values have been computed.
+        values have been computed (long form).
     :param float time_span:
         Time span (also known as investigation time).
     :param float tses:
         Time representative of the stochastic event set.
         It is computed as: time span * number of logic tree branches *
         number of seismicity histories.
-    :param float sa_period:
-        When the intensity measure type is `SA` (
-        spectral acceleration), it specifies its period (in seconds).
-    :param float sa_damping:
-        When the intensity measure type is `SA` (
-        spectral acceleration), it specifies its damping factor
-        (percentage). Default to 5.0.
     """
 
-    def __init__(self, hazard_output_id, imt, time_span, tses,
-                 sa_period=None, sa_damping=5.0):
-
-        if imt == "SA" and sa_period is None:
-            raise ValueError("With IMT==`SA`, `sa_period` must be specified.")
+    def __init__(self, hazard_output_id, imt, time_span, tses):
+        imt, sa_period, sa_damping = models.parse_imt(imt)
 
         self._imt = imt
         self._tses = tses
@@ -119,11 +109,12 @@ class GroundMotionValuesGetter(object):
         At the moment, we only support risk calculations using ground motion
         fields coming from a specific realization.
         """
-        output = models.Output.objects.get(id=self._hazard_output_id)
+        gmf_collection = models.GmfCollection.objects.get(
+            id=self._hazard_output_id)
 
-        if output.output_type == "gmf":
-            return tuple([x.id for x in models.GmfSet.objects.filter(
-                gmf_collection__output=output)])
+        if gmf_collection.output.output_type == "gmf":
+            return tuple(
+                gmf_collection.gmfset_set.values_list('id', flat=True))
         else:
             raise ValueError("Output must be of type `gmf`. "
                 "At the moment, we only support computation of loss curves "

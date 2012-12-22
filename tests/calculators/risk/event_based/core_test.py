@@ -40,12 +40,18 @@ class EventBasedRiskCalculatorTestCase(
 
         params = self.calculator.calculation_parameters
         for field in ['loss_curve_resolution', 'insured_losses',
-                      'conditional_loss_poes']:
+                      'conditional_loss_poes', 'tses', 'time_span',
+                      'imt', 'seed', 'asset_correlation']:
             self.assertTrue(field in params)
 
         self.assertEqual(50, params['loss_curve_resolution'])
         self.assertEqual([0.01, 0.02, 0.05], params['conditional_loss_poes'])
         self.assertEqual(None, params['insured_losses'])
+        self.assertEqual(50, params['tses'])
+        self.assertEqual([0.01, 0.02, 0.05], params['time_span'])
+        self.assertEqual(None, params['imt'])
+        self.assertEqual(50, params['seed'])
+        self.assertEqual([0.01, 0.02, 0.05], params['asset_correlation'])
 
     def test_hazard_id(self):
         """
@@ -80,28 +86,33 @@ class EventBasedRiskCalculatorTestCase(
 
         hazard_id = self.job.risk_calculation.hazard_output.gmfcollection.id
 
-        patch = helpers.patch(
-            'openquake.calculators.risk.general.write_loss_curve')
-        mocked_writer = patch.start()
+        patches = [helpers.patch(x) for x in [
+            'openquake.calculators.risk.general.write_loss_curve',
+            'openquake.calculators.risk.general.update_aggregate_losses']]
 
-        loss_curve_id = mock.Mock()
+        mocked_loss_writer = patches[0].start()
+        mocked_agg_loss_writer = patches[1].start()
+
+        loss_curve_id, aggregate_loss_curve_id = mock.Mock(), mock.Mock()
         exposure_model_id = self.job.risk_calculation.model('exposure').id
         region_constraint = self.job.risk_calculation.region_constraint
-        event_based.event_based(self.job.id,
-                            0,
-                            assets_per_task=3,
-                            exposure_model_id=exposure_model_id,
-                            hazard_getter="ground_motion_field",
-                            hazard_id=hazard_id,
-                            region_constraint=region_constraint,
-                            loss_curve_id=loss_curve_id,
-                            insured_curve_id=None,
-                            loss_map_ids={},
-                            insured_losses=False,
-                            conditional_loss_poes=[],
-                            seed=None)
-        patch.stop()
+        event_based.event_based(
+            self.job.id,
+            0, assets_per_task=3, exposure_model_id=exposure_model_id,
+            region_constraint=region_constraint,
+            hazard_getter="ground_motion_field", hazard_id=hazard_id,
+            loss_curve_id=loss_curve_id,  loss_map_ids={},
+            insured_curve_id=None,
+            aggregate_loss_curve_id=aggregate_loss_curve_id,
+            conditional_loss_poes=[], insured_losses=False,
+            imt="PGA", time_span=50, tses=50,
+            loss_curve_resolution=70, seed=None, asset_correlation=None)
+
+        patches[0].stop()
+        patches[1].stop()
 
         # we expect 1 asset being filtered out by the region
         # constraint, so there are only two loss curves to be written
-        self.assertEqual(2, mocked_writer.call_count)
+        self.assertEqual(2, mocked_loss_writer.call_count)
+
+        self.assertEqual(1, mocked_agg_loss_writer.call_count)
