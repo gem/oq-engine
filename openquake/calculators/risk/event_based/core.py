@@ -35,16 +35,23 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
                 loss_curve_id, loss_map_ids,
                 insured_curve_id, aggregate_loss_curve_id,
                 conditional_loss_poes, insured_losses,
+                imt, time_span, tses,
                 loss_curve_resolution, seed, asset_correlation):
     """
     Celery task for the event based risk calculator.
     """
     vulnerability_model = general.fetch_vulnerability_model(job_id)
 
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+    # FIXME(lp): refactor risklib. there is no reason to propagate
+    # time_span and tses in an hazard getter
+    hazard_getter = general.hazard_getter(
+        hazard_getter, hazard_id, imt, time_span, tses)
 
     calculator = api.probabilistic_event_based(
-        vulnerability_model, loss_curve_resolution, seed, asset_correlation)
+        vulnerability_model,
+        curve_resolution=loss_curve_resolution,
+        seed=seed,
+        correlation_type=asset_correlation)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
@@ -62,7 +69,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
 
-            general.write_loss_curve(loss_curve_id, asset_output)
+            loss_curve = general.write_loss_curve(loss_curve_id, asset_output)
 
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
@@ -70,10 +77,11 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
             if asset_output.insured_losses:
                 general.write_loss_curve(insured_curve_id, asset_output)
 
-    # by using #filter and #update django prevents possible race conditions
-    models.AggregateLossData.objects.filter(
-        output__id=aggregate_loss_curve_id).update(
-            losses=db.models.F('losses') + calculator.aggregate_losses)
+    # poes in event based calculator depends only on the number of
+    # ground motion values and the loss curve resolution, which are
+    # both constants in the calculation. So, as we poes we take
+    general.update_aggregate_losses(
+        aggregate_loss_curve_id, calculator.aggregate_losses, loss_curve.poes)
 event_based.ignore_result = False
 
 
@@ -89,16 +97,22 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         """
         super(EventBasedRiskCalculator, self).pre_execute()
 
-        imt = self.rc.model("vulnerability").imt
-
         hc = self.rc.hazard_output.oq_job.hazard_calculation
 
         allowed_imts = hc.intensity_measure_types_and_levels.keys()
 
-        if not imt in allowed_imts:
+        if not self.imt in allowed_imts:
             raise RuntimeError(
                 "There is no ground motion field in the intensity measure %s" %
-                imt)
+                self.imt)
+
+    @property
+    def imt(self):
+        """
+        The intensity measure type considered by this calculator.
+        It is got by the vulnerability model
+        """
+        return self.rc.model("vulnerability").imt
 
     @property
     def hazard_id(self):
@@ -119,7 +133,19 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         """
         Calculator specific parameters
         """
+
+        hc = self.rc.hazard_calculation
+
+        # atm, no complete_logic_tree gmf are supported
+        number_of_realizations = 1
+
+        tses = hc.ses_per_logic_tree_path * number_of_realizations
+        time_span = hc.investigation_time
+
         return dict(
+            tses=tses,
+            time_span=time_span,
+            imt=self.imt,
             loss_curve_resolution=self.rc.loss_curve_resolution,
             seed=self.rc.master_seed,
             asset_correlation=self.rc.asset_correlation)
@@ -129,13 +155,18 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         Add Aggregate loss curve and Insured Curve output containers
         """
         outputs = super(EventBasedRiskCalculator, self).create_outputs()
-        outputs['aggregate_loss_curve_id'] = (
-            models.LossCurve.objects.create(
+
+        aggregate_loss_curve = models.LossCurve.objects.create(
                 aggregate=True,
                 output=models.Output.objects.create_output(
-                    self.job,
-                    "Aggregate Loss Curve Set",
-                    "agg_loss_curve")).id)
+                    self.job, "Aggregate Loss Curve Set", "agg_loss_curve"))
+        outputs['aggregate_loss_curve_id'] = aggregate_loss_curve.id
+
+        # for aggregate loss curve, we need to create also the
+        # aggregate loss individual curve object
+        models.AggregateLossCurveData.objects.create(
+            loss_curve=aggregate_loss_curve)
+
         outputs['insured_curve_id'] = (
             models.LossCurve.objects.create(
                 insured=True,
