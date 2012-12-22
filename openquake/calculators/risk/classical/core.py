@@ -20,7 +20,6 @@ Core functionality for the classical PSHA risk calculator.
 from openquake.calculators.risk import general
 from openquake.utils import tasks
 from openquake.utils import stats
-from openquake.db import models
 from openquake import logs
 from risklib import api
 from django.db import transaction
@@ -83,8 +82,8 @@ classical.ignore_result = False
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
     """
-    Classical PSHA risk calculator. Computes loss curves and loss
-    params for a given set of assets.
+    Classical PSHA risk calculator. Computes loss curves and loss maps
+    for a given set of assets.
     """
 
     #: The core calculation celery task function
