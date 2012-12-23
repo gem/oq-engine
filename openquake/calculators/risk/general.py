@@ -91,6 +91,12 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         4. Initialize progress counters
         """
+
+        # reload the risk calculation to avoid getting raw string
+        # values instead of arrays
+        self.job.risk_calculation = models.RiskCalculation.objects.get(
+            pk=self.rc.pk)
+
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
 
@@ -262,11 +268,13 @@ class BaseRiskCalculator(base.CalculatorNext):
                     job, "Loss Curve set", "loss_curve")).pk,
             loss_map_ids=dict())
 
-        # loss maps containers
-        for poe in self.rc.conditional_loss_poes:
+        for poe in self.job.risk_calculation.conditional_loss_poes:
             outputs['loss_map_ids'][poe] = models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Loss Map poe=%s" % poe, "loss_map")).pk
+                 output=models.Output.objects.create_output(
+                     self.job,
+                     "Loss Map Set with poe %s" % poe,
+                     "loss_map"),
+                     poe=poe).pk
         return outputs
 
 
