@@ -153,6 +153,103 @@ class LossCurveXMLWriter(object):
             self._loss_curves.set("unit", str(self._unit))
 
 
+class AggregateLossCurveXMLWriter(object):
+    """
+    :param path:
+        File path (including filename) for results to be saved to.
+    :param float investigation_time:
+        Investigation time (also known as Time Span) defined in
+        the calculation which produced these results (in years).
+    :param str source_model_tree_path:
+        Id of the source model tree path (obtained by concatenating the IDs of
+        the branches the path is made of) for which input hazard curves
+        have been computed.
+    :param str gsim_tree_path:
+        Id of the gsim (ground shaking intensity model) tree path (obtained
+        by concatenating the IDs of the branches the path is made of) for
+        which input hazard curves have been computed.
+    :param str unit:
+        Attribute describing how the value of the assets has been measured.
+    :param str statistics:
+        `mean` or `quantile`. When serializing loss curves produced from
+        statistical hazard inputs, it describes the type of statistic used.
+    :param float quantile_value:
+        When serializing loss curves produced from quantile hazard inputs,
+        it describes the quantile value.
+    """
+
+    def __init__(self, path, investigation_time,
+                 source_model_tree_path=None, gsim_tree_path=None,
+                 statistics=None, quantile_value=None, unit=None):
+
+        validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
+            statistics, quantile_value)
+
+        self._unit = unit
+        self._path = path
+        self._statistics = statistics
+        self._quantile_value = quantile_value
+        self._gsim_tree_path = gsim_tree_path
+        self._investigation_time = investigation_time
+        self._source_model_tree_path = source_model_tree_path
+
+    def serialize(self, data):
+        """
+        Serialize an aggregation loss curve.
+
+        :param data:
+            An object representing an aggregate loss curve. This object should:
+
+            * define an attribute `poes`, which is a list of floats
+              describing the probabilities of exceedance.
+            * define an attribute `losses`, which is a list of floats
+              describing the losses.
+
+            Also, `poes`, `losses` values must be indexed coherently,
+            i.e.: the loss at index zero is related to the probability
+            of exceedance at the same index.
+        """
+
+        _assert_valid_input(data)
+
+        with open(self._path, "w") as output:
+            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+
+            aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
+
+            aggregate_loss_curve.set("investigationTime",
+                str(self._investigation_time))
+
+            if self._source_model_tree_path is not None:
+                aggregate_loss_curve.set("sourceModelTreePath",
+                    str(self._source_model_tree_path))
+
+            if self._gsim_tree_path is not None:
+                aggregate_loss_curve.set("gsimTreePath",
+                    str(self._gsim_tree_path))
+
+            if self._statistics is not None:
+                aggregate_loss_curve.set("statistics",
+                    str(self._statistics))
+
+            if self._quantile_value is not None:
+                aggregate_loss_curve.set("quantileValue",
+                    str(self._quantile_value))
+
+            if self._unit is not None:
+                aggregate_loss_curve.set("unit", str(self._unit))
+
+            poes = etree.SubElement(aggregate_loss_curve, "poEs")
+            poes.text = " ".join([str(p) for p in data.poes])
+
+            losses = etree.SubElement(aggregate_loss_curve, "losses")
+            losses.text = " ".join([str(p) for p in data.losses])
+
+            output.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+
 class LossMapXMLWriter(object):
     """
     Serializer for loss maps produced with the classical and

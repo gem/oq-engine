@@ -169,14 +169,14 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 <nrml
   xmlns:gml="http://www.opengis.net/gml"
   xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <aggregatelossCurve
+  <aggregateLossCurve
     investigationTime="10.0"
     sourceModelTreePath="b1_b2_b3"
     gsimTreePath="b1_b2"
     unit="USD">
-      <poEs>1.0 0.5 0.1</poEs>
-      <losses>10.0 20.0 30.0</losses>
-  </aggregatelossCurve>
+    <poEs>1.0 0.5 0.1</poEs>
+    <losses>10.0 20.0 30.0</losses>
+  </aggregateLossCurve>
 </nrml>
 """)
 
