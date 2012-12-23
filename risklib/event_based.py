@@ -285,11 +285,14 @@ def _loss_curve(loss_values, tses, time_span,
     # We compute the rates of exceedances by iterating over loss
     # values and counting the number of distinct loss values less than
     # the current loss. This is a workaround for a rounding error, ask Luigi
-    # for the gory details
+    # for the details
     times = [index
              for index, (previous_val, val) in
              enumerate(pairwise(sorted_loss_values))
              if not numpy.allclose([val], [previous_val])]
+
+    if not times:
+        times = [0, len(sorted_loss_values) - 1]
 
     sorted_loss_values = sorted_loss_values[times]
     rates_of_exceedance = numpy.array(times) / float(tses)

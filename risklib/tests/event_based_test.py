@@ -359,6 +359,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             event_based._compute_loss_ratios(self.vulnerability_function1,
                 GMF, None, None)))
 
+    def test_constant(self):
+        expected = [10] * 100
+        actual = event_based._loss_curve(expected, 50, 50, 11)
+
+        numpy.testing.assert_allclose([10] * 11, actual.x_values)
+        numpy.testing.assert_allclose(numpy.arange(0, 1.1, 0.1), actual.y_values)
+
     def test_probs_of_exceedance(self):
         expected_poes = [
             0.99801517, 0.92235092, 0.76412292, 0.63212056,
