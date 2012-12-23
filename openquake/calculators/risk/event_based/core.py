@@ -185,7 +185,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         aggregate_loss_curve = models.LossCurve.objects.create(
                 aggregate=True,
                 output=models.Output.objects.create_output(
-                    self.job, "Aggregate Loss Curve Set", "agg_loss_curve"))
+                    self.job, "Aggregate Loss Curve", "agg_loss_curve"))
         outputs['aggregate_loss_curve_id'] = aggregate_loss_curve.id
 
         # for aggregate loss curve, we need to create also the
