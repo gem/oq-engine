@@ -120,3 +120,78 @@ class ClassicalExportTestcase(BaseExportTestCase):
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
+
+
+class EventBasedExportTestcase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_event_based_risk_export(self):
+        # Tests that outputs of a risk classical calculation are exported
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('event_based_risk/job.ini')
+
+            # run the calculation to create something to export
+
+            # at the moment, only gmf for a specific realization are
+            # supported as hazard input
+            retcode = helpers.run_risk_job_sp(
+                cfg, silence=True,
+                hazard_id=models.GmfCollection.objects.filter(
+                    complete_logic_tree_gmf=False)[0].output.id)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+            # 1 loss curve set + 3 loss curve map set + 1 insured + 1 aggregate
+            expected_outputs = 6
+            self.assertEqual(expected_outputs, len(outputs))
+
+            # Export the loss curves...
+            curves = outputs.filter(output_type='loss_curve')
+            rc_files = []
+            for curve in curves:
+                rc_files.extend(risk.export(curve.id, target_dir))
+
+            self.assertEqual(1, len(rc_files))
+
+            for f in rc_files:
+                self._test_exported_file(f)
+
+            # ... loss map ...
+            maps = outputs.filter(output_type='loss_map')
+            lm_files = sum(
+                [risk.export(loss_map.id, target_dir)
+                 for loss_map in maps], [])
+
+            self.assertEqual(3, len(lm_files))
+
+            for f in lm_files:
+                self._test_exported_file(f)
+
+            # ... aggregate losses...
+            maps = outputs.filter(output_type='agg_loss_curve')
+            lm_files = sum(
+                [risk.export(loss_map.id, target_dir)
+                 for loss_map in maps], [])
+
+            self.assertEqual(1, len(lm_files))
+
+            for f in lm_files:
+                self._test_exported_file(f)
+
+            # and insured losses.
+            maps = outputs.filter(output_type='ins_loss_curve')
+            lm_files = sum(
+                [risk.export(loss_map.id, target_dir)
+                 for loss_map in maps], [])
+
+            self.assertEqual(1, len(lm_files))
+
+            for f in lm_files:
+                self._test_exported_file(f)
+
+        finally:
+            shutil.rmtree(target_dir)

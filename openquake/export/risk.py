@@ -50,6 +50,7 @@ def _export_fn_map():
     fn_map = {
         'agg_loss_curve': export_agg_loss_curve,
         'loss_curve': export_loss_curve,
+        'ins_loss_curve': export_loss_curve,
         'loss_map': export_loss_map,
         'bcr_distribution': export_bcr_distribution
         }
@@ -106,6 +107,9 @@ def export_loss_curve(output, target_dir):
     args = _export_common(output)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.losscurve.id})
+    if output.losscurve.insured:
+        args['insured'] = True
+
     writers.LossCurveXMLWriter(**args).serialize(
         output.losscurve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
