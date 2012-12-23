@@ -23,7 +23,7 @@ from tests.utils import helpers
 from openquake.db import models
 
 
-class ClassicalRiskHazardCase1TestCase(risk.BaseRiskQATestCase):
+class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
