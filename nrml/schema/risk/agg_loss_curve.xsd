@@ -14,11 +14,22 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element name="loss" type="PositiveDoubleList" minOccurs="1" maxOccurs="1"/>
-                    <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+                    <xs:element name="losses" type="PositiveDoubleList" minOccurs="1" maxOccurs="1"/>
+                    <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
-    </xs:complexType>
+
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
+
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+        <!-- same as `stcoUnit` in exposure. -->
+        <xs:attribute name="unit" type="xs:string" use="optional" />
+      </xs:complexType>
 
 </xs:schema>
