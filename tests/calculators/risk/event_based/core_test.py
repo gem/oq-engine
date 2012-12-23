@@ -164,6 +164,5 @@ class EventBasedRiskCalculatorTestCase(
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
-        # FIXME(lp). Skipped atm
-        #files = self.calculator.export(exports='xml')
-        #self.assertEqual(4, len(files))
+        files = self.calculator.export(exports='xml')
+        self.assertEqual(6, len(files))
