@@ -38,19 +38,25 @@ class LossCurveXMLWriter(object):
         Id of the gsim (ground shaking intensity model) tree path (obtained
         by concatenating the IDs of the branches the path is made of) for
         which input hazard curves have been computed.
-    :param str unit:
-        Attribute describing how the value of the assets has been measured.
     :param str statistics:
         `mean` or `quantile`. When serializing loss curves produced from
         statistical hazard inputs, it describes the type of statistic used.
     :param float quantile_value:
         When serializing loss curves produced from quantile hazard inputs,
         it describes the quantile value.
+    :param float quantile_value:
+        When serializing loss curves produced from quantile hazard inputs,
+        it describes the quantile value.
+    :param str unit:
+        Attribute describing how the value of the assets has been measured.
+    :param bool insured:
+        True if it is an insured loss curve
     """
 
     def __init__(self, path, investigation_time,
                  source_model_tree_path=None, gsim_tree_path=None,
-                 statistics=None, quantile_value=None, unit=None):
+                 statistics=None, quantile_value=None, unit=None,
+                 insured=False):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
             statistics, quantile_value)
@@ -62,6 +68,7 @@ class LossCurveXMLWriter(object):
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
         self._source_model_tree_path = source_model_tree_path
+        self._insured = insured
 
         self._loss_curves = None
 
@@ -129,6 +136,9 @@ class LossCurveXMLWriter(object):
         """
 
         self._loss_curves = etree.SubElement(root, "lossCurves")
+
+        if self._insured:
+            self._loss_curves.set("insured", str(self._insured))
 
         self._loss_curves.set("investigationTime",
             str(self._investigation_time))
@@ -210,7 +220,8 @@ class AggregateLossCurveXMLWriter(object):
             of exceedance at the same index.
         """
 
-        _assert_valid_input(data)
+        if data is None:
+            raise ValueError("You can not serialize an empty document")
 
         with open(self._path, "w") as output:
             root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)

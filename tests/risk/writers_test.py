@@ -109,6 +109,48 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
+    def test_serialize_an_insured_loss_curve(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossCurves  insured="True" investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+    <lossCurve assetRef="asset_1">
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <poEs>1.0 0.5 0.1</poEs>
+      <losses>10.0 20.0 30.0</losses>
+    </lossCurve>
+    <lossCurve assetRef="asset_2">
+      <gml:Point>
+        <gml:pos>2.0 2.5</gml:pos>
+      </gml:Point>
+      <poEs>1.0 0.3 0.2</poEs>
+      <losses>20.0 30.0 40.0</losses>
+    </lossCurve>
+  </lossCurves>
+</nrml>
+""")
+
+        writer = writers.LossCurveXMLWriter(self.filename,
+            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+            gsim_tree_path="b1_b2", unit="USD", insured=True)
+
+        data = [
+            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
+                poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
+                loss_ratios=None),
+
+            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
+                poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
+                loss_ratios=None),
+        ]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -160,7 +202,6 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.AggregateLossCurveXMLWriter(self.filename,
             investigation_time=10.0, statistics="mean")
 
-        self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
