@@ -14,6 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
+import numpy
 
 from nose.plugins.attrib import attr as noseattr
 
@@ -23,118 +25,108 @@ from tests.utils import helpers
 from openquake.db import models
 
 
-class ClassicalRiskHazardCase1TestCase(risk.BaseRiskQATestCase):
+class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="50.0" statistics="mean" unit="USD">
-    <lossCurve assetRef="a1">
-      <gml:Point>
-        <gml:pos>1.0 1.0</gml:pos>
-      </gml:Point>
-      <poEs>0.0393347533677 0.039319630829 0.0384540639673 0.0353555683375 0.0310809359515 0.0269219661169 0.0233091854249 0.0202549286473 0.0176926044553 0.0155616221765 0.0138044829893 0.0111599850445 0.00927277820929 0.00780386210329 0.00660104748954 0.00562104810103 0.00426294495221 0.00347810187546 0.00291642896185 0.00237546166034 0.00185477228722 0.00113319071162 0.000862358303707 0.000784269030445 0.000660062215756 0.000374938542786 0.000230249004394 0.000122823654476 5.72790058706e-05 2.35807221323e-05 8.66392324538e-06</poEs>
-      <losses>0.0 0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2 0.24 0.28 0.32 0.36 0.4 0.48 0.56 0.64 0.72 0.8 0.96 1.12 1.28 1.44 1.6 1.68 1.76 1.84 1.92 2.0</losses>
-      <lossRatios>0.0 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.12 0.14 0.16 0.18 0.2 0.24 0.28 0.32 0.36 0.4 0.48 0.56 0.64 0.72 0.8 0.84 0.88 0.92 0.96 1.0</lossRatios>
-    </lossCurve>
-  </lossCurves>
 </nrml>
     """
 
-    EXPECTED_LOSS_MAP_0_01_XML = """<?xml version='1.0' encoding='UTF-8'?>
+    EXPECTED_AGG_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="50.0" poE="0.01"
-           statistics="mean" lossCategory="single_asset" unit="USD">
-    <node>
-      <gml:Point>
-        <gml:pos>1.0 1.0</gml:pos>
-      </gml:Point>
-      <loss assetRef="a1" value="0.264586283238"/>
-    </node>
-  </lossMap>
 </nrml>
     """
 
-    EXPECTED_LOSS_MAP_0_02_XML = """<?xml version='1.0' encoding='UTF-8'?>
+    EXPECTED_INS_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="50.0" poE="0.02"
-           statistics="mean" lossCategory="single_asset" unit="USD">
-    <node>
-      <gml:Point>
-        <gml:pos>1.0 1.0</gml:pos>
-      </gml:Point>
-      <loss assetRef="a1" value="0.141989823521"/>
-    </node>
-  </lossMap>
+</nrml>
+    """
+
+    EXPECTED_LOSS_MAP_0_1_XML = """<?xml version='1.0' encoding='UTF-8'?>
+</nrml>
+    """
+
+    EXPECTED_LOSS_MAP_0_2_XML = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 </nrml>"""
 
-    EXPECTED_LOSS_MAP_0_05_XML = """<?xml version='1.0' encoding='UTF-8'?>
+    EXPECTED_LOSS_MAP_0_5_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="50.0" poE="0.05" statistics="mean" lossCategory="single_asset" unit="USD">
-    <node>
-      <gml:Point>
-        <gml:pos>1.0 1.0</gml:pos>
-      </gml:Point>
-      <loss assetRef="a1" value="0.0"/>
-    </node>
-  </lossMap>
 </nrml>
     """
 
-    @noseattr('qa', 'risk', 'classical')
+    @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self.run_test()
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("simple_fault_demo_hazard/job.ini"))
+            helpers.demo_file("event_based_hazard/job.ini"))
 
-        hazard_curve = [
-            (0.001, 0.0398612669790014),
-            (0.01, 0.039861266979001400), (0.05, 0.039728757480298900),
-            (0.10, 0.029613426625612500), (0.15, 0.019827328756491600),
-            (0.20, 0.013062270161451900), (0.25, 0.008655387950000430),
-            (0.30, 0.005898520593689670), (0.35, 0.004061698589511780),
-            (0.40, 0.002811727179526820), (0.45, 0.001995117417776690),
-            (0.50, 0.001358705972845710), (0.55, 0.000989667841573727),
-            (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
-            (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
+        hc = job.hazard_calculation
 
-        hd = models.HazardCurveData.objects.create(
-            hazard_curve=models.HazardCurve.objects.create(
+        gmf_set = models.GmfSet.objects.create(
+            gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
-                    job, "Test Hazard curve", "hazard_curve"),
-                investigation_time=50,
-                imt="PGA", imls=[hz[0] for hz in hazard_curve],
-                statistics="mean"),
-            poes=[hz[1] for hz in hazard_curve],
-            location="POINT(1 1)")
+                    job, "Test Hazard output", "gmf"),
+                    lt_realization=models.LtRealization.objects.create(
+                        hazard_calculation=job.hazard_calculation,
+                        ordinal=1, seed=1, weight=None,
+                        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+                        is_complete=False, total_items=1, completed_items=1),
+                    complete_logic_tree_gmf=False),
+                investigation_time=hc.investigation_time,
+                ses_ordinal=1,
+                complete_logic_tree_gmf=False)
 
-        return hd.hazard_curve.output.id
+        with open('gmf.csv', 'rb') as csvfile:
+            gmfreader = csv.reader(csvfile, delimiter=',')
+            locations = gmfreader.next()
+
+            for i, gmvs in enumerate(
+                    numpy.array([[float(x) for x in row]
+                                 for row in gmfreader]).transpose()):
+                models.Gmf.objects.create(
+                    gmf_set=gmf_set,
+                    imt="PGA", gmvs=gmvs,
+                    result_grp_ordinal=1,
+                    location="POINT(%s)" % locations[i])
+
+        return gmf_set.gmfcollection.output.id
 
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job)] +
+                        loss_curve__output__oq_job=job,
+                        loss_curve__aggregate=False,
+                        loss_curve__insured=False).order_by('asset_ref')] +
+                [curve.loss_ratios
+                for curve in models.LossCurveData.objects.filter(
+                        loss_curve__output__oq_job=job,
+                        loss_curve__aggregate=True,
+                        loss_curve__insured=False).order_by('asset_ref')] +
+                [curve.loss_ratios
+                for curve in models.LossCurveData.objects.filter(
+                        loss_curve__output__oq_job=job,
+                        loss_curve__aggregate=False,
+                        loss_curve__insured=True).order_by('asset_ref')] +
                 [point.value
                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job)])
+                        loss_map__output__oq_job=job).order_by('asset_ref')])
 
     def expected_data(self):
-        return [[
-            0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06,
-            0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16,
-            0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40,
-            0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
-            0.92, 0.96, 1.00],
-            0.264586283238, 0.141989823521, 0.0]
+        return [[], None, None, None]
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,
-                self.EXPECTED_LOSS_MAP_0_01_XML,
-                self.EXPECTED_LOSS_MAP_0_02_XML,
-                self.EXPECTED_LOSS_MAP_0_05_XML]
+                self.EXPECTED_AGG_LOSS_CURVE_XML,
+                self.EXPECTED_INS_LOSS_CURVE_XML,
+                self.EXPECTED_LOSS_MAP_0_1_XML,
+                self.EXPECTED_LOSS_MAP_0_2_XML,
+                self.EXPECTED_LOSS_MAP_0_5_XML]
