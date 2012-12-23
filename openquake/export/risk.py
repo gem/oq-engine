@@ -48,6 +48,7 @@ def _export_fn_map():
     Creates a mapping from output type to risk export function
     """
     fn_map = {
+        'agg_loss_curve': export_agg_loss_curve,
         'loss_curve': export_loss_curve,
         'loss_map': export_loss_map,
         'bcr_distribution': export_bcr_distribution
@@ -80,6 +81,20 @@ def _export_common(output):
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
                 unit=unit)
+
+
+@core.makedirs
+def export_agg_loss_curve(output, target_dir):
+    """
+    Export `output` to `target_dir` by using a nrml loss curves
+    serializer
+    """
+    args = _export_common(output)
+    args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+        'loss_curve_id': output.losscurve.id})
+    writers.AggregateLossCurveXMLWriter(**args).serialize(
+        output.losscurve.aggregatelosscurvedata)
+    return [args['path']]
 
 
 @core.makedirs
