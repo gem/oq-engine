@@ -163,8 +163,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         # atm, no complete_logic_tree gmf are supported
         number_of_realizations = 1
 
-        tses = hc.ses_per_logic_tree_path * number_of_realizations
         time_span = hc.investigation_time
+        tses = hc.ses_per_logic_tree_path * number_of_realizations * time_span
 
         return dict(
             insured_losses=self.rc.insured_losses,
