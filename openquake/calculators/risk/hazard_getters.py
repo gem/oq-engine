@@ -143,10 +143,12 @@ class GroundMotionValuesGetter(object):
         query = """
         SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %%s))
         AS min_distance FROM (
-            SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
-            WHERE imt = %%s AND gmf_set_id IN %%s %s
-            ORDER BY gmf_set_id, result_grp_ordinal
-        ) n GROUP BY location ORDER BY min_distance LIMIT 1;"""
+            SELECT row_number() over () as r,
+                   unnest(m.gmvs) as v, location FROM (
+              SELECT gmvs, location FROM hzrdr.gmf
+              WHERE imt = %%s AND gmf_set_id IN %%s %s
+              ORDER BY gmf_set_id, result_grp_ordinal
+          ) m) n GROUP BY r ORDER BY min_distance LIMIT 1;"""
 
         query = query % spectral_filters
 

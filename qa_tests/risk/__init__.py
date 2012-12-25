@@ -74,12 +74,12 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
             for i, actual in enumerate(actual_data):
                 numpy.testing.assert_array_almost_equal(
-                    expected_data[i], actual, decimal=4)
+                    expected_data[i], actual, decimal=3)
 
             expected_outputs = self.expected_outputs()
 
             for i, output in enumerate(models.Output.objects.filter(
-                    oq_job=job)):
+                    oq_job=job).order_by('id')):
                 [exported_file] = risk_export.export(output.id, result_dir)
                 self.assert_xml_equal(
                     StringIO.StringIO(expected_outputs[i]), exported_file)

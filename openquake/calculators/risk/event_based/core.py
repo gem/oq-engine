@@ -25,7 +25,7 @@ from openquake.db import models
 from openquake.utils import tasks, stats
 from openquake import logs
 
-from risklib import api
+from risklib import api, event_based as eb
 
 
 @tasks.oqtask
@@ -73,7 +73,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
 
-            loss_curve = general.write_loss_curve(loss_curve_id, asset_output)
+            general.write_loss_curve(loss_curve_id, asset_output)
 
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
@@ -81,12 +81,8 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
             if asset_output.insured_losses:
                 general.write_loss_curve(insured_curve_id, asset_output)
 
-    # poes in event based calculator depends only on the number of
-    # ground motion values and the loss curve resolution, which are
-    # both constants in the calculation. So, as we poes we take
     general.update_aggregate_losses(
-        aggregate_loss_curve_id,
-        eb_calculator.aggregate_losses, loss_curve.poes)
+        aggregate_loss_curve_id, eb_calculator.aggregate_losses)
 event_based.ignore_result = False
 
 
@@ -129,6 +125,21 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                      db.models.Q(ins_limit__isnull=True))).exists():
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
+
+    def post_process(self):
+        loss_curve = models.LossCurve.objects.get(
+            pk=self.output_container_ids['aggregate_loss_curve_id'])
+        curve_data = loss_curve.aggregatelosscurvedata
+
+        aggregate_loss_curve = eb._loss_curve(
+            curve_data.losses,
+            self.calculation_parameters['tses'],
+            self.calculation_parameters['time_span'],
+            self.calculation_parameters['loss_curve_resolution'])
+
+        curve_data.losses = aggregate_loss_curve.x_values.tolist()
+        curve_data.poes = aggregate_loss_curve.y_values.tolist()
+        curve_data.save()
 
     @property
     def imt(self):
