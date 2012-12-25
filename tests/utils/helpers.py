@@ -247,8 +247,7 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
             devnull.close()
 
 
-def run_risk_job_sp(config_file, params=None, check_output=False,
-                    silence=False, hazard_id=None):
+def run_risk_job_sp(config_file, params=None, silence=False, hazard_id=None):
     """
     Given a path to a config file, run an openquake risk job as a separate
     process using `subprocess`. See `run_hazard_job_sp` for the signature
@@ -269,11 +268,7 @@ def run_risk_job_sp(config_file, params=None, check_output=False,
         devnull = open(os.devnull, 'wb')
 
     try:
-        if check_output:
-            return subprocess.check_output(args, stdout=devnull,
-                                           stderr=devnull)
-        else:
-            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
+        return subprocess.check_call(args, stderr=devnull, stdout=devnull)
     finally:
         if devnull is not None:
             devnull.close()

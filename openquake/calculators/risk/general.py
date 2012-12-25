@@ -393,10 +393,10 @@ def write_loss_map(loss_map_ids, asset_output):
 
 
 @db.transaction.commit_on_success
-def update_aggregate_losses(curve_id, losses, poes):
+def update_aggregate_losses(curve_id, losses):
     """
     Update an aggregate loss curve with new `losses` (that will be
-    added) and `poes`
+    added)
 
     :type losses: numpy array
     """
@@ -413,7 +413,7 @@ def update_aggregate_losses(curve_id, losses, poes):
         curve_data.losses = losses + curve_data.losses
     else:
         curve_data.losses = losses
-        curve_data.poes = poes
+
     curve_data.save()
 
 
