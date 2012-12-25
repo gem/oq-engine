@@ -261,14 +261,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IML defined.
         """
         # min IML in this case is 0.01
-        self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
+        numpy.testing.assert_allclose(numpy.array([0.0, 0.0, 0.0]),
             event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
+                {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None))
 
         # max IML in this case is 0.52
-        self.assertTrue(numpy.allclose(numpy.array([0.700, 0.700]),
+        numpy.testing.assert_allclose(numpy.array([0.700, 0.700]),
             event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.525, 0.530)}, None, None)))
+                {"IMLs": (0.525, 0.530)}, None, None))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -355,9 +355,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.00307200000000000, 0.0199728000000000])
 
         # the length of the result is the length of the gmf
-        self.assertTrue(numpy.allclose(expected_loss_ratios,
+        numpy.testing.assert_allclose(
+            expected_loss_ratios,
             event_based._compute_loss_ratios(self.vulnerability_function1,
-                GMF, None, None)))
+                                             GMF, None, None))
 
     def test_constant(self):
         expected = [10] * 100
