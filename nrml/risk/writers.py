@@ -254,7 +254,7 @@ class AggregateLossCurveXMLWriter(object):
             poes.text = " ".join([str(p) for p in data.poes])
 
             losses = etree.SubElement(aggregate_loss_curve, "losses")
-            losses.text = " ".join([str(p) for p in data.losses])
+            losses.text = " ".join(["%.4f" % p for p in data.losses])
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
