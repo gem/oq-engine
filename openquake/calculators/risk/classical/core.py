@@ -17,8 +17,10 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+
 from django.db import transaction
 
+from openquake.calculators import base
 from openquake.calculators.risk import general
 from openquake.utils import tasks, stats
 from openquake import logs
@@ -26,7 +28,6 @@ from risklib import api
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def classical(job_id, assets, hazard_getter, hazard_id,
               loss_curve_id, loss_map_ids,
@@ -78,6 +79,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
 
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+
 classical.ignore_result = False
 
 
@@ -87,26 +90,11 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     for a given set of assets.
     """
 
-    #: The core calculation celery task function
-    celery_task = classical
-
-    @property
-    def calculation_parameters(self):
-        """
-        The specific calculation parameters passed as kwargs to the
-        celery task function
-        """
-
-        return {
-            'lrem_steps_per_interval': self.rc.lrem_steps_per_interval,
-            'conditional_loss_poes': self.rc.conditional_loss_poes
-            }
-
     @property
     def hazard_id(self):
         """
         The ID of the :class:`openquake.db.models.HazardCurve` object that
-        stores the hazard curves used by the risk calculation
+        stores the hazard curves used by the risk calculation.
         """
         if not self.rc.hazard_output.is_hazard_curve():
             raise RuntimeError(
@@ -123,3 +111,11 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
         """
         return "hazard_curve"
+
+    @property
+    def calculator_parameters(self):
+        """
+        Specific calculator parameters returned as list suitable to be
+        passed in task_arg_gen
+        """
+        return [self.rc.lrem_steps_per_interval, self.rc.conditional_loss_poes]
