@@ -249,7 +249,9 @@ def _loss_curve(loss_values, tses, time_span,
              enumerate(pairwise(sorted_loss_values))
              if not numpy.allclose([val], [previous_val])]
 
-    if not times:
+    # if there are less than 2 distinct loss values, we will keep the
+    # endpoints
+    if len(times) < 2:
         times = [0, len(sorted_loss_values) - 1]
 
     sorted_loss_values = sorted_loss_values[times]
