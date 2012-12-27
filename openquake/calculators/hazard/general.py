@@ -431,16 +431,11 @@ def update_realization(lt_rlz_id, num_items):
 class BaseHazardCalculatorNext(base.CalculatorNext):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
-    functionality, including initialization procedures and the core
-    distribution/execution logic.
+    functionality, like initialization procedures.
     """
-
-    #: In subclasses, this would be a reference to the task function
-    core_calc_task = None
 
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
-        self.progress = dict(total=0, computed=0)
 
     @property
     def hc(self):
@@ -449,17 +444,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         :class:`~openquake.db.models.HazardCalculation`.
         """
         return self.job.hazard_calculation
-
-    def task_arg_gen(self, block_size):
-        """
-        Generator function for creating the arguments for each task.
-
-        Subclasses must implement this.
-
-        :param int block_size:
-            The number of work items per task (sources, sites, etc.).
-        """
-        raise NotImplementedError
 
     def block_size(self):
         """

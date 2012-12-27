@@ -57,16 +57,11 @@ class BaseRiskCalculator(base.CalculatorNext):
       set of assets going from offset to offset + block_size.
     """
 
-    #: in subclasses, this would be a reference to the the celery task
-    #  function used in the execute phase
-    core_calc_task = lambda *args, **kwargs: None
-
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
+
         self.assets_nr = None
         self.exposure_model_id = None
-
-        self.progress = dict(total=0, computed=0)
 
     def pre_execute(self):
         """
