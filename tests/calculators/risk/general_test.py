@@ -114,8 +114,6 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         [loss_curve_id, loss_map_ids] = self.calculator.create_outputs()
 
-        self.assertEqual(2, len(outputs))
-
         self.assertTrue(
             models.LossCurve.objects.filter(pk=loss_curve_id).exists())
 
