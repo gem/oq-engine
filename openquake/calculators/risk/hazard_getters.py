@@ -141,14 +141,16 @@ class GroundMotionValuesGetter(object):
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
 
         query = """
-        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %%s))
+        SELECT array_agg(n.v) as t,
+               AsText(location),
+               min(ST_Distance_Sphere(location, %%s))
         AS min_distance FROM (
             SELECT row_number() over () as r,
                    unnest(m.gmvs) as v, location FROM (
               SELECT gmvs, location FROM hzrdr.gmf
               WHERE imt = %%s AND gmf_set_id IN %%s %s
               ORDER BY gmf_set_id, result_grp_ordinal
-          ) m) n GROUP BY r ORDER BY min_distance LIMIT 1;"""
+          ) m) n GROUP BY r, location ORDER BY min_distance;"""
 
         query = query % spectral_filters
 
@@ -158,7 +160,19 @@ class GroundMotionValuesGetter(object):
             args = args + (self._sa_period, self._sa_damping)
 
         cursor.execute(query, args)
-        ground_motion_values = cursor.fetchone()[0]
+
+        ground_motion_values = []
+        current_location = None
+        while 1:
+            data = cursor.fetchone()
+            if not data:
+                break
+            if not current_location:
+                current_location = data[1]
+            else:
+                if current_location != data[1]:
+                    break
+            ground_motion_values.extend(data[0])
 
         # FIXME(lp): temporary format, to be changed.
         # Do these values depends on the site?
