@@ -90,6 +90,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     for a given set of assets.
     """
 
+    #: celery task
+    core_calc_task = classical
+
     @property
     def hazard_id(self):
         """
