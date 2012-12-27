@@ -75,4 +75,4 @@ class ClassicalBCRRiskCalculatorTestCase(
         """
 
         self.assertTrue(models.BCRDistribution.objects.filter(
-            pk=self.calculator.create_distribution_output()).exists())
+            pk=self.calculator.create_outputs()[0]).exists())
