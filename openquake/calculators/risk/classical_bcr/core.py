@@ -60,8 +60,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
       The life expectancy used for every asset
     """
     model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model(
-        job_id, True)
+    model_retrofitted = general.fetch_vulnerability_model(job_id, True)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.bcr(
