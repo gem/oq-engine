@@ -25,6 +25,7 @@ import numpy
 from django.db import transaction
 
 from openquake import logs
+from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.db import models
@@ -71,7 +72,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         msg %= calc_type
         raise RuntimeError(msg)
 
-    haz_general.signal_task_complete(
+    base.signal_task_complete(
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
 
@@ -462,7 +463,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
                 try:
-                    haz_general.queue_next(
+                    base.queue_next(
                         self.core_calc_task, disagg_task_arg_gen.next())
                 except StopIteration:
                     # There are no more tasks to dispatch; now we just need to
@@ -496,7 +497,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # with disagg tasks:
                         for _ in xrange(concurrent_tasks):
                             try:
-                                haz_general.queue_next(
+                                base.queue_next(
                                     self.core_calc_task,
                                     disagg_task_arg_gen.next())
                             except StopIteration:
@@ -513,7 +514,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # we're not done computing hazard curves; enqueue the
                         # next task
                         try:
-                            haz_general.queue_next(
+                            base.queue_next(
                                 self.core_calc_task, hc_task_arg_gen.next())
                         except StopIteration:
                             # No more hazard curve tasks left to enqueue;
