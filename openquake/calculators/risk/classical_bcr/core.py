@@ -87,35 +87,45 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     core_calc_task = classical_bcr
 
-    @property
-    def calculation_parameters(self):
+    def task_arg_gen(self, block_size):
         """
-        :returns: calculation specific parameters as a dictionary
-        suitable to be passed to the celery task function of the
-        calculator
+        Generator function for creating the arguments for each task.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
         """
 
         rc = self.job.risk_calculation
+        distribution_id = self.create_distribution_output()
+        asset_offsets = range(0, self.assets_nr, block_size)
+        region_constraint = self.job.risk_calculation.region_constraint
 
-        return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'interest_rate': rc.interest_rate,
-            'asset_life_expectancy': rc.asset_life_expectancy
-            }
+        for offset in asset_offsets:
+            with logs.tracing("getting assets"):
+                assets = models.ExposureData.objects.contained_in(
+                    self.exposure_model_id, region_constraint, offset,
+                    block_size)
 
-    def create_outputs(self):
+            tf_args = [
+                self.job.id, assets, "one_query_per_asset", self.hazard_id,
+                distribution_id, rc.lrem_steps_per_interval,
+                rc.asset_life_expectancy,  rc.interest_rate,
+            ]
+
+        yield  tf_args
+
+    def create_distribution_output(self):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
         :class:`openquake.db.models.Output` container.
 
         :returns: A dictionary where the created output container is
-          associated with the key bcr_distribution_id
+          associated with the key bcr_distribution_id.
         """
-        return dict(
-            bcr_distribution_id=models.BCRDistribution.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk)
+        return models.BCRDistribution.objects.create(
+            output=models.Output.objects.create_output(
+            self.job, "BCR Distribution", "bcr_distribution")).pk
 
     def store_risk_model(self):
         """
@@ -125,4 +135,4 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
         general.store_risk_model(self.job.risk_calculation,
-                                 "vulnerability_retrofitted")
+            "vulnerability_retrofitted")

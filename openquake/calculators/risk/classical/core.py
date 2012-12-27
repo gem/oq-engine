@@ -129,6 +129,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             yield  tf_args
 
     def create_loss_curve_output(self):
+        """
+        Create the output container for loss curves.
+        """
         return models.LossCurve.objects.create(
             output=models.Output.objects.create_output(
             self.job, "Loss Curve set", "loss_curve")).pk
