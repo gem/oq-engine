@@ -18,8 +18,6 @@
 """Common functionality for Risk calculators."""
 
 import os
-import math
-import functools
 
 from openquake import logs
 from openquake.utils import config
@@ -28,7 +26,6 @@ from openquake.calculators import base
 from openquake.parser import risk
 from openquake.export import (
     core as export_core, risk as risk_export)
-from openquake.utils import tasks
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
 
@@ -54,26 +51,22 @@ class BaseRiskCalculator(base.CalculatorNext):
     :attribute exposure_model_id:
       The exposure model used by the calculation
 
-    :attribute assets_per_task:
-      The number of assets processed by each celery task
-
     :attribute asset_offsets:
       A generator of asset offsets used by each celery task. Assets are
       ordered by their id. An asset offset is an int that identify the
-      set of assets going from offset to offset + assets_per_task.
+      set of assets going from offset to offset + block_size.
     """
 
     #: in subclasses, this would be a reference to the the celery task
     #  function used in the execute phase
-    celery_task = lambda *args, **kwargs: None
+    core_calc_task = lambda *args, **kwargs: None
 
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
-        self.output_container_ids = None
         self.assets_nr = None
         self.exposure_model_id = None
-        self.assets_per_task = None
-        self.asset_offsets = None
+
+        self.progress = dict(total=0, computed=0)
 
     def pre_execute(self):
         """
@@ -102,44 +95,18 @@ class BaseRiskCalculator(base.CalculatorNext):
                      ' This configuration is invalid. '
                      ' Change the region constraint input or use a proper '
                      ' exposure file'])
-            self.assets_per_task = int(
-                math.ceil(float(self.assets_nr) / int(
-                    config.get('risk', 'task_number'))))
-
-            self.asset_offsets = range(0, self.assets_nr, self.assets_per_task)
 
         with logs.tracing('store risk model'):
             self.store_risk_model()
 
-        with logs.tracing('create output containers'):
-            self.output_container_ids = self.create_outputs()
-
+        self.progress.update(total=self.assets_nr)
         self._initialize_progress()
 
-    def execute(self):
-        """
-        Calculation work is parallelized over block of assets, which
-        means that each task will compute risk for only a subset of
-        the exposure considered.
+    def block_size(self):
+        return int(config.get('risk', 'block_size'))
 
-        The asset block size value is got by the variable `block_size`
-        in `[risk]` section of the OpenQuake config file.
-        """
-
-        tf_args = dict(
-            job_id=self.job.id,
-            hazard_getter="one_query_per_asset",
-            assets_per_task=self.assets_per_task,
-            region_constraint=self.job.risk_calculation.region_constraint,
-            exposure_model_id=self.exposure_model_id,
-            hazard_id=self.hazard_id)
-        tf_args.update(self.output_container_ids)
-        tf_args.update(self.calculation_parameters)
-
-        tasks.distribute(
-            self.celery_task,
-            ("offset", self.asset_offsets),
-            tf_args=tf_args)
+    def concurrent_tasks(self):
+        return int(config.get('risk', 'concurrent_tasks'))
 
     def export(self, *args, **kwargs):
         """
@@ -198,65 +165,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         to load fragility models or multiple vulnerability models"""
 
         store_risk_model(self.job.risk_calculation, "vulnerability")
-
-    def create_outputs(self):
-        """
-        Create outputs container objects (e.g. LossCurve, Output).
-
-        Derived classes should override this to create containers for
-        storing objects other than LossCurves.
-
-        The default behavior is to create a loss curve output.
-
-        :return a dictionary string -> ContainerObject ids
-        """
-
-        job = self.job
-
-        return dict(
-            loss_curve_id=models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Loss Curve set", "loss_curve")).pk)
-
-
-def with_assets(fn):
-    """
-    Decorator helper for a risk calculation celery task.
-
-    It transforms an oqtask function accepting an offset as first
-    argument and a block size over a list of assets into a function
-    that accepts a list of assets contained in a region_constraint.
-
-    The exposure_model, the region constraint and the assets_per_task
-    are got by kwargs of the original function. Such arguments are
-    removed from the function signature.
-
-    It is also responsible to log the progress
-    """
-    @functools.wraps(fn)
-    def wrapped_function(job_id, offset, **kwargs):
-        """
-        The wrapped celery task function that expects in input an
-        offset over the collection of all the Asset considered
-        by the risk calculation.
-        """
-        exposure_model_id = kwargs['exposure_model_id']
-        region_constraint = kwargs['region_constraint']
-        assets_per_task = kwargs['assets_per_task']
-
-        del kwargs['exposure_model_id']
-        del kwargs['region_constraint']
-        del kwargs['assets_per_task']
-
-        with logs.tracing("getting assets"):
-            assets = models.ExposureData.objects.contained_in(
-                exposure_model_id,
-                region_constraint, offset, assets_per_task)
-
-        fn(job_id, assets, **kwargs)
-        logs.log_percent_complete(job_id, "risk")
-
-    return wrapped_function
 
 
 def hazard_getter(hazard_getter_name, hazard_id):

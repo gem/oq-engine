@@ -111,6 +111,60 @@ class CalculatorNext(object):
                     conn.drain_events()
         logs.LOG.progress("calculation 100% complete")
 
+    def get_task_complete_callback(self, task_arg_gen, block_size,
+                                   concurrent_tasks):
+        """
+        Create the callback which responds to a task completion signal. In some
+        cases, the reponse is simply to enqueue the next task (if there is any
+        work left to be done).
+
+        :param task_arg_gen:
+            The task arg generator, so the callback can get the next set of
+            args and enqueue the next task.
+        :param int block_size:
+            The (maximum) number of work items to pass to a given task.
+        :param int concurrent_tasks:
+            The (maximum) number of tasks that should be in queue at any time.
+        :return:
+            A callback function which responds to a task completion signal.
+            A response typically includes enqueuing the next task and updating
+            progress counters.
+        """
+
+        def callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_items` (to indicate the
+                number of sources computed).
+
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_items = body['num_items']
+
+            assert job_id == self.job.id
+            self.progress['computed'] += num_items
+
+            logs.log_percent_complete(job_id, "hazard")
+
+            # Once we receive a completion signal, enqueue the next
+            # piece of work (if there's anything left to be done).
+            try:
+                queue_next(self.core_calc_task, task_arg_gen.next())
+            except StopIteration:
+                # There are no more tasks to dispatch; now we just need
+                # to wait until all tasks signal completion.
+                pass
+
+            message.ack()
+
+        return callback
+
     def post_execute(self):
         """
         Override this method in subclasses to any necessary post-execution
