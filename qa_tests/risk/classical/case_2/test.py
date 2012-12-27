@@ -104,5 +104,4 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
             0.264870863283]
 
     def expected_outputs(self):
-        return [self.EXPECTED_LOSS_MAP_0_01_XML,
-                self.EXPECTED_LOSS_CURVE_XML]
+        return [self.EXPECTED_LOSS_CURVE_XML, self.EXPECTED_LOSS_MAP_0_01_XML]

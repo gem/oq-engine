@@ -129,7 +129,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def post_process(self):
         loss_curve = models.LossCurve.objects.get(
-            aggregate=True, output__oqjob=self.job)
+            aggregate=True, output__oq_job=self.job)
         curve_data = loss_curve.aggregatelosscurvedata
 
         tses, time_span = self.hazard_times()
