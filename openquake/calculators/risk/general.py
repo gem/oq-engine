@@ -103,9 +103,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         self._initialize_progress()
 
     def block_size(self):
+        """
+        Number of assets handled per task.
+        """
         return int(config.get('risk', 'block_size'))
 
     def concurrent_tasks(self):
+        """
+        Number of tasks to be in queue at any given time.
+        """
         return int(config.get('risk', 'concurrent_tasks'))
 
     def export(self, *args, **kwargs):
