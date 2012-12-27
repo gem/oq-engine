@@ -28,6 +28,7 @@ from openquake.export import (
     core as export_core, risk as risk_export)
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
+from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
@@ -147,7 +148,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         with logs.tracing('storing exposure'):
             path = os.path.join(rc.base_path, exposure_model_input.path)
-            exposure_stream = risk.ExposureModelFile(path)
+            exposure_stream = parsers.ExposureModelParser(path)
             writer = exposure_writer.ExposureDBWriter(exposure_model_input)
             writer.serialize(exposure_stream)
         return writer.model
