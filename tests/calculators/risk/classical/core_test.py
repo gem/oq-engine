@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import mock
 from tests.utils import helpers
 from tests.calculators.risk import general_test
 
@@ -36,26 +35,13 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.status = 'executing'
         self.job.save()
 
-        hazard_id = self.job.risk_calculation.hazard_output.hazardcurve.id
-
         patch = helpers.patch(
             'openquake.calculators.risk.general.write_loss_curve')
         mocked_writer = patch.start()
 
-        loss_curve_id = mock.Mock()
-        exposure_model_id = self.job.risk_calculation.model('exposure').id
-        region_constraint = self.job.risk_calculation.region_constraint
-        classical.classical(self.job.id,
-                            0,
-                            assets_per_task=3,
-                            exposure_model_id=exposure_model_id,
-                            hazard_getter="hazard_curve",
-                            hazard_id=hazard_id,
-                            region_constraint=region_constraint,
-                            loss_curve_id=loss_curve_id,
-                            loss_map_ids={},
-                            lrem_steps_per_interval=3,
-                            conditional_loss_poes=[])
+        classical.classical(*self.calculator.task_arg_gen(
+            self.calculator.block_size()).next())
+
         patch.stop()
 
         # we expect 1 asset being filtered out by the region
@@ -92,19 +78,6 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
         files = self.calculator.export(exports='xml')
         self.assertEqual(4, len(files))
-
-    def calculation_parameters(self):
-        """
-        Test that the specific calculation parameters are present
-        """
-
-        params = self.calculator.calculation_parameters
-        for field in ['lrem_steps_per_interval', 'conditional_loss_poes']:
-            self.assertTrue(
-                field in params)
-
-        self.assertEqual(5, params['lrem_steps_per_interval'])
-        self.assertEqual([0.01, 0.02, 0.05], params['conditional_loss_poes'])
 
     def test_hazard_id(self):
         """
