@@ -43,10 +43,6 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
     def hazard_id(self):
         return 0
 
-    @property
-    def calculation_parameters(self):
-        return {}
-
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     """
@@ -103,18 +99,6 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(1, model.vulnerabilityfunction_set.count())
 
-    def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
-
-        outputs = self.calculator.create_outputs()
-
-        self.assertTrue('loss_curve_id' in outputs)
-
-        self.assertTrue(models.LossCurve.objects.filter(
-            pk=outputs['loss_curve_id']).exists())
-
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
@@ -125,8 +109,6 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
             helpers.patch(
                 '%s.%s' % (path, 'store_risk_model')),
             helpers.patch(
-                '%s.%s' % (path, 'create_outputs')),
-            helpers.patch(
                 '%s.%s' % (path, '_initialize_progress')),
             helpers.patch(
                 'openquake.db.models.ExposureData.objects.contained_in_count'))
@@ -134,48 +116,15 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         mocks = [p.start() for p in patches]
 
         mocks[1].return_value = models.ExposureModel.objects.all()[0]
-        mocks[4].return_value = 3
+        mocks[3].return_value = 3
 
         self.calculator.pre_execute()
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count,
-                             "mock %d has not been called" % (i + 1))
+                "mock %d has not been called" % (i + 1))
             m.stop()
             patches[i].stop()
-
-    def test_execute(self):
-        """
-        Test that the distribute function is called properly
-        """
-
-        patch = helpers.patch(
-            'openquake.utils.tasks.distribute')
-        distribute = patch.start()
-
-        self.calculator.pre_execute()
-        self.calculator.execute()
-
-        self.assertEqual(1, distribute.call_count)
-
-        expected_region_constraint = (
-            self.job.risk_calculation.region_constraint)
-        expected_model_id = self.calculator.exposure_model_id
-        expected_kwargs = dict(job_id=self.job.id,
-                               hazard_getter="one_query_per_asset",
-                               assets_per_task=1,
-                               region_constraint=expected_region_constraint,
-                               exposure_model_id=expected_model_id,
-                               hazard_id=self.calculator.hazard_id)
-        expected_kwargs.update(self.calculator.output_container_ids)
-        expected_kwargs.update(self.calculator.calculation_parameters)
-
-        expected_call = ((self.calculator.celery_task,
-                          ("offset", range(0, 3, 4))),
-                          dict(tf_args=expected_kwargs))
-        self.assertEqual(1, distribute.call_count)
-        self.assertEqual(expected_call[1:], distribute.call_args_list[0][1:])
-        patch.stop()
 
     def test_initialize_progress(self):
         """
