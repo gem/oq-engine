@@ -19,13 +19,15 @@
 
 import os
 
+from django import db
+
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base
+from openquake import export
 from openquake.parser import risk
-from openquake.export import (
-    core as export_core, risk as risk_export)
+
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
 from nrml.risk import parsers
@@ -78,12 +80,18 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         4. Initialize progress counters
         """
+
+        # reload the risk calculation to avoid getting raw string
+        # values instead of arrays
+        self.job.risk_calculation = models.RiskCalculation.objects.get(
+            pk=self.rc.pk)
+
         with logs.tracing('store exposure'):
             self.exposure_model_id = self._store_exposure().id
 
             self.assets_nr = models.ExposureData.objects.contained_in_count(
                 self.exposure_model_id,
-                self.job.risk_calculation.region_constraint)
+                self.rc.region_constraint)
 
             if not self.assets_nr:
                 raise RuntimeError(
@@ -110,6 +118,33 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         return int(config.get('risk', 'concurrent_tasks'))
 
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
+        """
+
+        output_containers = self.create_outputs()
+        calculator_parameters = self.calculator_parameters
+
+        # asset offsets
+        asset_offsets = range(0, self.assets_nr, block_size)
+        region_constraint = self.job.risk_calculation.region_constraint
+
+        for offset in asset_offsets:
+            with logs.tracing("getting assets"):
+                assets = models.ExposureData.objects.contained_in(
+                    self.exposure_model_id, region_constraint, offset,
+                    block_size)
+
+            tf_args = ([self.job.id,
+                        assets, self.hazard_getter, self.hazard_id] +
+                        output_containers + calculator_parameters)
+
+            yield  tf_args
+
     def export(self, *args, **kwargs):
         """
         If requested by the user, automatically export all result artifacts to
@@ -126,19 +161,57 @@ class BaseRiskCalculator(base.CalculatorNext):
 
             if 'exports' in kwargs and 'xml' in kwargs['exports']:
                 exported_files = sum([
-                    risk_export.export(output.id,
-                                       self.job.risk_calculation.export_dir)
-                    for output in export_core.get_outputs(self.job.id)], [])
+                    export.risk.export(output.id, self.rc.export_dir)
+                    for output in export.core.get_outputs(self.job.id)], [])
 
                 for exp_file in exported_files:
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
+    def hazard_id(self):
+        """
+        :returns: The ID of the output container of the hazard used
+        for this risk calculation. E.g. an `openquake.db.models.HazardCurve'
+
+        :raises: `RuntimeError` if the hazard associated with the
+        current risk calculation is not suitable to be used with this
+        calculator
+        """
+
+        # Calculator must override this to select from the hazard
+        # output the proper hazard output container
+        raise NotImplementedError
+
+    @property
+    def hazard_getter(self):
+        """
+        :returns: a key for the dict
+        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
+        to get the hazard getter used by the calculator.
+        """
+        raise NotImplementedError
+
+    @property
+    def rc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.RiskCalculation`.
+        """
+        return self.job.risk_calculation
+
+    @property
+    def calculator_parameters(self):
+        """
+        The specific calculation parameters passed as args to the
+        celery task function. Calculators should override this to
+        provide custom arguments to its celery task
+        """
+        return []
+
     def _store_exposure(self):
         """Load exposure assets and write them to database."""
-        rc = self.job.risk_calculation
         [exposure_model_input] = models.inputs4rcalc(
-            self.job.risk_calculation, input_type='exposure')
+            self.rc, input_type='exposure')
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
@@ -147,7 +220,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             return exposure_model_input.exposuremodel
 
         with logs.tracing('storing exposure'):
-            path = os.path.join(rc.base_path, exposure_model_input.path)
+            path = os.path.join(self.rc.base_path, exposure_model_input.path)
             exposure_stream = parsers.ExposureModelParser(path)
             writer = exposure_writer.ExposureDBWriter(exposure_model_input)
             writer.serialize(exposure_stream)
@@ -166,14 +239,45 @@ class BaseRiskCalculator(base.CalculatorNext):
         """Load and store vulnerability model. It could be overriden
         to load fragility models or multiple vulnerability models"""
 
-        store_risk_model(self.job.risk_calculation, "vulnerability")
+        store_risk_model(self.rc, "vulnerability")
+
+    def create_outputs(self):
+        """
+        Create outputs container objects (e.g. LossCurve, Output).
+
+        Derived classes should override this to create containers for
+        storing objects other than LossCurves, LossMaps
+
+        The default behavior is to create a loss curve and loss maps
+        output.
+
+        :return a list of int (id of containers) or dict (poe->int)
+        """
+
+        job = self.job
+
+        # add loss curve containers
+        loss_curve_id = models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Loss Curve set", "loss_curve")).pk
+
+        loss_map_ids = dict()
+
+        for poe in self.job.risk_calculation.conditional_loss_poes:
+            loss_map_ids[poe] = models.LossMap.objects.create(
+                 output=models.Output.objects.create_output(
+                     self.job,
+                     "Loss Map Set with poe %s" % poe,
+                     "loss_map"),
+                     poe=poe).pk
+        return [loss_curve_id, loss_map_ids]
 
 
-def hazard_getter(hazard_getter_name, hazard_id):
+def hazard_getter(hazard_getter_name, hazard_id, *args):
     """
     Initializes and returns an hazard getter
     """
-    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id)
+    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id, *args)
 
 
 def fetch_vulnerability_model(job_id, retrofitted=False):
@@ -198,9 +302,10 @@ def fetch_vulnerability_model(job_id, retrofitted=False):
 
 def write_loss_curve(loss_curve_id, asset_output):
     """
-    Stores a :class:`openquake.db.models.LossCurveData` where the data are
-    got by `asset_output` and the :class:`openquake.db.models.LossCurve`
-    output container is identified by `loss_curve_id`.
+    Stores and returns a :class:`openquake.db.models.LossCurveData`
+    where the data are got by `asset_output` and the
+    :class:`openquake.db.models.LossCurve` output container is
+    identified by `loss_curve_id`.
 
     :param int loss_curve_id: the ID of the output container
 
@@ -209,7 +314,7 @@ def write_loss_curve(loss_curve_id, asset_output):
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
     returned by risklib
     """
-    models.LossCurveData.objects.create(
+    return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset_output.asset.asset_ref,
         location=asset_output.asset.site,
@@ -240,6 +345,31 @@ def write_loss_map(loss_map_ids, asset_output):
             value=loss,
             std_dev=None,
             location=asset_output.asset.site)
+
+
+@db.transaction.commit_on_success
+def update_aggregate_losses(curve_id, losses):
+    """
+    Update an aggregate loss curve with new `losses` (that will be
+    added)
+
+    :type losses: numpy array
+    """
+
+    # to avoid race conditions we lock the table
+    query = """
+      SELECT * FROM riskr.aggregate_loss_curve_data WHERE
+      loss_curve_id = %s FOR UPDATE
+    """
+
+    [curve_data] = models.AggregateLossCurveData.objects.raw(query, [curve_id])
+
+    if curve_data.losses:
+        curve_data.losses = losses + curve_data.losses
+    else:
+        curve_data.losses = losses
+
+    curve_data.save()
 
 
 def write_bcr_distribution(bcr_distribution_id, asset_output):
@@ -275,8 +405,7 @@ def store_risk_model(rc, input_type):
     :param rc: the current :class:`openquake.db.models.RiskCalculation`
     instance
     """
-    [vulnerability_input] = models.inputs4rcalc(
-        rc.id, input_type=input_type)
+    [vulnerability_input] = models.inputs4rcalc(rc.id, input_type=input_type)
 
     for record in risk.VulnerabilityModelFile(
             vulnerability_input.path):
@@ -284,7 +413,7 @@ def store_risk_model(rc, input_type):
             models.VulnerabilityModel.objects.get_or_create(
                 owner=vulnerability_input.owner,
                 input=vulnerability_input,
-                imt=record['IMT'].lower(), imls=record['IML'],
+                imt=record['IMT'], imls=record['IML'],
                 name=record['vulnerabilitySetID'],
                 asset_category=record['assetCategory'],
                 loss_category=record['lossCategory']))

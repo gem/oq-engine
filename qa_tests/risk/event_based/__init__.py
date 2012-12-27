@@ -12,11 +12,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-"""This package contains functionality for querying and exporting calculation
-results"""
-
-
-from openquake.export import risk
-
-__all__ = (risk.__name__,)

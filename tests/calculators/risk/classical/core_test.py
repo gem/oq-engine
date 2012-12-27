@@ -60,17 +60,21 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.save()
         self.calculator.execute()
 
-        self.assertEqual(4, models.Output.objects.filter(
-            oq_job=self.job).count())
-
-        self.assertEqual(1, models.LossCurve.objects.filter(
-            output__oq_job=self.job).count())
-
-        self.assertEqual(2, models.LossCurveData.objects.filter(
-            loss_curve__output__oq_job=self.job).count())
-
-        self.assertEqual(6, models.LossMapData.objects.filter(
-            loss_map__output__oq_job=self.job).count())
+        # 1 loss curve + 3 loss maps
+        self.assertEqual(4,
+                         models.Output.objects.filter(oq_job=self.job).count())
+        self.assertEqual(1,
+                         models.LossCurve.objects.filter(
+                             output__oq_job=self.job).count())
+        self.assertEqual(2,
+                         models.LossCurveData.objects.filter(
+                             loss_curve__output__oq_job=self.job).count())
+        self.assertEqual(3,
+                         models.LossMap.objects.filter(
+                             output__oq_job=self.job).count())
+        self.assertEqual(6,
+                         models.LossMapData.objects.filter(
+                             loss_map__output__oq_job=self.job).count())
 
         files = self.calculator.export(exports='xml')
         self.assertEqual(4, len(files))
@@ -81,24 +85,6 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         `openquake.db.models.HazardCurve` object
         """
 
-        self.assertEqual(1, models.HazardCurve.objects.filter(
-            pk=self.calculator.hazard_id).count())
-
-    def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
-
-        loss_curve_id = self.calculator.create_loss_curve_output()
-        loss_maps_ids = self.calculator.create_loss_maps_outputs()
-
-        self.assertTrue(models.LossCurve.objects.filter(
-            pk=loss_curve_id).exists())
-
-        self.assertEqual(
-            sorted(self.job.risk_calculation.conditional_loss_poes),
-            sorted(loss_maps_ids.keys()))
-
-        for _, map_id in loss_maps_ids.items():
-            self.assertTrue(models.LossMap.objects.filter(
-                pk=map_id).exists())
+        self.assertEqual(1,
+                         models.HazardCurve.objects.filter(
+                             pk=self.calculator.hazard_id).count())
