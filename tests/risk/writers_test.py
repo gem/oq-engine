@@ -216,7 +216,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     gsimTreePath="b1_b2"
     unit="USD">
     <poEs>1.0 0.5 0.1</poEs>
-    <losses>10.0 20.0 30.0</losses>
+    <losses>10.0000 20.0000 30.0000</losses>
   </aggregateLossCurve>
 </nrml>
 """)
@@ -244,7 +244,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     statistics="quantile"
     quantileValue="0.5">
     <poEs>1.0 0.5 0.1</poEs>
-    <losses>10.0 20.0 30.0</losses>
+    <losses>10.0000 20.0000 30.0000</losses>
   </aggregateLossCurve>
 </nrml>
 """)
