@@ -21,7 +21,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from openquake import engine2
-from openquake.calculators.hazard import general as haz_general
+from openquake.calculators import base
 from openquake.calculators.hazard.disagg import core as disagg_core
 from openquake.calculators.hazard.classical import core as cls_core
 from openquake.db import models
@@ -60,11 +60,12 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.disagg_tag_mock.return_value = disagg_tag
 
         # Mock `haz_general.queue_next`
-        general_path = 'openquake.calculators.hazard.general'
-        self.queue_next_patch = helpers.patch('%s.queue_next' % general_path)
+        base_path = 'openquake.calculators.base'
+        self.queue_next_patch = helpers.patch('%s.queue_next' % base_path)
         self.queue_next_mock = self.queue_next_patch.start()
 
         # Mock `finalize_hazard_curves`
+        general_path = 'openquake.calculators.hazard.general'
         self.finalize_curves_patch = helpers.patch(
             '%s.BaseHazardCalculatorNext.finalize_hazard_curves'
             % general_path)
@@ -99,8 +100,8 @@ class TaskCompleteCallbackTest(unittest.TestCase):
 
         # "pre-queue" two hazard curve tasks,
         # and use a fake function
-        haz_general.queue_next(lambda x: x, hc_tag.next())
-        haz_general.queue_next(lambda x: x, hc_tag.next())
+        base.queue_next(lambda x: x, hc_tag.next())
+        base.queue_next(lambda x: x, hc_tag.next())
         self.assertEqual(2, self.queue_next_mock.call_count)
         self.calc.progress['in_queue'] = 2
 

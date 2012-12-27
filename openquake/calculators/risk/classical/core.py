@@ -17,6 +17,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+from openquake.calculators import base
 from openquake.calculators.risk import general
 from openquake.utils import tasks
 from openquake.utils import stats
@@ -27,7 +28,6 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def classical(job_id, assets, hazard_getter, hazard_id,
               loss_curve_id, loss_map_ids,
@@ -78,6 +78,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
             general.write_loss_curve(loss_curve_id, asset_output)
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+
 classical.ignore_result = False
 
 
@@ -87,48 +89,69 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     params for a given set of assets.
     """
 
-    #: The core calculation celery task function
-    celery_task = classical
+    core_calc_task = classical
 
-    @property
-    def calculation_parameters(self):
-        """
-        The specific calculation parameters passed as kwargs to the
-        celery task function
-        """
-        rc = self.job.risk_calculation
-
-        return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'conditional_loss_poes': rc.conditional_loss_poes
-            }
+    def __init__(self, job):
+        super(ClassicalRiskCalculator, self).__init__(job)
 
     @property
     def hazard_id(self):
         """
         The ID of the :class:`openquake.db.models.HazardCurve` object that
-        stores the hazard curves used by the risk calculation
+        stores the hazard curves used by the risk calculation.
         """
         return self.job.risk_calculation.hazard_output.hazardcurve.id
 
-    def create_outputs(self):
+    def task_arg_gen(self, block_size):
         """
-        Add loss map ids when conditional loss poes are specified
+        Generator function for creating the arguments for each task.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
         """
-        outputs = super(ClassicalRiskCalculator, self).create_outputs()
+
+        rc = self.job.risk_calculation
+        loss_maps_ids = self.create_loss_maps_outputs()
+        loss_curve_id = self.create_loss_curve_output()
+        asset_offsets = range(0, self.assets_nr, block_size)
+        region_constraint = self.job.risk_calculation.region_constraint
+
+        for offset in asset_offsets:
+            with logs.tracing("getting assets"):
+                assets = models.ExposureData.objects.contained_in(
+                    self.exposure_model_id, region_constraint, offset,
+                    block_size)
+
+            tf_args = [
+                self.job.id, assets, "one_query_per_asset", self.hazard_id,
+                loss_curve_id, loss_maps_ids, rc.lrem_steps_per_interval,
+                rc.conditional_loss_poes,
+            ]
+
+            yield  tf_args
+
+    def create_loss_curve_output(self):
+        """
+        Create the output container for loss curves.
+        """
+        return models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+            self.job, "Loss Curve set", "loss_curve")).pk
+
+    def create_loss_maps_outputs(self):
+        """
+        Add loss map ids when conditional loss poes are specified.
+        """
         poes = self.job.risk_calculation.conditional_loss_poes or []
 
         def create_loss_map(poe):
             """
             Given a poe create a loss map output container associated
-            with the current job
+            with the current job.
             """
             return models.LossMap.objects.create(
                  output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
-        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
-                                       for poe in poes)
-        return outputs
+                     self.job, "Loss Map Set with poe %s" % poe,
+                     "loss_map"), poe=poe).pk
+
+        return dict((poe, create_loss_map(poe)) for poe in poes)
