@@ -29,7 +29,6 @@ from risklib import api, event_based as eb
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def event_based(job_id, assets, hazard_getter, hazard_id,
                 loss_curve_id, loss_map_ids,
@@ -94,7 +93,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
     """
 
     #: The core calculation celery task function
-    celery_task = event_based
+    core_calc_task = event_based
 
     def pre_execute(self):
         """
@@ -128,14 +127,14 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def post_process(self):
         loss_curve = models.LossCurve.objects.get(
-            pk=self.output_container_ids['aggregate_loss_curve_id'])
+            aggregate=True, output__oqjob=self.job)
         curve_data = loss_curve.aggregatelosscurvedata
 
+        tses, time_span = self.hazard_times()
+
         aggregate_loss_curve = eb._loss_curve(
-            curve_data.losses,
-            self.calculation_parameters['tses'],
-            self.calculation_parameters['time_span'],
-            self.calculation_parameters['loss_curve_resolution'])
+            curve_data.losses, tses, time_span,
+            curve_resolution=self.rc.loss_curve_resolution)
 
         curve_data.losses = aggregate_loss_curve.x_values.tolist()
         curve_data.poes = aggregate_loss_curve.y_values.tolist()
@@ -163,29 +162,34 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         return self.rc.hazard_output.gmfcollection.id
 
+    def hazard_times(self):
+        """
+        Return the hazard investigation time related to the ground
+        motion field and the so-called time representative of the
+        stochastic event set
+        """
+        hc = self.rc.hazard_calculation
+
+        # atm, no complete_logic_tree gmf are supported
+        realizations_nr = 1
+
+        time_span = hc.investigation_time
+        return (time_span,
+                hc.ses_per_logic_tree_path * realizations_nr * time_span)
+
     @property
-    def calculation_parameters(self):
+    def calculator_parameters(self):
         """
         Calculator specific parameters
         """
 
-        hc = self.rc.hazard_calculation
+        time_span, tses = self.hazard_times()
 
-        # atm, no complete_logic_tree gmf are supported
-        number_of_realizations = 1
-
-        time_span = hc.investigation_time
-        tses = hc.ses_per_logic_tree_path * number_of_realizations * time_span
-
-        return dict(
-            insured_losses=self.rc.insured_losses,
-            conditional_loss_poes=self.rc.conditional_loss_poes,
-            tses=tses,
-            time_span=time_span,
-            imt=self.imt,
-            loss_curve_resolution=self.rc.loss_curve_resolution,
-            seed=self.rc.master_seed,
-            asset_correlation=self.rc.asset_correlation)
+        return [self.rc.conditional_loss_poes,
+                self.rc.insured_losses,
+                self.imt, time_span, tses,
+                self.rc.loss_curve_resolution,
+                self.rc.master_seed, self.rc.asset_correlation]
 
     def create_outputs(self):
         """
@@ -197,21 +201,20 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 aggregate=True,
                 output=models.Output.objects.create_output(
                     self.job, "Aggregate Loss Curve", "agg_loss_curve"))
-        outputs['aggregate_loss_curve_id'] = aggregate_loss_curve.id
 
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
         models.AggregateLossCurveData.objects.create(
             loss_curve=aggregate_loss_curve)
 
-        outputs['insured_curve_id'] = (
+        insured_curve_id = (
             models.LossCurve.objects.create(
                 insured=True,
                 output=models.Output.objects.create_output(
                     self.job,
                     "Insured Loss Curve Set",
                     "ins_loss_curve")).id)
-        return outputs
+        return outputs + [insured_curve_id, aggregate_loss_curve.id]
 
     @property
     def hazard_getter(self):
