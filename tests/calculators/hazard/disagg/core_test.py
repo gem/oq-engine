@@ -22,7 +22,6 @@ from nose.plugins.attrib import attr
 
 from openquake import engine2
 from openquake.calculators import base
-from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.disagg import core as disagg_core
 from openquake.calculators.hazard.classical import core as cls_core
 from openquake.db import models
