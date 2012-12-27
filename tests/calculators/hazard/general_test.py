@@ -18,7 +18,6 @@
 import getpass
 import unittest
 
-import kombu
 import nhlib
 
 from nhlib import geo as nhlib_geo

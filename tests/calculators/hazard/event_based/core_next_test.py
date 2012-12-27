@@ -24,7 +24,6 @@ from nose.plugins.attrib import attr
 from openquake.db import models
 from openquake.calculators import base
 from openquake.calculators.hazard.event_based import core_next
-from openquake.calculators.hazard import general as haz_general
 from openquake.utils import stats
 
 from tests.utils import helpers
