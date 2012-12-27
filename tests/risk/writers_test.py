@@ -29,6 +29,8 @@ BCR_NODE = collections.namedtuple("BCRNode",
     "average_annual_loss_retrofitted")
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
+AGGREGATE_LOSS_CURVE = collections.namedtuple(
+    "AggregateLossCurve", "poes losses")
 
 
 class Point(object):
@@ -107,6 +109,48 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
+    def test_serialize_an_insured_loss_curve(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossCurves  insured="True" investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+    <lossCurve assetRef="asset_1">
+      <gml:Point>
+        <gml:pos>1.0 1.5</gml:pos>
+      </gml:Point>
+      <poEs>1.0 0.5 0.1</poEs>
+      <losses>10.0 20.0 30.0</losses>
+    </lossCurve>
+    <lossCurve assetRef="asset_2">
+      <gml:Point>
+        <gml:pos>2.0 2.5</gml:pos>
+      </gml:Point>
+      <poEs>1.0 0.3 0.2</poEs>
+      <losses>20.0 30.0 40.0</losses>
+    </lossCurve>
+  </lossCurves>
+</nrml>
+""")
+
+        writer = writers.LossCurveXMLWriter(self.filename,
+            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+            gsim_tree_path="b1_b2", unit="USD", insured=True)
+
+        data = [
+            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
+                poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
+                loss_ratios=None),
+
+            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
+                poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
+                loss_ratios=None),
+        ]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -131,6 +175,86 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         data = [LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
             loss_ratios=[0.4, 0.6, 0.8])]
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+
+class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
+
+    filename = "aggregate_loss_curves.xml"
+
+    def remove_file(self):
+        try:
+            os.remove(self.filename)
+        except OSError:
+            pass
+
+    def setUp(self):
+        self.remove_file()
+
+    def tearDown(self):
+        self.remove_file()
+
+    def test_empty_model_not_supported(self):
+        writer = writers.AggregateLossCurveXMLWriter(self.filename,
+            investigation_time=10.0, statistics="mean")
+
+        self.assertRaises(ValueError, writer.serialize, None)
+
+    def test_serialize_a_model(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <aggregateLossCurve
+    investigationTime="10.0"
+    sourceModelTreePath="b1_b2_b3"
+    gsimTreePath="b1_b2"
+    unit="USD">
+    <poEs>1.0 0.5 0.1</poEs>
+    <losses>10.0000 20.0000 30.0000</losses>
+  </aggregateLossCurve>
+</nrml>
+""")
+
+        writer = writers.AggregateLossCurveXMLWriter(self.filename,
+            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+            gsim_tree_path="b1_b2", unit="USD")
+
+        data = AGGREGATE_LOSS_CURVE(
+            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0])
+
+        writer.serialize(data)
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+    def test_serialize_statistics_metadata(self):
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <aggregateLossCurve
+    investigationTime="10.0"
+    statistics="quantile"
+    quantileValue="0.5">
+    <poEs>1.0 0.5 0.1</poEs>
+    <losses>10.0000 20.0000 30.0000</losses>
+  </aggregateLossCurve>
+</nrml>
+""")
+
+        writer = writers.AggregateLossCurveXMLWriter(self.filename,
+            investigation_time=10.0, statistics="quantile",
+            quantile_value=0.50)
+
+        data = AGGREGATE_LOSS_CURVE(
+            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0])
 
         writer.serialize(data)
 

@@ -25,6 +25,9 @@
 
         <!-- same as `stcoUnit` in exposure. -->
         <xs:attribute name="unit" type="xs:string" use="optional" />
+
+        <!-- is an insured loss curve? -->
+        <xs:attribute name="insured" type="xs:string" use="optional" />
     </xs:complexType>
 
     <!-- lossCurve: a loss curve for a single asset. -->
