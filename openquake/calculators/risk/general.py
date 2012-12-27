@@ -18,8 +18,6 @@
 """Common functionality for Risk calculators."""
 
 import os
-import math
-import functools
 
 from django import db
 
@@ -29,7 +27,7 @@ from openquake.db import models
 from openquake.calculators import base
 from openquake import export
 from openquake.parser import risk
-from openquake.utils import tasks
+
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
 from nrml.risk import parsers
@@ -56,26 +54,17 @@ class BaseRiskCalculator(base.CalculatorNext):
     :attribute exposure_model_id:
       The exposure model used by the calculation
 
-    :attribute assets_per_task:
-      The number of assets processed by each celery task
-
     :attribute asset_offsets:
       A generator of asset offsets used by each celery task. Assets are
       ordered by their id. An asset offset is an int that identify the
-      set of assets going from offset to offset + assets_per_task.
+      set of assets going from offset to offset + block_size.
     """
-
-    #: in subclasses, this would be a reference to the the celery task
-    #  function used in the execute phase
-    celery_task = lambda *args, **kwargs: None
 
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
-        self.output_container_ids = None
+
         self.assets_nr = None
         self.exposure_model_id = None
-        self.assets_per_task = None
-        self.asset_offsets = None
 
     def pre_execute(self):
         """
@@ -110,44 +99,51 @@ class BaseRiskCalculator(base.CalculatorNext):
                      ' This configuration is invalid. '
                      ' Change the region constraint input or use a proper '
                      ' exposure file'])
-            self.assets_per_task = int(
-                math.ceil(float(self.assets_nr) / int(
-                    config.get('risk', 'task_number'))))
-
-            self.asset_offsets = range(0, self.assets_nr, self.assets_per_task)
 
         with logs.tracing('store risk model'):
             self.store_risk_model()
 
-        with logs.tracing('create output containers'):
-            self.output_container_ids = self.create_outputs()
-
+        self.progress.update(total=self.assets_nr)
         self._initialize_progress()
 
-    def execute(self):
+    def block_size(self):
         """
-        Calculation work is parallelized over block of assets, which
-        means that each task will compute risk for only a subset of
-        the exposure considered.
+        Number of assets handled per task.
+        """
+        return int(config.get('risk', 'block_size'))
 
-        The asset block size value is got by the variable `block_size`
-        in `[risk]` section of the OpenQuake config file.
+    def concurrent_tasks(self):
+        """
+        Number of tasks to be in queue at any given time.
+        """
+        return int(config.get('risk', 'concurrent_tasks'))
+
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
         """
 
-        tf_args = dict(
-            job_id=self.job.id,
-            hazard_getter=self.hazard_getter,
-            assets_per_task=self.assets_per_task,
-            region_constraint=self.rc.region_constraint,
-            exposure_model_id=self.exposure_model_id,
-            hazard_id=self.hazard_id)
-        tf_args.update(self.output_container_ids)
-        tf_args.update(self.calculation_parameters)
+        output_containers = self.create_outputs()
+        calculator_parameters = self.calculator_parameters
 
-        tasks.distribute(
-            self.celery_task,
-            ("offset", self.asset_offsets),
-            tf_args=tf_args)
+        # asset offsets
+        asset_offsets = range(0, self.assets_nr, block_size)
+        region_constraint = self.job.risk_calculation.region_constraint
+
+        for offset in asset_offsets:
+            with logs.tracing("getting assets"):
+                assets = models.ExposureData.objects.contained_in(
+                    self.exposure_model_id, region_constraint, offset,
+                    block_size)
+
+            tf_args = ([self.job.id,
+                        assets, self.hazard_getter, self.hazard_id] +
+                        output_containers + calculator_parameters)
+
+            yield  tf_args
 
     def export(self, *args, **kwargs):
         """
@@ -204,13 +200,13 @@ class BaseRiskCalculator(base.CalculatorNext):
         return self.job.risk_calculation
 
     @property
-    def calculation_parameters(self):
+    def calculator_parameters(self):
         """
-        The specific calculation parameters passed as kwargs to the
+        The specific calculation parameters passed as args to the
         celery task function. Calculators should override this to
         provide custom arguments to its celery task
         """
-        return dict()
+        return []
 
     def _store_exposure(self):
         """Load exposure assets and write them to database."""
@@ -250,72 +246,31 @@ class BaseRiskCalculator(base.CalculatorNext):
         Create outputs container objects (e.g. LossCurve, Output).
 
         Derived classes should override this to create containers for
-        storing objects other than LossCurves, LossMaps and Insured
-        Loss Curve
+        storing objects other than LossCurves, LossMaps
 
-        The default behavior is to create a loss curve, map and
-        insured loss output.
+        The default behavior is to create a loss curve and loss maps
+        output.
 
-        :return a dictionary string -> ContainerObject ids
+        :return a list of int (id of containers) or dict (poe->int)
         """
 
         job = self.job
 
         # add loss curve containers
-        outputs = dict(
-            loss_curve_id=models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Loss Curve set", "loss_curve")).pk,
-            loss_map_ids=dict())
+        loss_curve_id = models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Loss Curve set", "loss_curve")).pk
+
+        loss_map_ids = dict()
 
         for poe in self.job.risk_calculation.conditional_loss_poes:
-            outputs['loss_map_ids'][poe] = models.LossMap.objects.create(
+            loss_map_ids[poe] = models.LossMap.objects.create(
                  output=models.Output.objects.create_output(
                      self.job,
                      "Loss Map Set with poe %s" % poe,
                      "loss_map"),
                      poe=poe).pk
-        return outputs
-
-
-def with_assets(fn):
-    """
-    Decorator helper for a risk calculation celery task.
-
-    It transforms an oqtask function accepting an offset as first
-    argument and a block size over a list of assets into a function
-    that accepts a list of assets contained in a region_constraint.
-
-    The exposure_model, the region constraint and the assets_per_task
-    are got by kwargs of the original function. Such arguments are
-    removed from the function signature.
-
-    It is also responsible to log the progress
-    """
-    @functools.wraps(fn)
-    def wrapped_function(job_id, offset, **kwargs):
-        """
-        The wrapped celery task function that expects in input an
-        offset over the collection of all the Asset considered
-        by the risk calculation.
-        """
-        exposure_model_id = kwargs['exposure_model_id']
-        region_constraint = kwargs['region_constraint']
-        assets_per_task = kwargs['assets_per_task']
-
-        del kwargs['exposure_model_id']
-        del kwargs['region_constraint']
-        del kwargs['assets_per_task']
-
-        with logs.tracing("getting assets"):
-            assets = models.ExposureData.objects.contained_in(
-                exposure_model_id,
-                region_constraint, offset, assets_per_task)
-
-        fn(job_id, assets, **kwargs)
-        logs.log_percent_complete(job_id, "risk")
-
-    return wrapped_function
+        return [loss_curve_id, loss_map_ids]
 
 
 def hazard_getter(hazard_getter_name, hazard_id, *args):
