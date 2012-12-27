@@ -89,8 +89,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     params for a given set of assets.
     """
 
-    #: The core calculation celery task function
     core_calc_task = classical
+
+    def __init__(self, job):
+        super(ClassicalRiskCalculator, self).__init__(job)
 
     @property
     def hazard_id(self):
