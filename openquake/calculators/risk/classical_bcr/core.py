@@ -19,7 +19,7 @@ Core functionality for the classical PSHA risk calculator.
 
 from risklib import api
 
-
+from openquake.calculators import base
 from openquake.calculators.risk import general
 from openquake.calculators.risk.classical import core as classical
 from openquake.utils import stats
@@ -30,13 +30,10 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def classical_bcr(job_id, assets, hazard_getter, hazard_id,
-                  bcr_distribution_id,
-                  lrem_steps_per_interval,
-                  asset_life_expectancy,
-                  interest_rate):
+                  bcr_distribution_id, lrem_steps_per_interval,
+                  asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -79,6 +76,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
             general.write_bcr_distribution(bcr_distribution_id, asset_output)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
 classical_bcr.ignore_result = False
 
 
@@ -87,7 +85,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     Classical BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    celery_task = classical_bcr
+    core_calc_task = classical_bcr
 
     @property
     def calculation_parameters(self):
