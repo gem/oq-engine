@@ -86,6 +86,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     core_calc_task = classical_bcr
 
+    def __init__(self, job):
+        super(ClassicalBCRRiskCalculator, self).__init__(job)
+
     def task_arg_gen(self, block_size):
         """
         Generator function for creating the arguments for each task.
