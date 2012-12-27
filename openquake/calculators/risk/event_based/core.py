@@ -24,6 +24,7 @@ from openquake.calculators.risk import general
 from openquake.db import models
 from openquake.utils import tasks, stats
 from openquake import logs
+from openquake.calculators import base
 
 from risklib import api, event_based as eb
 
@@ -82,6 +83,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
 
     general.update_aggregate_losses(
         aggregate_loss_curve_id, eb_calculator.aggregate_losses)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False
 
 
