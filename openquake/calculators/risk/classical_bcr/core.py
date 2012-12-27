@@ -86,48 +86,27 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     core_calc_task = classical_bcr
 
-    def __init__(self, job):
-        super(ClassicalBCRRiskCalculator, self).__init__(job)
-
-    def task_arg_gen(self, block_size):
+    @property
+    def calculator_parameters(self):
         """
-        Generator function for creating the arguments for each task.
-
-        :param int block_size:
-            The number of work items per task (sources, sites, etc.).
+        Specific calculator parameters returned as list suitable to be
+        passed in task_arg_gen
         """
 
-        rc = self.job.risk_calculation
-        distribution_id = self.create_distribution_output()
-        asset_offsets = range(0, self.assets_nr, block_size)
-        region_constraint = self.job.risk_calculation.region_constraint
+        return [self.rc.lrem_steps_per_interval,
+                self.rc.asset_life_expectancy, self.rc.interest_rate]
 
-        for offset in asset_offsets:
-            with logs.tracing("getting assets"):
-                assets = models.ExposureData.objects.contained_in(
-                    self.exposure_model_id, region_constraint, offset,
-                    block_size)
-
-            tf_args = [
-                self.job.id, assets, "one_query_per_asset", self.hazard_id,
-                distribution_id, rc.lrem_steps_per_interval,
-                rc.asset_life_expectancy,  rc.interest_rate,
-            ]
-
-        yield  tf_args
-
-    def create_distribution_output(self):
+    def create_outputs(self):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
         :class:`openquake.db.models.Output` container.
 
-        :returns: A dictionary where the created output container is
-          associated with the key bcr_distribution_id.
+        :returns: A list containing the output container id
         """
-        return models.BCRDistribution.objects.create(
+        return [models.BCRDistribution.objects.create(
             output=models.Output.objects.create_output(
-            self.job, "BCR Distribution", "bcr_distribution")).pk
+            self.job, "BCR Distribution", "bcr_distribution")).pk]
 
     def store_risk_model(self):
         """
@@ -136,5 +115,14 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         """
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
-        general.store_risk_model(self.job.risk_calculation,
-            "vulnerability_retrofitted")
+        general.store_risk_model(self.rc, "vulnerability_retrofitted")
+
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "hazard_curve"

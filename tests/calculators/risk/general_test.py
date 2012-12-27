@@ -43,6 +43,14 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
     def hazard_id(self):
         return 0
 
+    @property
+    def hazard_getter(self):
+        return "hazard_getter"
+
+    @property
+    def calculation_parameters(self):
+        return []
+
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     """
@@ -98,6 +106,24 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.assertEqual("QA_test1", model.name)
 
         self.assertEqual(1, model.vulnerabilityfunction_set.count())
+
+    def test_create_outputs(self):
+        """
+        Test that the proper output containers are created
+        """
+
+        [loss_curve_id, loss_map_ids] = self.calculator.create_outputs()
+
+        self.assertTrue(
+            models.LossCurve.objects.filter(pk=loss_curve_id).exists())
+
+        self.assertEqual(
+            sorted(self.job.risk_calculation.conditional_loss_poes),
+            sorted(loss_map_ids.keys()))
+
+        for _, map_id in loss_map_ids.items():
+            self.assertTrue(models.LossMap.objects.filter(
+                pk=map_id).exists())
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
