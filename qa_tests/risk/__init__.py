@@ -78,7 +78,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             expected_outputs = self.expected_outputs()
 
             for i, output in enumerate(models.Output.objects.filter(
-                    oq_job=job)):
+                    oq_job=job).order_by('id')):
                 [exported_file] = risk_export.export(output.id, result_dir)
                 self.assert_xml_equal(
                     StringIO.StringIO(expected_outputs[i]), exported_file)
