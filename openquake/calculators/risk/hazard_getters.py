@@ -22,8 +22,6 @@ An HazardGetter is responsible to get hazard outputs needed by a risk
 calculation.
 """
 
-import string
-
 from openquake.db import models
 from django.db import connection
 
@@ -83,27 +81,17 @@ class GroundMotionValuesGetter(object):
         plain `gmf` output types (single logic tree branch or realization).
     :param str imt:
         The intensity measure type with which the ground motion
-        values have been computed.
+        values have been computed (long form).
     :param float time_span:
         Time span (also known as investigation time).
     :param float tses:
         Time representative of the stochastic event set.
         It is computed as: time span * number of logic tree branches *
         number of seismicity histories.
-    :param float sa_period:
-        When the intensity measure type is `SA` (
-        spectral acceleration), it specifies its period (in seconds).
-    :param float sa_damping:
-        When the intensity measure type is `SA` (
-        spectral acceleration), it specifies its damping factor
-        (percentage). Default to 5.0.
     """
 
-    def __init__(self, hazard_output_id, imt, time_span, tses,
-                 sa_period=None, sa_damping=5.0):
-
-        if imt == "SA" and sa_period is None:
-            raise ValueError("With IMT==`SA`, `sa_period` must be specified.")
+    def __init__(self, hazard_output_id, imt, time_span, tses):
+        imt, sa_period, sa_damping = models.parse_imt(imt)
 
         self._imt = imt
         self._tses = tses
@@ -121,11 +109,12 @@ class GroundMotionValuesGetter(object):
         At the moment, we only support risk calculations using ground motion
         fields coming from a specific realization.
         """
-        output = models.Output.objects.get(id=self._hazard_output_id)
+        gmf_collection = models.GmfCollection.objects.get(
+            id=self._hazard_output_id)
 
-        if output.output_type == "gmf":
-            return tuple([x.id for x in models.GmfSet.objects.filter(
-                gmf_collection__output=output)])
+        if gmf_collection.output.output_type == "gmf":
+            return tuple(
+                gmf_collection.gmfset_set.values_list('id', flat=True))
         else:
             raise ValueError("Output must be of type `gmf`. "
                 "At the moment, we only support computation of loss curves "
@@ -151,14 +140,19 @@ class GroundMotionValuesGetter(object):
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
 
-        query = string.Template("""
-        SELECT array_agg(n.v) as t, min(ST_Distance_Sphere(location, %s))
+        query = """
+        SELECT array_agg(n.v) as t,
+               AsText(location),
+               min(ST_Distance_Sphere(location, %%s))
         AS min_distance FROM (
-            SELECT unnest(gmvs) as v, location FROM hzrdr.gmf
-            WHERE imt = %s AND gmf_set_id IN %s ${sa}
-            ORDER BY gmf_set_id, result_grp_ordinal
-        ) n GROUP BY location ORDER BY min_distance LIMIT 1;""").substitute(
-        dict(sa=spectral_filters))
+            SELECT row_number() over () as r,
+                   unnest(m.gmvs) as v, location FROM (
+              SELECT gmvs, location FROM hzrdr.gmf
+              WHERE imt = %%s AND gmf_set_id IN %%s %s
+              ORDER BY gmf_set_id, result_grp_ordinal
+          ) m) n GROUP BY r, location ORDER BY min_distance;"""
+
+        query = query % spectral_filters
 
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
 
@@ -166,9 +160,22 @@ class GroundMotionValuesGetter(object):
             args = args + (self._sa_period, self._sa_damping)
 
         cursor.execute(query, args)
-        ground_motion_values = cursor.fetchone()[0]
 
-        # temporary format, to be changed.
+        ground_motion_values = []
+        current_location = None
+        while 1:
+            data = cursor.fetchone()
+            if not data:
+                break
+            if not current_location:
+                current_location = data[1]
+            else:
+                if current_location != data[1]:
+                    break
+            ground_motion_values.extend(data[0])
+
+        # FIXME(lp): temporary format, to be changed.
+        # Do these values depends on the site?
         result = {"IMLs": ground_motion_values,
             "TimeSpan": self._time_span, "TSES": self._tses}
 
@@ -177,6 +184,6 @@ class GroundMotionValuesGetter(object):
 
 
 HAZARD_GETTERS = dict(
-    one_query_per_asset=HazardCurveGetterPerAsset,
-    event_based=GroundMotionValuesGetter,
+    hazard_curve=HazardCurveGetterPerAsset,
+    ground_motion_field=GroundMotionValuesGetter,
 )

@@ -1058,3 +1058,50 @@ class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
                 instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
+
+
+class EventBasedValidationTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job, _ = helpers.get_risk_job('event_based_risk/job.ini',
+                                           'event_based_hazard/job.ini')
+
+    def test_valid_form_with_default_resolution(self):
+        rc = models.RiskCalculation(
+            calculation_mode="event_based",
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=self.job.risk_calculation.hazard_output)
+
+        form = validation.EventBasedRiskCalculationForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_valid_form_with_custom_resolution(self):
+        rc = models.RiskCalculation(
+            calculation_mode="event_based",
+            owner=helpers.default_user(),
+            loss_curve_resolution=60,
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=self.job.risk_calculation.hazard_output)
+
+        form = validation.EventBasedRiskCalculationForm(
+            instance=rc, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form(self):
+        rc = models.RiskCalculation(
+            calculation_mode="event_based",
+            owner=helpers.default_user(),
+            loss_curve_resolution=-10,
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            hazard_output=self.job.risk_calculation.hazard_output)
+
+        form = validation.EventBasedRiskCalculationForm(
+            instance=rc, files=None)
+        self.assertFalse(form.is_valid())
