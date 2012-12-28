@@ -35,6 +35,7 @@
     <xs:include schemaLocation="./risk/fragility.xsd"/>
     <xs:include schemaLocation="./risk/general.xsd"/>
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/loss_map.xsd"/>
     <xs:include schemaLocation="./risk/vulnerability.xsd"/>
     <xs:include schemaLocation="./risk/collapse_map.xsd"/>
@@ -67,6 +68,7 @@
             <xs:element ref="siteModel" />
             <xs:element ref="hazardCurves" />
             <xs:element ref="lossCurves" />
+            <xs:element ref="aggregateLossCurve" />
             <xs:element ref="lossMap" />
             <xs:element ref="bcrMap" />
             <!-- For Event-Based GMFs, applies to a specific logic tree branch -->
