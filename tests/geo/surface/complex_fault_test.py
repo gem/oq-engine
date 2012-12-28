@@ -160,6 +160,17 @@ class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
 
+    def test_edges_with_nonuniform_length(self):
+        edges = [Line([Point(1, -20, 30), Point(1, -20.2, 30),
+                       Point(2, -19.7, 30), Point(3, -19.5, 30)]),
+                 Line([Point(1, -20, 50), Point(1, -20.2, 50),
+                       Point(2, -19.7, 50)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [1, 1, 2, 3]
+        elats = [-20.2, -20., -19.7, -19.5]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
 
 class ComplexFaultSurfaceGetWidthTestCase(unittest.TestCase):
     def test_surface_with_variable_width(self):
