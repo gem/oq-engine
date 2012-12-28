@@ -22,8 +22,8 @@ import kombu
 from nose.plugins.attrib import attr
 
 from openquake.db import models
+from openquake.calculators import base
 from openquake.calculators.hazard.event_based import core_next
-from openquake.calculators.hazard import general as haz_general
 from openquake.utils import stats
 
 from tests.utils import helpers
@@ -201,9 +201,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 dict(job_id=self.job.id, num_items=sources_per_task), body)
             message.ack()
 
-        exchange, conn_args = haz_general.exchange_and_conn_args()
+        exchange, conn_args = base.exchange_and_conn_args()
 
-        routing_key = haz_general.ROUTING_KEY_FMT % dict(job_id=self.job.id)
+        routing_key = base.ROUTING_KEY_FMT % dict(job_id=self.job.id)
         task_signal_queue = kombu.Queue(
             'htasks.job.%s' % self.job.id, exchange=exchange,
             routing_key=routing_key, durable=False, auto_delete=True)
