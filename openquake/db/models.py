@@ -35,6 +35,7 @@ from datetime import datetime
 import numpy
 
 from django.db import connection
+from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
 from risklib import vulnerability_function
@@ -65,6 +66,9 @@ IMT_CHOICES = (
     (u'RSD', u'Relative Significant Duration'),
     (u'MMI', u'Modified Mercalli Intensity'),
 )
+
+#: Default Loss Curve Resolution used for probabilistic risk calculators
+DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
 def profile4job(job_id):
@@ -117,7 +121,7 @@ def inputs4hcalc(calc_id, input_type=None):
 
 def inputs4rcalc(calc_id, input_type=None):
     """
-    Get all of the inputs for a given hazard calculation.
+    Get all of the inputs for a given risk calculation.
 
     :param int calc_id:
         ID of a :class:`RiskCalculation`.
@@ -403,19 +407,6 @@ class Input(djm.Model):
     # Number of bytes in the file:
     size = djm.IntegerField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def model(self):
-        """The model associated with this input or `None`.
-
-        :returns: the appropriate model if one exists or `None`
-        """
-        assert self.input_type in ("exposure", "fragility"), (
-            "unsupported model type (%s)" % self.input_type)
-        attr = "%smodel_set" % self.input_type
-        qm = getattr(self, attr)
-        models = qm.all()
-        if models:
-            return models[0]
 
     def __str__(self):
         path_suffix = "/".join(self.path.rsplit(os.sep, 2)[1:])
@@ -930,13 +921,11 @@ class RiskCalculation(djm.Model):
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
+        (u'event_based', u'Probabilistic Event-Based'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'event_based', u'Probabilistic Event-Based'),
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        # Benefit-cost ratio calculator based on Event Based risk calc
         # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
@@ -947,6 +936,20 @@ class RiskCalculation(djm.Model):
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=False, blank=False)
 
+    # A seed used to generate random values to be applied to
+    # vulnerability functions
+    master_seed = djm.IntegerField(null=True, blank=True)
+
+    ##################################
+    # Probabilistic shared parameters
+    ##################################
+    ASSET_CORRELATION_CHOICES = (
+        (u'perfect', u'Perfect'),
+        (u'uncorrelated', u'Uncorrelated'),
+    )
+    asset_correlation = djm.TextField(null=True, blank=True,
+                                      choices=ASSET_CORRELATION_CHOICES)
+
     #######################
     # Classical parameters:
     #######################
@@ -956,7 +959,9 @@ class RiskCalculation(djm.Model):
     #########################
     # Event-Based parameters:
     #########################
-    loss_histogram_bins = djm.IntegerField(null=True, blank=True)
+    loss_curve_resolution = djm.IntegerField(
+        null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
+    insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
@@ -986,11 +991,11 @@ class RiskCalculation(djm.Model):
         if applicable) associated with the hazard output used by this
         risk calculation
         """
-        if self.hazard_output.hazardcurve:
+        if self.hazard_output.is_hazard_curve():
             return (self.hazard_output.hazardcurve.statistics,
                     self.hazard_output.hazardcurve.quantile)
         else:
-            raise NotImplementedError
+            return None, None  # no mean/quantile for gmf
 
     @property
     def hazard_logic_tree_paths(self):
@@ -998,11 +1003,11 @@ class RiskCalculation(djm.Model):
         The logic tree paths associated with the hazard output used by
         this risk calculation
         """
-        if self.hazard_output.hazardcurve:
+        if self.hazard_output.is_hazard_curve():
             lt = self.hazard_output.hazardcurve.lt_realization
-            return lt.sm_lt_path, lt.gsim_lt_path
         else:
-            raise NotImplementedError
+            lt = self.hazard_output.gmfcollection.lt_realization
+        return lt.sm_lt_path, lt.gsim_lt_path
 
     @property
     def is_bcr(self):
@@ -1013,6 +1018,9 @@ class RiskCalculation(djm.Model):
         The model associated with this risk calculation with input of
         type `input_type`
         """
+
+        # FIXME(lp). Although we store all the risk models we only use
+        # the first one
         [exposure_input] = inputs4rcalc(self, input_type)
         if input_type == "exposure":
             return exposure_input.exposuremodel
@@ -1318,6 +1326,7 @@ class Output(djm.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
+        (u'ins_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
         (u'ses', u'Stochastic Event Set'),
@@ -1334,6 +1343,12 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
+
+    def is_ground_motion_field(self):
+        return self.output_type in ['gmf', 'complete_lt_gmf']
+
+    def is_hazard_curve(self):
+        return self.output_type == 'hazard_curve'
 
 
 class ErrorMsg(djm.Model):
@@ -2026,6 +2041,7 @@ class LossCurve(djm.Model):
 
     output = djm.OneToOneField("Output")
     aggregate = djm.BooleanField(default=False)
+    insured = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2052,7 +2068,7 @@ class AggregateLossCurveData(djm.Model):
     Holds the probabilities of exceedance for the whole exposure model
     '''
 
-    loss_curve = djm.ForeignKey("LossCurve")
+    loss_curve = djm.OneToOneField("LossCurve")
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
 
@@ -2344,7 +2360,9 @@ class VulnerabilityModel(djm.Model):
     input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
-    imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
+    imt = djm.TextField(null=True, blank=True, validators=[
+        validators.RegexValidator("PGA|SA\([^)]+?\)",
+                                  "Incorrect intensity measure type")])
     imls = fields.FloatArrayField()
     asset_category = djm.TextField()
     loss_category = djm.TextField()
