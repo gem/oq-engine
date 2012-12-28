@@ -55,6 +55,8 @@ import getpass
 import os
 import sys
 
+from os.path import expanduser
+
 from openquake.utils import config
 
 config.abort_if_no_config_available()
@@ -441,9 +443,10 @@ def main():
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
 
-        export_hazard(output_id, target_dir)
+        export_hazard(output_id, expanduser(target_dir))
     elif args.run_hazard is not None:
-        run_hazard(args.run_hazard, args.log_level, args.log_file,
+        log_file = expanduser(args.log_file) if args.log_file is not None else None
+        run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
                    args.force_inputs, args.exports)
     # risk
     elif args.list_risk_calculations:
@@ -452,11 +455,12 @@ def main():
         list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
         output_id, target_dir = args.export_risk
-        export_risk(output_id, target_dir)
+        export_risk(output_id, expanduser(target_dir))
     elif args.run_risk is not None:
         if args.hazard_output_id is None:
             complain_and_exit(MISSING_HAZARD_OUTPUT_MSG)
-        run_risk(args.run_risk, args.log_level, args.log_file,
+        log_file = expanduser(args.log_file) if args.log_file is not None else None
+        run_risk(expanduser(args.run_risk), args.log_level, log_file,
                  args.force_inputs, args.exports,
                  hazard_output_id=args.hazard_output_id)
     else:
