@@ -71,6 +71,36 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+def profile4job(job_id):
+    """Return the job profile for the given job.
+
+    :param int job_id: identifier of the job in question
+    :returns: a :py:class:`openquake.db.models.OqJobProfile` instance
+    """
+    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    return j2p.oq_job_profile
+
+
+def inputs4job(job_id, input_type=None, path=None):
+    """Return the inputs for the given job, input type and path.
+
+    :param int job_id: identifier of the job in question
+    :param str input_type: a valid input type
+    :param str path: the path of the desired input.
+    :returns: a list of :py:class:`openquake.db.models.Input` instances
+    """
+    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    if not input_type and not path:
+        return list(i.input for i in i2js.all())
+    qargs = []
+    if input_type:
+        qargs.append(("input__input_type", input_type))
+    if path:
+        qargs.append(("input__path", path))
+    qargs = dict(qargs)
+    return list(i.input for i in i2js.filter(**qargs))
+
+
 def inputs4hcalc(calc_id, input_type=None):
     """
     Get all of the inputs for a given hazard calculation.
@@ -414,6 +444,17 @@ class ModelContent(djm.Model):
         Returns raw_content in ASCII
         """
         return str(self.raw_content)
+
+
+class Input2job(djm.Model):
+    '''
+    Associates input model files and jobs.
+    '''
+    input = djm.ForeignKey('Input')
+    oq_job = djm.ForeignKey('OqJob')
+
+    class Meta:
+        db_table = 'uiapi\".\"input2job'
 
 
 class Src2ltsrc(djm.Model):
