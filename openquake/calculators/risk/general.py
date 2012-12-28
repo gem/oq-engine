@@ -26,8 +26,6 @@ from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base
 from openquake import export
-from openquake.parser import risk
-
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
 from nrml.risk import parsers
@@ -407,7 +405,7 @@ def store_risk_model(rc, input_type):
     """
     [vulnerability_input] = models.inputs4rcalc(rc.id, input_type=input_type)
 
-    for record in risk.VulnerabilityModelFile(
+    for record in parsers.VulnerabilityModelParser(
             vulnerability_input.path):
         vulnerability_model, _ = (
             models.VulnerabilityModel.objects.get_or_create(
