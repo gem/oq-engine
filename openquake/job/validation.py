@@ -428,7 +428,7 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'no_progress_timeout',
             'region_constraint',
             'lrem_steps_per_interval',
-            'conditional_loss_poes'
+            'conditional_loss_poes',
             )
 
 
@@ -442,13 +442,30 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'region_constraint',
             'lrem_steps_per_interval',
             'interest_rate',
-            'asset_life_expectancy')
+            'asset_life_expectancy',
+            )
+
+
+class EventBasedRiskCalculationForm(BaseOQModelForm):
+    calc_mode = 'event_based'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'loss_curve_resolution',
+            'insured_losses',
+            'master_seed',
+            'asset_correlation',
+            )
 
 
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
-    'classical_bcr': ClassicalRiskCalculationWithBCRForm
+    'classical_bcr': ClassicalRiskCalculationWithBCRForm,
+    'event_based': EventBasedRiskCalculationForm
 }
 
 
@@ -701,7 +718,6 @@ def mean_hazard_curves_is_valid(_mdl):
     # We don't need to check anything here.
     return True, []
 
-
 def quantile_hazard_curves_is_valid(mdl):
     qhc = mdl.quantile_hazard_curves
 
@@ -837,6 +853,30 @@ def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
             return False, ['Interest Rate must be > 0']
+    return True, []
+
+
+def insured_losses_is_valid(_mdl):
+    # The validation form should normalize the type to a boolean.
+    # We don't need to check anything here.
+    return True, []
+
+
+def loss_curve_resolution_is_valid(mdl):
+    if mdl.calculation_mode == 'event_based':
+        if (mdl.loss_curve_resolution is not None and
+            mdl.loss_curve_resolution < 1):
+            return False, ['Loss Curve Resolution must be > 1.']
+    return True, []
+
+
+def asset_correlation_is_valid(_mdl):
+    # The validation form should check if it is in the list
+    # We don't need to check anything here.
+    return True, []
+
+
+def master_seed_is_valid(_mdl):
     return True, []
 
 
