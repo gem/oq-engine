@@ -171,6 +171,9 @@ class ToroEtAl2002(GMPE):
 
 class ToroEtAl2002SHARE(ToroEtAl2002):
 
+    #: Required rupture parameters are magnitude and rake
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
