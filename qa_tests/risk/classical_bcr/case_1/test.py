@@ -40,7 +40,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
 </nrml>
     """
 
-    @attr('qa', 'risk', 'classical')
+    @attr('qa', 'risk', 'classical_bcr')
     def test(self):
         self.run_test()
 
