@@ -60,7 +60,7 @@ class ExposureModelParser(object):
 
     def __init__(self, source):
         self._source = source
-        self.assert_is_valid()
+        assert_is_valid(self._source)
 
         # contains the data of the node currently parsed.
         self._current_meta = {}
@@ -190,3 +190,83 @@ def _to_site(element):
     point_elem = element.find('%ssite' % NRML).find('%sPoint' % GML)
     return [float(x.strip()) for x in point_elem.find(
         '%spos' % GML).text.split()]
+
+
+class VulnerabilityModelParser(object):
+    """
+    Vulnerability model parser. This class is implemented as a generator.
+
+    For each `discreteVulnerability` element in the parsed document,
+    it yields a dictionary containing the function attributes.
+
+    :param source:
+        Filename or file-like object containing the XML data.
+    """
+
+    def __init__(self, source):
+        self._source = source
+        assert_is_valid(self._source)
+
+        self._vulnerability_model = etree.parse(self._source).getroot()
+
+    def __iter__(self):
+        """
+        Parse the vulnerability model.
+        """
+
+        for vulnerability_set in self._vulnerability_model.findall(
+            ".//%sdiscreteVulnerabilitySet" % NRML):
+
+            vulnerability_function = _parse_set_attributes(vulnerability_set)
+
+            for vf in vulnerability_set.findall(
+                ".//%sdiscreteVulnerability" % NRML):
+
+                loss_ratios = [float(x) for x in vf.find(
+                    "%slossRatio" % NRML).text.strip().split()]
+
+                coefficients_variation = [float(x) for x in vf.find(
+                    "%scoefficientsVariation" % NRML).text.strip().split()]
+
+                vulnerability_function["ID"] = vf.attrib[
+                    "vulnerabilityFunctionID"]
+
+                vulnerability_function["probabilisticDistribution"] = \
+                    vf.attrib["probabilisticDistribution"]
+
+                vulnerability_function["lossRatio"] = loss_ratios
+                vulnerability_function["coefficientsVariation"] = \
+                    coefficients_variation
+
+                yield dict(vulnerability_function)
+
+
+def _parse_set_attributes(vset):
+    """
+    Extract the attributes common to all the vulnerability functions
+    belonging to the given set.
+    """
+
+    attrs = dict()
+    imls = vset.find(".//%sIML" % NRML)
+
+    attrs["IMT"] = imls.attrib["IMT"]
+    attrs["IML"] = [float(x) for x in imls.text.strip().split()]
+
+    attrs["lossCategory"] = vset.attrib["lossCategory"]
+    attrs["assetCategory"] = vset.attrib["assetCategory"]
+    attrs["vulnerabilitySetID"] = vset.attrib["vulnerabilitySetID"]
+
+    return attrs
+
+
+def assert_is_valid(source):
+    """
+    Check the input file is valid according to the schema.
+    """
+
+    exposure = etree.parse(source)
+    xmlschema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+
+    if not xmlschema.validate(exposure):
+        raise ValueError("Exposure model is not valid.")
