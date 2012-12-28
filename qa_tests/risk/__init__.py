@@ -73,8 +73,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             actual_data = self.actual_data(job)
 
             for i, actual in enumerate(actual_data):
-                numpy.testing.assert_array_almost_equal(
-                    expected_data[i], actual, decimal=3)
+                numpy.testing.assert_allclose(actual, expected_data[i],
+                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
             expected_outputs = self.expected_outputs()
 
