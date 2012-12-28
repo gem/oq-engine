@@ -59,6 +59,8 @@ CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
 CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
 -- disagg_result
 CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
+-- lt_realization
+CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
@@ -81,3 +83,7 @@ CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site
 CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
 CREATE INDEX uiapi_job2profile_job_id_idx on uiapi.job2profile(oq_job_id);
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
+
+-- htemp indexes
+CREATE INDEX htemp_source_progress_lt_realization_id_idx on htemp.source_progress(lt_realization_id);
+CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progress(lt_realization_id);
