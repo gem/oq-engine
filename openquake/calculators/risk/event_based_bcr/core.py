@@ -11,17 +11,17 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Core functionality for the classical PSHA risk calculator.
+Core functionality for the Event Based BCR Risk calculator.
 """
 
 from risklib import api
 
 from openquake.calculators import base
 from openquake.calculators.risk import general
-from openquake.calculators.risk.classical import core as classical
+from openquake.calculators.risk.event_based import core as event_based
 from openquake.utils import stats
 from openquake.utils import tasks
 from openquake import logs
@@ -31,70 +31,102 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical_bcr(job_id, assets, hazard_getter, hazard_id,
-                  bcr_distribution_id, lrem_steps_per_interval,
-                  asset_life_expectancy, interest_rate):
+def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
+                    bcr_distribution_id, imt, time_span, tses,
+                    loss_curve_resolution, seed, asset_correlation,
+                    asset_life_expectancy, interest_rate):
     """
-    Celery task for the BCR risk calculator based on the classical
+    Celery task for the BCR risk calculator based on the event based
     calculator.
 
     Gets the vulnerability models, instantiates risklib calculators
     and stores results to db in a single transaction.
 
     :param int job_id:
-      ID of the currently running job
+        ID of the currently running job.
     :param assets:
-      list of Assets to take into account
+        list of assets to compute.
     :param hazard_getter:
-      Strategy used to get the hazard curves
+        Strategy used to get the hazard inputs (ground motion fields).
     :param int hazard_id
-      ID of the Hazard Output the risk calculation is based on
-    :param bcr_distribution_id
-      ID of the :class:`openquake.db.models.BCRDistribution` output
-      container used to store the computed bcr distribution
-    :param int lrem_steps_per_interval
-      Steps per interval used to compute the Loss Ratio Exceedance matrix
+        ID of the hazard output the risk calculation is based on.
+    :param int bcr_distribution_id
+        ID of the :class:`openquake.db.models.BCRDistribution` output
+        container used to store the computed BCR distribution.
+    :param float imt:
+        Intensity Measure Type to take into account.
+    :param float time_span:
+        Time Span of the hazard calculation.
+    :param float tses:
+        Time of the Stochastic Event Set.
+    :param int loss_curve_resolution:
+        Resolution of the computed loss curves (number of points).
+    :param int seed:
+        Seed used to generate random values.
+    :param int asset_correlation:
+        Type of assets correlation (0 uncorrelated,
+        1 perfectly correlated).
     :param float interest_rate
-      The interest rate used in the Cost Benefit Analysis
+        The interest rate used in the Cost Benefit Analysis.
     :param float asset_life_expectancy
-      The life expectancy used for every asset
+        The life expectancy used for every asset.
     """
     model = general.fetch_vulnerability_model(job_id)
     model_retrofitted = general.fetch_vulnerability_model(job_id, True)
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.bcr(
-        api.classical(model, lrem_steps_per_interval),
-        api.classical(model_retrofitted, lrem_steps_per_interval),
-        interest_rate,
-        asset_life_expectancy)
+    hazard_getter = general.hazard_getter(
+        hazard_getter, hazard_id, imt, time_span, tses)
 
-    with transaction.commit_on_success(using='reslt_writer'):
+    calculator = api.probabilistic_event_based(
+        model, curve_resolution=loss_curve_resolution,
+        seed=seed, correlation_type=asset_correlation)
+
+    calculator_retrofitted = api.probabilistic_event_based(
+        model_retrofitted, curve_resolution=loss_curve_resolution,
+        seed=seed, correlation_type=asset_correlation)
+
+    bcr_calculator = api.bcr(calculator, calculator_retrofitted,
+        interest_rate, asset_life_expectancy)
+
+    with transaction.commit_on_success(using="reslt_writer"):
         logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
+            "launching compute_on_assets over %d assets" % len(assets))
+
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, calculator):
+            assets, hazard_getter, bcr_calculator):
             general.write_bcr_distribution(bcr_distribution_id, asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
-classical_bcr.ignore_result = False
+
+event_based_bcr.ignore_result = False
 
 
-class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
+class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     """
-    Classical BCR risk calculator. Computes BCR distributions for a
+    Event based BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    core_calc_task = classical_bcr
+    core_calc_task = event_based_bcr
 
     @property
     def calculator_parameters(self):
         """
         Specific calculator parameters returned as list suitable to be
-        passed in task_arg_gen
+        passed in task_arg_gen.
         """
 
-        return [self.rc.lrem_steps_per_interval,
-                self.rc.asset_life_expectancy, self.rc.interest_rate]
+        time_span, tses = self.hazard_times()
+
+        return [
+            self.imt, time_span, tses, self.rc.loss_curve_resolution,
+            self.rc.master_seed, self.rc.asset_correlation,
+            self.rc.lrem_steps_per_interval, self.rc.asset_life_expectancy,
+            self.rc.interest_rate
+        ]
+
+    def post_process(self):
+        """
+        No need to compute the aggregate loss curve in the BCR calculator.
+        """
 
     def create_outputs(self):
         """
@@ -102,27 +134,18 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         :class:`openquake.db.models.BCRDistribution` instance and its
         :class:`openquake.db.models.Output` container.
 
-        :returns: A list containing the output container id
+        :returns: A list containing the output container id.
         """
-        return [models.BCRDistribution.objects.create(
+        return [
+            models.BCRDistribution.objects.create(
             output=models.Output.objects.create_output(
-            self.job, "BCR Distribution", "bcr_distribution")).pk]
+            self.job, "BCR Distribution", "bcr_distribution")).pk
+        ]
 
     def store_risk_model(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        super(ClassicalBCRRiskCalculator, self).store_risk_model()
-
+        super(EventBasedBCRRiskCalculator, self).store_risk_model()
         general.store_risk_model(self.rc, "vulnerability_retrofitted")
-
-    @property
-    def hazard_getter(self):
-        """
-        The hazard getter used by the calculation.
-
-        :returns: A string used to get the hazard getter class from
-        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
-        """
-        return "hazard_curve"
