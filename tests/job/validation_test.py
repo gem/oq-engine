@@ -1063,7 +1063,7 @@ class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
 class EventBasedRiskCalculationWithBCRForm(unittest.TestCase):
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job('event_based_risk/job.ini',
+        self.job, _ = helpers.get_risk_job('event_based_bcr/job.ini',
             'event_based_hazard/job.ini')
 
     def test_valid_form(self):
