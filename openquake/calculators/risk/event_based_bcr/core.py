@@ -119,8 +119,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         return [
             self.imt, time_span, tses, self.rc.loss_curve_resolution,
             self.rc.master_seed, self.rc.asset_correlation,
-            self.rc.lrem_steps_per_interval, self.rc.asset_life_expectancy,
-            self.rc.interest_rate
+            self.rc.asset_life_expectancy, self.rc.interest_rate
         ]
 
     def post_process(self):
