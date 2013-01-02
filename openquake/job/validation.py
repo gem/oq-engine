@@ -446,6 +446,22 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             )
 
 
+class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
+    calc_mode = 'event_based_bcr'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'loss_curve_resolution',
+            'master_seed',
+            'asset_correlation',
+            'interest_rate',
+            'asset_life_expectancy',
+        )
+
+
 class EventBasedRiskCalculationForm(BaseOQModelForm):
     calc_mode = 'event_based'
 
@@ -465,7 +481,8 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
     'classical_bcr': ClassicalRiskCalculationWithBCRForm,
-    'event_based': EventBasedRiskCalculationForm
+    'event_based': EventBasedRiskCalculationForm,
+    'event_based_bcr': EventBasedRiskCalculationWithBCRForm,
 }
 
 
@@ -717,6 +734,7 @@ def mean_hazard_curves_is_valid(_mdl):
     # The validation form should normalize the type to a boolean.
     # We don't need to check anything here.
     return True, []
+
 
 def quantile_hazard_curves_is_valid(mdl):
     qhc = mdl.quantile_hazard_curves
