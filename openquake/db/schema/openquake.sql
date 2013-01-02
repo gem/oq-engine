@@ -1009,6 +1009,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'gmf',
+            'gmf_scenario',   
             'hazard_curve',
             'hazard_map',
             'ins_loss_curve',
@@ -1262,6 +1263,26 @@ CREATE TABLE hzrdr.gmf (
     result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+
+
+CREATE TABLE hzrdr.gmf_scenario (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to output.id
+    imt VARCHAR NOT NULL CONSTRAINT scenario_imt
+        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    sa_period float CONSTRAINT gmf_sa_period
+        CHECK(
+            ((imt = 'SA') AND (sa_period IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float CONSTRAINT gmf_sa_damping
+        CHECK(
+            ((imt = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[],
+    result_grp_ordinal INTEGER NOT NULL
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf_scenario', 'location', 4326, 'POINT', 2);
+
 
 
 CREATE TABLE hzrdr.disagg_result (
@@ -1951,6 +1972,11 @@ ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
 ON DELETE CASCADE;
 
+-- gmf_scenario -> output FK
+ALTER TABLE hzrdr.gmf_scenario
+ADD CONSTRAINT hzrdr_gmf_scenario_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
+ON DELETE CASCADE;
 
 -- disagg_result -> output FK
 ALTER TABLE hzrdr.disagg_result

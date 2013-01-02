@@ -13,33 +13,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy
 import os
-import shutil
-import tempfile
-
 from nose.plugins.attrib import attr
-from openquake.db import models
+from numpy.testing import assert_almost_equal
+
+from openquake import export
 from qa_tests import _utils as qa_utils
 
 
-class EventBasedHazardCase1TestCase(qa_utils.BaseQATestCase):
+class ScenarioHazardCase2TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'event_based')
+    @attr('qa', 'hazard', 'scenario')
     def test(self):
-        result_dir = tempfile.mkdtemp()
+        cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+        job = self.run_hazard(cfg)
+        [output] = export.core.get_outputs(job.id)
+        actual = list(qa_utils.get_medians(output, 'PGA'))
+        expected_medians = [0.37412136, 0.19021782, 0.1365383]
 
-        try:
-            cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-            expected_curve_poes = [0.4570, 0.0587, 0.0069]
-
-            job = self.run_hazard(cfg)
-
-            # Test the poe values of the single curve:
-            [actual_curve] = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id)
-
-            numpy.testing.assert_array_almost_equal(
-                expected_curve_poes, actual_curve.poes, decimal=2)
-        finally:
-            shutil.rmtree(result_dir)
+        assert_almost_equal(actual, expected_medians, decimal=2)
