@@ -563,7 +563,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         # Now parse the source models and store `pared_source` records:
         for src_inp in src_inputs:
-            src_content = StringIO.StringIO(src_inp.model_content.raw_content)
+            src_content = StringIO.StringIO(
+                src_inp.model_content.raw_content_ascii)
             sm_parser = nrml_parsers.SourceModelParser(src_content)
             src_db_writer = source.SourceDBWriter(
                 src_inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
@@ -593,7 +594,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         if site_model_inp is not None:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = str(site_model_inp.model_content.raw_content)
+            site_model_content = site_model_inp.model_content.raw_content_ascii
 
             # Store `site_model` records:
             store_site_model(
