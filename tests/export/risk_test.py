@@ -40,6 +40,11 @@ def _number_of(elem_name, tree):
 
 class BaseExportTestCase(unittest.TestCase):
 
+    def setUp(self):
+        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
+                                      'simple_fault_demo_hazard/job.ini')
+        self.hazard_id = job.risk_calculation.hazard_output.id
+
     def _test_exported_file(self, filename):
         self.assertTrue(os.path.exists(filename))
         self.assertTrue(os.path.isabs(filename))
@@ -57,7 +62,8 @@ class ClassicalExportTestcase(BaseExportTestCase):
             cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_risk_job_sp(cfg, silence=True)
+            retcode = helpers.run_risk_job_sp(cfg, self.hazard_id,
+                                              silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -101,7 +107,8 @@ class ClassicalExportTestcase(BaseExportTestCase):
             cfg = helpers.demo_file('classical_bcr/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_risk_job_sp(cfg, silence=True)
+            retcode = helpers.run_risk_job_sp(cfg, self.hazard_id,
+                                              silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -130,6 +137,11 @@ class EventBasedExportTestcase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
+            # use get_risk_job to create a fake GmfCollection
+            job, _ = helpers.get_risk_job('event_based_risk/job.ini',
+                                          'event_based_hazard/job.ini',
+                                          'gmf')
+
             cfg = helpers.demo_file('event_based_risk/job.ini')
 
             # run the calculation to create something to export
@@ -138,8 +150,7 @@ class EventBasedExportTestcase(BaseExportTestCase):
             # supported as hazard input
             retcode = helpers.run_risk_job_sp(
                 cfg, silence=True,
-                hazard_id=models.GmfCollection.objects.filter(
-                    complete_logic_tree_gmf=False)[0].output.id)
+                hazard_id=job.risk_calculation.hazard_output.id)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
