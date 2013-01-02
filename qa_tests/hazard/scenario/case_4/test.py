@@ -29,7 +29,7 @@ from qa_tests import _utils as qa_utils
 @skip
 class ScenarioHazardCase4TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'scenario')
+    @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)

@@ -18,7 +18,6 @@
 import getpass
 import unittest
 
-import kombu
 import nhlib
 
 from nhlib import geo as nhlib_geo
@@ -305,22 +304,6 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         self.assertEqual(sm2, res2)
 
 
-class ExchangeConnArgsTestCase(unittest.TestCase):
-
-    def test_exchange_and_conn_args(self):
-        expected_conn_args = {
-            'password': 'guest', 'hostname': 'localhost', 'userid': 'guest',
-            'virtual_host': '/',
-        }
-
-        exchange, conn_args = general.exchange_and_conn_args()
-
-        self.assertEqual('oq.htasks', exchange.name)
-        self.assertEqual('direct', exchange.type)
-
-        self.assertEqual(expected_conn_args, conn_args)
-
-
 class GetSiteCollectionTestCase(unittest.TestCase):
 
     @attr('slow')
@@ -401,31 +384,3 @@ class ImtsToNhlibTestCase(unittest.TestCase):
         for exp_imt, exp_imls in expected.items():
             act_imls = actual[exp_imt]
             self.assertEqual(exp_imls, act_imls)
-
-
-class SignalTestCase(unittest.TestCase):
-
-    def test_signal_task_complete(self):
-        job_id = 7
-        num_sources = 10
-
-        def test_callback(body, message):
-            self.assertEqual(dict(job_id=job_id, num_items=num_sources),
-                             body)
-            message.ack()
-
-        exchange, conn_args = general.exchange_and_conn_args()
-        routing_key = general.ROUTING_KEY_FMT % dict(job_id=job_id)
-        task_signal_queue = kombu.Queue(
-            'htasks.job.%s' % job_id, exchange=exchange,
-            routing_key=routing_key, durable=False, auto_delete=True)
-
-        with kombu.BrokerConnection(**conn_args) as conn:
-            task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[test_callback]):
-
-                # send the signal:
-                general.signal_task_complete(
-                    job_id=job_id, num_items=num_sources)
-                conn.drain_events()
