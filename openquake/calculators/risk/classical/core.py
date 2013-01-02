@@ -17,17 +17,17 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+
+from django.db import transaction
+
+from openquake.calculators import base
 from openquake.calculators.risk import general
-from openquake.utils import tasks
-from openquake.utils import stats
-from openquake.db import models
+from openquake.utils import tasks, stats
 from openquake import logs
 from risklib import api
-from django.db import transaction
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def classical(job_id, assets, hazard_getter, hazard_id,
               loss_curve_id, loss_map_ids,
@@ -58,8 +58,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     """
-
     vulnerability_model = general.fetch_vulnerability_model(job_id)
+
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.Classical(vulnerability_model, lrem_steps_per_interval)
@@ -68,67 +68,58 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     # aggregator
     if conditional_loss_poes:
         calculator = api.ConditionalLosses(
-            conditional_loss_poes, calculator)
+conditional_loss_poes, calculator)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
+
             general.write_loss_curve(loss_curve_id, asset_output)
+
             if asset_output.conditional_losses:
                 general.write_loss_map(loss_map_ids, asset_output)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+
 classical.ignore_result = False
 
 
 class ClassicalRiskCalculator(general.BaseRiskCalculator):
     """
-    Classical PSHA risk calculator. Computes loss curves and loss
-    params for a given set of assets.
+    Classical PSHA risk calculator. Computes loss curves and loss maps
+    for a given set of assets.
     """
 
-    #: The core calculation celery task function
-    celery_task = classical
-
-    @property
-    def calculation_parameters(self):
-        """
-        The specific calculation parameters passed as kwargs to the
-        celery task function
-        """
-        rc = self.job.risk_calculation
-
-        return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'conditional_loss_poes': rc.conditional_loss_poes
-            }
+    #: celery task
+    core_calc_task = classical
 
     @property
     def hazard_id(self):
         """
         The ID of the :class:`openquake.db.models.HazardCurve` object that
-        stores the hazard curves used by the risk calculation
+        stores the hazard curves used by the risk calculation.
         """
-        return self.job.risk_calculation.hazard_output.hazardcurve.id
+        if not self.rc.hazard_output.is_hazard_curve():
+            raise RuntimeError(
+                "The provided hazard output is not an hazard curve")
 
-    def create_outputs(self):
-        """
-        Add loss map ids when conditional loss poes are specified
-        """
-        outputs = super(ClassicalRiskCalculator, self).create_outputs()
-        poes = self.job.risk_calculation.conditional_loss_poes or []
+        return self.rc.hazard_output.hazardcurve.id
 
-        def create_loss_map(poe):
-            """
-            Given a poe create a loss map output container associated
-            with the current job
-            """
-            return models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
-        outputs['loss_map_ids'] = dict((poe, create_loss_map(poe))
-                                       for poe in poes)
-        return outputs
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "hazard_curve"
+
+    @property
+    def calculator_parameters(self):
+        """
+        Specific calculator parameters returned as list suitable to be
+        passed in task_arg_gen
+        """
+        return [self.rc.lrem_steps_per_interval, self.rc.conditional_loss_poes]

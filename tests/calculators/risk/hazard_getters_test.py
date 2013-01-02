@@ -66,7 +66,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             result_grp_ordinal=2).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=output.id,
+            hazard_output_id=collection.id,
             imt="PGA", time_span=50.0, tses=20.0)
 
         # to the event based risk calculator, we must pass all the
@@ -96,7 +96,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             result_grp_ordinal=1).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=output.id,
+            hazard_output_id=collection.id,
             imt="PGA", time_span=50.0, tses=20.0)
 
         expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3],
@@ -106,17 +106,13 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
     def test_only_specific_branches_are_supported(self):
         output = self._hazard_output("complete_lt_gmf")
+        collection = models.GmfCollection(output=output,
+            complete_logic_tree_gmf=True)
+        collection.save()
 
         self.assertRaises(ValueError,
             hazard_getters.GroundMotionValuesGetter,
-            output.id, "PGA", 50.0, 20.0)
-
-    def test_intensity_type_sa_period_required(self):
-        output = self._hazard_output("gmf")
-
-        self.assertRaises(ValueError,
-            hazard_getters.GroundMotionValuesGetter,
-            hazard_output_id=output.id, imt="SA", time_span=50.0, tses=20.0)
+            collection.id, "PGA", 50.0, 20.0)
 
     def test_intensity_type_sa(self):
         output = self._hazard_output("gmf")
@@ -132,7 +128,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
         # and `sa_damping`
         models.Gmf(gmf_set=self._gmf_set(collection, 1), imt="SA",
             location=Point(1.0, 1.0), gmvs=[0.1, 0.2, 0.3], sa_period=1.0,
-            sa_damping=2.0, result_grp_ordinal=1).save()
+            sa_damping=5.0, result_grp_ordinal=1).save()
 
         # different `sa_period`
         models.Gmf(gmf_set=self._gmf_set(collection, 2), imt="SA",
@@ -145,8 +141,8 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             sa_damping=1.0, result_grp_ordinal=3).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=output.id, imt="SA", time_span=50.0,
-            tses=20.0, sa_period=1.0, sa_damping=2.0)
+            hazard_output_id=collection.id, imt="SA(1.0)", time_span=50.0,
+            tses=20.0)
 
         expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3], "TimeSpan": 50.0}
         self.assertEqual(expected, getter(Point(0.5, 0.5)))

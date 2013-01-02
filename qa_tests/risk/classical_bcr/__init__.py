@@ -11,6 +11,4 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-"""A variety of file format parsers, including NRML parsers."""
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.

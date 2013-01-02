@@ -1054,10 +1054,10 @@ class LogicTreeProcessor(object):
     """
     def __init__(self, calc_id):
         [smlt_input] = models.inputs4hcalc(calc_id, input_type='lt_source')
-        smlt_content = smlt_input.model_content.raw_content
+        smlt_content = smlt_input.model_content.raw_content_ascii
 
         [gmpelt_input] = models.inputs4hcalc(calc_id, input_type='lt_gsim')
-        gmpelt_content = gmpelt_input.model_content.raw_content
+        gmpelt_content = gmpelt_input.model_content.raw_content_ascii
 
         self.source_model_lt = SourceModelLogicTree(
             smlt_content, basepath=None, filename=None, validate=False

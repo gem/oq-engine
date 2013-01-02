@@ -289,7 +289,7 @@ class count_progress(object):   # pylint: disable=C0103
                                and hasattr(args[1], '__len__'))
             if not id_and_sequence:
                 raise TypeError(
-                    '%s should have arguments job_id and a list of ids, '
+                    '%s should have arguments job_id and a list, '
                     'got %r and %r instead' % (func, args[0], args[1]))
             job_id, num_items = self.get_task_data(*args)
             try:

@@ -409,13 +409,20 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
+    -- probabilistic parameters
+    asset_correlation VARCHAR NULL,
+    master_seed INTEGER NULL,
+  
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
 
     -- event-based parameters:
-    loss_histogram_bins INTEGER,
+    loss_curve_resolution INTEGER NOT NULL DEFAULT 50
+        CONSTRAINT loss_curve_resolution_is_set
+        CHECK  (loss_curve_resolution >= 1),
+    insured_losses boolean DEFAULT false,
 
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
@@ -1005,6 +1012,7 @@ CREATE TABLE uiapi.output (
             'gmf_scenario',   
             'hazard_curve',
             'hazard_map',
+            'ins_loss_curve',
             'loss_curve',
             'loss_map',
             'ses',
@@ -1412,7 +1420,8 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    aggregate BOOLEAN NOT NULL DEFAULT false
+    aggregate BOOLEAN NOT NULL DEFAULT false,
+    insured BOOLEAN NOT NULL DEFAULT false
 ) TABLESPACE riskr_ts;
 
 
@@ -1641,8 +1650,7 @@ CREATE TABLE riski.vulnerability_model (
     input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
+    imt VARCHAR NOT NULL,
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     asset_category VARCHAR NOT NULL,

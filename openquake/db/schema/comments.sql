@@ -252,7 +252,7 @@ COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 
 COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
-COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the loss curve record to which the aggregate loss curve data belongs';
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
 
