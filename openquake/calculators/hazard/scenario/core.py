@@ -30,6 +30,7 @@ from nhlib import correlation
 import nhlib.gsim
 
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators import base
 from openquake import utils, logs
 from openquake.db import models
 from openquake.input import source
@@ -65,7 +66,7 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id=job_id, num_items=1)
+    base.signal_task_complete(job_id=job_id, num_items=1)
 
 
 def compute_gmfs(job_id, rupture_ids, output_id, task_no):
