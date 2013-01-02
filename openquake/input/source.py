@@ -270,12 +270,10 @@ def _simple_rupture_to_nhlib(src, mesh_spacing):
         :class:`nrml.models.PointSource` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
-    :param float bin_width:
-        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
-        width.
     :returns:
-        The NHLib representation of the input source.
+        The NHLib representation of the input rupture.
     """
+
     shapely_line = wkt.loads(src.geometry.wkt)
     fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
     geom = src.geometry
@@ -301,12 +299,10 @@ def _complex_rupture_to_nhlib(src, mesh_spacing):
         :class:`nrml.models.PointSource` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
-    :param float bin_width:
-        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
-        width.
     :returns:
-        The NHLib representation of the input source.
+        The NHLib representation of the input rupture.
     """
+
     edges_wkt = []
     edges_wkt.append(src.geometry.top_edge_wkt)
     edges_wkt.extend(src.geometry.int_edges)
