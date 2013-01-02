@@ -939,7 +939,7 @@ class RiskCalculation(djm.Model):
         # implemented.
         # (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
-        # (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
+        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     region_constraint = djm.PolygonField(
@@ -1024,7 +1024,7 @@ class RiskCalculation(djm.Model):
 
     @property
     def is_bcr(self):
-        return self.calculation_mode in ['classical_bcr']
+        return self.calculation_mode in ['classical_bcr', 'event_based_bcr']
 
     def model(self, input_type):
         """
