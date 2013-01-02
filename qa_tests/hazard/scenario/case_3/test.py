@@ -13,27 +13,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy
 import os
-
 from nose.plugins.attrib import attr
-from openquake.db import models
+from numpy.testing import assert_almost_equal
+
+from openquake import export
 from qa_tests import _utils as qa_utils
 
 
-class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
+# job.ini contains intensity_measure_types = PGA, SA(0.1)
+class ScenarioHazardCase3TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'hazard', 'event_based')
+    @attr('qa', 'hazard', 'scenario')
     def test(self):
-        aaae = numpy.testing.assert_array_almost_equal
-
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-        expected_curve_poes = [0.54736, 0.02380, 0.00000]
-
         job = self.run_hazard(cfg)
+        [output] = export.core.get_outputs(job.id)
+        # [exported_file] = export.hazard.export(output.id, '/tmp')
 
-        # Test the poe values of the single curve:
-        [curve] = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job.id)
+        actual = list(qa_utils.get_medians(output, 'PGA'))
+        expected_medians_pga = [0.48155582, 0.21123045, 0.14484586]
+        assert_almost_equal(actual, expected_medians_pga, decimal=2)
 
-        aaae(expected_curve_poes, curve.poes, decimal=2)
+        actual = list(qa_utils.get_medians(output, 'SA(0.1)'))
+        expected_medians_sa = [0.93913177, 0.40880148, 0.2692668]
+        assert_almost_equal(actual, expected_medians_sa, decimal=2)
