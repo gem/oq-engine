@@ -31,12 +31,12 @@ from risklib import api, event_based as eb
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard_id,
+def event_based(job_id, assets, hazard_getter, hazard_id, seed,
                 loss_curve_id, loss_map_ids,
                 insured_curve_id, aggregate_loss_curve_id,
                 conditional_loss_poes, insured_losses,
                 imt, time_span, tses,
-                loss_curve_resolution, seed, asset_correlation):
+                loss_curve_resolution, asset_correlation):
     """
     Celery task for the event based risk calculator.
     """
@@ -190,8 +190,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
-                self.rc.loss_curve_resolution,
-                self.rc.master_seed, self.rc.asset_correlation]
+                self.rc.loss_curve_resolution, self.rc.asset_correlation]
 
     def create_outputs(self):
         """
