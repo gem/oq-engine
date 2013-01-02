@@ -404,6 +404,12 @@ class Input(djm.Model):
         (u'rupture_model', u'Rupture Model')
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
+
+    hazard_calculations = djm.ManyToManyField('HazardCalculation',
+                                              through='Input2hcalc')
+    risk_calculations = djm.ManyToManyField('RiskCalculation',
+                                              through='Input2rcalc')
+
     # Number of bytes in the file:
     size = djm.IntegerField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -431,6 +437,13 @@ class ModelContent(djm.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"model_content'
+
+    @property
+    def raw_content_ascii(self):
+        """
+        Returns raw_content in ASCII
+        """
+        return str(self.raw_content)
 
 
 class Input2job(djm.Model):
