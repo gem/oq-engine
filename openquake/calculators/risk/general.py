@@ -213,7 +213,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
-        if models.ExposureModel.objects.filter(
+        if not self.rc.force_inputs and models.ExposureModel.objects.filter(
                 input=exposure_model_input).exists():
             return exposure_model_input.exposuremodel
 
@@ -404,6 +404,12 @@ def store_risk_model(rc, input_type):
     instance
     """
     [vulnerability_input] = models.inputs4rcalc(rc.id, input_type=input_type)
+
+    # if a vulnerability model already exists for the same input, then
+    # we do not need to create again.
+    if models.VulnerabilityModel.objects.filter(
+            input=vulnerability_input).exists() and not rc.force_inputs:
+        return
 
     for record in parsers.VulnerabilityModelParser(
             vulnerability_input.path):
