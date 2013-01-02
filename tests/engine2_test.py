@@ -176,7 +176,9 @@ not_a_valid_file = foo.xml
 calculation_mode = classical
 [site]
 site_model_file = %s
-not_a_valid_file = foo.xml
+maximum_distance=0
+truncation_level=0
+random_seed=0
 """ % site_model_input)
 
         # Add a 'name' to make this look like a real file:
@@ -188,20 +190,23 @@ not_a_valid_file = foo.xml
             'base_path': exp_base_path,
             'force_inputs': False,
             'calculation_mode': 'classical',
-            'not_a_valid_file': 'foo.xml',
+            'truncation_level': '0',
+            'random_seed': '0',
+            'maximum_distance': '0'
         }
 
         # Run first with force_inputs=True to create the new Input.
-        _, expected_files = engine2.parse_config(source, force_inputs=True)
+        params, expected_files = engine2.parse_config(
+            source, force_inputs=True)
 
         # In order for us to reuse the existing input, we need to associate
         # each input with a successful job.
         job = engine2.prepare_job(getpass.getuser())
+
+        job.hazard_calculation = engine2.create_hazard_calculation(
+            job.owner, params, expected_files.values())
         job.status = 'complete'
         job.save()
-        for inp in expected_files.values():
-            i2j = models.Input2job(input=inp, oq_job=job)
-            i2j.save()
 
         # Now run twice with force_inputs=False (the default).
         source.seek(0)
@@ -218,9 +223,10 @@ not_a_valid_file = foo.xml
         self.assertEqual(len(expected_files), len(files1))
         self.assertEqual(len(expected_files), len(files2))
 
-        for key in expected_files:
-            self.assertEqual(expected_files[key].id, files1[key].id)
-            self.assertEqual(expected_files[key].id, files2[key].id)
+        self.assertEqual(
+            expected_files['site_model_file'].id, files1['site_model_file'].id)
+        self.assertEqual(
+            expected_files['site_model_file'].id, files2['site_model_file'].id)
 
 
 class FileDigestTestCase(unittest.TestCase):
