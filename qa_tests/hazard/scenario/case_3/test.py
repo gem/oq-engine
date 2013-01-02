@@ -24,7 +24,7 @@ from qa_tests import _utils as qa_utils
 # job.ini contains intensity_measure_types = PGA, SA(0.1)
 class ScenarioHazardCase3TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'scenario')
+    @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
