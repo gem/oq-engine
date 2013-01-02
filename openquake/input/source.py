@@ -185,7 +185,7 @@ def _simple_to_nhlib(src, mesh_spacing, bin_width):
     See :mod:`nrml.models` and :mod:`nhlib.source`.
 
     :param src:
-        :class:`nrml.models.PointSource` instance.
+        :class:`nrml.models.SimpleFaultRuptureModel` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
@@ -223,7 +223,7 @@ def _complex_to_nhlib(src, mesh_spacing, bin_width):
     See :mod:`nrml.models` and :mod:`nhlib.source`.
 
     :param src:
-        :class:`nrml.models.PointSource` instance.
+        :class:`nrml.models.ComplexFaultRuptureModel` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
