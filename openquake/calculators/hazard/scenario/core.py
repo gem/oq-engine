@@ -124,11 +124,11 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
 
     inserter = writer.BulkInserter(models.GmfScenario)
 
-    for imt, gmfs in gmf_dict.iteritems():
+    for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
         # we want it is an array; it handles subscripting
         # in the way that we want
-        gmfs = numpy.array(gmfs)
+        gmfarray = numpy.array(gmfs_)
 
         sa_period = None
         sa_damping = None
@@ -144,7 +144,7 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
                 sa_period=sa_period,
                 sa_damping=sa_damping,
                 location=location.wkt2d,
-                gmvs=gmfs[i].tolist(),
+                gmvs=gmfarray[i].tolist(),
                 result_grp_ordinal=result_grp_ordinal,
             )
 
@@ -157,6 +157,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
 
     core_calc_task = gmfs
+    output = None  # defined in pre_execute
 
     def initialize_sources(self):
         """
