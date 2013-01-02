@@ -30,6 +30,7 @@ from nhlib import correlation
 import nhlib.gsim
 
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators import base
 from openquake import utils, logs
 from openquake.db import models
 from openquake.input import source
@@ -51,34 +52,55 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
+
+    :param task_seed:
+        Value for seeding numpy/scipy in the computation of ground motion fields.
     """
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
                    % (job_id, task_no))
 
     numpy.random.seed(task_seed)
-    compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no)
+    compute_gmfs(job_id, rupture_ids, output_id, task_no)
+
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    haz_general.signal_task_complete(job_id=job_id, num_items=1)
+    base.signal_task_complete(job_id=job_id, num_items=1)
 
 
-def compute_gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
+# NB: get_site_collection is called for each task;
+# this could be a performance bottleneck, potentially
+def compute_gmfs(job_id, rupture_ids, output_id, task_no):
+    """
+    Compute ground motion fields and store them in the db.
+
+    :param job_id:
+        ID of the currently running job.
+    :param rupture_ids:
+        List of ids of parsed rupture model from which we will generate
+        ground motion fields.
+    :param output_id:
+        output_id idenfitifies the reference to the output record.
+    :param task_no:
+        The task_no in which the calculation results will be placed.
+        This ID basically corresponds to the sequence number of the task,
+        in the context of the entire calculation.
+    """
+
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
         hc.rupture_mesh_spacing, None, None)
     sites = haz_general.get_site_collection(hc)
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
-    GSIM = AVAILABLE_GSIMS[hc.gsim]
+    gsim = AVAILABLE_GSIMS[hc.gsim]
 
     gmf = ground_motion_fields(
-        rupture_mdl, sites, imts, GSIM(),
+        rupture_mdl, sites, imts, gsim(),
         hc.truncation_level, realizations=1,
         correlation_model=None)
-    points_to_compute = hc.points_to_compute()
-    save_gmf(output_id, gmf, points_to_compute, task_no)
+    save_gmf(output_id, gmf, sites.mesh, task_no)
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -102,11 +124,11 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
 
     inserter = writer.BulkInserter(models.GmfScenario)
 
-    for imt, gmfs in gmf_dict.iteritems():
+    for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
         # we want it is an array; it handles subscripting
         # in the way that we want
-        gmfs = numpy.array(gmfs)
+        gmfarray = numpy.array(gmfs_)
 
         sa_period = None
         sa_damping = None
@@ -122,7 +144,7 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
                 sa_period=sa_period,
                 sa_damping=sa_damping,
                 location=location.wkt2d,
-                gmvs=gmfs[i].tolist(),
+                gmvs=gmfarray[i].tolist(),
                 result_grp_ordinal=result_grp_ordinal,
             )
 
@@ -130,8 +152,12 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
+    """
+    Scenario hazard calculator. Computes ground motion fields.
+    """
 
     core_calc_task = gmfs
+    output = None  # defined in pre_execute
 
     def initialize_sources(self):
         """
@@ -139,6 +165,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         parsed version of it in the database (see
         :class:`openquake.db.models.ParsedRupture``) in pickle format.
         """
+
         # Get the rupture model in input
         [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
 

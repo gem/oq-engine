@@ -54,8 +54,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        job_status = helpers.run_risk_job_sp(cfg, hazard_id=hazard_id,
-                                             silence=True)
+        job_status = helpers.run_risk_job_sp(cfg, hazard_id, silence=True)
         self.assertEqual(0, job_status)
 
         completed_job = models.OqJob.objects.latest('last_update')
@@ -73,13 +72,13 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             actual_data = self.actual_data(job)
 
             for i, actual in enumerate(actual_data):
-                numpy.testing.assert_array_almost_equal(
-                    expected_data[i], actual, decimal=4)
+                numpy.testing.assert_allclose(actual, expected_data[i],
+                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
             expected_outputs = self.expected_outputs()
 
             for i, output in enumerate(models.Output.objects.filter(
-                    oq_job=job)):
+                    oq_job=job).order_by('id')):
                 [exported_file] = risk_export.export(output.id, result_dir)
                 self.assert_xml_equal(
                     StringIO.StringIO(expected_outputs[i]), exported_file)
