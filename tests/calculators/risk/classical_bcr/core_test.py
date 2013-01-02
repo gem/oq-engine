@@ -51,30 +51,14 @@ class ClassicalBCRRiskCalculatorTestCase(
         self.job.save()
         self.calculator.execute()
 
-        self.assertEqual(1,
-                         models.Output.objects.filter(oq_job=self.job).count())
-        self.assertEqual(1,
-                         models.BCRDistribution.objects.filter(
-                             output__oq_job=self.job).count())
-        self.assertEqual(
-            3,
-            models.BCRDistributionData.objects.filter(
-                bcr_distribution__output__oq_job=self.job).count())
+        self.assertEqual(1, models.Output.objects.filter(
+            oq_job=self.job).count())
 
-    def calculation_parameters(self):
-        """
-        Test that the specific calculation parameters are present
-        """
+        self.assertEqual(1, models.BCRDistribution.objects.filter(
+            output__oq_job=self.job).count())
 
-        params = self.calculator.calculation_parameters
-        for field in ['lrem_steps_per_interval',
-                      'asset_life_expectancy',
-                      'interest_rate']:
-            self.assertTrue(field in params)
-
-        self.assertEqual(5, params['lrem_steps_per_interval'])
-        self.assertEqual(40, params['asset_life_expectancy'])
-        self.assertEqual(0.05, params['asset_life_expectancy'])
+        self.assertEqual(3, models.BCRDistributionData.objects.filter(
+            bcr_distribution__output__oq_job=self.job).count())
 
     def test_hazard_id(self):
         """
@@ -82,18 +66,13 @@ class ClassicalBCRRiskCalculatorTestCase(
         `openquake.db.models.HazardCurve` object
         """
 
-        self.assertEqual(1,
-                         models.HazardCurve.objects.filter(
-                             pk=self.calculator.hazard_id).count())
+        self.assertEqual(1, models.HazardCurve.objects.filter(
+            pk=self.calculator.hazard_id).count())
 
     def test_create_outputs(self):
         """
         Test that the proper output containers are created
         """
 
-        outputs = self.calculator.create_outputs()
-
-        self.assertTrue('bcr_distribution_id' in outputs)
-
         self.assertTrue(models.BCRDistribution.objects.filter(
-            pk=outputs['bcr_distribution_id']).exists())
+            pk=self.calculator.create_outputs()[0]).exists())

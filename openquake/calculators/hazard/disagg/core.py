@@ -25,6 +25,7 @@ import numpy
 from django.db import transaction
 
 from openquake import logs
+from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.db import models
@@ -71,7 +72,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         msg %= calc_type
         raise RuntimeError(msg)
 
-    haz_general.signal_task_complete(
+    base.signal_task_complete(
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
 
@@ -462,12 +463,12 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # queuing tasks (if there are any left) and wait for everything
                 # to finish.
                 try:
-                    haz_general.queue_next(
+                    base.queue_next(
                         self.core_calc_task, disagg_task_arg_gen.next())
                 except StopIteration:
                     # There are no more tasks to dispatch; now we just need to
                     # wait until all of the tasks signal completion.
-                    pass
+                    self.progress['in_queue'] -= 1
                 else:
                     logs.LOG.debug('* queuing the next disagg task')
             else:
@@ -478,7 +479,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
                     if (self.progress['hc_computed']
                         == self.progress['hc_total']):
-                        # we're switching to disagg phase
+                        # we just finished the last hazard curve task ...
+                        self.progress['in_queue'] -= 1
+                        # ... and we're switching to disagg phase
                         self.disagg_phase = True
                         logs.LOG.progress('Hazard curve computation complete',
                                           indent=True)
@@ -494,7 +497,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # with disagg tasks:
                         for _ in xrange(concurrent_tasks):
                             try:
-                                haz_general.queue_next(
+                                base.queue_next(
                                     self.core_calc_task,
                                     disagg_task_arg_gen.next())
                             except StopIteration:
@@ -502,16 +505,21 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                 # we have number of disagg tasks <
                                 # concurrent_tasks.
                                 break
+                            else:
+                                self.progress['in_queue'] += 1
+
+                        logs.LOG.info('Items now in queue: %s'
+                                      % self.progress['in_queue'])
                     else:
                         # we're not done computing hazard curves; enqueue the
                         # next task
                         try:
-                            haz_general.queue_next(
+                            base.queue_next(
                                 self.core_calc_task, hc_task_arg_gen.next())
                         except StopIteration:
                             # No more hazard curve tasks left to enqueue;
                             # now we just wait for this phase to complete.
-                            pass
+                            self.progress['in_queue'] -= 1
                         else:
                             logs.LOG.debug(
                                 '* queueing the next hazard curve task')
@@ -525,6 +533,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # message:
             self.progress['computed'] += num_items
             message.ack()
+            logs.LOG.info('A task was completed. Items now in queue: %s'
+                          % self.progress['in_queue'])
 
         return callback
 
