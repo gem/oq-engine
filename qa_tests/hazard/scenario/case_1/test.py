@@ -25,7 +25,7 @@ from qa_tests import _utils as qa_utils
 
 class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'scenario')
+    @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
@@ -36,7 +36,7 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
 
         assert_almost_equal(actual, expected_medians, decimal=2)
 
-    @attr('qa', 'scenario')
+    @attr('qa', 'hazard', 'scenario')
     def test_export(self):
         result_dir = tempfile.mkdtemp()
 
