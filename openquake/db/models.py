@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import itertools
+import operator
 import os
 import re
 
@@ -1337,6 +1338,7 @@ class Output(djm.Model):
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'gmf', u'Ground Motion Field'),
+        (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
         (u'ins_loss_curve', u'Insured Loss Curve'),
@@ -1853,6 +1855,9 @@ class _GroundMotionField(object):
     def __iter__(self):
         return iter(self.gmf_nodes)
 
+    def __getitem__(self, key):
+        return self.gmf_nodes[key]
+
 
 class _GroundMotionFieldNode(object):
 
@@ -1878,6 +1883,69 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+
+class GmfScenario(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    output = djm.ForeignKey('Output')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    # Spectral acceleration
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    result_grp_ordinal = djm.IntegerField()
+
+    objects = djm.GeoManager()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_scenario'
+
+
+def get_gmfs_scenario(output, imt=None):
+    """
+    Iterator for walking through all :class:`Gmf` objects associated
+    to a given output. Notice that values for the same site are
+    displayed together and then ordered according to the iml, so that
+    it is possible to get reproducible outputs in the test cases.
+
+    :param output: instance of :class:`openquake.db.models.Output`
+
+    :param string imt: a string with the IMT to extract; the default
+                       is None, all the IMT in the job.ini file are extracted
+
+    :returns: an iterator over
+              :class:`openquake.db.models._GroundMotionField` instances
+    """
+    job = output.oq_job
+    hc = job.hazard_calculation
+    if imt is None:
+        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    else:
+        imts = [parse_imt(imt)]
+    for imt, sa_period, sa_damping in imts:
+        gmfs = GmfScenario.objects.filter(
+            output__id=output.id,
+            imt=imt,
+            sa_period=sa_period,
+            sa_damping=sa_damping,
+        ).order_by('location')
+        # yield all the nodes associated to a given location
+        for loc, rows in itertools.groupby(
+                gmfs, operator.attrgetter('location')):
+            gmf_nodes = []
+            for gmf in rows:
+                for gmv in gmf.gmvs:
+                    gmf_nodes.append(
+                        _GroundMotionFieldNode(iml=gmv, location=loc))
+            yield _GroundMotionField(
+                imt=imt,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('iml')))
 
 
 class DisaggResult(djm.Model):
