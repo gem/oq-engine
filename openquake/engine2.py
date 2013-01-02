@@ -23,7 +23,7 @@ import os
 import sys
 
 from django.core import exceptions
-from django.db import close_connection
+from django.db import close_connection, models as djm
 
 from openquake import kvs
 from openquake import logs
@@ -186,8 +186,7 @@ def get_input(path, input_type, owner, force_input, name=None):
 
     digest = _file_digest(path)
 
-    # FIXME remove me
-    existing_input = _identical_input(input_type, digest, owner.id)
+    existing_input = _identical_input(input_type, digest, owner)
 
     if force_input or existing_input is None:
         # If we chose to force inputs, or there are simply none to reuse,
@@ -212,7 +211,7 @@ def get_input(path, input_type, owner, force_input, name=None):
     return inp
 
 
-def _identical_input(input_type, digest, owner_id):
+def _identical_input(input_type, digest, owner):
     """Get an identical input with the same type or `None`.
 
     Identical inputs are found by comparing md5sum digests. In order to avoid
@@ -225,28 +224,18 @@ def _identical_input(input_type, digest, owner_id):
         input model type
     :param str digest:
         md5sum digest
-    :param int owner_id:
-        the database key of the owner
+    :param owner:
+        the `:class:openquake.db.models.OqUser` instance of the owner
     :returns:
         an `:class:openquake.db.models.Input` instance or `None`
     """
-    query = """
-    SELECT * from uiapi.input WHERE id = (
-        SELECT MAX(input_id) AS max_input_id FROM
-            uiapi.oq_job, (
-                SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
-                FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
-                     uiapi.input AS i, admin.oq_user u
-                WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
-                    AND i.digest = %s AND i.input_type = %s
-                    AND j.owner_id = u.id AND u.id = %s
-                GROUP BY i.id ORDER BY i.id DESC) AS mjq
-            WHERE
-                id = mjq.min_job_id
-                AND status = 'complete'
-                AND is_running = false)"""
-    ios = list(models.Input.objects.raw(query, [digest, input_type, owner_id]))
-    return ios[0] if ios else None
+    queryset = models.Input.objects.filter(
+        digest=digest, owner=owner, input_type=input_type).filter(
+        djm.Q(hazard_calculations__oqjob__status="complete") |
+        djm.Q(risk_calculations__oqjob__status="complete"))
+
+    if queryset.exists():
+        return queryset.latest('last_update')
 
 
 def create_hazard_calculation(owner, params, files):

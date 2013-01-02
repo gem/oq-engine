@@ -19,7 +19,7 @@ Core functionality for the classical PSHA risk calculator.
 
 from risklib import api
 
-
+from openquake.calculators import base
 from openquake.calculators.risk import general
 from openquake.calculators.risk.classical import core as classical
 from openquake.utils import stats
@@ -30,13 +30,10 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@general.with_assets
 @stats.count_progress('r')
 def classical_bcr(job_id, assets, hazard_getter, hazard_id,
-                  bcr_distribution_id,
-                  lrem_steps_per_interval,
-                  asset_life_expectancy,
-                  interest_rate):
+                  bcr_distribution_id, lrem_steps_per_interval,
+                  asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -63,8 +60,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
       The life expectancy used for every asset
     """
     model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model(
-        job_id, True)
+    model_retrofitted = general.fetch_vulnerability_model(job_id, True)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.BCR(
@@ -79,6 +75,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
         for asset_output in api.compute_on_assets(
             assets, hazard_getter, calculator):
             general.write_bcr_distribution(bcr_distribution_id, asset_output)
+    base.signal_task_complete(job_id=job_id, num_items=len(assets))
 classical_bcr.ignore_result = False
 
 
@@ -87,23 +84,17 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     Classical BCR risk calculator. Computes BCR distributions for a
     given set of assets.
     """
-    celery_task = classical_bcr
+    core_calc_task = classical_bcr
 
     @property
-    def calculation_parameters(self):
+    def calculator_parameters(self):
         """
-        :returns: calculation specific parameters as a dictionary
-        suitable to be passed to the celery task function of the
-        calculator
+        Specific calculator parameters returned as list suitable to be
+        passed in task_arg_gen
         """
 
-        rc = self.job.risk_calculation
-
-        return {
-            'lrem_steps_per_interval': rc.lrem_steps_per_interval,
-            'interest_rate': rc.interest_rate,
-            'asset_life_expectancy': rc.asset_life_expectancy
-            }
+        return [self.rc.lrem_steps_per_interval,
+                self.rc.asset_life_expectancy, self.rc.interest_rate]
 
     def create_outputs(self):
         """
@@ -111,13 +102,11 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         :class:`openquake.db.models.BCRDistribution` instance and its
         :class:`openquake.db.models.Output` container.
 
-        :returns: A dictionary where the created output container is
-          associated with the key bcr_distribution_id
+        :returns: A list containing the output container id
         """
-        return dict(
-            bcr_distribution_id=models.BCRDistribution.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk)
+        return [models.BCRDistribution.objects.create(
+            output=models.Output.objects.create_output(
+            self.job, "BCR Distribution", "bcr_distribution")).pk]
 
     def store_risk_model(self):
         """
@@ -126,5 +115,14 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         """
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
-        general.store_risk_model(self.job.risk_calculation,
-                                 "vulnerability_retrofitted")
+        general.store_risk_model(self.rc, "vulnerability_retrofitted")
+
+    @property
+    def hazard_getter(self):
+        """
+        The hazard getter used by the calculation.
+
+        :returns: A string used to get the hazard getter class from
+        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
+        """
+        return "hazard_curve"
