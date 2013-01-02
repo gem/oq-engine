@@ -69,6 +69,8 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     base.signal_task_complete(job_id=job_id, num_items=1)
 
 
+# NB: get_site_collection is called for each task;
+# this could be a performance bottleneck, potentially
 def compute_gmfs(job_id, rupture_ids, output_id, task_no):
     """
     Compute ground motion fields and store them in the db.
@@ -98,8 +100,7 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no):
         rupture_mdl, sites, imts, gsim(),
         hc.truncation_level, realizations=1,
         correlation_model=None)
-    points_to_compute = hc.points_to_compute()
-    save_gmf(output_id, gmf, points_to_compute, task_no)
+    save_gmf(output_id, gmf, sites.mesh, task_no)
 
 
 @transaction.commit_on_success(using='reslt_writer')
