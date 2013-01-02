@@ -152,6 +152,9 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
+    """
+    Scenario hazard calculator. Computes ground motion fields.
+    """
 
     core_calc_task = gmfs
 
