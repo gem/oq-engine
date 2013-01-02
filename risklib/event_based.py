@@ -52,6 +52,7 @@ def aggregate_loss_curve(set_of_losses, tses, time_span,
     :rtype: an instance of `risklib.curve.Curve`
     """
     aggregate_losses = sum(set_of_losses)
+
     return _loss_curve(aggregate_losses, tses, time_span,
                        curve_resolution=curve_resolution)
 
@@ -145,7 +146,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()
 
     if all_covs_are_zero:
-        return _mean_based(vuln_function, gmf_set)
+        return vuln_function.loss_ratio_for(gmf_set["IMLs"])
     else:
         epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
         return _sample_based(vuln_function, gmf_set, epsilon_provider, asset)
@@ -204,48 +205,6 @@ def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
     return numpy.array(loss_ratios)
 
 
-def _mean_based(vuln_function, gmf_set):
-    """Compute the set of loss ratios when the vulnerability function
-    has all the CVs (Coefficent of Variation) set to zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    """
-
-    loss_ratios = []
-    retrieved = {}
-    imls = vuln_function.imls
-
-    # seems like with numpy you can only specify a single fill value
-    # if the x_new is outside the range. Here we need two different values,
-    # depending if the x_new is below or upon the defined values
-    for ground_motion_field in gmf_set["IMLs"]:
-        if ground_motion_field < imls[0]:
-            loss_ratios.append(0.0)
-        elif ground_motion_field > imls[-1]:
-            loss_ratios.append(vuln_function.loss_ratios[-1])
-        else:
-            # The actual value is computed later
-            mark = len(loss_ratios)
-            retrieved[mark] = gmf_set['IMLs'][mark]
-            loss_ratios.append(0.0)
-
-    means = vuln_function.loss_ratio_for(retrieved.values())
-
-    for mark, mean_ratio in zip(retrieved.keys(), means):
-        loss_ratios[mark] = mean_ratio
-
-    return numpy.array(loss_ratios)
-
-
 def _probs_of_exceedance(rates, time_span):
     """
     Compute the probabilities of exceedance using the given rates of
@@ -270,7 +229,6 @@ def _loss_curve(loss_values, tses, time_span,
     :param curve_resolution: The number of points the output curve is
     defined by
     """
-
     sorted_loss_values = numpy.sort(loss_values)[::-1]
 
     def pairwise(iterable):
@@ -283,11 +241,16 @@ def _loss_curve(loss_values, tses, time_span,
     # We compute the rates of exceedances by iterating over loss
     # values and counting the number of distinct loss values less than
     # the current loss. This is a workaround for a rounding error, ask Luigi
-    # for the gory details
+    # for the details
     times = [index
              for index, (previous_val, val) in
              enumerate(pairwise(sorted_loss_values))
              if not numpy.allclose([val], [previous_val])]
+
+    # if there are less than 2 distinct loss values, we will keep the
+    # endpoints
+    if len(times) < 2:
+        times = [0, len(sorted_loss_values) - 1]
 
     sorted_loss_values = sorted_loss_values[times]
     rates_of_exceedance = numpy.array(times) / float(tses)
