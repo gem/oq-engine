@@ -32,8 +32,8 @@ from django.db import transaction
 @tasks.oqtask
 @stats.count_progress('r')
 def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
-                    bcr_distribution_id, imt, time_span, tses,
-                    loss_curve_resolution, seed, asset_correlation,
+                    seed, bcr_distribution_id, imt, time_span, tses,
+                    loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the event based
@@ -118,7 +118,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         return [
             self.imt, time_span, tses, self.rc.loss_curve_resolution,
-            self.rc.master_seed, self.rc.asset_correlation,
+            self.rc.asset_correlation,
             self.rc.asset_life_expectancy, self.rc.interest_rate
         ]
 
