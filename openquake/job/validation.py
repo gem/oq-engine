@@ -31,7 +31,7 @@ MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a signed 32-bit int
 MAX_SINT_32 = (2 ** 31) - 1
 
-AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
+AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims().keys()
 
 
 class BaseOQModelForm(ModelForm):

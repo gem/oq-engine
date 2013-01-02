@@ -54,8 +54,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        job_status = helpers.run_risk_job_sp(cfg, hazard_id=hazard_id,
-                                             silence=True)
+        job_status = helpers.run_risk_job_sp(cfg, hazard_id, silence=True)
         self.assertEqual(0, job_status)
 
         completed_job = models.OqJob.objects.latest('last_update')

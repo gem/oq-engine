@@ -463,6 +463,7 @@ def _do_run_calc(job, exports, calc, job_type):
     """
     # - Run the calculation
     _switch_to_job_phase(job, job_type, "pre_executing")
+
     calc.pre_execute()
 
     _switch_to_job_phase(job, job_type, "executing")
