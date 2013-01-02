@@ -158,10 +158,15 @@ class ComplexFaultSurface(BaseSurface):
             the surface projection of the complex fault.
         """
         # collect lons and lats of all the vertices of all the edges
-        lons, lats = numpy.array(
-            [[[point.longitude, point.latitude] for point in edge]
-             for edge in edges], dtype=float
-        ).reshape((-1, 2)).transpose()
+        lons = []
+        lats = []
+        for edge in edges:
+            for point in edge:
+                lons.append(point.longitude)
+                lats.append(point.latitude)
+        lons = numpy.array(lons, dtype=float)
+        lats = numpy.array(lats, dtype=float)
+
         return Mesh(lons, lats, depths=None).get_convex_hull()
 
     def get_width(self):
