@@ -26,7 +26,10 @@ import os
 import pwd
 import sys
 
+import openquake
 from openquake.utils import general
+
+OQDIR = os.path.dirname(openquake.__path__[0])
 
 
 @general.singleton
@@ -48,7 +51,7 @@ class Config(object):
     by settings with the same key names in the local configuration.
     """
     GLOBAL_PATH = "/etc/openquake/openquake.cfg"
-    LOCAL_PATH = "./openquake.cfg"
+    LOCAL_PATH = os.path.join(OQDIR, "openquake.cfg")
     cfg = dict()
 
     def __init__(self):
