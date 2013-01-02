@@ -130,6 +130,11 @@ class EventBasedExportTestcase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
+            # use get_risk_job to create a fake GmfCollection
+            helpers.get_risk_job('event_based_risk/job.ini',
+                                 'event_based_hazard/job.ini',
+                                 'gmf')
+
             cfg = helpers.demo_file('event_based_risk/job.ini')
 
             # run the calculation to create something to export
