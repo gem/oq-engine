@@ -25,6 +25,7 @@ eventually.
 
 import os
 import sys
+import imp
 
 from openquake.utils import config
 
@@ -60,7 +61,13 @@ CELERY_IMPORTS = (
     "openquake.calculators.hazard.event_based.core_next",
     "openquake.calculators.hazard.event_based.post_processing",
     "openquake.calculators.risk.classical.core",
-    "openquake.calculators.risk.classical_bcr.core",
-    "tests.utils.tasks")
+    "openquake.calculators.risk.classical_bcr.core")
+
+try:
+    imp.find_module("tasks", [ os.path.join(x, "tests/utils") for x in sys.path ])
+except ImportError:
+    pass
+else:
+    CELERY_IMPORTS.append("tests.utils.tasks")
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
