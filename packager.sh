@@ -247,8 +247,8 @@ cd "$GEM_BUILD_SRC"
 # date
 dt="$(date +%s)"
 
-# version from setup.py
-stp_vers="$(cat setup.py | grep "^version[ 	]*=[ 	]*['\"]" | sed -n "s/^version[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
+# version from nrml/__init__.py
+stp_vers="$(cat nrml/__init__.py | grep "^__version__[ 	]*=[ 	]*['\"]" | sed -n "s/^__version__[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"

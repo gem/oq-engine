@@ -31,11 +31,19 @@ Copyright (C) 2010-2012 GEM Foundation.
 """
 
 import os
-
+import sys
+import re
 from setuptools import setup, find_packages
 
+for line in open('nrml/__init__.py'):
+    VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    version = re.search(VSRE, line, re.M)
+    if version:
+        break
+else:
+    sys.exit('variable __version__ not found in nrml/__init__.py')
+version=version.group(1)
 
-version = '0.4.3'
 url = 'http://github.com/gem/nrml'
 
 
