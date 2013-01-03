@@ -42,7 +42,7 @@ for line in open('nrml/__init__.py'):
         break
 else:
     sys.exit('variable __version__ not found in nrml/__init__.py')
-version=version.group(1)
+version = version.group(1)
 
 url = 'http://github.com/gem/nrml'
 
