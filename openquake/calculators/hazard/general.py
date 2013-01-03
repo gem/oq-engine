@@ -573,7 +573,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def initialize_site_model(self):
         """
-        If a site model is specified in the calculation configuration. parse
+        If a site model is specified in the calculation configuration, parse
         it and load it into the `hzrdi.site_model` table. This includes a
         validation step to ensure that the area covered by the site model
         completely envelops the calculation geometry. (If this requirement is
@@ -730,11 +730,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
             sm_name, sm_lt_path = ltp.sample_source_model_logictree(
-                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(MIN_SINT_32, MAX_SINT_32))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
-                    rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(MIN_SINT_32, MAX_SINT_32))
 
             lt_rlz = models.LtRealization(
                 hazard_calculation=self.hc,
