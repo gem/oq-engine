@@ -47,7 +47,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     hazard_getter = general.hazard_getter(
         hazard_getter, hazard_id, imt, time_span, tses)
 
-    calculator = api.probabilistic_event_based(
+    calculator = api.ProbabilisticEventBased(
         vulnerability_model,
         curve_resolution=loss_curve_resolution,
         seed=seed,
@@ -60,18 +60,18 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     # if we need to compute the insured losses, we add the proper
     # risklib aggregator
     if insured_losses:
-        calculator = api.insured_losses(calculator)
+        calculator = api.InsuredLosses(calculator)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
 
     with db.transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, calculator):
+                assets, hazard_getter, calculator):
 
             general.write_loss_curve(loss_curve_id, asset_output)
 
@@ -138,8 +138,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.losses, tses, time_span,
             curve_resolution=self.rc.loss_curve_resolution)
 
-        curve_data.losses = aggregate_loss_curve.x_values.tolist()
-        curve_data.poes = aggregate_loss_curve.y_values.tolist()
+        curve_data.losses = aggregate_loss_curve.abscissae.tolist()
+        curve_data.poes = aggregate_loss_curve.ordinates.tolist()
         curve_data.save()
 
     @property
