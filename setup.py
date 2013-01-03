@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+version = "0.9.0"
+url = "http://openquake.org/"
 
 README = """
 OpenQuake is an open source application that allows users to
@@ -22,14 +24,14 @@ setup(
             "oq_monitor = openquake.bin.openquake_supervisor:main",
             ]},
     name="openquake",
-    version="0.9.0",
+    version=version,
     author="The OpenQuake team",
     author_email="devops@openquake.org",
     description=("Computes hazard, risk and socio-economic impact of "
                  "earthquakes."),
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
-    url="http://openquake.org/",
+    url=url,
     long_description=README,
     classifiers=[
         "Development Status :: 3 - Alpha",
