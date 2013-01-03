@@ -321,6 +321,8 @@ if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
     read a
 fi
 
+# the following unexecuted block of code is a flag to identify where and how modifications can
+# be performed from sources to package
 if [ 0 -eq 1 ]; then
     sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
