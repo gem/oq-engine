@@ -1060,6 +1060,51 @@ class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
             self.assertFalse(form.is_valid(), fields)
 
 
+class EventBasedRiskCalculationWithBCRForm(unittest.TestCase):
+
+    def setUp(self):
+        self.job, _ = helpers.get_risk_job('event_based_bcr/job.ini',
+            'event_based_hazard/job.ini')
+
+    def test_valid_form(self):
+        region_constraint = (
+            'POLYGON((-122.0 38.113, -122.114 38.113, '
+            '-122.57 38.111, -122.0 38.113))'
+        )
+
+        rc = models.RiskCalculation(
+            calculation_mode="event_based_bcr",
+            owner=helpers.default_user(),
+            region_constraint=region_constraint,
+            hazard_output=self.job.risk_calculation.hazard_output,
+            interest_rate=0.05,
+            asset_life_expectancy=40,
+        )
+
+        form = validation.EventBasedRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_invalid_form(self):
+        region_constraint = (
+            'POLYGON((-122.0 38.113, -122.114 38.113, '
+            '-122.57 38.111, -122.0 38.113))'
+        )
+
+        rc = models.RiskCalculation(
+            calculation_mode="event_based_bcr",
+            owner=helpers.default_user(),
+            region_constraint=region_constraint,
+            hazard_output=self.job.risk_calculation.hazard_output,
+        )
+
+        form = validation.EventBasedRiskCalculationWithBCRForm(
+            instance=rc, files=None)
+
+        self.assertFalse(form.is_valid())
+
+
 class EventBasedValidationTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_risk_job('event_based_risk/job.ini',

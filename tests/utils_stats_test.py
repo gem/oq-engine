@@ -354,6 +354,12 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
 class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.count_progress()."""
 
+    def test_wrong_arguments(self):
+        @stats.count_progress('h')
+        def wrong_args(job_id, non_sequence):
+            pass
+        self.assertRaises(TypeError, wrong_args, 1, 2)
+
     def test_success_stats(self):
         """
         The success counter is incremented when the wrapped function
