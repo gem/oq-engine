@@ -32,7 +32,7 @@ from django.db import transaction
 @tasks.oqtask
 @stats.count_progress('r')
 def classical_bcr(job_id, assets, hazard_getter, hazard_id,
-                  bcr_distribution_id, lrem_steps_per_interval,
+                  seed, bcr_distribution_id, lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
@@ -49,6 +49,8 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
       Strategy used to get the hazard curves
     :param int hazard_id
       ID of the Hazard Output the risk calculation is based on
+    :param int seed:
+        Seed used to generate random values.
     :param bcr_distribution_id
       ID of the :class:`openquake.db.models.BCRDistribution` output
       container used to store the computed bcr distribution
@@ -62,6 +64,9 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     model = general.fetch_vulnerability_model(job_id)
     model_retrofitted = general.fetch_vulnerability_model(job_id, True)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+
+    # FIXME(lp)
+    # risklib calculator should get the seed in input
 
     calculator = api.BCR(
         api.Classical(model, lrem_steps_per_interval),
