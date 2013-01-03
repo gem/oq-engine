@@ -17,9 +17,9 @@
 import mock
 import unittest
 
-from risklib.tests import utils
 from risklib.models import input, output
-from risklib import api, curve, vulnerability_function
+from risklib.curve import Curve
+from risklib import api, vulnerability_function
 
 
 class ComputeOnSitesTestCase(unittest.TestCase):
@@ -32,17 +32,17 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         hazard_getter = mock.Mock(return_value=1.0)
         assets_getter = mock.Mock(return_value=[asset])
 
-        list(api.compute_on_sites(sites,
-            assets_getter, hazard_getter, calculator))
+        list(api.compute_on_sites(
+             sites, assets_getter, hazard_getter, calculator))
 
         expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
-            (((3.0, 3.0),), {})]
+                          (((3.0, 3.0),), {})]
 
         self.assertEquals(expected_calls, assets_getter.call_args_list)
         self.assertEquals(expected_calls, hazard_getter.call_args_list)
 
         self.assertEquals([((asset, 1.0), {})] * 3,
-            calculator.call_args_list)
+                          calculator.call_args_list)
 
     def test_multiple_assets_per_site(self):
         sites = [(1.0, 1.0)]
@@ -57,11 +57,11 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         hazard_getter = mock.Mock(return_value=1.0)
         assets_getter = mock.Mock(return_value=assets)
 
-        list(api.compute_on_sites(sites,
-            assets_getter, hazard_getter, calculator))
+        list(api.compute_on_sites(
+             sites, assets_getter, hazard_getter, calculator))
 
         expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
-            ((assets[2], 1.0), {})]
+                          ((assets[2], 1.0), {})]
 
         self.assertEquals(expected_calls, calculator.call_args_list)
 
@@ -81,12 +81,12 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
         list(api.compute_on_assets(assets, hazard_getter, calculator))
 
         expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
-            (((3.0, 3.0),), {})]
+                          (((3.0, 3.0),), {})]
 
         self.assertEquals(expected_calls, hazard_getter.call_args_list)
 
         expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
-            ((assets[2], 1.0), {})]
+                          ((assets[2], 1.0), {})]
 
         self.assertEquals(expected_calls, calculator.call_args_list)
 
@@ -95,25 +95,24 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
         asset = input.Asset("a1", None, None, None)
+        loss_ratio_curve = Curve([(2.0, 2.0)])
+        loss_curve = Curve([(1.0, 1.0)])
         asset_output = output.ClassicalOutput(
-            asset, [(2.0, 2.0)], [(1.0, 1.0)], None)
+            asset, loss_ratio_curve, loss_curve, None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
 
-        with mock.patch("risklib.classical._conditional_losses") as stub:
-            stub.return_value = {0.1: 0.5, 0.2: 0.5}
+        asset_output = api.ConditionalLosses(
+            [0.1, 0.2], loss_curve_calculator)(asset, 1.0)
 
-            asset_output = api.conditional_losses(
-                [0.1, 0.2], loss_curve_calculator)(asset, 1.0)
+        loss_curve_calculator.assert_called_with(asset, 1.0)
 
-            loss_curve_calculator.assert_called_with(asset, 1.0)
+        expected_output = output.ClassicalOutput(
+            asset, loss_ratio_curve, loss_curve, {0.2: 1.0, 0.1: 1.0})
 
-            expected_output = output.ClassicalOutput(
-                asset, [(2.0, 2.0)], [(1.0, 1.0)], {0.1: 0.5, 0.2: 0.5})
-
-            # as output we have the output from the given loss curve
-            # calculator, plus the conditional losses
-            self.assertEquals(expected_output, asset_output)
+        # as output we have the output from the given loss curve
+        # calculator, plus the conditional losses
+        self.assertEquals(expected_output, asset_output)
 
 
 class ClassicalCalculatorTestCase(unittest.TestCase):
@@ -126,7 +125,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}
-        asset_output = api.classical(vulnerability_model)(asset, hazard_curve)
+        asset_output = api.Classical(vulnerability_model)(asset, hazard_curve)
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -139,16 +138,16 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
 class ScenarioDamageCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_damage_calculator(self):
-        fragility_model = input.FragilityModel("discrete",
-            [0.1, 0.2], ["LS1", "LS2"])
+        fragility_model = input.FragilityModel(
+            "discrete", [0.1, 0.2], ["LS1", "LS2"])
 
         fragility_function = input.FragilityFunctionDiscrete(
             fragility_model, [0.8, 0.7], 1)
 
         asset = input.Asset("a1", "RC", None, None, number_of_units=1.0)
 
-        calculator = api.scenario_damage(fragility_model,
-            {"RC": [fragility_function]})
+        calculator = api.ScenarioDamage(
+            fragility_model, {"RC": [fragility_function]})
 
         asset_output = calculator(asset, [0.11, 0.12, 0.13])
 
@@ -173,8 +172,9 @@ class BCRCalculatorTestCase(unittest.TestCase):
         vulnerability_model = {"RC": function}
         vulnerability_model_retrofitted = {"RC": function}
 
-        asset_output = (api.bcr(api.classical(vulnerability_model),
-            api.classical(vulnerability_model_retrofitted), 1.0, 1.0)
+        asset_output = (
+            api.BCR(api.Classical(vulnerability_model),
+                    api.Classical(vulnerability_model_retrofitted), 1.0, 1.0)
             (asset, hazard_curve))
 
         self.assertEquals(asset, asset_output.asset)
@@ -197,7 +197,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
         vulnerability_model = {"RC": function}
 
-        asset_output = api.probabilistic_event_based(
+        asset_output = api.ProbabilisticEventBased(
             vulnerability_model, 37, "perfect")(asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)
@@ -214,14 +214,14 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
         asset = input.Asset("a1", "RC", 1.0, None,
-            ins_limit=1.0, deductible=1.0)
+                            ins_limit=1.0, deductible=1.0)
 
         function = vulnerability_function.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}
 
-        asset_output = api.scenario_risk(
+        asset_output = api.ScenarioRisk(
             vulnerability_model, 37, "perfect")(asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)

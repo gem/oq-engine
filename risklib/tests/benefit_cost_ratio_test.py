@@ -32,7 +32,7 @@ class RiskCommonTestCase(unittest.TestCase):
         expected_result = 0.43405
 
         result = bcr(eal_orig, eal_retrofitted, interest,
-            life_expectancy, retrofitting_cost)
+                     life_expectancy, retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=2e-5)
 
     def test_mean_curve_computation(self):

@@ -18,4 +18,4 @@
 from risklib.models import input
 
 
-__all__ = (input.__name__)
+__all__ = [input.__name__]  # ugly

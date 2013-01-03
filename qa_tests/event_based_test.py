@@ -128,23 +128,23 @@ sb = TestData(  # sample based test data
 
     expected_losses=Triplet(
         a1=numpy.array([
-                0.0234332852886, 0.0702998558659,
-                0.117166426443, 0.16403299702,
-                0.210899567598, 0.257766138175,
-                0.304632708752, 0.351499279329,
-                0.398365849907]),
+            0.0234332852886, 0.0702998558659,
+            0.117166426443, 0.16403299702,
+            0.210899567598, 0.257766138175,
+            0.304632708752, 0.351499279329,
+            0.398365849907]),
         a2=numpy.array([
-                0.0112780780331, 0.0338342340993,
-                0.0563903901655, 0.0789465462317,
-                0.101502702298, 0.124058858364,
-                0.14661501443, 0.169171170497,
-                0.191727326563]),
+            0.0112780780331, 0.0338342340993,
+            0.0563903901655, 0.0789465462317,
+            0.101502702298, 0.124058858364,
+            0.14661501443, 0.169171170497,
+            0.191727326563]),
         a3=numpy.array([
-                0.00981339568577, 0.0294401870573,
-                0.0490669784288, 0.0686937698004,
-                0.0883205611719, 0.107947352543,
-                0.127574143915, 0.147200935287,
-                0.166827726658]),
+            0.00981339568577, 0.0294401870573,
+            0.0490669784288, 0.0686937698004,
+            0.0883205611719, 0.107947352543,
+            0.127574143915, 0.147200935287,
+            0.166827726658]),
         ),
 
     expected_loss_map=Triplet(
@@ -211,21 +211,21 @@ class EventBasedTestCase(unittest.TestCase):
     def test_mean_based(self):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, None, None)
 
-        peb_conditional_losses = api.conditional_losses(
+        peb_conditional_losses = api.ConditionalLosses(
             [CONDITIONAL_LOSS_POES], peb_calculator)
 
         for i in range(3):
@@ -239,17 +239,17 @@ class EventBasedTestCase(unittest.TestCase):
                 delta=0.05 * mb.expected_loss_map[i])
 
             self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_ratio_curve.y_values)
+                                 asset_output.loss_ratio_curve.ordinates)
 
             self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_curve.y_values)
+                                 asset_output.loss_curve.ordinates)
 
             self.assert_allclose(mb.expected_losses[i],
-                                 asset_output.loss_curve.x_values)
+                                 asset_output.loss_curve.abscissae)
 
             self.assert_allclose(
                 mb.expected_losses[i] / mb.input_models_asset[i].value,
-                asset_output.loss_ratio_curve.x_values)
+                asset_output.loss_ratio_curve.abscissae)
 
         expected_aggregate_poes = [0, 0.020408606, 0.04081678, 0.061224955,
                                    0.08163313, 0.102041305, 0.12244948,
@@ -288,13 +288,13 @@ class EventBasedTestCase(unittest.TestCase):
                                      115.8386574, 55.3134][::-1]
 
         aggregate_curve = event_based.aggregate_loss_curve(
-           [peb_calculator.aggregate_losses], 50, 50)
+            [peb_calculator.aggregate_losses], 50, 50)
 
         self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.x_values)
+            expected_aggregate_losses, aggregate_curve.abscissae)
 
         self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.y_values)
+            expected_aggregate_poes, aggregate_curve.ordinates)
 
     # we skip the following test as we lack reliable data
     @unittest.skip
@@ -312,9 +312,9 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, None, None)
-        peb_conditional_losses = api.conditional_losses([0.99], peb_calculator)
+        peb_conditional_losses = api.ConditionalLosses([0.99], peb_calculator)
 
         for i in range(3):
             asset_output = peb_conditional_losses(
@@ -326,9 +326,9 @@ class EventBasedTestCase(unittest.TestCase):
             [peb_calculator.aggregate_losses], 2500, 50, 10)
 
         expected_aggregate_poes = [1.0, 0.732864698034, 0.228948414196,
-                                    0.147856211034, 0.0768836536134,
-                                    0.0768836536134, 0.0198013266932,
-                                    0.0198013266932, 0.0198013266932]
+                                   0.147856211034, 0.0768836536134,
+                                   0.0768836536134, 0.0198013266932,
+                                   0.0198013266932, 0.0198013266932]
 
         expected_aggregate_losses = [
             102.669407618, 308.008222854, 513.347038089,
@@ -336,29 +336,29 @@ class EventBasedTestCase(unittest.TestCase):
             1334.70229903, 1540.04111427, 1745.3799295]
 
         self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.y_values)
+            expected_aggregate_poes, aggregate_curve.ordinates)
 
         self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.x_values)
+            expected_aggregate_losses, aggregate_curve.abscissae)
 
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             vulnerability_function.VulnerabilityFunction(
-            [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-            [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_model = {"RM": vulnerability_function_rm,
                                "RC": vulnerability_function_rc}
 
-        peb_calculator = api.probabilistic_event_based(
+        peb_calculator = api.ProbabilisticEventBased(
             vulnerability_model, curve_resolution=20)
 
-        peb_insured_losses = api.insured_losses(peb_calculator)
+        peb_insured_losses = api.InsuredLosses(peb_calculator)
 
         for i in range(3):
             asset_output = peb_insured_losses(
@@ -367,12 +367,12 @@ class EventBasedTestCase(unittest.TestCase):
 
             self.assert_allclose(
                 il.expected_poes[i],
-                asset_output.insured_losses.y_values)
+                asset_output.insured_losses.ordinates)
 
             if not numpy.allclose(il.expected_losses[i],
-                                  asset_output.insured_losses.x_values):
+                                  asset_output.insured_losses.abscissae):
                 print asset_output.insured_losses
 
             self.assert_allclose(
                 il.expected_losses[i],
-                asset_output.insured_losses.x_values)
+                asset_output.insured_losses.abscissae)

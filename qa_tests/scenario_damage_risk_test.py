@@ -66,7 +66,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                     fragility_model, 0.40, 0.12, 'LS2'),
                 ])
 
-        calculator = api.scenario_damage(fragility_model, fragility_functions)
+        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
  
         asset_output = calculator(
             input.Asset("a1", "RM", 3000, None, number_of_units=3000), 
@@ -125,7 +125,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                     fragility_model, [0.0003, 0.05, 0.40, 0.86], 'LS2'),
                 ])
 
-        calculator = api.scenario_damage(fragility_model, fragility_functions)
+        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
  
         asset_output = calculator(
             input.Asset("a1", "RM", 3000, None, number_of_units=3000), 

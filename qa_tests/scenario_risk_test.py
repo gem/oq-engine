@@ -57,7 +57,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         )
 
     def test_mean_based(self):
-        calculator = api.scenario_risk(
+        calculator = api.ScenarioRisk(
             self.vulnerability_model_mean, None, None)
 
         asset_output = calculator(
@@ -102,7 +102,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
             RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
             )
 
-        calculator = api.scenario_risk(vulnerability_model, seed=37,
+        calculator = api.ScenarioRisk(vulnerability_model, seed=37,
             correlation_type=None)
 
         asset_output = calculator(

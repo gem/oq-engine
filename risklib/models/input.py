@@ -43,9 +43,7 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityModel(object):
 
-    def __init__(self, format, imls, limit_states,
-        no_damage_limit=None):
-
+    def __init__(self, format, imls, limit_states, no_damage_limit=None):
         self.imls = imls
         self.format = format
         self.lss = limit_states
@@ -55,9 +53,8 @@ class FragilityModel(object):
 class Asset(object):
 
     def __init__(self, asset_ref, taxonomy, value, site,
-        number_of_units=None, ins_limit=None, deductible=None,
-        retrofitting_cost=None):
-
+                 number_of_units=None, ins_limit=None, deductible=None,
+                 retrofitting_cost=None):
         self.site = site
         self.value = value
         self.taxonomy = taxonomy

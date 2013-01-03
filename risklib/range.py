@@ -49,24 +49,18 @@ def range_clip(val, val_range):
     """
     assert len(val_range) >= 2, "val_range must contain at least 2 elements"
 
-    # val_range must be arranged in ascending order with no duplicates
-    assert list(val_range) == sorted(set(val_range))
+    min_val, max_val = min(val_range), max(val_range)
 
-    if isinstance(val, (list, tuple, numpy.ndarray)):
+    if hasattr(val, '__len__'):  # a sequence
         # convert to numpy.array so we can use numpy.putmask:
         val = numpy.array(val)
+        numpy.putmask(val, val < min_val, min_val)
+        numpy.putmask(val, val > max_val, max_val)
+        return val
 
-        # clip low values:
-        numpy.putmask(val, val < val_range[0], val_range[0])
-
-        # clip high values:
-        numpy.putmask(val, val > val_range[-1], val_range[-1])
-
-    else:
-        # should be a single (float) value
-        if val < val_range[0]:
-            val = val_range[0]
-        elif val > val_range[-1]:
-            val = val_range[-1]
-
+    # else val is a single (float) value
+    if val < min_val:
+        return min_val
+    elif val > max_val:
+        return max_val
     return val

@@ -51,7 +51,6 @@ def aggregate_loss_curve(set_of_losses, tses, time_span,
     :returns: the aggregate loss curve.
     :rtype: an instance of `risklib.curve.Curve`
     """
-
     aggregate_losses = sum(set_of_losses)
 
     return _loss_curve(aggregate_losses, tses, time_span,
@@ -124,7 +123,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
     :param gmf_set: ground motion fields used to compute the loss ratios
     :type gmf_set: :py:class:`dict` with the following
         keys:
@@ -141,8 +140,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
-
-    if vuln_function.is_empty:
+    if not vuln_function:
         return numpy.array([])
 
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()
@@ -161,7 +159,7 @@ def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
     :param gmf_set: ground motion fields used to compute the loss ratios
     :type gmf_set: :py:class:`dict` with the following
         keys:

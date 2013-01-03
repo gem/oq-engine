@@ -364,8 +364,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected = [10] * 100
         actual = event_based._loss_curve(expected, 50, 50, 11)
 
-        numpy.testing.assert_allclose([10] * 11, actual.x_values)
-        numpy.testing.assert_allclose(numpy.arange(0, 1.1, 0.1), actual.y_values)
+        numpy.testing.assert_allclose([10] * 11, actual.abscissae)
+        numpy.testing.assert_allclose(
+            numpy.arange(0, 1.1, 0.1), actual.ordinates)
 
     def test_probs_of_exceedance(self):
         expected_poes = [
@@ -377,10 +378,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.05404053, 0.05404053, 0.05404053, 0.05404053,
         ]
 
-        numpy.testing.assert_allclose(expected_poes,
+        numpy.testing.assert_allclose(
+            expected_poes,
             event_based._probs_of_exceedance(
                 self.exceeding_times / float(GMF["TSES"]), GMF["TimeSpan"]),
-                atol=0.001)
+            atol=0.001)
 
 
 class EpsilonProviderTestCase(unittest.TestCase):

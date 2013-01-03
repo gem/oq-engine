@@ -76,9 +76,8 @@ def _collapse_map(fractions):
     return _damage_distribution_stats(fractions[:, -1])
 
 
-def _damage_distribution_per_asset(asset,
-                                  (fragility_model, fragility_functions),
-                                  ground_motion_field):
+def _damage_distribution_per_asset(
+        asset, (fragility_model, fragility_functions), ground_motion_field):
     """
     Computes the damage distribution related with a single asset.
 

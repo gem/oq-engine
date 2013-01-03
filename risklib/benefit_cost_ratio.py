@@ -20,7 +20,7 @@ import math
 
 
 def bcr(eal_original, eal_retrofitted, interest_rate,
-                asset_life_expectancy, retrofitting_cost):
+        asset_life_expectancy, retrofitting_cost):
     """
     Compute the Benefit-Cost Ratio.
 
@@ -40,21 +40,26 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
+def mean(values):
+    "Averages between a value and the next value in a sequence"
+    return map(numpy.mean, zip(values, values[1:]))
+
+
+def diff(values):
+    "Differences between a value and the next value in a sequence"
+    return [x - y for x, y in zip(values, values[1:])]
+
+
 def mean_loss(curve):
-    """Compute the mean loss (or loss ratio) for the given curve."""
+    """
+    Compute the mean loss (or loss ratio) for the given curve.
+    For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
+    (x4, y4)], returns
 
-    pes = curve.ordinates
-    loss_ratios = curve.abscissae
-
-    mean_loss_ratios = [numpy.mean([x, y])
-                        for x, y in zip(loss_ratios, loss_ratios[1:])]
-
-    mean_pes = [numpy.mean([x, y])
-               for x, y in zip(pes, pes[1:])]
-
-    mean_loss_ratios = [numpy.mean([x, y])
-                        for x, y in zip(mean_loss_ratios, mean_loss_ratios[1:])]
-
-    mean_pes = [x - y for x, y in zip(mean_pes, mean_pes[1:])]
-
-    return numpy.dot(mean_loss_ratios, mean_pes)
+      x1 + 2x2 + x3  y1 - y3    x2 + 2x3 + x4  y2 - y4
+    [(-------------, -------), (-------------, -------)]
+           4             2            4           4
+    """
+    mean_ratios = mean(mean(curve.abscissae))  # not clear why it is done twice
+    mean_pes = diff(mean(curve.ordinates))
+    return numpy.dot(mean_ratios, mean_pes)

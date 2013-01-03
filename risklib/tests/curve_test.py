@@ -17,8 +17,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-
+import pickle
 from risklib.curve import Curve
+from numpy import allclose
 
 
 class CurveTestCase(unittest.TestCase):
@@ -75,7 +76,7 @@ class CurveTestCase(unittest.TestCase):
 
         curve = Curve(zip(vals, vals))
 
-        self.assertRaises(AssertionError, curve.abscissa_for, vals)
+        self.assertRaises(ValueError, curve.abscissa_for, vals)
 
     def test_abscissa_for_with_multiple_yvals(self):
         """ tests the correctness of the abscissa method """
@@ -87,29 +88,9 @@ class CurveTestCase(unittest.TestCase):
         curve1 = Curve([(0.1, 1.0), (0.2, 2.0)])
         curve2 = Curve([(0.1, 1.0), (0.2, 2.0)])
         curve3 = Curve([(0.1, 1.0), (0.2, 5.0)])
-        curve4 = Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve5 = Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve6 = Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.3))])
 
         self.assertEquals(curve1, curve2)
         self.assertNotEquals(curve1, curve3)
-        self.assertNotEquals(curve1, curve4)
-        self.assertNotEquals(curve3, curve4)
-        self.assertEquals(curve4, curve5)
-        self.assertNotEquals(curve5, curve6)
-
-    def test_can_construct_a_curve_from_list(self):
-        curve1 = Curve([(0.1, 1.0), (0.2, 2.0)])
-        curve2 = Curve.from_list([[0.1, 1.0], [0.2, 2.0]])
-        curve3 = Curve([(0.1, (1.0, 0.3)), (0.2, (2.0, 0.3))])
-        curve4 = Curve.from_list([[0.1, [1.0, 0.3]], [0.2, [2.0, 0.3]]])
-
-        # keys are already floats
-        curve5 = Curve.from_list([[0.1, [1.0, 0.3]], [0.2, [2.0, 0.3]]])
-
-        self.assertEquals(curve1, curve2)
-        self.assertEquals(curve3, curve4)
-        self.assertEquals(curve3, curve5)
 
     def test_can_construct_with_unordered_values(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
@@ -117,3 +98,24 @@ class CurveTestCase(unittest.TestCase):
         self.assertEqual(1.0, curve.ordinate_for(0.5))
         self.assertEqual(2.0, curve.ordinate_for(0.4))
         self.assertEqual(2.0, curve.ordinate_for(0.3))
+
+    def test_can_pickle(self):
+        curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
+        curve.ordinate_for(0.35)
+        curve.abscissa_for(1.35)
+        self.assertEqual(pickle.loads(pickle.dumps(curve)), curve)
+
+    def test_ordinate_diffs(self):
+        hazard_curve = Curve([
+            (0.01, 0.99), (0.08, 0.96),
+            (0.17, 0.89), (0.26, 0.82),
+            (0.36, 0.70), (0.55, 0.40),
+            (0.70, 0.01),
+        ])
+
+        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
+        pes = [0.05, 0.15, 0.3, 0.5, 0.7]
+
+        self.assertTrue(allclose(expected_pos,
+                                 hazard_curve.ordinate_diffs(pes),
+                                 atol=0.00005))

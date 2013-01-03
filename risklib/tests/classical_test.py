@@ -18,10 +18,11 @@ import itertools
 from numpy import allclose, array
 
 from risklib.curve import Curve
-from risklib.vulnerability_function import VulnerabilityFunction, _mean_imls
-from risklib.classical import (_loss_ratio_exceedance_matrix,
+from risklib.vulnerability_function import VulnerabilityFunction
+from risklib.classical import (
+    _loss_ratio_exceedance_matrix,
     _loss_ratio_curve, _alpha_value, _beta_value,
-    _conditional_loss, _poos, _loss_ratio_exceedance_matrix_per_poos,
+    _conditional_loss, _loss_ratio_exceedance_matrix_per_poos,
     _evenly_spaced_loss_ratios)
 
 
@@ -35,7 +36,8 @@ class ClassicalTestCase(unittest.TestCase):
 
     def test_alpha_value(self):
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-        alphas = [_alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
+        alphas = [
+            _alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
             stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
         self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
@@ -43,7 +45,7 @@ class ClassicalTestCase(unittest.TestCase):
     def test_beta_value(self):
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
         betas = [_beta_value(mean_loss_ratio, stddev) for mean_loss_ratio,
-            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
         self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
 
@@ -156,21 +158,6 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertTrue(allclose(0.23, lrem_po[8][3], atol=0.005))
         self.assertTrue(allclose(0.00, lrem_po[10][0], atol=0.005))
 
-    def test_poos(self):
-        hazard_curve = [
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01),
-        ]
-
-        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
-        pes = [0.05, 0.15, 0.3, 0.5, 0.7]
-
-        self.assertTrue(allclose(expected_pos,
-            _poos(hazard_curve, pes),
-            atol=0.00005))
-
     def test_bin_width_from_imls(self):
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.5, 0.5, 0.5]
@@ -181,8 +168,8 @@ class ClassicalTestCase(unittest.TestCase):
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
-        self.assertTrue(allclose(expected_steps,
-            _mean_imls(vulnerability_function)))
+        self.assertTrue(
+            allclose(expected_steps, vulnerability_function.mean_imls()))
 
     def test_split_with_real_values_from_turkey(self):
         loss_ratios = [
@@ -190,39 +177,39 @@ class ClassicalTestCase(unittest.TestCase):
             7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
 
         result = [0.0, 3.9199999999999996e-16,
-            7.8399999999999992e-16, 1.1759999999999998e-15,
-            1.5679999999999998e-15, 1.9599999999999999e-15,
-            5.0756799999999998e-13, 1.0131759999999998e-12,
-            1.5187839999999998e-12, 2.024392e-12, 2.5299999999999999e-12,
-            1.6202400000000001e-10, 3.2151800000000003e-10,
-            4.8101199999999999e-10, 6.4050600000000006e-10,
-            8.0000000000000003e-10, 1.726e-08, 3.372e-08,
-            5.0179999999999997e-08, 6.6639999999999993e-08,
-            8.3099999999999996e-08, 7.7048000000000005e-07,
-            1.4578600000000002e-06, 2.1452400000000005e-06,
-            2.8326200000000003e-06, 3.5200000000000002e-06,
-            1.7136000000000003e-05, 3.0752000000000006e-05,
-            4.4368000000000013e-05, 5.7984000000000013e-05,
-            7.1600000000000006e-05, 0.00021648000000000001,
-            0.00036136000000000002, 0.00050624000000000003,
-            0.00065112000000000004, 0.00079600000000000005,
-            0.0017108000000000002, 0.0026256000000000001,
-            0.0035404, 0.0044552000000000003, 0.0053699999999999998,
-            0.0090760000000000007, 0.012782, 0.016487999999999999,
-            0.020194, 0.023900000000000001, 0.034140000000000004,
-            0.044380000000000003, 0.054620000000000002,
-            0.064860000000000001, 0.0751, 0.095479999999999995,
-            0.11585999999999999, 0.13624,
-            0.15661999999999998, 0.17699999999999999]
+                  7.8399999999999992e-16, 1.1759999999999998e-15,
+                  1.5679999999999998e-15, 1.9599999999999999e-15,
+                  5.0756799999999998e-13, 1.0131759999999998e-12,
+                  1.5187839999999998e-12, 2.024392e-12, 2.5299999999999999e-12,
+                  1.6202400000000001e-10, 3.2151800000000003e-10,
+                  4.8101199999999999e-10, 6.4050600000000006e-10,
+                  8.0000000000000003e-10, 1.726e-08, 3.372e-08,
+                  5.0179999999999997e-08, 6.6639999999999993e-08,
+                  8.3099999999999996e-08, 7.7048000000000005e-07,
+                  1.4578600000000002e-06, 2.1452400000000005e-06,
+                  2.8326200000000003e-06, 3.5200000000000002e-06,
+                  1.7136000000000003e-05, 3.0752000000000006e-05,
+                  4.4368000000000013e-05, 5.7984000000000013e-05,
+                  7.1600000000000006e-05, 0.00021648000000000001,
+                  0.00036136000000000002, 0.00050624000000000003,
+                  0.00065112000000000004, 0.00079600000000000005,
+                  0.0017108000000000002, 0.0026256000000000001,
+                  0.0035404, 0.0044552000000000003, 0.0053699999999999998,
+                  0.0090760000000000007, 0.012782, 0.016487999999999999,
+                  0.020194, 0.023900000000000001, 0.034140000000000004,
+                  0.044380000000000003, 0.054620000000000002,
+                  0.064860000000000001, 0.0751, 0.095479999999999995,
+                  0.11585999999999999, 0.13624,
+                  0.15661999999999998, 0.17699999999999999]
 
-        self.assertTrue(allclose(array(result),
-            _evenly_spaced_loss_ratios(loss_ratios, 5)))
+        self.assertTrue(
+            allclose(array(result),
+                     _evenly_spaced_loss_ratios(loss_ratios, 5)))
 
     def test_split_with_real_values_from_taiwan(self):
         loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
-            2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
-            5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
-
+                       2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
+                       5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
         self.assertEqual(56, len(_evenly_spaced_loss_ratios(loss_ratios, 5)))
 
     def test_compute_loss_ratio_curve(self):
@@ -273,12 +260,12 @@ class ClassicalTestCase(unittest.TestCase):
     def test_split_single_interval_with_no_steps_between(self):
         self.assertTrue(
             allclose(array([1.0, 2.0]),
-            _evenly_spaced_loss_ratios([1.0, 2.0], 1)))
+                     _evenly_spaced_loss_ratios([1.0, 2.0], 1)))
 
     def test_evenly_spaced_single_interval_with_a_step_between(self):
         self.assertTrue(
             allclose(array([1.0, 1.5, 2.0]),
-            _evenly_spaced_loss_ratios([1.0, 2.0], 2)))
+                     _evenly_spaced_loss_ratios([1.0, 2.0], 2)))
 
     def test_evenly_spaced_single_interval_with_steps_between(self):
         self.assertTrue(allclose(array(
