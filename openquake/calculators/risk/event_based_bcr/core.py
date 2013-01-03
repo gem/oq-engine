@@ -77,23 +77,23 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
     hazard_getter = general.hazard_getter(
         hazard_getter, hazard_id, imt, time_span, tses)
 
-    calculator = api.probabilistic_event_based(
+    calculator = api.ProbabilisticEventBased(
         model, curve_resolution=loss_curve_resolution,
         seed=seed, correlation_type=asset_correlation)
 
-    calculator_retrofitted = api.probabilistic_event_based(
+    calculator_retrofitted = api.ProbabilisticEventBased(
         model_retrofitted, curve_resolution=loss_curve_resolution,
         seed=seed, correlation_type=asset_correlation)
 
-    bcr_calculator = api.bcr(calculator, calculator_retrofitted,
-        interest_rate, asset_life_expectancy)
+    bcr_calculator = api.BCR(calculator, calculator_retrofitted,
+                             interest_rate, asset_life_expectancy)
 
     with transaction.commit_on_success(using="reslt_writer"):
         logs.LOG.debug(
             "launching compute_on_assets over %d assets" % len(assets))
 
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, bcr_calculator):
+                assets, hazard_getter, bcr_calculator):
             general.write_bcr_distribution(bcr_distribution_id, asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
