@@ -23,7 +23,7 @@ from qa_tests import _utils as qa_utils
 
 class EventBasedHazardCase13TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'event_based')
+    @attr('qa', 'hazard', 'event_based')
     def test(self):
         aaae = numpy.testing.assert_array_almost_equal
 

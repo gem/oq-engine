@@ -19,11 +19,13 @@
 
 from django.db import router
 from django.db import transaction
+import nrml
 from nhlib import geo
 from nhlib import mfd
 from nhlib import pmf
 from nhlib import scalerel
 from nhlib import source
+from nhlib.source.rupture import Rupture as NhlibRupture
 from nrml import models as nrml_models
 from shapely import wkt
 
@@ -70,6 +72,10 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
         return _complex_to_nhlib(src, mesh_spacing, bin_width)
     elif isinstance(src, nrml_models.SimpleFaultSource):
         return _simple_to_nhlib(src, mesh_spacing, bin_width)
+    elif isinstance(src, nrml_models.ComplexFaultRuptureModel):
+        return _complex_rupture_to_nhlib(src, mesh_spacing)
+    elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
+        return _simple_rupture_to_nhlib(src, mesh_spacing)
 
 
 def _point_to_nhlib(src, mesh_spacing, bin_width):
@@ -179,7 +185,7 @@ def _simple_to_nhlib(src, mesh_spacing, bin_width):
     See :mod:`nrml.models` and :mod:`nhlib.source`.
 
     :param src:
-        :class:`nrml.models.PointSource` instance.
+        :class:`nrml.models.SimpleFaultRuptureModel` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
@@ -217,7 +223,7 @@ def _complex_to_nhlib(src, mesh_spacing, bin_width):
     See :mod:`nrml.models` and :mod:`nhlib.source`.
 
     :param src:
-        :class:`nrml.models.PointSource` instance.
+        :class:`nrml.models.ComplexFaultRuptureModel` instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
@@ -253,6 +259,70 @@ def _complex_to_nhlib(src, mesh_spacing, bin_width):
     )
 
     return cmplx
+
+
+def _simple_rupture_to_nhlib(src, mesh_spacing):
+    """Convert a NRML simple fault source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param float mesh_spacing:
+        Rupture mesh spacing, in km.
+    :returns:
+        The NHLib representation of the input rupture.
+    """
+
+    shapely_line = wkt.loads(src.geometry.wkt)
+    fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+    geom = src.geometry
+
+    surface = geo.SimpleFaultSurface.from_fault_data(
+        fault_trace, geom.upper_seismo_depth, geom.lower_seismo_depth,
+        geom.dip, mesh_spacing)
+
+    rupture = NhlibRupture(
+        mag=src.magnitude, rake=src.rake,
+        tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
+        surface=surface, source_typology=geo.SimpleFaultSurface)
+
+    return rupture
+
+
+def _complex_rupture_to_nhlib(src, mesh_spacing):
+    """Convert a NRML complex fault source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param float mesh_spacing:
+        Rupture mesh spacing, in km.
+    :returns:
+        The NHLib representation of the input rupture.
+    """
+
+    edges_wkt = []
+    edges_wkt.append(src.geometry.top_edge_wkt)
+    edges_wkt.extend(src.geometry.int_edges)
+    edges_wkt.append(src.geometry.bottom_edge_wkt)
+
+    edges = []
+
+    for edge in edges_wkt:
+        shapely_line = wkt.loads(edge)
+        line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+        edges.append(line)
+
+    surface = geo.ComplexFaultSurface.from_fault_data(edges, mesh_spacing)
+
+    rupture = NhlibRupture(
+        mag=src.magnitude, rake=src.rake,
+        tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
+        surface=surface, source_typology=geo.ComplexFaultSurface)
+
+    return rupture
 
 
 def _mfd_to_nhlib(src_mfd, bin_width):
@@ -355,3 +425,38 @@ class SourceDBWriter(object):
                 polygon=geom.wkt
             )
             ps.save()
+
+
+class RuptureDBWriter(object):
+    """Takes a rupture and saves it to the
+    `hzrdi.parsed_rupture_model` table in the database, in pickled blob form.
+
+    :param inp:
+        :class:`~openquake.db.models.Input` object, the top-level container for
+        the sources written to the database. Should have an `input_type` of
+        'simple_fault' or 'complex_fault'.
+    :param rupture_model:
+        :class:`nrml.models.SimpleFaultRuptureModel` object or
+        :class:`nrml.models.ComplexFaultRuptureModel`
+    """
+
+    def __init__(self, inp, rupture_model):
+        self.inp = inp
+        self.rupture_model = rupture_model
+
+    @transaction.commit_on_success(router.db_for_write(models.ParsedRupture))
+    def serialize(self):
+        """
+        Serialize the rupture_model in hzrdi.parsed_rupture_model, with a
+        reference to the `openquake.db.models.Input` object.
+        """
+        src = self.rupture_model
+        if isinstance(src, nrml.models.SimpleFaultRuptureModel):
+            rupture_type = 'simple_fault'
+        elif isinstance(src, nrml.models.ComplexFaultRuptureModel):
+            rupture_type = 'complex_fault'
+        else:
+            raise TypeError(
+                'Expected Simple or Complex FaultRuptureModel, got %r' % src)
+        models.ParsedRupture(
+            input=self.inp, rupture_type=rupture_type, nrml=src).save()
