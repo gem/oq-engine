@@ -46,7 +46,7 @@ class EventBasedRiskCalculatorTestCase(
         params = dict(zip(
             ['conditional_loss_poes', 'insured_losses',
              'imt', 'time_span', 'tses', 'loss_curve_resolution',
-             'seed', 'asset_correlation'], params_as_list))
+             'asset_correlation'], params_as_list))
 
         self.assertEqual(80, params['loss_curve_resolution'])
         self.assertEqual([0.1, 0.2, 0.3], params['conditional_loss_poes'])
@@ -54,7 +54,6 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(250, params['tses'])
         self.assertEqual(50, params['time_span'])
         self.assertEqual('PGA', params['imt'])
-        self.assertEqual(None, params['seed'])
         self.assertEqual(None, params['asset_correlation'])
 
     def test_hazard_id(self):
