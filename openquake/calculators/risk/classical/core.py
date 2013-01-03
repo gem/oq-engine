@@ -66,12 +66,13 @@ def classical(job_id, assets, hazard_getter, hazard_id, seed,
 
     # FIXME(lp).
     # Risklib calculators should get in input the seed
-    calculator = api.classical(vulnerability_model, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_model, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.conditional_losses(conditional_loss_poes, calculator)
+        calculator = api.ConditionalLosses(
+            conditional_loss_poes, calculator)
 
     with transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(

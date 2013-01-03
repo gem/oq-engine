@@ -68,9 +68,9 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     # FIXME(lp)
     # risklib calculator should get the seed in input
 
-    calculator = api.bcr(
-        api.classical(model, lrem_steps_per_interval),
-        api.classical(model_retrofitted, lrem_steps_per_interval),
+    calculator = api.BCR(
+        api.Classical(model, lrem_steps_per_interval),
+        api.Classical(model_retrofitted, lrem_steps_per_interval),
         interest_rate,
         asset_life_expectancy)
 

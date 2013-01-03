@@ -334,9 +334,9 @@ def write_loss_curve(loss_curve_id, asset_output):
         loss_curve_id=loss_curve_id,
         asset_ref=asset_output.asset.asset_ref,
         location=asset_output.asset.site,
-        poes=asset_output.loss_curve.y_values,
-        losses=asset_output.loss_curve.x_values,
-        loss_ratios=asset_output.loss_ratio_curve.x_values)
+        poes=asset_output.loss_curve.ordinates,
+        losses=asset_output.loss_curve.abscissae,
+        loss_ratios=asset_output.loss_ratio_curve.abscissae)
 
 
 def write_loss_map(loss_map_ids, asset_output):
