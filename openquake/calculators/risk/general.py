@@ -18,9 +18,11 @@
 """Common functionality for Risk calculators."""
 
 import os
+import random
 
 from django import db
 
+from openquake.job.validation import MAX_SINT_32, MIN_SINT_32
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
@@ -45,10 +47,6 @@ class BaseRiskCalculator(base.CalculatorNext):
       extracted from the exposure input and filtered according with the
       RiskCalculation region_constraint
 
-    :attribute output_container_ids:
-      A dictionary holding the output containers object ids (e.g. LossCurve,
-      LossMap)
-
     :attribute exposure_model_id:
       The exposure model used by the calculation
 
@@ -56,6 +54,10 @@ class BaseRiskCalculator(base.CalculatorNext):
       A generator of asset offsets used by each celery task. Assets are
       ordered by their id. An asset offset is an int that identify the
       set of assets going from offset to offset + block_size.
+
+    :attribute rnd:
+      The random number generator (initialized with a master seed) used
+      for sampling
     """
 
     def __init__(self, job):
@@ -63,6 +65,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         self.assets_nr = None
         self.exposure_model_id = None
+        self.rnd = None
 
     def pre_execute(self):
         """
@@ -77,6 +80,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         3. Prepare and save the output containers.
 
         4. Initialize progress counters
+
+        5. Initialize random number generator
         """
 
         # reload the risk calculation to avoid getting raw string
@@ -104,6 +109,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         self.progress.update(total=self.assets_nr)
         self._initialize_progress()
 
+        self.rnd = random.Random()
+        self.rnd.seed(self.rc.master_seed)
+
     def block_size(self):
         """
         Number of assets handled per task.
@@ -122,6 +130,14 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         :param int block_size:
             The number of work items per task (sources, sites, etc.).
+
+        :returns: an iterator over a list of arguments. Each contains
+        1) the job id
+        2) the exposure subset on which the celery task is applied on
+        3) the hazard getter and the hazard_id to be used
+        4) a seed (eventually generated from a master seed)
+        5) the output containers to be populated
+        6) the specific calculator parameter set
         """
 
         output_containers = self.create_outputs()
@@ -137,8 +153,10 @@ class BaseRiskCalculator(base.CalculatorNext):
                     self.exposure_model_id, region_constraint, offset,
                     block_size)
 
+            seed = self.rnd.randint(MIN_SINT_32, MAX_SINT_32)
+
             tf_args = ([self.job.id,
-                        assets, self.hazard_getter, self.hazard_id] +
+                        assets, self.hazard_getter, self.hazard_id, seed] +
                         output_containers + calculator_parameters)
 
             yield  tf_args

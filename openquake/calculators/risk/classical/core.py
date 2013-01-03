@@ -29,7 +29,7 @@ from risklib import api
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical(job_id, assets, hazard_getter, hazard_id,
+def classical(job_id, assets, hazard_getter, hazard_id, seed,
               loss_curve_id, loss_map_ids,
               lrem_steps_per_interval, conditional_loss_poes):
     """
@@ -47,6 +47,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
       Strategy used to get the hazard curves
     :param int hazard_id:
       ID of the Hazard Output the risk calculation is based on
+    :param int seed:
+        Seed used to generate random values.
     :param loss_curve_id:
       ID of the :class:`openquake.db.models.LossCurve` output container used
       to store the computed loss curves
@@ -62,6 +64,8 @@ def classical(job_id, assets, hazard_getter, hazard_id,
 
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
+    # FIXME(lp).
+    # Risklib calculators should get in input the seed
     calculator = api.classical(vulnerability_model, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
