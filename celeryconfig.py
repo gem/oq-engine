@@ -67,7 +67,7 @@ CELERY_IMPORTS = (
 
 try:
     imp.find_module("tasks", [ os.path.join(x, "tests/utils") for x in sys.path ])
-    CELERY_IMPORTS.append("tests.utils.tasks")
+    CELERY_IMPORTS = CELERY_IMPORTS + ("tests.utils.tasks",)
 except ImportError:
     pass
 
