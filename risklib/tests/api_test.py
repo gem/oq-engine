@@ -17,15 +17,15 @@
 import mock
 import unittest
 
-from risklib.models import input, output
+from risklib import scientific
 from risklib.curve import Curve
-from risklib import api, vulnerability_function
+from risklib import api
 
 
 class ComputeOnSitesTestCase(unittest.TestCase):
 
     def test_multiple_sites(self):
-        asset = input.Asset("a1", None, None, None)
+        asset = scientific.Asset("a1", None, None, None)
         sites = [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)]
 
         calculator = mock.Mock()
@@ -48,9 +48,9 @@ class ComputeOnSitesTestCase(unittest.TestCase):
         sites = [(1.0, 1.0)]
 
         assets = [
-            input.Asset("a1", None, None, None),
-            input.Asset("a2", None, None, None),
-            input.Asset("a3", None, None, None),
+            scientific.Asset("a1", None, None, None),
+            scientific.Asset("a2", None, None, None),
+            scientific.Asset("a3", None, None, None),
         ]
 
         calculator = mock.Mock()
@@ -70,9 +70,9 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
     def test_compute_on_assets(self):
         assets = [
-            input.Asset("a1", None, None, (1.0, 1.0)),
-            input.Asset("a2", None, None, (2.0, 2.0)),
-            input.Asset("a3", None, None, (3.0, 3.0)),
+            scientific.Asset("a1", None, None, (1.0, 1.0)),
+            scientific.Asset("a2", None, None, (2.0, 2.0)),
+            scientific.Asset("a3", None, None, (3.0, 3.0)),
         ]
 
         calculator = mock.Mock()
@@ -94,7 +94,7 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
-        asset = input.Asset("a1", None, None, None)
+        asset = scientific.Asset("a1", None, None, None)
         loss_ratio_curve = Curve([(2.0, 2.0)])
         loss_curve = Curve([(1.0, 1.0)])
         asset_output = output.ClassicalOutput(
@@ -119,9 +119,9 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
 
     def test_classical_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = input.Asset("a1", "RC", 1.0, None)
+        asset = scientific.Asset("a1", "RC", 1.0, None)
 
-        function = vulnerability_function.VulnerabilityFunction(
+        function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}
@@ -144,7 +144,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         fragility_function = input.FragilityFunctionDiscrete(
             fragility_model, [0.8, 0.7], 1)
 
-        asset = input.Asset("a1", "RC", None, None, number_of_units=1.0)
+        asset = scientific.Asset("a1", "RC", None, None, number_of_units=1.0)
 
         calculator = api.ScenarioDamage(
             fragility_model, {"RC": [fragility_function]})
@@ -164,9 +164,9 @@ class BCRCalculatorTestCase(unittest.TestCase):
 
     def test_bcr_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = input.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
+        asset = scientific.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
 
-        function = vulnerability_function.VulnerabilityFunction(
+        function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}
@@ -189,10 +189,10 @@ class BCRCalculatorTestCase(unittest.TestCase):
 class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
     def test_event_based_calculator(self):
-        asset = input.Asset("a1", "RC", 1.0, None)
+        asset = scientific.Asset("a1", "RC", 1.0, None)
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
-        function = vulnerability_function.VulnerabilityFunction(
+        function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}
@@ -213,10 +213,10 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
-        asset = input.Asset("a1", "RC", 1.0, None,
+        asset = scientific.Asset("a1", "RC", 1.0, None,
                             ins_limit=1.0, deductible=1.0)
 
-        function = vulnerability_function.VulnerabilityFunction(
+        function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         vulnerability_model = {"RC": function}

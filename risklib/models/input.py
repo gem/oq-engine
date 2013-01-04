@@ -48,18 +48,3 @@ class FragilityModel(object):
         self.format = format
         self.lss = limit_states
         self.no_damage_limit = no_damage_limit
-
-
-class Asset(object):
-
-    def __init__(self, asset_ref, taxonomy, value, site,
-                 number_of_units=None, ins_limit=None, deductible=None,
-                 retrofitting_cost=None):
-        self.site = site
-        self.value = value
-        self.taxonomy = taxonomy
-        self.asset_ref = asset_ref
-        self.ins_limit = ins_limit
-        self.deductible = deductible
-        self.number_of_units = number_of_units
-        self.retrofitting_cost = retrofitting_cost
