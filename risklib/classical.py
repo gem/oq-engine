@@ -31,15 +31,15 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
         Number of steps between loss ratios.
     """
     loss_ratios = _evenly_spaced_loss_ratios(
-        vuln_function.loss_ratios, steps, [0.0], [1.0])
+        vuln_function.mean_loss_ratios, steps, [0.0], [1.0])
 
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number of imls
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
-    for col, _ in enumerate(vuln_function):
+    for col in range(vuln_function.resolution):
         for row, loss_ratio in enumerate(loss_ratios):
-            mean_loss_ratio = vuln_function.loss_ratios[col]
+            mean_loss_ratio = vuln_function.mean_loss_ratios[col]
             loss_ratio_stddev = vuln_function.stddevs[col]
 
             if vuln_function.distribution == "BT":
@@ -138,7 +138,7 @@ def _loss_ratio_curve(vuln_function, lrem, hazard_curve_values, steps):
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
         vuln_function, lrem, hazard_curve_values)
     loss_ratios = _evenly_spaced_loss_ratios(
-        vuln_function.loss_ratios, steps, [0.0], [1.0])
+        vuln_function.mean_loss_ratios, steps, [0.0], [1.0])
     return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
 

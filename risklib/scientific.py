@@ -36,6 +36,7 @@ from scipy import interpolate
 class Asset(object):
     # FIXME (lp). Provide description
     def __init__(self, asset_ref, taxonomy, value, site,
+                 number_of_units=1,
                  ins_limit=None, deductible=None,
                  retrofitting_cost=None):
         self.site = site
@@ -44,6 +45,7 @@ class Asset(object):
         self.asset_ref = asset_ref
         self.ins_limit = ins_limit
         self.deductible = deductible
+        self.number_of_units = number_of_units
         self.retrofitting_cost = retrofitting_cost
 
 
@@ -67,11 +69,19 @@ class VulnerabilityFunction(object):
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
         self.imls = numpy.array(imls)
+        self.max_iml = self.imls[-1]
+        self.min_iml = self.imls[0]
+
+        self.resolution = len(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
         self.distribution = distribution
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        self._cov_for = lambda iml: self._covs_i1d(
+            numpy.max(
+                [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
+                numpy.ones(len(iml)) * self.min_iml], axis=0))
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -115,21 +125,6 @@ class VulnerabilityFunction(object):
         ret[to_interpolate] = self._mlr_i1d(numpy.array(imls)[to_interpolate])
 
         return ret
-
-    def _cov_for(self, imls):
-        """
-        Given IML values, interpolate the corresponding Coefficient of
-        Variation value(s) on the curve.
-
-        Input IML value(s) is/are clipped to IML range defined for this
-        vulnerability function.
-
-        :param float array imls: IML values
-
-        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
-            values equal to the size of the input (1 or many)
-        """
-        return self._covs_i1d(imls)
 
     def mean_imls(self):
         """

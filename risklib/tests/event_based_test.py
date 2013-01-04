@@ -20,7 +20,7 @@ import unittest
 
 from risklib import models
 from risklib.curve import EMPTY_CURVE
-from risklib.vulnerability_function import VulnerabilityFunction
+from risklib import scientific
 from risklib import event_based
 
 
@@ -65,7 +65,7 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.vulnerability_function1 = VulnerabilityFunction(
+        self.vulnerability_function1 = scientific.VulnerabilityFunction(
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN"
@@ -76,7 +76,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1,
         ])
 
-        self.vulnerability_function2 = VulnerabilityFunction([
+        self.vulnerability_function2 = scientific.VulnerabilityFunction([
             0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
             0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
             0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
@@ -149,7 +149,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IMLs inside range defined by Vulnerability function's imls.
         """
 
-        vulnerability_function = VulnerabilityFunction(
+        vulnerability_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -185,7 +185,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         values are less than the lower bound.
         """
 
-        vuln_function = VulnerabilityFunction(
+        vuln_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -222,7 +222,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
-        vuln_function = VulnerabilityFunction(
+        vuln_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN")
 
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
@@ -393,9 +393,9 @@ class EpsilonProviderTestCase(unittest.TestCase):
             correlation_type=event_based.PERFECTLY_CORRELATED,
             taxonomies=["a", "b"])
         self.assets = [
-            models.input.Asset(None, "a", None, None),
-            models.input.Asset(None, "b", None, None),
-            models.input.Asset(None, "a", None, None),
+            scientific.Asset(None, "a", None, None),
+            scientific.Asset(None, "b", None, None),
+            scientific.Asset(None, "a", None, None),
         ]
 
     def test_uncorrelated(self):

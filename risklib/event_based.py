@@ -146,7 +146,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()
 
     if all_covs_are_zero:
-        return vuln_function.loss_ratio_for(gmf_set["IMLs"])
+        return vuln_function(gmf_set["IMLs"])
     else:
         epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
         return _sample_based(vuln_function, gmf_set, epsilon_provider, asset)
@@ -182,11 +182,11 @@ def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
             if ground_motion_field > vuln_function.imls[-1]:
                 ground_motion_field = vuln_function.imls[-1]
 
-            mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
+            [mean_ratio] = vuln_function([ground_motion_field])
 
-            cov = vuln_function.cov_for(ground_motion_field)
+            [cov] = vuln_function._cov_for([ground_motion_field])
 
-            if vuln_function.is_beta:
+            if vuln_function.distribution == 'BT':
                 stddev = cov * mean_ratio
                 alpha = classical._alpha_value(mean_ratio, stddev)
                 beta = classical._beta_value(mean_ratio, stddev)

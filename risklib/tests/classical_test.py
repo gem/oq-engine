@@ -18,7 +18,7 @@ import itertools
 from numpy import allclose, array
 
 from risklib.curve import Curve
-from risklib.vulnerability_function import VulnerabilityFunction
+from risklib import scientific
 from risklib.classical import (
     _loss_ratio_exceedance_matrix,
     _loss_ratio_curve, _alpha_value, _beta_value,
@@ -126,7 +126,7 @@ class ClassicalTestCase(unittest.TestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0027925],
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
-        vulnerability_function = VulnerabilityFunction(
+        vulnerability_function = scientific.VulnerabilityFunction(
             self.imls, self.mean_loss_ratios, self.covs, "BT")
 
         lrem = _loss_ratio_exceedance_matrix(vulnerability_function, 5)
@@ -143,7 +143,7 @@ class ClassicalTestCase(unittest.TestCase):
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
-        vuln_function = VulnerabilityFunction(imls, loss_ratios, covs, "LN")
+        vuln_function = scientific.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
@@ -163,7 +163,7 @@ class ClassicalTestCase(unittest.TestCase):
         covs = [0.5, 0.5, 0.5, 0.5]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
-        vulnerability_function = VulnerabilityFunction(
+        vulnerability_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN")
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
@@ -223,7 +223,7 @@ class ClassicalTestCase(unittest.TestCase):
         covs = [0.5, 0.3, 0.2, 0.1]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
-        vulnerability_function = VulnerabilityFunction(
+        vulnerability_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN")
 
         # pre computed values just use one intermediate

@@ -17,27 +17,26 @@
 import unittest
 
 from risklib import api
-from risklib.models import input
-from risklib import vulnerability_function
+from risklib import scientific
 
 
 class BCRTestCase(unittest.TestCase):
 
     def test_bcr_classical(self):
         vulnerability_function_rm = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
             [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         vulnerability_function_rf = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
             [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         vulnerability_model_rm = {"VF": vulnerability_function_rm}
         vulnerability_model_rf = {"VF": vulnerability_function_rf}
 
-        asset = input.Asset("a1", "VF", 2, None, retrofitting_cost=0.1)
+        asset = scientific.Asset("a1", "VF", 2, None, retrofitting_cost=0.1)
 
         calculator_rm = api.Classical(vulnerability_model_rm, steps=5)
         calculator_rf = api.Classical(vulnerability_model_rf, steps=5)

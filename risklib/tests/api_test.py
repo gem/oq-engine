@@ -17,6 +17,7 @@
 import mock
 import unittest
 
+from risklib.models import input
 from risklib import scientific
 from risklib.curve import Curve
 from risklib import api
@@ -97,7 +98,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
         asset = scientific.Asset("a1", None, None, None)
         loss_ratio_curve = Curve([(2.0, 2.0)])
         loss_curve = Curve([(1.0, 1.0)])
-        asset_output = output.ClassicalOutput(
+        asset_output = scientific.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
@@ -107,7 +108,7 @@ class ConditionalLossesTestCase(unittest.TestCase):
 
         loss_curve_calculator.assert_called_with(asset, 1.0)
 
-        expected_output = output.ClassicalOutput(
+        expected_output = scientific.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, {0.2: 1.0, 0.1: 1.0})
 
         # as output we have the output from the given loss curve

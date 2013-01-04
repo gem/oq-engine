@@ -20,8 +20,7 @@ import unittest
 import numpy
 
 from risklib import api
-from risklib.models import input as input_models
-from risklib import vulnerability_function
+from risklib import scientific
 from risklib import event_based
 from risklib.tests.utils import vectors_from_csv
 
@@ -55,9 +54,9 @@ mean_based_loss_curve_poes = [
 mb = TestData(
 
     input_models_asset=Triplet(
-        a1=input_models.Asset("a1", "RM", 3000, None),
-        a2=input_models.Asset("a2", "RC", 2000, None),
-        a3=input_models.Asset("a3", "RM", 1000, None),
+        a1=scientific.Asset("a1", "RM", 3000, None),
+        a2=scientific.Asset("a2", "RC", 2000, None),
+        a3=scientific.Asset("a3", "RM", 1000, None),
         ),
 
     expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
@@ -157,11 +156,11 @@ sb = TestData(  # sample based test data
 il = TestData(  # insured loss test data
 
     input_models_asset=Triplet(
-        a1=input_models.Asset(
+        a1=scientific.Asset(
             "a1", "RM", 3000, None, ins_limit=1250, deductible=40),
-        a2=input_models.Asset(
+        a2=scientific.Asset(
             "a2", "RC", 2000, None, ins_limit=500, deductible=15),
-        a3=input_models.Asset(
+        a3=scientific.Asset(
             "a3", "RM", 1000, None, ins_limit=40, deductible=13),
         ),
 
@@ -210,12 +209,12 @@ class EventBasedTestCase(unittest.TestCase):
 
     def test_mean_based(self):
         vulnerability_function_rm = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
@@ -300,12 +299,12 @@ class EventBasedTestCase(unittest.TestCase):
     @unittest.skip
     def test_sample_based_beta(self):
         vulnerability_function_rm = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT"))
 
         vulnerability_function_rc = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT"))
 
@@ -343,12 +342,12 @@ class EventBasedTestCase(unittest.TestCase):
 
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
