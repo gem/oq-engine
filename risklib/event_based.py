@@ -25,7 +25,6 @@ from scipy import interpolate
 from risklib import curve
 from risklib import classical
 
-UNCORRELATED, PERFECTLY_CORRELATED = range(0, 2)
 DEFAULT_CURVE_RESOLUTION = 50
 
 
@@ -64,17 +63,17 @@ class EpsilonProvider(object):
     """
 
     def __init__(self, seed=None,
-                 correlation_type=UNCORRELATED, taxonomies=None):
+                 correlation_type=None, taxonomies=None):
         """
         :param params: configuration parameters from the job configuration
         :type params: dict
         """
         self._samples = dict()
-        self._correlation_type = correlation_type or UNCORRELATED
+        self._correlation_type = correlation_type
         self._seed = seed
         self.rnd = None
 
-        if correlation_type == PERFECTLY_CORRELATED:
+        if correlation_type == "perfect":
             self._setup_rnd()
             for taxonomy in taxonomies:
                 self._samples[taxonomy] = self._generate()
@@ -90,7 +89,7 @@ class EpsilonProvider(object):
 
         return self.rnd.normalvariate(0, 1)
 
-    def epsilon(self, asset):
+    def epsilon(self, taxonomy, count=1):
         """Sample from the standard normal distribution for the given asset.
 
         For uncorrelated risk calculation jobs we sample the standard normal
@@ -104,13 +103,15 @@ class EpsilonProvider(object):
         correlated jobs and unlikely to be available for uncorrelated ones.
         """
 
-        if self._correlation_type == UNCORRELATED:
-            return self._generate()
-        elif self._correlation_type == PERFECTLY_CORRELATED:
-            return self._samples[asset.taxonomy]
+        if self._correlation_type == "perfect":
+            ret = [self._samples[taxonomy] for _ in range(count)]
         else:
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' %
-                             self._correlation_type)
+            ret = [self._generate() for _ in range(count)]
+
+        if count == 1:
+            return ret[0]
+        else:
+            return ret
 
 
 def _compute_loss_ratios(vuln_function, gmf_set,
@@ -140,17 +141,7 @@ def _compute_loss_ratios(vuln_function, gmf_set,
     :param asset: the asset used to compute the loss ratios.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
-    if not vuln_function:
-        return numpy.array([])
-
-    all_covs_are_zero = (vuln_function.covs <= 0.0).all()
-
-    if all_covs_are_zero:
-        return vuln_function(gmf_set["IMLs"])
-    else:
-        epsilon_provider = EpsilonProvider(seed, correlation_type, taxonomies)
-        return _sample_based(vuln_function, gmf_set, epsilon_provider, asset)
-
+    return vuln_function(gmf_set["IMLs"])
 
 def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the set of loss ratios when at least one CV

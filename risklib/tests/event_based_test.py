@@ -15,13 +15,23 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import mock
 import unittest
 
-from risklib import models
-from risklib.curve import EMPTY_CURVE
 from risklib import scientific
 from risklib import event_based
+
+
+class EpsilonProvider(object):
+    def __init__(self):
+        self.epsilons = [0.5377, 1.8339,
+            -2.2588, 0.8622, 0.3188, -1.3077,
+            -0.4336, 0.3426, 3.5784, 2.7694]
+
+    def epsilon(self, _, count=1):
+        if count == 1:
+            return self.epsilons.pop(0)
+        else:
+            return [self.epsilons.pop(0) for _ in range(count)]
 
 
 GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -68,8 +78,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
-            [0.0] * 8, "LN"
-        )
+            [0.0] * 8, "LN", "RC")
+        self.vulnerability_function1.seed(event_based.EpsilonProvider(3))
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
@@ -95,7 +105,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
-            1.0, 1.0, 1.0], [0.0] * 100, "LN")
+            1.0, 1.0, 1.0], [0.0] * 100, "LN", "RC")
+
+        self.vulnerability_function1.seed(event_based.EpsilonProvider(4))
 
         self.gmf1 = {"IMLs": (
             0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -133,10 +145,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.3726, 0.0845, 0.1942, 0.4629, 0.1354,
             0.1109), "TSES": 200, "TimeSpan": 50}
 
-    def test_an_empty_function_produces_an_empty_set(self):
-        data = event_based._compute_loss_ratios(EMPTY_CURVE, GMF, None)
-        self.assertEqual(0, data.size)
-
     def test_an_empty_gmf_produces_an_empty_set(self):
         data = event_based._compute_loss_ratios(
             self.vulnerability_function1, {"IMLs": ()}, None)
@@ -151,13 +159,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         vulnerability_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN")
-
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
-
-        def fake_eps(_):
-            return epsilons.pop(0)
+            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
         expected_asset = object()
 
@@ -171,12 +173,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-            ratios = event_based._compute_loss_ratios(
-                vulnerability_function, gmf, expected_asset)
-            self.assertTrue(numpy.allclose(expected_loss_ratios,
-                                           ratios, atol=0.0, rtol=0.01))
+        vulnerability_function.seed(EpsilonProvider())
+        ratios = event_based._compute_loss_ratios(
+            vulnerability_function, gmf, expected_asset)
+        numpy.testing.assert_allclose(expected_loss_ratios,
+                                      ratios, atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmf_less_than_first_vulnimls(self):
         """
@@ -187,30 +188,22 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         vuln_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN")
+            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
-
-        def fake_eps(_):
-            return epsilons.pop(0)
-
+        vuln_function.seed(EpsilonProvider())
         expected_asset = object()
 
         gmfs = {"IMLs": (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                          0.1419, 0.4218, 0.9157, 0.05, 0.9595)}
 
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-
-            self.assertTrue(
-                numpy.allclose(
-                    numpy.array([0.0, 0.3176, 0.4049, 0.0902,
-                                 0.2793, 0.0636, 0.0932, 0.2472,
-                                 0.0, 0.3020]),
-                    event_based._compute_loss_ratios(
-                                    vuln_function, gmfs,
-                                    expected_asset), atol=0.0, rtol=0.01))
+        self.assertTrue(
+            numpy.allclose(
+                numpy.array([0.0, 0.3176, 0.4049, 0.0902,
+                    0.2793, 0.0636, 0.0932, 0.2472,
+                    0.0, 0.3020]),
+                event_based._compute_loss_ratios(
+                    vuln_function, gmfs,
+                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -223,28 +216,20 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN")
-
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
-
-        def fake_eps(_):
-            return epsilons.pop(0)
+            imls, loss_ratios, covs, "LN", "RC")
 
         expected_asset = object()
 
         gmfs = {"IMLs": (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                          0.1419, 0.4218, 0.9157, 1.05, 0.9595)}
-
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-            self.assertTrue(
-                numpy.allclose(
-                    numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
-                                 0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                    event_based._compute_loss_ratios(
-                        vuln_function, gmfs, expected_asset),
-                    atol=0.0, rtol=0.01))
+        vuln_function.seed(EpsilonProvider())
+        print "start"
+        numpy.testing.assert_allclose(
+                numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
+                    0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
+                event_based._compute_loss_ratios(
+                    vuln_function, gmfs, expected_asset),
+                atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -390,7 +375,7 @@ class EpsilonProviderTestCase(unittest.TestCase):
     def setUp(self):
         self.epsilon_provider1 = event_based.EpsilonProvider()
         self.epsilon_provider2 = event_based.EpsilonProvider(
-            correlation_type=event_based.PERFECTLY_CORRELATED,
+            correlation_type="perfect",
             taxonomies=["a", "b"])
         self.assets = [
             scientific.Asset(None, "a", None, None),
@@ -401,7 +386,7 @@ class EpsilonProviderTestCase(unittest.TestCase):
     def test_uncorrelated(self):
         samples = []
         for asset in self.assets:
-            sample = self.epsilon_provider1.epsilon(asset)
+            sample = self.epsilon_provider1.epsilon(asset.taxonomy)
             self.assertTrue(sample not in samples,
                             "%s is already in %s" % (sample, samples))
             self.assertTrue(isinstance(sample, float),
@@ -411,7 +396,7 @@ class EpsilonProviderTestCase(unittest.TestCase):
     def test_correlated(self):
         samples = dict()
         for asset in self.assets:
-            sample = self.epsilon_provider2.epsilon(asset)
+            sample = self.epsilon_provider2.epsilon(asset.taxonomy)
             taxonomy = asset.taxonomy
             # This is either the first time we see this taxonomy or the sample
             # is identical to the one originally drawn for this taxonomy.

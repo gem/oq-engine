@@ -47,7 +47,7 @@ class ClassicalTestCase(unittest.TestCase):
         vulnerability_model = {"VF":
             scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN")}
+            [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF")}
 
         calculator = api.ConditionalLosses([0.01, 0.02, 0.05],
             api.Classical(vulnerability_model, steps=5))
@@ -97,7 +97,7 @@ class ClassicalTestCase(unittest.TestCase):
         vulnerability_model = {"VF":
             scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "BT")}
+            [0.5, 0.4, 0.3, 0.2, 0.1], "BT", "VF")}
 
         calculator = api.ConditionalLosses([0.01],
             api.Classical(vulnerability_model, steps=5))

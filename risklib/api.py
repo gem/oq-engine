@@ -244,7 +244,10 @@ class ProbabilisticEventBased(object):
 
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
-
+        vulnerability_function.seed(
+            event_based.EpsilonProvider(self.seed,
+                                        self.correlation_type,
+                                        taxonomies))
         self.loss_ratios = event_based._compute_loss_ratios(
             vulnerability_function, hazard, asset, self.seed,
             self.correlation_type, taxonomies)
@@ -308,6 +311,11 @@ class ScenarioRisk(object):
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
+
+        vulnerability_function.seed(
+            event_based.EpsilonProvider(self.seed,
+                                        self.correlation_type,
+                                        taxonomies))
 
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard))

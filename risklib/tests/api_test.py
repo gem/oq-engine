@@ -123,7 +123,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         asset = scientific.Asset("a1", "RC", 1.0, None)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
         vulnerability_model = {"RC": function}
         asset_output = api.Classical(vulnerability_model)(asset, hazard_curve)
@@ -168,7 +168,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
         asset = scientific.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
         vulnerability_model = {"RC": function}
         vulnerability_model_retrofitted = {"RC": function}
@@ -194,7 +194,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
         vulnerability_model = {"RC": function}
 
@@ -218,7 +218,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
                             ins_limit=1.0, deductible=1.0)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
         vulnerability_model = {"RC": function}
 

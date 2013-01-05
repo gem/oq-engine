@@ -51,7 +51,8 @@ class Asset(object):
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs, distribution):
+    def __init__(self, imls, mean_loss_ratios, covs, distribution,
+                 taxonomy):
         """
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
@@ -65,6 +66,8 @@ class VulnerabilityFunction(object):
 
         :param string distribution: The probabilistic distribution
             related to this function.
+
+        :param string taxonomy: the taxonomy related to this function
         """
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
@@ -82,6 +85,11 @@ class VulnerabilityFunction(object):
             numpy.max(
                 [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
                 numpy.ones(len(iml)) * self.min_iml], axis=0))
+        self.epsilon_provider = None
+        self.taxonomy = taxonomy
+
+    def seed(self, epsilon_provider):
+        self.epsilon_provider = epsilon_provider
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -112,17 +120,45 @@ class VulnerabilityFunction(object):
         :returns: :py:class:`numpy.ndarray` containing a number of interpolated
             values equal to the size of the input (1 or many)
         """
+        # for imls < min(iml) we return a loss of 0 (default)
         ret = numpy.zeros(len(imls))
 
-        saturated = numpy.where(imls > self.imls[-1])
-        ret[saturated] = numpy.ones(len(saturated)) * self.mean_loss_ratios[-1]
+        # imls are clipped to max(iml)
+        imls = numpy.min([numpy.ones(len(imls)) * self.imls[-1],
+                          imls], axis=0)
 
-        to_interpolate = numpy.intersect1d(
-            numpy.where(imls <= self.imls[-1])[0],
-            numpy.where(imls >= self.imls[0])[0],
-            assume_unique=True)
+        # for imls such that iml > min(iml) we get a mean loss ratio
+        # by interpolation and apply the uncertainty (if present)
 
-        ret[to_interpolate] = self._mlr_i1d(numpy.array(imls)[to_interpolate])
+        idxs = numpy.where(imls >= self.imls[0])[0]
+        imls = numpy.array(imls)[idxs]
+        means = self._mlr_i1d(imls)
+
+        # apply uncertainty
+        if (self.covs > 0).any():
+            covs = self._cov_for(imls)
+            if self.distribution == 'BT':
+                stddevs = covs * imls
+                from risklib import classical
+                alpha = classical._alpha_value(means, stddevs)
+                beta = classical._beta_value(means, stddevs)
+                values = numpy.random.beta(alpha, beta, size=None)
+            elif self.distribution == 'LN':
+                variance = (means * covs) ** 2.0
+                epsilon = self.epsilon_provider.epsilon(
+                    self.taxonomy, len(means))
+                print epsilon, len(means)
+                sigma = numpy.sqrt(
+                    numpy.log((variance / means ** 2.0) + 1.0))
+
+                mu = numpy.log(means ** 2.0 / numpy.sqrt(
+                    variance + means ** 2.0))
+
+                values = numpy.exp(mu + (epsilon * sigma))
+
+            ret[idxs] = values
+        else:
+            ret[idxs] = means
 
         return ret
 

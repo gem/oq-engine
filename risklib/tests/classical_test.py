@@ -127,7 +127,7 @@ class ClassicalTestCase(unittest.TestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
         vulnerability_function = scientific.VulnerabilityFunction(
-            self.imls, self.mean_loss_ratios, self.covs, "BT")
+            self.imls, self.mean_loss_ratios, self.covs, "BT", "RC")
 
         lrem = _loss_ratio_exceedance_matrix(vulnerability_function, 5)
         self.assertTrue(allclose(expected_lrem, lrem, rtol=0.0, atol=0.0005))
@@ -143,7 +143,8 @@ class ClassicalTestCase(unittest.TestCase):
         imls = [0.1, 0.2, 0.4, 0.6]
         covs = [0.5, 0.3, 0.2, 0.1]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
-        vuln_function = scientific.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
+        vuln_function = scientific.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN", "RC")
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
@@ -164,7 +165,7 @@ class ClassicalTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
         vulnerability_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN")
+            imls, loss_ratios, covs, "LN", "RC")
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
@@ -224,7 +225,7 @@ class ClassicalTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
 
         vulnerability_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN")
+            imls, loss_ratios, covs, "LN", "RC")
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
