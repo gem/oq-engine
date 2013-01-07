@@ -21,17 +21,14 @@ This module includes the scientific API of the oq-risklib
 """
 
 import collections
+import random
 import numpy
-from scipy import interpolate
+from scipy import interpolate, stats
 
 
-#  ___                   _                         _       _
-# |_ _|_ __  _ __  _   _| |_   _ __ ___   ___   __| | ___ | | ___
-#  | || '_ \| '_ \| | | | __| | '_ ` _ \ / _ \ / _` |/ _ \| |/ __|
-#  | || | | | |_) | |_| | |_  | | | | | | (_) | (_| |  __/| |\__ \
-# |___|_| |_| .__/ \__,_|\__| |_| |_| |_|\___/ \__,_|\___||_||___/
-#           |_|
-
+##
+## Input models
+##
 
 class Asset(object):
     # FIXME (lp). Provide description
@@ -88,8 +85,9 @@ class VulnerabilityFunction(object):
         self.epsilon_provider = None
         self.taxonomy = taxonomy
 
-    def seed(self, epsilon_provider):
-        self.epsilon_provider = epsilon_provider
+    def seed(self, seed=None, correlation_type=None, taxonomies=None):
+        self.epsilon_provider = EpsilonProvider(
+            seed, correlation_type, taxonomies)
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -124,38 +122,35 @@ class VulnerabilityFunction(object):
         ret = numpy.zeros(len(imls))
 
         # imls are clipped to max(iml)
-        imls = numpy.min([numpy.ones(len(imls)) * self.imls[-1],
+        imls = numpy.min([numpy.ones(len(imls)) * self.max_iml,
                           imls], axis=0)
 
         # for imls such that iml > min(iml) we get a mean loss ratio
         # by interpolation and apply the uncertainty (if present)
 
-        idxs = numpy.where(imls >= self.imls[0])[0]
+        idxs = numpy.where(imls >= self.min_iml)[0]
         imls = numpy.array(imls)[idxs]
         means = self._mlr_i1d(imls)
 
         # apply uncertainty
         if (self.covs > 0).any():
             covs = self._cov_for(imls)
+            stddevs = covs * imls
+
             if self.distribution == 'BT':
-                stddevs = covs * imls
                 from risklib import classical
                 alpha = classical._alpha_value(means, stddevs)
                 beta = classical._beta_value(means, stddevs)
-                values = numpy.random.beta(alpha, beta, size=None)
+                values = stats.beta.sf(means, alpha, beta)
             elif self.distribution == 'LN':
-                variance = (means * covs) ** 2.0
+                variance = (means * covs) ** 2
                 epsilon = self.epsilon_provider.epsilon(
                     self.taxonomy, len(means))
-                print epsilon, len(means)
                 sigma = numpy.sqrt(
                     numpy.log((variance / means ** 2.0) + 1.0))
-
                 mu = numpy.log(means ** 2.0 / numpy.sqrt(
                     variance + means ** 2.0))
-
                 values = numpy.exp(mu + (epsilon * sigma))
-
             ret[idxs] = values
         else:
             ret[idxs] = means
@@ -177,12 +172,9 @@ class VulnerabilityFunction(object):
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
-#   ___        _               _     __  __           _       _
-#  / _ \ _   _| |_ _ __  _   _| |_  |  \/  | ___   __| | ___ | | ___
-# | | | | | | | __| '_ \| | | | __| | |\/| |/ _ \ / _` |/ _ \| |/ __|
-# | |_| | |_| | |_| |_) | |_| | |_  | |  | | (_) | (_| |  __/| |\__ \
-#  \___/ \__,_|\__| .__/ \__,_|\__| |_|  |_|\___/ \__,_|\___||_||___/
-#                 |_|
+##
+## Output models
+##
 
 
 ClassicalOutput = collections.namedtuple(
@@ -209,10 +201,64 @@ ScenarioRiskOutput = collections.namedtuple(
     "ScenarioRiskOutput", ["asset", "mean", "standard_deviation"])
 
 
-#       _                  _            _   ____   ____  _   _     _
-#   ___| | __ _  ___  ___ (_) ___  __ _| | |  _ \ / ___|| | | |   / \
-#  / __| |/ _` |/ __|/ __|| |/ __|/ _` | | | |_) |\___ \| |_| |  / _ \
-# | (__| | (_| |\__ \\__ \| | (__| (_| | | |  __/  ___) |  _  | / ___ \
-#  \___|_|\__,_||___/|___/|_|\___|\__,_|_| |_|    |____/|_| |_|/_/   \_\
+##
+## Sampling
+##
 
+class EpsilonProvider(object):
+    """
+    Simple class for combining job configuration parameters and an `epsilon`
+    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
+    """
 
+    def __init__(self, seed=None,
+                 correlation_type=None, taxonomies=None):
+        """
+        :param params: configuration parameters from the job configuration
+        :type params: dict
+        """
+        self._samples = dict()
+        self._correlation_type = correlation_type
+        self._seed = seed
+        self.rnd = None
+
+        if correlation_type == "perfect":
+            self._setup_rnd()
+            for taxonomy in taxonomies:
+                self._samples[taxonomy] = self._generate()
+
+    def _setup_rnd(self):
+        self.rnd = random.Random()
+        if self._seed is not None:
+            self.rnd.seed(int(self._seed))
+            numpy.random.seed(int(self._seed))
+
+    def _generate(self):
+        if self.rnd is None:
+            self._setup_rnd()
+
+        return self.rnd.normalvariate(0, 1)
+
+    def epsilon(self, taxonomy, count=1):
+        """Sample from the standard normal distribution for the given asset.
+
+        For uncorrelated risk calculation jobs we sample the standard normal
+        distribution for each asset.
+        In the opposite case ("perfectly correlated" assets) we sample for each
+        building typology i.e. two assets with the same typology will "share"
+        the same standard normal distribution sample.
+
+        Two assets are considered to be of the same building typology if their
+        taxonomy is the same. The asset's `taxonomy` is only needed for
+        correlated jobs and unlikely to be available for uncorrelated ones.
+        """
+
+        if self._correlation_type == "perfect":
+            ret = [self._samples[taxonomy] for _ in range(count)]
+        else:
+            ret = [self._generate() for _ in range(count)]
+
+        if count == 1:
+            return ret[0]
+        else:
+            return ret

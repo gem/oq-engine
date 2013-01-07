@@ -15,15 +15,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
-import random
 import itertools
 
 import numpy
 from scipy import interpolate
 
 from risklib import curve
-from risklib import classical
 
 DEFAULT_CURVE_RESOLUTION = 50
 
@@ -54,146 +51,6 @@ def aggregate_loss_curve(set_of_losses, tses, time_span,
 
     return _loss_curve(aggregate_losses, tses, time_span,
                        curve_resolution=curve_resolution)
-
-
-class EpsilonProvider(object):
-    """
-    Simple class for combining job configuration parameters and an `epsilon`
-    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
-    """
-
-    def __init__(self, seed=None,
-                 correlation_type=None, taxonomies=None):
-        """
-        :param params: configuration parameters from the job configuration
-        :type params: dict
-        """
-        self._samples = dict()
-        self._correlation_type = correlation_type
-        self._seed = seed
-        self.rnd = None
-
-        if correlation_type == "perfect":
-            self._setup_rnd()
-            for taxonomy in taxonomies:
-                self._samples[taxonomy] = self._generate()
-
-    def _setup_rnd(self):
-        self.rnd = random.Random()
-        if self._seed is not None:
-            self.rnd.seed(int(self._seed))
-
-    def _generate(self):
-        if self.rnd is None:
-            self._setup_rnd()
-
-        return self.rnd.normalvariate(0, 1)
-
-    def epsilon(self, taxonomy, count=1):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        taxonomy is the same. The asset's `taxonomy` is only needed for
-        correlated jobs and unlikely to be available for uncorrelated ones.
-        """
-
-        if self._correlation_type == "perfect":
-            ret = [self._samples[taxonomy] for _ in range(count)]
-        else:
-            ret = [self._generate() for _ in range(count)]
-
-        if count == 1:
-            return ret[0]
-        else:
-            return ret
-
-
-def _compute_loss_ratios(vuln_function, gmf_set,
-                         asset,
-                         seed=None,
-                         correlation_type=None,
-                         taxonomies=None):
-    """Compute the set of loss ratios using the set of
-    ground motion fields passed.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param seed:
-      the seed used for the rnd generator
-    :param correlation_type
-      UNCORRELATED or PERFECTLY_CORRELATED
-    :param taxonomies
-      a list of considered taxonomies
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-    return vuln_function(gmf_set["IMLs"])
-
-def _sample_based(vuln_function, gmf_set, epsilon_provider, asset):
-    """Compute the set of loss ratios when at least one CV
-    (Coefficent of Variation) defined in the vulnerability function
-    is greater than zero.
-
-    :param vuln_function: the vulnerability function used to
-        compute the loss ratios.
-    :type vuln_function: :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
-    :param gmf_set: ground motion fields used to compute the loss ratios
-    :type gmf_set: :py:class:`dict` with the following
-        keys:
-        **IMLs** - tuple of ground motion fields (float)
-        **TimeSpan** - time span parameter (float)
-        **TSES** - time representative of the Stochastic Event Set (float)
-    :param epsilon_provider: service used to get the epsilon when
-        using the sample based algorithm.
-    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
-    """
-
-    loss_ratios = []
-
-    for ground_motion_field in gmf_set["IMLs"]:
-        if ground_motion_field < vuln_function.imls[0]:
-            loss_ratios.append(0.0)
-        else:
-            if ground_motion_field > vuln_function.imls[-1]:
-                ground_motion_field = vuln_function.imls[-1]
-
-            [mean_ratio] = vuln_function([ground_motion_field])
-
-            [cov] = vuln_function._cov_for([ground_motion_field])
-
-            if vuln_function.distribution == 'BT':
-                stddev = cov * mean_ratio
-                alpha = classical._alpha_value(mean_ratio, stddev)
-                beta = classical._beta_value(mean_ratio, stddev)
-                loss_ratios.append(numpy.random.beta(alpha, beta, size=None))
-            else:
-                variance = (mean_ratio * cov) ** 2.0
-                epsilon = epsilon_provider.epsilon(asset)
-                sigma = math.sqrt(
-                    math.log((variance / mean_ratio ** 2.0) + 1.0))
-
-                mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                    variance + mean_ratio ** 2.0))
-
-                loss_ratios.append(math.exp(mu + (epsilon * sigma)))
-
-    return numpy.array(loss_ratios)
 
 
 def _probs_of_exceedance(rates, time_span):

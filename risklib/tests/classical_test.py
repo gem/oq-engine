@@ -15,7 +15,7 @@
 
 import unittest
 import itertools
-from numpy import allclose, array
+import numpy
 
 from risklib.curve import Curve
 from risklib import scientific
@@ -40,14 +40,14 @@ class ClassicalTestCase(unittest.TestCase):
             _alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
             stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
-        self.assertTrue(allclose(alphas, expected_alphas, atol=0.0002))
+        numpy.testing.assert_allclose(alphas, expected_alphas, atol=0.0002)
 
     def test_beta_value(self):
-        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
+        expected_betas = [71.250, 49.725, 34.755555, 21.900, 4.800]
         betas = [_beta_value(mean_loss_ratio, stddev) for mean_loss_ratio,
                  stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
 
-        self.assertTrue(allclose(betas, expected_betas, atol=0.0001))
+        numpy.testing.assert_allclose(betas, expected_betas)
 
     def test_loss_is_zero_if_probability_is_too_high(self):
         loss_curve = Curve([
@@ -55,7 +55,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertEqual(0.0, _conditional_loss(loss_curve, 0.200))
+        self.assertAlmostEqual(0.0, _conditional_loss(loss_curve, 0.200))
 
     def test_loss_is_max_if_probability_is_too_low(self):
         loss_curve = Curve([
@@ -63,7 +63,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertEqual(0.30, _conditional_loss(loss_curve, 0.050))
+        self.assertAlmostEqual(0.30, _conditional_loss(loss_curve, 0.050))
 
     def test_conditional_loss_duplicates(self):
         # we feed compute_conditional_loss with some duplicated data to see if
@@ -81,7 +81,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.24, 0.108), (0.27, 0.089), (0.30, 0.066),
         ]), 0.100)
 
-        self.assertEquals(loss1, loss2)
+        numpy.testing.assert_allclose(loss1, loss2)
 
     def test_conditional_loss_computation(self):
         loss_curve = Curve([
@@ -130,7 +130,8 @@ class ClassicalTestCase(unittest.TestCase):
             self.imls, self.mean_loss_ratios, self.covs, "BT", "RC")
 
         lrem = _loss_ratio_exceedance_matrix(vulnerability_function, 5)
-        self.assertTrue(allclose(expected_lrem, lrem, rtol=0.0, atol=0.0005))
+        numpy.testing.assert_allclose(
+            expected_lrem, lrem, rtol=0.0, atol=0.0005)
 
     def test_lrem_po_computation(self):
         hazard_curve = [
@@ -152,12 +153,12 @@ class ClassicalTestCase(unittest.TestCase):
         lrem_po = _loss_ratio_exceedance_matrix_per_poos(
             vuln_function, lrem, hazard_curve)
 
-        self.assertTrue(allclose(0.07, lrem_po[0][0], atol=0.005))
-        self.assertTrue(allclose(0.06, lrem_po[1][0], atol=0.005))
-        self.assertTrue(allclose(0.13, lrem_po[0][1], atol=0.005))
-        self.assertTrue(allclose(0.47, lrem_po[5][3], atol=0.005))
-        self.assertTrue(allclose(0.23, lrem_po[8][3], atol=0.005))
-        self.assertTrue(allclose(0.00, lrem_po[10][0], atol=0.005))
+        numpy.testing.assert_allclose(0.07, lrem_po[0][0], atol=0.005)
+        numpy.testing.assert_allclose(0.06, lrem_po[1][0], atol=0.005)
+        numpy.testing.assert_allclose(0.13, lrem_po[0][1], atol=0.005)
+        numpy.testing.assert_allclose(0.47, lrem_po[5][3], atol=0.005)
+        numpy.testing.assert_allclose(0.23, lrem_po[8][3], atol=0.005)
+        numpy.testing.assert_allclose(0.00, lrem_po[10][0], atol=0.005)
 
     def test_bin_width_from_imls(self):
         imls = [0.1, 0.2, 0.4, 0.6]
@@ -169,8 +170,8 @@ class ClassicalTestCase(unittest.TestCase):
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
-        self.assertTrue(
-            allclose(expected_steps, vulnerability_function.mean_imls()))
+        numpy.testing.assert_allclose(
+            expected_steps, vulnerability_function.mean_imls())
 
     def test_split_with_real_values_from_turkey(self):
         loss_ratios = [
@@ -203,9 +204,8 @@ class ClassicalTestCase(unittest.TestCase):
                   0.11585999999999999, 0.13624,
                   0.15661999999999998, 0.17699999999999999]
 
-        self.assertTrue(
-            allclose(array(result),
-                     _evenly_spaced_loss_ratios(loss_ratios, 5)))
+        numpy.testing.assert_allclose(
+            result, _evenly_spaced_loss_ratios(loss_ratios, 5))
 
     def test_split_with_real_values_from_taiwan(self):
         loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
@@ -229,18 +229,20 @@ class ClassicalTestCase(unittest.TestCase):
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
-        lrem = array(
-            [[1., 1., 1., 1.],
-             [8.90868149e-01, 9.99932030e-01, 1., 1.],
-             [4.06642478e-01, 9.27063668e-01, 1., 1.],
-             [2.14297309e-01, 7.12442306e-01, 9.99999988e-01, 1.],
-             [1.09131851e-01, 4.41652761e-01, 9.99997019e-01, 1.],
-             [7.84971008e-03, 2.00321301e-02, 9.55620783e-01, 1.],
-             [7.59869969e-04, 5.41393717e-04, 4.60560758e-01, 1.],
-             [2.79797605e-05, 1.66547090e-06, 1.59210054e-02, 9.97702369e-01],
-             [1.75697664e-06, 9.04938835e-09, 1.59710253e-04, 4.80110732e-01],
-             [2.89163471e-09, 2.43138842e-14, 6.60395072e-11, 7.56938368e-09],
-             [2.38464803e-11, 0., 1.11022302e-16, 0.]])
+        lrem = [[1., 1., 1., 1.],
+                [8.90868149e-01, 9.99932030e-01, 1., 1.],
+                [4.06642478e-01, 9.27063668e-01, 1., 1.],
+                [2.14297309e-01, 7.12442306e-01, 9.99999988e-01, 1.],
+                [1.09131851e-01, 4.41652761e-01, 9.99997019e-01, 1.],
+                [7.84971008e-03, 2.00321301e-02, 9.55620783e-01, 1.],
+                [7.59869969e-04, 5.41393717e-04, 4.60560758e-01, 1.],
+                [2.79797605e-05, 1.66547090e-06, 1.59210054e-02,
+                 9.97702369e-01],
+                [1.75697664e-06, 9.04938835e-09, 1.59710253e-04,
+                 4.80110732e-01],
+                [2.89163471e-09, 2.43138842e-14, 6.60395072e-11,
+                 7.56938368e-09],
+                [2.38464803e-11, 0., 1.11022302e-16, 0.]]
 
         loss_ratio_curve = _loss_ratio_curve(
             vulnerability_function, lrem, hazard_curve, 2)
@@ -254,31 +256,29 @@ class ClassicalTestCase(unittest.TestCase):
             (1.0, 0.00)])
 
         for x_value in expected_curve.abscissae:
-            self.assertTrue(allclose(
+            numpy.testing.assert_allclose(
                 expected_curve.ordinate_for(x_value),
-                loss_ratio_curve.ordinate_for(x_value), atol=0.005))
+                loss_ratio_curve.ordinate_for(x_value), atol=0.005)
 
     def test_split_single_interval_with_no_steps_between(self):
-        self.assertTrue(
-            allclose(array([1.0, 2.0]),
-                     _evenly_spaced_loss_ratios([1.0, 2.0], 1)))
+        numpy.testing.assert_allclose(
+            [1.0, 2.0], _evenly_spaced_loss_ratios([1.0, 2.0], 1))
 
     def test_evenly_spaced_single_interval_with_a_step_between(self):
-        self.assertTrue(
-            allclose(array([1.0, 1.5, 2.0]),
-                     _evenly_spaced_loss_ratios([1.0, 2.0], 2)))
+        numpy.testing.assert_allclose(
+            [1.0, 1.5, 2.0], _evenly_spaced_loss_ratios([1.0, 2.0], 2))
 
     def test_evenly_spaced_single_interval_with_steps_between(self):
-        self.assertTrue(allclose(array(
-            [1.0, 1.25, 1.50, 1.75, 2.0]),
-            _evenly_spaced_loss_ratios([1.0, 2.0], 4)))
+        numpy.testing.assert_allclose(
+            [1.0, 1.25, 1.50, 1.75, 2.0],
+            _evenly_spaced_loss_ratios([1.0, 2.0], 4))
 
     def test_evenly_spaced_multiple_intervals_with_a_step_between(self):
-        self.assertTrue(allclose(array(
-            [1.0, 1.5, 2.0, 2.5, 3.0]),
-            _evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 2)))
+        numpy.testing.assert_allclose(
+            [1.0, 1.5, 2.0, 2.5, 3.0],
+            _evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 2))
 
     def test_evenly_spaced_multiple_intervals_with_steps_between(self):
-        self.assertTrue(allclose(array(
-            [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
-            _evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 4)))
+        numpy.testing.assert_allclose(
+            [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0],
+            _evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 4))

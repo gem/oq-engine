@@ -245,12 +245,8 @@ class ProbabilisticEventBased(object):
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
         vulnerability_function.seed(
-            event_based.EpsilonProvider(self.seed,
-                                        self.correlation_type,
-                                        taxonomies))
-        self.loss_ratios = event_based._compute_loss_ratios(
-            vulnerability_function, hazard, asset, self.seed,
-            self.correlation_type, taxonomies)
+            self.seed, self.correlation_type, taxonomies)
+        self.loss_ratios = vulnerability_function(hazard["IMLs"])
 
         loss_ratio_curve = event_based._loss_curve(
             self.loss_ratios, hazard['TSES'], hazard['TimeSpan'],
@@ -313,16 +309,12 @@ class ScenarioRisk(object):
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
         vulnerability_function.seed(
-            event_based.EpsilonProvider(self.seed,
-                                        self.correlation_type,
-                                        taxonomies))
+            self.seed, self.correlation_type, taxonomies)
 
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard))
 
-        loss_ratios = event_based._compute_loss_ratios(
-            vulnerability_function, {"IMLs": hazard}, asset,
-            self.seed, self.correlation_type, taxonomies)
+        loss_ratios = vulnerability_function(hazard)
 
         losses = loss_ratios * asset.value
 

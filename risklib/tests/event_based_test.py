@@ -34,7 +34,7 @@ class EpsilonProvider(object):
             return [self.epsilons.pop(0) for _ in range(count)]
 
 
-GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
+GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
     0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
     0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
     0.012864, 0.001728, 0.06648, 0.000736, 0.01992, 0.011616,
@@ -68,8 +68,10 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
     0.008496, 0.069136, 0.011568, 0.01576, 0.01072, 0.002336,
     0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928,
     0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
-    0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
-    "TSES": 900, "TimeSpan": 50}
+    0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
+
+TSES = 900.
+TIMESPAN = 50.
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
@@ -79,7 +81,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN", "RC")
-        self.vulnerability_function1.seed(event_based.EpsilonProvider(3))
+        self.vulnerability_function1.seed(3)
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
@@ -107,7 +109,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
             1.0, 1.0, 1.0], [0.0] * 100, "LN", "RC")
 
-        self.vulnerability_function1.seed(event_based.EpsilonProvider(4))
+        self.vulnerability_function1.seed(4)
 
         self.gmf1 = {"IMLs": (
             0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -146,10 +148,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        data = event_based._compute_loss_ratios(
-            self.vulnerability_function1, {"IMLs": ()}, None)
-
-        self.assertEqual(0, data.size)
+        self.assertEqual(0, self.vulnerability_function1([]).size)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         """
@@ -161,21 +160,18 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
-        expected_asset = object()
-
-        gmf = {"IMLs": (
+        gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
             0.1419, 0.4218, 0.9157, 0.7922, 0.9595,
-        )}
+        )
 
         expected_loss_ratios = numpy.array([
             0.0722, 0.4106, 0.1800, 0.1710, 0.2508,
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vulnerability_function.seed(EpsilonProvider())
-        ratios = event_based._compute_loss_ratios(
-            vulnerability_function, gmf, expected_asset)
+        vulnerability_function.epsilon_provider = EpsilonProvider()
+        ratios = vulnerability_function(gmf)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -190,20 +186,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
-        vuln_function.seed(EpsilonProvider())
-        expected_asset = object()
+        vuln_function.epsilon_provider = EpsilonProvider()
 
-        gmfs = {"IMLs": (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
-                         0.1419, 0.4218, 0.9157, 0.05, 0.9595)}
+        gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
-        self.assertTrue(
-            numpy.allclose(
-                numpy.array([0.0, 0.3176, 0.4049, 0.0902,
-                    0.2793, 0.0636, 0.0932, 0.2472,
-                    0.0, 0.3020]),
-                event_based._compute_loss_ratios(
-                    vuln_function, gmfs,
-                    expected_asset), atol=0.0, rtol=0.01))
+        numpy.testing.assert_allclose(
+            numpy.array([0.0, 0.3176, 0.4049, 0.0902,
+                         0.2793, 0.0636, 0.0932, 0.2472,
+                         0.0, 0.3020]),
+            vuln_function(gmfs), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -218,17 +210,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         vuln_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN", "RC")
 
-        expected_asset = object()
+        gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 1.05, 0.9595)
+        vuln_function.epsilon_provider = EpsilonProvider()
 
-        gmfs = {"IMLs": (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
-                         0.1419, 0.4218, 0.9157, 1.05, 0.9595)}
-        vuln_function.seed(EpsilonProvider())
-        print "start"
         numpy.testing.assert_allclose(
                 numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                     0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                event_based._compute_loss_ratios(
-                    vuln_function, gmfs, expected_asset),
+                    vuln_function(gmfs),
                 atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
@@ -247,13 +236,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(numpy.array([0.0, 0.0, 0.0]),
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None))
+            self.vulnerability_function1([0.0001, 0.0002, 0.0003]))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(numpy.array([0.700, 0.700]),
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.525, 0.530)}, None, None))
+            self.vulnerability_function1([0.525, 0.530]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -342,8 +329,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                                             GMF, None, None))
+            self.vulnerability_function1(GMF))
 
     def test_constant(self):
         expected = [10] * 100
@@ -366,15 +352,15 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_poes,
             event_based._probs_of_exceedance(
-                self.exceeding_times / float(GMF["TSES"]), GMF["TimeSpan"]),
+                self.exceeding_times / TSES, TIMESPAN),
             atol=0.001)
 
 
 class EpsilonProviderTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.epsilon_provider1 = event_based.EpsilonProvider()
-        self.epsilon_provider2 = event_based.EpsilonProvider(
+        self.epsilon_provider1 = scientific.EpsilonProvider()
+        self.epsilon_provider2 = scientific.EpsilonProvider(
             correlation_type="perfect",
             taxonomies=["a", "b"])
         self.assets = [

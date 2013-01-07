@@ -37,8 +37,8 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
     # and number of columns equal to the number of imls
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
-    for col in range(vuln_function.resolution):
-        for row, loss_ratio in enumerate(loss_ratios):
+    for row, loss_ratio in enumerate(loss_ratios):
+        for col in range(vuln_function.resolution):
             mean_loss_ratio = vuln_function.mean_loss_ratios[col]
             loss_ratio_stddev = vuln_function.stddevs[col]
 
@@ -52,11 +52,7 @@ def _loss_ratio_exceedance_matrix(vuln_function, steps):
                 sigma = sqrt(log((variance / mean_loss_ratio ** 2.0) + 1.0))
                 mu = exp(log(mean_loss_ratio ** 2.0 /
                              sqrt(variance + mean_loss_ratio ** 2.0)))
-
                 lrem[row][col] = stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-            else:
-                raise RuntimeError(
-                    "Only beta or lognormal distributions are supported")
 
     return lrem
 
