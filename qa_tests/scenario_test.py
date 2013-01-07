@@ -91,8 +91,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
         self.assertAlmostEqual(186.864456949986,
             asset_output.standard_deviation)
 
-        total_losses = scenario.aggregate_losses(
-            [calculator.aggregate_losses])
+        total_losses = (numpy.mean(calculator.aggregate_losses),
+                        numpy.std(calculator.aggregate_losses, ddof=1))
 
         self.assertAlmostEqual(246.62, total_losses[1], places=2)
         self.assertAlmostEqual(1053.09, total_losses[0], places=2)
