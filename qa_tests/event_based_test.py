@@ -21,7 +21,6 @@ import numpy
 
 from risklib import api
 from risklib import scientific
-from risklib import event_based
 from risklib.tests.utils import vectors_from_csv
 
 #: The conditional loss poes used for testing
@@ -286,8 +285,8 @@ class EventBasedTestCase(unittest.TestCase):
                                      133.3773383, 122.2148143, 115.92256,
                                      115.8386574, 55.3134][::-1]
 
-        aggregate_curve = event_based.aggregate_loss_curve(
-            [peb_calculator.aggregate_losses], 50, 50)
+        aggregate_curve = scientific.event_based(
+            peb_calculator.aggregate_losses, 50, 50)
 
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.abscissae)

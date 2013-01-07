@@ -18,7 +18,6 @@ import numpy
 import unittest
 
 from risklib import scientific
-from risklib import event_based
 
 
 class EpsilonProvider(object):
@@ -333,27 +332,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_constant(self):
         expected = [10] * 100
-        actual = event_based._loss_curve(expected, 50, 50, 11)
+        actual = scientific.event_based(expected, 50, 50, 11)
 
         numpy.testing.assert_allclose([10] * 11, actual.abscissae)
         numpy.testing.assert_allclose(
             numpy.arange(0, 1.1, 0.1), actual.ordinates)
-
-    def test_probs_of_exceedance(self):
-        expected_poes = [
-            0.99801517, 0.92235092, 0.76412292, 0.63212056,
-            0.54057418, 0.48658288, 0.35881961, 0.32219042,
-            0.32219042, 0.28346869, 0.24253487, 0.19926260,
-            0.19926260, 0.19926260, 0.19926260, 0.19926260,
-            0.10516068, 0.05404053, 0.05404053, 0.05404053,
-            0.05404053, 0.05404053, 0.05404053, 0.05404053,
-        ]
-
-        numpy.testing.assert_allclose(
-            expected_poes,
-            event_based._probs_of_exceedance(
-                self.exceeding_times / TSES, TIMESPAN),
-            atol=0.001)
 
 
 class EpsilonProviderTestCase(unittest.TestCase):

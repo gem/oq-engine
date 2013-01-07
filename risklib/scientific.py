@@ -22,8 +22,19 @@ This module includes the scientific API of the oq-risklib
 
 import collections
 import random
+import itertools
+
 import numpy
 from scipy import interpolate, stats
+
+from risklib import curve
+
+###
+### Constants & Defaults
+###
+
+DEFAULT_CURVE_RESOLUTION = 50
+
 
 
 ##
@@ -262,3 +273,87 @@ class EpsilonProvider(object):
             return ret[0]
         else:
             return ret
+
+
+###
+### Calculators
+###
+
+##
+## Event Based
+##
+
+def event_based(loss_values, tses, time_span,
+                curve_resolution=DEFAULT_CURVE_RESOLUTION):
+    """
+    Compute a loss (or loss ratio) curve.
+
+    :param loss_values: The loss ratios (or the losses) computed by
+    applying the vulnerability function
+
+    :param tses: Time representative of the stochastic event set
+
+    :param time_span: Investigation Time spanned by the hazard input
+
+    :param curve_resolution: The number of points the output curve is
+    defined by
+    """
+    sorted_loss_values = numpy.sort(loss_values)[::-1]
+
+    def pairwise(iterable):
+        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+        a, b = itertools.tee(iterable)
+        # b ahead one step; if b is empty do not raise StopIteration
+        next(b, None)
+        return itertools.izip(a, b)  # if a is empty will return an empty iter
+
+    # We compute the rates of exceedances by iterating over loss
+    # values and counting the number of distinct loss values less than
+    # the current loss. This is a workaround for a rounding error, ask Luigi
+    # for the details
+    times = [index
+             for index, (previous_val, val) in
+             enumerate(pairwise(sorted_loss_values))
+             if not numpy.allclose([val], [previous_val])]
+
+    # if there are less than 2 distinct loss values, we will keep the
+    # endpoints
+    if len(times) < 2:
+        times = [0, len(sorted_loss_values) - 1]
+
+    sorted_loss_values = sorted_loss_values[times]
+    rates_of_exceedance = numpy.array(times) / float(tses)
+
+    poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
+    reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
+
+    values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
+
+    return curve.Curve(zip(values, reference_poes))
+
+
+###
+### Calculator modifiers
+###
+
+
+def insured_losses(asset, losses, tses, timespan, curve_resolution):
+    """
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
+
+    :param asset: the asset used to compute the loss ratios and losses.
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
+    :param losses: an array of loss values multiplied by the asset value.
+    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
+    """
+
+    undeductible_losses = losses[losses >= asset.deductible]
+
+    losses = numpy.concatenate((
+        numpy.zeros(losses[losses < asset.deductible].shape),
+        numpy.min(
+            [undeductible_losses,
+             numpy.ones(undeductible_losses.shape) * asset.ins_limit], 0)))
+
+    return event_based(losses, tses, timespan, curve_resolution)

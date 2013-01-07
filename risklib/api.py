@@ -15,8 +15,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import (classical, event_based, scenario_damage,
-                     benefit_cost_ratio, insured_loss)
+from risklib import (scientific,
+                     classical, scenario_damage, benefit_cost_ratio)
 from risklib.models import output
 
 
@@ -228,7 +228,7 @@ class ProbabilisticEventBased(object):
 
     def __init__(
             self, vulnerability_model, seed=None, correlation_type=None,
-            curve_resolution=event_based.DEFAULT_CURVE_RESOLUTION):
+            curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
         self.correlation_type = correlation_type
@@ -248,7 +248,7 @@ class ProbabilisticEventBased(object):
             self.seed, self.correlation_type, taxonomies)
         self.loss_ratios = vulnerability_function(hazard["IMLs"])
 
-        loss_ratio_curve = event_based._loss_curve(
+        loss_ratio_curve = scientific.event_based(
             self.loss_ratios, hazard['TSES'], hazard['TimeSpan'],
             curve_resolution=self.curve_resolution)
 
@@ -276,7 +276,7 @@ class InsuredLosses(object):
     def __call__(self, asset, hazard):
         asset_output = self.losses_calculator(asset, hazard)
 
-        loss_curve = insured_loss.compute_insured_losses(
+        loss_curve = scientific.insured_losses(
             asset, self.losses_calculator.loss_ratios * asset.value,
             hazard['TSES'], hazard['TimeSpan'],
             self.losses_calculator.curve_resolution)
