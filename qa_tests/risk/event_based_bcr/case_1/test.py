@@ -29,28 +29,29 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_BCR_DISTRIBUTION = """<?xml version='1.0' encoding='UTF-8'?>
-    <nrml xmlns:gml="http://www.opengis.net/gml"
-          xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <bcrMap interestRate="0.05" assetLifeExpectancy="40.0"
           sourceModelTreePath="test_sm" gsimTreePath="test_gsim" unit="USD">
     <node>
       <gml:Point>
         <gml:pos>-122.0 38.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a1" ratio="81.8478428224"
-           aalOrig="1.57764123742" aalRetr="1.10434886619"/>
+      <bcr assetRef="a1" ratio="69.9962950992"
+           aalOrig="1.34919917016" aalRetr="0.94443941911"/>
     </node>
     <node>
       <gml:Point>
         <gml:pos>-120.0 37.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a2" ratio="61.3858821168"
-           aalOrig="2.36646185613" aalRetr="1.65652329929"/>
-      <bcr assetRef="a3" ratio="61.3858821168"
-           aalOrig="2.36646185613" aalRetr="1.65652329929"/>
+      <bcr assetRef="a2" ratio="52.4972213244"
+           aalOrig="2.02379875523" aalRetr="1.41665912866"/>
+      <bcr assetRef="a3" ratio="52.4972213244"
+           aalOrig="2.02379875523" aalRetr="1.41665912866"/>
     </node>
   </bcrMap>
-</nrml>"""
+</nrml>
+"""
 
     @noseattr('qa', 'risk', 'event_based_bcr')
     def test(self):
@@ -110,9 +111,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                              'asset_ref')]
 
     def expected_data(self):
-        return [[1.57764124, 1.10434887, 81.84784282],
-                [2.36646186, 1.6565233, 61.38588212],
-                [2.36646186, 1.6565233, 61.38588212]]
+        return [[1.34919917, 0.94443942, 69.9962951],
+                [2.02379876, 1.41665913, 52.49722132],
+                [2.02379876, 1.41665913, 52.49722132]]
 
     def expected_outputs(self):
         return [self.EXPECTED_BCR_DISTRIBUTION]

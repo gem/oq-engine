@@ -22,7 +22,6 @@ import random
 
 from django import db
 
-from openquake.job.validation import MAX_SINT_32, MIN_SINT_32
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
@@ -153,7 +152,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                     self.exposure_model_id, region_constraint, offset,
                     block_size)
 
-            seed = self.rnd.randint(MIN_SINT_32, MAX_SINT_32)
+            seed = self.rnd.randint(0, (2 ** 31) - 1)
 
             tf_args = ([self.job.id,
                         assets, self.hazard_getter, self.hazard_id, seed] +
