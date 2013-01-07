@@ -39,7 +39,7 @@ from django.db import connection
 from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
-from risklib import vulnerability_function
+from risklib import scientific
 from shapely import wkt
 
 from openquake.db import fields
@@ -2473,9 +2473,9 @@ class VulnerabilityFunction(djm.Model):
         db_table = 'riski\".\"vulnerability_function'
 
     def to_risklib(self):
-        return vulnerability_function.VulnerabilityFunction(
+        return scientific.VulnerabilityFunction(
             self.vulnerability_model.imls, self.loss_ratios, self.covs,
-            distribution=self.prob_distribution)
+            distribution=self.prob_distribution, taxonomy=self.taxonomy)
 
 
 class FragilityModel(djm.Model):

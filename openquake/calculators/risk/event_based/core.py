@@ -26,7 +26,7 @@ from openquake.utils import tasks, stats
 from openquake import logs
 from openquake.calculators import base
 
-from risklib import api, event_based as eb
+from risklib import api, scientific
 
 
 @tasks.oqtask
@@ -134,7 +134,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         tses, time_span = self.hazard_times()
 
-        aggregate_loss_curve = eb._loss_curve(
+        aggregate_loss_curve = scientific.event_based(
             curve_data.losses, tses, time_span,
             curve_resolution=self.rc.loss_curve_resolution)
 
