@@ -17,8 +17,8 @@
 import os
 import unittest
 
+import numpy
 from risklib import api
-from risklib import scenario
 from risklib import scientific
 from risklib.tests.utils import vectors_from_csv
 
@@ -132,8 +132,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         self.assertTrue(asset_output.standard_deviation > 259.964152622)
 
-        total_losses = scenario.aggregate_losses(
-            [calculator.aggregate_losses])
+        total_losses = (numpy.mean(calculator.aggregate_losses),
+                        numpy.std(calculator.aggregate_losses))
 
         self.assertAlmostEqual(1233.26,
             total_losses[0], delta=0.05 * 1233.26)
