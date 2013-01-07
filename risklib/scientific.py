@@ -145,6 +145,9 @@ class VulnerabilityFunction(object):
         means = self._mlr_i1d(imls)
 
         # apply uncertainty
+
+        # FIXME (lp). Refactor me. This stuff should be in a separate
+        # class
         if (self.covs > 0).any():
             covs = self._cov_for(imls)
             stddevs = covs * imls
@@ -152,7 +155,7 @@ class VulnerabilityFunction(object):
             if self.distribution == 'BT':
                 alpha = _alpha_value(means, stddevs)
                 beta = _beta_value(means, stddevs)
-                values = stats.beta.sf(means, alpha, beta)
+                values = numpy.random.beta(alpha, beta, size=None)
             elif self.distribution == 'LN':
                 variance = (means * covs) ** 2
                 epsilon = self.epsilon_provider.epsilon(
