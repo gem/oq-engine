@@ -107,8 +107,8 @@ class Classical(object):
         self.vulnerability_model = vulnerability_model
         self.steps = steps
         self.matrices = dict(
-            (taxonomy, classical._loss_ratio_exceedance_matrix(
-                vulnerability_function, steps))
+            (taxonomy,
+             vulnerability_function.loss_ratio_exceedance_matrix(steps))
             for taxonomy, vulnerability_function
             in vulnerability_model.iteritems())
 

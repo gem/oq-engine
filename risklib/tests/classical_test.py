@@ -14,14 +14,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import itertools
 import numpy
 
 from risklib.curve import Curve
 from risklib import scientific
 from risklib.classical import (
-    _loss_ratio_exceedance_matrix,
-    _loss_ratio_curve, _alpha_value, _beta_value,
+    _loss_ratio_curve,
     _conditional_loss, _loss_ratio_exceedance_matrix_per_poos,
     _evenly_spaced_loss_ratios)
 
@@ -33,21 +31,6 @@ class ClassicalTestCase(unittest.TestCase):
         self.imls = [0.100, 0.200, 0.300, 0.450, 0.600]
         self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
         self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
-
-    def test_alpha_value(self):
-        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
-        alphas = [
-            _alpha_value(mean_loss_ratio, stddev) for mean_loss_ratio,
-            stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-
-        numpy.testing.assert_allclose(alphas, expected_alphas, atol=0.0002)
-
-    def test_beta_value(self):
-        expected_betas = [71.250, 49.725, 34.755555, 21.900, 4.800]
-        betas = [_beta_value(mean_loss_ratio, stddev) for mean_loss_ratio,
-                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
-
-        numpy.testing.assert_allclose(betas, expected_betas)
 
     def test_loss_is_zero_if_probability_is_too_high(self):
         loss_curve = Curve([
@@ -126,10 +109,10 @@ class ClassicalTestCase(unittest.TestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0027925],
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
-        vulnerability_function = scientific.VulnerabilityFunction(
+        vf = scientific.VulnerabilityFunction(
             self.imls, self.mean_loss_ratios, self.covs, "BT", "RC")
 
-        lrem = _loss_ratio_exceedance_matrix(vulnerability_function, 5)
+        lrem = vf.loss_ratio_exceedance_matrix(5)
         numpy.testing.assert_allclose(
             expected_lrem, lrem, rtol=0.0, atol=0.0005)
 
@@ -149,7 +132,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         # pre computed values just use one intermediate
         # values between the imls, so steps=2
-        lrem = _loss_ratio_exceedance_matrix(vuln_function, 2)
+        lrem = vuln_function.loss_ratio_exceedance_matrix(2)
         lrem_po = _loss_ratio_exceedance_matrix_per_poos(
             vuln_function, lrem, hazard_curve)
 

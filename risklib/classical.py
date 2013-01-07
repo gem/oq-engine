@@ -13,83 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from math import exp
-from scipy import sqrt, log, stats
 from numpy import array, empty, concatenate, linspace
 
 from risklib.curve import Curve
-
-
-def _loss_ratio_exceedance_matrix(vuln_function, steps):
-    """Compute the LREM (Loss Ratio Exceedance Matrix).
-
-    :param vuln_function:
-        The vulnerability function used to compute the LREM.
-    :type vuln_function:
-        :class:`risklib.vulnerability_function.VulnerabilityFunction`
-    :param int steps:
-        Number of steps between loss ratios.
-    """
-    loss_ratios = _evenly_spaced_loss_ratios(
-        vuln_function.mean_loss_ratios, steps, [0.0], [1.0])
-
-    # LREM has number of rows equal to the number of loss ratios
-    # and number of columns equal to the number of imls
-    lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
-
-    for row, loss_ratio in enumerate(loss_ratios):
-        for col in range(vuln_function.resolution):
-            mean_loss_ratio = vuln_function.mean_loss_ratios[col]
-            loss_ratio_stddev = vuln_function.stddevs[col]
-
-            if vuln_function.distribution == "BT":
-                lrem[row][col] = stats.beta.sf(
-                    loss_ratio,
-                    _alpha_value(mean_loss_ratio, loss_ratio_stddev),
-                    _beta_value(mean_loss_ratio, loss_ratio_stddev))
-            elif vuln_function.distribution == "LN":
-                variance = loss_ratio_stddev ** 2.0
-                sigma = sqrt(log((variance / mean_loss_ratio ** 2.0) + 1.0))
-                mu = exp(log(mean_loss_ratio ** 2.0 /
-                             sqrt(variance + mean_loss_ratio ** 2.0)))
-                lrem[row][col] = stats.lognorm.sf(loss_ratio, sigma, scale=mu)
-
-    return lrem
-
-
-def _alpha_value(mean_loss_ratio, stddev):
-    """
-    Compute alpha value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed alpha value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            mean_loss_ratio ** 2)
-
-
-def _beta_value(mean_loss_ratio, stddev):
-    """
-    Compute beta value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed beta value
-    """
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            (mean_loss_ratio - mean_loss_ratio ** 2))
 
 
 def _conditional_loss(curve, probability):

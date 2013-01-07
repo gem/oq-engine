@@ -28,6 +28,7 @@ import numpy
 from scipy import interpolate, stats
 
 from risklib import curve
+from risklib import classical
 
 ###
 ### Constants & Defaults
@@ -149,9 +150,8 @@ class VulnerabilityFunction(object):
             stddevs = covs * imls
 
             if self.distribution == 'BT':
-                from risklib import classical
-                alpha = classical._alpha_value(means, stddevs)
-                beta = classical._beta_value(means, stddevs)
+                alpha = _alpha_value(means, stddevs)
+                beta = _beta_value(means, stddevs)
                 values = stats.beta.sf(means, alpha, beta)
             elif self.distribution == 'LN':
                 variance = (means * covs) ** 2
@@ -167,6 +167,50 @@ class VulnerabilityFunction(object):
             ret[idxs] = means
 
         return ret
+
+    def loss_ratio_exceedance_matrix(
+            self, curve_resolution=DEFAULT_CURVE_RESOLUTION):
+        """Compute the LREM (Loss Ratio Exceedance Matrix).
+
+        :param vuln_function:
+            The vulnerability function used to compute the LREM.
+        :type vuln_function:
+            :class:`risklib.vulnerability_function.VulnerabilityFunction`
+        :param int steps:
+            Number of steps between loss ratios.
+        """
+        loss_ratios = classical._evenly_spaced_loss_ratios(
+            self.mean_loss_ratios, curve_resolution, [0.0], [1.0])
+
+        # LREM has number of rows equal to the number of loss ratios
+        # and number of columns equal to the number of imls
+        lrem = numpy.empty((loss_ratios.size, self.imls.size), float)
+
+        for row, loss_ratio in enumerate(loss_ratios):
+            for col in range(self.resolution):
+                mean_loss_ratio = self.mean_loss_ratios[col]
+                loss_ratio_stddev = self.stddevs[col]
+
+                # FIXME(lp): Refactor this out
+                if self.distribution == "BT":
+                    lrem[row][col] = stats.beta.sf(
+                        loss_ratio,
+                        _alpha_value(
+                            mean_loss_ratio, loss_ratio_stddev),
+                        _beta_value(
+                            mean_loss_ratio, loss_ratio_stddev))
+                elif self.distribution == "LN":
+                    variance = loss_ratio_stddev ** 2.0
+                    sigma = numpy.sqrt(
+                        numpy.log((variance / mean_loss_ratio ** 2.0) + 1.0))
+                    mu = numpy.exp(
+                        numpy.log(
+                            mean_loss_ratio ** 2.0 /
+                            numpy.sqrt(variance + mean_loss_ratio ** 2.0)))
+                    lrem[row][col] = stats.lognorm.sf(
+                        loss_ratio, sigma, scale=mu)
+
+        return lrem
 
     def mean_imls(self):
         """
@@ -215,6 +259,42 @@ ScenarioRiskOutput = collections.namedtuple(
 ##
 ## Sampling
 ##
+
+
+def _alpha_value(mean_loss_ratio, stddev):
+    """
+    Compute alpha value
+
+    :param mean_loss_ratio: current loss ratio
+    :type mean_loss_ratio: float
+
+    :param stdev: current standard deviation
+    :type stdev: float
+
+
+    :returns: computed alpha value
+    """
+
+    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
+            mean_loss_ratio ** 2)
+
+
+def _beta_value(mean_loss_ratio, stddev):
+    """
+    Compute beta value
+
+    :param mean_loss_ratio: current loss ratio
+    :type mean_loss_ratio: float
+
+    :param stdev: current standard deviation
+    :type stdev: float
+
+
+    :returns: computed beta value
+    """
+    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
+            (mean_loss_ratio - mean_loss_ratio ** 2))
+
 
 class EpsilonProvider(object):
     """
