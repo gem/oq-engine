@@ -119,10 +119,12 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job)] +
+                        loss_curve__output__oq_job=job).order_by(
+                            'asset_ref')] +
                 [point.value
                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job)])
+                        loss_map__output__oq_job=job).order_by(
+                            'asset_ref')])
 
     def expected_data(self):
         return [[
@@ -131,7 +133,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
             0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40,
             0.48, 0.56, 0.64, 0.72, 0.80, 0.84, 0.88,
             0.92, 0.96, 1.00],
-            0.264586283238, 0.141989823521, 0.0]
+            0, 0.141989823521, 0.264586283238]
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,
