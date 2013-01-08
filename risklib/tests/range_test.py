@@ -17,7 +17,7 @@
 import numpy
 import unittest
 
-from risklib.curve import Curve as cu
+from risklib.curve import Curve
 
 
 class RangeClipTestCase(unittest.TestCase):
@@ -26,15 +26,15 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_low_iml_values(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that low values are clipped to the lowest valid value in the
         IML range.
         """
-        self.assertEqual(0.005, cu.range_clip(0.0049, self.TEST_IMLS))
+        self.assertEqual(0.005, Curve.range_clip(0.0049, self.TEST_IMLS))
 
     def test_clip_low_imls_many_values(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that low values are clipped to the lowest valid value in the
         IML range.
         """
@@ -42,22 +42,22 @@ class RangeClipTestCase(unittest.TestCase):
         test_input = [0.0049, 0.00001, 0.002]
 
         self.assertTrue(numpy.allclose(expected_imls,
-            cu.range_clip(test_input, self.TEST_IMLS)))
+            Curve.range_clip(test_input, self.TEST_IMLS)))
         # same test, except with a numpy.array-type input:
         self.assertTrue(numpy.allclose(expected_imls,
-            cu.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS)))
 
     def test_clip_high_iml_values(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that the high values are clipped to the highest valid value in
         the IML range.
         """
-        self.assertEqual(0.0269, cu.range_clip(0.027, self.TEST_IMLS))
+        self.assertEqual(0.0269, Curve.range_clip(0.027, self.TEST_IMLS))
 
     def test_clip_high_imls_many_values(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that the high values are clipped to the highest valid value in
         the IML range.
         """
@@ -65,24 +65,24 @@ class RangeClipTestCase(unittest.TestCase):
         test_input = [0.027, 0.3, 10]
 
         self.assertTrue(numpy.allclose(expected_imls,
-            cu.range_clip(test_input, self.TEST_IMLS)))
+            Curve.range_clip(test_input, self.TEST_IMLS)))
         # same test, except with a numpy.array-type input:
         self.assertTrue(numpy.allclose(expected_imls,
-            cu.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS)))
 
     def test_clip_iml_with_normal_value(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that normal values (values within the defined IML range) are not
         changed.
         """
         valid_imls = numpy.array([0.005, 0.0051, 0.0268, 0.0269])
         for i in valid_imls:
-            self.assertEqual(i, cu.range_clip(i, valid_imls))
+            self.assertEqual(i, Curve.range_clip(i, valid_imls))
 
     def test_clip_imls_with_many_normal_values(self):
         """
-        Test :py:method:`risklib.range.cu.range_clip` to
+        Test :py:method:`risklib.range.Curve.range_clip` to
         ensure that normal values (values within the defined IML range) are not
         changed.
         """
@@ -90,7 +90,7 @@ class RangeClipTestCase(unittest.TestCase):
         expected_result = numpy.array(valid_imls)
 
         self.assertTrue(numpy.allclose(expected_result,
-            cu.range_clip(valid_imls, self.TEST_IMLS)))
+            Curve.range_clip(valid_imls, self.TEST_IMLS)))
         # same test, except with numpy.array-type input:
         self.assertTrue(numpy.allclose(expected_result,
-            cu.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
+            Curve.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
