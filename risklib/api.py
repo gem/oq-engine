@@ -15,7 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import scientific, classical, scenario_damage
+from risklib import scientific, scenario_damage
 from risklib.models import output
 
 
@@ -114,7 +114,7 @@ class Classical(object):
     def __call__(self, asset, hazard):
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
-        loss_ratio_curve = classical._loss_ratio_curve(
+        loss_ratio_curve = scientific.classical(
             vulnerability_function, self.matrices[asset.taxonomy],
             hazard, self.steps)
 
@@ -178,7 +178,7 @@ class ConditionalLosses(object):
     def __call__(self, asset, hazard):
         asset_output = self.loss_curve_calculator(asset, hazard)
         cl = dict((poe,
-                   classical._conditional_loss(asset_output.loss_curve, poe))
+                   scientific.conditional_loss(asset_output.loss_curve, poe))
                   for poe in self.conditional_loss_poes)
         return asset_output._replace(conditional_losses=cl)
 

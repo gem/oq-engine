@@ -28,14 +28,12 @@ import numpy
 from scipy import interpolate, stats
 
 from risklib import curve
-from risklib import classical
 
 ###
 ### Constants & Defaults
 ###
 
 DEFAULT_CURVE_RESOLUTION = 50
-
 
 
 ##
@@ -182,7 +180,7 @@ class VulnerabilityFunction(object):
         :param int steps:
             Number of steps between loss ratios.
         """
-        loss_ratios = classical._evenly_spaced_loss_ratios(
+        loss_ratios = _evenly_spaced_loss_ratios(
             self.mean_loss_ratios, curve_resolution, [0.0], [1.0])
 
         # LREM has number of rows equal to the number of loss ratios
@@ -226,7 +224,7 @@ class VulnerabilityFunction(object):
            :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
         """
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
-                [numpy.mean(x) for x in zip(self.imls, self.imls[1:])] +
+                [numpy.mean(x) for x in pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
@@ -408,9 +406,109 @@ def event_based(loss_values, tses, time_span,
     return curve.Curve(zip(values, reference_poes))
 
 
+##
+## Classical
+##
+
+def classical(vuln_function, lrem, hazard_curve_values, steps):
+    """Compute a loss ratio curve for a specific hazard curve (e.g., site),
+    by applying a given vulnerability function.
+
+    A loss ratio curve is a function that has loss ratios as X values
+    and PoEs (Probabilities of Exceendance) as Y values.
+
+    This is the main (and only) public function of this module.
+
+    :param vuln_function: the vulnerability function used
+        to compute the curve.
+    :type vuln_function: :py:class:`risklib.scientific.VulnerabilityFunction`
+    :param hazard_curve_values: the hazard curve used to compute the curve.
+    :type hazard_curve_values: an association list with the
+    imls/values of the hazard curve
+    :param int steps:
+        Number of steps between loss ratios.
+    """
+    lrem_po = _loss_ratio_exceedance_matrix_per_poos(
+        vuln_function, lrem, hazard_curve_values)
+    loss_ratios = _evenly_spaced_loss_ratios(
+        vuln_function.mean_loss_ratios, steps, [0.0], [1.0])
+    return curve.Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
+
+
+def _loss_ratio_exceedance_matrix_per_poos(
+        vuln_function, lrem, hazard_curve_values):
+    """Compute the LREM * PoOs (Probability of Occurence) matrix.
+
+    :param vuln_function: the vulnerability function used
+        to compute the matrix.
+    :type vuln_function: :py:class:`risklib.scientific.VulnerabilityFunction`
+    :param hazard_curve: the hazard curve used to compute the matrix.
+    :type hazard_curve_values: an association list with the hazard
+    curve imls/values
+    :param lrem: the LREM used to compute the matrix.
+    :type lrem: 2-dimensional :py:class:`numpy.ndarray`
+    """
+    lrem = numpy.array(lrem)
+    lrem_po = numpy.empty(lrem.shape)
+    imls = vuln_function.mean_imls()
+    if hazard_curve_values:
+        # compute the PoOs (Probability of Occurence) from the PoEs
+        pos = curve.Curve(hazard_curve_values).ordinate_diffs(imls)
+        for idx, po in enumerate(pos):
+            lrem_po[:, idx] = lrem[:, idx] * po  # column * po
+    return lrem_po
+
+
+def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
+    """
+    Split the loss ratios, producing a new set of loss ratios.
+
+    :param loss_ratios: the loss ratios to split.
+    :type loss_ratios: list of floats
+    :param int steps: the number of steps we make to go from one loss
+        ratio to the next. For example, if we have [1.0, 2.0]:
+
+        steps = 1 produces [1.0, 2.0]
+        steps = 2 produces [1.0, 1.5, 2.0]
+        steps = 3 produces [1.0, 1.33, 1.66, 2.0]
+    :param first: optional array of ratios to put first (ex. [0.0])
+    :param last: optional array of ratios to put last (ex. [1.0])
+    """
+    loss_ratios = numpy.concatenate([first, loss_ratios, last])
+    ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
+                      for x, y in pairwise(loss_ratios)])
+    return numpy.concatenate([ls, [loss_ratios[-1]]])
+
+
+def conditional_loss(a_curve, probability):
+    """
+    Return the loss (or loss ratio) corresponding to the given
+    PoE (Probability of Exceendance).
+
+    Return the max loss (or loss ratio) if the given PoE is smaller
+    than the lowest PoE defined.
+
+    Return zero if the given PoE is greater than the
+    highest PoE defined.
+    """
+    # the loss curve is always decreasing
+    if a_curve.ordinate_out_of_bounds(probability):
+        if probability < a_curve.ordinates[-1]:  # min PoE
+            return a_curve.abscissae[-1]  # max loss
+        else:
+            return 0.0
+
+    return a_curve.abscissa_for(probability)
+
+
 ###
 ### Calculator modifiers
 ###
+
+
+##
+## Insured Losses
+##
 
 
 def insured_losses(asset, losses, tses, timespan, curve_resolution):
@@ -460,28 +558,21 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def mean(values):
-    "Averages between a value and the next value in a sequence"
-    return map(numpy.mean, zip(values, values[1:]))
-
-
-def diff(values):
-    "Differences between a value and the next value in a sequence"
-    return [x - y for x, y in zip(values, values[1:])]
-
-
-def mean_loss(curve):
+def mean_loss(a_curve):
     """
     Compute the mean loss (or loss ratio) for the given curve.
     For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
     (x4, y4)], returns
 
-      x1 + 2x2 + x3  y1 - y3    x2 + 2x3 + x4  y2 - y4
-    [(-------------, -------), (-------------, -------)]
-           4             2            4           4
+     x1 + 2x2 + x3  y1 - y3     x2 + 2x3 + x4  y2 - y4
+    (-------------, -------) . (-------------, -------)
+           4           2              4           4
     """
-    mean_ratios = mean(mean(curve.abscissae))  # not clear why it is done twice
-    mean_pes = diff(mean(curve.ordinates))
+    # FIXME. Needs more documentation.
+    mean_ratios = pairwise_mean(
+        pairwise_mean(a_curve.abscissae))
+    mean_pes = pairwise_diff(
+        pairwise_mean(a_curve.ordinates))
     return numpy.dot(mean_ratios, mean_pes)
 
 
@@ -495,3 +586,13 @@ def pairwise(iterable):
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
     return itertools.izip(a, b)  # if a is empty will return an empty iter
+
+
+def pairwise_mean(values):
+    "Averages between a value and the next value in a sequence"
+    return [numpy.mean(x) for x in pairwise(values)]
+
+
+def pairwise_diff(values):
+    "Differences between a value and the next value in a sequence"
+    return [x - y for x, y in pairwise(values)]
