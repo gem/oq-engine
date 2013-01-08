@@ -90,12 +90,10 @@ class GroundMotionValuesGetter(object):
         number of seismicity histories.
     """
 
-    def __init__(self, hazard_output_id, imt, time_span, tses):
+    def __init__(self, hazard_output_id, imt):
         imt, sa_period, sa_damping = models.parse_imt(imt)
 
         self._imt = imt
-        self._tses = tses
-        self._time_span = time_span
         self._sa_period = sa_period
         self._sa_damping = sa_damping
         self._hazard_output_id = hazard_output_id
@@ -174,13 +172,9 @@ class GroundMotionValuesGetter(object):
                     break
             ground_motion_values.extend(data[0])
 
-        # FIXME(lp): temporary format, to be changed.
-        # Do these values depends on the site?
-        result = {"IMLs": ground_motion_values,
-            "TimeSpan": self._time_span, "TSES": self._tses}
+        self._cache[site.wkt] = ground_motion_values
 
-        self._cache[site.wkt] = result
-        return result
+        return ground_motion_values
 
 
 HAZARD_GETTERS = dict(
