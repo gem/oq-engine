@@ -16,7 +16,6 @@
 
 import numpy
 from risklib import scientific, scenario_damage
-from risklib.models import output
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -53,7 +52,7 @@ def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
     :type calculator: `callable` that accepts as first parameter an
         instance of `risklib.models.input.Asset` and as second parameter the
         hazard input. It returns an instance of
-        `risklib.models.output.*Output` with the results of the
+        `risklib.scientific.*Output` with the results of the
         computation for the given asset
     """
 
@@ -86,7 +85,7 @@ def compute_on_assets(assets, hazard_getter, calculator):
     :type calculator: `callable` that accepts as first parameter an
         instance of `risklib.models.input.Asset` and as second parameter the
         hazard input. It returns an instance of
-        `risklib.models.output.*Output` with the results of the
+        `risklib.scientific.*Output` with the results of the
         computation for the given asset
     """
 
@@ -120,7 +119,7 @@ class Classical(object):
 
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
-        return output.ClassicalOutput(
+        return scientific.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
 
 
@@ -158,7 +157,7 @@ class ScenarioDamage(object):
 
         asset_fractions = self._fractions_per_taxonomy.get(taxonomy, ddmatrix)
         self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
-        return output.ScenarioDamageOutput(
+        return scientific.ScenarioDamageOutput(
             asset, damage_distribution_asset, collapse_map)
 
     @property
@@ -210,7 +209,7 @@ class BCR(object):
             annual_loss_retrofitted, self.interest_rate,
             self.asset_life_expectancy, asset.retrofitting_cost)
 
-        return output.BCROutput(
+        return scientific.BCROutput(
             asset, bcr, annual_loss_original, annual_loss_retrofitted)
 
 
@@ -261,7 +260,7 @@ class ProbabilisticEventBased(object):
 
         self._aggregate_losses += losses
 
-        return output.ProbabilisticEventBasedOutput(
+        return scientific.ProbabilisticEventBasedOutput(
             asset, losses, loss_ratio_curve, loss_curve,
             None, None, None, None)
 
@@ -324,7 +323,7 @@ class ScenarioRisk(object):
 
         self._aggregate_losses += losses
 
-        return output.ScenarioRiskOutput(asset, numpy.mean(losses),
+        return scientific.ScenarioRiskOutput(asset, numpy.mean(losses),
                                          numpy.std(losses, ddof=1))
 
     @property
