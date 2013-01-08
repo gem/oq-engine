@@ -26,7 +26,7 @@ from openquake.utils import tasks, stats
 from openquake import logs
 from openquake.calculators import base
 
-from risklib import api, event_based as eb
+from risklib import api, scientific
 
 
 @tasks.oqtask
@@ -45,11 +45,13 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     # FIXME(lp): refactor risklib. there is no reason to propagate
     # time_span and tses in an hazard getter
     hazard_getter = general.hazard_getter(
-        hazard_getter, hazard_id, imt, time_span, tses)
+        hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
         vulnerability_model,
         curve_resolution=loss_curve_resolution,
+        time_span=time_span,
+        tses=tses,
         seed=seed,
         correlation_type=asset_correlation)
 
@@ -134,7 +136,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         tses, time_span = self.hazard_times()
 
-        aggregate_loss_curve = eb._loss_curve(
+        aggregate_loss_curve = scientific.event_based(
             curve_data.losses, tses, time_span,
             curve_resolution=self.rc.loss_curve_resolution)
 
