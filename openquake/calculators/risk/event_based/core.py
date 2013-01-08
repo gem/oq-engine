@@ -45,11 +45,13 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     # FIXME(lp): refactor risklib. there is no reason to propagate
     # time_span and tses in an hazard getter
     hazard_getter = general.hazard_getter(
-        hazard_getter, hazard_id, imt, time_span, tses)
+        hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
         vulnerability_model,
         curve_resolution=loss_curve_resolution,
+        time_span=time_span,
+        tses=tses,
         seed=seed,
         correlation_type=asset_correlation)
 
