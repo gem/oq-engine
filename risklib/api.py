@@ -15,9 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import (classical, event_based, scenario_damage,
-                     benefit_cost_ratio, insured_loss)
-from risklib.models import output
+from risklib import scientific, scenario_damage
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -54,7 +52,7 @@ def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
     :type calculator: `callable` that accepts as first parameter an
         instance of `risklib.models.input.Asset` and as second parameter the
         hazard input. It returns an instance of
-        `risklib.models.output.*Output` with the results of the
+        `risklib.scientific.*Output` with the results of the
         computation for the given asset
     """
 
@@ -87,7 +85,7 @@ def compute_on_assets(assets, hazard_getter, calculator):
     :type calculator: `callable` that accepts as first parameter an
         instance of `risklib.models.input.Asset` and as second parameter the
         hazard input. It returns an instance of
-        `risklib.models.output.*Output` with the results of the
+        `risklib.scientific.*Output` with the results of the
         computation for the given asset
     """
 
@@ -107,21 +105,21 @@ class Classical(object):
         self.vulnerability_model = vulnerability_model
         self.steps = steps
         self.matrices = dict(
-            (taxonomy, classical._loss_ratio_exceedance_matrix(
-                vulnerability_function, steps))
+            (taxonomy,
+             vulnerability_function.loss_ratio_exceedance_matrix(steps))
             for taxonomy, vulnerability_function
             in vulnerability_model.iteritems())
 
     def __call__(self, asset, hazard):
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
-        loss_ratio_curve = classical._loss_ratio_curve(
+        loss_ratio_curve = scientific.classical(
             vulnerability_function, self.matrices[asset.taxonomy],
             hazard, self.steps)
 
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
-        return output.ClassicalOutput(
+        return scientific.ClassicalOutput(
             asset, loss_ratio_curve, loss_curve, None)
 
 
@@ -159,7 +157,7 @@ class ScenarioDamage(object):
 
         asset_fractions = self._fractions_per_taxonomy.get(taxonomy, ddmatrix)
         self._fractions_per_taxonomy[taxonomy] = asset_fractions + fractions
-        return output.ScenarioDamageOutput(
+        return scientific.ScenarioDamageOutput(
             asset, damage_distribution_asset, collapse_map)
 
     @property
@@ -179,7 +177,7 @@ class ConditionalLosses(object):
     def __call__(self, asset, hazard):
         asset_output = self.loss_curve_calculator(asset, hazard)
         cl = dict((poe,
-                   classical._conditional_loss(asset_output.loss_curve, poe))
+                   scientific.conditional_loss(asset_output.loss_curve, poe))
                   for poe in self.conditional_loss_poes)
         return asset_output._replace(conditional_losses=cl)
 
@@ -200,18 +198,18 @@ class BCR(object):
         self.asset_life_expectancy = asset_life_expectancy
 
     def __call__(self, asset, hazard):
-        annual_loss_original = benefit_cost_ratio.mean_loss(
+        annual_loss_original = scientific.mean_loss(
             self.lcc_original(asset, hazard).loss_curve)
 
-        annual_loss_retrofitted = benefit_cost_ratio.mean_loss(
+        annual_loss_retrofitted = scientific.mean_loss(
             self.lcc_retrofitted(asset, hazard).loss_curve)
 
-        bcr = benefit_cost_ratio.bcr(
+        bcr = scientific.bcr(
             annual_loss_original,
             annual_loss_retrofitted, self.interest_rate,
             self.asset_life_expectancy, asset.retrofitting_cost)
 
-        return output.BCROutput(
+        return scientific.BCROutput(
             asset, bcr, annual_loss_original, annual_loss_retrofitted)
 
 
@@ -227,12 +225,16 @@ class ProbabilisticEventBased(object):
     """
 
     def __init__(
-            self, vulnerability_model, seed=None, correlation_type=None,
-            curve_resolution=event_based.DEFAULT_CURVE_RESOLUTION):
+            self, vulnerability_model,
+            time_span, tses,
+            seed=None, correlation_type=None,
+            curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
+        self.time_span = time_span
+        self.tses = tses
         self.curve_resolution = curve_resolution
 
         self.loss_ratios = None
@@ -243,14 +245,14 @@ class ProbabilisticEventBased(object):
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
         if self._aggregate_losses is None:
-            self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
+            self._aggregate_losses = numpy.zeros(len(hazard))
+        vulnerability_function.seed(
+            self.seed, self.correlation_type, taxonomies)
+        self.loss_ratios = vulnerability_function(hazard)
 
-        self.loss_ratios = event_based._compute_loss_ratios(
-            vulnerability_function, hazard, asset, self.seed,
-            self.correlation_type, taxonomies)
-
-        loss_ratio_curve = event_based._loss_curve(
-            self.loss_ratios, hazard['TSES'], hazard['TimeSpan'],
+        loss_ratio_curve = scientific.event_based(
+            self.loss_ratios,
+            tses=self.tses, time_span=self.time_span,
             curve_resolution=self.curve_resolution)
 
         losses = self.loss_ratios * asset.value
@@ -258,7 +260,7 @@ class ProbabilisticEventBased(object):
 
         self._aggregate_losses += losses
 
-        return output.ProbabilisticEventBasedOutput(
+        return scientific.ProbabilisticEventBasedOutput(
             asset, losses, loss_ratio_curve, loss_curve,
             None, None, None, None)
 
@@ -277,9 +279,9 @@ class InsuredLosses(object):
     def __call__(self, asset, hazard):
         asset_output = self.losses_calculator(asset, hazard)
 
-        loss_curve = insured_loss.compute_insured_losses(
+        loss_curve = scientific.insured_losses(
             asset, self.losses_calculator.loss_ratios * asset.value,
-            hazard['TSES'], hazard['TimeSpan'],
+            self.losses_calculator.tses, self.losses_calculator.time_span,
             self.losses_calculator.curve_resolution)
 
         return asset_output._replace(
@@ -309,18 +311,19 @@ class ScenarioRisk(object):
         taxonomies = self.vulnerability_model.keys()
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
+        vulnerability_function.seed(
+            self.seed, self.correlation_type, taxonomies)
+
         if self._aggregate_losses is None:
             self._aggregate_losses = numpy.zeros(len(hazard))
 
-        loss_ratios = event_based._compute_loss_ratios(
-            vulnerability_function, {"IMLs": hazard}, asset,
-            self.seed, self.correlation_type, taxonomies)
+        loss_ratios = vulnerability_function(hazard)
 
         losses = loss_ratios * asset.value
 
         self._aggregate_losses += losses
 
-        return output.ScenarioRiskOutput(asset, numpy.mean(losses),
+        return scientific.ScenarioRiskOutput(asset, numpy.mean(losses),
                                          numpy.std(losses, ddof=1))
 
     @property

@@ -19,8 +19,7 @@ import unittest
 
 from risklib import api
 from risklib import curve
-from risklib.models import input
-from risklib import vulnerability_function
+from risklib import scientific
 
 
 class ClassicalTestCase(unittest.TestCase):
@@ -46,15 +45,15 @@ class ClassicalTestCase(unittest.TestCase):
     def test_lognormal_distribution(self):
 
         vulnerability_model = {"VF":
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN")}
+            [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF")}
 
         calculator = api.ConditionalLosses([0.01, 0.02, 0.05],
             api.Classical(vulnerability_model, steps=5))
 
         asset_output = calculator(
-            input.Asset("a1", "VF", 2, None), self.hazard_curve)
+            scientific.Asset("a1", "VF", 2, None), self.hazard_curve)
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -96,9 +95,9 @@ class ClassicalTestCase(unittest.TestCase):
     def test_beta_distribution(self):
 
         vulnerability_model = {"VF":
-            vulnerability_function.VulnerabilityFunction(
+            scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "BT")}
+            [0.5, 0.4, 0.3, 0.2, 0.1], "BT", "VF")}
 
         calculator = api.ConditionalLosses([0.01],
             api.Classical(vulnerability_model, steps=5))
@@ -106,7 +105,7 @@ class ClassicalTestCase(unittest.TestCase):
         value = 2 # the asset value
 
         asset_output = calculator(
-            input.Asset("a1", "VF", value, None), self.hazard_curve)
+            scientific.Asset("a1", "VF", value, None), self.hazard_curve)
 
         poes = [
             0.039334753367700, 0.039125428171600,

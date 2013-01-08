@@ -15,16 +15,23 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import mock
 import unittest
+import itertools
 
-from risklib import models
-from risklib.curve import EMPTY_CURVE
-from risklib.vulnerability_function import VulnerabilityFunction
-from risklib import event_based
+from risklib import scientific
 
 
-GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
+class EpsilonProvider(object):
+    def __init__(self):
+        self.epsilons = itertools.cycle([0.5377, 1.8339,
+            -2.2588, 0.8622, 0.3188, -1.3077,
+            -0.4336, 0.3426, 3.5784, 2.7694])
+
+    def epsilon(self, _, count):
+        return [self.epsilons.next() for _ in range(count)]
+
+
+GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
     0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
     0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
     0.012864, 0.001728, 0.06648, 0.000736, 0.01992, 0.011616,
@@ -58,25 +65,27 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
     0.008496, 0.069136, 0.011568, 0.01576, 0.01072, 0.002336,
     0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928,
     0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
-    0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
-    "TSES": 900, "TimeSpan": 50}
+    0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
+
+TSES = 900.
+TIMESPAN = 50.
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.vulnerability_function1 = VulnerabilityFunction(
+        self.vulnerability_function1 = scientific.VulnerabilityFunction(
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
-            [0.0] * 8, "LN"
-        )
+            [0.0] * 8, "LN", "RC")
+        self.vulnerability_function1.seed(3)
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
             4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1,
         ])
 
-        self.vulnerability_function2 = VulnerabilityFunction([
+        self.vulnerability_function2 = scientific.VulnerabilityFunction([
             0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
             0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
             0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
@@ -95,7 +104,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
-            1.0, 1.0, 1.0], [0.0] * 100, "LN")
+            1.0, 1.0, 1.0], [0.0] * 100, "LN", "RC")
+
+        self.vulnerability_function1.seed(4)
 
         self.gmf1 = {"IMLs": (
             0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -133,15 +144,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.3726, 0.0845, 0.1942, 0.4629, 0.1354,
             0.1109), "TSES": 200, "TimeSpan": 50}
 
-    def test_an_empty_function_produces_an_empty_set(self):
-        data = event_based._compute_loss_ratios(EMPTY_CURVE, GMF, None)
-        self.assertEqual(0, data.size)
-
     def test_an_empty_gmf_produces_an_empty_set(self):
-        data = event_based._compute_loss_ratios(
-            self.vulnerability_function1, {"IMLs": ()}, None)
-
-        self.assertEqual(0, data.size)
+        self.assertEqual(0, self.vulnerability_function1([]).size)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         """
@@ -149,34 +153,24 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IMLs inside range defined by Vulnerability function's imls.
         """
 
-        vulnerability_function = VulnerabilityFunction(
+        vulnerability_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN")
+            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
-
-        def fake_eps(_):
-            return epsilons.pop(0)
-
-        expected_asset = object()
-
-        gmf = {"IMLs": (
+        gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
             0.1419, 0.4218, 0.9157, 0.7922, 0.9595,
-        )}
+        )
 
         expected_loss_ratios = numpy.array([
             0.0722, 0.4106, 0.1800, 0.1710, 0.2508,
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-            ratios = event_based._compute_loss_ratios(
-                vulnerability_function, gmf, expected_asset)
-            self.assertTrue(numpy.allclose(expected_loss_ratios,
-                                           ratios, atol=0.0, rtol=0.01))
+        vulnerability_function.epsilon_provider = EpsilonProvider()
+        ratios = vulnerability_function(gmf)
+        numpy.testing.assert_allclose(expected_loss_ratios,
+                                      ratios, atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmf_less_than_first_vulnimls(self):
         """
@@ -185,32 +179,20 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         values are less than the lower bound.
         """
 
-        vuln_function = VulnerabilityFunction(
+        vuln_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN")
+            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
 
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
+        vuln_function.epsilon_provider = EpsilonProvider()
 
-        def fake_eps(_):
-            return epsilons.pop(0)
+        gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
-        expected_asset = object()
-
-        gmfs = {"IMLs": (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
-                         0.1419, 0.4218, 0.9157, 0.05, 0.9595)}
-
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-
-            self.assertTrue(
-                numpy.allclose(
-                    numpy.array([0.0, 0.3176, 0.4049, 0.0902,
-                                 0.2793, 0.0636, 0.0932, 0.2472,
-                                 0.0, 0.3020]),
-                    event_based._compute_loss_ratios(
-                                    vuln_function, gmfs,
-                                    expected_asset), atol=0.0, rtol=0.01))
+        numpy.testing.assert_allclose(
+            numpy.array([0.0, 0.3176, 0.4049, 0.0902,
+                         0.2793, 0.0636, 0.0932, 0.2472,
+                         0.0, 0.3020]),
+            vuln_function(gmfs), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -222,29 +204,18 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
-        vuln_function = VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN")
+        vuln_function = scientific.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN", "RC")
 
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-                    -0.4336, 0.3426, 3.5784, 2.7694]
+        gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 1.05, 0.9595)
+        vuln_function.epsilon_provider = EpsilonProvider()
 
-        def fake_eps(_):
-            return epsilons.pop(0)
-
-        expected_asset = object()
-
-        gmfs = {"IMLs": (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
-                         0.1419, 0.4218, 0.9157, 1.05, 0.9595)}
-
-        with mock.patch("risklib.event_based.EpsilonProvider.epsilon") as eps:
-            eps.side_effect = fake_eps
-            self.assertTrue(
-                numpy.allclose(
-                    numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
-                                 0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                    event_based._compute_loss_ratios(
-                        vuln_function, gmfs, expected_asset),
-                    atol=0.0, rtol=0.01))
+        numpy.testing.assert_allclose(
+                numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
+                    0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
+                    vuln_function(gmfs),
+                atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -262,13 +233,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(numpy.array([0.0, 0.0, 0.0]),
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None))
+            self.vulnerability_function1([0.0001, 0.0002, 0.0003]))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(numpy.array([0.700, 0.700]),
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                {"IMLs": (0.525, 0.530)}, None, None))
+            self.vulnerability_function1([0.525, 0.530]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -357,51 +326,34 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            event_based._compute_loss_ratios(self.vulnerability_function1,
-                                             GMF, None, None))
+            self.vulnerability_function1(GMF))
 
     def test_constant(self):
         expected = [10] * 100
-        actual = event_based._loss_curve(expected, 50, 50, 11)
+        actual = scientific.event_based(expected, 50, 50, 11)
 
         numpy.testing.assert_allclose([10] * 11, actual.abscissae)
         numpy.testing.assert_allclose(
             numpy.arange(0, 1.1, 0.1), actual.ordinates)
 
-    def test_probs_of_exceedance(self):
-        expected_poes = [
-            0.99801517, 0.92235092, 0.76412292, 0.63212056,
-            0.54057418, 0.48658288, 0.35881961, 0.32219042,
-            0.32219042, 0.28346869, 0.24253487, 0.19926260,
-            0.19926260, 0.19926260, 0.19926260, 0.19926260,
-            0.10516068, 0.05404053, 0.05404053, 0.05404053,
-            0.05404053, 0.05404053, 0.05404053, 0.05404053,
-        ]
-
-        numpy.testing.assert_allclose(
-            expected_poes,
-            event_based._probs_of_exceedance(
-                self.exceeding_times / float(GMF["TSES"]), GMF["TimeSpan"]),
-            atol=0.001)
-
 
 class EpsilonProviderTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.epsilon_provider1 = event_based.EpsilonProvider()
-        self.epsilon_provider2 = event_based.EpsilonProvider(
-            correlation_type=event_based.PERFECTLY_CORRELATED,
+        self.epsilon_provider1 = scientific.EpsilonProvider()
+        self.epsilon_provider2 = scientific.EpsilonProvider(
+            correlation_type="perfect",
             taxonomies=["a", "b"])
         self.assets = [
-            models.input.Asset(None, "a", None, None),
-            models.input.Asset(None, "b", None, None),
-            models.input.Asset(None, "a", None, None),
+            scientific.Asset(None, "a", None, None),
+            scientific.Asset(None, "b", None, None),
+            scientific.Asset(None, "a", None, None),
         ]
 
     def test_uncorrelated(self):
         samples = []
         for asset in self.assets:
-            sample = self.epsilon_provider1.epsilon(asset)
+            sample = self.epsilon_provider1.epsilon(asset.taxonomy)
             self.assertTrue(sample not in samples,
                             "%s is already in %s" % (sample, samples))
             self.assertTrue(isinstance(sample, float),
@@ -411,7 +363,7 @@ class EpsilonProviderTestCase(unittest.TestCase):
     def test_correlated(self):
         samples = dict()
         for asset in self.assets:
-            sample = self.epsilon_provider2.epsilon(asset)
+            sample = self.epsilon_provider2.epsilon(asset.taxonomy)
             taxonomy = asset.taxonomy
             # This is either the first time we see this taxonomy or the sample
             # is identical to the one originally drawn for this taxonomy.
