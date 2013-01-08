@@ -227,12 +227,16 @@ class ProbabilisticEventBased(object):
     """
 
     def __init__(
-            self, vulnerability_model, seed=None, correlation_type=None,
+            self, vulnerability_model,
+            time_span, tses,
+            seed=None, correlation_type=None,
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
+        self.time_span = time_span
+        self.tses = tses
         self.curve_resolution = curve_resolution
 
         self.loss_ratios = None
@@ -243,13 +247,14 @@ class ProbabilisticEventBased(object):
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
 
         if self._aggregate_losses is None:
-            self._aggregate_losses = numpy.zeros(len(hazard["IMLs"]))
+            self._aggregate_losses = numpy.zeros(len(hazard))
         vulnerability_function.seed(
             self.seed, self.correlation_type, taxonomies)
-        self.loss_ratios = vulnerability_function(hazard["IMLs"])
+        self.loss_ratios = vulnerability_function(hazard)
 
         loss_ratio_curve = scientific.event_based(
-            self.loss_ratios, hazard['TSES'], hazard['TimeSpan'],
+            self.loss_ratios,
+            tses=self.tses, time_span=self.time_span,
             curve_resolution=self.curve_resolution)
 
         losses = self.loss_ratios * asset.value
@@ -278,7 +283,7 @@ class InsuredLosses(object):
 
         loss_curve = scientific.insured_losses(
             asset, self.losses_calculator.loss_ratios * asset.value,
-            hazard['TSES'], hazard['TimeSpan'],
+            self.losses_calculator.tses, self.losses_calculator.time_span,
             self.losses_calculator.curve_resolution)
 
         return asset_output._replace(

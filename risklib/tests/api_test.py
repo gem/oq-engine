@@ -191,7 +191,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
     def test_event_based_calculator(self):
         asset = scientific.Asset("a1", "RC", 1.0, None)
-        hazard = {"IMLs": [0.11, 0.12, 0.13], "TSES": 1, "TimeSpan": 50}
+        hazard = [0.11, 0.12, 0.13]
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
@@ -199,7 +199,9 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         vulnerability_model = {"RC": function}
 
         asset_output = api.ProbabilisticEventBased(
-            vulnerability_model, 37, "perfect")(asset, hazard)
+            vulnerability_model,
+            seed=37, correlation_type="perfect", tses=1, time_span=50)(
+                asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)
 

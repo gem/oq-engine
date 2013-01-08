@@ -16,21 +16,19 @@
 
 import numpy
 import unittest
+import itertools
 
 from risklib import scientific
 
 
 class EpsilonProvider(object):
     def __init__(self):
-        self.epsilons = [0.5377, 1.8339,
+        self.epsilons = itertools.cycle([0.5377, 1.8339,
             -2.2588, 0.8622, 0.3188, -1.3077,
-            -0.4336, 0.3426, 3.5784, 2.7694]
+            -0.4336, 0.3426, 3.5784, 2.7694])
 
-    def epsilon(self, _, count=1):
-        if count == 1:
-            return self.epsilons.pop(0)
-        else:
-            return [self.epsilons.pop(0) for _ in range(count)]
+    def epsilon(self, _, count):
+        return [self.epsilons.next() for _ in range(count)]
 
 
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
