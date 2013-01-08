@@ -383,13 +383,6 @@ def event_based(loss_values, tses, time_span,
     """
     sorted_loss_values = numpy.sort(loss_values)[::-1]
 
-    def pairwise(iterable):
-        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-        a, b = itertools.tee(iterable)
-        # b ahead one step; if b is empty do not raise StopIteration
-        next(b, None)
-        return itertools.izip(a, b)  # if a is empty will return an empty iter
-
     # We compute the rates of exceedances by iterating over loss
     # values and counting the number of distinct loss values less than
     # the current loss. This is a workaround for a rounding error, ask Luigi
@@ -440,3 +433,65 @@ def insured_losses(asset, losses, tses, timespan, curve_resolution):
              numpy.ones(undeductible_losses.shape) * asset.ins_limit], 0)))
 
     return event_based(losses, tses, timespan, curve_resolution)
+
+##
+## Benefit Cost Ratio Analysis
+##
+
+
+def bcr(eal_original, eal_retrofitted, interest_rate,
+        asset_life_expectancy, retrofitting_cost):
+    """
+    Compute the Benefit-Cost Ratio.
+
+    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
+
+    Where:
+
+    * BCR -- Benefit cost ratio
+    * EALo -- Expected annual loss for original asset
+    * EALr -- Expected annual loss for retrofitted asset
+    * r -- Interest rate
+    * t -- Life expectancy of the asset
+    * C -- Retrofitting cost
+    """
+    return ((eal_original - eal_retrofitted)
+            * (1 - numpy.exp(- interest_rate * asset_life_expectancy))
+            / (interest_rate * retrofitting_cost))
+
+
+def mean(values):
+    "Averages between a value and the next value in a sequence"
+    return map(numpy.mean, zip(values, values[1:]))
+
+
+def diff(values):
+    "Differences between a value and the next value in a sequence"
+    return [x - y for x, y in zip(values, values[1:])]
+
+
+def mean_loss(curve):
+    """
+    Compute the mean loss (or loss ratio) for the given curve.
+    For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
+    (x4, y4)], returns
+
+      x1 + 2x2 + x3  y1 - y3    x2 + 2x3 + x4  y2 - y4
+    [(-------------, -------), (-------------, -------)]
+           4             2            4           4
+    """
+    mean_ratios = mean(mean(curve.abscissae))  # not clear why it is done twice
+    mean_pes = diff(mean(curve.ordinates))
+    return numpy.dot(mean_ratios, mean_pes)
+
+
+###
+### Utils
+###
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    # b ahead one step; if b is empty do not raise StopIteration
+    next(b, None)
+    return itertools.izip(a, b)  # if a is empty will return an empty iter

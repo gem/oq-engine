@@ -15,8 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import (scientific,
-                     classical, scenario_damage, benefit_cost_ratio)
+from risklib import scientific, classical, scenario_damage
 from risklib.models import output
 
 
@@ -200,13 +199,13 @@ class BCR(object):
         self.asset_life_expectancy = asset_life_expectancy
 
     def __call__(self, asset, hazard):
-        annual_loss_original = benefit_cost_ratio.mean_loss(
+        annual_loss_original = scientific.mean_loss(
             self.lcc_original(asset, hazard).loss_curve)
 
-        annual_loss_retrofitted = benefit_cost_ratio.mean_loss(
+        annual_loss_retrofitted = scientific.mean_loss(
             self.lcc_retrofitted(asset, hazard).loss_curve)
 
-        bcr = benefit_cost_ratio.bcr(
+        bcr = scientific.bcr(
             annual_loss_original,
             annual_loss_retrofitted, self.interest_rate,
             self.asset_life_expectancy, asset.retrofitting_cost)

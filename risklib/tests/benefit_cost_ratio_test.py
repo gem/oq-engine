@@ -16,7 +16,7 @@
 import unittest
 
 from risklib.curve import Curve
-from risklib.benefit_cost_ratio import (
+from risklib.scientific import (
     bcr, mean_loss)
 
 
