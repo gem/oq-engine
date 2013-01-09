@@ -16,6 +16,7 @@
 
 import shutil
 import tempfile
+import unittest
 
 from lxml import etree
 from nose.plugins.attrib import attr
@@ -26,6 +27,43 @@ from openquake.export import hazard
 
 from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
+
+
+class UtilsTestCase(unittest.TestCase):
+
+    def test__get_end_branch_export_path(self):
+        class FakeLtRealization(object):
+            def __init__(self, gsim_lt_path):
+                self.gsim_lt_path = gsim_lt_path
+        class FakeResult(object):
+            def __init__(self, lt_realization, imt, sa_period):
+                self.lt_realization = lt_realization
+                self.imt = imt
+                self.sa_period = sa_period
+        class FakeGMPE(object):
+            pass
+        class FakeGMPELTBranch(object):
+            value = FakeGMPE()
+        class FakeGMPELT(object):
+            branches = dict(b1=FakeGMPELTBranch())
+        class FakeLogicTreeProcessor(object):
+            gmpe_lt = FakeGMPELT()
+
+        target_dir = '/tmp/oq/'
+        lt_rlz = FakeLtRealization(['b1'])
+        ltp = FakeLogicTreeProcessor()
+
+        # PGA:
+        result = FakeResult(lt_rlz, 'PGA', None)
+        expected = '/tmp/oq/FakeGMPE/PGA'
+        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        self.assertEqual(expected, actual)
+
+        # SA:
+        result = FakeResult(lt_rlz, 'SA', '0.025')
+        expected = '/tmp/oq/FakeGMPE/SA[0025]'
+        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        self.assertEqual(expected, actual)
 
 
 class ClassicalExportTestcase(BaseExportTestCase):
