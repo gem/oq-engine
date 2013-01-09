@@ -226,9 +226,12 @@ class EventBasedTestCase(unittest.TestCase):
         peb_conditional_losses = api.ConditionalLosses(
             [CONDITIONAL_LOSS_POES], peb_calculator)
 
+        outputs = []
         for i in range(3):
             asset_output = peb_conditional_losses(
                 mb.input_models_asset[i], gmf[i])
+
+            outputs.append(asset_output)
 
             self.assertAlmostEqual(
                 mb.expected_loss_map[i],
@@ -285,7 +288,7 @@ class EventBasedTestCase(unittest.TestCase):
                                      115.8386574, 55.3134][::-1]
 
         aggregate_curve = scientific.event_based(
-            peb_calculator.aggregate_losses, 50, 50)
+            api.aggregate_losses(outputs), 50, 50)
 
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.abscissae)

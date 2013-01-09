@@ -243,11 +243,9 @@ class ProbabilisticEventBased(object):
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
-
-        if self._aggregate_losses is None:
-            self._aggregate_losses = numpy.zeros(len(hazard))
         vulnerability_function.seed(
             self.seed, self.correlation_type, taxonomies)
+
         self.loss_ratios = vulnerability_function(hazard)
 
         loss_ratio_curve = scientific.event_based(
@@ -258,15 +256,21 @@ class ProbabilisticEventBased(object):
         losses = self.loss_ratios * asset.value
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
-        self._aggregate_losses += losses
-
         return scientific.ProbabilisticEventBasedOutput(
             asset, losses, loss_ratio_curve, loss_curve,
             None, None, None, None)
 
-    @property
-    def aggregate_losses(self):
-        return self._aggregate_losses
+
+
+# the aggregation design was discussed in 
+# https://mail.google.com/mail/u/0/#search/aggrega/13a9bbf82d91fa0d
+def aggregate_losses(set_of_outputs, result=None):
+    for asset_output in set_of_outputs:
+        if result is None:  # first time
+            result = asset_output.losses
+        else:
+            result += asset_output.losses
+    return result
 
 
 class InsuredLosses(object):
@@ -305,8 +309,6 @@ class ScenarioRisk(object):
         self.correlation_type = correlation_type
         self.vulnerability_model = vulnerability_model
 
-        self._aggregate_losses = None
-
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
         vulnerability_function = self.vulnerability_model[asset.taxonomy]
@@ -314,18 +316,9 @@ class ScenarioRisk(object):
         vulnerability_function.seed(
             self.seed, self.correlation_type, taxonomies)
 
-        if self._aggregate_losses is None:
-            self._aggregate_losses = numpy.zeros(len(hazard))
-
         loss_ratios = vulnerability_function(hazard)
 
         losses = loss_ratios * asset.value
 
-        self._aggregate_losses += losses
-
-        return scientific.ScenarioRiskOutput(asset, numpy.mean(losses),
-                                         numpy.std(losses, ddof=1))
-
-    @property
-    def aggregate_losses(self):
-        return self._aggregate_losses
+        return scientific.ScenarioRiskOutput(asset, losses, numpy.mean(losses),
+                                             numpy.std(losses, ddof=1))
