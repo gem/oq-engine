@@ -89,10 +89,12 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job)] +
+                        loss_curve__output__oq_job=job).order_by(
+                            'asset_ref')] +
                 [point.value
                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job)])
+                        loss_map__output__oq_job=job).order_by(
+                            'asset_ref', 'loss_map__poe')])
 
     def expected_data(self):
         return [[
