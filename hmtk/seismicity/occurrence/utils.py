@@ -45,3 +45,37 @@ def recurrence_table(mag, dmag, year):
     rec_table = np.column_stack([mval, number_obs, n_c, number_obs_annual,
                                  n_c_annual])
     return rec_table
+
+def input_checks(catalogue, config, completeness):
+    """ Performs a basic set of input checks on the data
+    """
+
+    if isinstance(completeness, np.ndarray):
+        # completeness table is a numpy array (i.e. [year, magnitude])
+        if np.shape(completeness)[1] != 2:
+            raise ValueError('Completeness Table incorrectly configured')
+        else:
+            cmag = completeness[:, 1]
+            ctime = completeness[:, 0]
+    elif isinstance(completeness, float):
+        # Completeness corresponds to a single magnitude (i.e. applies to
+        # the entire catalogue)
+        cmag = np.array(completeness)
+        ctime = np.array(np.min(catalogue['year']))
+    else:
+        # Everything is valid - i.e. no completeness magnitude
+        cmag = np.array(np.min(catalogue['magnitude']))
+        ctime = np.array(np.min(catalogue['year']))
+     
+    # Set reference magnitude - if not in config then default to M = 0.
+    if not config['reference_magnitude']:
+        ref_mag = 0.0
+    else:
+        ref_mag = config['reference_magnitude']
+
+    if not config['magnitude_interval']:
+        dmag = 0.1
+    else:
+        dmag = config['magnitude_interval']
+    
+    return cmag, ctime, ref_mag, dmag
