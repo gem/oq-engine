@@ -34,5 +34,3 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         bval, sigma_b = aki_max_likelihood(self.mval, self.numobs, 
                                                 dmag=self.dmag, m_c=0.0)
         self.assertAlmostEqual(self.bval, bval, 2)
-        print sigma_b
-        self.assertAlmostEqual(0.0, sigma_b, 2)
