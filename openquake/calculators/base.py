@@ -40,7 +40,7 @@ class CalculatorNext(object):
     def __init__(self, job):
         self.job = job
 
-        self.progress = dict(total=0, computed=0)
+        self.progress = dict(total=0, computed=0, in_queue=0)
 
     def task_arg_gen(self, block_size):
         """
@@ -117,9 +117,11 @@ class CalculatorNext(object):
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
-                pass
+                self.progress['in_queue'] -= 1
 
             message.ack()
+            logs.LOG.info('A task was completed. Tasks now in queue: %s'
+                          % self.progress['in_queue'])
 
         return callback
 
@@ -176,6 +178,11 @@ class CalculatorNext(object):
                         # This basically just means that we could be
                         # under-utilizing worker node resources.
                         break
+                    else:
+                        self.progress['in_queue'] += 1
+
+                logs.LOG.info('Tasks now in queue: %s'
+                              % self.progress['in_queue'])
 
                 while (self.progress['computed'] < self.progress['total']):
                     # This blocks until a message is received.
