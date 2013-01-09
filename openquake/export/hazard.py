@@ -28,6 +28,7 @@ from nrml import writers as nrml_writers
 from openquake import logs
 from openquake.db import models
 from openquake.export import core
+from openquake.input import logictree
 
 
 LOG = logs.LOG
@@ -92,6 +93,52 @@ COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
 GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
 
 
+def _get_end_branch_export_path(target_dir, result, ltp):
+    """
+    Given a hazard result for a particular logic tree end branch, construct an
+    export path by concatenating ``target_dir``, GSIM name, and IMT, create the
+    directory structure (if it doesn't already exist), and return the path.
+
+    In the resulting path, the IMT is used as-is, except for SA IMTs. In this
+    case, the IMT component of the path is formatted like so:
+
+    `SA[0025]` for SA with a period of 0.025.
+
+    :param str target_dir:
+        Destination directory location for exported files.
+    :param result:
+        :mod:`openquake.db.models` result object `with a foreign key reference
+        to :class:`~openquake.db.models.LtRealization`. The realization is
+        needed to identify the logic tree paths, and thus, the name of the
+        GSIM.
+
+        ``result`` should also have the following the attributes:
+
+        * imt
+        * sa_period
+
+        See :class:`~openquake.db.models.HazardCurve` for an example.
+    :param ltp:
+        Instance of a :class:`~openquake.input.logictree.LogicTreeProcessor`.
+    """
+    lt_rlz = result.lt_realization
+    [gsim_branch] = lt_rlz.gsim_lt_path
+    gsim_name = ltp.gmpe_lt.branches[gsim_branch].value.__class__.__name__
+
+    imt = result.imt
+    if imt == 'SA':
+        # if it's SA, include the period
+        period = str(result.sa_period)
+        period = period.replace('.', '')
+        imt = 'SA[%s]' % period
+
+    export_dir = os.path.abspath(os.path.join(target_dir, gsim_name, imt))
+    if not os.path.exists(export_dir):
+        os.makedirs(export_dir)
+
+    return export_dir
+
+
 @core.makedirs
 def export_hazard_curves(output, target_dir):
     """
@@ -111,7 +158,6 @@ def export_hazard_curves(output, target_dir):
     hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id)
 
     filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
-    path = os.path.abspath(os.path.join(target_dir, filename))
 
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
@@ -119,10 +165,19 @@ def export_hazard_curves(output, target_dir):
         lt_rlz = hc.lt_realization
         smlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsimlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+
+        # Also include the GSIM name and IMT in the directory structure.
+        # This is much more useful and organized than simply dumping all of the
+        # results to a single directory.
+        haz_calc = hc.lt_realization.hazard_calculation
+        ltp = logictree.LogicTreeProcessor(haz_calc.id)
+        export_dir = _get_end_branch_export_path(target_dir, hc)
+        path = os.path.join(export_dir, filename)
     else:
         # These curves must be statistical aggregates
         smlt_path = None
         gsimlt_path = None
+        path = os.path.abspath(os.path.join(target_dir, filename))
 
     metadata = {
         'quantile_value': hc.quantile,
