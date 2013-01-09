@@ -125,7 +125,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 [[point.value
                   for point in models.LossMapData.objects.filter(
                         loss_map__output__oq_job=job).order_by(
-                            'asset_ref', 'id')]])
+                            'asset_ref', 'loss_map__poe')]])
 
     def expected_data(self):
         poes = [0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
@@ -234,9 +234,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             losses_1, losses_2, losses_3,
             insured_losses_1, insured_losses_2, insured_losses_3,
             expected_aggregate_losses,
-            [ 209.67284154, 227.8571829, 246.04152426, 30.92378683,
-              30.96278052, 31.0017742, 46.53855225, 47.56302559,
-              48.58749892]]
+            [246.04152426, 227.8571829, 209.67284154, 31.0017742,
+              30.96278052, 30.92378683, 48.58749892, 47.56302559,
+              46.53855225]]
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,
