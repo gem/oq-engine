@@ -24,10 +24,10 @@ class CatalogueTestCase(unittest.TestCase):
                                [1960, 6.99], # I
                                ])
         self.mt_table = np.array([[1920, 7.0],
-                                   [1940, 6.0],
-                                   [1950, 5.5],
-                                   [1960, 5.0],
-                                   ])
+                                  [1940, 6.0],
+                                  [1950, 5.5],
+                                  [1960, 5.0],
+                                ])
         
     def test_load_from_array(self):
         """
@@ -37,6 +37,15 @@ class CatalogueTestCase(unittest.TestCase):
         cat.load_from_array(['year','magnitude'], self.data_array)
         self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
         self.assertTrue(np.allclose(cat.data['year'],self.data_array[:,0]))
+        
+    def test_load_to_array(self):
+        """
+        Tests the creation of a catalogue from an array and a key list 
+        """
+        cat = Catalogue()
+        cat.load_from_array(['year','magnitude'], self.data_array)
+        data = cat.load_to_array(['year','magnitude'])
+        self.assertTrue(np.allclose(data,self.data_array))
     
     def test_catalogue_mt_filter(self):
         """

@@ -60,9 +60,29 @@ class Catalogue(object):
         # TODO 
         raise AttributeError('Not implemented yet!')
     
+    def load_to_array(self, keys):
+        """
+        This loads the data contained in the catalogue into a numpy array. The
+        method works only for float data
+        
+        :param keys:
+            A list of keys to be uploaded into the array 
+        :type list:
+        """
+        # Preallocate the numpy array
+        data = np.empty( (len(self.data[keys[0]]), len(keys)) )
+        for i in range(0, len(self.data[keys[0]]) ):
+            for j,key in enumerate(keys):
+                data[i,j] = self.data[key][i]
+        return data  
+    
     def load_from_array(self, keys, data_array):
         """
         This loads the data contained in an array into the catalogue object
+        
+        :param keys:
+            A list of keys explaining the content of the columns in the array
+        :type list:
         """
         for i,key in enumerate(keys):
             self.data[key] = data_array[:,i]
