@@ -124,7 +124,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
                 [point.value
                  for point in models.LossMapData.objects.filter(
                         loss_map__output__oq_job=job).order_by(
-                            'loss_map__poe')])
+                            'asset_ref', 'loss_map__poe')])
 
     def expected_data(self):
         return [[
