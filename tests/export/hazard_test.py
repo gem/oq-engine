@@ -238,3 +238,44 @@ class ScenarioExportTestCase(BaseExportTestCase):
             # 3 because there are 3 sites in the job.ini file
         finally:
             shutil.rmtree(target_dir)
+
+
+class DisaggExportTestCase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_disagg_hazard_export(self):
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('disaggregation/job.ini')
+
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+
+            # Test curve export:
+            curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(4, len(curves))
+            curve_files = []
+            for curve in curves:
+                curve_files.extend(hazard.export(curve.id, target_dir))
+
+            self.assertEqual(4, len(curve_files))
+            for f in curve_files:
+                self._test_exported_file(f)
+
+            # Test disagg matrix export:
+            matrices = outputs.filter(output_type='disagg_matrix')
+            self.assertEqual(8, len(matrices))
+            disagg_files = []
+            for matrix in matrices:
+                disagg_files.extend(hazard.export(matrix.id, target_dir))
+
+            self.assertEqual(8, len(disagg_files))
+            for f in disagg_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
