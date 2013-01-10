@@ -142,34 +142,25 @@ class ScenarioDamage(object):
         self._fractions_per_taxonomy = {}
 
     def __call__(self, asset, hazard):
-        taxonomy = asset.taxonomy
         fractions = scenario_damage._damage_distribution_per_asset(
             asset,
-            (self.fragility_model, self.fragility_functions[taxonomy]),
+            (self.fragility_model,
+             self.fragility_functions[asset.taxonomy]),
             hazard)
-
-        if taxonomy in self._fractions_per_taxonomy:
-            self._fractions_per_taxonomy[taxonomy] += fractions
-        else:
-            self._fractions_per_taxonomy[taxonomy] = fractions
-
-        return scientific.ScenarioDamageOutput(
-            asset, scientific.mean_std(fractions))
-
-    @property
-    def damage_distribution_by_taxonomy(self):
-        return self._fractions_per_taxonomy
+        return scientific.ScenarioDamageOutput(asset, fractions)
 
 
-## this will be useful in the future
 def damage_distribution_by_taxonomy(asset_outputs, result):
     if result is None:
         result = {}
     for asset_output in asset_outputs:
-        if asset_output.asset.taxonomy in result:
-            result[asset_output.asset.taxonomy] += asset_output.fractions
-        else:
+        try:
+            prev = result[asset_output.asset.taxonomy]
+        except KeyError:
             result[asset_output.asset.taxonomy] = asset_output.fractions
+        else:
+            # using += would not work because it would mutate the array in place
+            result[asset_output.asset.taxonomy] = prev + asset_output.fractions
     return result
 
 

@@ -94,10 +94,9 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
         # aggregations for taxonomy
-        # distr = api.damage_distribution_by_taxonomy(
-        #    [asset_output_a1, asset_output_a2, asset_output_a3])
-        #import pdb; pdb.set_trace()
-        distr = calculator.damage_distribution_by_taxonomy
+        distr = api.damage_distribution_by_taxonomy(
+            [asset_output_a1, asset_output_a2, asset_output_a3], {})
+
         rm = distr['RM']  # array 10x3
         rc = distr['RC']  # array 10x3
 
@@ -158,9 +157,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
         # aggregations for taxonomy
-        #distr = api.damage_distribution_by_taxonomy(
-        #    [asset_output_a1, asset_output_a2, asset_output_a3])
-        distr = calculator.damage_distribution_by_taxonomy
+        distr = api.damage_distribution_by_taxonomy(
+            [asset_output_a1, asset_output_a2, asset_output_a3], {})
         rm = distr['RM']  # array 10x3
         rc = distr['RC']  # array 10x3
 

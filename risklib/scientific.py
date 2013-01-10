@@ -239,7 +239,13 @@ ClassicalOutput = collections.namedtuple(
 
 
 ScenarioDamageOutput = collections.namedtuple(
-    "ScenarioDamageOutput", ["asset", "damage_distribution_asset"])
+    "ScenarioDamageOutput", ["asset", "fractions"])
+
+
+def damage_distribution_asset(self):
+    return mean_std(self.fractions)
+ScenarioDamageOutput.damage_distribution_asset = property(
+    damage_distribution_asset)
 
 
 def collapse_map(self):
