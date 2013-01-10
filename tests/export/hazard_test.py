@@ -66,7 +66,7 @@ class UtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
-class ClassicalExportTestcase(BaseExportTestCase):
+class ClassicalExportTestCase(BaseExportTestCase):
 
     @attr('slow')
     def test_classical_hazard_export(self):
