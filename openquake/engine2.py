@@ -428,24 +428,31 @@ def _run_calc(job, log_level, log_file, exports, calc, job_type):
     return models.OqJob.objects.get(id=job.id)
 
 
-def _switch_to_job_phase(job, ctype, status):
+def _switch_to_job_phase(job, ctype, status, no_distribute=False):
     """Switch to a particular phase of execution.
 
     This involves creating a `job_phase_stats` record and logging the new
     status.
+
+    .. note::
+        If there are no live computation worker nodes available to the run the
+        calculation, abort the calculation and exit. This check is skipped if
+        ``no_distribute`` is `True`.
 
     :param job:
         An :class:`~openquake.db.models.OqJob` instance.
     :param str ctype: calculation type (hazard|risk)
     :param str status: one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
+    :param bool no_distribute:
+        Defaults to `False`. If `True`, skip the check for live worker nodes.
     """
     job.status = status
     job.save()
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
                                         ctype=ctype)
     logs.LOG.progress("%s (%s)" % (status, ctype))
-    if status == "executing":
+    if status == "executing" and not no_distribute:
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
         failed_nodes = monitor.count_failed_nodes(job)
@@ -468,26 +475,33 @@ def _do_run_calc(job, exports, calc, job_type):
         The input job object when the calculation completes.
     """
     # - Run the calculation
-    _switch_to_job_phase(job, job_type, "pre_executing")
+    _switch_to_job_phase(job, job_type, "pre_executing",
+                         no_distribute=calc.no_distribute)
 
     calc.pre_execute()
 
-    _switch_to_job_phase(job, job_type, "executing")
+    _switch_to_job_phase(job, job_type, "executing",
+                         no_distribute=calc.no_distribute)
     calc.execute()
 
-    _switch_to_job_phase(job, job_type, "post_executing")
+    _switch_to_job_phase(job, job_type, "post_executing",
+                         no_distribute=calc.no_distribute)
     calc.post_execute()
 
-    _switch_to_job_phase(job, job_type, "post_processing")
+    _switch_to_job_phase(job, job_type, "post_processing",
+                         no_distribute=calc.no_distribute)
     calc.post_process()
 
-    _switch_to_job_phase(job, job_type, "export")
+    _switch_to_job_phase(job, job_type, "export",
+                         no_distribute=calc.no_distribute)
     calc.export(exports=exports)
 
-    _switch_to_job_phase(job, job_type, "clean_up")
+    _switch_to_job_phase(job, job_type, "clean_up",
+                         no_distribute=calc.no_distribute)
     calc.clean_up()
 
-    _switch_to_job_phase(job, job_type, "complete")
+    _switch_to_job_phase(job, job_type, "complete",
+                         no_distribute=calc.no_distribute)
     logs.LOG.debug("*> complete")
 
     return job
