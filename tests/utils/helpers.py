@@ -202,7 +202,7 @@ def run_hazard_job(cfg, exports=None):
 
 
 def run_hazard_job_sp(config_file, params=None, check_output=False,
-                      silence=False):
+                      silence=False, force_inputs=True):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
@@ -216,6 +216,9 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         :func:`subprocess.check_call`.
     :param bool silence:
         If `True`, silence all stdout and stderr messages.
+    :param bool force_inputs:
+        Defaults to `True`. If `True`, run openquake with the `--force-inputs`
+        option.
 
     :returns:
         With the default input, return the return code of the subprocess.
@@ -228,7 +231,10 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--force-inputs", "--run-hazard=%s" % config_file]
+    args = ["bin/openquake", "--run-hazard=%s" % config_file]
+    if force_inputs:
+        args.append('--force-inputs')
+
     if params is not None:
         args.extend(params)
 
@@ -247,7 +253,8 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
             devnull.close()
 
 
-def run_risk_job_sp(config_file, hazard_id, params=None, silence=False):
+def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
+                    force_inputs=True):
     """
     Given a path to a config file, run an openquake risk job as a separate
     process using `subprocess`. See `run_hazard_job_sp` for the signature
@@ -256,8 +263,11 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False):
       ID of the hazard output used by the risk calculation
     """
 
-    args = ["bin/openquake", "--force-inputs", "--run-risk=%s" % config_file,
+    args = ["bin/openquake", "--run-risk=%s" % config_file,
             "--hazard-output-id=%d" % hazard_id]
+    if force_inputs:
+        args.append('--force-inputs')
+
     if params is not None:
         args.extend(params)
 
