@@ -560,13 +560,15 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Associate the source input to the source model logic tree input:
             try:
-                models.Src2ltsrc.objects.get(hzrd_src=inp, lt_src=smlt, filename=src_path)
+                models.Src2ltsrc.objects.get(hzrd_src=inp, lt_src=smlt,
+                                             filename=src_path)
             except ObjectDoesNotExist:
                 # If it doesn't exist, this is a new input and we're not
                 # reusing an old one which is identical.
                 # Only in this case do we parse the sources and populate
                 # `hzrdi.parsed_source`.
-                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt, filename=src_path)
+                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                                filename=src_path)
                 src_content = StringIO.StringIO(
                     inp.model_content.raw_content_ascii)
                 sm_parser = nrml_parsers.SourceModelParser(src_content)
