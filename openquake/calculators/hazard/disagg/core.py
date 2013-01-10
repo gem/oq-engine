@@ -508,7 +508,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                             else:
                                 self.progress['in_queue'] += 1
 
-                        logs.LOG.info('Items now in queue: %s'
+                        logs.LOG.info('Tasks now in queue: %s'
                                       % self.progress['in_queue'])
                     else:
                         # we're not done computing hazard curves; enqueue the
@@ -533,7 +533,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # message:
             self.progress['computed'] += num_items
             message.ack()
-            logs.LOG.info('A task was completed. Items now in queue: %s'
+            logs.LOG.info('A task was completed. Tasks now in queue: %s'
                           % self.progress['in_queue'])
 
         return callback
