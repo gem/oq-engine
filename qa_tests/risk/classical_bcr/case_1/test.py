@@ -42,7 +42,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
 
     @attr('qa', 'risk', 'classical_bcr')
     def test(self):
-        self.run_test()
+        self._run_test()
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
