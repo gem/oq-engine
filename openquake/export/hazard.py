@@ -406,7 +406,10 @@ def export_disagg(output, target_dir):
     lt_rlz = disagg_result.lt_realization
 
     filename = '%s.xml' % output.display_name
-    path = os.path.abspath(os.path.join(target_dir, filename))
+    haz_calc = disagg_result.lt_realization.hazard_calculation
+    ltp = logictree.LogicTreeProcessor(haz_calc.id)
+    export_dir = _get_end_branch_export_path(target_dir, disagg_result, ltp)
+    path = os.path.abspath(os.path.join(export_dir, filename))
 
     pmf_map = OrderedDict([
         (('Mag', ), disagg.mag_pmf),
