@@ -238,20 +238,26 @@ def exchange_and_conn_args():
     return exchange, conn_args
 
 
-def queue_next(task_func, task_args):
+def queue_next(task_func, task_args, no_distribute=False):
     """
     :param task_func:
         A Celery task function, to be enqueued with the next set of args in
         ``task_arg_gen``.
     :param task_args:
         A set of arguments which match the specified ``task_func``.
+    :param bool no_distribute:
+        Defaults to `False`. If `True`, don't send this to the queue, but
+        instead just execute it as a normal function.
 
     .. note::
         This utility function was added to make for easier mocking and testing
         of the "plumbing" which handles task queuing (such as the various "task
         complete" callback functions).
     """
-    task_func.apply_async(task_args)
+    if no_distribute:
+        task_func(*task_args)
+    else:
+        task_func.apply_async(task_args)
 
 
 def signal_task_complete(**kwargs):
