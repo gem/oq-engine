@@ -171,7 +171,7 @@ def export_hazard_curves(output, target_dir):
         # results to a single directory.
         haz_calc = hc.lt_realization.hazard_calculation
         ltp = logictree.LogicTreeProcessor(haz_calc.id)
-        export_dir = _get_end_branch_export_path(target_dir, hc)
+        export_dir = _get_end_branch_export_path(target_dir, hc, ltp)
         path = os.path.join(export_dir, filename)
     else:
         # These curves must be statistical aggregates
