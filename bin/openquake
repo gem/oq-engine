@@ -108,6 +108,12 @@ def set_up_arg_parser():
         help='Defaults to "warn"', required=False,
         choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
         default='progress')
+    general_grp.add_argument(
+        '--no-distribute', '--nd', action='store_true',
+        help=('Disable calculation task distribution and run the computation'
+              ' in a single process. This is intended for use in debugging '
+              ' and profiling.')
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -167,7 +173,7 @@ def set_up_arg_parser():
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
+def run_hazard(cfg_file, log_level, log_file, force_inputs, exports, no_distribute):
     """
     Run a hazard calculation using the specified config file and other options.
 
@@ -183,6 +189,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
+    :param bool no_distribute:
+        If `True`, run calculations in a single thread and don't
+        distribute/parallelize the computation.
     """
     try:
         if log_file is not None:
@@ -336,9 +345,8 @@ def export(fn, output_id, target_dir):
         print 'This feature is probably not implemented yet'
 
 
-def run_risk(
-        cfg_file, log_level, log_file,
-        force_inputs, exports, hazard_output_id):
+def run_risk(cfg_file, log_level, log_file, force_inputs, exports,
+             hazard_output_id, no_distribute):
     """
     Run a risk calculation using the specified config file and other options.
 
@@ -356,6 +364,9 @@ def run_risk(
         is supported.
     :param str hazard_ouput_id:
         The Hazard Output ID used by the risk calculation
+    :param bool no_distribute:
+        If `True`, run calculations in a single thread and don't
+        distribute/parallelize the computation.
     """
     try:
         if log_file is not None:
@@ -447,7 +458,8 @@ def main():
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
-                   args.force_inputs, args.exports)
+                   args.force_inputs, args.exports,
+                   no_distribute=args.no_distribute)
     # risk
     elif args.list_risk_calculations:
         list_risk_calculations()
@@ -462,7 +474,8 @@ def main():
         log_file = expanduser(args.log_file) if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,
                  args.force_inputs, args.exports,
-                 hazard_output_id=args.hazard_output_id)
+                 hazard_output_id=args.hazard_output_id,
+                 no_distribute=args.no_distribute)
     else:
         arg_parser.print_usage()
 
