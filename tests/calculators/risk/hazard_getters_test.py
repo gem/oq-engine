@@ -66,13 +66,11 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             result_grp_ordinal=2).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=collection.id,
-            imt="PGA", time_span=50.0, tses=20.0)
+            hazard_output_id=collection.id, imt="PGA")
 
         # to the event based risk calculator, we must pass all the
         # ground motion values coming from all the stochastic event sets.
-        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-            "TimeSpan": 50.0}
+        expected = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
 
@@ -96,11 +94,9 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             result_grp_ordinal=1).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=collection.id,
-            imt="PGA", time_span=50.0, tses=20.0)
+            hazard_output_id=collection.id, imt="PGA")
 
-        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3],
-            "TimeSpan": 50.0}
+        expected = [0.1, 0.2, 0.3]
 
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
 
@@ -112,7 +108,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError,
             hazard_getters.GroundMotionValuesGetter,
-            collection.id, "PGA", 50.0, 20.0)
+            collection.id, "PGA")
 
     def test_intensity_type_sa(self):
         output = self._hazard_output("gmf")
@@ -141,10 +137,9 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
             sa_damping=1.0, result_grp_ordinal=3).save()
 
         getter = hazard_getters.GroundMotionValuesGetter(
-            hazard_output_id=collection.id, imt="SA(1.0)", time_span=50.0,
-            tses=20.0)
+            hazard_output_id=collection.id, imt="SA(1.0)")
 
-        expected = {"TSES": 20.0, "IMLs": [0.1, 0.2, 0.3], "TimeSpan": 50.0}
+        expected = [0.1, 0.2, 0.3]
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
 
     def _gmf_set(self, collection, ses_ordinal, investigation_time=50.0):
