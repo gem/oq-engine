@@ -118,7 +118,8 @@ class CalculatorNext(object):
             # Once we receive a completion signal, enqueue the next
             # piece of work (if there's anything left to be done).
             try:
-                queue_next(self.core_calc_task, task_arg_gen.next())
+                queue_next(self.core_calc_task, task_arg_gen.next(),
+                           no_distribute=self.no_distribute)
             except StopIteration:
                 # There are no more tasks to dispatch; now we just need
                 # to wait until all tasks signal completion.
@@ -176,7 +177,8 @@ class CalculatorNext(object):
                 # First: Queue up the initial tasks.
                 for _ in xrange(self.concurrent_tasks()):
                     try:
-                        queue_next(self.core_calc_task, task_gen.next())
+                        queue_next(self.core_calc_task, task_gen.next(),
+                                   no_distribute=self.no_distribute)
                     except StopIteration:
                         # If we get a `StopIteration` here, that means we have
                         # a number of tasks < concurrent_tasks.
