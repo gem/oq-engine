@@ -87,7 +87,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     @noseattr('qa', 'risk', 'classical')
     def test(self):
-        self.run_test()
+        self._run_test()
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
