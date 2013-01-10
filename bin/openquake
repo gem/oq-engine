@@ -227,7 +227,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports, no_distribu
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_hazard(job, log_level, log_file, exports)
+        completed_job = engine2.run_hazard(job, log_level, log_file, exports,
+                                           no_distribute=no_distribute)
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -408,7 +409,7 @@ def run_risk(cfg_file, log_level, log_file, force_inputs, exports,
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
         completed_job = engine2.run_risk(
-            job, log_level, log_file, exports)
+            job, log_level, log_file, exports, no_distribute=no_distribute)
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.

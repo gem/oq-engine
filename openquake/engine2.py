@@ -300,7 +300,7 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
-def run_hazard(job, log_level, log_file, exports):
+def run_hazard(job, log_level, log_file, exports, no_distribute=False):
     """
     Run a hazard calculation.
 
@@ -316,6 +316,9 @@ def run_hazard(job, log_level, log_file, exports):
     :param list exports:
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
+    :param bool no_distribute:
+        Defaults to `False`. If `True`, run calculations in a single thread and
+        don't distribute/parallelize the computation.
     """
     from openquake.calculators.hazard import CALCULATORS_NEXT
 
@@ -326,7 +329,7 @@ def run_hazard(job, log_level, log_file, exports):
     return _run_calc(job, log_level, log_file, exports, calc, 'hazard')
 
 
-def run_risk(job, log_level, log_file, exports):
+def run_risk(job, log_level, log_file, exports, no_distribute=False):
     """
     Run a risk calculation.
 
@@ -342,6 +345,9 @@ def run_risk(job, log_level, log_file, exports):
     :param list exports:
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
+    :param bool no_distribute:
+        Defaults to `False`. If `True`, run calculations in a single thread and
+        don't distribute/parallelize the computation.
     """
 
     from openquake.calculators.risk import CALCULATORS
