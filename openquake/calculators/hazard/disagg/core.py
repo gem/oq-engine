@@ -464,7 +464,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # to finish.
                 try:
                     base.queue_next(
-                        self.core_calc_task, disagg_task_arg_gen.next())
+                        self.core_calc_task, disagg_task_arg_gen.next(),
+                        no_distribute=self.no_distribute
+                    )
                 except StopIteration:
                     # There are no more tasks to dispatch; now we just need to
                     # wait until all of the tasks signal completion.
@@ -499,7 +501,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                             try:
                                 base.queue_next(
                                     self.core_calc_task,
-                                    disagg_task_arg_gen.next())
+                                    disagg_task_arg_gen.next(),
+                                    no_distribute=self.no_distribute
+                                )
                             except StopIteration:
                                 # If we get a `StopIteration` here, that means
                                 # we have number of disagg tasks <
@@ -515,7 +519,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         # next task
                         try:
                             base.queue_next(
-                                self.core_calc_task, hc_task_arg_gen.next())
+                                self.core_calc_task,
+                                hc_task_arg_gen.next(),
+                                no_distribute=self.no_distribute
+                            )
                         except StopIteration:
                             # No more hazard curve tasks left to enqueue;
                             # now we just wait for this phase to complete.
