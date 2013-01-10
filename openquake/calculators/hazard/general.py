@@ -30,6 +30,7 @@ import numpy
 
 from django.db import transaction, connections
 from django.db.models import Sum
+from django.core.exceptions import ObjectDoesNotExist
 
 from nhlib import geo as nhlib_geo
 from nrml import parsers as nrml_parsers
@@ -558,18 +559,23 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 input=inp, hazard_calculation=self.hc)
 
             # Associate the source input to the source model logic tree input:
-            models.Src2ltsrc.objects.get_or_create(
-                hzrd_src=inp, lt_src=smlt, filename=src_path)
-
-        # Now parse the source models and store `pared_source` records:
-        for src_inp in src_inputs:
-            src_content = StringIO.StringIO(
-                src_inp.model_content.raw_content_ascii)
-            sm_parser = nrml_parsers.SourceModelParser(src_content)
-            src_db_writer = source.SourceDBWriter(
-                src_inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                self.hc.width_of_mfd_bin, self.hc.area_source_discretization)
-            src_db_writer.serialize()
+            try:
+                models.Src2ltsrc.objects.get(hzrd_src=inp, lt_src=smlt, filename=src_path)
+            except ObjectDoesNotExist:
+                # If it doesn't exist, this is a new input and we're not
+                # reusing an old one which is identical.
+                # Only in this case do we parse the sources and populate
+                # `hzrdi.parsed_source`.
+                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt, filename=src_path)
+                src_content = StringIO.StringIO(
+                    inp.model_content.raw_content_ascii)
+                sm_parser = nrml_parsers.SourceModelParser(src_content)
+                src_db_writer = source.SourceDBWriter(
+                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                    self.hc.width_of_mfd_bin,
+                    self.hc.area_source_discretization
+                )
+                src_db_writer.serialize()
 
     def initialize_site_model(self):
         """
