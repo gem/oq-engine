@@ -239,8 +239,13 @@ ClassicalOutput = collections.namedtuple(
 
 
 ScenarioDamageOutput = collections.namedtuple(
-    "ScenarioDamageOutput",
-    ["asset", "damage_distribution_asset", "collapse_map"])
+    "ScenarioDamageOutput", ["asset", "damage_distribution_asset"])
+
+
+def collapse_map(self):
+    mean, std = self.damage_distribution_asset
+    return mean[-1], std[-1]  # last column of the damage distribution
+ScenarioDamageOutput.collapse_map = property(collapse_map)
 
 
 BCROutput = collections.namedtuple(
@@ -596,3 +601,11 @@ def pairwise_mean(values):
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
     return [x - y for x, y in pairwise(values)]
+
+
+def mean_std(fractions):
+    """
+    Given an N x M matrix, returns mean and std computed on the rows,
+    i.e. two M-dimensional vectors.
+    """
+    return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)

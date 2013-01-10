@@ -158,7 +158,6 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         # because the scientific logic is tested elsewhere
         self.assertIsNotNone(asset_output.collapse_map)
         self.assertIsNotNone(asset_output.damage_distribution_asset)
-        self.assertIsNotNone(calculator.damage_distribution_by_taxonomy)
 
 
 class BCRCalculatorTestCase(unittest.TestCase):
