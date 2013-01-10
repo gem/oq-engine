@@ -324,7 +324,7 @@ def run_hazard(job, log_level, log_file, exports, no_distribute=False):
 
     calc_mode = job.hazard_calculation.calculation_mode
     # - Instantiate the calculator class
-    calc = CALCULATORS_NEXT[calc_mode](job)
+    calc = CALCULATORS_NEXT[calc_mode](job, no_distribute=no_distribute)
 
     return _run_calc(job, log_level, log_file, exports, calc, 'hazard')
 
@@ -353,7 +353,7 @@ def run_risk(job, log_level, log_file, exports, no_distribute=False):
     from openquake.calculators.risk import CALCULATORS
 
     calc_mode = job.risk_calculation.calculation_mode
-    calc = CALCULATORS[calc_mode](job)
+    calc = CALCULATORS[calc_mode](job, no_distribute=no_distribute)
 
     return _run_calc(job, log_level, log_file, exports, calc, 'risk')
 
