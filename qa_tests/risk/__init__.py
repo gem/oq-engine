@@ -61,7 +61,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         self.assertEqual('complete', completed_job.status)
         return completed_job
 
-    def run_test(self):
+    def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
         try:
