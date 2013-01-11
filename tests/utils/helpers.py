@@ -171,7 +171,7 @@ def create_job(params, **kwargs):
     return JobContext(params, job_id, **kwargs)
 
 
-def run_hazard_job(cfg, exports=None):
+def run_hazard_job(cfg, exports=None, no_distribute=True):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
@@ -180,6 +180,14 @@ def run_hazard_job(cfg, exports=None):
         Path to a job config file.
     :param list exports:
         A list of export format types. Currently only 'xml' is supported.
+    :param bool no_distribute:
+        Defaults to `True`.
+
+        If `True`, don't use Celery for distribution. This will just run
+        everything in a single process. This can be very useful for debugging
+        and profiling. This can also be very useful for tests to increase code
+        coverage metrics, since code execution for the entire calculation is
+        not 'hidden' behind a distribution mechanism.
     :returns:
         The completed :class:`~openquake.db.models.OqJob`.
     """
@@ -193,7 +201,7 @@ def run_hazard_job(cfg, exports=None):
     models.JobStats.objects.create(oq_job=job)
 
     calc_mode = job.hazard_calculation.calculation_mode
-    calc = hazard.CALCULATORS_NEXT[calc_mode](job)
+    calc = hazard.CALCULATORS_NEXT[calc_mode](job, no_distribute=no_distribute)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
     job.is_running = False
     job.save()
