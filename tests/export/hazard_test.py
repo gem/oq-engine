@@ -31,7 +31,7 @@ from tests.utils import helpers
 
 class UtilsTestCase(unittest.TestCase):
 
-    def test__get_end_branch_export_path(self):
+    def setUp(self):
         class FakeLtRealization(object):
             def __init__(self, gsim_lt_path):
                 self.gsim_lt_path = gsim_lt_path
@@ -45,24 +45,67 @@ class UtilsTestCase(unittest.TestCase):
         class FakeGMPELTBranch(object):
             value = FakeGMPE()
         class FakeGMPELT(object):
-            branches = dict(b1=FakeGMPELTBranch())
+            def __init__(self, branches):
+                self.branches = branches
         class FakeLogicTreeProcessor(object):
-            gmpe_lt = FakeGMPELT()
+            def __init__(self, gmpe_lt):
+                self.gmpe_lt = gmpe_lt
 
-        target_dir = '/tmp/oq/'
-        lt_rlz = FakeLtRealization(['b1'])
-        ltp = FakeLogicTreeProcessor()
+        self.FakeResult = FakeResult
+        self.FakeGMPELTBranch = FakeGMPELTBranch
+
+        self.lt_rlz = FakeLtRealization(['b1'])
+        branches = dict(b1=FakeGMPELTBranch())
+        gmpe_lt = FakeGMPELT(branches)
+        self.ltp = FakeLogicTreeProcessor(gmpe_lt)
+
+        self.target_dir = '/tmp/oq/'
+
+    def test__get_end_branch_export_path_one_gsim_bl(self):
+        # Test with one GSIM branching level
 
         # PGA:
-        result = FakeResult(lt_rlz, 'PGA', None)
+        result = self.FakeResult(self.lt_rlz, 'PGA', None)
         expected = '/tmp/oq/FakeGMPE/PGA'
-        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        actual = hazard._get_end_branch_export_path(
+            self.target_dir, result, self.ltp
+        )
         self.assertEqual(expected, actual)
 
         # SA:
-        result = FakeResult(lt_rlz, 'SA', '0.025')
+        result = self.FakeResult(self.lt_rlz, 'SA', '0.025')
         expected = '/tmp/oq/FakeGMPE/SA[0025]'
-        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        actual = hazard._get_end_branch_export_path(
+            self.target_dir, result, self.ltp
+        )
+        self.assertEqual(expected, actual)
+
+    def test__get_end_branch_export_path_two_gsim_bls(self):
+        # Same test as above but with multiple GSIM branching levels
+        # In this case, we have two branching levels in the GSIM logic tree.
+        # The GSIM names should be joined on a `_` to form the directory name.
+
+        class FakeGMPE2(object):
+            pass
+        b2 = self.FakeGMPELTBranch()
+        b2.value = FakeGMPE2()
+        self.ltp.gmpe_lt.branches['b2'] = b2
+        self.lt_rlz.gsim_lt_path.append('b2')
+
+        # PGA:
+        result = self.FakeResult(self.lt_rlz, 'PGA', None)
+        expected = '/tmp/oq/FakeGMPE_FakeGMPE2/PGA'
+        actual = hazard._get_end_branch_export_path(
+            self.target_dir, result, self.ltp
+        )
+        self.assertEqual(expected, actual)
+
+        # SA:
+        result = self.FakeResult(self.lt_rlz, 'SA', '0.025')
+        expected = '/tmp/oq/FakeGMPE_FakeGMPE2/SA[0025]'
+        actual = hazard._get_end_branch_export_path(
+            self.target_dir, result, self.ltp
+        )
         self.assertEqual(expected, actual)
 
 

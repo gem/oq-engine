@@ -122,8 +122,10 @@ def _get_end_branch_export_path(target_dir, result, ltp):
         Instance of a :class:`~openquake.input.logictree.LogicTreeProcessor`.
     """
     lt_rlz = result.lt_realization
-    [gsim_branch] = lt_rlz.gsim_lt_path
-    gsim_name = ltp.gmpe_lt.branches[gsim_branch].value.__class__.__name__
+    gsim_dir_name = '_'.join(
+        [ltp.gmpe_lt.branches[br].value.__class__.__name__
+         for br in lt_rlz.gsim_lt_path]
+    )
 
     imt = result.imt
     if imt == 'SA':
@@ -132,7 +134,7 @@ def _get_end_branch_export_path(target_dir, result, ltp):
         period = period.replace('.', '')
         imt = 'SA[%s]' % period
 
-    export_dir = os.path.abspath(os.path.join(target_dir, gsim_name, imt))
+    export_dir = os.path.abspath(os.path.join(target_dir, gsim_dir_name, imt))
     if not os.path.exists(export_dir):
         os.makedirs(export_dir)
 
