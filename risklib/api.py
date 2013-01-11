@@ -264,7 +264,7 @@ class ProbabilisticEventBased(object):
 def aggregate_losses(set_of_outputs, result=None):
     for asset_output in set_of_outputs:
         if result is None:  # first time
-            result = asset_output.losses[:]  # take a copy
+            result = numpy.copy(asset_output.losses)
         else:
             result += asset_output.losses  # mutate the copy
     return result
