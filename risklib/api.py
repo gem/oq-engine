@@ -159,7 +159,7 @@ def damage_distribution_by_taxonomy(asset_outputs, result):
         except KeyError:
             result[asset_output.asset.taxonomy] = asset_output.fractions
         else:
-            # using += would not work because it would mutate the array in place
+            # using += would mutate the array in place
             result[asset_output.asset.taxonomy] = prev + asset_output.fractions
     return result
 
@@ -237,7 +237,6 @@ class ProbabilisticEventBased(object):
         self.curve_resolution = curve_resolution
 
         self.loss_ratios = None
-        self._aggregate_losses = None
 
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
@@ -265,9 +264,9 @@ class ProbabilisticEventBased(object):
 def aggregate_losses(set_of_outputs, result=None):
     for asset_output in set_of_outputs:
         if result is None:  # first time
-            result = asset_output.losses
+            result = asset_output.losses[:]  # take a copy
         else:
-            result += asset_output.losses
+            result += asset_output.losses  # mutate the copy
     return result
 
 
