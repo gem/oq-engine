@@ -16,6 +16,7 @@
 
 import shutil
 import tempfile
+import unittest
 
 from lxml import etree
 from nose.plugins.attrib import attr
@@ -28,7 +29,44 @@ from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
 
 
-class ClassicalExportTestcase(BaseExportTestCase):
+class UtilsTestCase(unittest.TestCase):
+
+    def test__get_end_branch_export_path(self):
+        class FakeLtRealization(object):
+            def __init__(self, gsim_lt_path):
+                self.gsim_lt_path = gsim_lt_path
+        class FakeResult(object):
+            def __init__(self, lt_realization, imt, sa_period):
+                self.lt_realization = lt_realization
+                self.imt = imt
+                self.sa_period = sa_period
+        class FakeGMPE(object):
+            pass
+        class FakeGMPELTBranch(object):
+            value = FakeGMPE()
+        class FakeGMPELT(object):
+            branches = dict(b1=FakeGMPELTBranch())
+        class FakeLogicTreeProcessor(object):
+            gmpe_lt = FakeGMPELT()
+
+        target_dir = '/tmp/oq/'
+        lt_rlz = FakeLtRealization(['b1'])
+        ltp = FakeLogicTreeProcessor()
+
+        # PGA:
+        result = FakeResult(lt_rlz, 'PGA', None)
+        expected = '/tmp/oq/FakeGMPE/PGA'
+        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        self.assertEqual(expected, actual)
+
+        # SA:
+        result = FakeResult(lt_rlz, 'SA', '0.025')
+        expected = '/tmp/oq/FakeGMPE/SA[0025]'
+        actual = hazard._get_end_branch_export_path(target_dir, result, ltp)
+        self.assertEqual(expected, actual)
+
+
+class ClassicalExportTestCase(BaseExportTestCase):
 
     @attr('slow')
     def test_classical_hazard_export(self):
@@ -198,5 +236,46 @@ class ScenarioExportTestCase(BaseExportTestCase):
             tree = etree.parse(f)
             self.assertEqual(3, number_of('nrml:gmf', tree))
             # 3 because there are 3 sites in the job.ini file
+        finally:
+            shutil.rmtree(target_dir)
+
+
+class DisaggExportTestCase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_disagg_hazard_export(self):
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            cfg = helpers.demo_file('disaggregation/job.ini')
+
+            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+
+            # Test curve export:
+            curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(4, len(curves))
+            curve_files = []
+            for curve in curves:
+                curve_files.extend(hazard.export(curve.id, target_dir))
+
+            self.assertEqual(4, len(curve_files))
+            for f in curve_files:
+                self._test_exported_file(f)
+
+            # Test disagg matrix export:
+            matrices = outputs.filter(output_type='disagg_matrix')
+            self.assertEqual(8, len(matrices))
+            disagg_files = []
+            for matrix in matrices:
+                disagg_files.extend(hazard.export(matrix.id, target_dir))
+
+            self.assertEqual(8, len(disagg_files))
+            for f in disagg_files:
+                self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
