@@ -208,9 +208,11 @@ class GroundMotionValuesGetter(object):
         cursor.execute(min_dist_query, args)
         min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
 
+        min_dist += 0.1  # 0.1 is some numerical tolerance
+
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf
-        WHERE %s >= ST_Distance_Sphere(location, %s)
+        WHERE %s > ST_Distance_Sphere(location, %s)
         AND imt = %s AND gmf_set_id IN %s {}
         ORDER BY gmf_set_id, result_grp_ordinal
         """.format(spectral_filters)
