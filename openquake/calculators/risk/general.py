@@ -59,8 +59,10 @@ class BaseRiskCalculator(base.CalculatorNext):
       for sampling
     """
 
-    def __init__(self, job):
-        super(BaseRiskCalculator, self).__init__(job)
+    def __init__(self, job, no_distribute=False):
+        super(BaseRiskCalculator, self).__init__(
+            job, no_distribute=no_distribute
+        )
 
         self.assets_nr = None
         self.exposure_model_id = None

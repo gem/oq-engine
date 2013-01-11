@@ -289,13 +289,21 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 writers=dict(mean_curves=MeanCurveWriter,
                              quantile_curves=QuantileCurveWriter))
 
-            utils_tasks.distribute(
+            if self.no_distribute:
+                # Don't use celery for the post-processing computation:
+                for each_task in tasks:
+                    post_processing.do_post_process(self.job.id, each_task)
+            else:
+                utils_tasks.distribute(
                     post_processing.do_post_process,
                     ("post_processing_task", tasks),
-                    tf_args=dict(job_id=self.job.id))
+                    tf_args=dict(job_id=self.job.id)
+                )
 
         if len(self.hc.poes_hazard_maps) > 0:
-            post_processing.do_hazard_map_post_process(self.job)
+            post_processing.do_hazard_map_post_process(
+                self.job, no_distribute=self.no_distribute
+            )
 
         logs.LOG.debug('< done with post processing')
 

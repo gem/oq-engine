@@ -414,13 +414,16 @@ hazard_curves_to_hazard_map_task = utils_tasks.oqtask(
 hazard_curves_to_hazard_map_task.ignore_result = False
 
 
-def do_hazard_map_post_process(job):
+def do_hazard_map_post_process(job, no_distribute=False):
     """
     Create and distribute tasks for processing hazard curves into hazard maps.
 
     :param job:
         A :class:`openquake.db.models.OqJob` which has some hazard curves
         associated with it.
+    :param bool no_distribute:
+        If `True`, do this processing in the current process, and don't
+        distribute/parallelize the computation in any way.
     """
     logs.LOG.debug('> Post-processing - Hazard Maps')
     block_size = int(config.get('hazard', 'concurrent_tasks'))
@@ -440,13 +443,19 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('> Hazard post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        tasks = []
-        for hazard_curve_id in block:
-            tasks.append(hazard_curves_to_hazard_map_task.subtask(
-                (job.id, hazard_curve_id, poes)))
-        results = TaskSet(tasks=tasks).apply_async()
+        if no_distribute:
+            # just execute the post-processing using the plain function form of
+            # the task
+            for hazard_curve_id in block:
+                hazard_curves_to_hazard_map_task(job.id, hazard_curve_id, poes)
+        else:
+            tasks = []
+            for hazard_curve_id in block:
+                tasks.append(hazard_curves_to_hazard_map_task.subtask(
+                    (job.id, hazard_curve_id, poes)))
+            results = TaskSet(tasks=tasks).apply_async()
 
-        utils_tasks._check_exception(results)
+            utils_tasks._check_exception(results)
 
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))
