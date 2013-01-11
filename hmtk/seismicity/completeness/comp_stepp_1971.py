@@ -8,16 +8,9 @@ completeness of an earthquake catalogue
 
 from math import fabs
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import fmin_l_bfgs_b
 from hmtk.seismicity.utils import decimal_time, piecewise_linear_scalar
 from hmtk.seismicity.completeness.base import BaseCatalogueCompleteness
-
-valid_markers = ['*', '+', '1', '2', '3', '4', '8', '<', '>', 'D', 'H', '^',
-                 '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
-
-DEFAULT_FILETYPE = 'png'
-DEFAULT_DPI = 300
 
 def get_bilinear_residuals_stepp(input_params, xvals, yvals, slope1_fit):
     '''
@@ -96,9 +89,6 @@ class Stepp1971(BaseCatalogueCompleteness):
                 'increment_lock' Boolean to indicate whether to ensure
                            completeness magnitudes always decrease with more
                            recent bins
-                'filename' {optional} name of file to write Stepp plot
-                'filetype' {optional} Type of file (default: png)
-                'filedpi' {optional} Image resolution (dpi) of figure
         
         :returns: 
             2-column table indicating year of completeness and corresponding 
@@ -147,18 +137,6 @@ class Stepp1971(BaseCatalogueCompleteness):
             np.floor(self.end_year - comp_time), 
             mag_cents])
         
-        if isinstance(config['filename'], str):
-            # A plot is requested
-            self.time_values = n_years
-            if not 'filetype' in config.keys or not config['filetype']:
-                config['filetype'] = DEFAULT_FILETYPE
-            if not 'filedpi' in config.keys or not config['filedpi']:
-                config['filedpi'] = DEFAULT_DPI
-
-            self.create_stepp_plot(config['filename'], 
-                                   config['filetype'], 
-                                   config['filedpi'])
-
         return self.completeness_table 
     
    
@@ -360,58 +338,4 @@ class Stepp1971(BaseCatalogueCompleteness):
         return completeness_time, result[0], model_line
 
 
-    def create_stepp_plots(self, filename, filetype='png', 
-        filedpi=300):
-        '''Creates the classic Stepp (1972) plots for a completed Stepp 
-        analysis, and exports the figure to a file.
-        :param string filename: 
-            Name of output file
-        :param string filetype: 
-            Type of file (from list supported by matplotlib)
-        :param int filedpi:
-            Resolution (dots per inch) of output file
-        '''
-        legend_list = [(str(self.magnitude_bin[iloc] + 0.01) + ' - ' + 
-                       str(self.magnitude_bin[iloc + 1])) for iloc in range(0, 
-                       len(self.magnitude_bin) - 1)]
-        
-        rgb_list = []
-        marker_vals = []
-        # Get marker from valid list
-        while len(valid_markers) < len(self.magnitude_bin):
-            valid_markers.append(valid_markers)
-        
-        marker_sampler = np.arange(0, len(valid_markers),1)
-        np.random.shuffle(marker_sampler)
-        # Get colour for each bin
-        for value in range(0, len(self.magnitude_bin) - 1):
-            rgb_samp = np.random.uniform(0., 1., 3)
-            rgb_list.append((rgb_samp[0], rgb_samp[1], rgb_samp[2]))
-            marker_vals.append(valid_markers[marker_sampler[value]])
-        # Plot observed Sigma lambda
-        for iloc in range(0, len(self.magnitude_bin) - 1):
-            plt.loglog(self.time_values, 
-                       self.sigma[:, iloc],
-                       linestyle='None',
-                       marker=marker_vals[iloc], 
-                       color=rgb_list[iloc])
-        
-        plt.legend(legend_list)
-        # Plot expected Poisson rate
-        for iloc in range(0, len(self.magnitude_bin) - 1):
-            plt.loglog(self.time_values, 
-                       self.model_line[:,iloc], 
-                       linestyle='-',
-                       marker='None',
-                       color=rgb_list[iloc])
-            xmarker = self.end_year - self.completeness_table[iloc, 0]
-            id0 = self.model_line[:, iloc] > 0.
-            ymarker = 10.0 ** np.interp(np.log10(xmarker),
-                                        np.log10(self.time_values[id0]),
-                                        np.log10(self.model_line[id0, iloc]))
-            plt.loglog(xmarker, ymarker, 'ks')
-        plt.xlabel('Time (years)', fontsize=15)
-        plt.ylabel('$\sigma_{\lambda} = \sqrt{\lambda} / \sqrt{T}$', 
-                    fontsize=15)
-        # Save figure to file
-        plt.savefig(filename, dpi=filedpi, format=filetype)
+
