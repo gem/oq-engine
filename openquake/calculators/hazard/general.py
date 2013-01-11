@@ -560,8 +560,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             # Associate the source input to the source model logic tree input:
             try:
-                models.Src2ltsrc.objects.get(hzrd_src=inp, lt_src=smlt,
-                                             filename=src_path)
+                models.Src2ltsrc.objects.get(lt_src=smlt, filename=src_path)
             except ObjectDoesNotExist:
                 # If it doesn't exist, this is a new input and we're not
                 # reusing an old one which is identical.
