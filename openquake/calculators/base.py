@@ -250,7 +250,10 @@ def queue_next(task_func, task_args):
         of the "plumbing" which handles task queuing (such as the various "task
         complete" callback functions).
     """
-    task_func.apply_async(task_args)
+    if openquake.no_distribute():
+        task_func(*task_args)
+    else:
+        task_func.apply_async(task_args)
 
 
 def signal_task_complete(**kwargs):
