@@ -18,6 +18,8 @@
 
 import kombu
 
+import openquake
+
 from openquake import logs
 from openquake.utils import config
 
@@ -147,6 +149,8 @@ class CalculatorNext(object):
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
         """
+        if openquake.no_distribute():
+            logs.LOG.warn('Calculation task distribution is disabled')
         # The following two counters are in a dict so that we can use them in
         # the closures below.
         # When `self.progress['compute']` becomes equal to
