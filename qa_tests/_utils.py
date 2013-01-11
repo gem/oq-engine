@@ -14,7 +14,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import nrml
+import os
 import unittest
+
+import openquake
 
 from lxml import etree
 from numpy import median
@@ -43,9 +46,23 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
+        # backup the OQ_NO_DISTRIBUTE state:
+        old_nd = os.environ.get(openquake.NO_DISTRIBUTE_VAR)
+
+        # by default, set OQ_NO_DISTRIBUTE to true, so we can benefit from
+        # including these tests in our code coverage
+        os.environ[openquake.NO_DISTRIBUTE_VAR] = '1'
+
         completed_job = helpers.run_hazard_job(cfg, exports=exports)
 
         self.assertEqual('complete', completed_job.status)
+
+        # restore the OQ_NO_DISTRIBUTE state:
+        if old_nd is None:
+            os.environ.pop(openquake.NO_DISTRIBUTE_VAR)
+        else:
+            os.environ[openquake.NO_DISTRIBUTE_VAR] = old_nd
+
         return completed_job
 
     def assert_xml_equal(self, a, b):
