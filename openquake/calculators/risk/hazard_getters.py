@@ -114,9 +114,69 @@ class GroundMotionValuesGetter(object):
             return tuple(
                 gmf_collection.gmfset_set.values_list('id', flat=True))
         else:
-            raise ValueError("Output must be of type `gmf`. "
+            raise ValueError(
+                "Output must be of type `gmf`. "
                 "At the moment, we only support computation of loss curves "
                 "for a specific logic tree branch.")
+
+    ## old version to be removed ##
+    # def __call__(self, site):
+    #     """
+    #     Return the closest ground motion values to the given location.
+
+    #     :param site:
+    #         The reference location. The closest ground motion values
+    #         to this location are returned.
+    #     :type site: `django.contrib.gis.geos.point.Point` object
+    #     """
+
+    #     if site.wkt in self._cache:
+    #         return self._cache[site.wkt]
+
+    #     cursor = connection.cursor()
+
+    #     spectral_filters = ""
+
+    #     if self._imt == "SA":
+    #         spectral_filters = "AND sa_period = %s AND sa_damping = %s"
+
+    #     query = """
+    #     SELECT array_agg(n.v) as t,
+    #            AsText(location),
+    #            min(ST_Distance_Sphere(location, %%s))
+    #     AS min_distance FROM (
+    #         SELECT row_number() over () as r,
+    #                unnest(m.gmvs) as v, location FROM (
+    #           SELECT gmvs, location FROM hzrdr.gmf
+    #           WHERE imt = %%s AND gmf_set_id IN %%s %s
+    #           ORDER BY gmf_set_id, result_grp_ordinal
+    #       ) m) n GROUP BY r, location ORDER BY min_distance;"""
+
+    #     query = query % spectral_filters
+
+    #     args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
+
+    #     if self._imt == "SA":
+    #         args = args + (self._sa_period, self._sa_damping)
+
+    #     cursor.execute(query, args)
+
+    #     ground_motion_values = []
+    #     current_location = None
+    #     while 1:
+    #         data = cursor.fetchone()
+    #         if not data:
+    #             break
+    #         if not current_location:
+    #             current_location = data[1]
+    #         else:
+    #             if current_location != data[1]:
+    #                 break
+    #         ground_motion_values.extend(data[0])
+
+    #     self._cache[site.wkt] = ground_motion_values
+
+    #     return ground_motion_values
 
     def __call__(self, site):
         """
@@ -134,46 +194,31 @@ class GroundMotionValuesGetter(object):
         cursor = connection.cursor()
 
         spectral_filters = ""
-
-        if self._imt == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-
-        query = """
-        SELECT array_agg(n.v) as t,
-               AsText(location),
-               min(ST_Distance_Sphere(location, %%s))
-        AS min_distance FROM (
-            SELECT row_number() over () as r,
-                   unnest(m.gmvs) as v, location FROM (
-              SELECT gmvs, location FROM hzrdr.gmf
-              WHERE imt = %%s AND gmf_set_id IN %%s %s
-              ORDER BY gmf_set_id, result_grp_ordinal
-          ) m) n GROUP BY r, location ORDER BY min_distance;"""
-
-        query = query % spectral_filters
-
         args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
 
         if self._imt == "SA":
-            args = args + (self._sa_period, self._sa_damping)
+            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
+            args += (self._sa_period, self._sa_damping)
 
-        cursor.execute(query, args)
+        min_dist_query = """-- find the distance of the closest location
+        SELECT min(ST_Distance_Sphere(location, %s)) FROM hzrdr.gmf
+        WHERE imt = %s AND gmf_set_id IN %s {}""".format(
+            spectral_filters)
 
-        ground_motion_values = []
-        current_location = None
-        while 1:
-            data = cursor.fetchone()
-            if not data:
-                break
-            if not current_location:
-                current_location = data[1]
-            else:
-                if current_location != data[1]:
-                    break
-            ground_motion_values.extend(data[0])
+        cursor.execute(min_dist_query, args)
+        min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
 
+        gmvs_query = """-- return all the gmvs inside the min_dist radius
+        SELECT gmvs FROM hzrdr.gmf
+        WHERE %s >= ST_Distance_Sphere(location, %s)
+        AND imt = %s AND gmf_set_id IN %s {}
+        ORDER BY gmf_set_id, result_grp_ordinal
+        """.format(spectral_filters)
+
+        cursor.execute(gmvs_query, (min_dist,) + args)
+
+        ground_motion_values = sum([row[0] for row in cursor], [])
         self._cache[site.wkt] = ground_motion_values
-
         return ground_motion_values
 
 
