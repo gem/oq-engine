@@ -20,6 +20,7 @@ import unittest
 import openquake
 
 from lxml import etree
+from mock import patch
 from numpy import median
 
 from tests.utils import helpers
@@ -46,22 +47,12 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        # backup the OQ_NO_DISTRIBUTE state:
-        old_nd = os.environ.get(openquake.NO_DISTRIBUTE_VAR)
+        # Set OQ_NO_DISTRIBUTE to true, so we can benefit from including these
+        # tests in our code coverage
+        with patch.dict('os.environ', {openquake.NO_DISTRIBUTE_VAR: '1'}):
+            completed_job = helpers.run_hazard_job(cfg, exports=exports)
 
-        # by default, set OQ_NO_DISTRIBUTE to true, so we can benefit from
-        # including these tests in our code coverage
-        os.environ[openquake.NO_DISTRIBUTE_VAR] = '1'
-
-        completed_job = helpers.run_hazard_job(cfg, exports=exports)
-
-        self.assertEqual('complete', completed_job.status)
-
-        # restore the OQ_NO_DISTRIBUTE state:
-        if old_nd is None:
-            os.environ.pop(openquake.NO_DISTRIBUTE_VAR)
-        else:
-            os.environ[openquake.NO_DISTRIBUTE_VAR] = old_nd
+            self.assertEqual('complete', completed_job.status)
 
         return completed_job
 
