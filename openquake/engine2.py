@@ -22,6 +22,8 @@ import md5
 import os
 import sys
 
+import openquake
+
 from django.core import exceptions
 from django.db import close_connection, models as djm
 
@@ -439,7 +441,7 @@ def _switch_to_job_phase(job, ctype, status):
     models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
                                         ctype=ctype)
     logs.LOG.progress("%s (%s)" % (status, ctype))
-    if status == "executing":
+    if status == "executing" and not openquake.no_distribute():
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
         failed_nodes = monitor.count_failed_nodes(job)
