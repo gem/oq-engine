@@ -159,3 +159,72 @@ class GroundMotionValuesGetter(object):
         self._cache[site.wkt] = ground_motion_values
         return ground_motion_values
 
+
+class GroundMotionScenarioGetter(object):
+    """
+    Hazard getter for loading ground motion values from the table
+    gmf_scenario.
+    It caches the ground motion values on a per-location basis.
+
+    :param int hazard_output_id:
+        Id of the hazard output (`openquake.db.models.Output`) used to
+        look up the ground motion values. This implementation only supports
+        plain `gmf` output types (single logic tree branch or realization).
+    :param str imt:
+        The intensity measure type with which the ground motion
+        values have been computed (long form).
+    """
+
+    def __init__(self, hazard_output_id, imt):
+        imt, sa_period, sa_damping = models.parse_imt(imt)
+
+        self._imt = imt
+        self._sa_period = sa_period
+        self._sa_damping = sa_damping
+        self._hazard_output_id = hazard_output_id
+        self._cache = {}
+
+    def __call__(self, site):
+        """
+        Return the closest ground motion values to the given location.
+
+        :param site:
+            The reference location. The closest ground motion values
+            to this location are returned.
+        :type site: `django.contrib.gis.geos.point.Point` object
+        """
+
+        if site.wkt in self._cache:
+            return self._cache[site.wkt]
+
+        cursor = connection.cursor()
+
+        spectral_filters = ""
+        args = ("SRID=4326; %s" % site.wkt, self._imt, self._hazard_output_id)
+
+        if self._imt == "SA":
+            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
+            args += (self._sa_period, self._sa_damping)
+
+        min_dist_query = """-- find the distance of the closest location
+        SELECT min(ST_Distance_Sphere(location, %s)) FROM hzrdr.gmf_scenario
+        WHERE imt = %s AND output_id = %s {}""".format(
+            spectral_filters)
+
+        cursor.execute(min_dist_query, args)
+        min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
+
+        min_dist += 0.1  # 0.1 is some numerical tolerance
+
+        gmvs_query = """-- return all the gmvs inside the min_dist radius
+        SELECT gmvs FROM hzrdr.gmf_scenario
+        WHERE %s > ST_Distance_Sphere(location, %s)
+        AND imt = %s AND output_id = %s {}
+        ORDER BY result_grp_ordinal
+        """.format(spectral_filters)
+
+        cursor.execute(gmvs_query, (min_dist,) + args)
+
+        ground_motion_values = sum([row[0] for row in cursor], [])
+        self._cache[site.wkt] = ground_motion_values
+        return ground_motion_values

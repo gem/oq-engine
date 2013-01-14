@@ -23,6 +23,26 @@ from django.contrib.gis.geos.point import Point
 from openquake.calculators.risk import hazard_getters
 
 
+# helper
+def _hazard_output(output_type):
+    organization = models.Organization(name="TEST Organization")
+    organization.save()
+
+    user, _ = models.OqUser.objects.get_or_create(
+        user_name="Test",
+        defaults={"full_name": "Test", "organization": organization})
+
+    job = models.OqJob(owner=user)
+    job.save()
+
+    output = models.Output(
+        owner=user, oq_job=job, display_name="TEST",
+        output_type=output_type)
+    output.save()
+
+    return output
+
+
 class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
@@ -48,7 +68,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
     def test_all_sets_at_same_location_merged(self):
-        output = self._hazard_output("gmf")
+        output = _hazard_output("gmf")
 
         # we don't use an output type `complete_lt_gmf` here, the
         # flag is just to avoid the creation of all the realization
@@ -77,7 +97,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
 
     def test_closest_location_selected(self):
-        output = self._hazard_output("gmf")
+        output = _hazard_output("gmf")
 
         # we don't use an output type `complete_lt_gmf` here, the
         # flag is just to avoid the creation of all the realization
@@ -105,7 +125,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
         self.assertEqual(expected, getter(Point(0.5, 0.5)))
 
     def test_only_specific_branches_are_supported(self):
-        output = self._hazard_output("complete_lt_gmf")
+        output = _hazard_output("complete_lt_gmf")
         collection = models.GmfCollection(
             output=output, complete_logic_tree_gmf=True)
         collection.save()
@@ -115,7 +135,7 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
                           collection.id, "PGA")
 
     def test_intensity_type_sa(self):
-        output = self._hazard_output("gmf")
+        output = _hazard_output("gmf")
 
         # we don't use an output type `complete_lt_gmf` here, the
         # flag is just to avoid the creation of all the realization
@@ -157,20 +177,76 @@ class GroundMotionValuesGetterTestCase(unittest.TestCase):
 
         return gmf_set
 
-    def _hazard_output(self, output_type):
-        organization = models.Organization(name="TEST Organization")
-        organization.save()
 
-        user, _ = models.OqUser.objects.get_or_create(
-            user_name="Test",
-            defaults={"full_name": "Test", "organization": organization})
+class GroundMotionScenarioGetterTestCase(unittest.TestCase):
 
-        job = models.OqJob(owner=user)
-        job.save()
+    def test_all_sets_at_same_location_merged(self):
+        output = _hazard_output("gmf_scenario")
 
-        output = models.Output(
-            owner=user, oq_job=job, display_name="TEST",
-            output_type=output_type)
-        output.save()
+        models.GmfScenario(
+            output=output, imt="PGA",
+            location=Point(1.0, 1.0), gmvs=[0.1, 0.2, 0.3],
+            result_grp_ordinal=1).save()
 
-        return output
+        models.GmfScenario(
+            output=output, imt="PGA",
+            location=Point(1.0, 1.0), gmvs=[0.4, 0.5, 0.6],
+            result_grp_ordinal=2).save()
+
+        getter = hazard_getters.GroundMotionScenarioGetter(
+            hazard_output_id=output.id, imt="PGA")
+
+        # to the event based risk calculator, we must pass all the
+        # ground motion values coming from all the stochastic event sets.
+        expected = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
+
+        self.assertEqual(expected, getter(Point(0.5, 0.5)))
+
+    def test_closest_location_selected(self):
+        output = _hazard_output("gmf_scenario")
+
+        # this is the closest ground motion field.
+        models.GmfScenario(
+            output=output, imt="PGA",
+            location=Point(1.0, 1.0), gmvs=[0.1, 0.2, 0.3],
+            result_grp_ordinal=1).save()
+
+        models.GmfScenario(
+            output=output, imt="PGA",
+            location=Point(2.0, 2.0), gmvs=[0.4, 0.5, 0.6],
+            result_grp_ordinal=1).save()
+
+        getter = hazard_getters.GroundMotionScenarioGetter(
+            hazard_output_id=output.id, imt="PGA")
+
+        expected = [0.1, 0.2, 0.3]
+
+        self.assertEqual(expected, getter(Point(0.5, 0.5)))
+
+    def test_intensity_type_sa(self):
+        output = _hazard_output("gmf_scenario")
+
+        # when IMT==SA we should filter also for `sa_period`
+        # and `sa_damping`
+        models.GmfScenario(
+            output=output, imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.1, 0.2, 0.3], sa_period=1.0,
+            sa_damping=5.0, result_grp_ordinal=1).save()
+
+        # different `sa_period`
+        models.GmfScenario(
+            output=output, imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.4, 0.5, 0.6], sa_period=2.0,
+            sa_damping=2.0, result_grp_ordinal=2).save()
+
+        # different `sa_damping`
+        models.GmfScenario(
+            output=output, imt="SA",
+            location=Point(1.0, 1.0), gmvs=[0.7, 0.8, 0.9], sa_period=1.0,
+            sa_damping=1.0, result_grp_ordinal=3).save()
+
+        getter = hazard_getters.GroundMotionScenarioGetter(
+            hazard_output_id=output.id, imt="SA(1.0)")
+
+        expected = [0.1, 0.2, 0.3]
+        self.assertEqual(expected, getter(Point(0.5, 0.5)))
