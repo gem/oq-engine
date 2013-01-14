@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import nrml
-import os
 import unittest
 
 import openquake
