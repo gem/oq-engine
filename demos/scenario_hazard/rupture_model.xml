@@ -9,8 +9,8 @@
         <simpleFaultGeometry>
                 <gml:LineString>
                     <gml:posList>
-			15.5826 37.6943 1.0
-			15.5173 38.2324 1.0
+			15.5826 37.6943
+			15.5173 38.2324
                     </gml:posList>
                 </gml:LineString>
             <dip>42.0</dip>
