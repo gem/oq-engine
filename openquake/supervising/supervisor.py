@@ -306,6 +306,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             if failures:
                 message = "job terminated with failures: %s" % failures
             else:
+                # Don't check for failed nodes if distribution is disabled.
+                # In this case, we don't expect any nodes to be present, and
+                # thus, there are none that can fail.
                 if not openquake.no_distribute():
                     failed_nodes = abort_due_to_failed_nodes(self.job_id)
                     if failed_nodes:
