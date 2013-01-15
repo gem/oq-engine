@@ -78,7 +78,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, calculator):
+                assets, hazard_getter, calculator):
             general.write_bcr_distribution(bcr_distribution_id, asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 classical_bcr.ignore_result = False
@@ -90,6 +90,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     given set of assets.
     """
     core_calc_task = classical_bcr
+    hazard_getter = 'HazardCurveGetterPerAsset'
 
     @property
     def calculator_parameters(self):
@@ -110,8 +111,8 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         :returns: A list containing the output container id
         """
         return [models.BCRDistribution.objects.create(
-            output=models.Output.objects.create_output(
-            self.job, "BCR Distribution", "bcr_distribution")).pk]
+                output=models.Output.objects.create_output(
+                    self.job, "BCR Distribution", "bcr_distribution")).pk]
 
     def store_risk_model(self):
         """
@@ -121,13 +122,3 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).store_risk_model()
 
         general.store_risk_model(self.rc, "vulnerability_retrofitted")
-
-    @property
-    def hazard_getter(self):
-        """
-        The hazard getter used by the calculation.
-
-        :returns: A string used to get the hazard getter class from
-        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
-        """
-        return "hazard_curve"
