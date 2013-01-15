@@ -24,6 +24,8 @@ E.g. mean and quantile curves.
 import math
 import numpy
 
+import openquake
+
 from celery.task.sets import TaskSet
 from scipy.stats import mstats
 
@@ -440,13 +442,19 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('> Hazard post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        tasks = []
-        for hazard_curve_id in block:
-            tasks.append(hazard_curves_to_hazard_map_task.subtask(
-                (job.id, hazard_curve_id, poes)))
-        results = TaskSet(tasks=tasks).apply_async()
+        if openquake.no_distribute():
+            # just execute the post-processing using the plain function form of
+            # the task
+            for hazard_curve_id in block:
+                hazard_curves_to_hazard_map_task(job.id, hazard_curve_id, poes)
+        else:
+            tasks = []
+            for hazard_curve_id in block:
+                tasks.append(hazard_curves_to_hazard_map_task.subtask(
+                    (job.id, hazard_curve_id, poes)))
+            results = TaskSet(tasks=tasks).apply_async()
 
-        utils_tasks._check_exception(results)
+            utils_tasks._check_exception(results)
 
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))
