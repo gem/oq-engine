@@ -72,6 +72,7 @@ try:
 except ImportError:
     pass
 
+import openquake
 from openquake import __version__
 from openquake import engine2
 from openquake.db import models
@@ -108,6 +109,12 @@ def set_up_arg_parser():
         help='Defaults to "warn"', required=False,
         choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
         default='progress')
+    general_grp.add_argument(
+        '--no-distribute', '--nd', action='store_true',
+        help=('Disable calculation task distribution and run the computation'
+              ' in a single process. This is intended for use in debugging '
+              ' and profiling.')
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -433,6 +440,9 @@ def main():
 
     if args.version:
         complain_and_exit(utils_version.info(__version__))
+
+    if args.no_distribute:
+        os.environ[openquake.NO_DISTRIBUTE_VAR] = '1'
 
     # hazard
     if args.list_hazard_calculations:
