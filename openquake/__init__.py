@@ -49,6 +49,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
+from openquake.utils import general as general_utils
 
 # Please note: the release date should always have a value of 0 (zero) in the
 # master branch. It will only be set to a meaningful value in *packaged* and
@@ -61,3 +62,24 @@ __version__ = (
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+NO_DISTRIBUTE_VAR = 'OQ_NO_DISTRIBUTE'
+
+
+def no_distribute():
+    """
+    Check the `OQ_NO_DISTRIBUTE` environment var to determine if calculations
+    should be distributed or not.
+
+    :returns:
+        `True` if the envvar value is "true", "yes", "t", or "1", regardless of
+        case. Otherwise, return `False`.
+
+        If the variable is undefined, it defaults to `False`.
+    """
+    nd = os.environ.get(NO_DISTRIBUTE_VAR)
+
+    if nd is None:
+        return False
+    else:
+        return general_utils.str2bool(nd)

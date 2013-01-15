@@ -16,7 +16,10 @@
 import nrml
 import unittest
 
+import openquake
+
 from lxml import etree
+from mock import patch
 from numpy import median
 
 from tests.utils import helpers
@@ -43,9 +46,13 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        completed_job = helpers.run_hazard_job(cfg, exports=exports)
+        # Set OQ_NO_DISTRIBUTE to true, so we can benefit from including these
+        # tests in our code coverage
+        with patch.dict('os.environ', {openquake.NO_DISTRIBUTE_VAR: '1'}):
+            completed_job = helpers.run_hazard_job(cfg, exports=exports)
 
-        self.assertEqual('complete', completed_job.status)
+            self.assertEqual('complete', completed_job.status)
+
         return completed_job
 
     def assert_xml_equal(self, a, b):
