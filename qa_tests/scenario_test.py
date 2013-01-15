@@ -37,7 +37,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
     vulnerability_model_mean = dict(
         RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], taxonomy="RM"),
         RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], taxonomy="RC")
-        )
+    )
 
     hazard_mean = dict(
         a1=[0.17111044666642075, 0.3091294488722627,
@@ -55,44 +55,46 @@ class ScenarioRiskTestCase(unittest.TestCase):
             0.34461255379999045, 0.28035744548676755,
             0.44360919761302703, 0.2418451146800914,
             0.5069824581167889, 0.45975761535464116],
-        )
+    )
 
     def test_mean_based(self):
         calculator = api.ScenarioRisk(
             self.vulnerability_model_mean, None, None)
 
-        asset_output = calculator(
+        asset_output_a1 = calculator(
             scientific.Asset("a1", "RM", 3000, None),
             self.hazard_mean["a1"])
 
         self.assertAlmostEqual(440.147078317589,
-            asset_output.mean)
+                               asset_output_a1.mean)
 
         self.assertAlmostEqual(182.615976701858,
-            asset_output.standard_deviation)
+                               asset_output_a1.standard_deviation)
 
-        asset_output = calculator(
+        asset_output_a3 = calculator(
             scientific.Asset("a3", "RM", 1000, None),
             self.hazard_mean["a3"])
 
         self.assertAlmostEqual(180.717534009275,
-            asset_output.mean)
+                               asset_output_a3.mean)
 
         self.assertAlmostEqual(92.2122644809969,
-            asset_output.standard_deviation)
+                               asset_output_a3.standard_deviation)
 
-        asset_output = calculator(
+        asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None),
             self.hazard_mean["a2"])
 
         self.assertAlmostEqual(432.225448142534,
-            asset_output.mean)
+                               asset_output_a2.mean)
 
         self.assertAlmostEqual(186.864456949986,
-            asset_output.standard_deviation)
+                               asset_output_a2.standard_deviation)
 
-        total_losses = (numpy.mean(calculator.aggregate_losses),
-                        numpy.std(calculator.aggregate_losses, ddof=1))
+        aggregate_losses = api.aggregate_losses(
+            [asset_output_a1, asset_output_a2, asset_output_a3])
+        total_losses = (numpy.mean(aggregate_losses),
+                        numpy.std(aggregate_losses, ddof=1))
 
         self.assertAlmostEqual(246.62, total_losses[1], places=2)
         self.assertAlmostEqual(1053.09, total_losses[0], places=2)
@@ -103,39 +105,41 @@ class ScenarioRiskTestCase(unittest.TestCase):
                   taxonomy="RM"),
             RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5],
                   taxonomy="RC"),
-            )
+        )
 
         calculator = api.ScenarioRisk(vulnerability_model, seed=37,
-            correlation_type=None)
+                                      correlation_type=None)
 
-        asset_output = calculator(
+        asset_output_a1 = calculator(
             scientific.Asset("a1", "RM", 3000, None), gmv.a1)
 
-        self.assertAlmostEqual(521.885458891, asset_output.mean,
-            delta=0.05 * 521.885458891)
+        self.assertAlmostEqual(521.885458891, asset_output_a1.mean,
+                               delta=0.05 * 521.885458891)
 
-        self.assertTrue(asset_output.standard_deviation > 244.825980356)
+        self.assertTrue(asset_output_a1.standard_deviation > 244.825980356)
 
-        asset_output = calculator(
+        asset_output_a3 = calculator(
             scientific.Asset("a3", "RM", 1000, None), gmv.a3)
 
-        self.assertAlmostEqual(200.54874638, asset_output.mean,
-            delta=0.05 * 200.54874638)
+        self.assertAlmostEqual(200.54874638, asset_output_a3.mean,
+                               delta=0.05 * 200.54874638)
 
-        self.assertTrue(asset_output.standard_deviation > 94.2302991022)
+        self.assertTrue(asset_output_a3.standard_deviation > 94.2302991022)
 
-        asset_output = calculator(
+        asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None), gmv.a2)
 
-        self.assertAlmostEqual(510.821363253, asset_output.mean,
-            delta=0.05 * 510.821363253)
+        self.assertAlmostEqual(510.821363253, asset_output_a2.mean,
+                               delta=0.05 * 510.821363253)
 
-        self.assertTrue(asset_output.standard_deviation > 259.964152622)
+        self.assertTrue(asset_output_a2.standard_deviation > 259.964152622)
 
-        total_losses = (numpy.mean(calculator.aggregate_losses),
-                        numpy.std(calculator.aggregate_losses))
+        aggregate_losses = api.aggregate_losses(
+            [asset_output_a1, asset_output_a2, asset_output_a3])
+        total_losses = (numpy.mean(aggregate_losses),
+                        numpy.std(aggregate_losses))
 
-        self.assertAlmostEqual(1233.26,
-            total_losses[0], delta=0.05 * 1233.26)
+        self.assertAlmostEqual(
+            1233.26, total_losses[0], delta=0.05 * 1233.26)
 
         self.assertTrue(total_losses[1] > 443.63)

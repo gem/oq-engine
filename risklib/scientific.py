@@ -91,7 +91,7 @@ class VulnerabilityFunction(object):
         self._cov_for = lambda iml: self._covs_i1d(
             numpy.max(
                 [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
-                numpy.ones(len(iml)) * self.min_iml], axis=0))
+                 numpy.ones(len(iml)) * self.min_iml], axis=0))
         self.epsilon_provider = None
         self.taxonomy = taxonomy
 
@@ -239,8 +239,16 @@ ClassicalOutput = collections.namedtuple(
 
 
 ScenarioDamageOutput = collections.namedtuple(
-    "ScenarioDamageOutput",
-    ["asset", "damage_distribution_asset", "collapse_map"])
+    "ScenarioDamageOutput", ["asset", "fractions"])
+
+ScenarioDamageOutput.damage_distribution_asset = property(
+    lambda self: mean_std(self.fractions))
+
+
+def collapse_map(self):
+    mean, std = self.damage_distribution_asset
+    return mean[-1], std[-1]  # last column of the damage distribution
+ScenarioDamageOutput.collapse_map = property(collapse_map)
 
 
 BCROutput = collections.namedtuple(
@@ -254,7 +262,13 @@ ProbabilisticEventBasedOutput = collections.namedtuple(
 
 
 ScenarioRiskOutput = collections.namedtuple(
-    "ScenarioRiskOutput", ["asset", "mean", "standard_deviation"])
+    "ScenarioRiskOutput", ["asset", "losses"])
+
+ScenarioRiskOutput.mean = property(
+    lambda self: numpy.mean(self.losses))
+
+ScenarioRiskOutput.standard_deviation = property(
+    lambda self: numpy.std(self.losses, ddof=1))
 
 
 ##
@@ -596,3 +610,11 @@ def pairwise_mean(values):
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
     return [x - y for x, y in pairwise(values)]
+
+
+def mean_std(fractions):
+    """
+    Given an N x M matrix, returns mean and std computed on the rows,
+    i.e. two M-dimensional vectors.
+    """
+    return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
