@@ -114,6 +114,13 @@ class GroundMotionValuesGetter(object):
                 "At the moment, we only support computation of loss curves "
                 "for a specific logic tree branch.")
 
+    # Note on the algorithm: the idea is to first compute the minimal distance
+    # between the given site and the ground motion fields in the mesh; then the
+    # ground motion values are extracted from the points at that distance. To
+    # cope with numerical errors we extract all the ground motion fields within
+    # the minimal distance plus 10 centimers (any "small" number would do).
+    # This is ~6 times faster than using a group by/order by to extract the
+    # locations/gmvs directly with a single query.
     def __call__(self, site):
         """
         Return the closest ground motion values to the given location.
@@ -144,7 +151,7 @@ class GroundMotionValuesGetter(object):
         cursor.execute(min_dist_query, args)
         min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
 
-        min_dist += 0.1  # 0.1 is some numerical tolerance
+        min_dist += 0.1  # 0.1 meters = 10 centimeters
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf
@@ -184,6 +191,7 @@ class GroundMotionScenarioGetter(object):
         self._hazard_output_id = hazard_output_id
         self._cache = {}
 
+    # this is basically the same algorithm used in GroundMotionValuesGetter
     def __call__(self, site):
         """
         Return the closest ground motion values to the given location.
