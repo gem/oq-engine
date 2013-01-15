@@ -52,12 +52,6 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
         seed=seed,
         correlation_type=asset_correlation)
 
-    # FIXME. Save unmodified calculator, as the decorated one does not
-    # support aggregate losses at the moment.
-    eb_calculator = calculator
-
-    # if we need to compute the insured losses, we add the proper
-    # risklib aggregator
     if insured_losses:
         calculator = api.InsuredLosses(calculator)
 
@@ -66,6 +60,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     if conditional_loss_poes:
         calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
 
+    losses = None
     with db.transaction.commit_on_success(using='reslt_writer'):
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
@@ -80,8 +75,9 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
             if asset_output.insured_losses:
                 general.write_loss_curve(insured_curve_id, asset_output)
 
-    general.update_aggregate_losses(
-        aggregate_loss_curve_id, eb_calculator.aggregate_losses)
+            losses = api.aggregate_losses([asset_output], losses)
+
+    general.update_aggregate_losses(aggregate_loss_curve_id, losses)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False
 
