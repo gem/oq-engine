@@ -138,9 +138,6 @@ class ScenarioDamage(object):
         self.fragility_model = fragility_model
         self.fragility_functions = fragility_functions
 
-        # sum the fractions of all the assets with the same taxonomy
-        self._fractions_per_taxonomy = {}
-
     def __call__(self, asset, hazard):
         fractions = scenario_damage._damage_distribution_per_asset(
             asset,
