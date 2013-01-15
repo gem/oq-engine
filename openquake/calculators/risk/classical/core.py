@@ -78,7 +78,7 @@ def classical(job_id, assets, hazard_getter, hazard_id, seed,
         logs.LOG.debug(
             'launching compute_on_assets over %d assets' % len(assets))
         for asset_output in api.compute_on_assets(
-            assets, hazard_getter, calculator):
+                assets, hazard_getter, calculator):
 
             general.write_loss_curve(loss_curve_id, asset_output)
 
@@ -98,6 +98,8 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     #: celery task
     core_calc_task = classical
 
+    hazard_getter = 'HazardCurveGetterPerAsset'
+
     @property
     def hazard_id(self):
         """
@@ -109,16 +111,6 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not an hazard curve")
 
         return self.rc.hazard_output.hazardcurve.id
-
-    @property
-    def hazard_getter(self):
-        """
-        The hazard getter used by the calculation.
-
-        :returns: A string used to get the hazard getter class from
-        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
-        """
-        return "hazard_curve"
 
     @property
     def calculator_parameters(self):
