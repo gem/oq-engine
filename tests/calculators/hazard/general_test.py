@@ -384,3 +384,33 @@ class ImtsToNhlibTestCase(unittest.TestCase):
         for exp_imt, exp_imls in expected.items():
             act_imls = actual[exp_imt]
             self.assertEqual(exp_imls, act_imls)
+
+
+class Bug1098154TestCase(unittest.TestCase):
+    """
+    A test to directly address
+    https://bugs.launchpad.net/openquake/+bug/1098154. See the bug description
+    for more info.
+    """
+
+    @attr('slow')
+    def test(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+
+        retcode = helpers.run_hazard_job_sp(
+            cfg, silence=True, force_inputs=False
+        )
+        self.assertEqual(0, retcode)
+        job = models.OqJob.objects.latest('id')
+        job_stats = models.JobStats.objects.get(oq_job=job)
+        self.assertEqual(236, job_stats.num_tasks)
+
+        # As the bug description explains, run the same job a second time and
+        # check the task count. It should not grow.
+        retcode = helpers.run_hazard_job_sp(
+            cfg, silence=True, force_inputs=False
+        )
+        self.assertEqual(0, retcode)
+        job = models.OqJob.objects.latest('id')
+        job_stats = models.JobStats.objects.get(oq_job=job)
+        self.assertEqual(236, job_stats.num_tasks)
