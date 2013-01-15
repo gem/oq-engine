@@ -55,7 +55,6 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
         seed=seed,
         correlation_type=asset_correlation)
 
-    # if we need to compute the insured losses, we can aggregate on them, too
     if insured_losses:
         calculator = api.InsuredLosses(calculator)
 
@@ -198,9 +197,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         outputs = super(EventBasedRiskCalculator, self).create_outputs()
 
         aggregate_loss_curve = models.LossCurve.objects.create(
-                aggregate=True,
-                output=models.Output.objects.create_output(
-                    self.job, "Aggregate Loss Curve", "agg_loss_curve"))
+            aggregate=True,
+            output=models.Output.objects.create_output(
+                self.job, "Aggregate Loss Curve", "agg_loss_curve"))
 
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
