@@ -91,7 +91,7 @@ class VulnerabilityFunction(object):
         self._cov_for = lambda iml: self._covs_i1d(
             numpy.max(
                 [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
-                numpy.ones(len(iml)) * self.min_iml], axis=0))
+                 numpy.ones(len(iml)) * self.min_iml], axis=0))
         self.epsilon_provider = None
         self.taxonomy = taxonomy
 
@@ -241,11 +241,8 @@ ClassicalOutput = collections.namedtuple(
 ScenarioDamageOutput = collections.namedtuple(
     "ScenarioDamageOutput", ["asset", "fractions"])
 
-
-def damage_distribution_asset(self):
-    return mean_std(self.fractions)
 ScenarioDamageOutput.damage_distribution_asset = property(
-    damage_distribution_asset)
+    lambda self: mean_std(self.fractions))
 
 
 def collapse_map(self):
@@ -265,7 +262,13 @@ ProbabilisticEventBasedOutput = collections.namedtuple(
 
 
 ScenarioRiskOutput = collections.namedtuple(
-    "ScenarioRiskOutput", ["asset", "losses", "mean", "standard_deviation"])
+    "ScenarioRiskOutput", ["asset", "losses"])
+
+ScenarioRiskOutput.mean = property(
+    lambda self: numpy.mean(self.losses))
+
+ScenarioRiskOutput.standard_deviation = property(
+    lambda self: numpy.std(self.losses, ddof=1))
 
 
 ##

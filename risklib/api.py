@@ -317,5 +317,4 @@ class ScenarioRisk(object):
 
         losses = loss_ratios * asset.value
 
-        return scientific.ScenarioRiskOutput(asset, losses, numpy.mean(losses),
-                                             numpy.std(losses, ddof=1))
+        return scientific.ScenarioRiskOutput(asset, losses)
