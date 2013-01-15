@@ -104,7 +104,7 @@ class PickleFieldTestCase(unittest.TestCase):
     def test_get_prep_value(self):
         field = fields.PickleField()
         data = {'foo': None, (1, False): 'baz'}
-        self.assertEqual(pickle.loads(field.get_db_prep_value(data)), data)
+        self.assertEqual(pickle.loads(field.get_prep_value(data)), data)
 
 
 class OqNullBooleanFieldTestCase(unittest.TestCase):
