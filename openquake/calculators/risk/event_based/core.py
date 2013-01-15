@@ -42,10 +42,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
     """
     vulnerability_model = general.fetch_vulnerability_model(job_id)
 
-    # FIXME(lp): refactor risklib. there is no reason to propagate
-    # time_span and tses in an hazard getter
-    hazard_getter = general.hazard_getter(
-        hazard_getter, hazard_id, imt)
+    hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
         vulnerability_model,
@@ -98,6 +95,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     #: The core calculation celery task function
     core_calc_task = event_based
+
+    hazard_getter = "GroundMotionValuesGetter"
 
     def pre_execute(self):
         """
@@ -201,9 +200,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         outputs = super(EventBasedRiskCalculator, self).create_outputs()
 
         aggregate_loss_curve = models.LossCurve.objects.create(
-                aggregate=True,
-                output=models.Output.objects.create_output(
-                    self.job, "Aggregate Loss Curve", "agg_loss_curve"))
+            aggregate=True,
+            output=models.Output.objects.create_output(
+                self.job, "Aggregate Loss Curve", "agg_loss_curve"))
 
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
@@ -218,13 +217,3 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                     "Insured Loss Curve Set",
                     "ins_loss_curve")).id)
         return outputs + [insured_curve_id, aggregate_loss_curve.id]
-
-    @property
-    def hazard_getter(self):
-        """
-        The hazard getter used by the calculation.
-
-        :returns: A string used to get the hazard getter class from
-        `openquake.calculators.risk.hazard_getters.HAZARD_GETTERS`
-        """
-        return "ground_motion_field"

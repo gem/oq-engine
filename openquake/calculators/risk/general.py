@@ -59,6 +59,8 @@ class BaseRiskCalculator(base.CalculatorNext):
       for sampling
     """
 
+    hazard_getter = None  # the name of the hazard getter class; to override
+
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
 
@@ -198,15 +200,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         raise NotImplementedError
 
     @property
-    def hazard_getter(self):
-        """
-        :returns: a key for the dict
-        `:var:openquake.calculators.risk.hazard_getters.HAZARD_GETTERS'
-        to get the hazard getter used by the calculator.
-        """
-        raise NotImplementedError
-
-    @property
     def rc(self):
         """
         A shorter and more convenient way of accessing the
@@ -280,11 +273,11 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         for poe in self.job.risk_calculation.conditional_loss_poes:
             loss_map_ids[poe] = models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     self.job,
-                     "Loss Map Set with poe %s" % poe,
-                     "loss_map"),
-                     poe=poe).pk
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "Loss Map Set with poe %s" % poe,
+                    "loss_map"),
+                poe=poe).pk
         return [loss_curve_id, loss_map_ids]
 
 
@@ -292,7 +285,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     """
     Initializes and returns an hazard getter
     """
-    return hazard_getters.HAZARD_GETTERS[hazard_getter_name](hazard_id, *args)
+    return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
 def fetch_vulnerability_model(job_id, retrofitted=False):
