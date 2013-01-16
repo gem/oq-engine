@@ -157,7 +157,7 @@ def export_hazard_curves(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id)
+    hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id).iterator()
 
     filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
 
