@@ -163,6 +163,7 @@ def export_hazard_curves(output, target_dir):
     # faster and more lean in terms of memory consumption.
     curves = models.HazardCurveData.objects\
             .filter(hazard_curve=hc.id)\
+            .order_by('id')\
             .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
             .values_list('x', 'y', 'poes')\
             .iterator()
