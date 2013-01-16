@@ -26,7 +26,6 @@ from qa_tests import _utils as qa_utils
 # which breaks if the points in the site_model are in a line, see
 # https://bugs.launchpad.net/openquake/+bug/1092056
 # once the bug is fixed we can restore the test
-@skip
 class ScenarioHazardCase4TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'scenario')
