@@ -1,10 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <!-- The fragility function format applies to the entire fragility model -->
-    <fragilityModel gml:id="ep1" format="continuous" imlUnit="m" minIML="0.1" maxIML="9.9">
-        <gml:description>Fragility model for Pavia (continuous)</gml:description>
+    <fragilityModel format="continuous" imlUnit="m" minIML="0.1" maxIML="9.9">
+        <description>Fragility model for Pavia (continuous)</description>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
             slight
@@ -14,7 +13,7 @@
         </limitStates>
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs gml:id="PAV01-ff02-c" type="lognormal">
+        <ffs type="lognormal">
             <taxonomy>RC/DMRF-D/LR</taxonomy>
 
             <!-- fragility function in continuous format, 1 per limit state -->
@@ -34,7 +33,7 @@
                 <params mean="108.9" stddev="123.7" />
             </ffc>
         </ffs>
-        <ffs gml:id="PAV01-ff03-c">
+        <ffs>
             <taxonomy>RC/DMRF-D/HR</taxonomy>
 
             <!-- fragility function in continuous format, 1 per limit state -->
