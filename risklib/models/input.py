@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import numpy
 from scipy.stats import lognorm
 from scipy.interpolate import interp1d
 import math
@@ -76,37 +75,18 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityModel(object):
     """
-    A Fragility Model object which support a
-    property `lss` containing an iterator over limit states
+    A Fragility Model object with a list attribute `lss` containing
+    the limit states.
+    For N limit states in the fragility model, we always define N+1
+    damage states. The first damage state is always '_no_damage'.
     """
-    # I think there is no reason to support iterators; check
+
     def __init__(self, format, imls, limit_states, no_damage_limit=None):
         self.imls = imls
         self.format = format
-        self.lss = limit_states
+        self.lss = list(limit_states)
+        self.damage_states = [NO_DAMAGE_STATE] + self.lss
         self.no_damage_limit = no_damage_limit
-
-    # matrix of zeros
-    def _make_damage_distribution_matrix(self, ground_motion_field=None):
-        if ground_motion_field:
-            shape = (len(ground_motion_field), len(self.damage_states()))
-        else:
-            shape = len(self.damage_states())
-        return numpy.zeros(shape)
-
-    # probably this can be an attribute set into __init__ once for all
-    def damage_states(self):
-        """
-        Return the damage states from the given limit states.
-
-        For N limit states in the fragility model, we always
-        define N+1 damage states. The first damage state
-        should always be '_no_damage'.
-
-        :param self A Fragility Model object which support a
-        property `lss` containing an iterator over limit states
-        """
-        return [NO_DAMAGE_STATE] + list(self.lss)
 
     def no_damage(self, gmv):
         """

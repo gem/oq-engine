@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,9 +80,8 @@ def _ground_motion_value_fractions((fragility_model, funcs), gmv):
         to the highest)
     """
 
-    # we always have a number of damage states
-    # which is len(limit states) + 1
-    damage_state_values = fragility_model._make_damage_distribution_matrix()
+    # we always have a number of damage states which is len(limit states) + 1
+    damage_state_values = numpy.zeros(len(fragility_model.damage_states))
 
     # when we have a discrete fragility model and
     # the ground motion value is below the lowest
