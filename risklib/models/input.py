@@ -89,8 +89,7 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityModel(object):
     """
-    A Fragility Model object with a list attribute `lss` containing
-    the limit states.
+    A Fragility Model object with a list attribute `damage_states`.
     For N limit states in the fragility model, we always define N+1
     damage states. The first damage state is always '_no_damage'.
     """
@@ -98,8 +97,7 @@ class FragilityModel(object):
     def __init__(self, format, imls, limit_states, no_damage_limit=None):
         self.imls = imls
         self.format = format
-        self.lss = list(limit_states)
-        self.damage_states = [NO_DAMAGE_STATE] + self.lss
+        self.damage_states = [NO_DAMAGE_STATE] + list(limit_states)
         self.no_damage_limit = no_damage_limit
 
     def no_damage(self, gmv):
@@ -173,7 +171,7 @@ class FragilityModel(object):
 
     def __eq__(self, other):
         return (self.imls == other.imls and self.format == other.format
-                and self.lss == other.lss and
+                and self.damage_states == other.damage_states and
                 self.no_damage_limit == other.no_damage_limit)
 
     def __ne__(self, other):
