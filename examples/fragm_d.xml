@@ -3,8 +3,8 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <!-- The fragility function format applies to the entire fragility model -->
-    <fragilityModel gml:id="ep1" format="discrete" imlUnit="g">
-        <gml:description>Fragility model for Pavia (discrete)</gml:description>
+    <fragilityModel format="discrete">
+        <description>Fragility model for Pavia (discrete)</description>
 
         <IML IMT="MMI">7 8 9 10 11</IML>
         <!-- limit states apply to the entire fragility model -->
@@ -16,40 +16,40 @@
         </limitStates>
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs gml:id="PAV01-ff01-d">
+        <ffs>
             <taxonomy>RC/DMRF-D/LR</taxonomy>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <poE>0.0 0.09 0.56 0.91 0.98</poE>
+                <poEs>0.0 0.09 0.56 0.91 0.98</poEs>
             </ffd>
             <ffd ls="moderate">
-                <poE>0.0 0.00 0.04 0.78 0.96</poE>
+                <poEs>0.0 0.00 0.04 0.78 0.96</poEs>
             </ffd>
             <ffd ls="severe">
-                <poE>0.0 0.00 0.00 0.29 0.88</poE>
+                <poEs>0.0 0.00 0.00 0.29 0.88</poEs>
             </ffd>
             <ffd ls="collapse">
-                <poE>0.0 0.00 0.00 0.03 0.63</poE>
+                <poEs>0.0 0.00 0.00 0.03 0.63</poEs>
             </ffd>
         </ffs>
 
         <!-- fragility function set, with different IMLs -->
-        <ffs gml:id="PAV01-ff02-d">
+        <ffs>
             <taxonomy>RC/DMRF-D/HR</taxonomy>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <poE>0.0 0.09 0.56 0.92 0.99</poE>
+                <poEs>0.0 0.09 0.56 0.92 0.99</poEs>
             </ffd>
             <ffd ls="moderate">
-                <poE>0.0 0.00 0.04 0.79 0.97</poE>
+                <poEs>0.0 0.00 0.04 0.79 0.97</poEs>
             </ffd>
             <ffd ls="severe">
-                <poE>0.0 0.00 0.00 0.30 0.89</poE>
+                <poEs>0.0 0.00 0.00 0.30 0.89</poEs>
             </ffd>
             <ffd ls="collapse">
-                <poE>0.0 0.00 0.00 0.04 0.64</poE>
+                <poEs>0.0 0.00 0.00 0.04 0.64</poEs>
             </ffd>
         </ffs>
     </fragilityModel>
