@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:gml="http://www.opengis.net/gml"
            xmlns="http://openquake.org/xmlns/nrml/0.4"
            targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
-
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
-
     <!--
          Abbreviations used:
             - ffs: fragility function set
@@ -16,13 +12,10 @@
     -->
 
     <!-- Top-level element for Fragility model definitions. -->
-    <xs:element name="fragilityModel" type="FragilityModel" substitutionGroup="gml:_Feature"/>
+    <xs:element name="fragilityModel" type="FragilityModel" />
     <xs:complexType name="FragilityModel">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <!-- The format of the functions in this fragility model,
-                     one of: discrete, continuous -->
                 <xs:sequence>
+                    <xs:element name="description" type="xs:string"/>
                     <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1" />
                     <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
@@ -31,8 +24,6 @@
                 <xs:attribute name="imlUnit" type="xs:string" use="optional"/>
                 <xs:attribute name="minIML" type="PositiveDoubleType" use="optional"/>
                 <xs:attribute name="maxIML" type="PositiveDoubleType" use="optional"/>
-            </xs:extension>
-        </xs:complexContent>
     </xs:complexType>
 
     <xs:simpleType name="LimitStates">
@@ -41,10 +32,8 @@
         </xs:restriction>
     </xs:simpleType>
 
-    <xs:element name="ffs" type="Ffs" substitutionGroup="gml:_Feature"/>
+    <xs:element name="ffs" type="Ffs"/>
     <xs:complexType name="Ffs">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element name="taxonomy" minOccurs="1" maxOccurs="1" type="xs:string"/>
                     <!-- continuous and discrete fragility functions are
@@ -58,8 +47,6 @@
 
                 <!-- optional function type for a continuous ffs -->
                 <xs:attribute name="type" type="xs:string" use="optional"/>
-            </xs:extension>
-        </xs:complexContent>
     </xs:complexType>
 
     <xs:complexType name="Ffc">
@@ -80,18 +67,9 @@
 
     <xs:complexType name="Ffd">
         <xs:sequence>
-            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="ls" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="FfdValue">
-        <xs:simpleContent>
-            <xs:extension base="xs:string">
-            <xs:attribute name="iml" type="PositiveDoubleType" use="required" />
-            <xs:attribute name="poe" type="PositiveDoubleType" use="required" />
-            </xs:extension>
-        </xs:simpleContent>
     </xs:complexType>
 
     <xs:simpleType name="Fmformat">
