@@ -15,7 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import scientific, scenario_damage
+from risklib import scientific
 
 
 def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
@@ -125,40 +125,54 @@ class Classical(object):
 
 class ScenarioDamage(object):
     """
-    Scenario damage calculator. For each asset it produces:
-        * a damage distribution
-        * a collapse map
-
-    It also produces the following aggregate results:
-        * damage distribution per taxonomy
-        * total damage distribution
+    Scenario damage calculator producing a damage distribution for each asset,
+    i.e. a matrix NxM where N is the number of realizations of the ground
+    motion field and M is the numbers of damage states.
     """
-
     def __init__(self, fragility_model, fragility_functions):
         self.fragility_model = fragility_model
         self.fragility_functions = fragility_functions
 
     def __call__(self, asset, hazard):
-        fractions = scenario_damage._damage_distribution_per_asset(
-            asset,
-            (self.fragility_model,
-             self.fragility_functions[asset.taxonomy]),
-            hazard)
+        funcs = sorted(self.fragility_functions[asset.taxonomy],
+                       key=lambda x: x.lsi)
+        # sorting the functions by lsi (limit state index),
+        # because the algorithm must process them from the one
+        # with the lowest limit state to the one with
+        # the highest limit state
+        fractions = numpy.array([
+            self.fragility_model.ground_motion_value_fractions(funcs, gmv)
+            * asset.number_of_units for gmv in hazard])
         return scientific.ScenarioDamageOutput(asset, fractions)
 
+    @classmethod
+    def damage_distribution_by_taxonomy(cls, asset_outputs, result):
+        """
+        Aggregate the damage distributions by taxonomy, by returning
+        a dictionary {taxonomy -> fractions}.
+        """
+        if result is None:
+            result = {}
+        for asset_output in asset_outputs:
+            try:
+                prev = result[asset_output.asset.taxonomy]
+            except KeyError:
+                result[asset_output.asset.taxonomy] = asset_output.fractions
+            else:
+                # using += would mutate the array in place
+                result[asset_output.asset.taxonomy] = (
+                    prev + asset_output.fractions)
+        return result
 
-def damage_distribution_by_taxonomy(asset_outputs, result):
-    if result is None:
-        result = {}
-    for asset_output in asset_outputs:
-        try:
-            prev = result[asset_output.asset.taxonomy]
-        except KeyError:
-            result[asset_output.asset.taxonomy] = asset_output.fractions
-        else:
-            # using += would mutate the array in place
-            result[asset_output.asset.taxonomy] = prev + asset_output.fractions
-    return result
+    @classmethod
+    def damage_distribution_total(cls, dd_by_taxonomy):
+        """
+        Sum all the taxonomies in the dictionary of dd_by_taxonomy
+        and returns means and stdevs for each damage state, independently
+        from the taxonomy.
+        """
+        total = sum(dd_by_taxonomy[t] for t in dd_by_taxonomy)
+        return total.mean(0), total.std(0, ddof=1)
 
 
 class ConditionalLosses(object):
