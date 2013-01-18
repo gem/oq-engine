@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml" 
            xmlns="http://openquake.org/xmlns/nrml/0.4"
            targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
-
+<xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
     <!-- Common elements -->
     <xs:complexType name="Damage">
         <xs:attribute name="ds" type="xs:string" use="required" />
@@ -31,7 +32,7 @@
 
     <xs:complexType name="DmgDistPerAssetNode">
         <xs:sequence>
-            <xs:element ref="site" minOccurs="1" maxOccurs="1" />
+            <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
             <xs:element name="asset" type="DmgDistAsset" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
     </xs:complexType>
