@@ -8,7 +8,7 @@ Gardner and Knopoff declustering algorithm
 import numpy as np
 
 from hmtk.seismicity.declusterer.base import BaseCatalogueDecluster
-from hmtk.seismicity.declusterer.utils import decimal_year, haversine
+from hmtk.seismicity.utils import decimal_year, haversine
 
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     """
