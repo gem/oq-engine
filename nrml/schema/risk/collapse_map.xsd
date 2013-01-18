@@ -13,26 +13,22 @@
         <xs:sequence>
             <xs:element ref="CMNode" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
-        <xs:attribute name="endBranchLabel" type="xs:string"/>
     </xs:complexType>
 
-    <xs:element name="CMNode" type="CMNodeType" substitutionGroup="fieldNode"/>
+    <xs:element name="CMNode" type="CMNodeType"/>
     <xs:complexType name="CMNodeType">
-        <xs:complexContent>
-            <xs:extension base="FieldNode">
-                <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element name="cf" type="CMCollapseType"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+          <xs:sequence minOccurs="1" maxOccurs="2">
+            <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
+            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+              <xs:element name="cf" type="CMCollapseType"/>
+            </xs:sequence>
+          </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="CMCollapseType">
-        <xs:sequence>
-            <xs:element name="mean" type="PositiveDoubleType"/>
-            <xs:element name="stdDev" type="PositiveDoubleType"/>
-        </xs:sequence>
         <xs:attribute name="assetRef" type="xs:ID" use="required"/>
+        <xs:attribute name="mean" type="PositiveDoubleType"/>
+        <xs:attribute name="stdDev" type="PositiveDoubleType"/>
     </xs:complexType>
 
 </xs:schema>
