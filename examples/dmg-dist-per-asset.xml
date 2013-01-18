@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <dmgDistPerAsset endBranchLabel="ebl1">
+    <dmgDistPerAsset>
         <!-- NOTE: These are the damage states we would define if the following 'limit states'
              are defined in the fragility model:
                 - slight

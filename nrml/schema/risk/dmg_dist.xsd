@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:gml="http://www.opengis.net/gml"
            xmlns="http://openquake.org/xmlns/nrml/0.4"
            targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
@@ -28,7 +27,6 @@
             <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
             <xs:element name="DDNode" type="DmgDistPerAssetNode" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
     </xs:complexType>
 
     <xs:complexType name="DmgDistPerAssetNode">
@@ -57,7 +55,6 @@
             <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
             <xs:element name="DDNode" type="DmgDistPerTaxonomyNode" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
     </xs:complexType>
 
     <xs:complexType name="DmgDistPerTaxonomyNode">
@@ -75,7 +72,6 @@
             <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
             <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
         </xs:sequence>
-        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
     </xs:complexType>
 
 </xs:schema>
