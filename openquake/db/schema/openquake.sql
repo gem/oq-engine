@@ -1143,7 +1143,8 @@ CREATE TABLE hzrdr.hazard_curve_data (
     id SERIAL PRIMARY KEY,
     hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
-    poes float[] NOT NULL
+    poes float[] NOT NULL,
+    weight NUMERIC  -- copied from hzrdr.lt_realization
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
