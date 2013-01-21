@@ -348,7 +348,7 @@ CREATE TABLE uiapi.hazard_calculation (
     -- calculation parameters:
     investigation_time float,
     intensity_measure_types_and_levels bytea NOT NULL,  -- stored as a pickled Python `dict`
-    truncation_level float NOT NULL,
+    truncation_level float,
     maximum_distance float NOT NULL,
     -- event-based calculator parameters:
     intensity_measure_types VARCHAR[],
