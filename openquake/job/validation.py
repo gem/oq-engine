@@ -711,15 +711,27 @@ def intensity_measure_types_is_valid(mdl):
     return valid, errors
 
 
+# FIXME
+# This function and similar ones where different
+# checking rules are applied according to
+# different calculation modes need to be refactored,
+# splitting up the checking rules for each calculation
+# mode.
 def truncation_level_is_valid(mdl):
     if mdl.calculation_mode == 'disaggregation':
-        # truncation level must always be > 0 for disagg
-        if not mdl.truncation_level > 0:
-            return False, ['Truncation level must be > 0 for disaggregation'
+        if mdl.truncation_level is not None:
+            if mdl.truncation_level <= 0:
+                return False, [
+                        'Truncation level must be > 0 for disaggregation'
                            ' calculations']
+        else:
+            return False, [
+                        'Truncation level must be set for disaggregation'
+                           ' calculations and it must be > 0']
     else:
-        if not mdl.truncation_level >= 0:
-            return False, ['Truncation level must be >= 0']
+        if mdl.truncation_level is not None:
+            if mdl.truncation_level < 0:
+                return False, ['Truncation level must be >= 0']
 
     return True, []
 
