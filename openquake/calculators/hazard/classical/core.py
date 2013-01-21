@@ -21,21 +21,21 @@ import nhlib
 import nhlib.calc
 import nhlib.imt
 
-import openquake
+import numpy
 
 from django.db import transaction
+from scipy.stats import mstats
 
 from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.classical import post_processing
 from openquake.db import models
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-
-from openquake.db.aggregate_result_writer import (MeanCurveWriter,
-                                                  QuantileCurveWriter)
-from openquake.calculators.hazard.classical import post_processing
+from openquake.utils.general import block_splitter as bs
+from openquake.writer import BulkInserter
 
 
 @utils_tasks.oqtask
