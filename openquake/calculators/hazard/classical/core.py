@@ -310,6 +310,57 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         logs.LOG.debug('< done with post processing')
 
 
+def _all_curves_for_imt(job_id, imt, sa_period, sa_damping):
+    """
+    Helper function for creating a :class:`django.db.models.query.QuerySet` for
+    selecting all curves from all realizations for a given ``job_id`` and
+    ``imt``.
+
+    :param int job_id:
+        ID of a :class:`openquake.db.models.OqJob`.
+    :param str imt:
+        Intensity measure type.
+    :param sa_period:
+        Spectral Acceleration period value. Only relevant if the ``imt`` is
+        "SA".
+    :param sa_damping:
+        Spectrail Acceleration damping value. Only relevant if the ``imt`` is
+        "SA".
+    """
+    return models.HazardCurveData.objects\
+            .filter(hazard_curve__output__oq_job=job_id,
+                    hazard_curve__imt=imt,
+                    hazard_curve__sa_period=sa_period,
+                    hazard_curve__sa_damping=sa_damping,
+                    # We only want curves associated with a logic tree
+                    # realization (and not statistical aggregates):
+                    hazard_curve__lt_realization__isnull=False)\
+            .order_by('location')
+
+
+def _queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
+
+
 def compute_mean_curve(curves, weights=None):
     """
     Compute the mean or weighted average of a set of curves.
