@@ -727,7 +727,7 @@ def truncation_level_is_valid(mdl):
         else:
             return False, [
                         'Truncation level must be set for disaggregation'
-                           ' calculations']
+                           ' calculations and it must be > 0']
     else:
         if mdl.truncation_level is not None:
             if mdl.truncation_level < 0:
