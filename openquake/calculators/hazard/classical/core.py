@@ -37,6 +37,8 @@ from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter as bs
 from openquake.writer import BulkInserter
 
+#: Used for selecting hazard curve data from the DB for post-processing.
+_MAX_CURVES_PER_SELECT = 100000
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
