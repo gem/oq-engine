@@ -15,18 +15,12 @@
 
 import os
 from nose.plugins.attrib import attr
-from unittest import skip
 from numpy.testing import assert_almost_equal
 
 from openquake import export
 from qa_tests import _utils as qa_utils
 
 
-# this test is skipped because of a bug in hazard.general.validate_site_model
-# which breaks if the points in the site_model are in a line, see
-# https://bugs.launchpad.net/openquake/+bug/1092056
-# once the bug is fixed we can restore the test
-@skip
 class ScenarioHazardCase4TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'scenario')
