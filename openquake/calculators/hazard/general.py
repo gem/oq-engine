@@ -152,7 +152,7 @@ def validate_site_model(sm_nodes, mesh):
     )
 
     sm_ch = sm_mp.convex_hull
-    # Enlarging the area because the site model nodes
+    # Enlarging the area if the site model nodes
     # create a straight line with zero area.
     if sm_ch.area == 0:
         sm_ch = sm_ch.buffer(DILATION_ONE_METER)
