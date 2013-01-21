@@ -536,7 +536,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         hc_data_inserter.add_entry(
                             hazard_curve_id=haz_curve.id,
                             poes=poes.tolist(),
-                            location=location.wkt2d)
+                            location=location.wkt2d,
+                            weight=rlz.weight
+                        )
 
                     hc_data_inserter.flush()
 
