@@ -160,13 +160,20 @@ class BaseRiskCalculator(base.CalculatorNext):
                             taxonomy,
                             self.rc.region_constraint, offset, block_size)]
 
-                seed = self.rnd.randint(0, (2 ** 31) - 1)
-
                 tf_args = ([self.job.id,
-                            assets, self.hazard_getter, self.hazard_id, seed] +
+                            assets, self.hazard_getter, self.hazard_id] +
+                            self.worker_args(),
                             output_containers + calculator_parameters)
 
                 yield  tf_args
+
+    def worker_args(self):
+        """
+        :returns: a fixed list of arguments that a calculator may want
+        to pass to a worker. Default to a seed generated from the
+        master seed. May be overriden.
+        """
+        return [self.rnd.randint(0, (2 ** 31) - 1)]
 
     def export(self, *args, **kwargs):
         """
