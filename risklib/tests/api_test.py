@@ -47,19 +47,6 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
         self.assertEquals(expected_calls, calculator.call_args_list)
 
-    def test_compute_on_assets_should_raise(self):
-        assets = [
-            scientific.Asset("a1", "RC", None, (1.0, 1.0)),
-            scientific.Asset("a2", "POP", None, (2.0, 2.0)),
-        ]
-
-        calculator = mock.Mock()
-        hazard_getter = mock.Mock(return_value=1.0)
-
-        self.assertRaises(ValueError, list,
-                          api.compute_on_assets(
-                              assets, hazard_getter, calculator))
-
 
 class ConditionalLossesTestCase(unittest.TestCase):
 
@@ -184,10 +171,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
-        vulnerability_model = {"RC": function}
-
-        asset_output = api.ScenarioRisk(
-            vulnerability_model, 37, "perfect")(asset, hazard)
+        asset_output = api.ScenarioRisk(function, 37, "perfect")(asset, hazard)
 
         self.assertEquals(asset, asset_output.asset)
 

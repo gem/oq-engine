@@ -95,9 +95,9 @@ class VulnerabilityFunction(object):
         self.epsilon_provider = None
         self.taxonomy = taxonomy
 
-    def seed(self, seed=None, correlation_type=None, taxonomies=None):
+    def seed(self, seed=None, correlation_type=None):
         self.epsilon_provider = EpsilonProvider(
-            seed, correlation_type, taxonomies)
+            seed, correlation_type, [self.taxonomy])
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))

@@ -251,8 +251,7 @@ class ScenarioRisk(object):
         self.vulnerability_function = vulnerability_function
 
     def __call__(self, asset, hazard):
-        self.vulnerability_function.seed(
-            self.seed, self.correlation_type, taxonomies)
+        self.vulnerability_function.seed(self.seed, self.correlation_type)
 
         loss_ratios = self.vulnerability_function(hazard)
 

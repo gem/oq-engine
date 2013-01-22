@@ -59,7 +59,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
     def test_mean_based(self):
         calculator = api.ScenarioRisk(
-            self.vulnerability_model_mean, None, None)
+            self.vulnerability_model_mean["RM"], None, None)
 
         asset_output_a1 = calculator(
             scientific.Asset("a1", "RM", 3000, None),
@@ -81,6 +81,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         self.assertAlmostEqual(92.2122644809969,
                                asset_output_a3.standard_deviation)
 
+        calculator.vulnerability_function = self.vulnerability_model_mean["RC"]
         asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None),
             self.hazard_mean["a2"])
@@ -107,7 +108,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
                   taxonomy="RC"),
         )
 
-        calculator = api.ScenarioRisk(vulnerability_model, seed=37,
+        calculator = api.ScenarioRisk(vulnerability_model['RM'], seed=37,
                                       correlation_type=None)
 
         asset_output_a1 = calculator(
@@ -126,6 +127,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         self.assertTrue(asset_output_a3.standard_deviation > 94.2302991022)
 
+        calculator.vulnerability_function = vulnerability_model["RC"]
         asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None), gmv.a2)
 

@@ -217,19 +217,26 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
 
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
+        peb_calculator_rm = api.ProbabilisticEventBased(
+            vulnerability_function_rm, 50, 50)
 
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, 50, 50)
+        peb_conditional_losses_rm = api.ConditionalLosses(
+            [CONDITIONAL_LOSS_POES], peb_calculator_rm)
 
-        peb_conditional_losses = api.ConditionalLosses(
-            [CONDITIONAL_LOSS_POES], peb_calculator)
+        peb_calculator_rc = api.ProbabilisticEventBased(
+            vulnerability_function_rc, 50, 50)
+
+        peb_conditional_losses_rc = api.ConditionalLosses(
+            [CONDITIONAL_LOSS_POES], peb_calculator_rc)
 
         outputs = []
         for i in range(3):
-            asset_output = peb_conditional_losses(
-                mb.input_models_asset[i], gmf[i])
+            if i in [0, 2]:
+                asset_output = peb_conditional_losses_rm(
+                    mb.input_models_asset[i], gmf[i])
+            else:
+                asset_output = peb_conditional_losses_rc(
+                    mb.input_models_asset[i], gmf[i])
 
             outputs.append(asset_output)
 
@@ -360,17 +367,25 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
 
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
-
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, time_span=50, tses=50,
+        peb_calculator_rm = api.ProbabilisticEventBased(
+            vulnerability_function_rm, time_span=50, tses=50,
             curve_resolution=20)
 
-        peb_insured_losses = api.InsuredLosses(peb_calculator)
+        peb_insured_losses_rm = api.InsuredLosses(peb_calculator_rm)
+
+        peb_calculator_rc = api.ProbabilisticEventBased(
+            vulnerability_function_rc, time_span=50, tses=50,
+            curve_resolution=20)
+
+        peb_insured_losses_rc = api.InsuredLosses(peb_calculator_rc)
 
         for i in range(3):
-            asset_output = peb_insured_losses(il.input_models_asset[i], gmf[i])
+            if i in [0, 2]:
+                asset_output = peb_insured_losses_rm(
+                    il.input_models_asset[i], gmf[i])
+            else:
+                asset_output = peb_insured_losses_rc(
+                    il.input_models_asset[i], gmf[i])
 
             self.assert_allclose(
                 il.expected_poes[i],

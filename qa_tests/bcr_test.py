@@ -33,13 +33,10 @@ class BCRTestCase(unittest.TestCase):
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
             [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF"))
 
-        vulnerability_model_rm = {"VF": vulnerability_function_rm}
-        vulnerability_model_rf = {"VF": vulnerability_function_rf}
-
         asset = scientific.Asset("a1", "VF", 2, None, retrofitting_cost=0.1)
 
-        calculator_rm = api.Classical(vulnerability_model_rm, steps=5)
-        calculator_rf = api.Classical(vulnerability_model_rf, steps=5)
+        calculator_rm = api.Classical(vulnerability_function_rm, steps=5)
+        calculator_rf = api.Classical(vulnerability_function_rf, steps=5)
 
         calculator_bcr = api.BCR(calculator_rm, calculator_rf,
             interest_rate=0.05, asset_life_expectancy=40)

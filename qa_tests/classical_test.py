@@ -89,16 +89,12 @@ class ClassicalTestCase(unittest.TestCase):
             asset_output.conditional_losses[0.05])
 
     def test_beta_distribution(self):
-
-        vulnerability_model = {"VF":
-            scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "BT", "VF")}
-
         calculator = api.ConditionalLosses([0.01],
-            api.Classical(vulnerability_model, steps=5))
+            api.Classical(scientific.VulnerabilityFunction(
+            [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
+            [0.5, 0.4, 0.3, 0.2, 0.1], "BT", "VF"), steps=5))
 
-        value = 2 # the asset value
+        value = 2  # the asset value
 
         asset_output = calculator(
             scientific.Asset("a1", "VF", value, None), self.hazard_curve)
