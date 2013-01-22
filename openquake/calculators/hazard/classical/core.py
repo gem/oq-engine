@@ -308,6 +308,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hazard_calculation=self.hc).count()
 
         num_site_blocks_per_incr = int(_MAX_CURVES_PER_SELECT) / int(num_rlzs)
+        if num_site_blocks_per_incr == 0:
+            # This means we have `num_rlzs` >= `_MAX_CURVES_PER_SELECT`.
+            # The minimum number of sites should be 1.
+            num_site_blocks_per_incr = 1
         # NOTE(larsbutler): `slice_incr` must be a multiple of `num_rlzs`
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
 
