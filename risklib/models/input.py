@@ -121,16 +121,17 @@ class FragilityFunctionSeq(Sequence):
             the fraction of a damage state (in order from the lowest
             to the highest)
         """
-        # len(self) + 1 because of the no_damage state
-        damage_state_values = numpy.zeros(len(self) + 1)
+        n_limit_states = len(self)
+        # For N limit states in the fragility model, we always define N+1
+        # damage states. The first damage state is always 'no_damage'.
+        damage_state_values = numpy.zeros(n_limit_states + 1)
         # when we have a discrete fragility model and
         # the ground motion value is below the no_damage_limit or below
         # the lowest intensity measure level defined in the model
         # we simply use 100% no_damage and 0% for the
         # remaining limit states
-        no_damage_limit = getattr(self, 'no_damage_limit', None)
         if self.fragility_model.format == 'discrete' and (
-                gmv < no_damage_limit if no_damage_limit
+                gmv < self.no_damage_limit if self.no_damage_limit
                 else gmv < self.fragility_model.imls[0]):
             damage_state_values[0] = 1.0
             return numpy.array(damage_state_values)
@@ -144,18 +145,15 @@ class FragilityFunctionSeq(Sequence):
 
         # starting from one, the first damage state
         # is already computed...
-        for x in xrange(1, len(self)):
+        for x in xrange(1, n_limit_states):
             a_poe = self[x].poe(gmv)
             damage_state_values[x] = last_poe - a_poe
             last_poe = a_poe
 
         # last damage state is equal to the probability
         # of exceedance of the last limit state
-        damage_state_values[len(self)] = self[len(self) - 1].poe(gmv)
+        damage_state_values[n_limit_states] = self[n_limit_states - 1].poe(gmv)
         return damage_state_values
 
 
 FragilityModel = namedtuple('FragilityModel', 'format imls limit_states')
-# A Fragility Model object with a list attribute `damage_states`.
-# For N limit states in the fragility model, we always define N+1
-# damage states. The first damage state is always 'no_damage'.

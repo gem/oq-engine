@@ -108,9 +108,5 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)
 
     def test_can_pickle(self):
-        fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-                                  LIMIT_STATES)
-
-        ffd = input.FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
-
+        ffd = input.FragilityFunctionDiscrete(None, [0.05, 0.20, 0.50, 1.00])
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
