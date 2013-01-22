@@ -36,11 +36,12 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         fm = input.FragilityModel(
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
-        func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
+        funcs = input.FragilityFunctionSeq(
+            fm, input.FragilityFunctionDiscrete,
+            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
 
-        self._close_to(fm.ground_motion_value_fractions([func], 0.7),
-                       fm.ground_motion_value_fractions([func], 0.8))
+        self._close_to(funcs.ground_motion_value_fractions(0.7),
+                       funcs.ground_motion_value_fractions(0.8))
 
     def test_dda_iml_below_range_damage_limit_undefined(self):
         # corner case where we have a ground motion value
@@ -55,11 +56,12 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         fm = input.FragilityModel(
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
-        func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
+        funcs = input.FragilityFunctionSeq(
+            fm, input.FragilityFunctionDiscrete,
+            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
 
         self._close_to([1.0, 0.0, 0.0],
-                       fm.ground_motion_value_fractions([func], 0.05))
+                       funcs.ground_motion_value_fractions(0.05))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -72,13 +74,14 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-                                  LIMIT_STATES, no_damage_limit=0.05)
+                                  LIMIT_STATES)
 
-        func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
-
+        funcs = input.FragilityFunctionSeq(
+            fm, input.FragilityFunctionDiscrete,
+            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]],
+            no_damage_limit=0.05)
         self._close_to([1.0, 0.0, 0.0],
-                       fm.ground_motion_value_fractions([func], 0.02))
+                       funcs.ground_motion_value_fractions(0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -91,24 +94,19 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-                                  LIMIT_STATES, no_damage_limit=0.05)
+                                  LIMIT_STATES)
 
-        func1 = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
-
-        func2 = input.FragilityFunctionDiscrete(
-            fm, [0.00, 0.05, 0.20, 0.50], 2)
+        funcs = input.FragilityFunctionSeq(
+            fm, input.FragilityFunctionDiscrete,
+            [[0.05, 0.20, 0.50, 1.00], [0.00, 0.05, 0.20, 0.50]],
+            no_damage_limit=0.05)
 
         self._close_to([0.975, 0.025, 0.],
-                       fm.ground_motion_value_fractions([func1, func2], 0.075))
+                       funcs.ground_motion_value_fractions(0.075))
 
     def _close_to(self, expected, actual):
-        self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
+        numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)
 
     def test_can_pickle(self):
-        fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
-                                  LIMIT_STATES, no_damage_limit=0.05)
-
-        ffd = input.FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
-
+        ffd = input.FragilityFunctionDiscrete(None, [0.05, 0.20, 0.50, 1.00])
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)

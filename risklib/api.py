@@ -124,21 +124,17 @@ class ScenarioDamage(object):
     """
     Scenario damage calculator producing a damage distribution for each asset,
     i.e. a matrix NxM where N is the number of realizations of the ground
-    motion field and M is the numbers of damage states.
+    motion field and M is the numbers of damage states. fragility_functions
+    is a dictionary associating to each taxonomy a FragilityFunctionSeq object.
     """
-    def __init__(self, fragility_model, fragility_functions):
+    def __init__(self, fragility_model, fragility_functions_map):
         self.fragility_model = fragility_model
-        self.fragility_functions = fragility_functions
+        self.fragility_functions = fragility_functions_map
 
     def __call__(self, asset, hazard):
-        funcs = sorted(self.fragility_functions[asset.taxonomy],
-                       key=lambda x: x.lsi)
-        # sorting the functions by lsi (limit state index),
-        # because the algorithm must process them from the one
-        # with the lowest limit state to the one with
-        # the highest limit state
+        funcs = self.fragility_functions[asset.taxonomy]
         fractions = numpy.array([
-            self.fragility_model.ground_motion_value_fractions(funcs, gmv)
+            funcs.ground_motion_value_fractions(gmv)
             * asset.number_of_units for gmv in hazard])
         return scientific.ScenarioDamageOutput(asset, fractions)
 
