@@ -135,14 +135,12 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
             helpers.patch(
                 '%s.%s' % (path, 'store_risk_model')),
             helpers.patch(
-                '%s.%s' % (path, '_initialize_progress')),
-            helpers.patch(
-                'openquake.db.models.ExposureData.objects.contained_in_count'))
+                '%s.%s' % (path, '_initialize_progress')))
 
         mocks = [p.start() for p in patches]
 
-        mocks[1].return_value = models.ExposureModel.objects.all()[0]
-        mocks[3].return_value = 3
+        mocks[0].return_value = mock.Mock()
+        mocks[0].return_value.taxonomies_in.return_value = {'RC': 10}
 
         self.calculator.pre_execute()
 
@@ -161,6 +159,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator._initialize_progress()
 
         total = stats.pk_get(self.calculator.job.id, "nrisk_total")
-        self.assertEqual(self.calculator.assets_nr, total)
+        self.assertEqual(2, total)
+        self.assertEqual({'VF': 2}, self.calculator.taxonomies)
         done = stats.pk_get(self.calculator.job.id, "nrisk_done")
         self.assertEqual(0, done)
