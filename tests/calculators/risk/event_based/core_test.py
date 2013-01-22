@@ -100,7 +100,7 @@ class EventBasedRiskCalculatorTestCase(
         # we expect 1 asset being filtered out by the region
         # constraint, so there are only four loss curves (2 of them
         # are insured) to be written
-        self.assertEqual(4, mocked_loss_writer.call_count)
+        self.assertEqual(2, mocked_loss_writer.call_count)
 
         self.assertEqual(1, mocked_agg_loss_writer.call_count)
 

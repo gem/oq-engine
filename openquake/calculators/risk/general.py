@@ -41,12 +41,13 @@ class BaseRiskCalculator(base.CalculatorNext):
     functionality, including initialization procedures and the core
     distribution/execution logic.
 
-    :attribute asset_nr:
-      The number of assets the calculator will work on. Assets are
-      extracted from the exposure input and filtered according with the
-      RiskCalculation region_constraint
+    :attribute dict taxonomies:
+      A dictionary mapping each taxonomy with the number of assets the
+      calculator will work on. Assets are extracted from the exposure
+      input and filtered according with the RiskCalculation
+      region_constraint
 
-    :attribute exposure_model_id:
+    :attribute exposure_model:
       The exposure model used by the calculation
 
     :attribute asset_offsets:
@@ -64,8 +65,8 @@ class BaseRiskCalculator(base.CalculatorNext):
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
 
-        self.assets_nr = None
-        self.exposure_model_id = None
+        self.taxonomies = None
+        self.exposure_model = None
         self.rnd = None
 
     def pre_execute(self):
@@ -75,14 +76,12 @@ class BaseRiskCalculator(base.CalculatorNext):
         1. Parse the exposure input and store the exposure data (if
         not already present)
 
-        2. Filter the exposure in order to consider only the assets of
-        interest
+        2. Check if the exposure filtered with region_constraint is
+        not empty
 
-        3. Prepare and save the output containers.
+        3. Initialize progress counters
 
-        4. Initialize progress counters
-
-        5. Initialize random number generator
+        4. Initialize random number generator
         """
 
         # reload the risk calculation to avoid getting raw string
@@ -91,13 +90,12 @@ class BaseRiskCalculator(base.CalculatorNext):
             pk=self.rc.pk)
 
         with logs.tracing('store exposure'):
-            self.exposure_model_id = self._store_exposure().id
+            self.exposure_model = self._store_exposure()
 
-            self.assets_nr = models.ExposureData.objects.contained_in_count(
-                self.exposure_model_id,
+            self.taxonomies = self.exposure_model.taxonomies_in(
                 self.rc.region_constraint)
 
-            if not self.assets_nr:
+            if not sum(self.taxonomies.values()):
                 raise RuntimeError(
                     ['Region of interest is not covered by the exposure input.'
                      ' This configuration is invalid. '
@@ -107,7 +105,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.store_risk_model()
 
-        self.progress.update(total=self.assets_nr)
+        self.progress.update(total=sum(self.taxonomies.values()))
         self._initialize_progress()
 
         self.rnd = random.Random()
@@ -129,6 +127,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         Generator function for creating the arguments for each task.
 
+        It is responsible for the distribution strategy. It divides
+        the considered exposure into chunks of homogeneous assets
+        (i.e. having the same taxonomy). The chunk size is given by
+        the `block_size` openquake config parameter
+
         :param int block_size:
             The number of work items per task (sources, sites, etc.).
 
@@ -144,23 +147,26 @@ class BaseRiskCalculator(base.CalculatorNext):
         output_containers = self.create_outputs()
         calculator_parameters = self.calculator_parameters
 
-        # asset offsets
-        asset_offsets = range(0, self.assets_nr, block_size)
-        region_constraint = self.job.risk_calculation.region_constraint
+        for taxonomy, assets_nr in self.taxonomies.items():
+            # asset offsets
+            asset_offsets = range(0, assets_nr, block_size)
 
-        for offset in asset_offsets:
-            with logs.tracing("getting assets"):
-                assets = models.ExposureData.objects.contained_in(
-                    self.exposure_model_id, region_constraint, offset,
-                    block_size)
+            for offset in asset_offsets:
+                with logs.tracing("getting assets"):
+                    assets = [
+                        exp.to_risklib()
+                        for exp in
+                        self.exposure_model.get_asset_chunk(
+                            taxonomy,
+                            self.rc.region_constraint, offset, block_size)]
 
-            seed = self.rnd.randint(0, (2 ** 31) - 1)
+                seed = self.rnd.randint(0, (2 ** 31) - 1)
 
-            tf_args = ([self.job.id,
-                        assets, self.hazard_getter, self.hazard_id, seed] +
-                        output_containers + calculator_parameters)
+                tf_args = ([self.job.id,
+                            assets, self.hazard_getter, self.hazard_id, seed] +
+                            output_containers + calculator_parameters)
 
-            yield  tf_args
+                yield  tf_args
 
     def export(self, *args, **kwargs):
         """
@@ -240,7 +246,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         This is needed for the purpose of providing an indication of progress
         to the end user."""
         stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", self.assets_nr)
+        stats.pk_set(self.job.id, "nrisk_total", sum(self.taxonomies.values()))
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def store_risk_model(self):
