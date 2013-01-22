@@ -562,7 +562,7 @@ def compute_quantile_curve(curves, quantile):
     # return numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
 
     # more or less copied from the scipy mquantiles function, just special
-    # cased for what we need (and about 6x faster)
+    # cased for what we need (and a lot faster)
 
     arr = numpy.array(curves)
 
