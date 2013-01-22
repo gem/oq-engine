@@ -91,24 +91,9 @@ class ScenarioDamage(object):
     def __call__(self, asset, hazard):
         fractions = scenario_damage._damage_distribution_per_asset(
             asset,
-            (self.fragility_model,
-             self.fragility_functions[asset.taxonomy]),
+            (self.fragility_model, self.fragility_functions),
             hazard)
         return scientific.ScenarioDamageOutput(asset, fractions)
-
-
-def damage_distribution_by_taxonomy(asset_outputs, result):
-    if result is None:
-        result = {}
-    for asset_output in asset_outputs:
-        try:
-            prev = result[asset_output.asset.taxonomy]
-        except KeyError:
-            result[asset_output.asset.taxonomy] = asset_output.fractions
-        else:
-            # using += would mutate the array in place
-            result[asset_output.asset.taxonomy] = prev + asset_output.fractions
-    return result
 
 
 class ConditionalLosses(object):

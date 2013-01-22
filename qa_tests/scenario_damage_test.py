@@ -70,7 +70,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                     fragility_model, 0.40, 0.12, 'LS2'),
             ])
 
-        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+        calculator = api.ScenarioDamage(fragility_model,
+                                           fragility_functions['RM'])
 
         asset_output_a1 = calculator(
             scientific.Asset("a1", "RM", 3000, None, number_of_units=3000),
@@ -86,6 +87,9 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [304.4769498434, 181.1415598664, 253.91309010185]
         self.assert_ok(asset_output_a3, expected_means, expected_stdevs)
 
+        rm = asset_output_a1.fractions + asset_output_a3.fractions
+
+        calculator.fragility_functions = fragility_functions['RC']
         asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None, number_of_units=2000),
             self.hazard['a2'])
@@ -93,12 +97,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
-        # aggregations for taxonomy
-        distr = api.damage_distribution_by_taxonomy(
-            [asset_output_a1, asset_output_a2, asset_output_a3], {})
-
-        rm = distr['RM']  # array 10x3
-        rc = distr['RC']  # array 10x3
+        rc = asset_output_a2.fractions
 
         assert_close(
             rm.mean(0), [1979.9364498479, 1495.2273659142, 524.8361842379])
@@ -133,7 +132,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                     fragility_model, [0.0003, 0.05, 0.40, 0.86], 'LS2'),
             ])
 
-        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+        calculator = api.ScenarioDamage(
+            fragility_model, fragility_functions['RM'])
 
         asset_output_a1 = calculator(
             scientific.Asset("a1", "RM", 3000, None, number_of_units=3000),
@@ -149,6 +149,9 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [220.65161409, 136.92817619, 246.84424913]
         self.assert_ok(asset_output_a3, expected_means, expected_stdevs)
 
+        rm = asset_output_a1.fractions + asset_output_a3.fractions
+
+        calculator.fragility_functions = fragility_functions['RC']
         asset_output_a2 = calculator(
             scientific.Asset("a2", "RC", 2000, None, number_of_units=2000),
             self.hazard['a2'])
@@ -156,11 +159,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         expected_stdevs = [300.61123079, 144.64852962, 417.30737837]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
-        # aggregations for taxonomy
-        distr = api.damage_distribution_by_taxonomy(
-            [asset_output_a1, asset_output_a2, asset_output_a3], {})
-        rm = distr['RM']  # array 10x3
-        rc = distr['RC']  # array 10x3
+        rc = asset_output_a2.fractions
 
         assert_close(
             rm.mean(0), [1100.2285892246, 1913.9402484967, 985.8311622787])

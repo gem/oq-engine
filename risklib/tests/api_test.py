@@ -102,8 +102,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
 
         asset = scientific.Asset("a1", "RC", None, None, number_of_units=1.0)
 
-        calculator = api.ScenarioDamage(
-            fragility_model, {"RC": [fragility_function]})
+        calculator = api.ScenarioDamage(fragility_model, [fragility_function])
 
         asset_output = calculator(asset, [0.11, 0.12, 0.13])
 
