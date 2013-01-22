@@ -235,8 +235,10 @@ class VulnerabilityFunction(object):
 
 ClassicalOutput = collections.namedtuple(
     "ClassicalOutput",
-    ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
+    ["asset", "loss_ratio_curve", "conditional_losses"])
 
+ClassicalOutput.loss_curve = property(
+    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
 
 ScenarioDamageOutput = collections.namedtuple(
     "ScenarioDamageOutput", ["asset", "fractions"])
@@ -256,10 +258,16 @@ BCROutput = collections.namedtuple(
 
 
 ProbabilisticEventBasedOutput = collections.namedtuple(
-    "ProbabilisticEventBasedOutput", ["asset", "losses",
-    "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
-    "insured_loss_curve", "insured_losses", "conditional_losses"])
+    "ProbabilisticEventBasedOutput",
+    ["asset", "losses", "loss_ratio_curve", "insured_loss_ratio_curve",
+     "insured_losses", "conditional_losses"])
 
+ProbabilisticEventBasedOutput.loss_curve = property(
+    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
+
+ProbabilisticEventBasedOutput.insured_loss_curve = property(
+    lambda self: self.insured_loss_ratio_curve.rescale_abscissae(
+        self.asset.value))
 
 ScenarioRiskOutput = collections.namedtuple(
     "ScenarioRiskOutput", ["asset", "losses"])

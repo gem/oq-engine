@@ -117,10 +117,7 @@ class Classical(object):
             vulnerability_function, self.matrices[asset.taxonomy],
             hazard, self.steps)
 
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
-
-        return scientific.ClassicalOutput(
-            asset, loss_ratio_curve, loss_curve, None)
+        return scientific.ClassicalOutput(asset, loss_ratio_curve, None)
 
 
 class ScenarioDamage(object):
@@ -246,8 +243,7 @@ class ProbabilisticEventBased(object):
         self.time_span = time_span
         self.tses = tses
         self.curve_resolution = curve_resolution
-
-        self.loss_ratios = None
+        self.loss_ratios = None  # set in __call__
 
     def __call__(self, asset, hazard):
         taxonomies = self.vulnerability_model.keys()
@@ -263,11 +259,9 @@ class ProbabilisticEventBased(object):
             curve_resolution=self.curve_resolution)
 
         losses = self.loss_ratios * asset.value
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
         return scientific.ProbabilisticEventBasedOutput(
-            asset, losses, loss_ratio_curve, loss_curve,
-            None, None, None, None)
+            asset, losses, loss_ratio_curve, None, None, None)
 
 
 # the aggregation design was discussed in

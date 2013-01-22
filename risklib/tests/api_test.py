@@ -95,11 +95,12 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
-        asset = scientific.Asset("a1", None, None, None)
+        asset = scientific.Asset("a1", None, .5, None)
         loss_ratio_curve = Curve([(2.0, 2.0)])
-        loss_curve = Curve([(1.0, 1.0)])
+        loss_curve = Curve([(1.0, 2.0)])  # abscissae rescaled by 0.5
+
         asset_output = scientific.ClassicalOutput(
-            asset, loss_ratio_curve, loss_curve, None)
+            asset, loss_ratio_curve, None)
 
         loss_curve_calculator = mock.Mock(return_value=asset_output)
 
@@ -109,11 +110,12 @@ class ConditionalLossesTestCase(unittest.TestCase):
         loss_curve_calculator.assert_called_with(asset, 1.0)
 
         expected_output = scientific.ClassicalOutput(
-            asset, loss_ratio_curve, loss_curve, {0.2: 1.0, 0.1: 1.0})
+            asset, loss_ratio_curve, {0.2: 1.0, 0.1: 1.0})
 
         # as output we have the output from the given loss curve
         # calculator, plus the conditional losses
         self.assertEquals(expected_output, asset_output)
+        self.assertEquals(asset_output.loss_curve, loss_curve)
 
 
 class ClassicalCalculatorTestCase(unittest.TestCase):
