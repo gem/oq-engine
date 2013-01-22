@@ -191,7 +191,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
             'simple_fault_demo_hazard/job.ini')
         calculator = general_risk.BaseRiskCalculator(self.job)
         calculator.pre_execute()
-        self.model = self.job.risk_calculation.model('exposure')
+        self.model = self.job.risk_calculation.exposure_model
 
         common_fake_args = dict(
             exposure_model=self.model,

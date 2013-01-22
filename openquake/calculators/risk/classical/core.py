@@ -30,13 +30,14 @@ from risklib import api
 @tasks.oqtask
 @stats.count_progress('r')
 def classical(job_id, assets, hazard_getter, hazard_id,
+              vulnerability_function,
               loss_curve_id, loss_map_ids,
               lrem_steps_per_interval, conditional_loss_poes):
     """
     Celery task for the classical risk calculator.
 
-    Gets vulnerability model, instantiates risklib calculators and
-    stores results to db in a single transaction.
+    Instantiates risklib calculators, computes losses for the given
+    assets and stores the results to db in a single transaction.
 
     :param int job_id:
       ID of the currently running job
@@ -58,11 +59,9 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     """
-    vulnerability_model = general.fetch_vulnerability_model(job_id)
-
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.Classical(vulnerability_model, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_function, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
@@ -96,8 +95,13 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = 'HazardCurveGetterPerAsset'
 
-    def worker_args(self):
-        return []
+    def worker_args(self, taxonomy):
+        """
+        As we do not need a seed in the classical calculator we just
+        have the vulnerability function as extra arg to the celery
+        task
+        """
+        return [self.vulnerability_functions[taxonomy]]
 
     @property
     def hazard_id(self):

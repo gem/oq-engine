@@ -367,8 +367,8 @@ class Input(djm.Model):
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
                                               through='Input2hcalc')
-    risk_calculations = djm.ManyToManyField('RiskCalculation',
-                                              through='Input2rcalc')
+    risk_calculations = djm.ManyToManyField(
+        'RiskCalculation', through='Input2rcalc', related_name="inputs")
 
     # Number of bytes in the file:
     size = djm.IntegerField()
@@ -986,21 +986,9 @@ class RiskCalculation(djm.Model):
     def is_bcr(self):
         return self.calculation_mode in ['classical_bcr', 'event_based_bcr']
 
-    def model(self, input_type):
-        """
-        The model associated with this risk calculation with input of
-        type `input_type`
-        """
-
-        # FIXME(lp). Although we store all the risk models we only use
-        # the first one
-        [exposure_input] = inputs4rcalc(self, input_type)
-        if input_type == "exposure":
-            return exposure_input.exposuremodel
-        elif input_type in ["vulnerability", "vulnerability_retrofitted"]:
-            return exposure_input.vulnerabilitymodel
-        else:
-            raise RuntimeError("Unknown model")
+    @property
+    def exposure_model(self):
+        return self.inputs.get(input_type="exposure").exposuremodel
 
 
 def _prep_geometry(kwargs):
@@ -2454,60 +2442,12 @@ class ExposureData(djm.Model):
 
         return risklib.scientific.Asset(
             asset_ref=self.asset_ref,
-            taxonomy=self.taxonomy,
             value=self.value,
             site=self.site,
             number_of_units=self.number_of_units,
             ins_limit=self.ins_limit,
             deductible=self.deductible,
             retrofitting_cost=retrofitting_cost)
-
-
-## Tables in the 'riski' schema.
-class VulnerabilityModel(djm.Model):
-    '''
-    A risk vulnerability model
-    '''
-
-    owner = djm.ForeignKey("OqUser")
-    input = djm.OneToOneField("Input")
-    name = djm.TextField()
-    description = djm.TextField(null=True)
-    imt = djm.TextField(null=True, blank=True, validators=[
-        validators.RegexValidator(r"PGA|SA\([^)]+?\)",
-                                  "Incorrect intensity measure type")])
-    imls = fields.FloatArrayField()
-    asset_category = djm.TextField()
-    loss_category = djm.TextField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"vulnerability_model'
-
-    def to_risklib(self):
-        return dict([(fn.taxonomy, fn.to_risklib())
-                     for fn in self.vulnerabilityfunction_set.all()])
-
-
-class VulnerabilityFunction(djm.Model):
-    '''
-    A risk vulnerability function
-    '''
-
-    vulnerability_model = djm.ForeignKey("VulnerabilityModel")
-    taxonomy = djm.TextField()
-    prob_distribution = djm.TextField()
-    loss_ratios = fields.FloatArrayField()
-    covs = fields.FloatArrayField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"vulnerability_function'
-
-    def to_risklib(self):
-        return risklib.scientific.VulnerabilityFunction(
-            self.vulnerability_model.imls, self.loss_ratios, self.covs,
-            distribution=self.prob_distribution, taxonomy=self.taxonomy)
 
 
 class FragilityModel(djm.Model):
