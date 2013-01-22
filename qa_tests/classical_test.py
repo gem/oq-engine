@@ -43,14 +43,10 @@ class ClassicalTestCase(unittest.TestCase):
         0.92, 0.96, 1.00]
 
     def test_lognormal_distribution(self):
-
-        vulnerability_model = {"VF":
-            scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF")}
-
         calculator = api.ConditionalLosses([0.01, 0.02, 0.05],
-            api.Classical(vulnerability_model, steps=5))
+            api.Classical(scientific.VulnerabilityFunction(
+                [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF"), steps=5))
 
         asset_output = calculator(
             scientific.Asset("a1", "VF", 2, None), self.hazard_curve)

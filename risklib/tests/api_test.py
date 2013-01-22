@@ -94,8 +94,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
-        vulnerability_model = {"RC": function}
-        asset_output = api.Classical(vulnerability_model)(asset, hazard_curve)
+        asset_output = api.Classical(function)(asset, hazard_curve)
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -138,12 +137,9 @@ class BCRCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
-        vulnerability_model = {"RC": function}
-        vulnerability_model_retrofitted = {"RC": function}
-
         asset_output = (
-            api.BCR(api.Classical(vulnerability_model),
-                    api.Classical(vulnerability_model_retrofitted), 1.0, 1.0)
+            api.BCR(api.Classical(function),
+                    api.Classical(function), 1.0, 1.0)
             (asset, hazard_curve))
 
         self.assertEquals(asset, asset_output.asset)
@@ -164,10 +160,8 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
 
-        vulnerability_model = {"RC": function}
-
         asset_output = api.ProbabilisticEventBased(
-            vulnerability_model,
+            function,
             seed=37, correlation_type="perfect", tses=1, time_span=50)(
                 asset, hazard)
 

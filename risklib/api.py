@@ -44,15 +44,7 @@ def compute_on_assets(assets, hazard_getter, calculator):
     asset has been used
     """
 
-    taxonomy = None
-
     for asset in assets:
-        if taxonomy is not None:
-            if asset.taxonomy != taxonomy:
-                raise ValueError("Taxonomy of %s must be equal to %s" % (
-                    asset.taxonomy, taxonomy))
-        else:
-            taxonomy = asset.taxonomy
         hazard = hazard_getter(asset.site)
         yield calculator(asset, hazard)
 
@@ -64,20 +56,15 @@ class Classical(object):
     * a loss ratio curve
     * a set of conditional losses
     """
-    def __init__(self, vulnerability_model, steps=10):
-        self.vulnerability_model = vulnerability_model
+    def __init__(self, vulnerability_function, steps=10):
+        self.vulnerability_function = vulnerability_function
         self.steps = steps
-        self.matrices = dict(
-            (taxonomy,
-             vulnerability_function.loss_ratio_exceedance_matrix(steps))
-            for taxonomy, vulnerability_function
-            in vulnerability_model.iteritems())
+        self.loss_ratio_exceedance_matrix = (
+            vulnerability_function.loss_ratio_exceedance_matrix(steps))
 
     def __call__(self, asset, hazard):
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
-
         loss_ratio_curve = scientific.classical(
-            vulnerability_function, self.matrices[asset.taxonomy],
+            self.vulnerability_function, self.loss_ratio_exceedance_matrix,
             hazard, self.steps)
 
         loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
@@ -184,14 +171,14 @@ class ProbabilisticEventBased(object):
     """
 
     def __init__(
-            self, vulnerability_model,
+            self, vulnerability_function,
             time_span, tses,
             seed=None, correlation_type=None,
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
         self.correlation_type = correlation_type
-        self.vulnerability_model = vulnerability_model
+        self.vulnerability_function = vulnerability_function
         self.time_span = time_span
         self.tses = tses
         self.curve_resolution = curve_resolution
@@ -199,12 +186,9 @@ class ProbabilisticEventBased(object):
         self.loss_ratios = None
 
     def __call__(self, asset, hazard):
-        taxonomies = self.vulnerability_model.keys()
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
-        vulnerability_function.seed(
-            self.seed, self.correlation_type, taxonomies)
+        self.vulnerability_function.seed(self.seed, self.correlation_type)
 
-        self.loss_ratios = vulnerability_function(hazard)
+        self.loss_ratios = self.vulnerability_function(hazard)
 
         loss_ratio_curve = scientific.event_based(
             self.loss_ratios,
@@ -260,20 +244,17 @@ class ScenarioRisk(object):
         * aggregate losses
     """
 
-    def __init__(self, vulnerability_model, seed, correlation_type):
+    def __init__(self, vulnerability_function, seed, correlation_type):
 
         self.seed = seed
         self.correlation_type = correlation_type
-        self.vulnerability_model = vulnerability_model
+        self.vulnerability_function = vulnerability_function
 
     def __call__(self, asset, hazard):
-        taxonomies = self.vulnerability_model.keys()
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
-
-        vulnerability_function.seed(
+        self.vulnerability_function.seed(
             self.seed, self.correlation_type, taxonomies)
 
-        loss_ratios = vulnerability_function(hazard)
+        loss_ratios = self.vulnerability_function(hazard)
 
         losses = loss_ratios * asset.value
 
