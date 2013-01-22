@@ -32,6 +32,7 @@ import random
 import unittest
 
 from nose.plugins.attrib import attr
+from scipy.stats import mstats
 
 from tests.utils import helpers
 from tests.utils.helpers import random_location_generator
@@ -712,15 +713,15 @@ class QuantileCurveTestCase(unittest.TestCase):
 
         # TODO(LB): Check with our hazard experts to see if this is reasonable
         # tolerance. Better yet, get a fresh set of test data. (This test data
-        # was just copied verbatim from an existing test. See
-        # tests/hazard_test.py.)
+        # was just copied verbatim from from some old tests in
+        # `tests/hazard_test.py`.
         numpy.testing.assert_allclose(expected_curve, actual_curve, atol=0.005)
 
-        # FIXME: Enable me.
-        # Since this implementation is separate from but equivalent to scipy's
-        # mquantiles, compare algorithms just to prove they are the same:
-        # scipy_curve = mstats.mquantiles(curves, prob=quantile, axis=0)[0]
-        # numpy.testing.assert_allclose(scipy_curve, actual_curve)
+        # Since this implementation is an optimized but equivalent version of
+        # scipy's `mquantiles`, compare algorithms just to prove they are the
+        # same:
+        scipy_curve = mstats.mquantiles(curves, prob=quantile, axis=0)[0]
+        numpy.testing.assert_allclose(scipy_curve, actual_curve)
 
     def test_compute_weighted_quantile_curve_case1(self):
         expected_curve = numpy.array([0.69909, 0.60859, 0.50328])
