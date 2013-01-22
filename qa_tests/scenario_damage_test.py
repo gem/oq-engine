@@ -123,13 +123,13 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             RC=input.FragilityFunctionSeq(
                 fragility_model,
                 input.FragilityFunctionDiscrete,
-                [([0.0073, 0.35, 0.74, 0.99],),
-                 ([0.001, 0.02, 0.25, 0.72],)]),
+                [[0.0073, 0.35, 0.74, 0.99],
+                 [0.001, 0.02, 0.25, 0.72]]),
             RM=input.FragilityFunctionSeq(
                 fragility_model,
                 input.FragilityFunctionDiscrete,
-                [([0.01, 0.64, 0.95, 1.0],),
-                 ([0.0003, 0.05, 0.40, 0.86],)])
+                [[0.01, 0.64, 0.95, 1.0],
+                 [0.0003, 0.05, 0.40, 0.86]])
         )
 
         calculator = api.ScenarioDamage(fragility_model, fragility_functions)
