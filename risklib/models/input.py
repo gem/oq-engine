@@ -100,20 +100,6 @@ class FragilityModel(object):
         self.damage_states = [NO_DAMAGE_STATE] + list(limit_states)
         self.no_damage_limit = no_damage_limit
 
-    def no_damage(self, gmv):
-        """
-        There is no damage when ground motions values are less
-        than the first iml or when the no damage limit value
-        is greater than the ground motions value.
-        """
-        discrete = self.format == "discrete"
-        no_damage_limit = self.no_damage_limit is not None
-
-        return ((discrete and not no_damage_limit and
-                 gmv < self.imls[0]) or
-                (discrete and no_damage_limit and
-                 gmv < self.no_damage_limit))
-
     def ground_motion_value_fractions(self, funcs, gmv):
         """
         Compute the fractions of each damage state for
@@ -137,16 +123,15 @@ class FragilityModel(object):
             the fraction of a damage state (in order from the lowest
             to the highest)
         """
-        # we always have a number of damage states
-        # which is len(limit states) + 1
         damage_state_values = numpy.zeros(len(self.damage_states))
-
         # when we have a discrete fragility model and
-        # the ground motion value is below the lowest
-        # intensity measure level defined in the model
+        # the ground motion value is below the no_damage_limit or below
+        # the lowest intensity measure level defined in the model
         # we simply use 100% no_damage and 0% for the
         # remaining limit states
-        if self.no_damage(gmv):
+        if self.format == 'discrete' and (
+                gmv < self.no_damage_limit if self.no_damage_limit
+                else gmv < self.imls[0]):
             damage_state_values[0] = 1.0
             return numpy.array(damage_state_values)
 
