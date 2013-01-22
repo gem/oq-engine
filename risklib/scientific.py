@@ -490,7 +490,7 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     """
     loss_ratios = numpy.concatenate([first, loss_ratios, last])
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                      for x, y in pairwise(loss_ratios)])
+                            for x, y in pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
@@ -513,7 +513,6 @@ def conditional_loss(a_curve, probability):
             return 0.0
 
     return a_curve.abscissa_for(probability)
-
 
 ###
 ### Calculator modifiers
