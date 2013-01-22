@@ -2333,7 +2333,7 @@ class AssetManager(djm.GeoManager):
             SELECT * FROM oqmif.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
-            ORDER BY id LIMIT %s OFFSET %s
+            ORDER BY taxonomy, id LIMIT %s OFFSET %s
             """, [exposure_model_id, taxonomy,
                   "SRID=4326; %s" % region_constraint.wkt,
                   size, offset]))
