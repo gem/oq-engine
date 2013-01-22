@@ -70,13 +70,11 @@ class EventBasedRiskCalculatorTestCase(
         # Test the validation of the imt associated with the
         # vulnerability model that must match the one of the hazard
         # output
-        model = self.calculator.rc.model('vulnerability')
-        model.imt = 'fake'
-        model.save()
-
         patch = helpers.patch(
-            'openquake.calculators.risk.general.store_risk_model')
+            'openquake.calculators.risk.general'\
+            '.BaseRiskCalculator.set_risk_models')
         patch.start()
+        self.calculator.imt = 'fake'
         self.assertRaises(RuntimeError, self.calculator.pre_execute)
         patch.stop()
 
