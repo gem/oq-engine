@@ -53,9 +53,9 @@ mean_based_loss_curve_poes = [
 mb = TestData(
 
     input_models_asset=Triplet(
-        a1=scientific.Asset("a1", "RM", 3000, None),
-        a2=scientific.Asset("a2", "RC", 2000, None),
-        a3=scientific.Asset("a3", "RM", 1000, None),
+        a1=scientific.Asset("a1", 3000, None),
+        a2=scientific.Asset("a2", 2000, None),
+        a3=scientific.Asset("a3", 1000, None),
         ),
 
     expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
@@ -156,11 +156,11 @@ il = TestData(  # insured loss test data
 
     input_models_asset=Triplet(
         a1=scientific.Asset(
-            "a1", "RM", 3000, None, ins_limit=1250, deductible=40),
+            "a1", 3000, None, ins_limit=1250, deductible=40),
         a2=scientific.Asset(
-            "a2", "RC", 2000, None, ins_limit=500, deductible=15),
+            "a2", 2000, None, ins_limit=500, deductible=15),
         a3=scientific.Asset(
-            "a3", "RM", 1000, None, ins_limit=40, deductible=13),
+            "a3", 1000, None, ins_limit=40, deductible=13),
         ),
 
     expected_poes=Triplet(

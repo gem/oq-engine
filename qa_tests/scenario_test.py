@@ -62,7 +62,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
             self.vulnerability_model_mean["RM"], None, None)
 
         asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None),
+            scientific.Asset("a1", 3000, None),
             self.hazard_mean["a1"])
 
         self.assertAlmostEqual(440.147078317589,
@@ -72,7 +72,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
                                asset_output_a1.standard_deviation)
 
         asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None),
+            scientific.Asset("a3", 1000, None),
             self.hazard_mean["a3"])
 
         self.assertAlmostEqual(180.717534009275,
@@ -83,7 +83,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         calculator.vulnerability_function = self.vulnerability_model_mean["RC"]
         asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None),
+            scientific.Asset("a2", 2000, None),
             self.hazard_mean["a2"])
 
         self.assertAlmostEqual(432.225448142534,
@@ -110,7 +110,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
                                       correlation_type=None)
 
         asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None), gmv.a1)
+            scientific.Asset("a1", 3000, None), gmv.a1)
 
         self.assertAlmostEqual(521.885458891, asset_output_a1.mean,
                                delta=0.05 * 521.885458891)
@@ -118,7 +118,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         self.assertTrue(asset_output_a1.standard_deviation > 244.825980356)
 
         asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None), gmv.a3)
+            scientific.Asset("a3", 1000, None), gmv.a3)
 
         self.assertAlmostEqual(200.54874638, asset_output_a3.mean,
                                delta=0.05 * 200.54874638)
@@ -127,7 +127,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         calculator.vulnerability_function = vulnerability_model["RC"]
         asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None), gmv.a2)
+            scientific.Asset("a2", 2000, None), gmv.a2)
 
         self.assertAlmostEqual(510.821363253, asset_output_a2.mean,
                                delta=0.05 * 510.821363253)

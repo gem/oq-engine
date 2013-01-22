@@ -42,13 +42,12 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 class Asset(object):
     # FIXME (lp). Provide description
-    def __init__(self, asset_ref, taxonomy, value, site,
+    def __init__(self, asset_ref, value, site,
                  number_of_units=1,
                  ins_limit=None, deductible=None,
                  retrofitting_cost=None):
         self.site = site
         self.value = value
-        self.taxonomy = taxonomy
         self.asset_ref = asset_ref
         self.ins_limit = ins_limit
         self.deductible = deductible

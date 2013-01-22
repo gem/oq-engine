@@ -27,9 +27,9 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 
     def test_compute_on_assets(self):
         assets = [
-            scientific.Asset("a1", None, None, (1.0, 1.0)),
-            scientific.Asset("a2", None, None, (2.0, 2.0)),
-            scientific.Asset("a3", None, None, (3.0, 3.0)),
+            scientific.Asset("a1", None, (1.0, 1.0)),
+            scientific.Asset("a2", None, (2.0, 2.0)),
+            scientific.Asset("a3", None, (3.0, 3.0)),
         ]
 
         calculator = mock.Mock()
@@ -51,7 +51,7 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
-        asset = scientific.Asset("a1", None, None, None)
+        asset = scientific.Asset("a1", None, None)
         loss_ratio_curve = Curve([(2.0, 2.0)])
         loss_curve = Curve([(1.0, 1.0)])
         asset_output = scientific.ClassicalOutput(
@@ -76,7 +76,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
 
     def test_classical_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = scientific.Asset("a1", "RC", 1.0, None)
+        asset = scientific.Asset("a1", 1.0, None)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
@@ -100,7 +100,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         fragility_function = input.FragilityFunctionDiscrete(
             fragility_model, [0.8, 0.7], 1)
 
-        asset = scientific.Asset("a1", "RC", None, None, number_of_units=1.0)
+        asset = scientific.Asset("a1", None, None, number_of_units=1.0)
 
         calculator = api.ScenarioDamage(fragility_model, [fragility_function])
 
@@ -118,7 +118,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
 
     def test_bcr_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = scientific.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
+        asset = scientific.Asset("a1", 1.0, None, retrofitting_cost=1.0)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
@@ -140,7 +140,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
 class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
     def test_event_based_calculator(self):
-        asset = scientific.Asset("a1", "RC", 1.0, None)
+        asset = scientific.Asset("a1", 1.0, None)
         hazard = [0.11, 0.12, 0.13]
 
         function = scientific.VulnerabilityFunction(
@@ -164,7 +164,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
-        asset = scientific.Asset("a1", "RC", 1.0, None,
+        asset = scientific.Asset("a1", 1.0, None,
                             ins_limit=1.0, deductible=1.0)
 
         function = scientific.VulnerabilityFunction(
