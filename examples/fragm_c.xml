@@ -13,7 +13,7 @@
         </limitStates>
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs type="lognormal">
+        <ffs noDamageLimit="0.05" type="lognormal">
             <taxonomy>RC/DMRF-D/LR</taxonomy>
 
             <!-- fragility function in continuous format, 1 per limit state -->
