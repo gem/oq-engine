@@ -79,7 +79,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         asset = scientific.Asset("a1", "RC", 1.0, None)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         asset_output = api.Classical(function)(asset, hazard_curve)
 
@@ -121,7 +121,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
         asset = scientific.Asset("a1", "RC", 1.0, None, retrofitting_cost=1.0)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         asset_output = (
             api.BCR(api.Classical(function),
@@ -144,7 +144,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         hazard = [0.11, 0.12, 0.13]
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         asset_output = api.ProbabilisticEventBased(
             function,
@@ -168,7 +168,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
                             ins_limit=1.0, deductible=1.0)
 
         function = scientific.VulnerabilityFunction(
-            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN", "RC")
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
         asset_output = api.ScenarioRisk(function, 37, "perfect")(asset, hazard)
 

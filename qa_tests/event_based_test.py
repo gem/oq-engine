@@ -210,12 +210,12 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RM"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         peb_calculator_rm = api.ProbabilisticEventBased(
             vulnerability_function_rm, 50, 50)
@@ -360,12 +360,12 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         peb_calculator_rm = api.ProbabilisticEventBased(
             vulnerability_function_rm, time_span=50, tses=50,

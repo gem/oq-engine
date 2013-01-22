@@ -27,16 +27,16 @@ THISDIR = os.path.dirname(__file__)
 gmv = vectors_from_csv('gmv', THISDIR)
 
 
-def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0), taxonomy="T"):
+def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0)):
     return scientific.VulnerabilityFunction(
-        [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs, "LN", taxonomy)
+        [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs, "LN")
 
 
 class ScenarioRiskTestCase(unittest.TestCase):
 
     vulnerability_model_mean = dict(
-        RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], taxonomy="RM"),
-        RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], taxonomy="RC")
+        RM=vf([0.05, 0.1, 0.2, 0.4, 0.8]),
+        RC=vf([0.035, 0.07, 0.14, 0.28, 0.56])
     )
 
     hazard_mean = dict(
@@ -102,10 +102,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
     def test_sample_based(self):
         vulnerability_model = dict(
-            RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], [0.05, 0.06, 0.07, 0.08, 0.09],
-                  taxonomy="RM"),
-            RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5],
-                  taxonomy="RC"),
+            RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], [0.05, 0.06, 0.07, 0.08, 0.09]),
+            RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
         )
 
         calculator = api.ScenarioRisk(vulnerability_model['RM'], seed=37,

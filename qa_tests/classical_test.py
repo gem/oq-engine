@@ -46,7 +46,7 @@ class ClassicalTestCase(unittest.TestCase):
         calculator = api.ConditionalLosses([0.01, 0.02, 0.05],
             api.Classical(scientific.VulnerabilityFunction(
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-                [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF"), steps=5))
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5))
 
         asset_output = calculator(
             scientific.Asset("a1", "VF", 2, None), self.hazard_curve)
@@ -92,7 +92,7 @@ class ClassicalTestCase(unittest.TestCase):
         calculator = api.ConditionalLosses([0.01],
             api.Classical(scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "BT", "VF"), steps=5))
+            [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5))
 
         value = 2  # the asset value
 

@@ -58,8 +58,7 @@ class Asset(object):
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs, distribution,
-                 taxonomy):
+    def __init__(self, imls, mean_loss_ratios, covs, distribution):
         """
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
@@ -73,8 +72,6 @@ class VulnerabilityFunction(object):
 
         :param string distribution: The probabilistic distribution
             related to this function.
-
-        :param string taxonomy: the taxonomy related to this function
         """
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
@@ -93,11 +90,9 @@ class VulnerabilityFunction(object):
                 [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
                  numpy.ones(len(iml)) * self.min_iml], axis=0))
         self.epsilon_provider = None
-        self.taxonomy = taxonomy
 
     def seed(self, seed=None, correlation_type=None):
-        self.epsilon_provider = EpsilonProvider(
-            seed, correlation_type, [self.taxonomy])
+        self.epsilon_provider = EpsilonProvider(seed, correlation_type)
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -156,8 +151,7 @@ class VulnerabilityFunction(object):
                 values = numpy.random.beta(alpha, beta, size=None)
             elif self.distribution == 'LN':
                 variance = (means * covs) ** 2
-                epsilon = self.epsilon_provider.epsilon(
-                    self.taxonomy, len(means))
+                epsilon = self.epsilon_provider.epsilon(len(means))
                 sigma = numpy.sqrt(
                     numpy.log((variance / means ** 2.0) + 1.0))
                 mu = numpy.log(means ** 2.0 / numpy.sqrt(
@@ -317,8 +311,7 @@ class EpsilonProvider(object):
     method. See :py:meth:`EpsilonProvider.epsilon` for more information.
     """
 
-    def __init__(self, seed=None,
-                 correlation_type=None, taxonomies=None):
+    def __init__(self, seed=None, correlation_type=None):
         """
         :param params: configuration parameters from the job configuration
         :type params: dict
@@ -330,8 +323,7 @@ class EpsilonProvider(object):
 
         if correlation_type == "perfect":
             self._setup_rnd()
-            for taxonomy in taxonomies:
-                self._samples[taxonomy] = self._generate()
+            self._samples = self._generate()
 
     def _setup_rnd(self):
         self.rnd = random.Random()
@@ -345,7 +337,7 @@ class EpsilonProvider(object):
 
         return self.rnd.normalvariate(0, 1)
 
-    def epsilon(self, taxonomy, count=1):
+    def epsilon(self, count=1):
         """Sample from the standard normal distribution for the given asset.
 
         For uncorrelated risk calculation jobs we sample the standard normal
@@ -353,14 +345,10 @@ class EpsilonProvider(object):
         In the opposite case ("perfectly correlated" assets) we sample for each
         building typology i.e. two assets with the same typology will "share"
         the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        taxonomy is the same. The asset's `taxonomy` is only needed for
-        correlated jobs and unlikely to be available for uncorrelated ones.
         """
 
         if self._correlation_type == "perfect":
-            ret = [self._samples[taxonomy] for _ in range(count)]
+            ret = [self._samples for _ in range(count)]
         else:
             ret = [self._generate() for _ in range(count)]
 

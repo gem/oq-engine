@@ -27,7 +27,7 @@ class EpsilonProvider(object):
             -2.2588, 0.8622, 0.3188, -1.3077,
             -0.4336, 0.3426, 3.5784, 2.7694])
 
-    def epsilon(self, _, count):
+    def epsilon(self, count):
         return [self.epsilons.next() for _ in range(count)]
 
 
@@ -77,7 +77,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
-            [0.0] * 8, "LN", "RC")
+            [0.0] * 8, "LN")
         self.vulnerability_function1.seed(3)
 
         self.exceeding_times = numpy.array([
@@ -104,7 +104,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
-            1.0, 1.0, 1.0], [0.0] * 100, "LN", "RC")
+            1.0, 1.0, 1.0], [0.0] * 100, "LN")
 
         self.vulnerability_function1.seed(4)
 
@@ -155,7 +155,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         vulnerability_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
+            [0.30, 0.30, 0.20, 0.20], "LN")
 
         gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
@@ -181,7 +181,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         vuln_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
+            [0.30, 0.30, 0.20, 0.20], "LN")
 
         vuln_function.epsilon_provider = EpsilonProvider()
 
@@ -205,7 +205,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN", "RC")
+            imls, loss_ratios, covs, "LN")
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
@@ -335,46 +335,3 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose([10] * 11, actual.abscissae)
         numpy.testing.assert_allclose(
             numpy.arange(0, 1.1, 0.1), actual.ordinates)
-
-
-class EpsilonProviderTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.epsilon_provider1 = scientific.EpsilonProvider()
-        self.epsilon_provider2 = scientific.EpsilonProvider(
-            correlation_type="perfect",
-            taxonomies=["a", "b"])
-        self.assets = [
-            scientific.Asset(None, "a", None, None),
-            scientific.Asset(None, "b", None, None),
-            scientific.Asset(None, "a", None, None),
-        ]
-
-    def test_uncorrelated(self):
-        samples = []
-        for asset in self.assets:
-            sample = self.epsilon_provider1.epsilon(asset.taxonomy)
-            self.assertTrue(sample not in samples,
-                            "%s is already in %s" % (sample, samples))
-            self.assertTrue(isinstance(sample, float),
-                            "Invalid sample (%s)" % sample)
-            samples.append(sample)
-
-    def test_correlated(self):
-        samples = dict()
-        for asset in self.assets:
-            sample = self.epsilon_provider2.epsilon(asset.taxonomy)
-            taxonomy = asset.taxonomy
-            # This is either the first time we see this taxonomy or the sample
-            # is identical to the one originally drawn for this taxonomy.
-            if taxonomy not in samples:
-                samples[taxonomy] = sample
-            else:
-                self.assertTrue(sample == samples[taxonomy])
-        # Make sure we used at least two taxonomies in this test.
-        self.assertTrue(len(samples) > 1)
-        # Are all samples valid values?
-        for taxonomy, sample in samples.items():
-            self.assertTrue(
-                isinstance(sample, float),
-                "Invalid sample (%s) for taxonomy %s" % (sample, taxonomy))

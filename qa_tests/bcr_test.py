@@ -26,12 +26,12 @@ class BCRTestCase(unittest.TestCase):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF"))
+            [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         vulnerability_function_rf = (
             scientific.VulnerabilityFunction(
             [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN", "VF"))
+            [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         asset = scientific.Asset("a1", "VF", 2, None, retrofitting_cost=0.1)
 
