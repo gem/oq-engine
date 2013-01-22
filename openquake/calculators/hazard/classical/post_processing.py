@@ -558,4 +558,21 @@ def compute_quantile_curve(curves, quantile):
         A numpy array representing the quantile aggregate of the input
         ``curves`` and ``quantile``.
     """
-    return numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
+    # this implementation is an alternative to:
+    # return numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
+
+    # more or less copied from the scipy mquantiles function, just special
+    # cased for what we need (and about 6x faster)
+
+    arr = numpy.array(curves)
+
+    p = numpy.array(quantile)
+    m = 0.4 + p * 0.2
+
+    n = len(arr)
+    aleph = n * p + m
+    k = numpy.floor(aleph.clip(1, n - 1)).astype(int)
+    gamma = (aleph - k).clip(0, 1)
+
+    data = numpy.sort(arr, axis=0).transpose()
+    return (1.0 - gamma) * data[:, k - 1] + gamma * data[:, k]
