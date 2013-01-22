@@ -23,50 +23,6 @@ from risklib.curve import Curve
 from risklib import api
 
 
-class ComputeOnSitesTestCase(unittest.TestCase):
-
-    def test_multiple_sites(self):
-        asset = scientific.Asset("a1", None, None, None)
-        sites = [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)]
-
-        calculator = mock.Mock()
-        hazard_getter = mock.Mock(return_value=1.0)
-        assets_getter = mock.Mock(return_value=[asset])
-
-        list(api.compute_on_sites(
-             sites, assets_getter, hazard_getter, calculator))
-
-        expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
-                          (((3.0, 3.0),), {})]
-
-        self.assertEquals(expected_calls, assets_getter.call_args_list)
-        self.assertEquals(expected_calls, hazard_getter.call_args_list)
-
-        self.assertEquals([((asset, 1.0), {})] * 3,
-                          calculator.call_args_list)
-
-    def test_multiple_assets_per_site(self):
-        sites = [(1.0, 1.0)]
-
-        assets = [
-            scientific.Asset("a1", None, None, None),
-            scientific.Asset("a2", None, None, None),
-            scientific.Asset("a3", None, None, None),
-        ]
-
-        calculator = mock.Mock()
-        hazard_getter = mock.Mock(return_value=1.0)
-        assets_getter = mock.Mock(return_value=assets)
-
-        list(api.compute_on_sites(
-             sites, assets_getter, hazard_getter, calculator))
-
-        expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
-                          ((assets[2], 1.0), {})]
-
-        self.assertEquals(expected_calls, calculator.call_args_list)
-
-
 class ComputeOnAssetsTestCase(unittest.TestCase):
 
     def test_compute_on_assets(self):
@@ -90,6 +46,19 @@ class ComputeOnAssetsTestCase(unittest.TestCase):
                           ((assets[2], 1.0), {})]
 
         self.assertEquals(expected_calls, calculator.call_args_list)
+
+    def test_compute_on_assets_should_raise(self):
+        assets = [
+            scientific.Asset("a1", "RC", None, (1.0, 1.0)),
+            scientific.Asset("a2", "POP", None, (2.0, 2.0)),
+        ]
+
+        calculator = mock.Mock()
+        hazard_getter = mock.Mock(return_value=1.0)
+
+        self.assertRaises(ValueError, list,
+                          api.compute_on_assets(
+                              assets, hazard_getter, calculator))
 
 
 class ConditionalLossesTestCase(unittest.TestCase):

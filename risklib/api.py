@@ -18,62 +18,13 @@ import numpy
 from risklib import scientific, scenario_damage
 
 
-def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
-    """
-    Main entry to trigger a calculation over geographical sites.
-
-    For each site in `sites`, the function will:
-        * load all the assets defined on that geographical site
-        * load the hazard input defined on that geographical site
-        * call the calculator for each asset and yield the calculator
-        results for that single asset
-
-    The assets lookup logic for a single site is completely up to the
-    caller, as well as the logic to lookup the correct hazard on that site.
-    Also, the are no constraints at all on how a single geographical site is
-    represented, because they are just passed back to the client implementation
-    of the assets and hazard getters to load the related inputs.
-
-    :param sites: the set of sites where to trigger the computation on
-    :type sites: an `iterator` over a collection of sites. No constraints
-        are needed for the type of a single site
-    :param assets_getter: the logic used to lookup the assets defined
-        on a single geographical site
-    :type assets_getter: `callable` that accepts as single parameter a
-        geographical site and returns a set of `risklib.models.input.Asset`
-    :param hazard_getter: the logic used to lookup the hazard defined
-        on a single geographical site
-    :type hazard_getter: `callable` that accepts as single parameter a
-        geographical site and returns the hazard input for that site.
-        The format of the hazard input depends on the type of calculator
-        chosen and it is documented in detail in each calculator
-    :param calculator: a specific calculator (classical, probabilistic
-        event based, benefit cost ratio, scenario risk, scenario damage)
-    :type calculator: `callable` that accepts as first parameter an
-        instance of `risklib.models.input.Asset` and as second parameter the
-        hazard input. It returns an instance of
-        `risklib.scientific.*Output` with the results of the
-        computation for the given asset
-    """
-
-    for site in sites:
-        assets = assets_getter(site)
-        hazard = hazard_getter(site)
-
-        for asset in assets:
-            yield calculator(asset, hazard)
-
-
 def compute_on_assets(assets, hazard_getter, calculator):
     """
-    Main entry to trigger a calculation over a set of assets.
-
-    It works basically in the same way as `risklib.api.compute_on_sites`
-    except that here we loop over the given assets.
+    Main entry to trigger a calculation over a set of homogeneous assets.
 
     :param assets: the set of assets where to trigger the computation on
     :type assets: an `iterator` over a collection of
-        `risklib.models.input.Asset`
+        `:class:risklib.scientific.Asset`
     :param hazard_getter: the logic used to lookup the hazard defined
         on a single geographical site
     :type hazard_getter: `callable` that accepts as single parameter a
@@ -85,11 +36,23 @@ def compute_on_assets(assets, hazard_getter, calculator):
     :type calculator: `callable` that accepts as first parameter an
         instance of `risklib.models.input.Asset` and as second parameter the
         hazard input. It returns an instance of
-        `risklib.scientific.*Output` with the results of the
+        `risklib.scientific.Output` with the results of the
         computation for the given asset
+
+    :raises: ValueError if the given assets are of different
+    taxonomies. The check is only performed after that the second
+    asset has been used
     """
 
+    taxonomy = None
+
     for asset in assets:
+        if taxonomy is not None:
+            if asset.taxonomy != taxonomy:
+                raise ValueError("Taxonomy of %s must be equal to %s" % (
+                    asset.taxonomy, taxonomy))
+        else:
+            taxonomy = asset.taxonomy
         hazard = hazard_getter(asset.site)
         yield calculator(asset, hazard)
 
