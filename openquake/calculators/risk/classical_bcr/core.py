@@ -32,14 +32,15 @@ from django.db import transaction
 @tasks.oqtask
 @stats.count_progress('r')
 def classical_bcr(job_id, assets, hazard_getter, hazard_id,
+                  vulnerability_function, vulnerability_function_retrofitted,
                   bcr_distribution_id, lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
 
-    Gets the vulnerability models, instantiates risklib calculators
-    and stores results to db in a single transaction.
+    Instantiates risklib calculators, computes BCR and stores the
+    results to db in a single transaction.
 
     :param int job_id:
       ID of the currently running job
@@ -59,13 +60,12 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     :param float asset_life_expectancy
       The life expectancy used for every asset
     """
-    model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model(job_id, True)
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
     calculator = api.BCR(
-        api.Classical(model, lrem_steps_per_interval),
-        api.Classical(model_retrofitted, lrem_steps_per_interval),
+        api.Classical(vulnerability_function, lrem_steps_per_interval),
+        api.Classical(vulnerability_function_retrofitted,
+                      lrem_steps_per_interval),
         interest_rate,
         asset_life_expectancy)
 
@@ -83,9 +83,21 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     """
     Classical BCR risk calculator. Computes BCR distributions for a
     given set of assets.
+
+    :attribute dict vulnerability_functions_retrofitted:
+    A dictionary mapping each taxonomy to a vulnerability functions
+    for the retrofitted losses computation
     """
     core_calc_task = classical_bcr
     hazard_getter = 'HazardCurveGetterPerAsset'
+
+    def __init__(self, job):
+        super(ClassicalBCRRiskCalculator, self).__init__(job)
+        self.vulnerability_functions_retrofitted = None
+
+    def worker_args(self, taxonomy):
+        return (super(ClassicalBCRRiskCalculator, self).worker_args(taxonomy) +
+                [self.vulnerability_functions_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -109,11 +121,11 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                 output=models.Output.objects.create_output(
                     self.job, "BCR Distribution", "bcr_distribution")).pk]
 
-    def store_risk_model(self):
+    def set_risk_models(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        super(ClassicalBCRRiskCalculator, self).store_risk_model()
-
-        general.store_risk_model(self.rc, "vulnerability_retrofitted")
+        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions_retrofitted = (
+            self.parse_vulnerability_model(True))
