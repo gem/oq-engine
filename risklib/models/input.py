@@ -13,10 +13,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import math
+from collections import Sequence
 from scipy.stats import lognorm
 from scipy.interpolate import interp1d
 import numpy
-import math
 
 
 NO_DAMAGE_STATE = "no_damage"
@@ -25,8 +26,7 @@ NO_DAMAGE_STATE = "no_damage"
 # TODO: validation on input values?
 class FragilityFunctionContinuous(object):
 
-    def __init__(self, fragility_model, mean, stddev, lsi):
-        self.lsi = lsi
+    def __init__(self, fragility_model, mean, stddev):
         self.mean = mean
         self.stddev = stddev
         self.fragility_model = fragility_model
@@ -48,8 +48,7 @@ class FragilityFunctionContinuous(object):
 
 class FragilityFunctionDiscrete(object):
 
-    def __init__(self, fragility_model, poes, lsi):
-        self.lsi = lsi
+    def __init__(self, fragility_model, poes):
         self.poes = poes
         self.fragility_model = fragility_model
         self._interp = None
@@ -76,15 +75,33 @@ class FragilityFunctionDiscrete(object):
 
     # so that the curve is pickeable
     def __getstate__(self):
-        return dict(lsi=self.lsi, poes=self.poes,
-                    fragility_model=self.fragility_model, _interp=None)
+        return dict(
+            poes=self.poes, fragility_model=self.fragility_model, _interp=None)
 
     def __eq__(self, other):
-        return (self.lsi == other.lsi and self.poes == other.poes
+        return (self.poes == other.poes
                 and self.fragility_model == other.fragility_model)
 
     def __ne__(self, other):
         return not self == other
+
+
+class FragilityFunctionSeq(Sequence):
+    """
+    An ordered sequence of fragility functions.
+    """
+    def __init__(self, fragility_model, fftype, argslist,
+                 no_damage_limit=None):
+        self.fragility_model = fragility_model
+        self.fftype = fftype
+        self.fflist = [fftype(fragility_model, *args) for args in argslist]
+        self.no_damage_limit = no_damage_limit
+
+    def __getitem__(self, i):
+        return self.fflist[i]
+
+    def __len__(self):
+        return len(self.fflist)
 
 
 class FragilityModel(object):
@@ -115,8 +132,7 @@ class FragilityModel(object):
             the distribution for each limit state. The functions
             must be in order from the one with the lowest
             limit state to the one with the highest limit state.
-        :type funcs: list of
-            :py:class:`FragilityFunction` instances
+        :type funcs: :py:class:`FragilityFunctionSeq` instance
         :returns: the fraction of buildings of each damage state
             computed for the given ground motion value.
         :rtype: 1d `numpy.array`. Each value represents
@@ -129,8 +145,9 @@ class FragilityModel(object):
         # the lowest intensity measure level defined in the model
         # we simply use 100% no_damage and 0% for the
         # remaining limit states
+        no_damage_limit = getattr(funcs, 'no_damage_limit', None)
         if self.format == 'discrete' and (
-                gmv < self.no_damage_limit if self.no_damage_limit
+                gmv < no_damage_limit if no_damage_limit
                 else gmv < self.imls[0]):
             damage_state_values[0] = 1.0
             return numpy.array(damage_state_values)

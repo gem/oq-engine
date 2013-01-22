@@ -37,7 +37,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
         func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
+            fm, [0.05, 0.20, 0.50, 1.00])
 
         self._close_to(fm.ground_motion_value_fractions([func], 0.7),
                        fm.ground_motion_value_fractions([func], 0.8))
@@ -56,7 +56,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
         func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
+            fm, [0.05, 0.20, 0.50, 1.00])
 
         self._close_to([1.0, 0.0, 0.0],
                        fm.ground_motion_value_fractions([func], 0.05))
@@ -75,7 +75,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
                                   LIMIT_STATES, no_damage_limit=0.05)
 
         func = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
+            fm, [0.05, 0.20, 0.50, 1.00])
 
         self._close_to([1.0, 0.0, 0.0],
                        fm.ground_motion_value_fractions([func], 0.02))
@@ -93,14 +93,13 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
                                   LIMIT_STATES, no_damage_limit=0.05)
 
-        func1 = input.FragilityFunctionDiscrete(
-            fm, [0.05, 0.20, 0.50, 1.00], 1)
-
-        func2 = input.FragilityFunctionDiscrete(
-            fm, [0.00, 0.05, 0.20, 0.50], 2)
+        seq = input.FragilityFunctionSeq(
+            fm, input.FragilityFunctionDiscrete,
+            [([0.05, 0.20, 0.50, 1.00],), ([0.00, 0.05, 0.20, 0.50],)],
+            no_damage_limit=0.05)
 
         self._close_to([0.975, 0.025, 0.],
-                       fm.ground_motion_value_fractions([func1, func2], 0.075))
+                       fm.ground_motion_value_fractions(seq, 0.075))
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
@@ -109,6 +108,6 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         fm = input.FragilityModel("discrete", [0.1, 0.3, 0.5, 0.7],
                                   LIMIT_STATES, no_damage_limit=0.05)
 
-        ffd = input.FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00], 1)
+        ffd = input.FragilityFunctionDiscrete(fm, [0.05, 0.20, 0.50, 1.00])
 
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
