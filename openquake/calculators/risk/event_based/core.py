@@ -117,10 +117,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "There is no ground motion field in the intensity measure %s" %
                 self.imt)
 
-        if self.rc.insured_losses and models.ExposureData.objects.filter(
-                exposure_model__id=self.exposure_model_id).filter(
+        if (self.rc.insured_losses and
+            self.exposure_model.exposuredata_set.filter(
                     (db.models.Q(deductible__isnull=True) |
-                     db.models.Q(ins_limit__isnull=True))).exists():
+                     db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
 
