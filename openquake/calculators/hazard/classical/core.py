@@ -21,10 +21,7 @@ import nhlib
 import nhlib.calc
 import nhlib.imt
 
-import numpy
-
 from django.db import transaction
-from scipy.stats import mstats
 
 from openquake import logs
 from openquake.calculators import base
@@ -37,11 +34,12 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.utils.general import block_splitter as bs
+from openquake.utils.general import block_splitter
 from openquake.writer import BulkInserter
 
 #: Used for selecting hazard curve data from the DB for post-processing.
 _MAX_CURVES_PER_SELECT = 100000
+
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
@@ -375,7 +373,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 for chunk in _queryset_iter(all_curves_for_imt, slice_incr):
                     # slice each chunk by `num_rlzs` into `site_chunk`
                     # and compute the aggregate
-                    for site_chunk in bs(chunk, num_rlzs):
+                    for site_chunk in block_splitter(chunk, num_rlzs):
                         site = site_chunk[0].location
                         curves_poes = [x.poes for x in site_chunk]
                         curves_weights = [x.weight for x in site_chunk]
