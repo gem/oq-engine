@@ -323,7 +323,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             im_type, sa_period, sa_damping = models.parse_imt(imt)
 
             # prepare `output` and `hazard_curve` containers in the DB:
-            agg_curves = dict()
+            container_ids = dict()
             if self.hc.mean_hazard_curves:
                 mean_output = models.Output.objects.create_output(
                     job=self.job,
@@ -339,7 +339,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     sa_damping=sa_damping,
                     statistics='mean'
                 )
-                agg_curves['mean'] = mean_hc
+                container_ids['mean'] = mean_hc.id
 
             if self.hc.quantile_hazard_curves:
                 for quantile in self.hc.quantile_hazard_curves:
@@ -360,8 +360,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                         statistics='quantile',
                         quantile=quantile
                     )
-                    agg_curves['q%s' % quantile] = q_hc
-
+                    container_ids['q%s' % quantile] = q_hc.id
 
             all_curves_for_imt = _all_curves_for_imt(
                 self.job.id, im_type, sa_period, sa_damping
@@ -394,7 +393,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                     )
                                 inserter.add_entry(
                                     hazard_curve_id=(
-                                        agg_curves['q%s' % quantile].id
+                                        container_ids['q%s' % quantile]
                                     ),
                                     poes=q_curve.tolist(),
                                     location=site.wkt
@@ -406,7 +405,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                 curves_poes, weights=curves_weights
                             )
                             inserter.add_entry(
-                                hazard_curve_id=agg_curves['mean'].id,
+                                hazard_curve_id=container_ids['mean'],
                                 poes=mean_curve.tolist(),
                                 location=site.wkt
                             )
