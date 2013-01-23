@@ -409,6 +409,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                 poes=mean_curve.tolist(),
                                 location=site.wkt
                             )
+                    # Incrementally insert to avoid caching too much insert
+                    # data at once:
+                    if len(inserter.values) >= _CURVE_CACHE_SIZE:
+                        inserter.flush()
                 inserter.flush()
 
 
