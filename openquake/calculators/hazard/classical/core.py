@@ -37,8 +37,8 @@ from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter
 from openquake.writer import BulkInserter
 
-#: Used for selecting hazard curve data from the DB for post-processing.
-_MAX_CURVES_PER_SELECT = 100000
+#: Maximum number of hazard curves to cache, for selects or inserts
+_CURVE_CACHE_SIZE = 100000
 
 
 @utils_tasks.oqtask
@@ -305,9 +305,9 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         num_rlzs = models.LtRealization.objects.filter(
             hazard_calculation=self.hc).count()
 
-        num_site_blocks_per_incr = int(_MAX_CURVES_PER_SELECT) / int(num_rlzs)
+        num_site_blocks_per_incr = int(_CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
-            # This means we have `num_rlzs` >= `_MAX_CURVES_PER_SELECT`.
+            # This means we have `num_rlzs` >= `_CURVE_CACHE_SIZE`.
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         # NOTE(larsbutler): `slice_incr` must be a multiple of `num_rlzs`
