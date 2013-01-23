@@ -84,13 +84,21 @@ class VulnerabilityFunction(object):
         self.max_iml = self.imls[-1]
         self.min_iml = self.imls[0]
         self.resolution = len(self.imls)
+        self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
         self._cov_for = lambda iml: self._covs_i1d(
             numpy.max(
                 [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
                  numpy.ones(len(iml)) * self.min_iml], axis=0))
-        self.epsilon_provider = None
+
+        if (self.covs > 0).any():
+            if self.distribution == "LN":
+                self.uncertainty = LogNormalDistribution()
+            elif self.distribution == "BT":
+                self.uncertainty = BetaDistribution()
+        else:
+            self.uncertainty = DegenerateDistribution()
 
     def __getstate__(self):
         return (self.imls, self.mean_loss_ratios, self.covs, self.distribution)
@@ -103,7 +111,8 @@ class VulnerabilityFunction(object):
         self.setUp()
 
     def seed(self, seed=None, correlation_type=None):
-        self.epsilon_provider = EpsilonProvider(seed, correlation_type)
+        self.uncertainty.epsilon_provider = EpsilonProvider(
+            seed, correlation_type)
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -113,13 +122,6 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 for x in covs)
         assert all(x >= 0.0 and x <= 1.0 for x in loss_ratios)
         assert distribution in ["LN", "BT"]
-
-    @property
-    def stddevs(self):
-        """
-        Convenience method: returns a list of calculated Standard Deviations
-        """
-        return self.covs * self.mean_loss_ratios
 
     def __call__(self, imls):
         """
@@ -149,28 +151,8 @@ class VulnerabilityFunction(object):
         means = self._mlr_i1d(imls)
 
         # apply uncertainty
-
-        # FIXME (lp). Refactor me. This stuff should be in a separate
-        # class
-        if (self.covs > 0).any():
-            covs = self._cov_for(imls)
-            stddevs = covs * imls
-
-            if self.distribution == 'BT':
-                alpha = _alpha_value(means, stddevs)
-                beta = _beta_value(means, stddevs)
-                values = numpy.random.beta(alpha, beta, size=None)
-            elif self.distribution == 'LN':
-                variance = (means * covs) ** 2
-                epsilon = self.epsilon_provider.epsilon(len(means))
-                sigma = numpy.sqrt(
-                    numpy.log((variance / means ** 2.0) + 1.0))
-                mu = numpy.log(means ** 2.0 / numpy.sqrt(
-                    variance + means ** 2.0))
-                values = numpy.exp(mu + (epsilon * sigma))
-            ret[idxs] = values
-        else:
-            ret[idxs] = means
+        covs = self._cov_for(imls)
+        ret[idxs] = self.uncertainty.apply(means, covs, covs * imls)
 
         return ret
 
@@ -197,24 +179,8 @@ class VulnerabilityFunction(object):
                 mean_loss_ratio = self.mean_loss_ratios[col]
                 loss_ratio_stddev = self.stddevs[col]
 
-                # FIXME(lp): Refactor this out
-                if self.distribution == "BT":
-                    lrem[row][col] = stats.beta.sf(
-                        loss_ratio,
-                        _alpha_value(
-                            mean_loss_ratio, loss_ratio_stddev),
-                        _beta_value(
-                            mean_loss_ratio, loss_ratio_stddev))
-                elif self.distribution == "LN":
-                    variance = loss_ratio_stddev ** 2.0
-                    sigma = numpy.sqrt(
-                        numpy.log((variance / mean_loss_ratio ** 2.0) + 1.0))
-                    mu = numpy.exp(
-                        numpy.log(
-                            mean_loss_ratio ** 2.0 /
-                            numpy.sqrt(variance + mean_loss_ratio ** 2.0)))
-                    lrem[row][col] = stats.lognorm.sf(
-                        loss_ratio, sigma, scale=mu)
+                lrem[row][col] = self.uncertainty.survival(
+                    loss_ratio, mean_loss_ratio, loss_ratio_stddev)
 
         return lrem
 
@@ -281,39 +247,50 @@ ScenarioRiskOutput.standard_deviation = property(
 ##
 
 
-def _alpha_value(mean_loss_ratio, stddev):
-    """
-    Compute alpha value
+class DegenerateDistribution(object):
+    def apply(self, means, *_):
+        return means
 
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
+    def survival(self, *_):
+        return 0
 
 
-    :returns: computed alpha value
-    """
+class LogNormalDistribution(object):
+    def __init__(self):
+        self.epsilon_provider = None
 
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            mean_loss_ratio ** 2)
+    def apply(self, means, covs, _):
+        variance = (means * covs) ** 2
+        epsilon = self.epsilon_provider.epsilon(len(means))
+        sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
+        mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
+        return numpy.exp(mu + (epsilon * sigma))
+
+    def survival(self, loss_ratio, mean, stddev):
+        variance = stddev ** 2.0
+        sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
+        mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
+        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
-def _beta_value(mean_loss_ratio, stddev):
-    """
-    Compute beta value
+class BetaDistribution(object):
+    def apply(self, means, _, stddevs):
+        alpha = self._alpha(means, stddevs)
+        beta = self._beta(means, stddevs)
+        return numpy.random.beta(alpha, beta, size=None)
 
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
+    def survival(self, loss_ratio, mean, stddev):
+        return stats.beta.sf(loss_ratio,
+                             self._alpha(mean, stddev),
+                             self._beta(mean, stddev))
 
-    :param stdev: current standard deviation
-    :type stdev: float
+    @staticmethod
+    def _alpha(mean, stddev):
+        return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
 
-
-    :returns: computed beta value
-    """
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            (mean_loss_ratio - mean_loss_ratio ** 2))
+    @staticmethod
+    def _beta(mean, stddev):
+        return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
 
 class EpsilonProvider(object):
