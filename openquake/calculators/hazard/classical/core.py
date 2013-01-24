@@ -362,9 +362,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     )
                     container_ids['q%s' % quantile] = q_hc.id
 
-            all_curves_for_imt = _all_curves_for_imt(
-                self.job.id, im_type, sa_period, sa_damping
-            )
+            all_curves_for_imt = models.HazardCurveData.objects\
+                .all_curves_for_imt(
+                    self.job.id, im_type, sa_period, sa_damping)\
+                .order_by('location')
 
             with transaction.commit_on_success(using='reslt_writer'):
                 inserter = BulkInserter(models.HazardCurveData)
@@ -414,34 +415,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     if len(inserter.values) >= _CURVE_CACHE_SIZE:
                         inserter.flush()
                 inserter.flush()
-
-
-def _all_curves_for_imt(job_id, imt, sa_period, sa_damping):
-    """
-    Helper function for creating a :class:`django.db.models.query.QuerySet` for
-    selecting all curves from all realizations for a given ``job_id`` and
-    ``imt``.
-
-    :param int job_id:
-        ID of a :class:`openquake.db.models.OqJob`.
-    :param str imt:
-        Intensity measure type.
-    :param sa_period:
-        Spectral Acceleration period value. Only relevant if the ``imt`` is
-        "SA".
-    :param sa_damping:
-        Spectrail Acceleration damping value. Only relevant if the ``imt`` is
-        "SA".
-    """
-    return models.HazardCurveData.objects\
-            .filter(hazard_curve__output__oq_job=job_id,
-                    hazard_curve__imt=imt,
-                    hazard_curve__sa_period=sa_period,
-                    hazard_curve__sa_damping=sa_damping,
-                    # We only want curves associated with a logic tree
-                    # realization (and not statistical aggregates):
-                    hazard_curve__lt_realization__isnull=False)\
-            .order_by('location')
 
 
 def _queryset_iter(queryset, chunk_size):
