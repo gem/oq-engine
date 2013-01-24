@@ -25,13 +25,13 @@ class BCRTestCase(unittest.TestCase):
     def test_bcr_classical(self):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
+                [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         vulnerability_function_rf = (
             scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
+                [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
         asset = scientific.Asset("a1", 2, None, retrofitting_cost=0.1)
 
@@ -39,7 +39,7 @@ class BCRTestCase(unittest.TestCase):
         calculator_rf = api.Classical(vulnerability_function_rf, steps=5)
 
         calculator_bcr = api.BCR(calculator_rm, calculator_rf,
-            interest_rate=0.05, asset_life_expectancy=40)
+                                 interest_rate=0.05, asset_life_expectancy=40)
 
         hazard = [
             (0.001, 0.0398612669790014), (0.01, 0.0398612669790014),
@@ -55,10 +55,10 @@ class BCRTestCase(unittest.TestCase):
         asset_output = calculator_bcr(asset, hazard)
 
         self.assertAlmostEqual(0.009379,
-            asset_output.eal_original, delta=0.0009)
+                               asset_output.eal_original, delta=0.0009)
 
         self.assertAlmostEqual(0.006586,
-            asset_output.eal_retrofitted, delta=0.0009)
+                               asset_output.eal_retrofitted, delta=0.0009)
 
         self.assertAlmostEqual(0.483091,
-            asset_output.bcr, delta=0.009)
+                               asset_output.bcr, delta=0.009)

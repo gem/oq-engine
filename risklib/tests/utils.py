@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, csv, collections
+import os
+import csv
+import collections
+
 
 def new(tuple_type, **kwargs):
     '''Instantiate a namedtuple class with missing fields defaulting to None
@@ -25,6 +28,7 @@ def new(tuple_type, **kwargs):
     params = dict.fromkeys(tuple_type._fields)
     params.update(kwargs)
     return tuple_type(**params)
+
 
 def vectors_from_csv(name, dirname):
     "Read columns of floats as an array for a .csv file with an header"

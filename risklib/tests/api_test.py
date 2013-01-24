@@ -168,7 +168,7 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
         asset = scientific.Asset("a1", 1.0, None,
-                            ins_limit=1.0, deductible=1.0)
+                                 ins_limit=1.0, deductible=1.0)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")

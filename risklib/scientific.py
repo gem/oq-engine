@@ -22,12 +22,11 @@ This module includes the scientific API of the oq-risklib
 
 import collections
 import random
-import itertools
 
 import numpy
 from scipy import interpolate, stats
 
-from risklib import curve
+from risklib import curve, utils
 
 ###
 ### Constants & Defaults
@@ -78,19 +77,15 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
         self.distribution = distribution
-        self.setUp()
+        self.init()
 
-    def setUp(self):
+    def init(self):
         self.max_iml = self.imls[-1]
         self.min_iml = self.imls[0]
         self.resolution = len(self.imls)
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
-        self._cov_for = lambda iml: self._covs_i1d(
-            numpy.max(
-                [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
-                 numpy.ones(len(iml)) * self.min_iml], axis=0))
 
         if (self.covs > 0).any():
             if self.distribution == "LN":
@@ -100,6 +95,18 @@ class VulnerabilityFunction(object):
         else:
             self.uncertainty = DegenerateDistribution()
 
+    def _cov_for(self, imls):
+        """
+        Clip `imls` to the range associated with the support of the
+        vulnerability function and returns the corresponding
+        covariance values by linear interpolation
+        """
+        clipped_up = numpy.min(
+            [imls, numpy.ones(len(imls)) * self.max_iml], axis=0)
+        clipped = numpy.max(
+            [clipped_up, numpy.ones(len(imls)) * self.min_iml], axis=0)
+        return self._covs_i1d(clipped)
+
     def __getstate__(self):
         return (self.imls, self.mean_loss_ratios, self.covs, self.distribution)
 
@@ -108,7 +115,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = mean_loss_ratios
         self.covs = covs
         self.distribution = distribution
-        self.setUp()
+        self.init()
 
     def seed(self, seed=None, correlation_type=None):
         self.uncertainty.epsilon_provider = EpsilonProvider(
@@ -195,7 +202,7 @@ class VulnerabilityFunction(object):
            :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
         """
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
-                [numpy.mean(pair) for pair in pairwise(self.imls)] +
+                [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
@@ -385,7 +392,7 @@ def event_based(loss_values, tses, time_span,
     # for the details
     times = [index
              for index, (previous_val, val) in
-             enumerate(pairwise(sorted_loss_values))
+             enumerate(utils.pairwise(sorted_loss_values))
              if not numpy.allclose([val], [previous_val])]
 
     # if there are less than 2 distinct loss values, we will keep the
@@ -474,7 +481,7 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     """
     loss_ratios = numpy.concatenate([first, loss_ratios, last])
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                            for x, y in pairwise(loss_ratios)])
+                            for x, y in utils.pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
@@ -573,26 +580,14 @@ def mean_loss(a_curve):
     return numpy.dot(mean_ratios, mean_pes)
 
 
-###
-### Utils
-###
-
-def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-    a, b = itertools.tee(iterable)
-    # b ahead one step; if b is empty do not raise StopIteration
-    next(b, None)
-    return itertools.izip(a, b)  # if a is empty will return an empty iter
-
-
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
-    return [numpy.mean(pair) for pair in pairwise(values)]
+    return [numpy.mean(pair) for pair in utils.pairwise(values)]
 
 
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
-    return [x - y for x, y in pairwise(values)]
+    return [x - y for x, y in utils.pairwise(values)]
 
 
 def mean_std(fractions):
