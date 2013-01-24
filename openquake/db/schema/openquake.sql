@@ -1144,7 +1144,11 @@ CREATE TABLE hzrdr.hazard_curve_data (
     hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
     poes float[] NOT NULL,
-    weight NUMERIC  -- copied from hzrdr.lt_realization
+    -- Copied from hzrdr.lt_realization.
+    -- This was added for performance reasons, so we can get the weight
+    -- without having to join `hzrdr.lt_realization`.
+    -- `weight` can be null, if the weight is implicit.
+    weight NUMERIC
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
