@@ -161,12 +161,9 @@ def export_hazard_curves(output, target_dir):
 
     # NOTE(LB): Using `values_list` and `iterator` here make this query a bit
     # faster and more lean in terms of memory consumption.
-    curves = models.HazardCurveData.objects\
-            .filter(hazard_curve=hc.id)\
-            .order_by('id')\
-            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
-            .values_list('x', 'y', 'poes')\
-            .iterator()
+    curves = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id)
+    )
     # Simple object wrapper around the values, to match the interface of the
     # XML writer:
     Location = namedtuple('Location', 'x y')
