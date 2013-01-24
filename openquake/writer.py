@@ -260,9 +260,9 @@ class BulkInserter(object):
         self.count += 1
 
         # If we have hit the `max_cache_size` is set,
-        if max_cache_size is not None:
+        if self.max_cache_size is not None:
             # check if we have hit the maximum insert the current batch.
-            if len(self.values) >= max_cache_size:
+            if len(self.values) >= self.max_cache_size:
                 self.flush()
 
     def flush(self):
