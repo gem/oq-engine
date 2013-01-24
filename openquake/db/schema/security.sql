@@ -58,10 +58,6 @@ GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.occupancy_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE riski.ffc_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riski.ffd_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riski.fragility_model_id_seq to GROUP openquake;
-
 GRANT ALL ON SEQUENCE riskr.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
@@ -215,18 +211,6 @@ GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 -- oqmif.occupancy
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
-
--- riski.ffc
-GRANT SELECT ON riski.ffc TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.ffc TO oq_job_init;
-
--- riski.ffd
-GRANT SELECT ON riski.ffd TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.ffd TO oq_job_init;
-
--- riski.fragility_model
-GRANT SELECT ON riski.fragility_model TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.fragility_model TO oq_job_init;
 
 -- riskr.loss_curve
 GRANT SELECT ON riskr.loss_curve TO GROUP openquake;
