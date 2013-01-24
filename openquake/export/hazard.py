@@ -20,6 +20,7 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 import os
 
+from collections import namedtuple
 from collections import OrderedDict
 
 from nhlib.calc import disagg
@@ -157,7 +158,20 @@ def export_hazard_curves(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id)
+
+    # NOTE(LB): Using `values_list` and `iterator` here make this query a bit
+    # faster and more lean in terms of memory consumption.
+    curves = models.HazardCurveData.objects\
+            .filter(hazard_curve=hc.id)\
+            .order_by('id')\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
+    # Simple object wrapper around the values, to match the interface of the
+    # XML writer:
+    Location = namedtuple('Location', 'x y')
+    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
+    hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
     filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
 

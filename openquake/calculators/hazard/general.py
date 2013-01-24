@@ -54,6 +54,9 @@ from openquake.utils import stats
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
+# Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
+# 1e-5 represents the approximate distance of one meter at the equator.
+DILATION_ONE_METER = 1e-5
 
 
 def store_source_model(job_id, seed, params, calc):
@@ -147,8 +150,15 @@ def validate_site_model(sm_nodes, mesh):
     sm_mp = geometry.MultiPoint(
         [(n.location.x, n.location.y) for n in sm_nodes]
     )
+
+    sm_ch = sm_mp.convex_hull
+    # Enlarging the area if the site model nodes
+    # create a straight line with zero area.
+    if sm_ch.area == 0:
+        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
+
     sm_poly = nhlib_geo.Polygon(
-        [nhlib_geo.Point(*x) for x in sm_mp.convex_hull.exterior.coords]
+        [nhlib_geo.Point(*x) for x in sm_ch.exterior.coords]
     )
 
     # "Intersects" is the correct operation (not "contains"), since we're just
