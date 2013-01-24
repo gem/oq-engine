@@ -21,6 +21,7 @@ This module includes the scientific API of the oq-risklib
 """
 
 import collections
+import itertools
 import random
 
 import numpy
@@ -77,6 +78,9 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
         self.distribution = distribution
+        (self.max_iml, self.min_iml, self.resolution,
+         self.stddevs, self._mlr_i1d, self._covs_i1d,
+         self.uncertainty) = itertools.repeat(None, 7)
         self.init()
 
     def init(self):
@@ -88,10 +92,7 @@ class VulnerabilityFunction(object):
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
 
         if (self.covs > 0).any():
-            if self.distribution == "LN":
-                self.uncertainty = LogNormalDistribution()
-            elif self.distribution == "BT":
-                self.uncertainty = BetaDistribution()
+            self.uncertainty = DISTRIBUTIONS[self.distribution]()
         else:
             self.uncertainty = DegenerateDistribution()
 
@@ -258,8 +259,9 @@ ScenarioRiskOutput.standard_deviation = property(
 
 
 ##
-## Sampling
+## Distribution & Sampling
 ##
+DISTRIBUTIONS = utils.Register()
 
 
 class DegenerateDistribution(object):
@@ -270,6 +272,7 @@ class DegenerateDistribution(object):
         return 0
 
 
+@DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(object):
     def __init__(self):
         self.epsilon_provider = None
@@ -288,6 +291,7 @@ class LogNormalDistribution(object):
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
+@DISTRIBUTIONS.add('BT')
 class BetaDistribution(object):
     def apply(self, means, _, stddevs):
         alpha = self._alpha(means, stddevs)
