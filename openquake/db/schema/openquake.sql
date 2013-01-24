@@ -412,7 +412,7 @@ CREATE TABLE uiapi.risk_calculation (
     -- probabilistic parameters
     asset_correlation VARCHAR NULL,
     master_seed INTEGER NULL,
-  
+
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
@@ -1009,7 +1009,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'gmf',
-            'gmf_scenario',   
+            'gmf_scenario',
             'hazard_curve',
             'hazard_map',
             'ins_loss_curve',
@@ -1490,7 +1490,7 @@ CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    average_annual_loss_original float NOT NULL ,   
+    average_annual_loss_original float NOT NULL,
     average_annual_loss_retrofitted float NOT NULL,
     bcr float NOT NULL
 ) TABLESPACE riskr_ts;
