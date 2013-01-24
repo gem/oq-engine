@@ -20,18 +20,19 @@ Core functionality for the classical PSHA risk calculator.
 
 from django import db
 
+from risklib import api, scientific
+
 from openquake.calculators.risk import general
 from openquake.db import models
 from openquake.utils import tasks, stats
 from openquake import logs
 from openquake.calculators import base
 
-from risklib import api, scientific
-
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard_id, seed,
+def event_based(job_id, assets, hazard_getter, hazard_id,
+                seed, vulnerability_function,
                 loss_curve_id, loss_map_ids,
                 insured_curve_id, aggregate_loss_curve_id,
                 conditional_loss_poes, insured_losses,
@@ -39,13 +40,38 @@ def event_based(job_id, assets, hazard_getter, hazard_id, seed,
                 loss_curve_resolution, asset_correlation):
     """
     Celery task for the event based risk calculator.
-    """
-    vulnerability_model = general.fetch_vulnerability_model(job_id)
 
+    :param job_id: the id of the current `:class:openquake.db.models.OqJob`
+    :param assets: the list of `:class:risklib.scientific.Asset`
+    instances considered
+    :param hazard_getter: the name of an hazard getter to be used
+    :param hazard_id: the hazard output id
+    :param seed: the seed used to initialize the rng
+    :param loss_curve_id:
+      ID of the :class:`openquake.db.models.LossCurve` output container used
+      to store the computed loss curves
+    :param loss_map_ids:
+      Dictionary poe->ID of the :class:`openquake.db.models.LossMap` output
+      container used to store the computed loss maps
+    :param insured_curve_id: Same as loss_curve_id but for insured losses
+    :param aggregate_loss_curve_id: ID of the
+      :class:`openquake.db.models.AggregateLossCurve` output container
+      used to store the computed loss curves
+    :param conditional_loss_poes:
+      The poes taken into accout to compute the loss maps
+    :param bool insured_losses: True if insured losses should be computed
+    :param str imt: the imt used to filter ground motion fields
+    :param time_span: the time span considered
+    :param tses: time of the stochastic event set
+    :param loss_curve_resolution: the curve resolution, i.e. the
+    number of points which defines the loss curves
+    :param float asset_correlation: a number ranging from 0 to 1
+    representing the correlation between the generated loss ratios
+    """
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
-        vulnerability_model,
+        vulnerability_function,
         curve_resolution=loss_curve_resolution,
         time_span=time_span,
         tses=tses,
@@ -117,10 +143,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "There is no ground motion field in the intensity measure %s" %
                 self.imt)
 
-        if self.rc.insured_losses and models.ExposureData.objects.filter(
-                exposure_model__id=self.exposure_model_id).filter(
+        if (self.rc.insured_losses and
+            self.exposure_model.exposuredata_set.filter(
                     (db.models.Q(deductible__isnull=True) |
-                     db.models.Q(ins_limit__isnull=True))).exists():
+                     db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
 
@@ -138,14 +164,6 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         curve_data.losses = aggregate_loss_curve.abscissae.tolist()
         curve_data.poes = aggregate_loss_curve.ordinates.tolist()
         curve_data.save()
-
-    @property
-    def imt(self):
-        """
-        The intensity measure type considered by this calculator.
-        It is got by the vulnerability model
-        """
-        return self.rc.model("vulnerability").imt
 
     @property
     def hazard_id(self):

@@ -192,23 +192,3 @@ class OQRouterTestCase(unittest.TestCase):
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
-
-    def test_riski_read_schema(self):
-        '''
-        For each model in the 'riski' schema, test for proper db routing
-        for read operations.
-        '''
-        classes = [oq.VulnerabilityModel, oq.VulnerabilityFunction]
-        expected_db = 'job_init'
-
-        self._db_for_read_helper(classes, expected_db)
-
-    def test_riski_write_schema(self):
-        '''
-        For each model in the 'riski' schema, test for proper db routing
-        for write operations.
-        '''
-        classes = [oq.VulnerabilityModel, oq.VulnerabilityFunction]
-        expected_db = 'job_init'
-
-        self._db_for_write_helper(classes, expected_db)
