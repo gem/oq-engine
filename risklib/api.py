@@ -167,12 +167,11 @@ class ProbabilisticEventBased(object):
         self.time_span = time_span
         self.tses = tses
         self.curve_resolution = curve_resolution
-
         self.loss_ratios = None
 
-    def __call__(self, asset, hazard):
         self.vulnerability_function.seed(self.seed, self.correlation_type)
 
+    def __call__(self, asset, hazard):
         self.loss_ratios = self.vulnerability_function(hazard)
 
         loss_ratio_curve = scientific.event_based(
@@ -221,25 +220,13 @@ class InsuredLosses(object):
 
 
 class ScenarioRisk(object):
-    """
-    Scenario risk calculator. For each asset it produces:
-        * mean / standard deviation of asset losses
-
-    It also produces the following aggregate results:
-        * aggregate losses
-    """
-
     def __init__(self, vulnerability_function, seed, correlation_type):
-
         self.seed = seed
         self.correlation_type = correlation_type
         self.vulnerability_function = vulnerability_function
-
-    def __call__(self, asset, hazard):
         self.vulnerability_function.seed(self.seed, self.correlation_type)
 
-        loss_ratios = self.vulnerability_function(hazard)
-
-        losses = loss_ratios * asset.value
-
-        return scientific.ScenarioRiskOutput(asset, losses)
+    def __call__(self, asset, hazard):
+        return scientific.ScenarioRiskOutput(
+            asset,
+            self.vulnerability_function(hazard) * asset.value)
