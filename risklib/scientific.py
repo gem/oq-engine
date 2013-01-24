@@ -319,10 +319,6 @@ class EpsilonProvider(object):
     """
 
     def __init__(self, seed=None, correlation_type=None):
-        """
-        :param params: configuration parameters from the job configuration
-        :type params: dict
-        """
         self._samples = dict()
         self._correlation_type = correlation_type
         self._seed = seed
@@ -359,10 +355,7 @@ class EpsilonProvider(object):
         else:
             ret = [self._generate() for _ in range(count)]
 
-        if count == 1:
-            return ret[0]
-        else:
-            return ret
+        return ret
 
 
 ###
