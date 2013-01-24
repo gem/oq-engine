@@ -21,14 +21,10 @@ import itertools
 from risklib import scientific
 
 
-class EpsilonProvider(object):
-    def __init__(self):
-        self.epsilons = itertools.cycle([0.5377, 1.8339,
-                                         -2.2588, 0.8622, 0.3188, -1.3077,
-                                         -0.4336, 0.3426, 3.5784, 2.7694])
-
-    def epsilon(self, count):
-        return [self.epsilons.next() for _ in range(count)]
+EPSILONS = list(itertools.repeat(
+    [0.5377, 1.8339,
+     -2.2588, 0.8622, 0.3188, -1.3077,
+     -0.4336, 0.3426, 3.5784, 2.7694], 10))
 
 
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -165,7 +161,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vf.distribution.epsilon_provider = EpsilonProvider()
+        vf.distribution.epsilons = EPSILONS
         ratios = vf(gmf)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
@@ -181,7 +177,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
-        vuln_function.distribution.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilons = EPSILONS
 
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
@@ -207,7 +203,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
-        vuln_function.distribution.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilons = EPSILONS
 
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,

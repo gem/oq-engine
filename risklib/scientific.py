@@ -160,6 +160,7 @@ class VulnerabilityFunction(object):
 
         # apply uncertainty
         covs = self._cov_for(imls)
+
         ret[idxs] = self.distribution.sample(means, covs, covs * imls)
 
         return ret
@@ -278,17 +279,30 @@ class DegenerateDistribution(object):
 @DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(object):
     def __init__(self):
-        self.epsilon_provider = None
+        self.rnd = random.Random()
+        self.epsilons = None
 
     def init(self, asset_count=1, samples=1, seed=None, correlation=0):
-        self.epsilon_provider = EpsilonProvider(seed, correlation)
+        assert correlation in [0, 1]
+        if seed is not None:
+            self.rnd.seed(seed)
+
+        if correlation == 0:
+            self.epsilons = [
+                [self.rnd.normalvariate(0, 1) for _ in range(0, samples)]
+                for __ in range(0, asset_count)]
+        else:
+            base_epsilons = [self.rnd.normalvariate(0, 1)
+                             for _ in range(0, samples)]
+            self.epsilons = itertools.repeat(base_epsilons, asset_count)
 
     def sample(self, means, covs, _):
+        epsilons = self.epsilons.pop()
         variance = (means * covs) ** 2
-        epsilon = self.epsilon_provider.epsilon(len(means))
         sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
         mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
-        return numpy.exp(mu + (epsilon * sigma))
+
+        return numpy.exp(mu + (epsilons[0:len(sigma)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
         variance = stddev ** 2.0
@@ -316,53 +330,6 @@ class BetaDistribution(object):
     @staticmethod
     def _beta(mean, stddev):
         return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
-
-
-class EpsilonProvider(object):
-    """
-    Simple class for combining job configuration parameters and an `epsilon`
-    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
-    """
-
-    def __init__(self, seed=None, correlation_type=None):
-        self._samples = dict()
-        self._correlation_type = correlation_type
-        self._seed = seed
-        self.rnd = None
-
-        if correlation_type == "perfect":
-            self._setup_rnd()
-            self._samples = self._generate()
-
-    def _setup_rnd(self):
-        self.rnd = random.Random()
-        if self._seed is not None:
-            self.rnd.seed(int(self._seed))
-            numpy.random.seed(int(self._seed))
-
-    def _generate(self):
-        if self.rnd is None:
-            self._setup_rnd()
-
-        return self.rnd.normalvariate(0, 1)
-
-    def epsilon(self, count=1):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-        """
-
-        if self._correlation_type == "perfect":
-            ret = [self._samples for _ in range(count)]
-        else:
-            ret = [self._generate() for _ in range(count)]
-
-        return ret
-
 
 ###
 ### Calculators

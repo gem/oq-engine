@@ -160,7 +160,7 @@ class ProbabilisticEventBased(object):
 
     def __call__(self, assets, ground_motion_fields):
         self.vulnerability_function.init_distribution(
-            len(assets), len(ground_motion_fields),
+            len(assets), len(ground_motion_fields[0]),
             self.seed, self.correlation)
 
         self.loss_ratios = [
@@ -228,7 +228,7 @@ class Scenario(object):
 
     def __call__(self, assets, ground_motion_fields):
         self.vulnerability_function.init_distribution(
-            len(assets), len(ground_motion_fields),
+            len(assets), len(ground_motion_fields[0]),
             self.seed, self.correlation)
 
         return [
