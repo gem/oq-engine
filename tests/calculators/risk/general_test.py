@@ -86,26 +86,15 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
-    def test_store_risk_model(self):
+    def test_set_risk_models(self):
         """
         Test that Vulnerability model and functions are properly
         stored and associated with the calculator
         """
 
-        [vulnerability_input] = models.inputs4rcalc(
-            self.job.risk_calculation, input_type='vulnerability')
+        self.calculator.set_risk_models()
 
-        self.calculator.store_risk_model()
-
-        actual_model_queryset = models.VulnerabilityModel.objects.filter(
-            input=vulnerability_input)
-        self.assertEqual(1, actual_model_queryset.count())
-
-        model = actual_model_queryset.all()[0]
-
-        self.assertEqual("QA_test1", model.name)
-
-        self.assertEqual(1, model.vulnerabilityfunction_set.count())
+        self.assertEqual(1, len(self.calculator.vulnerability_functions))
 
     def test_create_outputs(self):
         """
@@ -133,16 +122,14 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
             helpers.patch(
                 '%s.%s' % (path, '_store_exposure')),
             helpers.patch(
-                '%s.%s' % (path, 'store_risk_model')),
+                '%s.%s' % (path, 'set_risk_models')),
             helpers.patch(
-                '%s.%s' % (path, '_initialize_progress')),
-            helpers.patch(
-                'openquake.db.models.ExposureData.objects.contained_in_count'))
+                '%s.%s' % (path, '_initialize_progress')))
 
         mocks = [p.start() for p in patches]
 
-        mocks[1].return_value = models.ExposureModel.objects.all()[0]
-        mocks[3].return_value = 3
+        mocks[0].return_value = mock.Mock()
+        mocks[0].return_value.taxonomies_in.return_value = {'RC': 10}
 
         self.calculator.pre_execute()
 
@@ -161,6 +148,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator._initialize_progress()
 
         total = stats.pk_get(self.calculator.job.id, "nrisk_total")
-        self.assertEqual(self.calculator.assets_nr, total)
+        self.assertEqual(2, total)
+        self.assertEqual({'VF': 2}, self.calculator.taxonomies)
         done = stats.pk_get(self.calculator.job.id, "nrisk_done")
         self.assertEqual(0, done)
