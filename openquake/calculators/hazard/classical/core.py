@@ -370,7 +370,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             with transaction.commit_on_success(using='reslt_writer'):
                 inserter = BulkInserter(models.HazardCurveData)
 
-                for chunk in _queryset_iter(all_curves_for_imt, slice_incr):
+                for chunk in models.queryset_iter(all_curves_for_imt,
+                                                  slice_incr):
                     # slice each chunk by `num_rlzs` into `site_chunk`
                     # and compute the aggregate
                     for site_chunk in block_splitter(chunk, num_rlzs):
@@ -415,29 +416,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     if len(inserter.values) >= _CURVE_CACHE_SIZE:
                         inserter.flush()
                 inserter.flush()
-
-
-def _queryset_iter(queryset, chunk_size):
-    """
-    Given a QuerySet, split it into smaller queries and yield the result of
-    each.
-
-    :param queryset:
-        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
-        of ``chunk_size``.
-    :param int chunksize:
-        Chunk size for iteration over query results. For an unexecuted
-        QuerySet, this will result in splitting a (potentially large) query
-        into smaller queries.
-    """
-    offset = 0
-    while True:
-        chunk = list(queryset[offset:offset + chunk_size].iterator())
-        if len(chunk) == 0:
-            raise StopIteration
-        else:
-            yield chunk
-            offset += chunk_size
 
 
 def update_result_matrix(current, new):

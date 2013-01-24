@@ -72,6 +72,29 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+def queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
+
+
 def profile4job(job_id):
     """Return the job profile for the given job.
 
