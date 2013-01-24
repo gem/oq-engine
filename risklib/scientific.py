@@ -206,8 +206,10 @@ class VulnerabilityFunction(object):
 
 ClassicalOutput = collections.namedtuple(
     "ClassicalOutput",
-    ["asset", "loss_ratio_curve", "loss_curve", "conditional_losses"])
+    ["asset", "loss_ratio_curve", "conditional_losses"])
 
+ClassicalOutput.loss_curve = property(
+    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
 
 ScenarioDamageOutput = collections.namedtuple(
     "ScenarioDamageOutput", ["asset", "fractions"])
@@ -227,10 +229,16 @@ BCROutput = collections.namedtuple(
 
 
 ProbabilisticEventBasedOutput = collections.namedtuple(
-    "ProbabilisticEventBasedOutput", ["asset", "losses",
-    "loss_ratio_curve", "loss_curve", "insured_loss_ratio_curve",
-    "insured_loss_curve", "insured_losses", "conditional_losses"])
+    "ProbabilisticEventBasedOutput",
+    ["asset", "losses", "loss_ratio_curve", "insured_loss_ratio_curve",
+     "insured_losses", "conditional_losses"])
 
+ProbabilisticEventBasedOutput.loss_curve = property(
+    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
+
+ProbabilisticEventBasedOutput.insured_loss_curve = property(
+    lambda self: self.insured_loss_ratio_curve.rescale_abscissae(
+        self.asset.value))
 
 ScenarioRiskOutput = collections.namedtuple(
     "ScenarioRiskOutput", ["asset", "losses"])
@@ -466,7 +474,7 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     """
     loss_ratios = numpy.concatenate([first, loss_ratios, last])
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                      for x, y in pairwise(loss_ratios)])
+                            for x, y in pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
@@ -489,7 +497,6 @@ def conditional_loss(a_curve, probability):
             return 0.0
 
     return a_curve.abscissa_for(probability)
-
 
 ###
 ### Calculator modifiers
