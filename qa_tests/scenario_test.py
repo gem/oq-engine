@@ -115,7 +115,7 @@ class ScenarioTestCase(unittest.TestCase):
         self.assertTrue(asset_output_a3.standard_deviation > 94.2302991022)
 
         calculator.vulnerability_function = vulnerability_model["RC"]
-        calculator.vulnerability_function.seed(37)
+        calculator.vulnerability_function.init_distribution(seed=37)
 
         [asset_output_a2] = calculator([scientific.Asset(2000)], [gmv.a2])
 

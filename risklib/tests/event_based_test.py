@@ -78,7 +78,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN")
-        self.vulnerability_function1.seed(3)
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
@@ -106,8 +105,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
              0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
              0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
              1.0, 1.0, 1.0], [0.0] * 100, "LN")
-
-        self.vulnerability_function1.seed(4)
 
         self.gmf1 = {"IMLs": (
             0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -154,7 +151,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IMLs inside range defined by Vulnerability function's imls.
         """
 
-        vulnerability_function = scientific.VulnerabilityFunction(
+        vf = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -168,8 +165,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vulnerability_function.uncertainty.epsilon_provider = EpsilonProvider()
-        ratios = vulnerability_function(gmf)
+        vf.distribution.epsilon_provider = EpsilonProvider()
+        ratios = vf(gmf)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -184,7 +181,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
-        vuln_function.uncertainty.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilon_provider = EpsilonProvider()
 
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
@@ -210,7 +207,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
-        vuln_function.uncertainty.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilon_provider = EpsilonProvider()
 
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,

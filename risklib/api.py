@@ -146,7 +146,10 @@ class ProbabilisticEventBased(object):
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
-        self.correlation_type = correlation_type
+        if correlation_type == "perfect":
+            self.correlation = 1
+        else:
+            self.correlation = 0
         self.vulnerability_function = vulnerability_function
         self.time_span = time_span
         self.tses = tses
@@ -155,9 +158,11 @@ class ProbabilisticEventBased(object):
         # needed in external calculator.
         self.loss_ratios = None  # set in __call__
 
-        self.vulnerability_function.seed(self.seed, self.correlation_type)
-
     def __call__(self, assets, ground_motion_fields):
+        self.vulnerability_function.init_distribution(
+            len(assets), len(ground_motion_fields),
+            self.seed, self.correlation)
+
         self.loss_ratios = [
             self.vulnerability_function(ground_motion_fields[i])
             for i in range(0, len(assets))]
@@ -212,13 +217,20 @@ class InsuredLosses(object):
 
 
 class Scenario(object):
-    def __init__(self, vulnerability_function, seed, correlation_type):
+    def __init__(self, vulnerability_function,
+                 seed=None, correlation_type=None):
         self.seed = seed
-        self.correlation_type = correlation_type
+        if correlation_type == "perfect":
+            self.correlation = 1
+        else:
+            self.correlation = 0
         self.vulnerability_function = vulnerability_function
-        self.vulnerability_function.seed(self.seed, self.correlation_type)
 
     def __call__(self, assets, ground_motion_fields):
+        self.vulnerability_function.init_distribution(
+            len(assets), len(ground_motion_fields),
+            self.seed, self.correlation)
+
         return [
             scientific.ScenarioRiskOutput(
                 asset,

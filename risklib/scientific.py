@@ -55,7 +55,7 @@ class Asset(object):
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs, distribution):
+    def __init__(self, imls, mean_loss_ratios, covs, distribution_name):
         """
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
@@ -67,18 +67,18 @@ class VulnerabilityFunction(object):
         :param list covs: Coefficients of Variation. Equal in length
         to mean loss ratios. All values must be >= 0.0.
 
-        :param string distribution: The probabilistic distribution
+        :param str distribution_name: The probabilistic distribution
             related to this function.
         """
         self._check_vulnerability_data(
-            imls, mean_loss_ratios, covs, distribution)
+            imls, mean_loss_ratios, covs, distribution_name)
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
-        self.distribution = distribution
+        self.distribution_name = distribution_name
         (self.max_iml, self.min_iml, self.resolution,
          self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.uncertainty) = itertools.repeat(None, 7)
+         self.distribution) = itertools.repeat(None, 7)
         self.init()
 
     def init(self):
@@ -90,9 +90,15 @@ class VulnerabilityFunction(object):
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
 
         if (self.covs > 0).any():
-            self.uncertainty = DISTRIBUTIONS[self.distribution]()
+            self.distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
-            self.uncertainty = DegenerateDistribution()
+            self.distribution = DegenerateDistribution()
+
+    def init_distribution(self, asset_count=1, sample_num=1,
+                          seed=None, correlation=0):
+
+        assert correlation in [0, 1]
+        self.distribution.init(asset_count, sample_num, seed, correlation)
 
     def _cov_for(self, imls):
         """
@@ -115,10 +121,6 @@ class VulnerabilityFunction(object):
         self.covs = covs
         self.distribution = distribution
         self.init()
-
-    def seed(self, seed=None, correlation_type=None):
-        self.uncertainty.epsilon_provider = EpsilonProvider(
-            seed, correlation_type)
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -150,7 +152,7 @@ class VulnerabilityFunction(object):
                           imls], axis=0)
 
         # for imls such that iml > min(iml) we get a mean loss ratio
-        # by interpolation and apply the uncertainty (if present)
+        # by interpolation and sample the distribution
 
         idxs = numpy.where(imls >= self.min_iml)[0]
         imls = numpy.array(imls)[idxs]
@@ -158,7 +160,7 @@ class VulnerabilityFunction(object):
 
         # apply uncertainty
         covs = self._cov_for(imls)
-        ret[idxs] = self.uncertainty.apply(means, covs, covs * imls)
+        ret[idxs] = self.distribution.sample(means, covs, covs * imls)
 
         return ret
 
@@ -185,7 +187,7 @@ class VulnerabilityFunction(object):
                 mean_loss_ratio = self.mean_loss_ratios[col]
                 loss_ratio_stddev = self.stddevs[col]
 
-                lrem[row][col] = self.uncertainty.survival(
+                lrem[row][col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, loss_ratio_stddev)
 
         return lrem
@@ -263,7 +265,10 @@ DISTRIBUTIONS = utils.Register()
 
 
 class DegenerateDistribution(object):
-    def apply(self, means, *_):
+    def init(self, *args):
+        pass
+
+    def sample(self, means, *_):
         return means
 
     def survival(self, *_):
@@ -275,7 +280,10 @@ class LogNormalDistribution(object):
     def __init__(self):
         self.epsilon_provider = None
 
-    def apply(self, means, covs, _):
+    def init(self, asset_count=1, samples=1, seed=None, correlation=0):
+        self.epsilon_provider = EpsilonProvider(seed, correlation)
+
+    def sample(self, means, covs, _):
         variance = (means * covs) ** 2
         epsilon = self.epsilon_provider.epsilon(len(means))
         sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
@@ -291,7 +299,7 @@ class LogNormalDistribution(object):
 
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(object):
-    def apply(self, means, _, stddevs):
+    def sample(self, means, _, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta, size=None)
