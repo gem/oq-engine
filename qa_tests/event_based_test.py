@@ -50,9 +50,7 @@ mean_based_loss_curve_poes = [
 mb = TestData(
 
     input_models_asset=[
-        scientific.Asset("a1", 3000, None),
-        scientific.Asset("a3", 1000, None),
-        scientific.Asset("a2", 2000, None),
+        scientific.Asset(3000), scientific.Asset(1000), scientific.Asset(2000)
     ],
 
     expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
@@ -105,12 +103,9 @@ mb = TestData(
 il = TestData(  # insured loss test data
 
     input_models_asset=[
-        scientific.Asset(
-            "a1", 3000, None, ins_limit=1250, deductible=40),
-        scientific.Asset(
-            "a3", 1000, None, ins_limit=40, deductible=13),
-        scientific.Asset(
-            "a2", 2000, None, ins_limit=500, deductible=15),
+        scientific.Asset(3000, ins_limit=1250, deductible=40),
+        scientific.Asset(1000, ins_limit=40, deductible=13),
+        scientific.Asset(2000, ins_limit=500, deductible=15),
     ],
 
     expected_poes=[

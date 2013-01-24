@@ -49,7 +49,7 @@ class ClassicalTestCase(unittest.TestCase):
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5))
 
         [asset_output] = calculator(
-            [scientific.Asset("a1", 2, None)], [self.hazard_curve])
+            [scientific.Asset(2, None)], [self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -98,7 +98,7 @@ class ClassicalTestCase(unittest.TestCase):
         value = 2  # the asset value
 
         [asset_output] = calculator(
-            [scientific.Asset("a1", value, None)], [self.hazard_curve])
+            [scientific.Asset(value)], [self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039125428171600,

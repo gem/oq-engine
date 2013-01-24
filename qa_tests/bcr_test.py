@@ -33,7 +33,7 @@ class BCRTestCase(unittest.TestCase):
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
-        asset = scientific.Asset("a1", 2, None, retrofitting_cost=0.1)
+        asset = scientific.Asset(2, None, retrofitting_cost=0.1)
 
         calculator_rm = api.Classical(vulnerability_function_rm, steps=5)
         calculator_rf = api.Classical(vulnerability_function_rf, steps=5)

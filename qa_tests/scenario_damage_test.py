@@ -74,14 +74,14 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             fragility_model, fragility_functions['RC'])
 
         [asset_output_a1] = calculator_rm(
-            [scientific.Asset("a1", 3000, None, number_of_units=3000)],
+            [scientific.Asset(3000, number_of_units=3000)],
             [self.hazard['a1']])
         expected_means = [1562.6067550208, 1108.0189275488, 329.3743174305]
         expected_stdevs = [968.93502576, 652.7358505746, 347.3929450270]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
         [asset_output_a3] = calculator_rm(
-            [scientific.Asset("a3", 1000, None, number_of_units=1000)],
+            [scientific.Asset(1000, number_of_units=1000)],
             [self.hazard['a3']])
         expected_means = [417.3296948271, 387.2084383654, 195.4618668074]
         expected_stdevs = [304.4769498434, 181.1415598664, 253.91309010185]
@@ -90,7 +90,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         rm = asset_output_a1.fractions + asset_output_a3.fractions
 
         [asset_output_a2] = calculator_rc(
-            [scientific.Asset("a2", 2000, None, number_of_units=2000)],
+            [scientific.Asset(2000, number_of_units=2000)],
             [self.hazard['a2']])
         expected_means = [56.7201291212, 673.1047565606, 1270.1751143182]
         expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
@@ -138,14 +138,14 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             fragility_model, fragility_functions['RM'])
 
         [asset_output_a1] = calculator_rm(
-            [scientific.Asset("a1", 3000, None, number_of_units=3000)],
+            [scientific.Asset(3000, number_of_units=3000)],
             [self.hazard['a1']])
         expected_means = [875.81078203, 1448.29628694, 675.89293103]
         expected_stdevs = [757.54019289, 256.15319254, 556.76593931]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
         [asset_output_a3] = calculator_rm(
-            [scientific.Asset("a3", 1000, None, number_of_units=1000)],
+            [scientific.Asset(1000, number_of_units=1000)],
             [self.hazard['a3']])
         expected_means = [224.4178072, 465.64396155, 309.93823125]
         expected_stdevs = [220.65161409, 136.92817619, 246.84424913]
@@ -156,7 +156,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         calculator_rc = api.ScenarioDamage(
             fragility_model, fragility_functions['RC'])
         [asset_output_a2] = calculator_rc(
-            [scientific.Asset("a2", 2000, None, number_of_units=2000)],
+            [scientific.Asset(2000, number_of_units=2000)],
             [self.hazard['a2']])
         expected_means = [344.90849228, 747.62412976, 907.46737796]
         expected_stdevs = [300.61123079, 144.64852962, 417.30737837]

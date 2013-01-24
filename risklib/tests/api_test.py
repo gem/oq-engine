@@ -26,7 +26,7 @@ from risklib import api
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
-        asset = scientific.Asset("a1", .5, None)
+        asset = scientific.Asset(.5)
         loss_ratio_curve = Curve([(2.0, 2.0)])
         loss_curve = Curve([(1.0, 2.0)])  # abscissae rescaled by 0.5
 
@@ -53,7 +53,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
 
     def test_classical_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = scientific.Asset("a1", 1.0, None)
+        asset = scientific.Asset(1.0)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
@@ -78,7 +78,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
             fragility_model, input.FragilityFunctionDiscrete,
             [[0.8, 0.7], [0.8, 0.7]])
 
-        asset = scientific.Asset("a1", None, None, number_of_units=1.0)
+        asset = scientific.Asset(0, number_of_units=1.0)
 
         calculator = api.ScenarioDamage(fragility_model, fragility_functions)
 
@@ -96,7 +96,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
 
     def test_bcr_calculator(self):
         hazard_curve = [(0.1, 0.5), (0.2, 0.6)]
-        asset = scientific.Asset("a1", 1.0, None, retrofitting_cost=1.0)
+        asset = scientific.Asset(1.0, retrofitting_cost=1.0)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
@@ -118,7 +118,7 @@ class BCRCalculatorTestCase(unittest.TestCase):
 class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 
     def test_event_based_calculator(self):
-        asset = scientific.Asset("a1", 1.0, None)
+        asset = scientific.Asset(1.0)
         hazard = [0.11, 0.12, 0.13]
 
         function = scientific.VulnerabilityFunction(
@@ -142,8 +142,7 @@ class ScenarioCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
-        asset = scientific.Asset("a1", 1.0, None,
-                                 ins_limit=1.0, deductible=1.0)
+        asset = scientific.Asset(1.0, ins_limit=1.0, deductible=1.0)
 
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
