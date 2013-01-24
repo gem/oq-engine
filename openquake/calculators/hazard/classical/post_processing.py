@@ -483,14 +483,14 @@ def compute_mean_curve(curves, weights=None):
         A curve representing the mean/average (or weighted average, in case
         ``weights`` are specified) of all the input ``curves``.
     """
-    # Weights
     if weights is not None:
         # If all of the weights are None, don't compute a weighted average
-        if set(weights) == set([None]):
+        none_weights = [x is None for x in weights]
+        if all(none_weights):
             weights = None
-        elif any([x is None for x in weights]):
-            # a subset of the weights are None
-            # this is invalid
+        elif any(none_weights):
+            # some weights are defined, but some are none;
+            # this is invalid input
             raise ValueError('`None` value found in weights: %s' % weights)
 
     return numpy.average(curves, weights=weights, axis=0)
