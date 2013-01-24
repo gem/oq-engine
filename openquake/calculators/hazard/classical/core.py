@@ -310,14 +310,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # This means we have `num_rlzs` >= `_CURVE_CACHE_SIZE`.
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
-        # NOTE(larsbutler): `slice_incr` must be a multiple of `num_rlzs`
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
-
-        if not (slice_incr / float(num_rlzs)) % 1 == 0:
-            raise RuntimeError(
-                "`slice_incr` is not evenly divisible by the number of "
-                "realizations; something is very wrong"
-            )
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
             im_type, sa_period, sa_damping = models.parse_imt(imt)
