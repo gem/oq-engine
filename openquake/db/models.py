@@ -30,13 +30,11 @@ import operator
 import os
 import re
 
-from collections import namedtuple
 from datetime import datetime
 
 import numpy
 
 from django.db import connection
-from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
 import risklib
@@ -1103,21 +1101,21 @@ class OqJobProfile(djm.Model):
     )
     component = djm.TextField(choices=COMPONENT_CHOICES)
     IMT_CHOICES = (
-       (u'pga', u'Peak Ground Acceleration'),
-       (u'sa', u'Spectral Acceleration'),
-       (u'pgv', u'Peak Ground Velocity'),
-       (u'pgd', u'Peak Ground Displacement'),
-       (u'ia', u'Arias Intensity'),
-       (u'rsd', u'Relative Significant Duration'),
-       (u'mmi', u'Modified Mercalli Intensity'),
+        (u'pga', u'Peak Ground Acceleration'),
+        (u'sa', u'Spectral Acceleration'),
+        (u'pgv', u'Peak Ground Velocity'),
+        (u'pgd', u'Peak Ground Displacement'),
+        (u'ia', u'Arias Intensity'),
+        (u'rsd', u'Relative Significant Duration'),
+        (u'mmi', u'Modified Mercalli Intensity'),
     )
     imt = djm.TextField(choices=IMT_CHOICES)
     period = djm.FloatField(null=True)
     damping = djm.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
-       (u'none', u'None'),
-       (u'onesided', u'One-sided'),
-       (u'twosided', u'Two-sided'),
+        (u'none', u'None'),
+        (u'onesided', u'One-sided'),
+        (u'twosided', u'Two-sided'),
     )
     truncation_type = djm.TextField(choices=TRUNC_TYPE_CHOICES)
     # TODO(LB): We should probably find out why (from a science perspective)
@@ -1480,7 +1478,7 @@ class HazardCurveDataManager(djm.GeoManager):
         base_queryset = self.individual_curves_ordered(job, imt)
         base_queryset = base_queryset.extra({
             'wkb': 'asBinary(location)',
-            })
+        })
         values = base_queryset.values(
             'poes', 'wkb', 'hazard_curve__lt_realization__weight')
 
@@ -2263,13 +2261,13 @@ class ExposureModel(djm.Model):
         (u'per_asset', u'Per asset economic value'),
     )
     stco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="structural cost type")
+                              help_text="structural cost type")
     stco_unit = djm.TextField(null=True, help_text="structural cost unit")
     reco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="retrofitting cost type")
+                              help_text="retrofitting cost type")
     reco_unit = djm.TextField(null=True, help_text="retrofitting cost unit")
     coco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="contents cost type")
+                              help_text="contents cost type")
     coco_unit = djm.TextField(null=True, help_text="contents cost unit")
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -2383,7 +2381,7 @@ class ExposureData(djm.Model):
 
     @staticmethod
     def per_asset_value(
-        cost, cost_type, area, area_type, number_of_units, category):
+            cost, cost_type, area, area_type, number_of_units, category):
         """Return per-asset value for the given exposure data set.
 
         Calculate per asset value by considering the given exposure
@@ -2450,70 +2448,6 @@ class ExposureData(djm.Model):
             ins_limit=self.ins_limit,
             deductible=self.deductible,
             retrofitting_cost=retrofitting_cost)
-
-
-class FragilityModel(djm.Model):
-    """A risk fragility model"""
-
-    owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
-    description = djm.TextField(null=True)
-    FORMAT_CHOICES = (
-        (u"continuous", u"Continuous fragility model"),
-        (u"discrete", u"Discrete fragility model"),
-    )
-    format = djm.TextField(choices=FORMAT_CHOICES)
-    lss = fields.CharArrayField(help_text="limit states")
-    imls = fields.FloatArrayField(null=True,
-                                  help_text="Intensity measure levels")
-    imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
-                           help_text="Intensity measure type")
-    iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
-    min_iml = djm.FloatField(
-        null=True, help_text="Minimum IML value, for continuous models only")
-    max_iml = djm.FloatField(
-        null=True, help_text="Maximum IML value, for continuous models only")
-    no_damage_limit = djm.FloatField(
-        null=True, help_text="No Damage Limit value, for discrete models only")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"fragility_model'
-
-
-class Ffc(djm.Model):
-    """A continuous fragility function"""
-
-    fragility_model = djm.ForeignKey("FragilityModel")
-    lsi = djm.PositiveSmallIntegerField(
-        help_text="limit state index, facilitates ordering of fragility "
-                  "function in accordance with the limit states")
-    ls = djm.TextField(help_text="limit state")
-    taxonomy = djm.TextField()
-    ftype = djm.TextField(null=True, help_text="function/distribution type")
-    mean = djm.FloatField(help_text="Mean value")
-    stddev = djm.FloatField(help_text="Standard deviation")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"ffc'
-
-
-class Ffd(djm.Model):
-    """A discrete fragility function"""
-
-    fragility_model = djm.ForeignKey("FragilityModel")
-    lsi = djm.PositiveSmallIntegerField(
-        help_text="limit state index, facilitates ordering of fragility "
-                  "function in accordance with the limit states")
-    ls = djm.TextField(help_text="limit state")
-    taxonomy = djm.TextField()
-    poes = fields.FloatArrayField(help_text="Probabilities of exceedance")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"ffd'
-
 
 ## Tables in the 'htemp' schema.
 
