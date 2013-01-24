@@ -1641,81 +1641,6 @@ CREATE TABLE oqmif.occupancy (
     occupants INTEGER NOT NULL
 ) TABLESPACE oqmif_ts;
 
-
--- Fragility model
-CREATE TABLE riski.fragility_model (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- Associates the risk fragility model with an input file
-    input_id INTEGER NOT NULL,
-    description VARCHAR,
-    -- Fragility model format: one of "discrete", "continuous"
-    format VARCHAR NOT NULL CONSTRAINT format_value
-        CHECK(format IN ('continuous', 'discrete')),
-    -- Limit states
-    lss VARCHAR[] NOT NULL,
-    -- Intensity measure levels, only applicable to discrete fragility models.
-    imls float[],
-    -- Intensity measure type, only applicable to discrete fragility models.
-    imt VARCHAR(16),
-    -- IML unit of measurement
-    iml_unit VARCHAR(16),
-    -- minimum IML value, only applicable to continuous fragility models.
-    min_iml float,
-    -- maximum IML value, only applicable to continuous fragility models.
-    max_iml float,
-    -- defines the IML after which damage is observed, only applicable to
-    -- discrete fragility models.
-    no_damage_limit float,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE riski_ts;
-
-
--- Continuous fragility function
-CREATE TABLE riski.ffc (
-    id SERIAL PRIMARY KEY,
-    fragility_model_id INTEGER NOT NULL,
-    -- limit state index, facilitates the ordering of fragility functions in
-    -- accordance to limit states
-    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
-    -- limit state
-    ls VARCHAR NOT NULL,
-    -- taxonomy
-    taxonomy VARCHAR NOT NULL,
-    -- Optional function/distribution type e.g. lognormal
-    ftype VARCHAR,
-    mean float NOT NULL,
-    stddev float NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    -- The combination of limit state and taxonomy is unique within an
-    -- fragility model.
-    UNIQUE (fragility_model_id, taxonomy, lsi)
-) TABLESPACE riski_ts;
-
-
--- Discrete fragility function
-CREATE TABLE riski.ffd (
-    id SERIAL PRIMARY KEY,
-    fragility_model_id INTEGER NOT NULL,
-    -- limit state index, facilitates the ordering of fragility functions in
-    -- accordance to limit states
-    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
-    -- limit state
-    ls VARCHAR NOT NULL,
-    -- taxonomy
-    taxonomy VARCHAR NOT NULL,
-    poes float[] NOT NULL CONSTRAINT poes_values
-        CHECK (0.0 <= ALL(poes) AND 1.0 >= ALL(poes)),
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    -- The combination of limit state and taxonomy is unique within an
-    -- fragility model.
-    UNIQUE (fragility_model_id, taxonomy, lsi)
-) TABLESPACE riski_ts;
-
-
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (
     id SERIAL PRIMARY KEY,
@@ -1868,14 +1793,6 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE riski.fragility_model ADD CONSTRAINT
-riski_fragility_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
-admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE riski.fragility_model ADD CONSTRAINT
-riski_fragility_model_input_fk FOREIGN KEY (input_id) REFERENCES
-uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_output_fk
@@ -2077,15 +1994,6 @@ REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 ALTER TABLE oqmif.occupancy ADD CONSTRAINT
 oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
-
-ALTER TABLE riski.ffd ADD CONSTRAINT riski_ffd_fragility_model_fk FOREIGN KEY
-(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
-CASCADE;
-
-ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
-(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
-CASCADE;
-
 
 -- htemp.source_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.source_progress
