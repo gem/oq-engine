@@ -31,15 +31,16 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
-                    seed, bcr_distribution_id, imt, time_span, tses,
+def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
+                    vulnerability_function, vulnerability_function_retrofitted,
+                    bcr_distribution_id, imt, time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
 
-    Gets the vulnerability models, instantiates risklib calculators
+    Instantiates risklib calculators, computes bcr
     and stores results to db in a single transaction.
 
     :param int job_id:
@@ -71,19 +72,17 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
     :param float asset_life_expectancy
         The life expectancy used for every asset.
     """
-    model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model(job_id, True)
-
     hazard_getter = general.hazard_getter(
         hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
-        model, curve_resolution=loss_curve_resolution,
+        vulnerability_function, curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
         seed=seed, correlation_type=asset_correlation)
 
     calculator_retrofitted = api.ProbabilisticEventBased(
-        model_retrofitted, curve_resolution=loss_curve_resolution,
+        vulnerability_function_retrofitted,
+        curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
         seed=seed, correlation_type=asset_correlation)
 
@@ -108,6 +107,14 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     given set of assets.
     """
     core_calc_task = event_based_bcr
+
+    def __init__(self, job):
+        super(EventBasedBCRRiskCalculator, self).__init__(job)
+        self.vulnerability_functions_retrofitted = None
+
+    def worker_args(self, taxonomy):
+        return (super(EventBasedBCRRiskCalculator, self).worker_args(
+            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -143,10 +150,11 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
             self.job, "BCR Distribution", "bcr_distribution")).pk
         ]
 
-    def store_risk_model(self):
+    def set_risk_models(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        super(EventBasedBCRRiskCalculator, self).store_risk_model()
-        general.store_risk_model(self.rc, "vulnerability_retrofitted")
+        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions_retrofitted = (
+            self.parse_vulnerability_model(True))
