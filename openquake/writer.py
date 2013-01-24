@@ -224,14 +224,20 @@ def compose_writers(writers):
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
-    def __init__(self, dj_model):
+    def __init__(self, dj_model, max_cache_size=None):
         """
         Create a new bulk inserter for a Django model class
 
         :param dj_model:
             Django model class
+        :param int max_cache_size:
+            The number of entries to cache before flushing/inserting. This
+            helps to limit memory consumption for large sets of inserts.
+
+            The default value is `None`, which means there is no maximum.
         """
         self.table = dj_model
+        self.max_cache_size = max_cache_size
         self.fields = None
         self.values = []
         self.count = 0
@@ -252,6 +258,12 @@ class BulkInserter(object):
         for k in self.fields:
             self.values.append(kwargs[k])
         self.count += 1
+
+        # If we have hit the `max_cache_size` is set,
+        if max_cache_size is not None:
+            # check if we have hit the maximum insert the current batch.
+            if len(self.values) >= max_cache_size:
+                self.flush()
 
     def flush(self):
         """Inserts the entries in the database using a bulk insert query"""
