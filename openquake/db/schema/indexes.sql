@@ -78,6 +78,8 @@ CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_di
 
 -- oqmif indexes
 CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
+CREATE INDEX oqmif_exposure_data_taxonomy_idx ON oqmif.exposure_data(taxonomy);
+CREATE INDEX oqmif_exposure_data_exposure_model_id_idx on oqmif.exposure_data(exposure_model_id);
 
 -- uiapi indexes
 CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
