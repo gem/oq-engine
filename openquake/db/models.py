@@ -70,6 +70,29 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+def queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
+
+
 def profile4job(job_id):
     """Return the job profile for the given job.
 
@@ -1501,6 +1524,31 @@ class HazardCurveDataManager(djm.GeoManager):
                 job, imt, curves_per_location, offset, block_size)
                 for offset in ranges]
 
+    def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
+        """
+        Helper function for creating a :class:`django.db.models.query.QuerySet`
+        for selecting all curves from all realizations for a given ``job_id``
+        and ``imt``.
+
+        :param job:
+            An :class:`openquake.db.models.OqJob` instance.
+        :param str imt:
+            Intensity measure type.
+        :param sa_period:
+            Spectral Acceleration period value. Only relevant if the ``imt`` is
+            "SA".
+        :param sa_damping:
+            Spectrail Acceleration damping value. Only relevant if the ``imt``
+            is "SA".
+        """
+        return self.filter(hazard_curve__output__oq_job=job,
+                           hazard_curve__imt=imt,
+                           hazard_curve__sa_period=sa_period,
+                           hazard_curve__sa_damping=sa_damping,
+                           # We only want curves associated with a logic tree
+                           # realization (and not statistical aggregates):
+                           hazard_curve__lt_realization__isnull=False)
+
 
 class IndividualHazardCurveChunk(object):
     """
@@ -1547,6 +1595,8 @@ class HazardCurveData(djm.Model):
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    # weight can be null/None if the weight is implicit:
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     objects = HazardCurveDataManager()
 
