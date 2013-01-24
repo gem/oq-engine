@@ -56,7 +56,7 @@ mb = TestData(
         a1=scientific.Asset("a1", 3000, None),
         a2=scientific.Asset("a2", 2000, None),
         a3=scientific.Asset("a3", 1000, None),
-        ),
+    ),
 
     expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
                    0.1633, 0.1837, 0.2041, 0.2245, 0.2449, 0.2653, 0.2857,
@@ -99,14 +99,14 @@ mb = TestData(
                         39.456, 38.7239, 37.9917, 37.2595, 36.5273, 35.7951,
                         35.0629, 34.2983, 33.5148, 32.7313, 31.9478, 29.8488,
                         26.0726, 11.3905][::-1]),
-        ),
+    ),
 
     expected_loss_map=Triplet(
         a1=173.30415881565,
         a2=30.845799462654,
         a3=44.4896055766335,
-        ),
-    )
+    ),
+)
 
 sb = TestData(  # sample based test data
 
@@ -122,7 +122,7 @@ sb = TestData(  # sample based test data
         a3=[1.0, 0.999088118034, 0.472707575957,
             0.197481202038, 0.095162581964, 0.0392105608477,
             0.0198013266932, 0.0198013266932, 0.0198013266932],
-        ),
+    ),
 
     expected_losses=Triplet(
         a1=numpy.array([
@@ -143,14 +143,14 @@ sb = TestData(  # sample based test data
             0.0883205611719, 0.107947352543,
             0.127574143915, 0.147200935287,
             0.166827726658]),
-        ),
+    ),
 
     expected_loss_map=Triplet(
         a1=73.8279109206,
         a2=25.2312514028,
         a3=29.7790495007,
-        ),
-    )
+    ),
+)
 
 il = TestData(  # insured loss test data
 
@@ -161,7 +161,7 @@ il = TestData(  # insured loss test data
             "a2", 2000, None, ins_limit=500, deductible=15),
         a3=scientific.Asset(
             "a3", 1000, None, ins_limit=40, deductible=13),
-        ),
+    ),
 
     expected_poes=Triplet(
         a1=[1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842, 0.684211,
@@ -175,7 +175,7 @@ il = TestData(  # insured loss test data
             0.90318962, 0.88382754, 0.86446547, 0.84510339, 0.82574132,
             0.80637924, 0.78701717, 0.76765509, 0.74829301, 0.72893094,
             0.70956886, 0.69020679, 0.67084471, 0.65148263, 0.63212056],
-        ),
+    ),
 
     expected_losses=Triplet(
         a1=numpy.array(
@@ -195,7 +195,7 @@ il = TestData(  # insured loss test data
                         35.23106482, 35.66460438, 36.09814394, 36.53168351,
                         36.96522307, 37.39876263, 37.83230219, 38.26584175,
                         38.69938131, 39.13292088, 39.56646044, 40.]),
-        ),
+    ),
 
     expected_loss_map=None)
 
@@ -229,15 +229,13 @@ class EventBasedTestCase(unittest.TestCase):
         peb_conditional_losses_rc = api.ConditionalLosses(
             [CONDITIONAL_LOSS_POES], peb_calculator_rc)
 
+        calculator = [peb_conditional_losses_rm,
+                      peb_conditional_losses_rc,
+                      peb_conditional_losses_rm]
         outputs = []
         for i in range(3):
-            if i in [0, 2]:
-                asset_output = peb_conditional_losses_rm(
-                    mb.input_models_asset[i], gmf[i])
-            else:
-                asset_output = peb_conditional_losses_rc(
-                    mb.input_models_asset[i], gmf[i])
-
+            asset_output = calculator[i](
+                mb.input_models_asset[i], gmf[i])
             outputs.append(asset_output)
 
             self.assertAlmostEqual(
@@ -379,13 +377,12 @@ class EventBasedTestCase(unittest.TestCase):
 
         peb_insured_losses_rc = api.InsuredLosses(peb_calculator_rc)
 
+        calculator = [peb_insured_losses_rm,
+                      peb_insured_losses_rc,
+                      peb_insured_losses_rm]
         for i in range(3):
-            if i in [0, 2]:
-                asset_output = peb_insured_losses_rm(
-                    il.input_models_asset[i], gmf[i])
-            else:
-                asset_output = peb_insured_losses_rc(
-                    il.input_models_asset[i], gmf[i])
+            asset_output = calculator[i](
+                il.input_models_asset[i], gmf[i])
 
             self.assert_allclose(
                 il.expected_poes[i],
