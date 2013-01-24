@@ -57,30 +57,29 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             "continuous", None, ["LS1", "LS2"])
 
         fragility_functions = dict(
-            RC=[
-                input.FragilityFunctionContinuous(
-                    fragility_model, 0.2, 0.05, 'LS1'),
-                input.FragilityFunctionContinuous(
-                    fragility_model, 0.35, 0.10, 'LS2')
-            ],
-            RM=[
-                input.FragilityFunctionContinuous(
-                    fragility_model, 0.25, 0.08, 'LS1'),
-                input.FragilityFunctionContinuous(
-                    fragility_model, 0.40, 0.12, 'LS2'),
-            ])
+            RC=input.FragilityFunctionSeq(
+                fragility_model,
+                input.FragilityFunctionContinuous,
+                [(0.2, 0.05), (0.35, 0.10)]),
+            RM=input.FragilityFunctionSeq(
+                fragility_model,
+                input.FragilityFunctionContinuous,
+                [(0.25, 0.08), (0.40, 0.12)]),
+        )
 
-        calculator = api.ScenarioDamage(fragility_model,
-                                           fragility_functions['RM'])
+        calculator_rm = api.ScenarioDamage(
+            fragility_model, fragility_functions['RM'])
+        calculator_rc = api.ScenarioDamage(
+            fragility_model, fragility_functions['RC'])
 
-        asset_output_a1 = calculator(
+        asset_output_a1 = calculator_rm(
             scientific.Asset("a1", 3000, None, number_of_units=3000),
             self.hazard['a1'])
         expected_means = [1562.6067550208, 1108.0189275488, 329.3743174305]
         expected_stdevs = [968.93502576, 652.7358505746, 347.3929450270]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
-        asset_output_a3 = calculator(
+        asset_output_a3 = calculator_rm(
             scientific.Asset("a3", 1000, None, number_of_units=1000),
             self.hazard['a3'])
         expected_means = [417.3296948271, 387.2084383654, 195.4618668074]
@@ -89,8 +88,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         rm = asset_output_a1.fractions + asset_output_a3.fractions
 
-        calculator.fragility_functions = fragility_functions['RC']
-        asset_output_a2 = calculator(
+        asset_output_a2 = calculator_rc(
             scientific.Asset("a2", 2000, None, number_of_units=2000),
             self.hazard['a2'])
         expected_means = [56.7201291212, 673.1047565606, 1270.1751143182]
@@ -110,39 +108,42 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             rc.std(0, ddof=1),
             [117.7802813522, 485.2023172324, 575.8724057319])
 
-        # aggregations for total
-        ## means: [2036.6565789692, 2168.332122474, 1795.0112985561]
-        ## stdevs: [1075.3192939160, 1076.4342601834, 687.0910669304]
+        # aggregations for total; this comment will be removed once
+        # we decided where to put the aggregation by total
+        #means, stddevs = calculator.damage_distribution_total(distr)
+        #assert_close(
+        #    means, [2036.6565789692, 2168.332122474, 1795.0112985561])
+        #assert_close(
+        #    stddevs, [1075.3192939160, 1076.4342601834, 687.0910669304])
 
     def test_discrete_ff(self):
         fragility_model = input.FragilityModel(
             "discrete", [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"])
 
         fragility_functions = dict(
-            RC=[
-                input.FragilityFunctionDiscrete(
-                    fragility_model, [0.0073, 0.35, 0.74, 0.99], 'LS1'),
-                input.FragilityFunctionDiscrete(
-                    fragility_model, [0.001, 0.02, 0.25, 0.72], 'LS2')
-            ],
-            RM=[
-                input.FragilityFunctionDiscrete(
-                    fragility_model, [0.01, 0.64, 0.95, 1.0], 'LS1'),
-                input.FragilityFunctionDiscrete(
-                    fragility_model, [0.0003, 0.05, 0.40, 0.86], 'LS2'),
-            ])
+            RC=input.FragilityFunctionSeq(
+                fragility_model,
+                input.FragilityFunctionDiscrete,
+                [[0.0073, 0.35, 0.74, 0.99],
+                 [0.001, 0.02, 0.25, 0.72]]),
+            RM=input.FragilityFunctionSeq(
+                fragility_model,
+                input.FragilityFunctionDiscrete,
+                [[0.01, 0.64, 0.95, 1.0],
+                 [0.0003, 0.05, 0.40, 0.86]])
+        )
 
-        calculator = api.ScenarioDamage(
+        calculator_rm = api.ScenarioDamage(
             fragility_model, fragility_functions['RM'])
 
-        asset_output_a1 = calculator(
+        asset_output_a1 = calculator_rm(
             scientific.Asset("a1", 3000, None, number_of_units=3000),
             self.hazard['a1'])
         expected_means = [875.81078203, 1448.29628694, 675.89293103]
         expected_stdevs = [757.54019289, 256.15319254, 556.76593931]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
-        asset_output_a3 = calculator(
+        asset_output_a3 = calculator_rm(
             scientific.Asset("a3", 1000, None, number_of_units=1000),
             self.hazard['a3'])
         expected_means = [224.4178072, 465.64396155, 309.93823125]
@@ -151,8 +152,9 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         rm = asset_output_a1.fractions + asset_output_a3.fractions
 
-        calculator.fragility_functions = fragility_functions['RC']
-        asset_output_a2 = calculator(
+        calculator_rc = api.ScenarioDamage(
+            fragility_model, fragility_functions['RC'])
+        asset_output_a2 = calculator_rc(
             scientific.Asset("a2", 2000, None, number_of_units=2000),
             self.hazard['a2'])
         expected_means = [344.90849228, 747.62412976, 907.46737796]
@@ -172,6 +174,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             rc.std(0, ddof=1),
             [300.6112307894, 144.6485296163, 417.307378365])
 
-        # aggregations for total
-        ## means: [1445.1370815035, 2661.5643782540, 1893.2985402425]
-        ## stdevs: [824.7812010370, 374.0010314384, 661.8114364615]
+        # aggregations for total; this comment will be removed once
+        # we decided where to put the aggregation by total
+        # means, stddevs = calculator.damage_distribution_total(distr)
+        #assert_close(means, [1445.1370815035, 2661.5643782540, 1893.298540242])
+        #assert_close(stddevs, [824.7812010370, 374.0010314384, 661.8114364615])

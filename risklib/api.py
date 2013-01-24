@@ -15,7 +15,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import scientific, scenario_damage
+from risklib import scientific
 
 
 def compute_on_assets(assets, hazard_getter, calculator):
@@ -67,32 +67,25 @@ class Classical(object):
             self.vulnerability_function, self.loss_ratio_exceedance_matrix,
             hazard, self.steps)
 
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
-
-        return scientific.ClassicalOutput(
-            asset, loss_ratio_curve, loss_curve, None)
+        return scientific.ClassicalOutput(asset, loss_ratio_curve, None)
 
 
 class ScenarioDamage(object):
     """
-    Scenario damage calculator. For each asset it produces:
-        * a damage distribution
-        * a collapse map
-
-    It also produces the following aggregate results:
-        * damage distribution per taxonomy
-        * total damage distribution
+    Scenario damage calculator producing a damage distribution for each asset,
+    i.e. a matrix NxM where N is the number of realizations of the ground
+    motion field and M is the numbers of damage states. fragility_functions
+    is a dictionary associating to each taxonomy a FragilityFunctionSeq object.
     """
-
-    def __init__(self, fragility_model, fragility_functions):
+    def __init__(self, fragility_model, fragility_functions_map):
         self.fragility_model = fragility_model
-        self.fragility_functions = fragility_functions
+        self.fragility_functions = fragility_functions_map
 
     def __call__(self, asset, hazard):
-        fractions = scenario_damage._damage_distribution_per_asset(
-            asset,
-            (self.fragility_model, self.fragility_functions),
-            hazard)
+        funcs = self.fragility_functions
+        fractions = numpy.array([
+            funcs.ground_motion_value_fractions(gmv)
+            * asset.number_of_units for gmv in hazard])
         return scientific.ScenarioDamageOutput(asset, fractions)
 
 
@@ -167,8 +160,7 @@ class ProbabilisticEventBased(object):
         self.time_span = time_span
         self.tses = tses
         self.curve_resolution = curve_resolution
-        self.loss_ratios = None
-
+        self.loss_ratios = None  # set in __call__
         self.vulnerability_function.seed(self.seed, self.correlation_type)
 
     def __call__(self, asset, hazard):
@@ -180,11 +172,9 @@ class ProbabilisticEventBased(object):
             curve_resolution=self.curve_resolution)
 
         losses = self.loss_ratios * asset.value
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
         return scientific.ProbabilisticEventBasedOutput(
-            asset, losses, loss_ratio_curve, loss_curve,
-            None, None, None, None)
+            asset, losses, loss_ratio_curve, None, None, None)
 
 
 # the aggregation design was discussed in
