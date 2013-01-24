@@ -113,13 +113,13 @@ class VulnerabilityFunction(object):
         return self._covs_i1d(clipped)
 
     def __getstate__(self):
-        return (self.imls, self.mean_loss_ratios, self.covs, self.distribution)
+        return (self.imls, self.mean_loss_ratios, self.covs, self.distribution_name)
 
-    def __setstate__(self, (imls, mean_loss_ratios, covs, distribution)):
+    def __setstate__(self, (imls, mean_loss_ratios, covs, distribution_name)):
         self.imls = imls
         self.mean_loss_ratios = mean_loss_ratios
         self.covs = covs
-        self.distribution = distribution
+        self.distribution_name = distribution_name
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
