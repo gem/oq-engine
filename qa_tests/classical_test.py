@@ -48,8 +48,8 @@ class ClassicalTestCase(unittest.TestCase):
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5))
 
-        asset_output = calculator(
-            scientific.Asset("a1", 2, None), self.hazard_curve)
+        [asset_output] = calculator(
+            [scientific.Asset("a1", 2, None)], [self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -80,24 +80,25 @@ class ClassicalTestCase(unittest.TestCase):
             asset_output.loss_curve)
 
         self.assertAlmostEqual(0.264586283238,
-            asset_output.conditional_losses[0.01])
+                               asset_output.conditional_losses[0.01])
 
         self.assertAlmostEqual(0.141989823521,
-            asset_output.conditional_losses[0.02])
+                               asset_output.conditional_losses[0.02])
 
         self.assertAlmostEqual(0.0,
-            asset_output.conditional_losses[0.05])
+                               asset_output.conditional_losses[0.05])
 
     def test_beta_distribution(self):
         calculator = api.ConditionalLosses([0.01],
-            api.Classical(scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5))
+            api.Classical(
+                scientific.VulnerabilityFunction(
+                    [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
+                    [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5))
 
         value = 2  # the asset value
 
-        asset_output = calculator(
-            scientific.Asset("a1", value, None), self.hazard_curve)
+        [asset_output] = calculator(
+            [scientific.Asset("a1", value, None)], [self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039125428171600,
@@ -126,4 +127,4 @@ class ClassicalTestCase(unittest.TestCase):
             asset_output.loss_curve)
 
         self.assertAlmostEqual(0.264870863283,
-            asset_output.conditional_losses[0.01])
+                               asset_output.conditional_losses[0.01])

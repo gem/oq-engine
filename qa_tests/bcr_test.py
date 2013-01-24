@@ -52,7 +52,7 @@ class BCRTestCase(unittest.TestCase):
             (0.7, 0.000272824002045979), (0.8, 0.0),
             (0.9, 0.0), (1.0, 0.0)]
 
-        asset_output = calculator_bcr(asset, hazard)
+        [asset_output] = calculator_bcr([asset], [hazard])
 
         self.assertAlmostEqual(0.009379,
                                asset_output.eal_original, delta=0.0009)

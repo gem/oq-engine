@@ -234,8 +234,8 @@ class EventBasedTestCase(unittest.TestCase):
                       peb_conditional_losses_rm]
         outputs = []
         for i in range(3):
-            asset_output = calculator[i](
-                mb.input_models_asset[i], gmf[i])
+            [asset_output] = calculator[i](
+                [mb.input_models_asset[i]], [gmf[i]])
             outputs.append(asset_output)
 
             self.assertAlmostEqual(
@@ -301,59 +301,6 @@ class EventBasedTestCase(unittest.TestCase):
         self.assert_allclose(
             expected_aggregate_poes, aggregate_curve.ordinates)
 
-    # we skip the following test as atm the algorithm output is not
-    # predictable (you can set a fixed seed for sampling)
-
-    @unittest.skip
-    def test_sample_based_beta(self):
-        vulnerability_function_rm = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT", "RC"))
-
-        vulnerability_function_rc = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT", "RC"))
-
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
-
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, None, None)
-        peb_conditional_losses = api.ConditionalLosses([0.99], peb_calculator)
-
-        for i in range(3):
-            asset_output = peb_conditional_losses(
-                sb.input_models_asset[i],
-                {"IMLs": gmf_bd[i], "TSES": 2500, "TimeSpan": 50})
-            self.assert_allclose(
-                sb.expected_poes[i],
-                asset_output.insured_losses.ordinates)
-
-            self.assert_allclose(
-                sb.expected_losses[i],
-                asset_output.insured_losses.abscissae)
-
-        aggregate_curve = scientific.event_based(
-            peb_calculator.aggregate_losses, 2500, 50, 10)
-
-        expected_aggregate_poes = [1.0, 0.732864698034, 0.228948414196,
-                                   0.147856211034, 0.0768836536134,
-                                   0.0768836536134, 0.0198013266932,
-                                   0.0198013266932, 0.0198013266932]
-
-        expected_aggregate_losses = [
-            102.669407618, 308.008222854, 513.347038089,
-            718.685853325, 924.024668561, 1129.3634838,
-            1334.70229903, 1540.04111427, 1745.3799295]
-
-        self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.ordinates)
-
-        self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.abscissae)
-
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
@@ -381,8 +328,8 @@ class EventBasedTestCase(unittest.TestCase):
                       peb_insured_losses_rc,
                       peb_insured_losses_rm]
         for i in range(3):
-            asset_output = calculator[i](
-                il.input_models_asset[i], gmf[i])
+            [asset_output] = calculator[i](
+                [il.input_models_asset[i]], [gmf[i]])
 
             self.assert_allclose(
                 il.expected_poes[i],

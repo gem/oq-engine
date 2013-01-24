@@ -23,31 +23,6 @@ from risklib.curve import Curve
 from risklib import api
 
 
-class ComputeOnAssetsTestCase(unittest.TestCase):
-
-    def test_compute_on_assets(self):
-        assets = [
-            scientific.Asset("a1", None, (1.0, 1.0)),
-            scientific.Asset("a2", None, (2.0, 2.0)),
-            scientific.Asset("a3", None, (3.0, 3.0)),
-        ]
-
-        calculator = mock.Mock()
-        hazard_getter = mock.Mock(return_value=1.0)
-
-        list(api.compute_on_assets(assets, hazard_getter, calculator))
-
-        expected_calls = [(((1.0, 1.0),), {}), (((2.0, 2.0),), {}),
-                          (((3.0, 3.0),), {})]
-
-        self.assertEquals(expected_calls, hazard_getter.call_args_list)
-
-        expected_calls = [((assets[0], 1.0), {}), ((assets[1], 1.0), {}),
-                          ((assets[2], 1.0), {})]
-
-        self.assertEquals(expected_calls, calculator.call_args_list)
-
-
 class ConditionalLossesTestCase(unittest.TestCase):
 
     def test_conditional_losses_calculator(self):
@@ -58,12 +33,12 @@ class ConditionalLossesTestCase(unittest.TestCase):
         asset_output = scientific.ClassicalOutput(
             asset, loss_ratio_curve, None)
 
-        loss_curve_calculator = mock.Mock(return_value=asset_output)
+        loss_curve_calculator = mock.Mock(return_value=[asset_output])
 
-        asset_output = api.ConditionalLosses(
-            [0.1, 0.2], loss_curve_calculator)(asset, 1.0)
+        [asset_output] = api.ConditionalLosses(
+            [0.1, 0.2], loss_curve_calculator)([asset], 1.0)
 
-        loss_curve_calculator.assert_called_with(asset, 1.0)
+        loss_curve_calculator.assert_called_with([asset], 1.0)
 
         expected_output = scientific.ClassicalOutput(
             asset, loss_ratio_curve, {0.2: 1.0, 0.1: 1.0})
@@ -83,7 +58,7 @@ class ClassicalCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
-        asset_output = api.Classical(function)(asset, hazard_curve)
+        [asset_output] = api.Classical(function)([asset], [hazard_curve])
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -107,7 +82,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
 
         calculator = api.ScenarioDamage(fragility_model, fragility_functions)
 
-        asset_output = calculator(asset, [0.11, 0.12, 0.13])
+        [asset_output] = calculator([asset], [[0.11, 0.12, 0.13]])
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -126,10 +101,10 @@ class BCRCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
-        asset_output = (
+        [asset_output] = (
             api.BCR(api.Classical(function),
                     api.Classical(function), 1.0, 1.0)
-            (asset, hazard_curve))
+            ([asset], [hazard_curve]))
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -149,10 +124,10 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
-        asset_output = api.ProbabilisticEventBased(
+        [asset_output] = api.ProbabilisticEventBased(
             function,
             seed=37, correlation_type="perfect", tses=1, time_span=50)(
-                asset, hazard)
+                [asset], [hazard])
 
         self.assertEquals(asset, asset_output.asset)
 
@@ -163,7 +138,7 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         self.assertIsNotNone(asset_output.loss_ratio_curve)
 
 
-class ScenarioRiskCalculatorTestCase(unittest.TestCase):
+class ScenarioCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_risk_calculator(self):
         hazard = [0.11, 0.12, 0.13]
@@ -173,7 +148,8 @@ class ScenarioRiskCalculatorTestCase(unittest.TestCase):
         function = scientific.VulnerabilityFunction(
             [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
 
-        asset_output = api.ScenarioRisk(function, 37, "perfect")(asset, hazard)
+        [asset_output] = api.Scenario(function, 37, "perfect")(
+            [asset], [hazard])
 
         self.assertEquals(asset, asset_output.asset)
 
