@@ -308,77 +308,6 @@ AS $$
 $$ LANGUAGE plpythonu;
 
 
-COMMENT ON FUNCTION pcheck_fragility_model() IS
-'Make sure the inserted continuous fragility model record is consistent.';
-
-
-CREATE OR REPLACE FUNCTION pcheck_ffc()
-  RETURNS TRIGGER
-AS $$
-    NEW = TD["new"] # new data resulting from insert or update
-
-    # get the associated fragility model record
-    q = ("SELECT * FROM riski.fragility_model WHERE id = %s" %
-         NEW["fragility_model_id"])
-    [fmdl] = plpy.execute(q)
-
-    ls = NEW["ls"]
-    lsi = int(NEW["lsi"])
-    lss = fmdl["lss"]
-    taxonomy = NEW["taxonomy"]
-
-    assert fmdl["format"] == "continuous", (
-        "mismatch: discrete model but continuous function (%s, %s)"
-        % (ls, taxonomy))
-
-    assert lsi and lsi <= len(lss) and ls == lss[lsi-1], (
-        "Invalid limit state index (%s) for ffc(%s, %s)" % (lsi, taxonomy, ls))
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_ffc() IS
-'Make sure the inserted continuous fragility function record is consistent.';
-
-
-CREATE OR REPLACE FUNCTION pcheck_ffd()
-  RETURNS TRIGGER
-AS $$
-    NEW = TD["new"] # new data resulting from insert or update
-
-    # get the associated fragility model record
-    q = ("SELECT * FROM riski.fragility_model WHERE id = %s" %
-         NEW["fragility_model_id"])
-    [fmdl] = plpy.execute(q)
-
-    ls = NEW["ls"]
-    lsi = int(NEW["lsi"])
-    lss = fmdl["lss"]
-    taxonomy = NEW["taxonomy"]
-
-    assert fmdl["format"] == "discrete", (
-        "mismatch: continuous model but discrete function (%s, %s)"
-        % (ls, taxonomy))
-
-    len_poes = len(NEW["poes"])
-    len_imls = len(fmdl["imls"])
-
-    assert len_poes == len_imls, (
-        "#poes differs from #imls (%s != %s) for discrete function (%s, %s)"
-        % (len_poes, len_imls, ls, taxonomy))
-
-    assert lsi and lsi <= len(lss) and ls == lss[lsi-1], (
-        "Invalid limit state index (%s) for ffd(%s, %s)" % (lsi, taxonomy, ls))
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_ffd() IS
-'Make sure the inserted discrete fragility function record is consistent.';
-
-
 CREATE OR REPLACE FUNCTION pcheck_oq_job_profile()
   RETURNS TRIGGER
 AS $$
@@ -461,18 +390,6 @@ FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
 BEFORE INSERT ON oqmif.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
-
-CREATE TRIGGER riski_fragility_model_before_insert_update_trig
-BEFORE INSERT ON riski.fragility_model
-FOR EACH ROW EXECUTE PROCEDURE pcheck_fragility_model();
-
-CREATE TRIGGER riski_ffc_before_insert_update_trig
-BEFORE INSERT ON riski.ffc
-FOR EACH ROW EXECUTE PROCEDURE pcheck_ffc();
-
-CREATE TRIGGER riski_ffd_before_insert_update_trig
-BEFORE INSERT ON riski.ffd
-FOR EACH ROW EXECUTE PROCEDURE pcheck_ffd();
 
 CREATE TRIGGER uiapi_oq_job_profile_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON uiapi.oq_job_profile
