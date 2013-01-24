@@ -1556,6 +1556,31 @@ class HazardCurveDataManager(djm.GeoManager):
                 job, imt, curves_per_location, offset, block_size)
                 for offset in ranges]
 
+    def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
+        """
+        Helper function for creating a :class:`django.db.models.query.QuerySet`
+        for selecting all curves from all realizations for a given ``job_id``
+        and ``imt``.
+
+        :param job:
+            An :class:`openquake.db.models.OqJob` instance.
+        :param str imt:
+            Intensity measure type.
+        :param sa_period:
+            Spectral Acceleration period value. Only relevant if the ``imt`` is
+            "SA".
+        :param sa_damping:
+            Spectrail Acceleration damping value. Only relevant if the ``imt``
+            is "SA".
+        """
+        return self.filter(hazard_curve__output__oq_job=job,
+                           hazard_curve__imt=imt,
+                           hazard_curve__sa_period=sa_period,
+                           hazard_curve__sa_damping=sa_damping,
+                           # We only want curves associated with a logic tree
+                           # realization (and not statistical aggregates):
+                           hazard_curve__lt_realization__isnull=False)
+
 
 class IndividualHazardCurveChunk(object):
     """
