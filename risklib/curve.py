@@ -54,7 +54,7 @@ class Curve(object):
         return self._interp
 
     @staticmethod
-    def range_clip(val, val_range):
+    def range_clip(val, a_range):
         """
         'Clip' a value (or sequence of values) to the
         specified range.
@@ -72,22 +72,21 @@ class Curve(object):
         :param val: numeric value(s) to clip
         :type val: float, list/tuple of floats, or :py:class:`numpy.ndarray` of
             floats
-        :param val_range: This is the range we 'clip' the input
+        :param a_range: This is the range we 'clip' the input
             value(s) to. The range values should be arranged in
             ascending order with no duplicates. The length of the
             range must be at least 2 elements.
-        :type val_range: 1-dimensional :py:class:`numpy.ndarray`
+        :type a_range: 1-dimensional :py:class:`numpy.ndarray`
 
         :returns: Clipped value(s).
-            If the input type is a single value, return a numpy numeric type (such
-            as numpy.float64).
-            If the input val is a sequence (list, tuple or
-            :py:class:`numpy.ndarray`), return a :py:class:`numpy.ndarray` of
-            clipped values.
+            If the input type is a single value, return a numpy
+            numeric type (such as numpy.float64). If the input val is
+            a sequence (list, tuple or :py:class:`numpy.ndarray`),
+            return a :py:class:`numpy.ndarray` of clipped values.
         """
-        assert len(val_range) >= 2, "val_range must contain at least 2 elements"
+        assert len(a_range) >= 2, "a_range must contain at least 2 elements"
 
-        min_val, max_val = min(val_range), max(val_range)
+        min_val, max_val = min(a_range), max(a_range)
 
         if hasattr(val, '__len__'):  # a sequence
             # convert to numpy.array so we can use numpy.putmask:

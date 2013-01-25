@@ -29,9 +29,6 @@ CONDITIONAL_LOSS_POES = 0.50
 THISDIR = os.path.dirname(__file__)
 
 gmf = vectors_from_csv('gmf', THISDIR)
-gmf_bd = vectors_from_csv('gmf_bd', THISDIR)
-
-Triplet = collections.namedtuple('Triplet', 'a1 a2 a3')
 
 TestData = collections.namedtuple(
     'TestData', 'input_models_asset expected_poes expected_losses '
@@ -52,11 +49,9 @@ mean_based_loss_curve_poes = [
 #: mean based test data
 mb = TestData(
 
-    input_models_asset=Triplet(
-        a1=scientific.Asset("a1", "RM", 3000, None),
-        a2=scientific.Asset("a2", "RC", 2000, None),
-        a3=scientific.Asset("a3", "RM", 1000, None),
-        ),
+    input_models_asset=[
+        scientific.Asset(3000), scientific.Asset(1000), scientific.Asset(2000)
+    ],
 
     expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
                    0.1633, 0.1837, 0.2041, 0.2245, 0.2449, 0.2653, 0.2857,
@@ -66,136 +61,85 @@ mb = TestData(
                    0.7347, 0.7551, 0.7755, 0.7959, 0.8163, 0.8367, 0.8571,
                    0.8776, 0.898, 0.9184, 0.9388, 0.9592, 0.9796, 1][::-1],
 
-    expected_losses=Triplet(
-        a1=numpy.array([264.2259, 260.5148, 256.8037, 253.0926, 249.3815,
-                        245.6704, 241.9593, 238.2482, 234.5371, 230.8261,
-                        227.115, 223.4039, 219.6928, 215.9817, 212.2706,
-                        208.5595, 204.8484, 201.1373, 197.4262, 193.7152,
-                        190.0041, 186.293, 182.5819, 178.8708, 175.1597,
-                        171.4486, 167.7375, 164.0264, 160.3153, 156.6043,
-                        152.8932, 149.1393, 143.7887, 138.4381, 133.0875,
-                        127.7369, 122.3862, 117.0356, 111.685, 106.3344,
-                        100.9838, 95.6332, 90.2826, 85.5154, 81.0887,
-                        76.662, 72.2353, 68.2291, 64.759, 34.233][::-1]),
-        a2=numpy.array([31.04076788, 31.03280999, 31.02485209, 31.0168942,
-                        31.00893631, 31.00097841, 30.99302052, 30.98506262,
-                        30.97710473, 30.96914683, 30.96118894, 30.95323104,
-                        30.94527315, 30.93731525, 30.92935736, 30.92139946,
-                        30.91344157, 30.90548367, 30.89752578, 30.88956788,
-                        30.88160999, 30.87365209, 30.8656942, 30.8577363,
-                        30.84977841, 30.84182052, 30.83386262, 30.82590473,
-                        30.81794683, 30.80998894, 30.80203104, 30.79256074,
-                        30.72664001, 30.66071928, 30.59479855, 30.52887782,
-                        30.46295709, 30.39703636, 30.33111562, 30.26519489,
-                        30.19927416, 30.13335343, 30.0674327, 29.72848172,
-                        29.23016035, 28.73183899, 28.23351762, 27.06330665,
-                        25.03645701, 8.80769991][::-1]),
-        a3=numpy.array([49.612, 49.4029, 49.1938, 48.9847, 48.7757, 48.5666,
-                        48.3575, 48.1484, 47.9394, 47.7303, 47.5212, 47.3121,
-                        47.1031, 46.894, 46.6849, 46.4758, 46.2668, 46.0577,
-                        45.8486, 45.6395, 45.4304, 45.2214, 45.0123, 44.8032,
-                        44.5941, 44.3851, 44.176, 43.9669, 43.7578, 43.5488,
-                        43.3397, 43.117, 42.3848, 41.6526, 40.9204, 40.1882,
-                        39.456, 38.7239, 37.9917, 37.2595, 36.5273, 35.7951,
-                        35.0629, 34.2983, 33.5148, 32.7313, 31.9478, 29.8488,
-                        26.0726, 11.3905][::-1]),
-        ),
+    expected_losses=numpy.array([
+        [264.2259, 260.5148, 256.8037, 253.0926, 249.3815,
+         245.6704, 241.9593, 238.2482, 234.5371, 230.8261,
+         227.115, 223.4039, 219.6928, 215.9817, 212.2706,
+         208.5595, 204.8484, 201.1373, 197.4262, 193.7152,
+         190.0041, 186.293, 182.5819, 178.8708, 175.1597,
+         171.4486, 167.7375, 164.0264, 160.3153, 156.6043,
+         152.8932, 149.1393, 143.7887, 138.4381, 133.0875,
+         127.7369, 122.3862, 117.0356, 111.685, 106.3344,
+         100.9838, 95.6332, 90.2826, 85.5154, 81.0887,
+         76.662, 72.2353, 68.2291, 64.759, 34.233][::-1],
+        [49.612, 49.4029, 49.1938, 48.9847, 48.7757, 48.5666,
+         48.3575, 48.1484, 47.9394, 47.7303, 47.5212, 47.3121,
+         47.1031, 46.894, 46.6849, 46.4758, 46.2668, 46.0577,
+         45.8486, 45.6395, 45.4304, 45.2214, 45.0123, 44.8032,
+         44.5941, 44.3851, 44.176, 43.9669, 43.7578, 43.5488,
+         43.3397, 43.117, 42.3848, 41.6526, 40.9204, 40.1882,
+         39.456, 38.7239, 37.9917, 37.2595, 36.5273, 35.7951,
+         35.0629, 34.2983, 33.5148, 32.7313, 31.9478, 29.8488,
+         26.0726, 11.3905][::-1],
+        [31.04076788, 31.03280999, 31.02485209, 31.0168942,
+         31.00893631, 31.00097841, 30.99302052, 30.98506262,
+         30.97710473, 30.96914683, 30.96118894, 30.95323104,
+         30.94527315, 30.93731525, 30.92935736, 30.92139946,
+         30.91344157, 30.90548367, 30.89752578, 30.88956788,
+         30.88160999, 30.87365209, 30.8656942, 30.8577363,
+         30.84977841, 30.84182052, 30.83386262, 30.82590473,
+         30.81794683, 30.80998894, 30.80203104, 30.79256074,
+         30.72664001, 30.66071928, 30.59479855, 30.52887782,
+         30.46295709, 30.39703636, 30.33111562, 30.26519489,
+         30.19927416, 30.13335343, 30.0674327, 29.72848172,
+         29.23016035, 28.73183899, 28.23351762, 27.06330665,
+         25.03645701, 8.80769991][::-1],
+    ]),
 
-    expected_loss_map=Triplet(
-        a1=173.30415881565,
-        a2=30.845799462654,
-        a3=44.4896055766335,
-        ),
-    )
+    expected_loss_map=[173.30415881565, 44.4896055766335, 30.845799462654]
+)
 
-sb = TestData(  # sample based test data
-
-    input_models_asset=mb.input_models_asset,
-
-    expected_poes=Triplet(
-        a1=[1.0, 0.601480958915, 0.147856211034,
-            0.130641764601, 0.113079563283, 0.0768836536134,
-            0.0768836536134, 0.0198013266932, 0.0198013266932],
-        a2=[1.0, 0.831361852731, 0.302323673929,
-            0.130641764601, 0.0768836536134, 0.0768836536134,
-            0.0582354664158, 0.0582354664158, 0.0392105608477],
-        a3=[1.0, 0.999088118034, 0.472707575957,
-            0.197481202038, 0.095162581964, 0.0392105608477,
-            0.0198013266932, 0.0198013266932, 0.0198013266932],
-        ),
-
-    expected_losses=Triplet(
-        a1=numpy.array([
-            0.0234332852886, 0.0702998558659,
-            0.117166426443, 0.16403299702,
-            0.210899567598, 0.257766138175,
-            0.304632708752, 0.351499279329,
-            0.398365849907]),
-        a2=numpy.array([
-            0.0112780780331, 0.0338342340993,
-            0.0563903901655, 0.0789465462317,
-            0.101502702298, 0.124058858364,
-            0.14661501443, 0.169171170497,
-            0.191727326563]),
-        a3=numpy.array([
-            0.00981339568577, 0.0294401870573,
-            0.0490669784288, 0.0686937698004,
-            0.0883205611719, 0.107947352543,
-            0.127574143915, 0.147200935287,
-            0.166827726658]),
-        ),
-
-    expected_loss_map=Triplet(
-        a1=73.8279109206,
-        a2=25.2312514028,
-        a3=29.7790495007,
-        ),
-    )
 
 il = TestData(  # insured loss test data
 
-    input_models_asset=Triplet(
-        a1=scientific.Asset(
-            "a1", "RM", 3000, None, ins_limit=1250, deductible=40),
-        a2=scientific.Asset(
-            "a2", "RC", 2000, None, ins_limit=500, deductible=15),
-        a3=scientific.Asset(
-            "a3", "RM", 1000, None, ins_limit=40, deductible=13),
-        ),
+    input_models_asset=[
+        scientific.Asset(3000, ins_limit=1250, deductible=40),
+        scientific.Asset(1000, ins_limit=40, deductible=13),
+        scientific.Asset(2000, ins_limit=500, deductible=15),
+    ],
 
-    expected_poes=Triplet(
-        a1=[1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842, 0.684211,
+    expected_poes=[
+        [1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842, 0.684211,
             0.631579, 0.578947, 0.526316, 0.473684, 0.421053, 0.368421,
             0.315789, 0.263158, 0.210526, 0.157895, 0.105263, 0.052632, 0.],
-        a2=[1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842,
-            0.684211, 0.631579, 0.578947, 0.526316, 0.473684, 0.421053,
-            0.368421, 0.315789, 0.263158, 0.210526, 0.157895, 0.105263,
-            0.052632, 0.],
-        a3=[1., 0.98063792, 0.96127585, 0.94191377, 0.9225517,
+        [1., 0.98063792, 0.96127585, 0.94191377, 0.9225517,
             0.90318962, 0.88382754, 0.86446547, 0.84510339, 0.82574132,
             0.80637924, 0.78701717, 0.76765509, 0.74829301, 0.72893094,
             0.70956886, 0.69020679, 0.67084471, 0.65148263, 0.63212056],
-        ),
+        [1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842,
+            0.684211, 0.631579, 0.578947, 0.526316, 0.473684, 0.421053,
+            0.368421, 0.315789, 0.263158, 0.210526, 0.157895, 0.105263,
+            0.052632, 0.],
+    ],
 
-    expected_losses=Triplet(
-        a1=numpy.array(
-            [40.5835007, 70.37142354, 81.78761801, 94.22512956,
-             108.02407352, 121.82301747, 135.62196142, 149.37739409,
-             158.94810005, 168.51880601, 178.08951197, 187.66021794,
-             197.2309239, 206.80162986, 216.37233582,
-             225.94304178, 235.51374774, 245.0844, 254.65515, 264.225865]),
-        a2=numpy.array([15.04698321, 28.02375039, 29.30889206, 30.11601202,
-                        30.28601773, 30.45602344, 30.62602916, 30.79449254,
-                        30.81501549, 30.83553843, 30.85606138, 30.87658432,
-                        30.89710727, 30.91763021, 30.93815316,
-                        30.9586761, 30.97919905, 30.99972199, 31.02024494,
-                        31.04076788]),
-        a3=numpy.array([13.1976005, 25.87908519, 29.46172057, 31.82735019,
-                        32.57069097, 33.31403175, 34.05737253, 34.79752526,
-                        35.23106482, 35.66460438, 36.09814394, 36.53168351,
-                        36.96522307, 37.39876263, 37.83230219, 38.26584175,
-                        38.69938131, 39.13292088, 39.56646044, 40.]),
-        ),
+    expected_losses=numpy.array([
+        [40.5835007, 70.37142354, 81.78761801, 94.22512956,
+         108.02407352, 121.82301747, 135.62196142, 149.37739409,
+         158.94810005, 168.51880601, 178.08951197, 187.66021794,
+         197.2309239, 206.80162986, 216.37233582,
+         225.94304178, 235.51374774, 245.0844, 254.65515, 264.225865],
+        [13.1976005, 25.87908519, 29.46172057, 31.82735019,
+         32.57069097, 33.31403175, 34.05737253, 34.79752526,
+         35.23106482, 35.66460438, 36.09814394, 36.53168351,
+         36.96522307, 37.39876263, 37.83230219, 38.26584175,
+         38.69938131, 39.13292088, 39.56646044, 40.],
+        [15.04698321, 28.02375039, 29.30889206, 30.11601202,
+         30.28601773, 30.45602344, 30.62602916, 30.79449254,
+         30.81501549, 30.83553843, 30.85606138, 30.87658432,
+         30.89710727, 30.91763021, 30.93815316,
+         30.9586761, 30.97919905, 30.99972199, 31.02024494,
+         31.04076788],
+    ]),
 
     expected_loss_map=None)
 
@@ -210,29 +154,27 @@ class EventBasedTestCase(unittest.TestCase):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RM"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
+        calculator_rm = api.ConditionalLosses(
+            [CONDITIONAL_LOSS_POES],
+            api.ProbabilisticEventBased(
+                vulnerability_function_rm, 50, 50))
 
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, 50, 50)
+        calculator_rc = api.ConditionalLosses(
+            [CONDITIONAL_LOSS_POES],
+            api.ProbabilisticEventBased(
+                vulnerability_function_rc, 50, 50))
 
-        peb_conditional_losses = api.ConditionalLosses(
-            [CONDITIONAL_LOSS_POES], peb_calculator)
+        asset_outputs_rm = calculator_rm(mb.input_models_asset[0:2], gmf[0:2])
+        [asset_output_rc] = calculator_rc([mb.input_models_asset[2]], [gmf[2]])
 
-        outputs = []
-        for i in range(3):
-            asset_output = peb_conditional_losses(
-                mb.input_models_asset[i], gmf[i])
-
-            outputs.append(asset_output)
-
+        for i, asset_output in enumerate(asset_outputs_rm):
             self.assertAlmostEqual(
                 mb.expected_loss_map[i],
                 asset_output.conditional_losses[CONDITIONAL_LOSS_POES],
@@ -247,9 +189,27 @@ class EventBasedTestCase(unittest.TestCase):
             self.assert_allclose(mb.expected_losses[i],
                                  asset_output.loss_curve.abscissae)
 
-            self.assert_allclose(
-                mb.expected_losses[i] / mb.input_models_asset[i].value,
-                asset_output.loss_ratio_curve.abscissae)
+        self.assert_allclose(
+            mb.expected_losses[2] / mb.input_models_asset[2].value,
+            asset_output_rc.loss_ratio_curve.abscissae)
+
+        self.assertAlmostEqual(
+            mb.expected_loss_map[2],
+            asset_output_rc.conditional_losses[CONDITIONAL_LOSS_POES],
+            delta=0.05 * mb.expected_loss_map[2])
+
+        self.assert_allclose(mb.expected_poes,
+                             asset_output_rc.loss_ratio_curve.ordinates)
+
+        self.assert_allclose(mb.expected_poes,
+                             asset_output_rc.loss_curve.ordinates)
+
+        self.assert_allclose(mb.expected_losses[2],
+                             asset_output_rc.loss_curve.abscissae)
+
+        self.assert_allclose(
+            mb.expected_losses[2] / mb.input_models_asset[2].value,
+            asset_output_rc.loss_ratio_curve.abscissae)
 
         expected_aggregate_poes = [0, 0.020408606, 0.04081678, 0.061224955,
                                    0.08163313, 0.102041305, 0.12244948,
@@ -288,90 +248,37 @@ class EventBasedTestCase(unittest.TestCase):
                                      115.8386574, 55.3134][::-1]
 
         aggregate_curve = scientific.event_based(
-            api.aggregate_losses(outputs), 50, 50)
+            api.aggregate_losses(asset_outputs_rm + [asset_output_rc]), 50, 50)
 
         self.assert_allclose(
             expected_aggregate_losses, aggregate_curve.abscissae)
 
         self.assert_allclose(
             expected_aggregate_poes, aggregate_curve.ordinates)
-
-    # we skip the following test as atm the algorithm output is not
-    # predictable (you can set a fixed seed for sampling)
-
-    @unittest.skip
-    def test_sample_based_beta(self):
-        vulnerability_function_rm = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT", "RC"))
-
-        vulnerability_function_rc = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0001, 0.0001, 0.0001, 0.0001, 0.0001], "BT", "RC"))
-
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
-
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, None, None)
-        peb_conditional_losses = api.ConditionalLosses([0.99], peb_calculator)
-
-        for i in range(3):
-            asset_output = peb_conditional_losses(
-                sb.input_models_asset[i],
-                {"IMLs": gmf_bd[i], "TSES": 2500, "TimeSpan": 50})
-            self.assert_allclose(
-                sb.expected_poes[i],
-                asset_output.insured_losses.ordinates)
-
-            self.assert_allclose(
-                sb.expected_losses[i],
-                asset_output.insured_losses.abscissae)
-
-        aggregate_curve = scientific.event_based(
-            peb_calculator.aggregate_losses, 2500, 50, 10)
-
-        expected_aggregate_poes = [1.0, 0.732864698034, 0.228948414196,
-                                   0.147856211034, 0.0768836536134,
-                                   0.0768836536134, 0.0198013266932,
-                                   0.0198013266932, 0.0198013266932]
-
-        expected_aggregate_losses = [
-            102.669407618, 308.008222854, 513.347038089,
-            718.685853325, 924.024668561, 1129.3634838,
-            1334.70229903, 1540.04111427, 1745.3799295]
-
-        self.assert_allclose(
-            expected_aggregate_poes, aggregate_curve.ordinates)
-
-        self.assert_allclose(
-            expected_aggregate_losses, aggregate_curve.abscissae)
 
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         vulnerability_function_rc = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN", "RC"))
+                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
-        vulnerability_model = {"RM": vulnerability_function_rm,
-                               "RC": vulnerability_function_rc}
+        calculator_rm = api.InsuredLosses(api.ProbabilisticEventBased(
+            vulnerability_function_rm, time_span=50, tses=50,
+            curve_resolution=20))
 
-        peb_calculator = api.ProbabilisticEventBased(
-            vulnerability_model, time_span=50, tses=50,
-            curve_resolution=20)
+        calculator_rc = api.InsuredLosses(api.ProbabilisticEventBased(
+            vulnerability_function_rc, time_span=50, tses=50,
+            curve_resolution=20))
 
-        peb_insured_losses = api.InsuredLosses(peb_calculator)
+        asset_output_rm = calculator_rm(il.input_models_asset[0:2], gmf[0:2])
+        asset_output_rc = calculator_rc([il.input_models_asset[2]], [gmf[2]])
 
-        for i in range(3):
-            asset_output = peb_insured_losses(il.input_models_asset[i], gmf[i])
-
+        for i, asset_output in enumerate(asset_output_rm + asset_output_rc):
             self.assert_allclose(
                 il.expected_poes[i],
                 asset_output.insured_losses.ordinates)

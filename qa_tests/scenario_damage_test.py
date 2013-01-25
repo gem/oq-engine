@@ -21,6 +21,7 @@ from risklib import scientific
 from risklib.models import input
 
 
+# FIXME(lp) remove this. it is just using the default args
 def assert_close(expected, actual):
     return numpy.testing.assert_allclose(
         expected, actual, atol=0.0, rtol=1E-7)
@@ -67,35 +68,35 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                 [(0.25, 0.08), (0.40, 0.12)]),
         )
 
-        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+        calculator_rm = api.ScenarioDamage(
+            fragility_model, fragility_functions['RM'])
+        calculator_rc = api.ScenarioDamage(
+            fragility_model, fragility_functions['RC'])
 
-        asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None, number_of_units=3000),
-            self.hazard['a1'])
+        [asset_output_a1] = calculator_rm(
+            [scientific.Asset(3000, number_of_units=3000)],
+            [self.hazard['a1']])
         expected_means = [1562.6067550208, 1108.0189275488, 329.3743174305]
         expected_stdevs = [968.93502576, 652.7358505746, 347.3929450270]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
-        asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None, number_of_units=1000),
-            self.hazard['a3'])
+        [asset_output_a3] = calculator_rm(
+            [scientific.Asset(1000, number_of_units=1000)],
+            [self.hazard['a3']])
         expected_means = [417.3296948271, 387.2084383654, 195.4618668074]
         expected_stdevs = [304.4769498434, 181.1415598664, 253.91309010185]
         self.assert_ok(asset_output_a3, expected_means, expected_stdevs)
 
-        asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None, number_of_units=2000),
-            self.hazard['a2'])
+        rm = asset_output_a1.fractions + asset_output_a3.fractions
+
+        [asset_output_a2] = calculator_rc(
+            [scientific.Asset(2000, number_of_units=2000)],
+            [self.hazard['a2']])
         expected_means = [56.7201291212, 673.1047565606, 1270.1751143182]
         expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
-        # aggregations for taxonomy
-        distr = calculator.damage_distribution_by_taxonomy(
-            [asset_output_a1, asset_output_a2, asset_output_a3], {})
-
-        rm = distr['RM']  # array 10x3
-        rc = distr['RC']  # array 10x3
+        rc = asset_output_a2.fractions
 
         assert_close(
             rm.mean(0), [1979.9364498479, 1495.2273659142, 524.8361842379])
@@ -108,12 +109,13 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             rc.std(0, ddof=1),
             [117.7802813522, 485.2023172324, 575.8724057319])
 
-        # aggregations for total
-        means, stddevs = calculator.damage_distribution_total(distr)
-        assert_close(
-            means, [2036.6565789692, 2168.332122474, 1795.0112985561])
-        assert_close(
-            stddevs, [1075.3192939160, 1076.4342601834, 687.0910669304])
+        # aggregations for total; this comment will be removed once
+        # we decided where to put the aggregation by total
+        #means, stddevs = calculator.damage_distribution_total(distr)
+        #assert_close(
+        #    means, [2036.6565789692, 2168.332122474, 1795.0112985561])
+        #assert_close(
+        #    stddevs, [1075.3192939160, 1076.4342601834, 687.0910669304])
 
     def test_discrete_ff(self):
         fragility_model = input.FragilityModel(
@@ -132,34 +134,35 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                  [0.0003, 0.05, 0.40, 0.86]])
         )
 
-        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+        calculator_rm = api.ScenarioDamage(
+            fragility_model, fragility_functions['RM'])
 
-        asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None, number_of_units=3000),
-            self.hazard['a1'])
+        [asset_output_a1] = calculator_rm(
+            [scientific.Asset(3000, number_of_units=3000)],
+            [self.hazard['a1']])
         expected_means = [875.81078203, 1448.29628694, 675.89293103]
         expected_stdevs = [757.54019289, 256.15319254, 556.76593931]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
 
-        asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None, number_of_units=1000),
-            self.hazard['a3'])
+        [asset_output_a3] = calculator_rm(
+            [scientific.Asset(1000, number_of_units=1000)],
+            [self.hazard['a3']])
         expected_means = [224.4178072, 465.64396155, 309.93823125]
         expected_stdevs = [220.65161409, 136.92817619, 246.84424913]
         self.assert_ok(asset_output_a3, expected_means, expected_stdevs)
 
-        asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None, number_of_units=2000),
-            self.hazard['a2'])
+        rm = asset_output_a1.fractions + asset_output_a3.fractions
+
+        calculator_rc = api.ScenarioDamage(
+            fragility_model, fragility_functions['RC'])
+        [asset_output_a2] = calculator_rc(
+            [scientific.Asset(2000, number_of_units=2000)],
+            [self.hazard['a2']])
         expected_means = [344.90849228, 747.62412976, 907.46737796]
         expected_stdevs = [300.61123079, 144.64852962, 417.30737837]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
 
-        # aggregations for taxonomy
-        distr = calculator.damage_distribution_by_taxonomy(
-            [asset_output_a1, asset_output_a2, asset_output_a3], {})
-        rm = distr['RM']  # array 10x3
-        rc = distr['RC']  # array 10x3
+        rc = asset_output_a2.fractions
 
         assert_close(
             rm.mean(0), [1100.2285892246, 1913.9402484967, 985.8311622787])
@@ -172,8 +175,8 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             rc.std(0, ddof=1),
             [300.6112307894, 144.6485296163, 417.307378365])
 
-        means, stddevs = calculator.damage_distribution_total(distr)
-
-        # aggregations for total
-        assert_close(means, [1445.1370815035, 2661.5643782540, 1893.298540242])
-        assert_close(stddevs, [824.7812010370, 374.0010314384, 661.8114364615])
+        # aggregations for total; this comment will be removed once
+        # we decided where to put the aggregation by total
+        # means, stddevs = calculator.damage_distribution_total(distr)
+        #assert_close(means, [1445.1370815035, 2661.5643782540, 1893.298540242])
+        #assert_close(stddevs, [824.7812010370, 374.0010314384, 661.8114364615])

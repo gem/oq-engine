@@ -21,51 +21,47 @@ import itertools
 from risklib import scientific
 
 
-class EpsilonProvider(object):
-    def __init__(self):
-        self.epsilons = itertools.cycle([0.5377, 1.8339,
-            -2.2588, 0.8622, 0.3188, -1.3077,
-            -0.4336, 0.3426, 3.5784, 2.7694])
-
-    def epsilon(self, _, count):
-        return [self.epsilons.next() for _ in range(count)]
+EPSILONS = list(itertools.repeat(
+    [0.5377, 1.8339,
+     -2.2588, 0.8622, 0.3188, -1.3077,
+     -0.4336, 0.3426, 3.5784, 2.7694], 10))
 
 
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
-    0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
-    0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
-    0.012864, 0.001728, 0.06648, 0.000736, 0.01992, 0.011616,
-    0.001104, 0.033264, 0.021552, 0.055088, 0.00176, 0.001088, 0.041872,
-    0.005152, 0.007424, 0.002464, 0.008496, 0.019744, 0.025136, 0.005552,
-    0.00168, 0.00704, 0.00272, 0.081328, 0.001408, 0.025568, 0.051376,
-    0.003456, 0.01208, 0.002496, 0.001152, 0.007552, 0.004944, 0.024944,
-    0.01168, 0.027408, 0.00504, 0.003136, 0.20608, 0.00344, 0.01448,
-    0.03664, 0.124992, 0.005024, 0.007536, 0.015696, 0.00608,
-    0.001248, 0.005744, 0.017328, 0.002272, 0.06384, 0.029104,
-    0.001152, 0.016384, 0.002096, 0.00328, 0.004304, 0.020544,
-    0.000768, 0.011456, 0.004528, 0.024688, 0.024304, 0.126928,
-    0.002416, 0.0032, 0.024768, 0.00608, 0.02544, 0.003392,
-    0.381296, 0.013808, 0.002256, 0.181776, 0.038912, 0.023888,
-    0.002848, 0.014176, 0.001936, 0.089408, 0.001008, 0.02152,
-    0.002464, 0.00464, 0.064384, 0.001712, 0.01584, 0.012544,
-    0.028128, 0.005808, 0.004928, 0.025536, 0.008304, 0.112528,
-    0.06472, 0.01824, 0.002624, 0.003456, 0.014832, 0.002592,
-    0.041264, 0.004368, 0.016144, 0.008032, 0.007344, 0.004976,
-    0.00072, 0.022192, 0.002496, 0.001456, 0.044976, 0.055424,
-    0.009232, 0.010368, 0.000944, 0.002976, 0.00656, 0.003184,
-    0.004288, 0.00632, 0.286512, 0.007568, 0.00104, 0.00144,
-    0.004896, 0.053248, 0.046144, 0.0128, 0.033072, 0.02968,
-    0.002096, 0.021008, 0.017536, 0.000656, 0.016032, 0.012768,
-    0.002752, 0.007392, 0.007072, 0.044112, 0.023072, 0.013232,
-    0.001824, 0.020064, 0.008912, 0.039504, 0.00144, 0.000816,
-    0.008544, 0.077056, 0.113984, 0.001856, 0.053024, 0.023792,
-    0.013056, 0.0084, 0.009392, 0.010928, 0.041904, 0.000496,
-    0.041936, 0.035664, 0.03176, 0.003552, 0.00216, 0.0476, 0.028944,
-    0.006832, 0.011136, 0.025712, 0.006368, 0.004672, 0.001312,
-    0.008496, 0.069136, 0.011568, 0.01576, 0.01072, 0.002336,
-    0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928,
-    0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
-    0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
+       0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
+       0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
+       0.012864, 0.001728, 0.06648, 0.000736, 0.01992, 0.011616,
+       0.001104, 0.033264, 0.021552, 0.055088, 0.00176, 0.001088, 0.041872,
+       0.005152, 0.007424, 0.002464, 0.008496, 0.019744, 0.025136, 0.005552,
+       0.00168, 0.00704, 0.00272, 0.081328, 0.001408, 0.025568, 0.051376,
+       0.003456, 0.01208, 0.002496, 0.001152, 0.007552, 0.004944, 0.024944,
+       0.01168, 0.027408, 0.00504, 0.003136, 0.20608, 0.00344, 0.01448,
+       0.03664, 0.124992, 0.005024, 0.007536, 0.015696, 0.00608,
+       0.001248, 0.005744, 0.017328, 0.002272, 0.06384, 0.029104,
+       0.001152, 0.016384, 0.002096, 0.00328, 0.004304, 0.020544,
+       0.000768, 0.011456, 0.004528, 0.024688, 0.024304, 0.126928,
+       0.002416, 0.0032, 0.024768, 0.00608, 0.02544, 0.003392,
+       0.381296, 0.013808, 0.002256, 0.181776, 0.038912, 0.023888,
+       0.002848, 0.014176, 0.001936, 0.089408, 0.001008, 0.02152,
+       0.002464, 0.00464, 0.064384, 0.001712, 0.01584, 0.012544,
+       0.028128, 0.005808, 0.004928, 0.025536, 0.008304, 0.112528,
+       0.06472, 0.01824, 0.002624, 0.003456, 0.014832, 0.002592,
+       0.041264, 0.004368, 0.016144, 0.008032, 0.007344, 0.004976,
+       0.00072, 0.022192, 0.002496, 0.001456, 0.044976, 0.055424,
+       0.009232, 0.010368, 0.000944, 0.002976, 0.00656, 0.003184,
+       0.004288, 0.00632, 0.286512, 0.007568, 0.00104, 0.00144,
+       0.004896, 0.053248, 0.046144, 0.0128, 0.033072, 0.02968,
+       0.002096, 0.021008, 0.017536, 0.000656, 0.016032, 0.012768,
+       0.002752, 0.007392, 0.007072, 0.044112, 0.023072, 0.013232,
+       0.001824, 0.020064, 0.008912, 0.039504, 0.00144, 0.000816,
+       0.008544, 0.077056, 0.113984, 0.001856, 0.053024, 0.023792,
+       0.013056, 0.0084, 0.009392, 0.010928, 0.041904, 0.000496,
+       0.041936, 0.035664, 0.03176, 0.003552, 0.00216, 0.0476, 0.028944,
+       0.006832, 0.011136, 0.025712, 0.006368, 0.004672, 0.001312,
+       0.008496, 0.069136, 0.011568, 0.01576, 0.01072, 0.002336,
+       0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928,
+       0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
+       0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
 
 TSES = 900.
 TIMESPAN = 50.
@@ -77,8 +73,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
-            [0.0] * 8, "LN", "RC")
-        self.vulnerability_function1.seed(3)
+            [0.0] * 8, "LN")
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
@@ -95,18 +90,17 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             2.63, 2.67, 2.71, 2.75, 2.79, 2.83, 2.87, 2.91, 2.95, 2.99, 3.03,
             3.07, 3.11, 3.15, 3.19, 3.23, 3.27, 3.31, 3.35, 3.39, 3.43, 3.47,
             3.52, 3.56, 3.6, 3.64, 3.68, 3.72, 3.76, 3.8, 3.84, 3.88, 3.92,
-            3.96, 4.0], [0.0, 0.0, 0.0, 0.01, 0.04, 0.07, 0.11, 0.15, 0.2,
-            0.25, 0.3, 0.35, 0.39, 0.43, 0.47, 0.51, 0.55, 0.58, 0.61, 0.64,
-            0.67, 0.69, 0.71, 0.73, 0.75, 0.77, 0.79, 0.8, 0.81, 0.83, 0.84,
-            0.85, 0.86, 0.87, 0.88, 0.89, 0.89, 0.9, 0.91, 0.91, 0.92, 0.92,
-            0.93, 0.93, 0.94, 0.94, 0.94, 0.95, 0.95, 0.95, 0.95, 0.96, 0.96,
-            0.96, 0.96, 0.97, 0.97, 0.97, 0.97, 0.97, 0.97, 0.98, 0.98, 0.98,
-            0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
-            0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
-            0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
-            1.0, 1.0, 1.0], [0.0] * 100, "LN", "RC")
-
-        self.vulnerability_function1.seed(4)
+            3.96, 4.0],
+            [0.0, 0.0, 0.0, 0.01, 0.04, 0.07, 0.11, 0.15, 0.2,
+             0.25, 0.3, 0.35, 0.39, 0.43, 0.47, 0.51, 0.55, 0.58, 0.61, 0.64,
+             0.67, 0.69, 0.71, 0.73, 0.75, 0.77, 0.79, 0.8, 0.81, 0.83, 0.84,
+             0.85, 0.86, 0.87, 0.88, 0.89, 0.89, 0.9, 0.91, 0.91, 0.92, 0.92,
+             0.93, 0.93, 0.94, 0.94, 0.94, 0.95, 0.95, 0.95, 0.95, 0.96, 0.96,
+             0.96, 0.96, 0.97, 0.97, 0.97, 0.97, 0.97, 0.97, 0.98, 0.98, 0.98,
+             0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
+             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
+             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
+             1.0, 1.0, 1.0], [0.0] * 100, "LN")
 
         self.gmf1 = {"IMLs": (
             0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -153,9 +147,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IMLs inside range defined by Vulnerability function's imls.
         """
 
-        vulnerability_function = scientific.VulnerabilityFunction(
+        vf = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
+            [0.30, 0.30, 0.20, 0.20], "LN")
 
         gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
@@ -167,8 +161,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vulnerability_function.epsilon_provider = EpsilonProvider()
-        ratios = vulnerability_function(gmf)
+        vf.distribution.epsilons = EPSILONS
+        ratios = vf(gmf)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -181,9 +175,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         vuln_function = scientific.VulnerabilityFunction(
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
-            [0.30, 0.30, 0.20, 0.20], "LN", "RC")
+            [0.30, 0.30, 0.20, 0.20], "LN")
 
-        vuln_function.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilons = EPSILONS
 
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
@@ -205,17 +199,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN", "RC")
+            imls, loss_ratios, covs, "LN")
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
-        vuln_function.epsilon_provider = EpsilonProvider()
+        vuln_function.distribution.epsilons = EPSILONS
 
         numpy.testing.assert_allclose(
-                numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
-                    0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-                    vuln_function(gmfs),
-                atol=0.0, rtol=0.01)
+            numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
+                         0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
+            vuln_function(gmfs), atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -232,11 +225,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         IML defined.
         """
         # min IML in this case is 0.01
-        numpy.testing.assert_allclose(numpy.array([0.0, 0.0, 0.0]),
+        numpy.testing.assert_allclose(
+            numpy.array([0.0, 0.0, 0.0]),
             self.vulnerability_function1([0.0001, 0.0002, 0.0003]))
 
         # max IML in this case is 0.52
-        numpy.testing.assert_allclose(numpy.array([0.700, 0.700]),
+        numpy.testing.assert_allclose(
+            numpy.array([0.700, 0.700]),
             self.vulnerability_function1([0.525, 0.530]))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -335,46 +330,3 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose([10] * 11, actual.abscissae)
         numpy.testing.assert_allclose(
             numpy.arange(0, 1.1, 0.1), actual.ordinates)
-
-
-class EpsilonProviderTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.epsilon_provider1 = scientific.EpsilonProvider()
-        self.epsilon_provider2 = scientific.EpsilonProvider(
-            correlation_type="perfect",
-            taxonomies=["a", "b"])
-        self.assets = [
-            scientific.Asset(None, "a", None, None),
-            scientific.Asset(None, "b", None, None),
-            scientific.Asset(None, "a", None, None),
-        ]
-
-    def test_uncorrelated(self):
-        samples = []
-        for asset in self.assets:
-            sample = self.epsilon_provider1.epsilon(asset.taxonomy)
-            self.assertTrue(sample not in samples,
-                            "%s is already in %s" % (sample, samples))
-            self.assertTrue(isinstance(sample, float),
-                            "Invalid sample (%s)" % sample)
-            samples.append(sample)
-
-    def test_correlated(self):
-        samples = dict()
-        for asset in self.assets:
-            sample = self.epsilon_provider2.epsilon(asset.taxonomy)
-            taxonomy = asset.taxonomy
-            # This is either the first time we see this taxonomy or the sample
-            # is identical to the one originally drawn for this taxonomy.
-            if taxonomy not in samples:
-                samples[taxonomy] = sample
-            else:
-                self.assertTrue(sample == samples[taxonomy])
-        # Make sure we used at least two taxonomies in this test.
-        self.assertTrue(len(samples) > 1)
-        # Are all samples valid values?
-        for taxonomy, sample in samples.items():
-            self.assertTrue(
-                isinstance(sample, float),
-                "Invalid sample (%s) for taxonomy %s" % (sample, taxonomy))

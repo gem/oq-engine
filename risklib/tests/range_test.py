@@ -41,11 +41,12 @@ class RangeClipTestCase(unittest.TestCase):
         expected_imls = numpy.array([0.005, 0.005, 0.005])
         test_input = [0.0049, 0.00001, 0.002]
 
-        self.assertTrue(numpy.allclose(expected_imls,
-            Curve.range_clip(test_input, self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_imls, Curve.range_clip(test_input, self.TEST_IMLS))
         # same test, except with a numpy.array-type input:
-        self.assertTrue(numpy.allclose(expected_imls,
-            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_imls,
+            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS))
 
     def test_clip_high_iml_values(self):
         """
@@ -64,11 +65,13 @@ class RangeClipTestCase(unittest.TestCase):
         expected_imls = numpy.array([0.0269, 0.0269, 0.0269])
         test_input = [0.027, 0.3, 10]
 
-        self.assertTrue(numpy.allclose(expected_imls,
-            Curve.range_clip(test_input, self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_imls,
+            Curve.range_clip(test_input, self.TEST_IMLS))
         # same test, except with a numpy.array-type input:
-        self.assertTrue(numpy.allclose(expected_imls,
-            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_imls,
+            Curve.range_clip(numpy.array(test_input), self.TEST_IMLS))
 
     def test_clip_iml_with_normal_value(self):
         """
@@ -89,8 +92,10 @@ class RangeClipTestCase(unittest.TestCase):
         valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
         expected_result = numpy.array(valid_imls)
 
-        self.assertTrue(numpy.allclose(expected_result,
-            Curve.range_clip(valid_imls, self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_result,
+            Curve.range_clip(valid_imls, self.TEST_IMLS))
         # same test, except with numpy.array-type input:
-        self.assertTrue(numpy.allclose(expected_result,
-            Curve.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
+        numpy.testing.assert_allclose(
+            expected_result,
+            Curve.range_clip(numpy.array(valid_imls), self.TEST_IMLS))

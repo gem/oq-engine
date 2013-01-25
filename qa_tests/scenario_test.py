@@ -27,16 +27,16 @@ THISDIR = os.path.dirname(__file__)
 gmv = vectors_from_csv('gmv', THISDIR)
 
 
-def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0), taxonomy="T"):
+def vf(loss_ratios, covs=(0.0, 0.0, 0.0, 0.0, 0.0)):
     return scientific.VulnerabilityFunction(
-        [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs, "LN", taxonomy)
+        [0.1, 0.2, 0.3, 0.5, 0.7], loss_ratios, covs, "LN")
 
 
-class ScenarioRiskTestCase(unittest.TestCase):
+class ScenarioTestCase(unittest.TestCase):
 
     vulnerability_model_mean = dict(
-        RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], taxonomy="RM"),
-        RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], taxonomy="RC")
+        RM=vf([0.05, 0.1, 0.2, 0.4, 0.8]),
+        RC=vf([0.035, 0.07, 0.14, 0.28, 0.56])
     )
 
     hazard_mean = dict(
@@ -58,35 +58,28 @@ class ScenarioRiskTestCase(unittest.TestCase):
     )
 
     def test_mean_based(self):
-        calculator = api.ScenarioRisk(
-            self.vulnerability_model_mean, None, None)
+        calculator = api.Scenario(
+            self.vulnerability_model_mean["RM"], None, None)
 
-        asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None),
-            self.hazard_mean["a1"])
+        [asset_output_a1, asset_output_a3] = calculator(
+            [scientific.Asset(3000), scientific.Asset(1000)],
+            [self.hazard_mean["a1"], self.hazard_mean["a3"]])
 
-        self.assertAlmostEqual(440.147078317589,
-                               asset_output_a1.mean)
+        self.assertAlmostEqual(440.147078317589, asset_output_a1.mean)
 
         self.assertAlmostEqual(182.615976701858,
                                asset_output_a1.standard_deviation)
 
-        asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None),
-            self.hazard_mean["a3"])
-
-        self.assertAlmostEqual(180.717534009275,
-                               asset_output_a3.mean)
+        self.assertAlmostEqual(180.717534009275, asset_output_a3.mean)
 
         self.assertAlmostEqual(92.2122644809969,
                                asset_output_a3.standard_deviation)
 
-        asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None),
-            self.hazard_mean["a2"])
+        calculator.vulnerability_function = self.vulnerability_model_mean["RC"]
+        [asset_output_a2] = calculator(
+            [scientific.Asset(2000)], [self.hazard_mean["a2"]])
 
-        self.assertAlmostEqual(432.225448142534,
-                               asset_output_a2.mean)
+        self.assertAlmostEqual(432.225448142534, asset_output_a2.mean)
 
         self.assertAlmostEqual(186.864456949986,
                                asset_output_a2.standard_deviation)
@@ -101,33 +94,30 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
     def test_sample_based(self):
         vulnerability_model = dict(
-            RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], [0.05, 0.06, 0.07, 0.08, 0.09],
-                  taxonomy="RM"),
-            RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5],
-                  taxonomy="RC"),
+            RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], [0.05, 0.06, 0.07, 0.08, 0.09]),
+            RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
         )
 
-        calculator = api.ScenarioRisk(vulnerability_model, seed=37,
-                                      correlation_type=None)
+        calculator = api.Scenario(vulnerability_model['RM'], seed=37,
+                                  correlation_type=None)
 
-        asset_output_a1 = calculator(
-            scientific.Asset("a1", "RM", 3000, None), gmv.a1)
+        [asset_output_a1, asset_output_a3] = calculator(
+            [scientific.Asset(3000), scientific.Asset(1000)],
+            [gmv.a1, gmv.a3])
 
         self.assertAlmostEqual(521.885458891, asset_output_a1.mean,
                                delta=0.05 * 521.885458891)
-
         self.assertTrue(asset_output_a1.standard_deviation > 244.825980356)
-
-        asset_output_a3 = calculator(
-            scientific.Asset("a3", "RM", 1000, None), gmv.a3)
 
         self.assertAlmostEqual(200.54874638, asset_output_a3.mean,
                                delta=0.05 * 200.54874638)
 
         self.assertTrue(asset_output_a3.standard_deviation > 94.2302991022)
 
-        asset_output_a2 = calculator(
-            scientific.Asset("a2", "RC", 2000, None), gmv.a2)
+        calculator.vulnerability_function = vulnerability_model["RC"]
+        calculator.vulnerability_function.init_distribution(seed=37)
+
+        [asset_output_a2] = calculator([scientific.Asset(2000)], [gmv.a2])
 
         self.assertAlmostEqual(510.821363253, asset_output_a2.mean,
                                delta=0.05 * 510.821363253)

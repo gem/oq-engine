@@ -21,13 +21,13 @@ This module includes the scientific API of the oq-risklib
 """
 
 import collections
-import random
 import itertools
+import random
 
 import numpy
 from scipy import interpolate, stats
 
-from risklib import curve
+from risklib import curve, utils
 
 ###
 ### Constants & Defaults
@@ -42,14 +42,11 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 class Asset(object):
     # FIXME (lp). Provide description
-    def __init__(self, asset_ref, taxonomy, value, site,
+    def __init__(self, value,
                  number_of_units=1,
                  ins_limit=None, deductible=None,
                  retrofitting_cost=None):
-        self.site = site
         self.value = value
-        self.taxonomy = taxonomy
-        self.asset_ref = asset_ref
         self.ins_limit = ins_limit
         self.deductible = deductible
         self.number_of_units = number_of_units
@@ -58,8 +55,7 @@ class Asset(object):
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs, distribution,
-                 taxonomy):
+    def __init__(self, imls, mean_loss_ratios, covs, distribution_name):
         """
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
@@ -71,33 +67,60 @@ class VulnerabilityFunction(object):
         :param list covs: Coefficients of Variation. Equal in length
         to mean loss ratios. All values must be >= 0.0.
 
-        :param string distribution: The probabilistic distribution
+        :param str distribution_name: The probabilistic distribution
             related to this function.
-
-        :param string taxonomy: the taxonomy related to this function
         """
         self._check_vulnerability_data(
-            imls, mean_loss_ratios, covs, distribution)
+            imls, mean_loss_ratios, covs, distribution_name)
         self.imls = numpy.array(imls)
-        self.max_iml = self.imls[-1]
-        self.min_iml = self.imls[0]
-
-        self.resolution = len(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
-        self.distribution = distribution
+        self.distribution_name = distribution_name
+        (self.max_iml, self.min_iml, self.resolution,
+         self.stddevs, self._mlr_i1d, self._covs_i1d,
+         self.distribution) = itertools.repeat(None, 7)
+        self.init()
+
+    def init(self):
+        self.max_iml = self.imls[-1]
+        self.min_iml = self.imls[0]
+        self.resolution = len(self.imls)
+        self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
-        self._cov_for = lambda iml: self._covs_i1d(
-            numpy.max(
-                [numpy.min([iml, numpy.ones(len(iml)) * self.max_iml], axis=0),
-                 numpy.ones(len(iml)) * self.min_iml], axis=0))
-        self.epsilon_provider = None
-        self.taxonomy = taxonomy
 
-    def seed(self, seed=None, correlation_type=None, taxonomies=None):
-        self.epsilon_provider = EpsilonProvider(
-            seed, correlation_type, taxonomies)
+        if (self.covs > 0).any():
+            self.distribution = DISTRIBUTIONS[self.distribution_name]()
+        else:
+            self.distribution = DegenerateDistribution()
+
+    def init_distribution(self, asset_count=1, sample_num=1,
+                          seed=None, correlation=0):
+
+        assert correlation in [0, 1]
+        self.distribution.init(asset_count, sample_num, seed, correlation)
+
+    def _cov_for(self, imls):
+        """
+        Clip `imls` to the range associated with the support of the
+        vulnerability function and returns the corresponding
+        covariance values by linear interpolation
+        """
+        clipped_up = numpy.min(
+            [imls, numpy.ones(len(imls)) * self.max_iml], axis=0)
+        clipped = numpy.max(
+            [clipped_up, numpy.ones(len(imls)) * self.min_iml], axis=0)
+        return self._covs_i1d(clipped)
+
+    def __getstate__(self):
+        return (self.imls, self.mean_loss_ratios, self.covs, self.distribution_name)
+
+    def __setstate__(self, (imls, mean_loss_ratios, covs, distribution_name)):
+        self.imls = imls
+        self.mean_loss_ratios = mean_loss_ratios
+        self.covs = covs
+        self.distribution_name = distribution_name
+        self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
@@ -107,13 +130,6 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 for x in covs)
         assert all(x >= 0.0 and x <= 1.0 for x in loss_ratios)
         assert distribution in ["LN", "BT"]
-
-    @property
-    def stddevs(self):
-        """
-        Convenience method: returns a list of calculated Standard Deviations
-        """
-        return self.covs * self.mean_loss_ratios
 
     def __call__(self, imls):
         """
@@ -136,36 +152,16 @@ class VulnerabilityFunction(object):
                           imls], axis=0)
 
         # for imls such that iml > min(iml) we get a mean loss ratio
-        # by interpolation and apply the uncertainty (if present)
+        # by interpolation and sample the distribution
 
         idxs = numpy.where(imls >= self.min_iml)[0]
         imls = numpy.array(imls)[idxs]
         means = self._mlr_i1d(imls)
 
         # apply uncertainty
+        covs = self._cov_for(imls)
 
-        # FIXME (lp). Refactor me. This stuff should be in a separate
-        # class
-        if (self.covs > 0).any():
-            covs = self._cov_for(imls)
-            stddevs = covs * imls
-
-            if self.distribution == 'BT':
-                alpha = _alpha_value(means, stddevs)
-                beta = _beta_value(means, stddevs)
-                values = numpy.random.beta(alpha, beta, size=None)
-            elif self.distribution == 'LN':
-                variance = (means * covs) ** 2
-                epsilon = self.epsilon_provider.epsilon(
-                    self.taxonomy, len(means))
-                sigma = numpy.sqrt(
-                    numpy.log((variance / means ** 2.0) + 1.0))
-                mu = numpy.log(means ** 2.0 / numpy.sqrt(
-                    variance + means ** 2.0))
-                values = numpy.exp(mu + (epsilon * sigma))
-            ret[idxs] = values
-        else:
-            ret[idxs] = means
+        ret[idxs] = self.distribution.sample(means, covs, covs * imls)
 
         return ret
 
@@ -192,24 +188,8 @@ class VulnerabilityFunction(object):
                 mean_loss_ratio = self.mean_loss_ratios[col]
                 loss_ratio_stddev = self.stddevs[col]
 
-                # FIXME(lp): Refactor this out
-                if self.distribution == "BT":
-                    lrem[row][col] = stats.beta.sf(
-                        loss_ratio,
-                        _alpha_value(
-                            mean_loss_ratio, loss_ratio_stddev),
-                        _beta_value(
-                            mean_loss_ratio, loss_ratio_stddev))
-                elif self.distribution == "LN":
-                    variance = loss_ratio_stddev ** 2.0
-                    sigma = numpy.sqrt(
-                        numpy.log((variance / mean_loss_ratio ** 2.0) + 1.0))
-                    mu = numpy.exp(
-                        numpy.log(
-                            mean_loss_ratio ** 2.0 /
-                            numpy.sqrt(variance + mean_loss_ratio ** 2.0)))
-                    lrem[row][col] = stats.lognorm.sf(
-                        loss_ratio, sigma, scale=mu)
+                lrem[row][col] = self.distribution.survival(
+                    loss_ratio, mean_loss_ratio, loss_ratio_stddev)
 
         return lrem
 
@@ -224,7 +204,7 @@ class VulnerabilityFunction(object):
            :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
         """
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
-                [numpy.mean(pair) for pair in pairwise(self.imls)] +
+                [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
@@ -280,103 +260,76 @@ ScenarioRiskOutput.standard_deviation = property(
 
 
 ##
-## Sampling
+## Distribution & Sampling
 ##
+DISTRIBUTIONS = utils.Register()
 
 
-def _alpha_value(mean_loss_ratio, stddev):
-    """
-    Compute alpha value
+class DegenerateDistribution(object):
+    def init(self, *args):
+        pass
 
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
+    def sample(self, means, *_):
+        return means
 
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed alpha value
-    """
-
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            mean_loss_ratio ** 2)
+    def survival(self, *_):
+        return 0
 
 
-def _beta_value(mean_loss_ratio, stddev):
-    """
-    Compute beta value
-
-    :param mean_loss_ratio: current loss ratio
-    :type mean_loss_ratio: float
-
-    :param stdev: current standard deviation
-    :type stdev: float
-
-
-    :returns: computed beta value
-    """
-    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
-            (mean_loss_ratio - mean_loss_ratio ** 2))
-
-
-class EpsilonProvider(object):
-    """
-    Simple class for combining job configuration parameters and an `epsilon`
-    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
-    """
-
-    def __init__(self, seed=None,
-                 correlation_type=None, taxonomies=None):
-        """
-        :param params: configuration parameters from the job configuration
-        :type params: dict
-        """
-        self._samples = dict()
-        self._correlation_type = correlation_type
-        self._seed = seed
-        self.rnd = None
-
-        if correlation_type == "perfect":
-            self._setup_rnd()
-            for taxonomy in taxonomies:
-                self._samples[taxonomy] = self._generate()
-
-    def _setup_rnd(self):
+@DISTRIBUTIONS.add('LN')
+class LogNormalDistribution(object):
+    def __init__(self):
         self.rnd = random.Random()
-        if self._seed is not None:
-            self.rnd.seed(int(self._seed))
-            numpy.random.seed(int(self._seed))
+        self.epsilons = None
 
-    def _generate(self):
-        if self.rnd is None:
-            self._setup_rnd()
+    def init(self, asset_count=1, samples=1, seed=None, correlation=0):
+        assert correlation in [0, 1]
+        if seed is not None:
+            self.rnd.seed(seed)
 
-        return self.rnd.normalvariate(0, 1)
-
-    def epsilon(self, taxonomy, count=1):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        taxonomy is the same. The asset's `taxonomy` is only needed for
-        correlated jobs and unlikely to be available for uncorrelated ones.
-        """
-
-        if self._correlation_type == "perfect":
-            ret = [self._samples[taxonomy] for _ in range(count)]
+        if correlation == 0:
+            self.epsilons = [
+                [self.rnd.normalvariate(0, 1) for _ in range(0, samples)]
+                for __ in range(0, asset_count)]
         else:
-            ret = [self._generate() for _ in range(count)]
+            base_epsilons = [self.rnd.normalvariate(0, 1)
+                             for _ in range(0, samples)]
+            self.epsilons = itertools.repeat(base_epsilons, asset_count)
 
-        if count == 1:
-            return ret[0]
-        else:
-            return ret
+    def sample(self, means, covs, _):
+        epsilons = self.epsilons.pop()
+        variance = (means * covs) ** 2
+        sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
+        mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
 
+        return numpy.exp(mu + (epsilons[0:len(sigma)] * sigma))
+
+    def survival(self, loss_ratio, mean, stddev):
+        variance = stddev ** 2.0
+        sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
+        mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
+        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
+
+
+@DISTRIBUTIONS.add('BT')
+class BetaDistribution(object):
+    def sample(self, means, _, stddevs):
+        alpha = self._alpha(means, stddevs)
+        beta = self._beta(means, stddevs)
+        return numpy.random.beta(alpha, beta, size=None)
+
+    def survival(self, loss_ratio, mean, stddev):
+        return stats.beta.sf(loss_ratio,
+                             self._alpha(mean, stddev),
+                             self._beta(mean, stddev))
+
+    @staticmethod
+    def _alpha(mean, stddev):
+        return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
+
+    @staticmethod
+    def _beta(mean, stddev):
+        return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
 ###
 ### Calculators
@@ -409,7 +362,7 @@ def event_based(loss_values, tses, time_span,
     # for the details
     times = [index
              for index, (previous_val, val) in
-             enumerate(pairwise(sorted_loss_values))
+             enumerate(utils.pairwise(sorted_loss_values))
              if not numpy.allclose([val], [previous_val])]
 
     # if there are less than 2 distinct loss values, we will keep the
@@ -498,7 +451,7 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     """
     loss_ratios = numpy.concatenate([first, loss_ratios, last])
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                            for x, y in pairwise(loss_ratios)])
+                            for x, y in utils.pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
@@ -597,26 +550,14 @@ def mean_loss(a_curve):
     return numpy.dot(mean_ratios, mean_pes)
 
 
-###
-### Utils
-###
-
-def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-    a, b = itertools.tee(iterable)
-    # b ahead one step; if b is empty do not raise StopIteration
-    next(b, None)
-    return itertools.izip(a, b)  # if a is empty will return an empty iter
-
-
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
-    return [numpy.mean(pair) for pair in pairwise(values)]
+    return [numpy.mean(pair) for pair in utils.pairwise(values)]
 
 
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
-    return [x - y for x, y in pairwise(values)]
+    return [x - y for x, y in utils.pairwise(values)]
 
 
 def mean_std(fractions):

@@ -18,82 +18,6 @@ import numpy
 from risklib import scientific
 
 
-def compute_on_sites(sites, assets_getter, hazard_getter, calculator):
-    """
-    Main entry to trigger a calculation over geographical sites.
-
-    For each site in `sites`, the function will:
-        * load all the assets defined on that geographical site
-        * load the hazard input defined on that geographical site
-        * call the calculator for each asset and yield the calculator
-        results for that single asset
-
-    The assets lookup logic for a single site is completely up to the
-    caller, as well as the logic to lookup the correct hazard on that site.
-    Also, the are no constraints at all on how a single geographical site is
-    represented, because they are just passed back to the client implementation
-    of the assets and hazard getters to load the related inputs.
-
-    :param sites: the set of sites where to trigger the computation on
-    :type sites: an `iterator` over a collection of sites. No constraints
-        are needed for the type of a single site
-    :param assets_getter: the logic used to lookup the assets defined
-        on a single geographical site
-    :type assets_getter: `callable` that accepts as single parameter a
-        geographical site and returns a set of `risklib.models.input.Asset`
-    :param hazard_getter: the logic used to lookup the hazard defined
-        on a single geographical site
-    :type hazard_getter: `callable` that accepts as single parameter a
-        geographical site and returns the hazard input for that site.
-        The format of the hazard input depends on the type of calculator
-        chosen and it is documented in detail in each calculator
-    :param calculator: a specific calculator (classical, probabilistic
-        event based, benefit cost ratio, scenario risk, scenario damage)
-    :type calculator: `callable` that accepts as first parameter an
-        instance of `risklib.models.input.Asset` and as second parameter the
-        hazard input. It returns an instance of
-        `risklib.scientific.*Output` with the results of the
-        computation for the given asset
-    """
-
-    for site in sites:
-        assets = assets_getter(site)
-        hazard = hazard_getter(site)
-
-        for asset in assets:
-            yield calculator(asset, hazard)
-
-
-def compute_on_assets(assets, hazard_getter, calculator):
-    """
-    Main entry to trigger a calculation over a set of assets.
-
-    It works basically in the same way as `risklib.api.compute_on_sites`
-    except that here we loop over the given assets.
-
-    :param assets: the set of assets where to trigger the computation on
-    :type assets: an `iterator` over a collection of
-        `risklib.models.input.Asset`
-    :param hazard_getter: the logic used to lookup the hazard defined
-        on a single geographical site
-    :type hazard_getter: `callable` that accepts as single parameter a
-        geographical site and returns the hazard input for that site.
-        The format of the hazard input depends on the type of calculator
-        chosen and it is documented in detail in each calculator
-    :param calculator: a specific calculator (classical, probabilistic
-        event based, benefit cost ratio, scenario risk, scenario damage)
-    :type calculator: `callable` that accepts as first parameter an
-        instance of `risklib.models.input.Asset` and as second parameter the
-        hazard input. It returns an instance of
-        `risklib.scientific.*Output` with the results of the
-        computation for the given asset
-    """
-
-    for asset in assets:
-        hazard = hazard_getter(asset.site)
-        yield calculator(asset, hazard)
-
-
 class Classical(object):
     """
     Classical calculator. For each asset it produces:
@@ -101,23 +25,23 @@ class Classical(object):
     * a loss ratio curve
     * a set of conditional losses
     """
-    def __init__(self, vulnerability_model, steps=10):
-        self.vulnerability_model = vulnerability_model
+    def __init__(self, vulnerability_function, steps=10):
+        self.vulnerability_function = vulnerability_function
         self.steps = steps
-        self.matrices = dict(
-            (taxonomy,
-             vulnerability_function.loss_ratio_exceedance_matrix(steps))
-            for taxonomy, vulnerability_function
-            in vulnerability_model.iteritems())
+        self.loss_ratio_exceedance_matrix = (
+            vulnerability_function.loss_ratio_exceedance_matrix(steps))
 
-    def __call__(self, asset, hazard):
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
-
-        loss_ratio_curve = scientific.classical(
-            vulnerability_function, self.matrices[asset.taxonomy],
-            hazard, self.steps)
-
-        return scientific.ClassicalOutput(asset, loss_ratio_curve, None)
+    def __call__(self, assets, hazard_curves):
+        return [
+            scientific.ClassicalOutput(
+                asset,
+                scientific.classical(
+                    self.vulnerability_function,
+                    self.loss_ratio_exceedance_matrix,
+                    hazard_curves[i],
+                    self.steps),
+                None)
+            for i, asset in enumerate(assets)]
 
 
 class ScenarioDamage(object):
@@ -131,41 +55,15 @@ class ScenarioDamage(object):
         self.fragility_model = fragility_model
         self.fragility_functions = fragility_functions_map
 
-    def __call__(self, asset, hazard):
-        funcs = self.fragility_functions[asset.taxonomy]
-        fractions = numpy.array([
-            funcs.ground_motion_value_fractions(gmv)
-            * asset.number_of_units for gmv in hazard])
-        return scientific.ScenarioDamageOutput(asset, fractions)
-
-    @classmethod
-    def damage_distribution_by_taxonomy(cls, asset_outputs, result):
-        """
-        Aggregate the damage distributions by taxonomy, by returning
-        a dictionary {taxonomy -> fractions}.
-        """
-        if result is None:
-            result = {}
-        for asset_output in asset_outputs:
-            try:
-                prev = result[asset_output.asset.taxonomy]
-            except KeyError:
-                result[asset_output.asset.taxonomy] = asset_output.fractions
-            else:
-                # using += would mutate the array in place
-                result[asset_output.asset.taxonomy] = (
-                    prev + asset_output.fractions)
-        return result
-
-    @classmethod
-    def damage_distribution_total(cls, dd_by_taxonomy):
-        """
-        Sum all the taxonomies in the dictionary of dd_by_taxonomy
-        and returns means and stdevs for each damage state, independently
-        from the taxonomy.
-        """
-        total = sum(dd_by_taxonomy[t] for t in dd_by_taxonomy)
-        return total.mean(0), total.std(0, ddof=1)
+    def __call__(self, assets, ground_motion_fields):
+        return [
+            scientific.ScenarioDamageOutput(
+                asset,
+                numpy.array([
+                    self.fragility_functions.ground_motion_value_fractions(gmv)
+                    * asset.number_of_units
+                    for gmv in ground_motion_fields[i]]))
+            for i, asset in enumerate(assets)]
 
 
 class ConditionalLosses(object):
@@ -177,12 +75,16 @@ class ConditionalLosses(object):
         self.conditional_loss_poes = conditional_loss_poes
         self.loss_curve_calculator = loss_curve_calculator
 
-    def __call__(self, asset, hazard):
-        asset_output = self.loss_curve_calculator(asset, hazard)
-        cl = dict((poe,
-                   scientific.conditional_loss(asset_output.loss_curve, poe))
-                  for poe in self.conditional_loss_poes)
-        return asset_output._replace(conditional_losses=cl)
+    def __call__(self, assets, hazard):
+        asset_outputs = self.loss_curve_calculator(assets, hazard)
+
+        return [
+            asset_output._replace(
+                conditional_losses=dict(
+                    (poe,
+                     scientific.conditional_loss(asset_output.loss_curve, poe))
+                    for poe in self.conditional_loss_poes))
+            for asset_output in asset_outputs]
 
 
 class BCR(object):
@@ -200,20 +102,30 @@ class BCR(object):
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
 
-    def __call__(self, asset, hazard):
-        annual_loss_original = scientific.mean_loss(
-            self.lcc_original(asset, hazard).loss_curve)
+    def __call__(self, assets, hazard):
+        original_losses = self.lcc_original(assets, hazard)
+        retrofitted_losses = self.lcc_retrofitted(assets, hazard)
 
-        annual_loss_retrofitted = scientific.mean_loss(
-            self.lcc_retrofitted(asset, hazard).loss_curve)
+        original_annual_losses = [
+            scientific.mean_loss(original_losses[i].loss_curve)
+            for i in range(0, len(assets))]
 
-        bcr = scientific.bcr(
-            annual_loss_original,
-            annual_loss_retrofitted, self.interest_rate,
-            self.asset_life_expectancy, asset.retrofitting_cost)
+        retrofitted_annual_losses = [
+            scientific.mean_loss(retrofitted_losses[i].loss_curve)
+            for i in range(0, len(assets))]
 
-        return scientific.BCROutput(
-            asset, bcr, annual_loss_original, annual_loss_retrofitted)
+        return [
+            scientific.BCROutput(
+                asset,
+                scientific.bcr(
+                    original_annual_losses[i],
+                    retrofitted_annual_losses[i],
+                    self.interest_rate,
+                    self.asset_life_expectancy,
+                    asset.retrofitting_cost),
+                original_annual_losses[i],
+                retrofitted_annual_losses[i])
+            for i, asset in enumerate(assets)]
 
 
 class ProbabilisticEventBased(object):
@@ -228,47 +140,43 @@ class ProbabilisticEventBased(object):
     """
 
     def __init__(
-            self, vulnerability_model,
+            self, vulnerability_function,
             time_span, tses,
             seed=None, correlation_type=None,
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
-        self.correlation_type = correlation_type
-        self.vulnerability_model = vulnerability_model
+        if correlation_type == "perfect":
+            self.correlation = 1
+        else:
+            self.correlation = 0
+        self.vulnerability_function = vulnerability_function
         self.time_span = time_span
         self.tses = tses
         self.curve_resolution = curve_resolution
+
+        # needed in external calculator.
         self.loss_ratios = None  # set in __call__
 
-    def __call__(self, asset, hazard):
-        taxonomies = self.vulnerability_model.keys()
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
-        vulnerability_function.seed(
-            self.seed, self.correlation_type, taxonomies)
+    def __call__(self, assets, ground_motion_fields):
+        self.vulnerability_function.init_distribution(
+            len(assets), len(ground_motion_fields[0]),
+            self.seed, self.correlation)
 
-        self.loss_ratios = vulnerability_function(hazard)
+        self.loss_ratios = [
+            self.vulnerability_function(ground_motion_fields[i])
+            for i in range(0, len(assets))]
 
-        loss_ratio_curve = scientific.event_based(
-            self.loss_ratios,
-            tses=self.tses, time_span=self.time_span,
-            curve_resolution=self.curve_resolution)
-
-        losses = self.loss_ratios * asset.value
-
-        return scientific.ProbabilisticEventBasedOutput(
-            asset, losses, loss_ratio_curve, None, None, None)
-
-
-# the aggregation design was discussed in
-# https://mail.google.com/mail/u/0/#search/aggrega/13a9bbf82d91fa0d
-def aggregate_losses(set_of_outputs, result=None):
-    for asset_output in set_of_outputs:
-        if result is None:  # first time
-            result = numpy.copy(asset_output.losses)
-        else:
-            result += asset_output.losses  # mutate the copy
-    return result
+        return [
+            scientific.ProbabilisticEventBasedOutput(
+                asset,
+                self.loss_ratios[i] * asset.value,
+                scientific.event_based(
+                    self.loss_ratios[i],
+                    tses=self.tses, time_span=self.time_span,
+                    curve_resolution=self.curve_resolution),
+                None, None, None)
+            for i, asset in enumerate(assets)]
 
 
 class InsuredLosses(object):
@@ -278,44 +186,43 @@ class InsuredLosses(object):
     def __init__(self, losses_calculator):
         self.losses_calculator = losses_calculator
 
-    def __call__(self, asset, hazard):
-        asset_output = self.losses_calculator(asset, hazard)
+    def __call__(self, assets, ground_motion_fields):
+        asset_outputs = self.losses_calculator(assets, ground_motion_fields)
 
-        loss_curve = scientific.insured_losses(
-            asset, self.losses_calculator.loss_ratios * asset.value,
-            self.losses_calculator.tses, self.losses_calculator.time_span,
-            self.losses_calculator.curve_resolution)
+        ret = []
+        for i, asset_output in enumerate(asset_outputs):
+            loss_curve = scientific.insured_losses(
+                assets[i],
+                self.losses_calculator.loss_ratios[i] * assets[i].value,
+                self.losses_calculator.tses, self.losses_calculator.time_span,
+                self.losses_calculator.curve_resolution)
 
-        return asset_output._replace(
-            insured_losses=loss_curve,
-            insured_loss_ratio_curve=loss_curve.rescale_abscissae(
-                1 / asset.value))
+            ret.append(asset_output._replace(
+                insured_losses=loss_curve,
+                insured_loss_ratio_curve=loss_curve.rescale_abscissae(
+                    1 / asset_output.asset.value)))
+
+        return ret
 
 
-class ScenarioRisk(object):
-    """
-    Scenario risk calculator. For each asset it produces:
-        * mean / standard deviation of asset losses
-
-    It also produces the following aggregate results:
-        * aggregate losses
-    """
-
-    def __init__(self, vulnerability_model, seed, correlation_type):
-
+class Scenario(object):
+    def __init__(self, vulnerability_function,
+                 seed=None, correlation_type=None):
         self.seed = seed
-        self.correlation_type = correlation_type
-        self.vulnerability_model = vulnerability_model
+        if correlation_type == "perfect":
+            self.correlation = 1
+        else:
+            self.correlation = 0
+        self.vulnerability_function = vulnerability_function
 
-    def __call__(self, asset, hazard):
-        taxonomies = self.vulnerability_model.keys()
-        vulnerability_function = self.vulnerability_model[asset.taxonomy]
+    def __call__(self, assets, ground_motion_fields):
+        self.vulnerability_function.init_distribution(
+            len(assets), len(ground_motion_fields[0]),
+            self.seed, self.correlation)
 
-        vulnerability_function.seed(
-            self.seed, self.correlation_type, taxonomies)
-
-        loss_ratios = vulnerability_function(hazard)
-
-        losses = loss_ratios * asset.value
-
-        return scientific.ScenarioRiskOutput(asset, losses)
+        return [
+            scientific.ScenarioRiskOutput(
+                asset,
+                (self.vulnerability_function(ground_motion_fields[i]) *
+                 asset.value))
+            for i, asset in enumerate(assets)]
