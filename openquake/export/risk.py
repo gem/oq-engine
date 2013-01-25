@@ -53,7 +53,7 @@ def _export_fn_map():
         'ins_loss_curve': export_loss_curve,
         'loss_map': export_loss_map,
         'bcr_distribution': export_bcr_distribution
-        }
+    }
     return fn_map
 
 
@@ -151,5 +151,6 @@ def export_bcr_distribution(output, target_dir):
     del args['investigation_time']
 
     writers.BCRMapXMLWriter(**args).serialize(
-        output.bcrdistribution.bcrdistributiondata_set.all())
+        output.bcrdistribution.bcrdistributiondata_set.all().order_by(
+            'asset_ref'))
     return [args['path']]
