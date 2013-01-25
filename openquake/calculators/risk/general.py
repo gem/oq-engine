@@ -165,19 +165,17 @@ class BaseRiskCalculator(base.CalculatorNext):
 
             for offset in asset_offsets:
                 with logs.tracing("getting assets"):
-                    assets = [
-                        exp.to_risklib()
-                        for exp in
-                        self.exposure_model.get_asset_chunk(
-                            taxonomy,
-                            self.rc.region_constraint, offset, block_size)]
+                    assets = self.exposure_model.get_asset_chunk(
+                        taxonomy,
+                        self.rc.region_constraint, offset, block_size)
 
-                tf_args = ([self.job.id,
-                            assets, self.hazard_getter, self.hazard_id] +
-                            self.worker_args(taxonomy) +
-                            output_containers + calculator_parameters)
+                tf_args = ([
+                    self.job.id,
+                    assets, self.hazard_getter, self.hazard_id] +
+                    self.worker_args(taxonomy) +
+                    output_containers + calculator_parameters)
 
-                yield  tf_args
+                yield tf_args
 
     def worker_args(self, taxonomy):
         """
@@ -296,6 +294,16 @@ class BaseRiskCalculator(base.CalculatorNext):
         path = self.rc.inputs.get(input_type=input_type).path
 
         vfs = dict()
+
+        # CAVEATS
+        # 1) We use the first imt returned by the parser 2) Use the
+        # last vf for a taxonomy returned by the parser (if multiple
+        # vf for the same taxonomy are given).
+
+        # We basically assume that the user will provide a
+        # vulnerability model where for each taxonomy there is only
+        # one vf for a taxonomy and an imt matching the ones in the
+        # hazard output
         for record in parsers.VulnerabilityModelParser(path):
             if self.imt is None:
                 self.imt = record['IMT']
@@ -345,7 +353,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(loss_curve_id, asset_output):
+def write_loss_curve(loss_curve_id, asset, asset_output):
     """
     Stores and returns a :class:`openquake.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -353,7 +361,7 @@ def write_loss_curve(loss_curve_id, asset_output):
     identified by `loss_curve_id`.
 
     :param int loss_curve_id: the ID of the output container
-
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
     :param asset_output: an instance of
     :class:`risklib.models.output.ClassicalOutput` or of
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
@@ -361,14 +369,14 @@ def write_loss_curve(loss_curve_id, asset_output):
     """
     return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
-        asset_ref=asset_output.asset.asset_ref,
-        location=asset_output.asset.site,
+        asset_ref=asset.asset_ref,
+        location=asset.site,
         poes=asset_output.loss_curve.ordinates,
         losses=asset_output.loss_curve.abscissae,
         loss_ratios=asset_output.loss_ratio_curve.abscissae)
 
 
-def write_loss_map(loss_map_ids, asset_output):
+def write_loss_map(loss_map_ids, asset, asset_output):
     """
     Create :class:`openquake.db.models.LossMapData` objects where the
     data are got by `asset_output` and the
@@ -378,6 +386,8 @@ def write_loss_map(loss_map_ids, asset_output):
     :param dict loss_map_ids: A dictionary storing that links poe to
     :class:`openquake.db.models.LossMap` output container
 
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
+
     :param asset_output: an instance of
     :class:`risklib.models.output.ClassicalOutput` or of
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
@@ -386,10 +396,10 @@ def write_loss_map(loss_map_ids, asset_output):
     for poe, loss in asset_output.conditional_losses.items():
         models.LossMapData.objects.create(
             loss_map_id=loss_map_ids[poe],
-            asset_ref=asset_output.asset.asset_ref,
+            asset_ref=asset.asset_ref,
             value=loss,
             std_dev=None,
-            location=asset_output.asset.site)
+            location=asset.site)
 
 
 @db.transaction.commit_on_success
@@ -417,7 +427,7 @@ def update_aggregate_losses(curve_id, losses):
     curve_data.save()
 
 
-def write_bcr_distribution(bcr_distribution_id, asset_output):
+def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
     """
     Create a new :class:`openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -426,14 +436,17 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
     :param int bcr_distribution_id: the ID of
     :class:`openquake.db.models.BCRDistribution` instance that holds
     the BCR map
+
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
+
     :param asset_output: an instance of
     :class:`risklib.models.output.BCROutput` that holds BCR data for a
     specific asset
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
-        asset_ref=asset_output.asset.asset_ref,
+        asset_ref=asset.asset_ref,
         average_annual_loss_original=asset_output.eal_original,
         average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
-        location=asset_output.asset.site)
+        location=asset.site)

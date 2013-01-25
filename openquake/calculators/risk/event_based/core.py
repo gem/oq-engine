@@ -41,7 +41,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     """
     Celery task for the event based risk calculator.
 
-    :param job_id: the id of the current `:class:openquake.db.models.OqJob`
+    :param job_id: the id of the current :class:`openquake.db.models.OqJob`
     :param assets: the list of `:class:risklib.scientific.Asset`
     instances considered
     :param hazard_getter: the name of an hazard getter to be used
@@ -86,22 +86,27 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     if conditional_loss_poes:
         calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
 
-    losses = None
-    with db.transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, calculator):
+    with logs.tracing('getting hazard'):
+        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
 
-            general.write_loss_curve(loss_curve_id, asset_output)
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = calculator(assets, ground_motion_fields)
 
-            if asset_output.conditional_losses:
-                general.write_loss_map(loss_map_ids, asset_output)
+    with logs.tracing('writing results'):
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_loss_curve(
+                    loss_curve_id, assets[i], asset_output)
 
-            if asset_output.insured_losses:
-                general.write_loss_curve(insured_curve_id, asset_output)
+                if asset_output.conditional_losses:
+                    general.write_loss_map(
+                        loss_map_ids, assets[i], asset_output)
 
-            losses = api.aggregate_losses([asset_output], losses)
+                if asset_output.insured_losses:
+                    general.write_loss_curve(
+                        insured_curve_id, assets[i], asset_output)
+
+    losses = sum(asset_output.losses for asset_output in asset_outputs)
 
     general.update_aggregate_losses(aggregate_loss_curve_id, losses)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
