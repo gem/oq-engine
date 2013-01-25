@@ -76,7 +76,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
         time_span=time_span,
         tses=tses,
         seed=seed,
-        correlation_type=asset_correlation)
+        correlation=asset_correlation)
 
     if insured_losses:
         calculator = api.InsuredLosses(calculator)
