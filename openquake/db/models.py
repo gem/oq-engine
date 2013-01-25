@@ -1549,6 +1549,31 @@ class HazardCurveDataManager(djm.GeoManager):
                            # realization (and not statistical aggregates):
                            hazard_curve__lt_realization__isnull=False)
 
+    def all_curves_simple(self, filter_args=None, order_by='id'):
+        """
+        Get all :class:`HazardCurveData` records matching `filter_args` and
+        return the results in a simple, lean format: a sequence of (x, y, poes)
+        triples, where x and y are longitude and latitude of the `location`.
+
+        For querying large sets of hazard curve data, this is a rather lean
+        and efficient method for getting the results.
+
+        :param dict filter_args:
+            Optional. Dictionary of filter arguments to apply to the query.
+        :param str order_by:
+            Defaults to the primary key ('id'). Field by which to order
+            results. Currently, only one `ORDER BY` field is supported.
+        """
+        if filter_args is None:
+            filter_args = dict()
+
+        return self\
+            .filter(**filter_args)\
+            .order_by(order_by)\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
+
 
 class IndividualHazardCurveChunk(object):
     """
@@ -2337,6 +2362,18 @@ class ExposureModel(djm.Model):
             self.id, region_constraint)
 
     def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
+        """
+        :returns: a list of `openquake.db.models.ExposureData` objects
+        of a given taxonomy contained in a region and paginated
+
+        :param str taxonomy: the taxonomy of the returned objects
+
+        :param Polygon region_constraint: a Polygon object with a wkt
+        property used to filter the exposure
+
+        :param int offset: An offset used to paginate the returned set
+        :param int count: An offset used to paginate the returned set
+        """
         return ExposureData.objects.contained_in(
             self.id, taxonomy, region_constraint, offset, count)
 
@@ -2479,25 +2516,6 @@ class ExposureData(djm.Model):
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
 
-    def to_risklib(self):
-        """
-        :returns: an instance of `:class:risklib.scientific.Asset`
-        with the stored exposure data
-        """
-
-        if self.reco is not None:
-            retrofitting_cost = self.retrofitting_cost
-        else:
-            retrofitting_cost = self.NO_RETROFITTING_COST
-
-        return risklib.scientific.Asset(
-            asset_ref=self.asset_ref,
-            value=self.value,
-            site=self.site,
-            number_of_units=self.number_of_units,
-            ins_limit=self.ins_limit,
-            deductible=self.deductible,
-            retrofitting_cost=retrofitting_cost)
 
 ## Tables in the 'htemp' schema.
 

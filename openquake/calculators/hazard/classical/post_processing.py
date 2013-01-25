@@ -109,7 +109,7 @@ def setup_tasks(job, calculation, curve_finder, writers,
                 for chunk in chunks:
                     tasks.append(
                         [quantile_curves_fn,
-                    (chunk, writer, use_weights, quantile)])
+                         (chunk, writer, use_weights, quantile)])
     return tasks
 
 
@@ -357,30 +357,33 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
         List of PoEs for which we want to iterpolate hazard maps.
     """
     job = models.OqJob.objects.get(id=job_id)
-
     hc = models.HazardCurve.objects.get(id=hazard_curve_id)
-    hcd = hc.hazardcurvedata_set.order_by('location')
 
-    curves = (curve.poes for curve in hcd)
+    hcd = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id), order_by='location'
+    )
+    hcd = list(hcd)
+
+    imt = hc.imt
+    if imt == 'SA':
+        # if it's SA, include the period using the standard notation
+        imt = 'SA(%s)' % hc.sa_period
+
+    # Gather all of the curves and compute the maps, for all PoEs
+    curves = (poes for _, _, poes in hcd)
     hazard_maps = compute_hazard_maps(curves, hc.imls, poes)
 
+    # Prepare the maps to be saved to the DB
     for i, poe in enumerate(poes):
-        imls = hazard_maps[i]
-        lons = numpy.empty(imls.shape)
-        lats = numpy.empty(imls.shape)
+        map_values = hazard_maps[i]
+        lons = numpy.empty(map_values.shape)
+        lats = numpy.empty(map_values.shape)
 
-        for j, _ in enumerate(imls):
-            location = hcd[j].location
-            lons[j] = location.x
-            lats[j] = location.y
+        for loc_idx, _ in enumerate(map_values):
+            lons[loc_idx] = hcd[loc_idx][0]
+            lats[loc_idx] = hcd[loc_idx][1]
 
-        imt = hc.imt
-        if imt == 'SA':
-            # if it's SA, include the period using the standard notation
-            imt = 'SA(%s)' % hc.sa_period
-
-        # save the hazard map
-        # create `Output` first:
+        # Create 'Output' records for the map for this PoE
         if hc.statistics == 'mean':
             disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(poe=poe, imt=imt)
         elif hc.statistics == 'quantile':
@@ -391,9 +394,9 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
                 poe=poe, imt=imt, rlz=hc.lt_realization.id)
 
         output = models.Output.objects.create_output(
-            job, disp_name, 'hazard_map')
-
-        # now create and store the hazard map
+            job, disp_name, 'hazard_map'
+        )
+        # Save the complete hazard map
         models.HazardMap.objects.create(
             output=output,
             lt_realization=hc.lt_realization,
@@ -406,8 +409,9 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             poe=poe,
             lons=lons,
             lats=lats,
-            imls=imls,
+            imls=map_values,
         )
+
 
 # Disabling 'invalid name'
 # pylint: disable=C0103
