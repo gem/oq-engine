@@ -89,13 +89,18 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
     bcr_calculator = api.BCR(calculator, calculator_retrofitted,
                              interest_rate, asset_life_expectancy)
 
-    with transaction.commit_on_success(using="reslt_writer"):
-        logs.LOG.debug(
-            "launching compute_on_assets over %d assets" % len(assets))
+    with logs.tracing('getting hazard'):
+        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
 
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, bcr_calculator):
-            general.write_bcr_distribution(bcr_distribution_id, asset_output)
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = bcr_calculator(assets, ground_motion_fields)
+
+    with logs.tracing('writing results'):
+        with transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_bcr_distribution(
+                    bcr_distribution_id, assets[i], asset_output)
+
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
 event_based_bcr.ignore_result = False
@@ -146,8 +151,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         return [
             models.BCRDistribution.objects.create(
-            output=models.Output.objects.create_output(
-            self.job, "BCR Distribution", "bcr_distribution")).pk
+                output=models.Output.objects.create_output(
+                    self.job, "BCR Distribution", "bcr_distribution")).pk
         ]
 
     def set_risk_models(self):
