@@ -471,7 +471,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
-        self._computation_mesh = None
 
     @property
     def computation_mesh(self):
@@ -479,11 +478,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         :class:`nhlib.geo.mesh.Mesh` representing the points of interest for
         the calculation.
         """
-        if self._computation_mesh is None:
-            # for large geometries, the creation of this mesh can take a long
-            # time... so we cache the mesh
-            self._computation_mesh = self.hc.points_to_compute()
-        return self._computation_mesh
+        return self.hc.points_to_compute()
 
     @property
     def hc(self):
