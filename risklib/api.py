@@ -142,14 +142,11 @@ class ProbabilisticEventBased(object):
     def __init__(
             self, vulnerability_function,
             time_span, tses,
-            seed=None, correlation_type=None,
+            seed=None, correlation=0,
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
-        if correlation_type == "perfect":
-            self.correlation = 1
-        else:
-            self.correlation = 0
+        self.correlation = correlation
         self.vulnerability_function = vulnerability_function
         self.time_span = time_span
         self.tses = tses
@@ -207,12 +204,9 @@ class InsuredLosses(object):
 
 class Scenario(object):
     def __init__(self, vulnerability_function,
-                 seed=None, correlation_type=None):
+                 seed=None, correlation=0):
         self.seed = seed
-        if correlation_type == "perfect":
-            self.correlation = 1
-        else:
-            self.correlation = 0
+        self.correlation = correlation
         self.vulnerability_function = vulnerability_function
 
     def __call__(self, assets, ground_motion_fields):

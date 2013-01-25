@@ -97,7 +97,6 @@ class VulnerabilityFunction(object):
     def init_distribution(self, asset_count=1, sample_num=1,
                           seed=None, correlation=0):
 
-        assert correlation in [0, 1]
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
     def _cov_for(self, imls):
@@ -113,7 +112,8 @@ class VulnerabilityFunction(object):
         return self._covs_i1d(clipped)
 
     def __getstate__(self):
-        return (self.imls, self.mean_loss_ratios, self.covs, self.distribution_name)
+        return (self.imls, self.mean_loss_ratios,
+                self.covs, self.distribution_name)
 
     def __setstate__(self, (imls, mean_loss_ratios, covs, distribution_name)):
         self.imls = imls
@@ -283,18 +283,15 @@ class LogNormalDistribution(object):
         self.epsilons = None
 
     def init(self, asset_count=1, samples=1, seed=None, correlation=0):
-        assert correlation in [0, 1]
         if seed is not None:
             self.rnd.seed(seed)
 
-        if correlation == 0:
-            self.epsilons = [
-                [self.rnd.normalvariate(0, 1) for _ in range(0, samples)]
-                for __ in range(0, asset_count)]
-        else:
-            base_epsilons = [self.rnd.normalvariate(0, 1)
-                             for _ in range(0, samples)]
-            self.epsilons = itertools.repeat(base_epsilons, asset_count)
+        means_vector = numpy.zeros(asset_count)
+        covariance_matrix = (
+            numpy.ones((asset_count, asset_count)) * correlation +
+            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+        self.epsilons = numpy.random.multivariate_normal(
+            means_vector, covariance_matrix, samples)
 
     def sample(self, means, covs, _):
         epsilons = self.epsilons.pop()
