@@ -585,6 +585,13 @@ class HazardCalculation(djm.Model):
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
 
+    # We we create a `nhlib.site.SiteCollection` for the calculation, we can
+    # cache it here to avoid recomputing every time we need to use it in a task
+    # context. For large regions, this can be quite expensive.
+    _site_collection = fields.PickleField(
+        null=True, blank=True, db_column='site_collection'
+    )
+
     ########################
     # Logic Tree parameters:
     ########################
@@ -808,7 +815,39 @@ class HazardCalculation(djm.Model):
 
     def __init__(self, *args, **kwargs):
         kwargs = _prep_geometry(kwargs)
+        # A place to cache computation geometry. Recomputing this many times
+        # for large regions is wasteful.
+        self._points_to_compute = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
+
+    @property
+    def site_collection(self):
+        """
+        Compute, cache, and save (to the DB) the
+        :class:`nhlib.site.SiteCollection` which represents the calculation
+        sites of interest with associated soil parameters.
+
+        A `SiteCollection` is a combination of the geometry of interest for the
+        calculation, which is basically just a collection of geographical
+        points, and the soil associated soil parameters for each point.
+
+        .. note::
+            For computational efficiency, the `site_collection` should only be
+            computed once and cached in the database. If the computation
+            geometry or site parameters change during runtime, which highly
+            unlikely to occur in typical calculation scenarios, you will need
+            to clear the cache by setting `_site_collection` to `None` and
+            recompute the site collection by accessing this property.
+
+            In this case, it obvious that such a thing should be done carefully
+            and with much discretion.
+        """
+        if self._site_collection is None:
+            # Compute the site collection, cache it, and save this record to
+            # the DB:
+            self._site_collection = haz_general.get_site_collection(self)
+            self.save()
+        return self._site_collection
 
     def individual_curves_per_location(self):
         """
