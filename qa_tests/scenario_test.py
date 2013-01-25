@@ -1,23 +1,23 @@
 # coding=utf-8
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# OpenQuake Risklib is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
 #
-# OpenQuake is distributed in the hope that it will be useful,
+# OpenQuake Risklib is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Affero General Public
+# License along with OpenQuake Risklib. If not, see
+# <http://www.gnu.org/licenses/>.
 
 import os
 import unittest
 
-import numpy
 from risklib import api
 from risklib import scientific
 from risklib.tests.utils import vectors_from_csv
@@ -90,8 +90,7 @@ class ScenarioTestCase(unittest.TestCase):
             RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
         )
 
-        calculator = api.Scenario(vulnerability_model['RM'], seed=37,
-                                  correlation_type=None)
+        calculator = api.Scenario(vulnerability_model['RM'], seed=37)
 
         [asset_output_a1, asset_output_a3] = calculator(
             [scientific.Asset(3000), scientific.Asset(1000)],

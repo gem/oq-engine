@@ -2,18 +2,19 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# OpenQuake Risklib is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
 #
-# OpenQuake is distributed in the hope that it will be useful,
+# OpenQuake Risklib is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Affero General Public
+# License along with OpenQuake Risklib. If not, see
+# <http://www.gnu.org/licenses/>.
 
 
 """
@@ -22,7 +23,6 @@ This module includes the scientific API of the oq-risklib
 
 import collections
 import itertools
-import random
 
 import numpy
 from scipy import interpolate, stats
@@ -279,22 +279,26 @@ class DegenerateDistribution(object):
 @DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(object):
     def __init__(self):
-        self.rnd = random.Random()
         self.epsilons = None
+        self.epsilon_idx = 0
 
     def init(self, asset_count=1, samples=1, seed=None, correlation=0):
         if seed is not None:
-            self.rnd.seed(seed)
+            numpy.random.seed(seed)
 
         means_vector = numpy.zeros(asset_count)
         covariance_matrix = (
             numpy.ones((asset_count, asset_count)) * correlation +
             numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
         self.epsilons = numpy.random.multivariate_normal(
-            means_vector, covariance_matrix, samples)
+            means_vector, covariance_matrix, samples).transpose()
 
     def sample(self, means, covs, _):
-        epsilons = self.epsilons.pop()
+        if self.epsilons is None:
+            raise ValueError("A LogNormalDistribution must be initialized "
+                             "before you can use it")
+        epsilons = self.epsilons[self.epsilon_idx]
+        self.epsilon_idx += 1
         variance = (means * covs) ** 2
         sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
         mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
