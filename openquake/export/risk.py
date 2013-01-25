@@ -151,5 +151,6 @@ def export_bcr_distribution(output, target_dir):
     del args['investigation_time']
 
     writers.BCRMapXMLWriter(**args).serialize(
-        output.bcrdistribution.bcrdistributiondata_set.all())
+        output.bcrdistribution.bcrdistributiondata_set.all().order_by(
+            'asset_ref'))
     return [args['path']]
