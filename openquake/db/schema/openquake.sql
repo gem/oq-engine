@@ -412,7 +412,7 @@ CREATE TABLE uiapi.risk_calculation (
     -- probabilistic parameters
     asset_correlation VARCHAR NULL,
     master_seed INTEGER NULL,
-  
+
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
@@ -1009,7 +1009,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'gmf',
-            'gmf_scenario',   
+            'gmf_scenario',
             'hazard_curve',
             'hazard_map',
             'ins_loss_curve',
@@ -1143,7 +1143,12 @@ CREATE TABLE hzrdr.hazard_curve_data (
     id SERIAL PRIMARY KEY,
     hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
-    poes float[] NOT NULL
+    poes float[] NOT NULL,
+    -- Copied from hzrdr.lt_realization.
+    -- This was added for performance reasons, so we can get the weight
+    -- without having to join `hzrdr.lt_realization`.
+    -- `weight` can be null, if the weight is implicit.
+    weight NUMERIC
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
@@ -1485,7 +1490,7 @@ CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    average_annual_loss_original float NOT NULL ,   
+    average_annual_loss_original float NOT NULL,
     average_annual_loss_retrofitted float NOT NULL,
     bcr float NOT NULL
 ) TABLESPACE riskr_ts;

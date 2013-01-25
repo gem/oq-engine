@@ -70,6 +70,29 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+def queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
+
+
 def profile4job(job_id):
     """Return the job profile for the given job.
 
@@ -1501,6 +1524,56 @@ class HazardCurveDataManager(djm.GeoManager):
                 job, imt, curves_per_location, offset, block_size)
                 for offset in ranges]
 
+    def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
+        """
+        Helper function for creating a :class:`django.db.models.query.QuerySet`
+        for selecting all curves from all realizations for a given ``job_id``
+        and ``imt``.
+
+        :param job:
+            An :class:`openquake.db.models.OqJob` instance.
+        :param str imt:
+            Intensity measure type.
+        :param sa_period:
+            Spectral Acceleration period value. Only relevant if the ``imt`` is
+            "SA".
+        :param sa_damping:
+            Spectrail Acceleration damping value. Only relevant if the ``imt``
+            is "SA".
+        """
+        return self.filter(hazard_curve__output__oq_job=job,
+                           hazard_curve__imt=imt,
+                           hazard_curve__sa_period=sa_period,
+                           hazard_curve__sa_damping=sa_damping,
+                           # We only want curves associated with a logic tree
+                           # realization (and not statistical aggregates):
+                           hazard_curve__lt_realization__isnull=False)
+
+    def all_curves_simple(self, filter_args=None, order_by='id'):
+        """
+        Get all :class:`HazardCurveData` records matching `filter_args` and
+        return the results in a simple, lean format: a sequence of (x, y, poes)
+        triples, where x and y are longitude and latitude of the `location`.
+
+        For querying large sets of hazard curve data, this is a rather lean
+        and efficient method for getting the results.
+
+        :param dict filter_args:
+            Optional. Dictionary of filter arguments to apply to the query.
+        :param str order_by:
+            Defaults to the primary key ('id'). Field by which to order
+            results. Currently, only one `ORDER BY` field is supported.
+        """
+        if filter_args is None:
+            filter_args = dict()
+
+        return self\
+            .filter(**filter_args)\
+            .order_by(order_by)\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
+
 
 class IndividualHazardCurveChunk(object):
     """
@@ -1547,6 +1620,8 @@ class HazardCurveData(djm.Model):
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    # weight can be null/None if the weight is implicit:
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     objects = HazardCurveDataManager()
 
@@ -2287,6 +2362,18 @@ class ExposureModel(djm.Model):
             self.id, region_constraint)
 
     def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
+        """
+        :returns: a list of `openquake.db.models.ExposureData` objects
+        of a given taxonomy contained in a region and paginated
+
+        :param str taxonomy: the taxonomy of the returned objects
+
+        :param Polygon region_constraint: a Polygon object with a wkt
+        property used to filter the exposure
+
+        :param int offset: An offset used to paginate the returned set
+        :param int count: An offset used to paginate the returned set
+        """
         return ExposureData.objects.contained_in(
             self.id, taxonomy, region_constraint, offset, count)
 
@@ -2429,25 +2516,6 @@ class ExposureData(djm.Model):
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
 
-    def to_risklib(self):
-        """
-        :returns: an instance of `:class:risklib.scientific.Asset`
-        with the stored exposure data
-        """
-
-        if self.reco is not None:
-            retrofitting_cost = self.retrofitting_cost
-        else:
-            retrofitting_cost = self.NO_RETROFITTING_COST
-
-        return risklib.scientific.Asset(
-            asset_ref=self.asset_ref,
-            value=self.value,
-            site=self.site,
-            number_of_units=self.number_of_units,
-            ins_limit=self.ins_limit,
-            deductible=self.deductible,
-            retrofitting_cost=retrofitting_cost)
 
 ## Tables in the 'htemp' schema.
 

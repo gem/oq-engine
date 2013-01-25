@@ -21,21 +21,24 @@ import nhlib
 import nhlib.calc
 import nhlib.imt
 
-import openquake
-
 from django.db import transaction
 
 from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
+from openquake.calculators.hazard.classical import post_processing as post_proc
+from openquake.calculators.hazard.classical.post_processing import (
+    compute_mean_curve, compute_quantile_curve, compute_weighted_quantile_curve
+)
 from openquake.db import models
 from openquake.input import logictree
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+from openquake.utils.general import block_splitter
+from openquake.writer import BulkInserter
 
-from openquake.db.aggregate_result_writer import (MeanCurveWriter,
-                                                  QuantileCurveWriter)
-from openquake.calculators.hazard.classical import post_processing
+#: Maximum number of hazard curves to cache, for selects or inserts
+_CURVE_CACHE_SIZE = 100000
 
 
 @utils_tasks.oqtask
@@ -87,7 +90,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     ltp = logictree.LogicTreeProcessor(hc.id)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     sources = haz_general.gen_sources(
@@ -119,9 +122,9 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     if hc.maximum_distance:
         dist = hc.maximum_distance
         calc_kwargs['source_site_filter'] = (
-                nhlib.calc.filters.source_site_distance_filter(dist))
+            nhlib.calc.filters.source_site_distance_filter(dist))
         calc_kwargs['rupture_site_filter'] = (
-                nhlib.calc.filters.rupture_site_distance_filter(dist))
+            nhlib.calc.filters.rupture_site_distance_filter(dist))
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
@@ -202,11 +205,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             sources.
         """
         realizations = models.LtRealization.objects.filter(
-                hazard_calculation=self.hc, is_complete=False)
+            hazard_calculation=self.hc, is_complete=False)
 
         for lt_rlz in realizations:
             source_progress = models.SourceProgress.objects.filter(
-                    is_complete=False, lt_realization=lt_rlz).order_by('id')
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
 
@@ -281,31 +284,128 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
     def post_process(self):
         logs.LOG.debug('> starting post processing')
 
-        # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
-        # has some value (not an empty list), do post processing.
-        # Otherwise, just skip it altogether.
+        # means/quantiles:
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-            tasks = post_processing.setup_tasks(
-                self.job, self.job.hazard_calculation,
-                curve_finder=models.HazardCurveData.objects,
-                writers=dict(mean_curves=MeanCurveWriter,
-                             quantile_curves=QuantileCurveWriter))
+            self.do_aggregate_post_proc()
 
-            if openquake.no_distribute():
-                # Don't use celery for the post-processing computation:
-                for each_task in tasks:
-                    post_processing.do_post_process(self.job.id, each_task)
-            else:
-                utils_tasks.distribute(
-                    post_processing.do_post_process,
-                    ("post_processing_task", tasks),
-                    tf_args=dict(job_id=self.job.id)
-                )
-
+        # hazard maps:
         if len(self.hc.poes_hazard_maps) > 0:
-            post_processing.do_hazard_map_post_process(self.job)
+            post_proc.do_hazard_map_post_process(self.job)
 
         logs.LOG.debug('< done with post processing')
+
+    def do_aggregate_post_proc(self):
+        """
+        Grab hazard data for all realizations and sites from the database and
+        compute mean and/or quantile aggregates (depending on which options are
+        enabled in the calculation).
+
+        Post-processing results will be stored directly into the database.
+        """
+        num_rlzs = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc).count()
+
+        num_site_blocks_per_incr = int(_CURVE_CACHE_SIZE) / int(num_rlzs)
+        if num_site_blocks_per_incr == 0:
+            # This means we have `num_rlzs` >= `_CURVE_CACHE_SIZE`.
+            # The minimum number of sites should be 1.
+            num_site_blocks_per_incr = 1
+        slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
+
+        for imt, imls in self.hc.intensity_measure_types_and_levels.items():
+            im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+            # prepare `output` and `hazard_curve` containers in the DB:
+            container_ids = dict()
+            if self.hc.mean_hazard_curves:
+                mean_output = models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='mean-curves-%s' % imt,
+                    output_type='hazard_curve'
+                )
+                mean_hc = models.HazardCurve.objects.create(
+                    output=mean_output,
+                    investigation_time=self.hc.investigation_time,
+                    imt=im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    statistics='mean'
+                )
+                container_ids['mean'] = mean_hc.id
+
+            if self.hc.quantile_hazard_curves:
+                for quantile in self.hc.quantile_hazard_curves:
+                    q_output = models.Output.objects.create_output(
+                        job=self.job,
+                        display_name=(
+                            'quantile(%s)-curves-%s' % (quantile, imt)
+                        ),
+                        output_type='hazard_curve'
+                    )
+                    q_hc = models.HazardCurve.objects.create(
+                        output=q_output,
+                        investigation_time=self.hc.investigation_time,
+                        imt=im_type,
+                        imls=imls,
+                        sa_period=sa_period,
+                        sa_damping=sa_damping,
+                        statistics='quantile',
+                        quantile=quantile
+                    )
+                    container_ids['q%s' % quantile] = q_hc.id
+
+            all_curves_for_imt = models.HazardCurveData.objects\
+                .all_curves_for_imt(
+                    self.job.id, im_type, sa_period, sa_damping)\
+                .order_by('location')
+
+            with transaction.commit_on_success(using='reslt_writer'):
+                inserter = BulkInserter(models.HazardCurveData,
+                                        max_cache_size=_CURVE_CACHE_SIZE)
+
+                for chunk in models.queryset_iter(all_curves_for_imt,
+                                                  slice_incr):
+                    # slice each chunk by `num_rlzs` into `site_chunk`
+                    # and compute the aggregate
+                    for site_chunk in block_splitter(chunk, num_rlzs):
+                        site = site_chunk[0].location
+                        curves_poes = [x.poes for x in site_chunk]
+                        curves_weights = [x.weight for x in site_chunk]
+
+                        # do means and quantiles
+                        # quantiles first:
+                        if self.hc.quantile_hazard_curves:
+                            for quantile in self.hc.quantile_hazard_curves:
+                                if self.hc.number_of_logic_tree_samples == 0:
+                                    # explicitly weighted quantiles
+                                    q_curve = compute_weighted_quantile_curve(
+                                        curves_poes, curves_weights, quantile
+                                    )
+                                else:
+                                    # implicitly weighted quantiles
+                                    q_curve = compute_quantile_curve(
+                                        curves_poes, quantile
+                                    )
+                                inserter.add_entry(
+                                    hazard_curve_id=(
+                                        container_ids['q%s' % quantile]
+                                    ),
+                                    poes=q_curve.tolist(),
+                                    location=site.wkt
+                                )
+
+                        # then means
+                        if self.hc.mean_hazard_curves:
+                            mean_curve = compute_mean_curve(
+                                curves_poes, weights=curves_weights
+                            )
+                            inserter.add_entry(
+                                hazard_curve_id=container_ids['mean'],
+                                poes=mean_curve.tolist(),
+                                location=site.wkt
+                            )
+                inserter.flush()
 
 
 def update_result_matrix(current, new):
