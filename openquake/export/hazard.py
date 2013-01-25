@@ -159,8 +159,6 @@ def export_hazard_curves(output, target_dir):
     """
     hc = models.HazardCurve.objects.get(output=output.id)
 
-    # NOTE(LB): Using `values_list` and `iterator` here make this query a bit
-    # faster and more lean in terms of memory consumption.
     curves = models.HazardCurveData.objects.all_curves_simple(
         filter_args=dict(hazard_curve=hc.id)
     )
