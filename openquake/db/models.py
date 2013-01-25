@@ -1604,6 +1604,31 @@ class HazardCurveDataManager(djm.GeoManager):
                            # realization (and not statistical aggregates):
                            hazard_curve__lt_realization__isnull=False)
 
+    def all_curves_simple(self, filter_args=None, order_by='id'):
+        """
+        Get all :class:`HazardCurveData` records matching `filter_args` and
+        return the results in a simple, lean format: a sequence of (x, y, poes)
+        triples, where x and y are longitude and latitude of the `location`.
+
+        For querying large sets of hazard curve data, this is a rather lean
+        and efficient method for getting the results.
+
+        :param dict filter_args:
+            Optional. Dictionary of filter arguments to apply to the query.
+        :param str order_by:
+            Defaults to the primary key ('id'). Field by which to order
+            results. Currently, only one `ORDER BY` field is supported.
+        """
+        if filter_args is None:
+            filter_args = dict()
+
+        return self\
+            .filter(**filter_args)\
+            .order_by(order_by)\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
+
 
 class IndividualHazardCurveChunk(object):
     """
