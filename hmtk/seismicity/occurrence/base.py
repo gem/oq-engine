@@ -5,11 +5,19 @@
 
 import abc
 
-class SeismicityRecurrence(object):
+class SeismicityOccurrence(object):
     '''Implements recurrence calculations for instrumental seismicity'''
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def calculate(self, catalogue, config, completeness=None):
-        '''Implements recurrence calculation'''
+        """Implements recurrence calculation
+
+        :param catalogue:
+            An instance of :class:`hmtk.seismicity.catalogue`
+
+        :param dict config:
+            The config contains the necessary information to run a specific 
+            algorithm.     
+        """
         return

@@ -11,7 +11,7 @@ import numpy as np
 
 from hmtk.seismicity.occurrence.utils import recurrence_table
 from hmtk.seismicity.catalogue import Catalogue
-from hmtk.seismicity.occurrence.aki_maximum_likelihood import aki_max_likelihood
+from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 class AkiMaximumLikelihoodTestCase(unittest.TestCase):
     
@@ -25,12 +25,13 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
         self.numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+5.0))))
+
+        self.aki_ml = AkiMaxLikelihood()
         
     def test_aki_maximum_likelihood(self):
         """
         Tests that the computed b value corresponds to the same value
         used to generate the test data set 
         """
-        bval, sigma_b = aki_max_likelihood(self.mval, self.numobs, 
-                                                dmag=self.dmag, m_c=0.0)
+        bval, sigma_b = self.aki_ml._aki_ml(self.mval, self.numobs)
         self.assertAlmostEqual(self.bval, bval, 2)
