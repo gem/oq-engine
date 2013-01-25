@@ -103,7 +103,10 @@ class VulnerabilityFunction(object):
         """
         Clip `imls` to the range associated with the support of the
         vulnerability function and returns the corresponding
-        covariance values by linear interpolation
+        covariance values by linear interpolation. For instance
+        if the range is [0.005, 0.0269] and the imls are
+        [0.0049, 0.006, 0.027], the clipped imls are
+        [0.005,  0.006, 0.0269].
         """
         clipped_up = numpy.min(
             [imls, numpy.ones(len(imls)) * self.max_iml], axis=0)
