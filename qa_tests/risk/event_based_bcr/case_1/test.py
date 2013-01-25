@@ -37,15 +37,15 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
       <gml:Point>
         <gml:pos>-122.0 38.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a1" ratio="69.9962950992"
-           aalOrig="1.34919917016" aalRetr="0.94443941911"/>
+      <bcr assetRef="a1" ratio="77.9106047897"
+           aalOrig="1.50174981661" aalRetr="1.05122487163"/>
     </node>
     <node>
       <gml:Point>
         <gml:pos>-120.0 37.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a2" ratio="52.4972213244"
-           aalOrig="2.02379875523" aalRetr="1.41665912866"/>
+      <bcr assetRef="a2" ratio="54.1889945306"
+           aalOrig="2.08901760725" aalRetr="1.46231232508"/>
       <bcr assetRef="a3" ratio="52.4972213244"
            aalOrig="2.02379875523" aalRetr="1.41665912866"/>
     </node>
@@ -69,7 +69,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 job.hazard_calculation.intensity_measure_types_and_levels),
             calculation_mode="event_based",
             investigation_time=50,
-           ses_per_logic_tree_path=1)
+            ses_per_logic_tree_path=1)
         job.save()
         hc = job.hazard_calculation
 
@@ -77,15 +77,15 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard output", "gmf"),
-                    lt_realization=models.LtRealization.objects.create(
-                        hazard_calculation=job.hazard_calculation,
-                        ordinal=1, seed=1, weight=None,
-                        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                        is_complete=False, total_items=1, completed_items=1),
-                    complete_logic_tree_gmf=False),
-                investigation_time=hc.investigation_time,
-                ses_ordinal=1,
-                complete_logic_tree_gmf=False)
+                lt_realization=models.LtRealization.objects.create(
+                    hazard_calculation=job.hazard_calculation,
+                    ordinal=1, seed=1, weight=None,
+                    sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+                    is_complete=False, total_items=1, completed_items=1),
+                complete_logic_tree_gmf=False),
+            investigation_time=hc.investigation_time,
+            ses_ordinal=1,
+            complete_logic_tree_gmf=False)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
@@ -106,13 +106,13 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         return [(result.average_annual_loss_original,
                  result.average_annual_loss_retrofitted, result.bcr)
-                 for result in models.BCRDistributionData.objects.filter(
-                         bcr_distribution__output__oq_job=job).order_by(
-                             'asset_ref')]
+                for result in models.BCRDistributionData.objects.filter(
+                    bcr_distribution__output__oq_job=job).order_by(
+                        'asset_ref')]
 
     def expected_data(self):
-        return [[1.34919917, 0.94443942, 69.9962951],
-                [2.02379876, 1.41665913, 52.49722132],
+        return [[1.50174982, 1.05122487, 77.91060479],
+                [2.08901761, 1.46231233, 54.18899453],
                 [2.02379876, 1.41665913, 52.49722132]]
 
     def expected_outputs(self):
