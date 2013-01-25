@@ -160,6 +160,7 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     :param float sa_damping:
         Spectral Acceleration damping. Used only with ``imt`` of 'SA'.
     """
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     gmfs = models.Gmf.objects.filter(
         gmf_set__gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
@@ -174,7 +175,9 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
 
     # Save:
     models.HazardCurveData.objects.create(
-        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d)
+        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
+        weight=lt_rlz.weight
+    )
 gmf_to_hazard_curve_task.ignore_result = False
 
 
