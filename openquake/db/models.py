@@ -380,7 +380,7 @@ class Input(djm.Model):
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
-        (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
+        (u'vulnerability_retrofitted', u'Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
@@ -921,7 +921,7 @@ class RiskCalculation(djm.Model):
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
         # (u'scenario', u'Scenario'),
-        # (u'scenario_damage', u'Scenario Damage'),
+        (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
@@ -1330,7 +1330,7 @@ class Output(djm.Model):
         db_table = 'uiapi\".\"output'
 
     def is_ground_motion_field(self):
-        return self.output_type in ['gmf', 'complete_lt_gmf']
+        return self.output_type in ['gmf', 'gmf_scenario', 'complete_lt_gmf']
 
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
@@ -1904,7 +1904,7 @@ class GmfScenario(djm.Model):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`Gmf` objects associated
+    Iterator for walking through all :class:`GmfScenario` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
