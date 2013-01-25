@@ -179,17 +179,6 @@ class ProbabilisticEventBased(object):
             for i, asset in enumerate(assets)]
 
 
-# the aggregation design was discussed in
-# https://mail.google.com/mail/u/0/#search/aggrega/13a9bbf82d91fa0d
-def aggregate_losses(set_of_outputs, result=None):
-    for asset_output in set_of_outputs:
-        if result is None:  # first time
-            result = numpy.copy(asset_output.losses)
-        else:
-            result += asset_output.losses  # mutate the copy
-    return result
-
-
 class InsuredLosses(object):
     """
     Insured losses calculator.
