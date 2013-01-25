@@ -29,14 +29,15 @@ from risklib import api
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical(job_id, assets, hazard_getter, hazard_id, seed,
+def classical(job_id, assets, hazard_getter, hazard_id,
+              vulnerability_function,
               loss_curve_id, loss_map_ids,
               lrem_steps_per_interval, conditional_loss_poes):
     """
     Celery task for the classical risk calculator.
 
-    Gets vulnerability model, instantiates risklib calculators and
-    stores results to db in a single transaction.
+    Instantiates risklib calculators, computes losses for the given
+    assets and stores the results to db in a single transaction.
 
     :param int job_id:
       ID of the currently running job
@@ -47,8 +48,6 @@ def classical(job_id, assets, hazard_getter, hazard_id, seed,
       Strategy used to get the hazard curves
     :param int hazard_id:
       ID of the Hazard Output the risk calculation is based on
-    :param int seed:
-        Seed used to generate random values.
     :param loss_curve_id:
       ID of the :class:`openquake.db.models.LossCurve` output container used
       to store the computed loss curves
@@ -60,30 +59,30 @@ def classical(job_id, assets, hazard_getter, hazard_id, seed,
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     """
-    vulnerability_model = general.fetch_vulnerability_model(job_id)
-
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    # FIXME(lp).
-    # Risklib calculators should get in input the seed
-    calculator = api.Classical(vulnerability_model, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_function, lrem_steps_per_interval)
 
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.ConditionalLosses(
-            conditional_loss_poes, calculator)
+        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
 
-    with transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, calculator):
+    with logs.tracing('getting hazard'):
+        hazard_curves = [hazard_getter(asset.site) for asset in assets]
 
-            general.write_loss_curve(loss_curve_id, asset_output)
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = calculator(assets, hazard_curves)
 
-            if asset_output.conditional_losses:
-                general.write_loss_map(loss_map_ids, asset_output)
+    with logs.tracing('writing results'):
+        with transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_loss_curve(
+                    loss_curve_id, assets[i], asset_output)
+
+                if asset_output.conditional_losses:
+                    general.write_loss_map(
+                        loss_map_ids, assets[i], asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
 classical.ignore_result = False
@@ -99,6 +98,14 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     core_calc_task = classical
 
     hazard_getter = 'HazardCurveGetterPerAsset'
+
+    def worker_args(self, taxonomy):
+        """
+        As we do not need a seed in the classical calculator we just
+        have the vulnerability function as extra arg to the celery
+        task
+        """
+        return [self.vulnerability_functions[taxonomy]]
 
     @property
     def hazard_id(self):
