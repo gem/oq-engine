@@ -69,12 +69,17 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
         interest_rate,
         asset_life_expectancy)
 
-    with transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, calculator):
-            general.write_bcr_distribution(bcr_distribution_id, asset_output)
+    with logs.tracing('getting hazard'):
+        hazard_curves = [hazard_getter(asset.site) for asset in assets]
+
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = calculator(assets, hazard_curves)
+
+    with logs.tracing('writing results'):
+        with transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_bcr_distribution(
+                    bcr_distribution_id, assets[i], asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 classical_bcr.ignore_result = False
 
