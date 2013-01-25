@@ -66,19 +66,23 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     # if we need to compute the loss maps, we add the proper risk
     # aggregator
     if conditional_loss_poes:
-        calculator = api.ConditionalLosses(
-            conditional_loss_poes, calculator)
+        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
 
-    with transaction.commit_on_success(using='reslt_writer'):
-        logs.LOG.debug(
-            'launching compute_on_assets over %d assets' % len(assets))
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, calculator):
+    with logs.tracing('getting hazard'):
+        hazard_curves = [hazard_getter(asset.site) for asset in assets]
 
-            general.write_loss_curve(loss_curve_id, asset_output)
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = calculator(assets, hazard_curves)
 
-            if asset_output.conditional_losses:
-                general.write_loss_map(loss_map_ids, asset_output)
+    with logs.tracing('writing results'):
+        with transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_loss_curve(
+                    loss_curve_id, assets[i], asset_output)
+
+                if asset_output.conditional_losses:
+                    general.write_loss_map(
+                        loss_map_ids, assets[i], asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
 classical.ignore_result = False

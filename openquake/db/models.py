@@ -2429,26 +2429,6 @@ class ExposureData(djm.Model):
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
 
-    def to_risklib(self):
-        """
-        :returns: an instance of `:class:risklib.scientific.Asset`
-        with the stored exposure data
-        """
-
-        if self.reco is not None:
-            retrofitting_cost = self.retrofitting_cost
-        else:
-            retrofitting_cost = self.NO_RETROFITTING_COST
-
-        return risklib.scientific.Asset(
-            asset_ref=self.asset_ref,
-            value=self.value,
-            site=self.site,
-            number_of_units=self.number_of_units,
-            ins_limit=self.ins_limit,
-            deductible=self.deductible,
-            retrofitting_cost=retrofitting_cost)
-
 
 class FragilityModel(djm.Model):
     """A risk fragility model"""
@@ -2465,7 +2445,7 @@ class FragilityModel(djm.Model):
     imls = fields.FloatArrayField(null=True,
                                   help_text="Intensity measure levels")
     imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
-                           help_text="Intensity measure type")
+                        help_text="Intensity measure type")
     iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
     min_iml = djm.FloatField(
         null=True, help_text="Minimum IML value, for continuous models only")
