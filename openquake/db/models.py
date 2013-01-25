@@ -887,20 +887,31 @@ class HazardCalculation(djm.Model):
         The mesh can be calculated given a `region` polygon and
         `region_grid_spacing` (the discretization parameter), or from a list of
         `sites`.
+
+        .. note::
+            This mesh is cached for efficiency when dealing with large numbers
+            of calculation points. If you need to clear the cache and
+            recompute, set `_points_to_compute` to `None` and call this method
+            again.
         """
-        if self.region is not None and self.region_grid_spacing is not None:
-            # assume that the polygon is a single linear ring
-            coords = self.region.coords[0]
-            points = [nhlib_geo.Point(*x) for x in coords]
-            poly = nhlib_geo.Polygon(points)
-            return poly.discretize(self.region_grid_spacing)
-        elif self.sites is not None:
-            lons, lats = zip(*self.sites.coords)
-            return nhlib_geo.Mesh(
-                numpy.array(lons), numpy.array(lats), depths=None)
-        else:
-            # there's no geometry defined
-            return None
+        if self._points_to_compute is None:
+            if (self.region is not None
+                and self.region_grid_spacing is not None):
+                # assume that the polygon is a single linear ring
+                coords = self.region.coords[0]
+                points = [nhlib_geo.Point(*x) for x in coords]
+                poly = nhlib_geo.Polygon(points)
+                # Cache the mesh:
+                self._points_to_compute = poly.discretize(
+                    self.region_grid_spacing
+                )
+            elif self.sites is not None:
+                lons, lats = zip(*self.sites.coords)
+                # Cache the mesh:
+                self._points_to_compute = nhlib_geo.Mesh(
+                    numpy.array(lons), numpy.array(lats), depths=None
+                )
+        return self._points_to_compute
 
 
 class RiskCalculation(djm.Model):
