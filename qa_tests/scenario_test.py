@@ -84,14 +84,6 @@ class ScenarioTestCase(unittest.TestCase):
         self.assertAlmostEqual(186.864456949986,
                                asset_output_a2.standard_deviation)
 
-        aggregate_losses = api.aggregate_losses(
-            [asset_output_a1, asset_output_a2, asset_output_a3])
-        total_losses = (numpy.mean(aggregate_losses),
-                        numpy.std(aggregate_losses, ddof=1))
-
-        self.assertAlmostEqual(246.62, total_losses[1], places=2)
-        self.assertAlmostEqual(1053.09, total_losses[0], places=2)
-
     def test_sample_based(self):
         vulnerability_model = dict(
             RM=vf([0.05, 0.1, 0.2, 0.4, 0.8], [0.05, 0.06, 0.07, 0.08, 0.09]),
@@ -123,13 +115,3 @@ class ScenarioTestCase(unittest.TestCase):
                                delta=0.05 * 510.821363253)
 
         self.assertTrue(asset_output_a2.standard_deviation > 259.964152622)
-
-        aggregate_losses = api.aggregate_losses(
-            [asset_output_a1, asset_output_a2, asset_output_a3])
-        total_losses = (numpy.mean(aggregate_losses),
-                        numpy.std(aggregate_losses))
-
-        self.assertAlmostEqual(
-            1233.26, total_losses[0], delta=0.05 * 1233.26)
-
-        self.assertTrue(total_losses[1] > 443.63)
