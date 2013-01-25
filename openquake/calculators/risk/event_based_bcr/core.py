@@ -64,9 +64,8 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
         Resolution of the computed loss curves (number of points).
     :param int seed:
         Seed used to generate random values.
-    :param int asset_correlation:
-        Type of assets correlation (0 uncorrelated,
-        1 perfectly correlated).
+    :param float asset_correlation:
+        asset correlation (0 uncorrelated, 1 perfectly correlated).
     :param float interest_rate
         The interest rate used in the Cost Benefit Analysis.
     :param float asset_life_expectancy
@@ -78,13 +77,13 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
     calculator = api.ProbabilisticEventBased(
         vulnerability_function, curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
-        seed=seed, correlation_type=asset_correlation)
+        seed=seed, correlation=asset_correlation)
 
     calculator_retrofitted = api.ProbabilisticEventBased(
         vulnerability_function_retrofitted,
         curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
-        seed=seed, correlation_type=asset_correlation)
+        seed=seed, correlation=asset_correlation)
 
     bcr_calculator = api.BCR(calculator, calculator_retrofitted,
                              interest_rate, asset_life_expectancy)
@@ -151,8 +150,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         return [
             models.BCRDistribution.objects.create(
-            output=models.Output.objects.create_output(
-            self.job, "BCR Distribution", "bcr_distribution")).pk
+                output=models.Output.objects.create_output(
+                    self.job, "BCR Distribution", "bcr_distribution")).pk
         ]
 
     def set_risk_models(self):

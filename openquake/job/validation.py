@@ -891,6 +891,9 @@ def loss_curve_resolution_is_valid(mdl):
 def asset_correlation_is_valid(_mdl):
     # The validation form should check if it is in the list
     # We don't need to check anything here.
+    if _mdl.asset_correlation is not None:
+        if not (_mdl.asset_correlation >= 0 and _mdl.asset_correlation <= 1):
+            return False, ['Asset Correlation must be >= 0 and <= 1']
     return True, []
 
 
