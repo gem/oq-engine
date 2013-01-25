@@ -2287,6 +2287,18 @@ class ExposureModel(djm.Model):
             self.id, region_constraint)
 
     def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
+        """
+        :returns: a list of `openquake.db.models.ExposureData` objects
+        of a given taxonomy contained in a region and paginated
+
+        :param str taxonomy: the taxonomy of the returned objects
+
+        :param Polygon region_constraint: a Polygon object with a wkt
+        property used to filter the exposure
+
+        :param int offset: An offset used to paginate the returned set
+        :param int count: An offset used to paginate the returned set
+        """
         return ExposureData.objects.contained_in(
             self.id, taxonomy, region_constraint, offset, count)
 
