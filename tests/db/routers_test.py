@@ -132,7 +132,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-            oq.GmfData]
+                   oq.GmfData]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -143,7 +143,7 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-            oq.GmfData]
+                   oq.GmfData]
 
         expected_db = 'reslt_writer'
 
@@ -155,8 +155,8 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [oq.LossMap, oq.LossMapData, oq.LossCurve, oq.LossCurveData,
-            oq.AggregateLossCurveData, oq.CollapseMap, oq.CollapseMapData,
-            oq.BCRDistribution, oq.BCRDistributionData]
+                   oq.AggregateLossCurveData, oq.BCRDistribution,
+                   oq.BCRDistributionData]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -167,8 +167,8 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [oq.LossMap, oq.LossMapData, oq.LossCurve, oq.LossCurveData,
-            oq.AggregateLossCurveData, oq.CollapseMap, oq.CollapseMapData,
-            oq.BCRDistribution, oq.BCRDistributionData]
+                   oq.AggregateLossCurveData, oq.BCRDistribution,
+                   oq.BCRDistributionData]
         expected_db = 'reslt_writer'
 
         self._db_for_write_helper(classes, expected_db)
