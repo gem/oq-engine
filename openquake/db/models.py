@@ -2210,6 +2210,8 @@ class DmgState(djm.Model):
     # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
     dmg_state = djm.TextField()
+    lsi = djm.PositiveSmallIntegerField(
+        help_text="limit state index, to order the limit states")
 
     class Meta:
         db_table = 'riskr\".\"dmg_state'

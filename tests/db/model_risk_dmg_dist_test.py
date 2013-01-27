@@ -88,9 +88,9 @@ class DamageStateTestCase(DjangoTestCase):
         cls.ddt_output.save()
 
         for output in (cls.ddpa_output, cls.ddpt_output, cls.ddt_output):
-            for dmg_state in cls.DMG_STATES:
+            for lsi, dmg_state in enumerate(cls.DMG_STATES):
                 dstate = models.DmgState(
-                    output=output, dmg_state=dmg_state)
+                    output=output, dmg_state=dmg_state, lsi=lsi)
                 dstate.save()
 
     def _test_insert_update_invalid(self, mdl, table):
