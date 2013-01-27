@@ -1482,7 +1482,9 @@ CREATE TABLE riskr.dmg_state (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
     dmg_state VARCHAR NOT NULL,
-    UNIQUE (output_id, dmg_state));
+    lsi SMALLINT NOT NULL CHECK(lsi >= 0),
+    UNIQUE (output_id, dmg_state),
+    UNIQUE (output_id, lsi));
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
