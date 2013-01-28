@@ -18,7 +18,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
 
-from openquake import shapes
+from shapely.geometry import Point
 from openquake.db import models
 
 from tests.utils import helpers
@@ -30,7 +30,7 @@ class DamageStateTestCase(DjangoTestCase):
 
     DMG_STATES = ['no_damage', 'slight', 'moderate', 'extensive', 'complete']
 
-    GRID_CELL_SITE = shapes.Site(3.11, 2.14)
+    GRID_CELL_SITE = Point(3.11, 2.14)
 
     @classmethod
     def setUpClass(cls):
@@ -58,12 +58,12 @@ class DamageStateTestCase(DjangoTestCase):
             category='economic loss', stco_type='per_asset', stco_unit='CHF')
         exp_model.save()
 
-        test_site = shapes.Site(3.14, 2.17)
+        test_site = Point(3.14, 2.17)
         cls.exp_data = models.ExposureData(
             # Asset
             exposure_model=exp_model, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=37,
-            site=test_site.point.to_wkt(), stco=1234.56)
+            site=test_site.to_wkt(), stco=1234.56)
         cls.exp_data.save()
 
         # dmg dist per asset
@@ -112,20 +112,20 @@ class DamageStateTestCase(DjangoTestCase):
             dd = models.DmgDistPerAsset(
                 exposure_data=self.exp_data,
                 dmg_state=ds, mean=0.0, stddev=0.0,
-                location=self.GRID_CELL_SITE.point.to_wkt())
+                location=self.GRID_CELL_SITE.to_wkt())
             dd.save()
 
     def test_ddpa_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
-            mean=0.0, stddev=0.0, location=self.GRID_CELL_SITE.point.to_wkt())
+            mean=0.0, stddev=0.0, location=self.GRID_CELL_SITE.to_wkt())
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 
     def test_ddpa_update_valid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
             dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.point.to_wkt())
+            location=self.GRID_CELL_SITE.to_wkt())
         dd.save()
         dd.dmg_state = self.dmg_states['moderate']
         dd.save()
@@ -134,7 +134,7 @@ class DamageStateTestCase(DjangoTestCase):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
             dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.point.to_wkt())
+            location=self.GRID_CELL_SITE.to_wkt())
         dd.save()
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 
