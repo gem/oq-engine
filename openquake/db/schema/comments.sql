@@ -171,42 +171,6 @@ COMMENT ON COLUMN oqmif.occupancy.exposure_data_id IS 'Foreign key to the exposu
 COMMENT ON COLUMN oqmif.occupancy.description IS 'describes the occupancy data e.g. day, night etc.';
 COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
-
--- riski schema tables ------------------------------------------
-COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
-COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';
-COMMENT ON COLUMN riski.ffc.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
-COMMENT ON COLUMN riski.ffc.ls IS 'The limit state for the function at hand';
-COMMENT ON COLUMN riski.ffc.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
-COMMENT ON COLUMN riski.ffc.ftype IS 'Optional function/distribution type e.g. lognormal';
-COMMENT ON COLUMN riski.ffc.mean IS 'Mean value';
-COMMENT ON COLUMN riski.ffc.stddev IS 'Standard deviation';
-COMMENT ON COLUMN riski.ffc.last_update IS 'Date/time of the last change of the model at hand';
-
-
-COMMENT ON TABLE riski.ffd IS 'A discrete fragility function';
-COMMENT ON COLUMN riski.ffd.fragility_model_id IS 'A reference to the fragility model this function belongs to';
-COMMENT ON COLUMN riski.ffd.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
-COMMENT ON COLUMN riski.ffd.ls IS 'The limit state for the function at hand';
-COMMENT ON COLUMN riski.ffd.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
-COMMENT ON COLUMN riski.ffd.poes IS 'Probabilities of exceedence, one per riski.fragility_model.imls';
-COMMENT ON COLUMN riski.ffd.last_update IS 'Date/time of the last change of the model at hand';
-
-
-COMMENT ON TABLE riski.fragility_model IS 'A risk fragility model';
-COMMENT ON COLUMN riski.fragility_model.format IS 'One of "discrete", "continuous"';
-COMMENT ON COLUMN riski.fragility_model.lss IS 'A list of limit states';
-COMMENT ON COLUMN riski.fragility_model.imls IS 'List of intensity measure levels, mandatory for discrete fragility models';
-COMMENT ON COLUMN riski.fragility_model.iml_unit IS 'Optional: unit of measurement for the intensity measure levels.';
-COMMENT ON COLUMN riski.fragility_model.imt IS 'An optional intensity measure type, only applicable to discrete fragility models';
-COMMENT ON COLUMN riski.fragility_model.description IS 'An optional description of the risk fragility model at hand';
-COMMENT ON COLUMN riski.fragility_model.input_id IS 'The foreign key to the associated input model file';
-COMMENT ON COLUMN riski.fragility_model.last_update IS 'Date/time of the last change of the model at hand';
-COMMENT ON COLUMN riski.fragility_model.max_iml IS 'Optional: maximum intensity measure level, only allowed for continuous models.';
-COMMENT ON COLUMN riski.fragility_model.min_iml IS 'Optional: minimum intensity measure level, only allowed for continuous models.';
-
-
-
 -- riskr schema tables ------------------------------------------
 COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
 COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
@@ -240,16 +204,6 @@ COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign 
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
 
-COMMENT ON TABLE riskr.collapse_map IS 'Holds metadata for the collapse map';
-COMMENT ON COLUMN riskr.collapse_map.output_id IS 'The foreign key to the output record that represents the corresponding collapse map.';
-COMMENT ON COLUMN riskr.collapse_map.exposure_model_id IS 'The foreign key to the exposure model for this collapse map.';
-
-COMMENT ON TABLE riskr.collapse_map_data IS 'Holds the actual data for the collapse map';
-COMMENT ON COLUMN riskr.collapse_map_data.collapse_map_id IS 'The foreign key to the map record to which the collapse map data belongs';
-COMMENT ON COLUMN riskr.collapse_map_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN riskr.collapse_map_data.value IS 'The collapse amount';
-COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of the collapse amount';
-
 COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
 COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
 
@@ -260,7 +214,9 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'T
 COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
-COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+COMMENT ON COLUMN riskr.dmg_dist_per_asset.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+
+COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
