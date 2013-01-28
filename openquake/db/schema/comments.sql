@@ -206,22 +206,6 @@ COMMENT ON COLUMN riski.fragility_model.max_iml IS 'Optional: maximum intensity 
 COMMENT ON COLUMN riski.fragility_model.min_iml IS 'Optional: minimum intensity measure level, only allowed for continuous models.';
 
 
-COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
-COMMENT ON COLUMN riski.vulnerability_function.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
-COMMENT ON COLUMN riski.vulnerability_function.taxonomy IS 'The taxonomy, unique within the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_function.loss_ratios IS 'Loss ratio values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_function.covs IS 'Coefficient of variation values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_function.last_update IS 'Date/time of the last change of the data at hand';
-
-
-COMMENT ON TABLE riski.vulnerability_model IS 'A risk vulnerability model';
-COMMENT ON COLUMN riski.vulnerability_model.loss_category IS 'The risk category modelled';
-COMMENT ON COLUMN riski.vulnerability_model.asset_category IS 'The asset category of the vulnerability function set';
-COMMENT ON COLUMN riski.vulnerability_model.description IS 'An optional description of the risk vulnerability model at hand';
-COMMENT ON COLUMN riski.vulnerability_model.input_id IS 'The foreign key to the associated input model file';
-COMMENT ON COLUMN riski.vulnerability_model.last_update IS 'Date/time of the last change of the model at hand';
-
-
 
 -- riskr schema tables ------------------------------------------
 COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
