@@ -49,12 +49,15 @@ AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
 GMF_REALIZATIONS = int(config.get('hazard', 'concurrent_tasks'))
 
+
 def realizations_per_task(num_realizations, num_concur_task):
-    ntimes_concur_task, spare_realizations = divmod(num_realizations, num_concur_task)
+    ntimes_concur_task, spare_realizations = divmod(
+                                  num_realizations, num_concur_task)
     result = [ntimes_concur_task for _ in xrange(num_concur_task)]
     if spare_realizations:
         result.append(spare_realizations)
     return spare_realizations > 0, result
+
 
 @utils.tasks.oqtask
 @utils.stats.count_progress('h')
@@ -64,7 +67,8 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
     See :func:`compute_gmfs` for parameter definitions.
 
     :param task_seed:
-        Value for seeding numpy/scipy in the computation of ground motion fields.
+        Value for seeding numpy/scipy in the computation of
+        ground motion fields.
     """
 
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
@@ -111,7 +115,7 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         correlation_model=None)
 
     save_gmf(output_id, gmf, sites.mesh, task_no)
-    
+
 
 @transaction.commit_on_success(using='reslt_writer')
 def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
@@ -235,8 +239,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         spare_realizations, realizations = realizations_per_task(
                 self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
-        
-        num_tasks = (num_concurrent_tasks + 1) if spare_realizations else num_concurrent_tasks
+
+        num_tasks = (num_concurrent_tasks + 1 if spare_realizations
+                    else num_concurrent_tasks)
 
         for task_no in range(num_tasks):
             task_seed = rnd.randint(0, MAX_SINT_32)

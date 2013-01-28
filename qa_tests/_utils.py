@@ -84,7 +84,4 @@ def get_medians(output, imt):
     Compute the median of ground motion fields on a per site basis.
     """
     for gmf in models.get_gmfs_scenario(output, imt):
-        a = [gmfnode.iml for gmfnode in gmf]
-        print a
-        print output
-        yield median(a)  # don't use a genexp
+        yield median([gmfnode.iml for gmfnode in gmf])  # don't use a genexp
