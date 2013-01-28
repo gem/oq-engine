@@ -232,11 +232,16 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         models.AggregateLossCurveData.objects.create(
             loss_curve=aggregate_loss_curve)
 
-        insured_curve_id = (
-            models.LossCurve.objects.create(
-                insured=True,
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "Insured Loss Curve Set",
-                    "ins_loss_curve")).id)
+        if self.rc.insured_losses:
+            insured_curve_id = (
+                models.LossCurve.objects.create(
+                    insured=True,
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Insured Loss Curve Set",
+                        "ins_loss_curve")
+                ).id)
+        else:
+            insured_curve_id = None
+
         return outputs + [insured_curve_id, aggregate_loss_curve.id]
