@@ -25,7 +25,7 @@ from tests.utils import helpers
 from openquake.db import models
 
 
-class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
+class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
@@ -67,7 +67,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 job.hazard_calculation.intensity_measure_types_and_levels),
             calculation_mode="event_based",
             investigation_time=50,
-           ses_per_logic_tree_path=1)
+            ses_per_logic_tree_path=1)
         job.save()
         hc = job.hazard_calculation
 
@@ -75,15 +75,15 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard output", "gmf"),
-                    lt_realization=models.LtRealization.objects.create(
-                        hazard_calculation=job.hazard_calculation,
-                        ordinal=1, seed=1, weight=None,
-                        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                        is_complete=False, total_items=1, completed_items=1),
-                    complete_logic_tree_gmf=False),
-                investigation_time=hc.investigation_time,
-                ses_ordinal=1,
-                complete_logic_tree_gmf=False)
+                lt_realization=models.LtRealization.objects.create(
+                    hazard_calculation=job.hazard_calculation,
+                    ordinal=1, seed=1, weight=None,
+                    sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+                    is_complete=False, total_items=1, completed_items=1),
+                complete_logic_tree_gmf=False),
+            investigation_time=hc.investigation_time,
+            ses_ordinal=1,
+            complete_logic_tree_gmf=False)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
@@ -103,38 +103,38 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def actual_data(self, job):
         return ([curve.poes
-                 for curve in models.LossCurveData.objects.filter(
-                         loss_curve__output__oq_job=job,
-                         loss_curve__aggregate=False,
-                         loss_curve__insured=False).order_by('asset_ref')] +
+                for curve in models.LossCurveData.objects.filter(
+                    loss_curve__output__oq_job=job,
+                    loss_curve__aggregate=False,
+                    loss_curve__insured=False).order_by('asset_ref')] +
                 [curve.losses
-                 for curve in models.LossCurveData.objects.filter(
-                         loss_curve__output__oq_job=job,
-                         loss_curve__aggregate=False,
-                         loss_curve__insured=False).order_by('asset_ref')] +
+                for curve in models.LossCurveData.objects.filter(
+                    loss_curve__output__oq_job=job,
+                    loss_curve__aggregate=False,
+                    loss_curve__insured=False).order_by('asset_ref')] +
                 [curve.losses
-                 for curve in models.LossCurveData.objects.filter(
-                         loss_curve__output__oq_job=job,
-                         loss_curve__aggregate=False,
-                         loss_curve__insured=True).order_by('asset_ref')] +
+                for curve in models.LossCurveData.objects.filter(
+                    loss_curve__output__oq_job=job,
+                    loss_curve__aggregate=False,
+                    loss_curve__insured=True).order_by('asset_ref')] +
                 [curve.losses
-                 for curve in models.AggregateLossCurveData.objects.filter(
-                         loss_curve__output__oq_job=job,
-                         loss_curve__aggregate=True,
-                         loss_curve__insured=False)] +
+                for curve in models.AggregateLossCurveData.objects.filter(
+                    loss_curve__output__oq_job=job,
+                    loss_curve__aggregate=True,
+                    loss_curve__insured=False)] +
                 [[point.value
-                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job).order_by(
-                            'asset_ref', 'loss_map__poe')]])
+                for point in models.LossMapData.objects.filter(
+                    loss_map__output__oq_job=job).order_by(
+                        'asset_ref', 'loss_map__poe')]])
 
     def expected_data(self):
         poes = [0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
-             0.1633, 0.1837, 0.2041, 0.2245, 0.2449, 0.2653, 0.2857,
-             0.3061, 0.3265, 0.3469, 0.3673, 0.3878, 0.4082, 0.4286,
-             0.449, 0.4694, 0.4898, 0.5102, 0.5306, 0.551, 0.5714,
-             0.5918, 0.6122, 0.6327, 0.6531, 0.6735, 0.6939, 0.7143,
-             0.7347, 0.7551, 0.7755, 0.7959, 0.8163, 0.8367, 0.8571,
-             0.8776, 0.898, 0.9184, 0.9388, 0.9592, 0.9796, 1][::-1]
+                0.1633, 0.1837, 0.2041, 0.2245, 0.2449, 0.2653, 0.2857,
+                0.3061, 0.3265, 0.3469, 0.3673, 0.3878, 0.4082, 0.4286,
+                0.449, 0.4694, 0.4898, 0.5102, 0.5306, 0.551, 0.5714,
+                0.5918, 0.6122, 0.6327, 0.6531, 0.6735, 0.6939, 0.7143,
+                0.7347, 0.7551, 0.7755, 0.7959, 0.8163, 0.8367, 0.8571,
+                0.8776, 0.898, 0.9184, 0.9388, 0.9592, 0.9796, 1][::-1]
 
         losses_1 = [264.2259, 260.5148, 256.8037, 253.0926, 249.3815,
                     245.6704, 241.9593, 238.2482, 234.5371, 230.8261,
@@ -170,46 +170,82 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     26.0726, 11.3905][::-1]
 
         insured_losses_1 = [34.2337411055, 64.7589890606,
-        68.2290881107, 72.2352916074, 76.6619792681, 81.0886669289,
-        85.5153545896, 90.2825736863, 95.6331846178, 100.983795549,
-        106.334406481, 111.685017412, 117.035628344, 122.386239275,
-        127.736850207, 133.087461138, 138.43807207, 143.788683001,
-        149.139293933, 152.893163398, 156.604253472, 160.315343546,
-        164.026433621, 167.737523695, 171.44861377, 175.159703844,
-        178.870793918, 182.581883993, 186.292974067, 190.004064141,
-        193.715154216, 197.42624429, 201.137334364, 204.848424439,
-        208.559514513, 212.270604587, 215.981694662, 219.692784736,
-        223.40387481, 227.114964885, 230.826054959, 234.537145033,
-        238.248235108, 241.959325182, 245.670415256, 249.381505331,
-        253.092595405, 256.803685479, 260.514775554, 264.225865628]
+                            68.2290881107, 72.2352916074,
+                            76.6619792681, 81.0886669289,
+                            85.5153545896, 90.2825736863,
+                            95.6331846178, 100.983795549,
+                            106.334406481, 111.685017412,
+                            117.035628344, 122.386239275,
+                            127.736850207, 133.087461138,
+                            138.43807207, 143.788683001,
+                            149.139293933, 152.893163398,
+                            156.604253472, 160.315343546,
+                            164.026433621, 167.737523695,
+                            171.44861377, 175.159703844,
+                            178.870793918, 182.581883993,
+                            186.292974067, 190.004064141,
+                            193.715154216, 197.42624429,
+                            201.137334364, 204.848424439,
+                            208.559514513, 212.270604587,
+                            215.981694662, 219.692784736,
+                            223.40387481, 227.114964885,
+                            230.826054959, 234.537145033,
+                            238.248235108, 241.959325182,
+                            245.670415256, 249.381505331,
+                            253.092595405, 256.803685479,
+                            260.514775554, 264.225865628]
 
         insured_losses_2 = [8.80769990955, 25.0364570155,
-        27.0633066618, 28.2335176244, 28.7318389897, 29.230160355,
-        29.7284817202, 30.067432699, 30.1333534304, 30.1992741618,
-        30.2651948932, 30.3311156246, 30.3970363561, 30.4629570875,
-        30.5288778189, 30.5947985503, 30.6607192817, 30.7266400131,
-        30.7925607445, 30.8020310414, 30.8099889362, 30.8179468309,
-        30.8259047257, 30.8338626205, 30.8418205152, 30.84977841,
-        30.8577363048, 30.8656941995, 30.8736520943, 30.8816099891,
-        30.8895678838, 30.8975257786, 30.9054836734, 30.9134415681,
-        30.9213994629, 30.9293573577, 30.9373152524, 30.9452731472,
-        30.953231042, 30.9611889368, 30.9691468315, 30.9771047263,
-        30.9850626211, 30.9930205158, 31.0009784106, 31.0089363054,
-        31.0168942001, 31.0248520949, 31.0328099897, 31.0407678844]
+                            27.0633066618, 28.2335176244,
+                            28.7318389897, 29.230160355,
+                            29.7284817202, 30.067432699,
+                            30.1333534304, 30.1992741618,
+                            30.2651948932, 30.3311156246,
+                            30.3970363561, 30.4629570875,
+                            30.5288778189, 30.5947985503,
+                            30.6607192817, 30.7266400131,
+                            30.7925607445, 30.8020310414,
+                            30.8099889362, 30.8179468309,
+                            30.8259047257, 30.8338626205,
+                            30.8418205152, 30.84977841, 30.8577363048,
+                            30.8656941995, 30.8736520943,
+                            30.8816099891, 30.8895678838,
+                            30.8975257786, 30.9054836734,
+                            30.9134415681, 30.9213994629,
+                            30.9293573577, 30.9373152524,
+                            30.9452731472, 30.953231042,
+                            30.9611889368, 30.9691468315,
+                            30.9771047263, 30.9850626211,
+                            30.9930205158, 31.0009784106,
+                            31.0089363054, 31.0168942001,
+                            31.0248520949, 31.0328099897,
+                            31.0407678844]
 
         insured_losses_3 = [11.3905266834, 26.0726465488,
-        29.8488432921, 31.9478330478, 32.7313347813, 33.5148365149,
-        34.2983382484, 35.0629261139, 35.7951111086, 36.5272961033,
-        37.259481098, 37.9916660927, 38.7238510873, 39.456036082,
-        40.1882210767, 40.9204060714, 41.6525910661, 42.3847760608,
-        43.1169610555, 43.3396865246, 43.5487627158, 43.757838907,
-        43.9669150982, 44.1759912895, 44.3850674807, 44.5941436719,
-        44.8032198631, 45.0122960544, 45.2213722456, 45.4304484368,
-        45.639524628, 45.8486008193, 46.0576770105, 46.2667532017,
-        46.4758293929, 46.6849055842, 46.8939817754, 47.1030579666,
-        47.3121341578, 47.5212103491, 47.7302865403, 47.9393627315,
-        48.1484389227, 48.357515114, 48.5665913052, 48.7756674964,
-        48.9847436876, 49.1938198789, 49.4028960701, 49.6119722613]
+                            29.8488432921, 31.9478330478,
+                            32.7313347813, 33.5148365149,
+                            34.2983382484, 35.0629261139,
+                            35.7951111086, 36.5272961033,
+                            37.259481098, 37.9916660927,
+                            38.7238510873, 39.456036082,
+                            40.1882210767, 40.9204060714,
+                            41.6525910661, 42.3847760608,
+                            43.1169610555, 43.3396865246,
+                            43.5487627158, 43.757838907,
+                            43.9669150982, 44.1759912895,
+                            44.3850674807, 44.5941436719,
+                            44.8032198631, 45.0122960544,
+                            45.2213722456, 45.4304484368,
+                            45.639524628, 45.8486008193,
+                            46.0576770105, 46.2667532017,
+                            46.4758293929, 46.6849055842,
+                            46.8939817754, 47.1030579666,
+                            47.3121341578, 47.5212103491,
+                            47.7302865403, 47.9393627315,
+                            48.1484389227, 48.357515114,
+                            48.5665913052, 48.7756674964,
+                            48.9847436876, 49.1938198789,
+                            49.4028960701, 49.6119722613]
 
         expected_aggregate_losses = [330.0596974, 326.5857542, 323.111811,
                                      319.6378677, 316.1639245, 312.6899813,
@@ -235,8 +271,8 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             insured_losses_1, insured_losses_2, insured_losses_3,
             expected_aggregate_losses,
             [246.04152426, 227.8571829, 209.67284154, 31.0017742,
-              30.96278052, 30.92378683, 48.58749892, 47.56302559,
-              46.53855225]]
+             30.96278052, 30.92378683, 48.58749892, 47.56302559,
+             46.53855225]]
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,

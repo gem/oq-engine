@@ -207,10 +207,14 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         time_span, tses = self.hazard_times()
 
+        if self.rc.asset_correlation is None:
+            correlation = 0
+        else:
+            correlation = self.rc.asset_correlation
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
-                self.rc.loss_curve_resolution, self.rc.asset_correlation]
+                self.rc.loss_curve_resolution, correlation]
 
     def create_outputs(self):
         """

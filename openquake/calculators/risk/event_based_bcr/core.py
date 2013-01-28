@@ -127,11 +127,10 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         passed in task_arg_gen.
         """
 
-        time_span, tses = self.hazard_times()
+        super_params = super(EventBasedBCRRiskCalculator,
+                             self).calculator_parameters
 
-        return [
-            self.imt, time_span, tses, self.rc.loss_curve_resolution,
-            self.rc.asset_correlation,
+        return super_params[2:] + [
             self.rc.asset_life_expectancy, self.rc.interest_rate
         ]
 
