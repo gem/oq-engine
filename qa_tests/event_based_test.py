@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -19,6 +19,8 @@ import os
 import collections
 import unittest
 import numpy
+import random
+import itertools
 
 from risklib import api
 from risklib import scientific
@@ -110,18 +112,19 @@ il = TestData(  # insured loss test data
     ],
 
     expected_poes=[
-        [1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842, 0.684211,
-            0.631579, 0.578947, 0.526316, 0.473684, 0.421053, 0.368421,
-            0.315789, 0.263158, 0.210526, 0.157895, 0.105263, 0.052632, 0.],
-        [1., 0.98063792, 0.96127585, 0.94191377, 0.9225517,
-            0.90318962, 0.88382754, 0.86446547, 0.84510339, 0.82574132,
-            0.80637924, 0.78701717, 0.76765509, 0.74829301, 0.72893094,
-            0.70956886, 0.69020679, 0.67084471, 0.65148263, 0.63212056],
-        [1., 0.947368, 0.894737, 0.842105, 0.789474, 0.736842,
-            0.684211, 0.631579, 0.578947, 0.526316, 0.473684, 0.421053,
-            0.368421, 0.315789, 0.263158, 0.210526, 0.157895, 0.105263,
-            0.052632, 0.],
-    ],
+        [1., 0.94736842, 0.89473684, 0.84210526,
+         0.78947368, 0.7368421, 0.68421052, 0.63157895, 0.57894737, 0.52631579,
+         0.47368421, 0.42105263, 0.36842105, 0.31578947, 0.26315789,
+         0.21052632, 0.15789474, 0.10526316, 0.05263158, 0.],
+        [1., 0.98063792,
+         0.96127585, 0.94191377, 0.9225517, 0.90318962, 0.88382754,
+         0.86446547, 0.84510339, 0.82574132, 0.80637924, 0.78701717,
+         0.76765509, 0.74829301, 0.72893094, 0.70956886, 0.69020679,
+         0.67084471, 0.65148263, 0.63212056],
+        [1., 0.947368, 0.894737,
+         0.842105, 0.789474, 0.736842, 0.684211, 0.631579, 0.578947,
+         0.526316, 0.473684, 0.421053, 0.368421, 0.315789, 0.263158,
+         0.210526, 0.157895, 0.105263, 0.052632, 0.], ],
 
     expected_losses=numpy.array([
         [40.5835007, 70.37142354, 81.78761801, 94.22512956,
@@ -147,9 +150,53 @@ il = TestData(  # insured loss test data
 
 class EventBasedTestCase(unittest.TestCase):
 
-    def assert_allclose(self, expected, actual):
-        return numpy.testing.assert_allclose(
-            expected, actual, atol=0.0, rtol=0.05)
+    def test_mean_based_with_no_correlation(self):
+        # This is a regression test. Data has not been checked
+        vf = (
+            scientific.VulnerabilityFunction(
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
+        calc = api.ProbabilisticEventBased(
+            vf, 30, 120, seed=1, correlation=0, curve_resolution=4)
+
+        outputs = calc([scientific.Asset(1000), scientific.Asset(2000)],
+                       [[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+
+        numpy.testing.assert_allclose(
+            [0.80732874, 0.82524302, 0.8401855, 0.84260182],
+            outputs[0].loss_ratio_curve.abscissae)
+
+    def test_mean_based_with_partial_correlation(self):
+        # This is a regression test. Data has not been checked
+        vf = (
+            scientific.VulnerabilityFunction(
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
+        calc = api.ProbabilisticEventBased(
+            vf, 30, 120, seed=1, correlation=0.5, curve_resolution=4)
+
+        outputs = calc([scientific.Asset(1000), scientific.Asset(2000)],
+                       [[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+
+        numpy.testing.assert_allclose(
+            [0.77366888, 0.79923542, 0.81229682, 0.82383648],
+            outputs[0].loss_ratio_curve.abscissae)
+
+    def test_mean_based_with_perfect_correlation(self):
+        # This is a regression test. Data has not been checked
+        vf = (
+            scientific.VulnerabilityFunction(
+                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
+                [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
+        calc = api.ProbabilisticEventBased(
+            vf, 30, 120, seed=1, correlation=1, curve_resolution=4)
+
+        outputs = calc([scientific.Asset(1000), scientific.Asset(2000)],
+                       [[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+
+        numpy.testing.assert_allclose(
+            [0.76161603, 0.78226872, 0.79620137, 0.81240868],
+            outputs[0].loss_ratio_curve.abscissae)
 
     def test_mean_based(self):
         vulnerability_function_rm = (
@@ -181,16 +228,19 @@ class EventBasedTestCase(unittest.TestCase):
                 asset_output.conditional_losses[CONDITIONAL_LOSS_POES],
                 delta=0.05 * mb.expected_loss_map[i])
 
-            self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_ratio_curve.ordinates)
+            numpy.testing.assert_allclose(
+                mb.expected_poes, asset_output.loss_ratio_curve.ordinates,
+                rtol=10E-4)
 
-            self.assert_allclose(mb.expected_poes,
-                                 asset_output.loss_curve.ordinates)
+            numpy.testing.assert_allclose(
+                mb.expected_poes, asset_output.loss_curve.ordinates,
+                rtol=10E-4)
 
-            self.assert_allclose(mb.expected_losses[i],
-                                 asset_output.loss_curve.abscissae)
+            numpy.testing.assert_allclose(
+                mb.expected_losses[i], asset_output.loss_curve.abscissae,
+                rtol=10E-4)
 
-        self.assert_allclose(
+        numpy.testing.assert_allclose(
             mb.expected_losses[2] / mb.input_models_asset[2].value,
             asset_output_rc.loss_ratio_curve.abscissae)
 
@@ -199,18 +249,22 @@ class EventBasedTestCase(unittest.TestCase):
             asset_output_rc.conditional_losses[CONDITIONAL_LOSS_POES],
             delta=0.05 * mb.expected_loss_map[2])
 
-        self.assert_allclose(mb.expected_poes,
-                             asset_output_rc.loss_ratio_curve.ordinates)
+        numpy.testing.assert_allclose(
+            mb.expected_poes, asset_output_rc.loss_ratio_curve.ordinates,
+            rtol=10E-4)
 
-        self.assert_allclose(mb.expected_poes,
-                             asset_output_rc.loss_curve.ordinates)
+        numpy.testing.assert_allclose(
+            mb.expected_poes, asset_output_rc.loss_curve.ordinates,
+            rtol=10E-4)
 
-        self.assert_allclose(mb.expected_losses[2],
-                             asset_output_rc.loss_curve.abscissae)
+        numpy.testing.assert_allclose(
+            mb.expected_losses[2], asset_output_rc.loss_curve.abscissae,
+            rtol=10E-5)
 
-        self.assert_allclose(
+        numpy.testing.assert_allclose(
             mb.expected_losses[2] / mb.input_models_asset[2].value,
-            asset_output_rc.loss_ratio_curve.abscissae)
+            asset_output_rc.loss_ratio_curve.abscissae,
+            rtol=10E-5)
 
     def test_insured_loss_mean_based(self):
         vulnerability_function_rm = (
@@ -235,10 +289,12 @@ class EventBasedTestCase(unittest.TestCase):
         asset_output_rc = calculator_rc([il.input_models_asset[2]], [gmf[2]])
 
         for i, asset_output in enumerate(asset_output_rm + asset_output_rc):
-            self.assert_allclose(
+            numpy.testing.assert_allclose(
                 il.expected_poes[i],
-                asset_output.insured_losses.ordinates)
+                asset_output.insured_losses.ordinates,
+                rtol=10E-5)
 
-            self.assert_allclose(
+            numpy.testing.assert_allclose(
                 il.expected_losses[i],
-                asset_output.insured_losses.abscissae)
+                asset_output.insured_losses.abscissae,
+                rtol=10E-5)
