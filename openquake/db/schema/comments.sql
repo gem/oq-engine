@@ -204,16 +204,6 @@ COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign 
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
 
-COMMENT ON TABLE riskr.collapse_map IS 'Holds metadata for the collapse map';
-COMMENT ON COLUMN riskr.collapse_map.output_id IS 'The foreign key to the output record that represents the corresponding collapse map.';
-COMMENT ON COLUMN riskr.collapse_map.exposure_model_id IS 'The foreign key to the exposure model for this collapse map.';
-
-COMMENT ON TABLE riskr.collapse_map_data IS 'Holds the actual data for the collapse map';
-COMMENT ON COLUMN riskr.collapse_map_data.collapse_map_id IS 'The foreign key to the map record to which the collapse map data belongs';
-COMMENT ON COLUMN riskr.collapse_map_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN riskr.collapse_map_data.value IS 'The collapse amount';
-COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of the collapse amount';
-
 COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
 COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
 
@@ -224,7 +214,9 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'T
 COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
-COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+COMMENT ON COLUMN riskr.dmg_dist_per_asset.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+
+COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';

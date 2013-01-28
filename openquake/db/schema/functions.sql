@@ -175,103 +175,6 @@ $$ LANGUAGE plpythonu;
 COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
--- Damage Distribution, Per Asset
-CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
-    RETURNS TRIGGER
-AS $$
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    # make sure that NEW.dmg_state is in dmg_dist_per_asset.dmg_states
-    NEW = TD["new"]
-
-    ps = plpy.prepare(
-        "SELECT dmg_states FROM riskr.dmg_dist_per_asset WHERE id=$1",
-        ["integer"])
-    [ddps] = plpy.execute(ps, [NEW["dmg_dist_per_asset_id"]])
-
-    if not NEW["dmg_state"] in ddps["dmg_states"]:
-        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
-                            % (NEW["dmg_state"], ddps["dmg_states"])))
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data() IS
-'Make sure that each inserted or modified riskr.dmg_dist_per_asset_data record
- has a valid dmg_state.';
-
-
-CREATE TRIGGER riskr_dmg_dist_per_asset_data_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_asset_data
-FOR EACH ROW EXECUTE PROCEDURE
-riskr.pcheck_dmg_state_dmg_dist_per_asset_data();
--- End Damage Distribution, Per Asset
-
--- Damage Distribution, Per Taxonomy
-CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data()
-    RETURNS TRIGGER
-AS $$
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    # make sure that NEW.dmg_state is in dmg_dist_per_taxonomy.dmg_states
-    NEW = TD["new"]
-
-    ps = plpy.prepare(
-        "SELECT dmg_states FROM riskr.dmg_dist_per_taxonomy WHERE id=$1",
-        ["integer"])
-
-    [ddpt] = plpy.execute(ps, [NEW["dmg_dist_per_taxonomy_id"]])
-
-    if not NEW["dmg_state"] in ddpt["dmg_states"]:
-        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
-                            % (NEW["dmg_state"], ddpt["dmg_states"])))
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data() IS
-'Make sure that each inserted or modified riskr.dmg_dist_per_taxonomy_data
- record has a valid dmg_state.';
-
-
-CREATE TRIGGER riskr_dmg_dist_per_taxonomy_data_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_taxonomy_data
-FOR EACH ROW EXECUTE PROCEDURE
-riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data();
--- End Damage Distribution, Per Taxonomy
-
--- Damage Distribution, Total
-CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data()
-    RETURNS TRIGGER
-AS $$
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    # make sure that NEW.dmg_state is in dmg_dist_total.dmg_states
-    NEW = TD["new"]
-
-    ps = plpy.prepare(
-        "SELECT dmg_states FROM riskr.dmg_dist_total WHERE id=$1",
-        ["integer"])
-
-    [ddt] = plpy.execute(ps, [NEW["dmg_dist_total_id"]])
-
-    if not NEW["dmg_state"] in ddt["dmg_states"]:
-        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
-                            % (NEW["dmg_state"], ddt["dmg_states"])))
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data() IS
-'Make sure that each inserted or modified riskr.dmg_dist_total record has a
- valid dmg_state.';
-
 
 CREATE OR REPLACE FUNCTION pcheck_fragility_model()
   RETURNS TRIGGER
@@ -376,12 +279,6 @@ COMMENT ON FUNCTION uiapi.pcount_cnode_failures() IS
 CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
-
-
-CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
-FOR EACH ROW EXECUTE PROCEDURE riskr.pcheck_dmg_state_dmg_dist_total_data();
--- End Damage Distribution, Total
 
 CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
 BEFORE INSERT ON oqmif.exposure_model

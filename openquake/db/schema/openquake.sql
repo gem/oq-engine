@@ -1461,25 +1461,6 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     poes float[] NOT NULL
 ) TABLESPACE riskr_ts;
 
-
--- Collapse map data.
-CREATE TABLE riskr.collapse_map (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL, -- FK to output.id
-    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
-) TABLESPACE riskr_ts;
-
-CREATE TABLE riskr.collapse_map_data (
-    id SERIAL PRIMARY KEY,
-    collapse_map_id INTEGER NOT NULL, -- FK to collapse_map.id
-    asset_ref VARCHAR NOT NULL,
-    value float NOT NULL,
-    std_dev float NOT NULL
-) TABLESPACE riskr_ts;
-SELECT AddGeometryColumn('riskr', 'collapse_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
-
-
 -- Benefit-cost ratio distribution
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
@@ -1497,40 +1478,31 @@ CREATE TABLE riskr.bcr_distribution_data (
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
+CREATE TABLE riskr.dmg_state (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_state VARCHAR NOT NULL,
+    lsi SMALLINT NOT NULL CHECK(lsi >= 0),
+    UNIQUE (output_id, dmg_state),
+    UNIQUE (output_id, lsi));
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
-    dmg_states VARCHAR[] NOT NULL,
-    end_branch_label VARCHAR
-) TABLESPACE riskr_ts;
-
-CREATE TABLE riskr.dmg_dist_per_asset_data (
-    id SERIAL PRIMARY KEY,
-    dmg_dist_per_asset_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_per_asset.id
+    dmg_state_id INTEGER NOT NULL REFERENCES riskr.dmg_state,
     exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
-    dmg_state VARCHAR NOT NULL,
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
-SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE riskr.dmg_dist_per_asset_data ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.dmg_dist_per_asset ALTER COLUMN location SET NOT NULL;
 
 
 -- Damage Distrubtion Per Taxonomy
 CREATE TABLE riskr.dmg_dist_per_taxonomy (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
-    dmg_states VARCHAR[] NOT NULL,
-    end_branch_label VARCHAR
-) TABLESPACE riskr_ts;
-
-CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
-    id SERIAL PRIMARY KEY,
-    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskr.dmg_dist_per_taxonomy.id
+    dmg_state_id INTEGER NOT NULL REFERENCES riskr.dmg_state,
     taxonomy VARCHAR NOT NULL,
-    dmg_state VARCHAR NOT NULL,
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1539,15 +1511,7 @@ CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
 -- Total Damage Distribution
 CREATE TABLE riskr.dmg_dist_total (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
-    dmg_states VARCHAR[] NOT NULL,
-    end_branch_label VARCHAR
-) TABLESPACE riskr_ts;
-
-CREATE TABLE riskr.dmg_dist_total_data (
-    id SERIAL PRIMARY KEY,
-    dmg_dist_total_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_total.id
-    dmg_state VARCHAR NOT NULL,
+    dmg_state_id INTEGER NOT NULL REFERENCES riskr.dmg_state,
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1926,14 +1890,6 @@ ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE riskr.collapse_map
-ADD CONSTRAINT riskr_collapse_map_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.collapse_map
-ADD CONSTRAINT riskr_collapse_map_exposure_model_fk
-FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
-
 ALTER TABLE riskr.bcr_distribution
 ADD CONSTRAINT riskr_bcr_distribution_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
@@ -1950,47 +1906,17 @@ ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
-ALTER TABLE riskr.collapse_map_data
-ADD CONSTRAINT riskr_collapse_map_data_collapse_map_fk
-FOREIGN KEY (collapse_map_id) REFERENCES riskr.collapse_map(id) ON DELETE CASCADE;
-
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
 FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
 
 
 -- Damage Distribution, Per Asset
+
 ALTER TABLE riskr.dmg_dist_per_asset
-ADD CONSTRAINT riskr_dmg_dist_per_asset_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.dmg_dist_per_asset_data
-ADD CONSTRAINT riskr_dmg_dist_per_asset_data_dmg_dist_per_asset_fk
-FOREIGN KEY (dmg_dist_per_asset_id) REFERENCES riskr.dmg_dist_per_asset(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.dmg_dist_per_asset_data
-ADD CONSTRAINT riskr_dmg_dist_per_asset_data_exposure_data_fk
+ADD CONSTRAINT riskr_dmg_dist_per_asset_exposure_data_fk
 FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
 
-
--- Damage Distribution, Per Taxonomy
-ALTER TABLE riskr.dmg_dist_per_taxonomy
-ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.dmg_dist_per_taxonomy_data
-ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_data_dmg_dist_per_taxonomy_fk
-FOREIGN KEY (dmg_dist_per_taxonomy_id) REFERENCES riskr.dmg_dist_per_taxonomy(id) ON DELETE CASCADE;
-
-
--- Damage Distribution, Total
-ALTER TABLE riskr.dmg_dist_total
-ADD CONSTRAINT riskr_dmg_dist_total_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.dmg_dist_total_data
-ADD CONSTRAINT riskr_dmg_dist_total_data_dmg_dist_total_fk
-FOREIGN KEY (dmg_dist_total_id) REFERENCES riskr.dmg_dist_total(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)

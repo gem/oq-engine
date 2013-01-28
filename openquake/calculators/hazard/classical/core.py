@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -90,7 +90,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     ltp = logictree.LogicTreeProcessor(hc.id)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     sources = haz_general.gen_sources(
@@ -122,9 +122,9 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     if hc.maximum_distance:
         dist = hc.maximum_distance
         calc_kwargs['source_site_filter'] = (
-                nhlib.calc.filters.source_site_distance_filter(dist))
+            nhlib.calc.filters.source_site_distance_filter(dist))
         calc_kwargs['rupture_site_filter'] = (
-                nhlib.calc.filters.rupture_site_distance_filter(dist))
+            nhlib.calc.filters.rupture_site_distance_filter(dist))
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
@@ -205,11 +205,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
             sources.
         """
         realizations = models.LtRealization.objects.filter(
-                hazard_calculation=self.hc, is_complete=False)
+            hazard_calculation=self.hc, is_complete=False)
 
         for lt_rlz in realizations:
             source_progress = models.SourceProgress.objects.filter(
-                    is_complete=False, lt_realization=lt_rlz).order_by('id')
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
 
