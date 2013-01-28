@@ -405,9 +405,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hazard_calculation=self.hc, is_complete=False)
 
         # then distribute tasks for disaggregation histogram computation
-        site_coll = haz_general.get_site_collection(self.hc)
         for lt_rlz in realizations:
-            for block in general_utils.block_splitter(site_coll, block_size):
+            for block in general_utils.block_splitter(self.hc.site_collection,
+                                                      block_size):
                 # job_id, Site block, lt rlz, calc_type
                 yield (self.job.id, block, lt_rlz.id, 'disagg')
 
