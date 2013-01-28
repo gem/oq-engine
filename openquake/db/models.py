@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,6 @@ import numpy
 from django.db import connection
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
-import risklib
 from shapely import wkt
 
 from openquake.db import fields
@@ -2179,33 +2178,6 @@ class AggregateLossCurveData(djm.Model):
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
-class CollapseMap(djm.Model):
-    '''
-    Holds metadata for the collapse map
-    '''
-
-    output = djm.ForeignKey("Output")
-    exposure_model = djm.ForeignKey("ExposureModel")
-
-    class Meta:
-        db_table = 'riskr\".\"collapse_map'
-
-
-class CollapseMapData(djm.Model):
-    '''
-    Holds the actual data for the collapse map
-    '''
-
-    collapse_map = djm.ForeignKey("CollapseMap")
-    asset_ref = djm.TextField()
-    value = djm.FloatField()
-    std_dev = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'riskr\".\"collapse_map_data'
-
-
 class BCRDistribution(djm.Model):
     '''
     Holds metadata for the benefit-cost ratio distribution
@@ -2233,81 +2205,55 @@ class BCRDistributionData(djm.Model):
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
-class DmgDistPerAsset(djm.Model):
-    """Holds metadata for damage distributions per asset."""
-
+class DmgState(djm.Model):
+    """Holds the damage_states associated to a given output"""
+    # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
+    dmg_state = djm.TextField()
+    lsi = djm.PositiveSmallIntegerField(
+        help_text="limit state index, to order the limit states")
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_asset'
+        db_table = 'riskr\".\"dmg_state'
 
 
-class DmgDistPerAssetData(djm.Model):
+class DmgDistPerAsset(djm.Model):
     """Holds the actual data for damage distributions per asset."""
 
-    dmg_dist_per_asset = djm.ForeignKey("DmgDistPerAsset")
+    dmg_state = djm.ForeignKey("DmgState")
     exposure_data = djm.ForeignKey("ExposureData")
-    dmg_state = djm.TextField()
     mean = djm.FloatField()
     stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+        db_table = 'riskr\".\"dmg_dist_per_asset'
 
 
 class DmgDistPerTaxonomy(djm.Model):
-    """Hold metdata for damage distributions per taxonomy."""
+    """Holds the actual data for damage distributions per taxonomy."""
 
-    output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
+    dmg_state = djm.ForeignKey("DmgState")
+    taxonomy = djm.TextField()
+    mean = djm.FloatField()
+    stddev = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_taxonomy'
 
 
-class DmgDistPerTaxonomyData(djm.Model):
-    """Holds the actual data for damage distributions per taxonomy."""
-
-    dmg_dist_per_taxonomy = djm.ForeignKey("DmgDistPerTaxonomy")
-    taxonomy = djm.TextField()
-    dmg_state = djm.TextField()
-    mean = djm.FloatField()
-    stddev = djm.FloatField()
-
-    class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
-
-
 class DmgDistTotal(djm.Model):
-    """Holds metadata for 'total damage distribution' values for an entire
-    calculation. This is the total over all assets and GMFs."""
-
-    output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
-
-    class Meta:
-        db_table = 'riskr\".\"dmg_dist_total'
-
-
-class DmgDistTotalData(djm.Model):
     """Holds the actual 'total damage distribution' values for for an entire
     calculation. There should be  one record per calculation per damage state.
     """
 
-    dmg_dist_total = djm.ForeignKey("DmgDistTotal")
-    dmg_state = djm.TextField()
+    dmg_state = djm.ForeignKey("DmgState")
     mean = djm.FloatField()
     stddev = djm.FloatField()
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_total_data'
-
+        db_table = 'riskr\".\"dmg_dist_total'
 
 ## Tables in the 'oqmif' schema.
 
