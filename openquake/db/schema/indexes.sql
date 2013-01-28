@@ -74,6 +74,8 @@ CREATE INDEX riskr_aggregate_loss_curve_data_loss_curve_id_idx on riskr.aggregat
 CREATE INDEX riskr_bcr_distribution_output_id_idx on riskr.bcr_distribution(output_id);
 CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_distribution_data(bcr_distribution_id);
 
+CREATE INDEX riskr_dmg_state_output_id_ix on riskr.dmg_state(output_id);
+
 -- oqmif indexes
 CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
 CREATE INDEX oqmif_exposure_data_taxonomy_idx ON oqmif.exposure_data(taxonomy);
