@@ -2220,9 +2220,8 @@ class DmgState(djm.Model):
 class DmgDistPerAsset(djm.Model):
     """Holds the actual data for damage distributions per asset."""
 
-    output = djm.ForeignKey("Output")
+    dmg_state = djm.ForeignKey("DmgState")
     exposure_data = djm.ForeignKey("ExposureData")
-    dmg_state = djm.TextField()
     mean = djm.FloatField()
     stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
@@ -2235,9 +2234,8 @@ class DmgDistPerAsset(djm.Model):
 class DmgDistPerTaxonomy(djm.Model):
     """Holds the actual data for damage distributions per taxonomy."""
 
-    output = djm.ForeignKey("Output")
+    dmg_state = djm.ForeignKey("DmgState")
     taxonomy = djm.TextField()
-    dmg_state = djm.TextField()
     mean = djm.FloatField()
     stddev = djm.FloatField()
 
@@ -2249,8 +2247,8 @@ class DmgDistTotal(djm.Model):
     """Holds the actual 'total damage distribution' values for for an entire
     calculation. There should be  one record per calculation per damage state.
     """
-    output = djm.ForeignKey("Output")
-    dmg_state = djm.TextField()
+
+    dmg_state = djm.ForeignKey("DmgState")
     mean = djm.FloatField()
     stddev = djm.FloatField()
 
