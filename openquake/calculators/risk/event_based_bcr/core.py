@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,15 +31,16 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
-                    seed, bcr_distribution_id, imt, time_span, tses,
+def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
+                    vulnerability_function, vulnerability_function_retrofitted,
+                    bcr_distribution_id, imt, time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
 
-    Gets the vulnerability models, instantiates risklib calculators
+    Instantiates risklib calculators, computes bcr
     and stores results to db in a single transaction.
 
     :param int job_id:
@@ -71,32 +72,35 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id,
     :param float asset_life_expectancy
         The life expectancy used for every asset.
     """
-    model = general.fetch_vulnerability_model(job_id)
-    model_retrofitted = general.fetch_vulnerability_model(job_id, True)
-
     hazard_getter = general.hazard_getter(
         hazard_getter, hazard_id, imt)
 
     calculator = api.ProbabilisticEventBased(
-        model, curve_resolution=loss_curve_resolution,
+        vulnerability_function, curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
         seed=seed, correlation_type=asset_correlation)
 
     calculator_retrofitted = api.ProbabilisticEventBased(
-        model_retrofitted, curve_resolution=loss_curve_resolution,
+        vulnerability_function_retrofitted,
+        curve_resolution=loss_curve_resolution,
         time_span=time_span, tses=tses,
         seed=seed, correlation_type=asset_correlation)
 
     bcr_calculator = api.BCR(calculator, calculator_retrofitted,
                              interest_rate, asset_life_expectancy)
 
-    with transaction.commit_on_success(using="reslt_writer"):
-        logs.LOG.debug(
-            "launching compute_on_assets over %d assets" % len(assets))
+    with logs.tracing('getting hazard'):
+        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
 
-        for asset_output in api.compute_on_assets(
-                assets, hazard_getter, bcr_calculator):
-            general.write_bcr_distribution(bcr_distribution_id, asset_output)
+    with logs.tracing('computing risk over %d assets' % len(assets)):
+        asset_outputs = bcr_calculator(assets, ground_motion_fields)
+
+    with logs.tracing('writing results'):
+        with transaction.commit_on_success(using='reslt_writer'):
+            for i, asset_output in enumerate(asset_outputs):
+                general.write_bcr_distribution(
+                    bcr_distribution_id, assets[i], asset_output)
+
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
 event_based_bcr.ignore_result = False
@@ -108,6 +112,14 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     given set of assets.
     """
     core_calc_task = event_based_bcr
+
+    def __init__(self, job):
+        super(EventBasedBCRRiskCalculator, self).__init__(job)
+        self.vulnerability_functions_retrofitted = None
+
+    def worker_args(self, taxonomy):
+        return (super(EventBasedBCRRiskCalculator, self).worker_args(
+            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -143,10 +155,11 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
             self.job, "BCR Distribution", "bcr_distribution")).pk
         ]
 
-    def store_risk_model(self):
+    def set_risk_models(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        super(EventBasedBCRRiskCalculator, self).store_risk_model()
-        general.store_risk_model(self.rc, "vulnerability_retrofitted")
+        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions_retrofitted = (
+            self.parse_vulnerability_model(True))
