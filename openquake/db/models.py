@@ -842,10 +842,11 @@ class HazardCalculation(djm.Model):
             In this case, it obvious that such a thing should be done carefully
             and with much discretion.
         """
+        from openquake.calculators.hazard.general import get_site_collection
         if self._site_collection is None:
             # Compute the site collection, cache it, and save this record to
             # the DB:
-            self._site_collection = haz_general.get_site_collection(self)
+            self._site_collection = get_site_collection(self)
             self.save()
         return self._site_collection
 
