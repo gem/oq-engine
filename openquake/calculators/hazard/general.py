@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -536,7 +536,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                         hc_data_inserter.add_entry(
                             hazard_curve_id=haz_curve.id,
                             poes=poes.tolist(),
-                            location=location.wkt2d)
+                            location=location.wkt2d,
+                            weight=rlz.weight
+                        )
 
                     hc_data_inserter.flush()
 

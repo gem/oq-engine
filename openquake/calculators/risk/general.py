@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,6 +19,8 @@
 
 import os
 import random
+
+import risklib
 
 from django import db
 
@@ -41,12 +43,13 @@ class BaseRiskCalculator(base.CalculatorNext):
     functionality, including initialization procedures and the core
     distribution/execution logic.
 
-    :attribute asset_nr:
-      The number of assets the calculator will work on. Assets are
-      extracted from the exposure input and filtered according with the
-      RiskCalculation region_constraint
+    :attribute dict taxonomies:
+      A dictionary mapping each taxonomy with the number of assets the
+      calculator will work on. Assets are extracted from the exposure
+      input and filtered according with the RiskCalculation
+      region_constraint
 
-    :attribute exposure_model_id:
+    :attribute exposure_model:
       The exposure model used by the calculation
 
     :attribute asset_offsets:
@@ -54,9 +57,16 @@ class BaseRiskCalculator(base.CalculatorNext):
       ordered by their id. An asset offset is an int that identify the
       set of assets going from offset to offset + block_size.
 
+    :attribute dict vulnerability_functions:
+       A dict mapping taxonomy to vulnerability functions used for
+       this calculation
+
     :attribute rnd:
       The random number generator (initialized with a master seed) used
       for sampling
+
+    :attribute str imt:
+      The intensity measure type considered
     """
 
     hazard_getter = None  # the name of the hazard getter class; to override
@@ -64,9 +74,11 @@ class BaseRiskCalculator(base.CalculatorNext):
     def __init__(self, job):
         super(BaseRiskCalculator, self).__init__(job)
 
-        self.assets_nr = None
-        self.exposure_model_id = None
+        self.taxonomies = None
+        self.exposure_model = None
         self.rnd = None
+        self.vulnerability_functions = None
+        self.imt = None
 
     def pre_execute(self):
         """
@@ -75,10 +87,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         1. Parse the exposure input and store the exposure data (if
         not already present)
 
-        2. Filter the exposure in order to consider only the assets of
-        interest
+        2. Check if the exposure filtered with region_constraint is
+        not empty
 
-        3. Prepare and save the output containers.
+        3. Parse the risk models
 
         4. Initialize progress counters
 
@@ -91,13 +103,12 @@ class BaseRiskCalculator(base.CalculatorNext):
             pk=self.rc.pk)
 
         with logs.tracing('store exposure'):
-            self.exposure_model_id = self._store_exposure().id
+            self.exposure_model = self._store_exposure()
 
-            self.assets_nr = models.ExposureData.objects.contained_in_count(
-                self.exposure_model_id,
+            self.taxonomies = self.exposure_model.taxonomies_in(
                 self.rc.region_constraint)
 
-            if not self.assets_nr:
+            if not sum(self.taxonomies.values()):
                 raise RuntimeError(
                     ['Region of interest is not covered by the exposure input.'
                      ' This configuration is invalid. '
@@ -105,9 +116,9 @@ class BaseRiskCalculator(base.CalculatorNext):
                      ' exposure file'])
 
         with logs.tracing('store risk model'):
-            self.store_risk_model()
+            self.set_risk_models()
 
-        self.progress.update(total=self.assets_nr)
+        self.progress.update(total=sum(self.taxonomies.values()))
         self._initialize_progress()
 
         self.rnd = random.Random()
@@ -129,6 +140,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         Generator function for creating the arguments for each task.
 
+        It is responsible for the distribution strategy. It divides
+        the considered exposure into chunks of homogeneous assets
+        (i.e. having the same taxonomy). The chunk size is given by
+        the `block_size` openquake config parameter
+
         :param int block_size:
             The number of work items per task (sources, sites, etc.).
 
@@ -144,23 +160,32 @@ class BaseRiskCalculator(base.CalculatorNext):
         output_containers = self.create_outputs()
         calculator_parameters = self.calculator_parameters
 
-        # asset offsets
-        asset_offsets = range(0, self.assets_nr, block_size)
-        region_constraint = self.job.risk_calculation.region_constraint
+        for taxonomy, assets_nr in self.taxonomies.items():
+            asset_offsets = range(0, assets_nr, block_size)
 
-        for offset in asset_offsets:
-            with logs.tracing("getting assets"):
-                assets = models.ExposureData.objects.contained_in(
-                    self.exposure_model_id, region_constraint, offset,
-                    block_size)
+            for offset in asset_offsets:
+                with logs.tracing("getting assets"):
+                    assets = self.exposure_model.get_asset_chunk(
+                        taxonomy,
+                        self.rc.region_constraint, offset, block_size)
 
-            seed = self.rnd.randint(0, (2 ** 31) - 1)
+                tf_args = ([
+                    self.job.id,
+                    assets, self.hazard_getter, self.hazard_id] +
+                    self.worker_args(taxonomy) +
+                    output_containers + calculator_parameters)
 
-            tf_args = ([self.job.id,
-                        assets, self.hazard_getter, self.hazard_id, seed] +
-                        output_containers + calculator_parameters)
+                yield tf_args
 
-            yield  tf_args
+    def worker_args(self, taxonomy):
+        """
+        :returns: a fixed list of arguments that a calculator may want
+        to pass to a worker. Default to a seed generated from the
+        master seed and the vulnerability function associated with the
+        assets taxonomy. May be overriden.
+        """
+        return [self.rnd.randint(0, (2 ** 31) - 1),
+                self.vulnerability_functions[taxonomy]]
 
     def export(self, *args, **kwargs):
         """
@@ -240,14 +265,54 @@ class BaseRiskCalculator(base.CalculatorNext):
         This is needed for the purpose of providing an indication of progress
         to the end user."""
         stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", self.assets_nr)
+        stats.pk_set(self.job.id, "nrisk_total", sum(self.taxonomies.values()))
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-    def store_risk_model(self):
-        """Load and store vulnerability model. It could be overriden
-        to load fragility models or multiple vulnerability models"""
+    def set_risk_models(self):
+        self.vulnerability_functions = self.parse_vulnerability_model()
 
-        store_risk_model(self.rc, "vulnerability")
+    def parse_vulnerability_model(self, retrofitted=False):
+        """
+        Parse vulnerability model input associated with this
+        calculation.
+
+        As a side effect, it also stores the first IMT (that may be
+        needed for further hazard filtering) in the attribute `imt`.
+
+        :param bool retrofitted: true if the retrofitted model is
+        going to be parsed
+
+         :returns: a dictionary mapping each taxonomy to a
+        `:class:risklib.scientific.VulnerabilityFunction` instance.
+        """
+
+        if retrofitted:
+            input_type = "vulnerability_retrofitted"
+        else:
+            input_type = "vulnerability"
+
+        path = self.rc.inputs.get(input_type=input_type).path
+
+        vfs = dict()
+
+        # CAVEATS
+        # 1) We use the first imt returned by the parser 2) Use the
+        # last vf for a taxonomy returned by the parser (if multiple
+        # vf for the same taxonomy are given).
+
+        # We basically assume that the user will provide a
+        # vulnerability model where for each taxonomy there is only
+        # one vf for a taxonomy and an imt matching the ones in the
+        # hazard output
+        for record in parsers.VulnerabilityModelParser(path):
+            if self.imt is None:
+                self.imt = record['IMT']
+            vfs[record['ID']] = risklib.scientific.VulnerabilityFunction(
+                record['IML'],
+                record['lossRatio'],
+                record['coefficientsVariation'],
+                record['probabilisticDistribution'])
+        return vfs
 
     def create_outputs(self):
         """
@@ -288,27 +353,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def fetch_vulnerability_model(job_id, retrofitted=False):
-    """
-    Utility method to use in a celery task to get a vulnerability
-    model suitable to be used with Risklib.
-
-    :param int job_id: The ID of the current job
-
-    :param bool retrofitted: True if a retrofitted vulnerability model
-    should be returned
-    """
-
-    if retrofitted:
-        input_type = "vulnerability_retrofitted"
-    else:
-        input_type = "vulnerability"
-
-    return models.OqJob.objects.get(pk=job_id).risk_calculation.model(
-        input_type).to_risklib()
-
-
-def write_loss_curve(loss_curve_id, asset_output):
+def write_loss_curve(loss_curve_id, asset, asset_output):
     """
     Stores and returns a :class:`openquake.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -316,7 +361,7 @@ def write_loss_curve(loss_curve_id, asset_output):
     identified by `loss_curve_id`.
 
     :param int loss_curve_id: the ID of the output container
-
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
     :param asset_output: an instance of
     :class:`risklib.models.output.ClassicalOutput` or of
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
@@ -324,14 +369,14 @@ def write_loss_curve(loss_curve_id, asset_output):
     """
     return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
-        asset_ref=asset_output.asset.asset_ref,
-        location=asset_output.asset.site,
+        asset_ref=asset.asset_ref,
+        location=asset.site,
         poes=asset_output.loss_curve.ordinates,
         losses=asset_output.loss_curve.abscissae,
         loss_ratios=asset_output.loss_ratio_curve.abscissae)
 
 
-def write_loss_map(loss_map_ids, asset_output):
+def write_loss_map(loss_map_ids, asset, asset_output):
     """
     Create :class:`openquake.db.models.LossMapData` objects where the
     data are got by `asset_output` and the
@@ -341,6 +386,8 @@ def write_loss_map(loss_map_ids, asset_output):
     :param dict loss_map_ids: A dictionary storing that links poe to
     :class:`openquake.db.models.LossMap` output container
 
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
+
     :param asset_output: an instance of
     :class:`risklib.models.output.ClassicalOutput` or of
     :class:`risklib.models.output.ProbabilisticEventBasedOutput`
@@ -349,10 +396,10 @@ def write_loss_map(loss_map_ids, asset_output):
     for poe, loss in asset_output.conditional_losses.items():
         models.LossMapData.objects.create(
             loss_map_id=loss_map_ids[poe],
-            asset_ref=asset_output.asset.asset_ref,
+            asset_ref=asset.asset_ref,
             value=loss,
             std_dev=None,
-            location=asset_output.asset.site)
+            location=asset.site)
 
 
 @db.transaction.commit_on_success
@@ -380,7 +427,7 @@ def update_aggregate_losses(curve_id, losses):
     curve_data.save()
 
 
-def write_bcr_distribution(bcr_distribution_id, asset_output):
+def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
     """
     Create a new :class:`openquake.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -389,52 +436,17 @@ def write_bcr_distribution(bcr_distribution_id, asset_output):
     :param int bcr_distribution_id: the ID of
     :class:`openquake.db.models.BCRDistribution` instance that holds
     the BCR map
+
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
+
     :param asset_output: an instance of
     :class:`risklib.models.output.BCROutput` that holds BCR data for a
     specific asset
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
-        asset_ref=asset_output.asset.asset_ref,
+        asset_ref=asset.asset_ref,
         average_annual_loss_original=asset_output.eal_original,
         average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
-        location=asset_output.asset.site)
-
-
-def store_risk_model(rc, input_type):
-    """
-    Parse and store :class:`openquake.db.models.VulnerabilityModel` and
-    :class:`openquake.db.models.VulnerabilityFunction`.
-
-    :param str input_type: the input type of the
-    :class:`openquake.db.models.Input` object which provides the risk models
-
-    :param rc: the current :class:`openquake.db.models.RiskCalculation`
-    instance
-    """
-    [vulnerability_input] = models.inputs4rcalc(rc.id, input_type=input_type)
-
-    # if a vulnerability model already exists for the same input, then
-    # we do not need to create again.
-    if models.VulnerabilityModel.objects.filter(
-            input=vulnerability_input).exists() and not rc.force_inputs:
-        return
-
-    for record in parsers.VulnerabilityModelParser(
-            vulnerability_input.path):
-        vulnerability_model, _ = (
-            models.VulnerabilityModel.objects.get_or_create(
-                owner=vulnerability_input.owner,
-                input=vulnerability_input,
-                imt=record['IMT'], imls=record['IML'],
-                name=record['vulnerabilitySetID'],
-                asset_category=record['assetCategory'],
-                loss_category=record['lossCategory']))
-
-        models.VulnerabilityFunction.objects.create(
-            vulnerability_model=vulnerability_model,
-            taxonomy=record['ID'],
-            prob_distribution=record['probabilisticDistribution'],
-            covs=record['coefficientsVariation'],
-            loss_ratios=record['lossRatio'])
+        location=asset.site)
