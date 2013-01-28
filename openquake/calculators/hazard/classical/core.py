@@ -99,25 +99,13 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
 
     imts = haz_general.im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
 
-    # Now initialize the site collection for use in the calculation.
-    # If there is no site model defined, we will use the same reference
-    # parameters (defined in the HazardCalculation) for every site.
-
-    # TODO: We could just create the SiteCollection once, pickle it, and store
-    # it in the DB (in SiteData). Creating the SiteCollection isn't an
-    # expensive operation (at least for small calculations), but this is
-    # wasted work.
-    logs.LOG.debug('> creating site collection')
-    site_coll = haz_general.get_site_collection(hc)
-    logs.LOG.debug('< done creating site collection')
-
     # Prepare args for the calculator.
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
                    'sources': sources,
                    'imts': imts,
-                   'sites': site_coll}
+                   'sites': hc.site_collection}
 
     if hc.maximum_distance:
         dist = hc.maximum_distance
