@@ -268,7 +268,53 @@ ScenarioRiskOutput.standard_deviation = property(
 DISTRIBUTIONS = utils.Register()
 
 
-class DegenerateDistribution(object):
+class Distribution(object):
+    """
+    A Distribution class models continuous random variables used to
+    sample losses of a set of assets. It is usually registered with a
+    name (e.g. LN, BT) by using :class:`risklib.utils.Register`
+    """
+
+    def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
+        """
+        Abstract method to be extended by derived classes. It must be
+        called before any previous use of the method `sample`. It
+        initialize the random number generator and it may be
+        overridden to precompute random values with a given
+        correlation among assets.
+
+        :param int asset_count: the expected number of assets
+
+        :param int sample_count: the expected number of samples for
+        each asset
+
+        :param int seed: the seed used to initialize the random number
+        generator
+
+        :param float correlation: a value between 0 (inclusive) and 1
+        that indicates the correlation between samples across
+        different assets.
+        """
+        pass
+
+    def sample(self, means, covs=None, stddevs=None):
+        """
+        :returns: sample a set of losses
+        :param means: an array of mean losses
+        :param covs: an array of covariances
+        :param stddevs: an array of stddevs
+        """
+        pass
+
+    def survival(self, loss_ratio, mean, stddev):
+        """
+        Return the survival function of the distribution with `mean`
+        and `stddev` applied to `loss_ratio`
+        """
+        pass
+
+
+class DegenerateDistribution(Distribution):
     def init(self, *args):
         pass
 
@@ -280,7 +326,7 @@ class DegenerateDistribution(object):
 
 
 @DISTRIBUTIONS.add('LN')
-class LogNormalDistribution(object):
+class LogNormalDistribution(Distribution):
     def __init__(self):
         self.epsilons = None
         self.epsilon_idx = 0
@@ -316,7 +362,7 @@ class LogNormalDistribution(object):
 
 
 @DISTRIBUTIONS.add('BT')
-class BetaDistribution(object):
+class BetaDistribution(Distribution):
     def sample(self, means, _, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
