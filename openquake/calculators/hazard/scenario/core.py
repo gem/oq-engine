@@ -21,6 +21,7 @@ import random
 from cStringIO import StringIO
 from django.db import transaction
 import numpy
+from time import time
 
 from nrml.hazard.parsers import RuptureModelParser
 
@@ -36,6 +37,7 @@ from openquake.db import models
 from openquake.input import source
 from openquake import writer
 from openquake.job.validation import MAX_SINT_32
+from openquake.utils import config
 
 # FIXME! Duplication in EventBased Hazard Calculator
 #: Ground motion correlation model map
@@ -45,10 +47,18 @@ GM_CORRELATION_MODEL_MAP = {
 
 AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
+GMF_REALIZATIONS = int(config.get('hazard', 'concurrent_tasks'))
+
+def realizations_per_task(num_realizations, num_concur_task):
+    ntimes_concur_task, spare_realizations = divmod(num_realizations, num_concur_task)
+    result = [ntimes_concur_task for _ in xrange(num_concur_task)]
+    if spare_realizations:
+        result.append(spare_realizations)
+    return spare_realizations > 0, result
 
 @utils.tasks.oqtask
 @utils.stats.count_progress('h')
-def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
+def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
@@ -56,22 +66,23 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no):
     :param task_seed:
         Value for seeding numpy/scipy in the computation of ground motion fields.
     """
+
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
                    % (job_id, task_no))
 
     numpy.random.seed(task_seed)
-    compute_gmfs(job_id, rupture_ids, output_id, task_no)
+    compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations)
 
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    base.signal_task_complete(job_id=job_id, num_items=1)
+    base.signal_task_complete(job_id=job_id, num_items=realizations)
 
 
 # NB: get_site_collection is called for each task;
 # this could be a performance bottleneck, potentially
-def compute_gmfs(job_id, rupture_ids, output_id, task_no):
+def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
     """
     Compute ground motion fields and store them in the db.
 
@@ -87,7 +98,6 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no):
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
     """
-
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
@@ -95,13 +105,13 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no):
     sites = haz_general.get_site_collection(hc)
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]
-
     gmf = ground_motion_fields(
         rupture_mdl, sites, imts, gsim(),
-        hc.truncation_level, realizations=1,
+        hc.truncation_level, realizations=realizations,
         correlation_model=None)
-    save_gmf(output_id, gmf, sites.mesh, task_no)
 
+    save_gmf(output_id, gmf, sites.mesh, task_no)
+    
 
 @transaction.commit_on_success(using='reslt_writer')
 def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
@@ -121,7 +131,6 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-
     inserter = writer.BulkInserter(models.GmfScenario)
 
     for imt, gmfs_ in gmf_dict.iteritems():
@@ -222,8 +231,16 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_ids = [rupture.id for rupture in ruptures]
-        for task_no in range(self.hc.number_of_ground_motion_fields):
+        num_concurrent_tasks = self.concurrent_tasks()
+
+        spare_realizations, realizations = realizations_per_task(
+                self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
+        
+        num_tasks = (num_concurrent_tasks + 1) if spare_realizations else num_concurrent_tasks
+
+        for task_no in range(num_tasks):
             task_seed = rnd.randint(0, MAX_SINT_32)
             task_args = (self.job.id, rupture_ids,
-                         self.output.id, task_seed, task_no)
+                         self.output.id, task_seed, task_no,
+                         realizations[task_no])
             yield task_args
