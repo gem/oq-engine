@@ -70,11 +70,12 @@ CREATE INDEX riskr_loss_curve_output_id_idx on riskr.loss_curve(output_id);
 CREATE INDEX riskr_loss_curve_data_loss_curve_id_idx on riskr.loss_curve_data(loss_curve_id);
 CREATE INDEX riskr_loss_curve_data_loss_curve_asset_ref_idx on riskr.loss_curve_data(asset_ref);
 CREATE INDEX riskr_aggregate_loss_curve_data_loss_curve_id_idx on riskr.aggregate_loss_curve_data(loss_curve_id);
-CREATE INDEX riskr_collapse_map_output_id_idx on riskr.collapse_map(output_id);
-CREATE INDEX riskr_collapse_map_data_collapse_map_id_idx on riskr.collapse_map_data(collapse_map_id);
 
 CREATE INDEX riskr_bcr_distribution_output_id_idx on riskr.bcr_distribution(output_id);
 CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_distribution_data(bcr_distribution_id);
+
+CREATE INDEX riskr_dmg_state_output_id_idx on riskr.dmg_state(output_id);
+CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 
 -- oqmif indexes
 CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
