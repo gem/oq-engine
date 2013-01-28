@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,7 @@ from django.db import connection
 from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
-from risklib import scientific
+import risklib
 from shapely import wkt
 
 from openquake.db import fields
@@ -70,6 +70,29 @@ IMT_CHOICES = (
 
 #: Default Loss Curve Resolution used for probabilistic risk calculators
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
+
+
+def queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
 
 
 def profile4job(job_id):
@@ -136,47 +159,6 @@ def inputs4rcalc(calc_id, input_type=None):
     if input_type is not None:
         result = result.filter(input_type=input_type)
     return result
-
-
-def per_asset_value(exd):
-    """Return per-asset value for the given exposure data set.
-
-    Calculate per asset value by considering the given exposure data (`exd`)
-    as follows:
-
-        case 1: cost type: aggregated:
-            cost = economic value
-        case 2: cost type: per asset:
-            cost * number (of assets) = economic value
-        case 3: cost type: per area and area type: aggregated:
-            cost * area = economic value
-        case 4: cost type: per area and area type: per asset:
-            cost * area * number = economic value
-
-    The same "formula" applies to contenst/retrofitting cost analogously.
-
-    :param exd: a named tuple with the following properties:
-        - category
-        - cost
-        - cost_type
-        - area
-        - area_type
-        - number_of_units
-    :returns: the per-asset value as a `float`
-    :raises: `ValueError` in case of a malformed (risk exposure data) input
-    """
-    if exd.category is not None and exd.category == "population":
-        return exd.number_of_units
-    if exd.cost_type == "aggregated":
-        return exd.cost
-    elif exd.cost_type == "per_asset":
-        return exd.cost * exd.number_of_units
-    elif exd.cost_type == "per_area":
-        if exd.area_type == "aggregated":
-            return exd.cost * exd.area
-        elif exd.area_type == "per_asset":
-            return exd.cost * exd.area * exd.number_of_units
-    raise ValueError("Invalid input: '%s'" % str(exd))
 
 
 ## Tables in the 'admin' schema.
@@ -408,8 +390,8 @@ class Input(djm.Model):
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
                                               through='Input2hcalc')
-    risk_calculations = djm.ManyToManyField('RiskCalculation',
-                                              through='Input2rcalc')
+    risk_calculations = djm.ManyToManyField(
+        'RiskCalculation', through='Input2rcalc', related_name="inputs")
 
     # Number of bytes in the file:
     size = djm.IntegerField()
@@ -1029,21 +1011,9 @@ class RiskCalculation(djm.Model):
     def is_bcr(self):
         return self.calculation_mode in ['classical_bcr', 'event_based_bcr']
 
-    def model(self, input_type):
-        """
-        The model associated with this risk calculation with input of
-        type `input_type`
-        """
-
-        # FIXME(lp). Although we store all the risk models we only use
-        # the first one
-        [exposure_input] = inputs4rcalc(self, input_type)
-        if input_type == "exposure":
-            return exposure_input.exposuremodel
-        elif input_type in ["vulnerability", "vulnerability_retrofitted"]:
-            return exposure_input.vulnerabilitymodel
-        else:
-            raise RuntimeError("Unknown model")
+    @property
+    def exposure_model(self):
+        return self.inputs.get(input_type="exposure").exposuremodel
 
 
 def _prep_geometry(kwargs):
@@ -1556,6 +1526,56 @@ class HazardCurveDataManager(djm.GeoManager):
                 job, imt, curves_per_location, offset, block_size)
                 for offset in ranges]
 
+    def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
+        """
+        Helper function for creating a :class:`django.db.models.query.QuerySet`
+        for selecting all curves from all realizations for a given ``job_id``
+        and ``imt``.
+
+        :param job:
+            An :class:`openquake.db.models.OqJob` instance.
+        :param str imt:
+            Intensity measure type.
+        :param sa_period:
+            Spectral Acceleration period value. Only relevant if the ``imt`` is
+            "SA".
+        :param sa_damping:
+            Spectrail Acceleration damping value. Only relevant if the ``imt``
+            is "SA".
+        """
+        return self.filter(hazard_curve__output__oq_job=job,
+                           hazard_curve__imt=imt,
+                           hazard_curve__sa_period=sa_period,
+                           hazard_curve__sa_damping=sa_damping,
+                           # We only want curves associated with a logic tree
+                           # realization (and not statistical aggregates):
+                           hazard_curve__lt_realization__isnull=False)
+
+    def all_curves_simple(self, filter_args=None, order_by='id'):
+        """
+        Get all :class:`HazardCurveData` records matching `filter_args` and
+        return the results in a simple, lean format: a sequence of (x, y, poes)
+        triples, where x and y are longitude and latitude of the `location`.
+
+        For querying large sets of hazard curve data, this is a rather lean
+        and efficient method for getting the results.
+
+        :param dict filter_args:
+            Optional. Dictionary of filter arguments to apply to the query.
+        :param str order_by:
+            Defaults to the primary key ('id'). Field by which to order
+            results. Currently, only one `ORDER BY` field is supported.
+        """
+        if filter_args is None:
+            filter_args = dict()
+
+        return self\
+            .filter(**filter_args)\
+            .order_by(order_by)\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
+
 
 class IndividualHazardCurveChunk(object):
     """
@@ -1602,6 +1622,8 @@ class HazardCurveData(djm.Model):
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    # weight can be null/None if the weight is implicit:
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     objects = HazardCurveDataManager()
 
@@ -2330,6 +2352,33 @@ class ExposureModel(djm.Model):
     class Meta:
         db_table = 'oqmif\".\"exposure_model'
 
+    def taxonomies_in(self, region_constraint):
+        """
+        :param str region_constraint: polygon in wkt format the assets
+        must be contained into
+        :returns: a dictionary mapping each taxonomy with the number
+        of assets contained in `region_constraint`
+        """
+
+        return ExposureData.objects.taxonomies_contained_in(
+            self.id, region_constraint)
+
+    def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
+        """
+        :returns: a list of `openquake.db.models.ExposureData` objects
+        of a given taxonomy contained in a region and paginated
+
+        :param str taxonomy: the taxonomy of the returned objects
+
+        :param Polygon region_constraint: a Polygon object with a wkt
+        property used to filter the exposure
+
+        :param int offset: An offset used to paginate the returned set
+        :param int count: An offset used to paginate the returned set
+        """
+        return ExposureData.objects.contained_in(
+            self.id, taxonomy, region_constraint, offset, count)
+
 
 class Occupancy(djm.Model):
     '''
@@ -2348,32 +2397,40 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, region_constraint, offset, size):
+    def contained_in(self, exposure_model_id, taxonomy,
+                     region_constraint, offset, size):
         """
         :returns the asset ids (ordered by id) contained in
-        `region_constraint` associated with an
+        `region_constraint` of `taxonomy` associated with an
         `openquake.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        return list(self.raw("""
-    SELECT * FROM oqmif.exposure_data WHERE
-    exposure_model_id = %s AND
-    ST_COVERS(ST_GeographyFromText(%s), site)
-    ORDER BY id
-    LIMIT %s OFFSET %s
-    """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt,
-          size, offset]))
+        return list(
+            self.raw("""
+            SELECT * FROM oqmif.exposure_data
+            WHERE exposure_model_id = %s AND taxonomy = %s AND
+            ST_COVERS(ST_GeographyFromText(%s), site)
+            ORDER BY taxonomy, id LIMIT %s OFFSET %s
+            """, [exposure_model_id, taxonomy,
+                  "SRID=4326; %s" % region_constraint.wkt,
+                  size, offset]))
 
-    def contained_in_count(self, exposure_model_id, region_constraint):
+    def taxonomies_contained_in(self, exposure_model_id, region_constraint):
+        """
+        :returns: a dictionary which map each taxonomy associated with
+        `exposure_model` and contained in `region_constraint` with the
+        number of assets.
+        """
         cursor = connection.cursor()
 
         cursor.execute("""
-        SELECT COUNT(*) FROM oqmif.exposure_data WHERE
-        exposure_model_id = %s AND
-        ST_COVERS(ST_GeographyFromText(%s), site)
+        SELECT oqmif.exposure_data.taxonomy, COUNT(*)
+        FROM oqmif.exposure_data WHERE
+        exposure_model_id = %s AND ST_COVERS(ST_GeographyFromText(%s), site)
+        group by oqmif.exposure_data.taxonomy
         """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
 
-        return cursor.fetchone()[0]
+        return dict(cursor)
 
 
 class ExposureData(djm.Model):
@@ -2381,8 +2438,7 @@ class ExposureData(djm.Model):
     Per-asset risk exposure data
     '''
 
-    REXD = namedtuple(
-        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
+    NO_RETROFITTING_COST = "no retrofitting cost"
 
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
@@ -2409,75 +2465,58 @@ class ExposureData(djm.Model):
 
     objects = AssetManager()
 
+    class Meta:
+        db_table = 'oqmif\".\"exposure_data'
+
+    @staticmethod
+    def per_asset_value(
+        cost, cost_type, area, area_type, number_of_units, category):
+        """Return per-asset value for the given exposure data set.
+
+        Calculate per asset value by considering the given exposure
+        data as follows:
+            case 1: cost type: aggregated:
+                cost = economic value
+            case 2: cost type: per asset:
+                cost * number (of assets) = economic value
+            case 3: cost type: per area and area type: aggregated:
+                cost * area = economic value
+            case 4: cost type: per area and area type: per asset:
+                cost * area * number = economic value
+        The same "formula" applies to contenst/retrofitting cost analogously.
+        :returns: the per-asset value as a `float`
+        :raises: `ValueError` in case of a malformed (risk exposure data) input
+        """
+        if category is not None and category == "population":
+            return number_of_units
+        if cost_type == "aggregated":
+            return cost
+        elif cost_type == "per_asset":
+            return cost * number_of_units
+        elif cost_type == "per_area":
+            if area_type == "aggregated":
+                return cost * area
+            elif area_type == "per_asset":
+                return cost * area * number_of_units
+        raise ValueError("Invalid input")
+
     @property
     def value(self):
         """The structural per-asset value."""
-        exd = self.REXD(
+        return self.per_asset_value(
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
-        return per_asset_value(exd)
 
     @property
     def retrofitting_cost(self):
         """The retrofitting per-asset value."""
-        exd = self.REXD(
+        return self.per_asset_value(
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
-        return per_asset_value(exd)
-
-    class Meta:
-        db_table = 'oqmif\".\"exposure_data'
-
-
-## Tables in the 'riski' schema.
-class VulnerabilityModel(djm.Model):
-    '''
-    A risk vulnerability model
-    '''
-
-    owner = djm.ForeignKey("OqUser")
-    input = djm.OneToOneField("Input")
-    name = djm.TextField()
-    description = djm.TextField(null=True)
-    imt = djm.TextField(null=True, blank=True, validators=[
-        validators.RegexValidator("PGA|SA\([^)]+?\)",
-                                  "Incorrect intensity measure type")])
-    imls = fields.FloatArrayField()
-    asset_category = djm.TextField()
-    loss_category = djm.TextField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"vulnerability_model'
-
-    def to_risklib(self):
-        return dict([(fn.taxonomy, fn.to_risklib())
-                     for fn in self.vulnerabilityfunction_set.all()])
-
-
-class VulnerabilityFunction(djm.Model):
-    '''
-    A risk vulnerability function
-    '''
-
-    vulnerability_model = djm.ForeignKey("VulnerabilityModel")
-    taxonomy = djm.TextField()
-    prob_distribution = djm.TextField()
-    loss_ratios = fields.FloatArrayField()
-    covs = fields.FloatArrayField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"vulnerability_function'
-
-    def to_risklib(self):
-        return scientific.VulnerabilityFunction(
-            self.vulnerability_model.imls, self.loss_ratios, self.covs,
-            distribution=self.prob_distribution, taxonomy=self.taxonomy)
 
 
 class FragilityModel(djm.Model):
@@ -2495,7 +2534,7 @@ class FragilityModel(djm.Model):
     imls = fields.FloatArrayField(null=True,
                                   help_text="Intensity measure levels")
     imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
-                           help_text="Intensity measure type")
+                        help_text="Intensity measure type")
     iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
     min_iml = djm.FloatField(
         null=True, help_text="Minimum IML value, for continuous models only")

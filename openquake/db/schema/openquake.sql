@@ -412,7 +412,7 @@ CREATE TABLE uiapi.risk_calculation (
     -- probabilistic parameters
     asset_correlation VARCHAR NULL,
     master_seed INTEGER NULL,
-  
+
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
@@ -1009,7 +1009,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'gmf',
-            'gmf_scenario',   
+            'gmf_scenario',
             'hazard_curve',
             'hazard_map',
             'ins_loss_curve',
@@ -1143,7 +1143,12 @@ CREATE TABLE hzrdr.hazard_curve_data (
     id SERIAL PRIMARY KEY,
     hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
-    poes float[] NOT NULL
+    poes float[] NOT NULL,
+    -- Copied from hzrdr.lt_realization.
+    -- This was added for performance reasons, so we can get the weight
+    -- without having to join `hzrdr.lt_realization`.
+    -- `weight` can be null, if the weight is implicit.
+    weight NUMERIC
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
@@ -1485,7 +1490,7 @@ CREATE TABLE riskr.bcr_distribution_data (
     id SERIAL PRIMARY KEY,
     bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
     asset_ref VARCHAR NOT NULL,
-    average_annual_loss_original float NOT NULL ,   
+    average_annual_loss_original float NOT NULL,
     average_annual_loss_retrofitted float NOT NULL,
     bcr float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1640,44 +1645,6 @@ CREATE TABLE oqmif.occupancy (
     description VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
 ) TABLESPACE oqmif_ts;
-
-
--- Vulnerability model
-CREATE TABLE riski.vulnerability_model (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- Associates the risk vulnerability model with an input file
-    input_id INTEGER,
-    name VARCHAR NOT NULL,
-    description VARCHAR,
-    imt VARCHAR NOT NULL,
-    imls float[] NOT NULL,
-    -- e.g. "buildings", "bridges" etc.
-    asset_category VARCHAR NOT NULL,
-    loss_category VARCHAR NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE riski_ts;
-
-
--- Vulnerability function
-CREATE TABLE riski.vulnerability_function (
-    id SERIAL PRIMARY KEY,
-    vulnerability_model_id INTEGER NOT NULL,
-    -- The vulnerability function reference is unique within an vulnerability
-    -- model.
-    taxonomy VARCHAR NOT NULL,
-    -- Please note: there must be one loss ratio and coefficient of variation
-    -- per IML value defined in the referenced vulnerability model.
-    loss_ratios float[] NOT NULL CONSTRAINT loss_ratio_values
-        CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
-    -- Coefficients of variation
-    covs float[] NOT NULL,
-    prob_distribution VARCHAR NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    UNIQUE (vulnerability_model_id, taxonomy)
-) TABLESPACE riski_ts;
 
 
 -- Fragility model
@@ -1907,17 +1874,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
-ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
-riski_vulnerability_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
-admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE riski.fragility_model ADD CONSTRAINT
 riski_fragility_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
 admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
-riski_vulnerability_model_input_fk FOREIGN KEY (input_id) REFERENCES
-uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE riski.fragility_model ADD CONSTRAINT
 riski_fragility_model_input_fk FOREIGN KEY (input_id) REFERENCES
@@ -2123,11 +2082,6 @@ REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 ALTER TABLE oqmif.occupancy ADD CONSTRAINT
 oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
-
-ALTER TABLE riski.vulnerability_function ADD CONSTRAINT
-riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
-(vulnerability_model_id) REFERENCES riski.vulnerability_model(id) ON DELETE
-CASCADE;
 
 ALTER TABLE riski.ffd ADD CONSTRAINT riski_ffd_fragility_model_fk FOREIGN KEY
 (fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE

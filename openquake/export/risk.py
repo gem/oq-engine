@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -74,7 +74,7 @@ def _export_common(output):
             source_model_tree_path, gsim_tree_path = [
                 core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
 
-    unit = risk_calculation.model('exposure').stco_unit
+    unit = risk_calculation.exposure_model.stco_unit
 
     return dict(investigation_time=investigation_time,
                 statistics=statistics,
@@ -128,7 +128,7 @@ def export_loss_map(output, target_dir):
             'loss_map_id': output.lossmap.id,
             'poe': output.lossmap.poe}),
             poe=output.lossmap.poe,
-            loss_category=risk_calculation.model('exposure').category))
+            loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
         output.lossmap.lossmapdata_set.all().order_by('asset_ref'))
     return [args['path']]
@@ -151,5 +151,6 @@ def export_bcr_distribution(output, target_dir):
     del args['investigation_time']
 
     writers.BCRMapXMLWriter(**args).serialize(
-        output.bcrdistribution.bcrdistributiondata_set.all())
+        output.bcrdistribution.bcrdistributiondata_set.all().order_by(
+            'asset_ref'))
     return [args['path']]
