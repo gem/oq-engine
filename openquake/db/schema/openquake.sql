@@ -1445,7 +1445,7 @@ CREATE TABLE riskr.loss_curve (
     quantile float CONSTRAINT loss_curve_quantile_value
         CHECK(
             ((statistics = 'quantile') AND (quantile IS NOT NULL))
-            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
+            OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE riskr_ts;
 
 

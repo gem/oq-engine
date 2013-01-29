@@ -238,7 +238,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
-                print 'Calculation results:'
+                print 'Calculation %d results:' % (
+                    completed_job.hazard_calculation.id)
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
                 complain_and_exit('Job %s failed' % completed_job.id,
@@ -424,7 +425,8 @@ def run_risk(
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
                 print 'Job %s ran successfully' % completed_job.id
-                print 'Calculation results:'
+                print 'Calculation %d results:' % (
+                    completed_job.risk_calculation.id)
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
                 complain_and_exit('Job %s failed' % completed_job.id,
