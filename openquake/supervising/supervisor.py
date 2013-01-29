@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,6 +30,9 @@ supervise() will:
 import logging
 import os
 import signal
+
+import openquake
+
 from datetime import datetime
 
 try:
@@ -299,13 +302,18 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         elif failure_counters_need_check():
             # Job process is still running.
             failures = stats.failure_counters(self.job_id)
+            failed_nodes = None
             if failures:
                 message = "job terminated with failures: %s" % failures
             else:
-                failed_nodes = abort_due_to_failed_nodes(self.job_id)
-                if failed_nodes:
-                    message = ("job terminated due to %s failed nodes" %
-                               failed_nodes)
+                # Don't check for failed nodes if distribution is disabled.
+                # In this case, we don't expect any nodes to be present, and
+                # thus, there are none that can fail.
+                if not openquake.no_distribute():
+                    failed_nodes = abort_due_to_failed_nodes(self.job_id)
+                    if failed_nodes:
+                        message = ("job terminated due to %s failed nodes" %
+                                   failed_nodes)
             if failures or failed_nodes:
                 terminate_job(self.job_pid)
                 job_failed = True

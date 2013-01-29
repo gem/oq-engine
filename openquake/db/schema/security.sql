@@ -58,25 +58,17 @@ GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.occupancy_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE riski.ffc_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riski.ffd_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riski.fragility_model_id_seq to GROUP openquake;
-
 GRANT ALL ON SEQUENCE riskr.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riskr.collapse_map_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riskr.collapse_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_state_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_total_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE riskr.dmg_dist_total_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.model_content_id_seq to GROUP openquake;
@@ -216,18 +208,6 @@ GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
 
--- riski.ffc
-GRANT SELECT ON riski.ffc TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.ffc TO oq_job_init;
-
--- riski.ffd
-GRANT SELECT ON riski.ffd TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.ffd TO oq_job_init;
-
--- riski.fragility_model
-GRANT SELECT ON riski.fragility_model TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON riski.fragility_model TO oq_job_init;
-
 -- riskr.loss_curve
 GRANT SELECT ON riskr.loss_curve TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_curve TO oq_reslt_writer;
@@ -248,14 +228,6 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map TO oq_reslt_writer;
 GRANT SELECT ON riskr.loss_map_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map_data TO oq_reslt_writer;
 
--- riskr.collapse_map
-GRANT SELECT ON riskr.collapse_map TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.collapse_map TO oq_reslt_writer;
-
--- riskr.collapse_map_data
-GRANT SELECT ON riskr.collapse_map_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.collapse_map_data TO oq_reslt_writer;
-
 -- riskr.bcr_distribution
 GRANT SELECT ON riskr.bcr_distribution TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution TO oq_reslt_writer;
@@ -265,28 +237,20 @@ GRANT SELECT ON riskr.bcr_distribution_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution_data TO oq_reslt_writer;
 
 -- riskr.dmg_dist_per_asset
+GRANT SELECT ON riskr.dmg_state TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_state TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_asset
 GRANT SELECT ON riskr.dmg_dist_per_asset TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset TO oq_reslt_writer;
-
--- riskr.dmg_dist_per_asset_data
-GRANT SELECT ON riskr.dmg_dist_per_asset_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset_data TO oq_reslt_writer;
 
 -- riskr.dmg_dist_per_taxonomy
 GRANT SELECT ON riskr.dmg_dist_per_taxonomy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy TO oq_reslt_writer;
 
--- riskr.dmg_dist_per_taxonomy_data
-GRANT SELECT ON riskr.dmg_dist_per_taxonomy_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy_data TO oq_reslt_writer;
-
 -- riskr.dmg_dist_total
 GRANT SELECT ON riskr.dmg_dist_total TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_total TO oq_reslt_writer;
-
--- riskr.dmg_dist_total_data
-GRANT SELECT ON riskr.dmg_dist_total_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_total_data TO oq_reslt_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
