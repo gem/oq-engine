@@ -156,6 +156,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
+        # compute aggregate loss curves
         for hazard_output in self.considered_hazard_outputs():
             loss_curve = models.LossCurve.objects.get(
                 hazard_output=hazard_output,
@@ -171,6 +172,14 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.losses = aggregate_loss_curve.abscissae.tolist()
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
+
+        # then compute mean/quantile curves for
+        # individual/aggregate/insured loss curves
+
+        super(EventBasedRiskCalculator, self).post_process()
+        super(EventBasedRiskCalculator, self).post_process(aggregate=True)
+        if self.rc.insured_losses:
+            super(EventBasedRiskCalculator, self).post_process(insured=True)
 
     def hazard_id(self, hazard_output):
         """
