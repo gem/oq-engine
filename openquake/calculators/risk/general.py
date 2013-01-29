@@ -25,9 +25,9 @@ import risklib
 from django import db
 
 from openquake import logs
-from openquake.utils import config
+from openquake.utils import config, general as utils
 from openquake.db import models
-from openquake.calculators import base
+from openquake.calculators import base, post_processing
 from openquake import export
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
@@ -35,6 +35,12 @@ from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
+
+from openquake import writer
+
+
+#: Maximum number of loss curves to cache in buffers, for selects and inserts
+_CURVE_CACHE_SIZE = 100000
 
 
 class BaseRiskCalculator(base.CalculatorNext):
@@ -255,6 +261,83 @@ class BaseRiskCalculator(base.CalculatorNext):
         # Calculator must override this to select from the hazard
         # output/calculation the proper hazard output containers
         raise NotImplementedError
+
+    def post_processing(self, **extra_curve_args):
+
+        curve_args = dict(
+            aggregate=False, insured=False).update(extra_curve_args)
+
+        with logs.tracing('post processing'):
+            if self.rc.compute_loss_curve_statistics():
+                num_rlzs = len(self.considered_hazard_outputs())
+                num_site_blocks_per_incr = max(1, _CURVE_CACHE_SIZE / num_rlzs)
+                slice_incr = num_site_blocks_per_incr * num_rlzs
+
+                # prepare `output` and `hazard_curve` containers in the DB:
+                container_ids = dict()
+                if self.rc.mean_loss_curves:
+                    container_ids['mean'] = models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name='loss-curves',
+                            output_type='loss_curve'),
+                        statistics='mean', **curve_args).id
+
+                for quantile in self.rc.quantile_loss_curves or []:
+                    container_ids['q%s' % quantile] = (
+                        models.LossCurve.objects.create(
+                            output=models.Output.objects.create_output(
+                                job=self.job,
+                                display_name='quantile(%s)-curves' % quantile,
+                                output_type='loss_curve'),
+                            statistics='quantile',
+                            quantile=quantile,
+                            **curve_args).id)
+
+                all_curves = models.LossCurveData.objects.filter(
+                    losscurve__output__oqjob=self.job, **curve_args).order_by(
+                        'location')
+
+            hc = self.rc.get_hazard_calculation()
+
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                inserter = writer.BulkInserter(
+                    models.LossCurveData, max_cache_size=_CURVE_CACHE_SIZE)
+
+                for chunk in models.queryset_iter(all_curves, slice_incr):
+                    # slice each chunk by `num_rlzs` into `site_chunk`
+                    # and compute the aggregate
+                    for site_chunk in utils.block_splitter(chunk, num_rlzs):
+                        site = site_chunk[0].location
+                        curves_poes = [x.poes for x in site_chunk]
+                        curves_weights = [x.weight for x in site_chunk]
+
+                        for quantile in self.rc.quantile_hazard_curves or []:
+                            if hc.number_of_logic_tree_samples == 0:
+                                # explicitly weighted quantiles
+                                q_curve = (
+                                    post_processing.weighted_quantile_curve(
+                                        curves_poes, curves_weights, quantile))
+                            else:
+                                # implicitly weighted quantiles
+                                q_curve = (
+                                    post_processing.quantile_curve(
+                                        curves_poes, quantile))
+
+                            inserter.add_entry(
+                                loss_curve_id=container_ids['q%s' % quantile],
+                                poes=q_curve.tolist(),
+                                location=site.wkt)
+
+                        # then means
+                        if self.hc.mean_hazard_curves:
+                            mean_curve = post_processing.compute_mean_curve(
+                                curves_poes, weights=curves_weights)
+                            inserter.add_entry(
+                                loss_curve_id=container_ids['mean'],
+                                poes=mean_curve.tolist(),
+                                location=site.wkt)
+                inserter.flush()
 
     @property
     def rc(self):
