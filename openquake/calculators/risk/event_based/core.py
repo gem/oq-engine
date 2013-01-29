@@ -31,10 +31,9 @@ from openquake.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard_id,
+def event_based(job_id, assets, hazard_getter, hazard,
                 seed, vulnerability_function,
-                loss_curve_id, loss_map_ids,
-                insured_curve_id, aggregate_loss_curve_id,
+                output_containers,
                 conditional_loss_poes, insured_losses,
                 imt, time_span, tses,
                 loss_curve_resolution, asset_correlation):
@@ -45,16 +44,17 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     :param assets: the list of `:class:risklib.scientific.Asset`
     instances considered
     :param hazard_getter: the name of an hazard getter to be used
-    :param hazard_id: the hazard output id
+    :param dict hazard:
+      A dictionary mapping hazard Output ID to GmfCollection ID
     :param seed: the seed used to initialize the rng
-    :param loss_curve_id:
-      ID of the :class:`openquake.db.models.LossCurve` output container used
-      to store the computed loss curves
-    :param loss_map_ids:
-      Dictionary poe->ID of the :class:`openquake.db.models.LossMap` output
-      container used to store the computed loss maps
-    :param insured_curve_id: Same as loss_curve_id but for insured losses
-    :param aggregate_loss_curve_id: ID of the
+
+    :param dict output_containers: a dictionary mapping hazard Output
+      ID to a list (a, b, c, d) where a is the ID of the
+      :class:`openquake.db.models.LossCurve` output container used to
+      store the computed loss curves; b is the dictionary poe->ID of
+      the :class:`openquake.db.models.LossMap` output container used
+      to store the computed loss maps; c is the same as a but for
+      insured losses; d is the ID of the
       :class:`openquake.db.models.AggregateLossCurve` output container
       used to store the computed loss curves
     :param conditional_loss_poes:
@@ -68,47 +68,57 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     :param float asset_correlation: a number ranging from 0 to 1
     representing the correlation between the generated loss ratios
     """
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-    calculator = api.ProbabilisticEventBased(
-        vulnerability_function,
-        curve_resolution=loss_curve_resolution,
-        time_span=time_span,
-        tses=tses,
-        seed=seed,
-        correlation=asset_correlation)
+    for hazard_output_id, hazard_data in hazard.items():
+        hazard_id, _ = hazard_data
 
-    if insured_losses:
-        calculator = api.InsuredLosses(calculator)
+        (loss_curve_id, loss_map_ids,
+         insured_curve_id, aggregate_loss_curve_id) = (
+             output_containers[hazard_output_id])
 
-    # if we need to compute the loss maps, we add the proper risk
-    # aggregator
-    if conditional_loss_poes:
-        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
+        hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-    with logs.tracing('getting hazard'):
-        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
+        calculator = api.ProbabilisticEventBased(
+            vulnerability_function,
+            curve_resolution=loss_curve_resolution,
+            time_span=time_span,
+            tses=tses,
+            seed=seed,
+            correlation=asset_correlation)
 
-    with logs.tracing('computing risk over %d assets' % len(assets)):
-        asset_outputs = calculator(assets, ground_motion_fields)
+        if insured_losses:
+            calculator = api.InsuredLosses(calculator)
 
-    with logs.tracing('writing results'):
-        with db.transaction.commit_on_success(using='reslt_writer'):
-            for i, asset_output in enumerate(asset_outputs):
-                general.write_loss_curve(
-                    loss_curve_id, assets[i], asset_output)
+        # if we need to compute the loss maps, we add the proper risk
+        # aggregator
+        if conditional_loss_poes:
+            calculator = api.ConditionalLosses(
+                conditional_loss_poes, calculator)
 
-                if asset_output.conditional_losses:
-                    general.write_loss_map(
-                        loss_map_ids, assets[i], asset_output)
+        with logs.tracing('getting hazard'):
+            ground_motion_fields = [hazard_getter(asset.site)
+                                    for asset in assets]
 
-                if asset_output.insured_losses:
+        with logs.tracing('computing risk over %d assets' % len(assets)):
+            asset_outputs = calculator(assets, ground_motion_fields)
+
+        with logs.tracing('writing results'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, asset_output in enumerate(asset_outputs):
                     general.write_loss_curve(
-                        insured_curve_id, assets[i], asset_output)
+                        loss_curve_id, assets[i], asset_output)
 
-    losses = sum(asset_output.losses for asset_output in asset_outputs)
+                    if asset_output.conditional_losses:
+                        general.write_loss_map(
+                            loss_map_ids, assets[i], asset_output)
 
-    general.update_aggregate_losses(aggregate_loss_curve_id, losses)
+                    if asset_output.insured_losses:
+                        general.write_loss_curve(
+                            insured_curve_id, assets[i], asset_output)
+
+        losses = sum(asset_output.losses for asset_output in asset_outputs)
+        general.update_aggregate_losses(aggregate_loss_curve_id, losses)
+
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False
 
@@ -172,28 +182,35 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
 
-    def hazard_id(self, hazard_output):
+    def hazard_output(self, output):
         """
         :returns: the ID of the
         :class:`openquake.db.models.GmfCollection` object that stores
-        the ground motion fields associated with `hazard_output`
+        the ground motion fields associated with `output`
         """
 
-        if not hazard_output.is_ground_motion_field():
+        if not output.is_ground_motion_field():
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
 
-        return hazard_output.gmfcollection.id
+        gmf = output.gmfcollection
+
+        if gmf.lt_realization:
+            weight = gmf.lt_realization.weight
+        else:
+            weight = None
+        return (gmf.id, weight)
 
     def hazard_outputs(self, hazard_calculation):
         """
         :returns: a list of :class:`openquake.db.models.Output` hazard
         object that stores the ground motion fields associated with
-        `hazard_calculation`
+        `hazard_calculation` and a logic tree realization
         """
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='gmf',
+                gmfcollection__lt_realization__isnull=False,
                 gmfcollection__complete_logic_tree_gmf=False)
 
     def hazard_times(self):

@@ -989,14 +989,19 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
 
     risk_cfg = demo_file(risk_demo)
 
+    rlz = models.LtRealization.objects.create(
+        hazard_calculation=hazard_job.hazard_calculation,
+        ordinal=1, seed=1, weight=None,
+        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+        is_complete=False, total_items=1, completed_items=1)
     if output_type == "curve":
         hazard_output = models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
+                lt_realization=rlz,
                 output=models.Output.objects.create_output(
                     hazard_job, "Test Hazard output", "hazard_curve"),
                 investigation_time=hc.investigation_time,
-                imt="PGA", imls=[0.1, 0.2, 0.3],
-                statistics="mean"),
+                imt="PGA", imls=[0.1, 0.2, 0.3]),
             poes=[0.1, 0.2, 0.3],
             location="POINT(1 1)")
     else:
@@ -1005,11 +1010,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 gmf_collection=models.GmfCollection.objects.create(
                     output=models.Output.objects.create_output(
                         hazard_job, "Test Hazard output", "gmf"),
-                    lt_realization=models.LtRealization.objects.create(
-                        hazard_calculation=hazard_job.hazard_calculation,
-                        ordinal=1, seed=1, weight=None,
-                        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                        is_complete=False, total_items=1, completed_items=1),
+                    lt_realization=rlz,
                     complete_logic_tree_gmf=False),
                 investigation_time=hc.investigation_time,
                 ses_ordinal=1,
