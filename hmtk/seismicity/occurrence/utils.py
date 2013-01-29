@@ -55,7 +55,6 @@ def input_checks(catalogue, config, completeness):
     """
 
     if isinstance(completeness, np.ndarray):
-        print 'Option A'
         # completeness table is a numpy array (i.e. [year, magnitude])
         if np.shape(completeness)[1] != 2:
             raise ValueError('Completeness Table incorrectly configured')
@@ -63,13 +62,11 @@ def input_checks(catalogue, config, completeness):
             cmag = completeness[:, 1]
             ctime = completeness[:, 0]
     elif isinstance(completeness, float):
-        print 'Option B'
         # Completeness corresponds to a single magnitude (i.e. applies to
         # the entire catalogue)
         cmag = np.array(completeness)
         ctime = np.array(np.min(catalogue['year']))
     else:
-        print 'Option C'
         # Everything is valid - i.e. no completeness magnitude
         cmag = np.array(np.min(catalogue['magnitude']))
         ctime = np.array(np.min(catalogue['year']))
