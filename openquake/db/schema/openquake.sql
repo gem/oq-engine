@@ -409,6 +409,9 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
+    mean_loss_curves boolean DEFAULT false,
+    quantile_loss_curves float[],
+
     -- probabilistic parameters
     asset_correlation float NULL
     CONSTRAINT asset_correlation_value
@@ -1433,7 +1436,16 @@ CREATE TABLE riskr.loss_curve (
     output_id INTEGER NOT NULL,
     hazard_output_id INTEGER NOT NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
-    insured BOOLEAN NOT NULL DEFAULT false
+    insured BOOLEAN NOT NULL DEFAULT false,
+
+    statistics VARCHAR CONSTRAINT loss_curve_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT loss_curve_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
 ) TABLESPACE riskr_ts;
 
 
