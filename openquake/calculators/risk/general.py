@@ -264,13 +264,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         # output/calculation the proper hazard output containers
         raise NotImplementedError
 
-    def post_processing(self, **extra_curve_args):
+    def post_process(self, **extra_curve_args):
 
         curve_args = dict(
-            aggregate=False, insured=False).update(extra_curve_args)
+            aggregate=False, insured=False)
+        curve_args.update(extra_curve_args)
 
         with logs.tracing('post processing'):
-            if self.rc.compute_loss_curve_statistics():
+            if self.rc.will_compute_loss_curve_statistics():
                 num_rlzs = len(self.considered_hazard_outputs())
                 num_site_blocks_per_incr = max(1, _CURVE_CACHE_SIZE / num_rlzs)
                 slice_incr = num_site_blocks_per_incr * num_rlzs
@@ -296,9 +297,11 @@ class BaseRiskCalculator(base.CalculatorNext):
                             quantile=quantile,
                             **curve_args).id)
 
+                curve_data_args = dict(('loss_curve__%s' % k, v)
+                                       for k, v in curve_args.items())
                 all_curves = models.LossCurveData.objects.filter(
-                    losscurve__output__oqjob=self.job, **curve_args).order_by(
-                        'location')
+                    loss_curve__output__oq_job=self.job,
+                    **curve_data_args).order_by('location')
 
             hc = self.rc.get_hazard_calculation()
 

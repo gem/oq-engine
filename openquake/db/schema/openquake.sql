@@ -1412,7 +1412,7 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    hazard_output_id INTEGER NOT NULL,
+    hazard_output_id INTEGER NULL,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
         CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
@@ -1434,7 +1434,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    hazard_output_id INTEGER NOT NULL,
+    hazard_output_id INTEGER NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false,
 
@@ -1484,7 +1484,7 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    hazard_output_id INTEGER NOT NULL
+    hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.bcr_distribution_data (
