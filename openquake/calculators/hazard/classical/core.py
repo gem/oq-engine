@@ -397,12 +397,12 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
                         # then means
                         if self.hc.mean_hazard_curves:
-                            mean_curve = mean_curve(
+                            m_curve = mean_curve(
                                 curves_poes, weights=curves_weights
                             )
                             inserter.add_entry(
                                 hazard_curve_id=container_ids['mean'],
-                                poes=mean_curve.tolist(),
+                                poes=m_curve.tolist(),
                                 location=site.wkt
                             )
                 inserter.flush()
