@@ -909,6 +909,11 @@ class RiskCalculation(djm.Model):
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=False, blank=False)
 
+    # the HazardCalculation object used by the risk calculation (each
+    # Output (ergo each logic tree realization) is considered
+    hazard_calculation = djm.ForeignKey("HazardCalculation",
+                                        null=False, blank=False)
+
     # A seed used to generate random values to be applied to
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
@@ -945,13 +950,13 @@ class RiskCalculation(djm.Model):
         kwargs = _prep_geometry(kwargs)
         super(RiskCalculation, self).__init__(*args, **kwargs)
 
-    @property
-    def hazard_calculation(self):
+    def get_hazard_calculation(self):
         """
         :returns: the hazard calculation associated with the hazard
         output used as input in risk calculation
         """
-        return self.hazard_output.oq_job.hazard_calculation
+        return (self.hazard_calculation or
+                self.hazard_output.oq_job.hazard_calculation)
 
     @property
     def hazard_statistics(self):
@@ -2036,6 +2041,7 @@ class LossMap(djm.Model):
     '''
 
     output = djm.OneToOneField("Output")
+    hazard_output = djm.ForeignKey("Output")
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2064,6 +2070,7 @@ class LossCurve(djm.Model):
     '''
 
     output = djm.OneToOneField("Output")
+    hazard_output = djm.ForeignKey("Output")
     aggregate = djm.BooleanField(default=False)
     insured = djm.BooleanField(default=False)
 
@@ -2133,6 +2140,7 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.OneToOneField("Output")
+    hazard_output = djm.ForeignKey("Output")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'

@@ -157,7 +157,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        output_containers = self.create_outputs()
+        if self.rc.hazard_output:
+            hazard_outputs = [self.hazard_output]
+        else:
+            hazard_outputs = self.hazard_outputs(self.hazard_calculation)
+
+        output_containers = dict((hazard_output.id,
+                                  self.create_outputs(hazard_output))
+                                 for hazard_output in hazard_outputs)
+
         calculator_parameters = self.calculator_parameters
 
         for taxonomy, assets_nr in self.taxonomies.items():
@@ -168,12 +176,15 @@ class BaseRiskCalculator(base.CalculatorNext):
                     assets = self.exposure_model.get_asset_chunk(
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
-
-                tf_args = ([
-                    self.job.id,
-                    assets, self.hazard_getter, self.hazard_id] +
-                    self.worker_args(taxonomy) +
-                    output_containers + calculator_parameters)
+                for hazard_output in hazard_outputs:
+                    tf_args = ([
+                        self.job.id,
+                        assets,
+                        self.hazard_getter,
+                        self.hazard_id(hazard_output)] +
+                        self.worker_args(taxonomy) +
+                        output_containers[hazard_output.id] +
+                        calculator_parameters)
 
                 yield tf_args
 
@@ -210,18 +221,33 @@ class BaseRiskCalculator(base.CalculatorNext):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
-    def hazard_id(self):
+    def hazard_outputs(self, hazard_calculation):
         """
-        :returns: The ID of the output container of the hazard used
-        for this risk calculation. E.g. an `openquake.db.models.HazardCurve'
+        :returns: a list of :class:`openquake.db.models.Output`
+        objects to be used for a risk calculation.
+
+        Calculator must override this to select from the hazard
+        calculation which are the Output objects to be considered by
+        the risk calculation
+        """
+        pass
+
+    def hazard_id(self, hazard_output):
+        """
+        :returns: The ID of the output container of the hazard
+        used for this risk calculation. E.g. an
+        :class:`openquake.db.models.HazardCurve'
+
+        :param hazard_output: the ID of an
+        :class:`openquake.db.models.Output` object
 
         :raises: `RuntimeError` if the hazard associated with the
-        current risk calculation is not suitable to be used with this
+        `hazard_output` is not suitable to be used with this
         calculator
         """
 
         # Calculator must override this to select from the hazard
-        # output the proper hazard output container
+        # output/calculation the proper hazard output containers
         raise NotImplementedError
 
     @property
@@ -304,7 +330,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 record['probabilisticDistribution'])
         return vfs
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create outputs container objects (e.g. LossCurve, Output).
 
@@ -314,24 +340,29 @@ class BaseRiskCalculator(base.CalculatorNext):
         The default behavior is to create a loss curve and loss maps
         output.
 
-        :return a list of int (id of containers) or dict (poe->int)
+        :returns: a dictionary mapping an Output object ID to a list
+        of int (id of containers) or dict (poe->int)
         """
 
         job = self.job
 
         # add loss curve containers
         loss_curve_id = models.LossCurve.objects.create(
+            hazard_output_id=hazard_output.id,
             output=models.Output.objects.create_output(
-                job, "Loss Curve set", "loss_curve")).pk
+                job, "Loss Curve set for hazard %s" % hazard_output.id,
+                "loss_curve")).pk
 
         loss_map_ids = dict()
 
         if self.job.risk_calculation.conditional_loss_poes is not None:
             for poe in self.job.risk_calculation.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
+                    hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Loss Map Set with poe %s" % poe,
+                        "Loss Map Set with poe %s for hazard %s" % (
+                            poe, hazard_output.id),
                         "loss_map"),
                     poe=poe).pk
         return [loss_curve_id, loss_map_ids]

@@ -107,17 +107,26 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    @property
-    def hazard_id(self):
+    def hazard_id(self, hazard_output):
         """
-        The ID of the :class:`openquake.db.models.HazardCurve` object that
-        stores the hazard curves used by the risk calculation.
+        :returns: the ID of the
+        :class:`openquake.db.models.HazardCurve` object that stores
+        the hazard curves associated to `hazard_output`
         """
-        if not self.rc.hazard_output.is_hazard_curve():
+        if not hazard_output.is_hazard_curve():
             raise RuntimeError(
                 "The provided hazard output is not an hazard curve")
 
-        return self.rc.hazard_output.hazardcurve.id
+        return hazard_output.hazardcurve.id
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.HazardCurve`
+        object that stores the hazard curves associated to
+        `hazard_calculation`
+        """
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.filter(output_type='hazard_curve')
 
     @property
     def calculator_parameters(self):
