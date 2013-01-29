@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Unit tests for the Weichert maximum likelihood algorithm class which computes 
+Unit tests for the maximum likelihood algorithm class which computes 
 seismicity occurrence parameters.
 """
 
@@ -10,7 +10,7 @@ import numpy as np
 
 from hmtk.seismicity.occurrence.b_maximum_likelihood import BMaxLikelihood
 
-class MaxLikelihoodTestCase(unittest.TestCase):
+class BMaxLikelihoodTestCase(unittest.TestCase):
     
     def setUp(self):
         """
@@ -55,50 +55,48 @@ class MaxLikelihoodTestCase(unittest.TestCase):
             lidx = uidx 
 
         self.catalogue = {'magnitude' : magnitude, 'year' : year}
-        self.wei_ml = BMaxLikelihood()
+        self.b_ml = BMaxLikelihood()
         self.config = {'Average Type' : 'Weighted'}
         
-    def test_weichert_maximum_likelihood(self):
+    def test_b_maximum_likelihood(self):
         """
         Tests that the computed b value corresponds to the same value
         used to generate the test data set 
         """
-        bval, sigma_b, aval, sigma_a = self.wei_ml.calculate(self.catalogue, 
+        bval, sigma_b, aval, sigma_a = self.b_ml.calculate(self.catalogue, 
                 self.config, self.compl)
         self.assertAlmostEqual(self.bval, bval, 1)
 
-    def test_weichert_maximum_likelihood_raise_error(self):
+    def test_b_maximum_likelihood_raise_error(self):
         completeness_table = np.zeros((10,2))
         catalogue = {'year': [1900]}
         config = {'Average Type' : ['fake']}
-        self.assertRaises(ValueError, self.wei_ml.calculate, catalogue, 
+        self.assertRaises(ValueError, self.b_ml.calculate, catalogue, 
                 config, completeness_table)
 
-    def test_weichert_maximum_likelihood_average_parameters_raise_error(self):
+    def test_b_maximum_likelihood_average_parameters_raise_error(self):
         num = 4 
         gr_pars = np.zeros((10,num))
         neq = np.zeros((num))
-        self.assertRaises(ValueError, self.wei_ml._average_parameters, 
+        self.assertRaises(ValueError, self.b_ml._average_parameters, 
                 gr_pars, neq)
 
-    def test_weichert_maximum_likelihood_average_parameters_use_harmonic(self):
+    def test_b_maximum_likelihood_average_parameters_use_harmonic(self):
         num = 4 
         gr_pars = np.ones((num,10))
         neq = np.ones((num))
-        self.wei_ml._average_parameters(gr_pars, neq, average_type='Harmonic')
+        self.b_ml._average_parameters(gr_pars, neq, average_type='Harmonic')
 
-    def test_weichert_maximum_likelihood_weighted_mean_raise_error(self):
+    def test_b_maximum_likelihood_weighted_mean_raise_error(self):
         num = 4 
         parameters = np.ones((num))
         neq = np.ones((num+1))
-        self.assertRaises(ValueError, self.wei_ml._weighted_mean, 
+        self.assertRaises(ValueError, self.b_ml._weighted_mean, 
                 parameters, neq)
 
-    def test_weichert_maximum_likelihood_harmonic_mean_raise_error(self):
+    def test_b_maximum_likelihood_harmonic_mean_raise_error(self):
         num = 4 
         parameters = np.ones((num))
         neq = np.ones((num+1))
-        self.assertRaises(ValueError, self.wei_ml._harmonic_mean, 
+        self.assertRaises(ValueError, self.b_ml._harmonic_mean, 
                 parameters, neq)
-
-

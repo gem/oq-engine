@@ -40,6 +40,13 @@ class BMaxLikelihood(SeismicityOccurrence):
         if not config['Average Type'] in ['Weighted','Harmonic']:
             raise ValueError('Average type not recognised in bMaxLiklihood!')
 
+        return self._b_ml(catalogue, config, cmag, ctime, ref_mag, 
+                dmag, end_year)
+
+    def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag, end_year):
+        """
+        """
+
         ival = 0
         mag_eq_tolerance = 1E-5
         aki_ml = AkiMaxLikelihood()
@@ -64,8 +71,6 @@ class BMaxLikelihood(SeismicityOccurrence):
                                               catalogue['year'][id1],
                                               end_year-ctime[ival]+1)
             
-            print temp_rec_table
-
             bval, sigma_b = aki_ml._aki_ml(temp_rec_table[:, 0],
                                              temp_rec_table[:, 1], dmag, m_c)
 

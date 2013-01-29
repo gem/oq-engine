@@ -57,9 +57,6 @@ class RecurrenceTableTestCase(unittest.TestCase):
         Basic recurrence table test
         """
         magnitude_interval = 0.1
-        print rec_utils.recurrence_table(self.catalogueB['magnitude'], 
-                                       magnitude_interval,
-                                       self.catalogueB['year'])
         self.assertTrue( np.allclose(self.true_tableB, 
             rec_utils.recurrence_table(self.catalogueB['magnitude'], 
                                        magnitude_interval,
@@ -72,7 +69,13 @@ class RecurrenceTableTestCase(unittest.TestCase):
         self.assertRaises(ValueError, rec_utils.input_checks, catalogue, 
                 config, fake_completeness_table)
 
-    def test_input_checks_use_a_float(self):
+    def test_input_checks_simple_input(self):
+        completeness_table = [[1900, 2.0]]
+        catalogue = {'magnitude': [5.0, 6.0], 'year': [2000, 2000]}
+        config = {}
+        rec_utils.input_checks(catalogue, config, completeness_table)
+
+    def test_input_checks_use_a_float_for_completeness(self):
         fake_completeness_table = 0.0
         catalogue = {'year': [1900]}
         config = {}
