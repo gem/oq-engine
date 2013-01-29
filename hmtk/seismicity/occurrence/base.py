@@ -19,5 +19,8 @@ class SeismicityOccurrence(object):
         :param dict config:
             The config contains the necessary information to run a specific 
             algorithm.     
+
+        :param numpy.ndarray completeness:
+            The completeness matrix
         """
         return

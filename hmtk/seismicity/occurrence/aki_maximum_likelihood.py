@@ -2,7 +2,7 @@
 
 import numpy as np
 from hmtk.seismicity.occurrence.base import SeismicityOccurrence
-from hmtk.seismicity.occurrence.utils import recurrence_table
+from hmtk.seismicity.occurrence.utils import recurrence_table, input_checks 
 
 class AkiMaxLikelihood(SeismicityOccurrence):
 
@@ -20,13 +20,15 @@ class AkiMaxLikelihood(SeismicityOccurrence):
         :keyword float completeness: 
             Completeness magnitude
 
-        :return bval:
+        :return float bval:
             b-value of the Gutenberg-Richter relationship
-        :rtype float:
-        :return sigma_b:
-        :rtype float:
+        :return float sigma_b:
+            Standard deviation of the GR b-value
         """
-        rt = recurrence_table(catalogue['magnitude'])
+        # Input checks
+        cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
+                                                    completeness)
+        rt = recurrence_table(catalogue['magnitude'], dmag, catalogue['year'])
         bval, sigma_b = self._aki_ml(rt[:,0], rt[:,1])
         return bval, sigma_b 
 
@@ -42,13 +44,14 @@ class AkiMaxLikelihood(SeismicityOccurrence):
             magnitude interval
         :keyword float m_c: 
             completeness magnitude
-        :returns: 
-            bvalue and sigma_b
-        :rtype: float
+
+        :return float bval:
+            b-value of the Gutenberg-Richter relationship
+        :return float sigma_b:
+            Standard deviation of the GR b-value
         """
         # Exclude data below Mc
         id0 = mval >= m_c
-        print id0
         mval = mval[id0]
         number_obs = number_obs[id0]
         # Get Number of events, minimum magnitude and mean magnitude

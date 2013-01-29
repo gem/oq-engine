@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def recurrence_table(mag, dmag, year):
+def recurrence_table(mag, dmag, year, time_interval=None):
     """
     Table of recurrence statistics for each magnitude
     [Magnitude, Number of Observations, Cumulative Number
@@ -15,17 +15,21 @@ def recurrence_table(mag, dmag, year):
     Counts number and cumulative number of occurrences of
     each magnitude in catalogue
 
-    :param mag: catalog matrix magnitude column
-    :type mag: numpy.ndarray
-    :param dmag: magnitude interval
-    :type dmag: numpy.ndarray
-    :param year: catalog matrix year column
-    :type year: numpy.ndarray
-    :returns: recurrence table
-    :rtype: numpy.ndarray
+    :param numpy.ndarray mag: 
+        Catalog matrix magnitude column
+    :param numpy.ndarray dmag: 
+        Magnitude interval
+    :param numpy.ndarray year: 
+        Catalog matrix year column
+
+    :returns numpy.ndarray recurrence table:
+        Recurrence table
     """
     # Define magnitude vectors
-    num_year = np.max(year) - np.min(year) + 1.
+    if time_interval is None:
+        num_year = np.max(year) - np.min(year) + 1.
+    else:
+        num_year = time_interval
     upper_m = np.max(np.ceil(10.0 * mag) / 10.0)
     lower_m = np.min(np.floor(10.0 * mag) / 10.0)
     mag_range = np.arange(lower_m, upper_m + (1.5 * dmag), dmag)
@@ -68,12 +72,12 @@ def input_checks(catalogue, config, completeness):
         ctime = np.array(np.min(catalogue['year']))
      
     # Set reference magnitude - if not in config then default to M = 0.
-    if not config['reference_magnitude']:
+    if config is None or not 'reference_magnitude' in config:
         ref_mag = 0.0
     else:
         ref_mag = config['reference_magnitude']
 
-    if not config['magnitude_interval']:
+    if config is None or not 'magnitude_interval' in config:
         dmag = 0.1
     else:
         dmag = config['magnitude_interval']
