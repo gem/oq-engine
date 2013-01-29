@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 import os
 
+from collections import namedtuple
 from collections import OrderedDict
 
 from nhlib.calc import disagg
@@ -157,7 +158,15 @@ def export_hazard_curves(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    hcd = models.HazardCurveData.objects.filter(hazard_curve=hc.id)
+
+    curves = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id)
+    )
+    # Simple object wrapper around the values, to match the interface of the
+    # XML writer:
+    Location = namedtuple('Location', 'x y')
+    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
+    hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
     filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
 

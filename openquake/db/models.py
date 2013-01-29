@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,16 +30,13 @@ import operator
 import os
 import re
 
-from collections import namedtuple
 from datetime import datetime
 
 import numpy
 
 from django.db import connection
-from django.core import validators
 from django.contrib.gis.db import models as djm
 from nhlib import geo as nhlib_geo
-import risklib
 from shapely import wkt
 
 from openquake.db import fields
@@ -70,6 +67,29 @@ IMT_CHOICES = (
 
 #: Default Loss Curve Resolution used for probabilistic risk calculators
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
+
+
+def queryset_iter(queryset, chunk_size):
+    """
+    Given a QuerySet, split it into smaller queries and yield the result of
+    each.
+
+    :param queryset:
+        A :class:`django.db.models.query.QuerySet` to iterate over, in chunks
+        of ``chunk_size``.
+    :param int chunksize:
+        Chunk size for iteration over query results. For an unexecuted
+        QuerySet, this will result in splitting a (potentially large) query
+        into smaller queries.
+    """
+    offset = 0
+    while True:
+        chunk = list(queryset[offset:offset + chunk_size].iterator())
+        if len(chunk) == 0:
+            raise StopIteration
+        else:
+            yield chunk
+            offset += chunk_size
 
 
 def profile4job(job_id):
@@ -667,6 +687,8 @@ class HazardCalculation(djm.Model):
     )
     truncation_level = djm.FloatField(
         help_text='Level for ground motion distribution truncation',
+        null=True,
+        blank=True
     )
     maximum_distance = djm.FloatField(
         help_text=('Maximum distance (in km) of sources to be considered in '
@@ -1097,21 +1119,21 @@ class OqJobProfile(djm.Model):
     )
     component = djm.TextField(choices=COMPONENT_CHOICES)
     IMT_CHOICES = (
-       (u'pga', u'Peak Ground Acceleration'),
-       (u'sa', u'Spectral Acceleration'),
-       (u'pgv', u'Peak Ground Velocity'),
-       (u'pgd', u'Peak Ground Displacement'),
-       (u'ia', u'Arias Intensity'),
-       (u'rsd', u'Relative Significant Duration'),
-       (u'mmi', u'Modified Mercalli Intensity'),
+        (u'pga', u'Peak Ground Acceleration'),
+        (u'sa', u'Spectral Acceleration'),
+        (u'pgv', u'Peak Ground Velocity'),
+        (u'pgd', u'Peak Ground Displacement'),
+        (u'ia', u'Arias Intensity'),
+        (u'rsd', u'Relative Significant Duration'),
+        (u'mmi', u'Modified Mercalli Intensity'),
     )
     imt = djm.TextField(choices=IMT_CHOICES)
     period = djm.FloatField(null=True)
     damping = djm.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
-       (u'none', u'None'),
-       (u'onesided', u'One-sided'),
-       (u'twosided', u'Two-sided'),
+        (u'none', u'None'),
+        (u'onesided', u'One-sided'),
+        (u'twosided', u'Two-sided'),
     )
     truncation_type = djm.TextField(choices=TRUNC_TYPE_CHOICES)
     # TODO(LB): We should probably find out why (from a science perspective)
@@ -1474,7 +1496,7 @@ class HazardCurveDataManager(djm.GeoManager):
         base_queryset = self.individual_curves_ordered(job, imt)
         base_queryset = base_queryset.extra({
             'wkb': 'asBinary(location)',
-            })
+        })
         values = base_queryset.values(
             'poes', 'wkb', 'hazard_curve__lt_realization__weight')
 
@@ -1496,6 +1518,56 @@ class HazardCurveDataManager(djm.GeoManager):
         return [IndividualHazardCurveChunk(
                 job, imt, curves_per_location, offset, block_size)
                 for offset in ranges]
+
+    def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
+        """
+        Helper function for creating a :class:`django.db.models.query.QuerySet`
+        for selecting all curves from all realizations for a given ``job_id``
+        and ``imt``.
+
+        :param job:
+            An :class:`openquake.db.models.OqJob` instance.
+        :param str imt:
+            Intensity measure type.
+        :param sa_period:
+            Spectral Acceleration period value. Only relevant if the ``imt`` is
+            "SA".
+        :param sa_damping:
+            Spectrail Acceleration damping value. Only relevant if the ``imt``
+            is "SA".
+        """
+        return self.filter(hazard_curve__output__oq_job=job,
+                           hazard_curve__imt=imt,
+                           hazard_curve__sa_period=sa_period,
+                           hazard_curve__sa_damping=sa_damping,
+                           # We only want curves associated with a logic tree
+                           # realization (and not statistical aggregates):
+                           hazard_curve__lt_realization__isnull=False)
+
+    def all_curves_simple(self, filter_args=None, order_by='id'):
+        """
+        Get all :class:`HazardCurveData` records matching `filter_args` and
+        return the results in a simple, lean format: a sequence of (x, y, poes)
+        triples, where x and y are longitude and latitude of the `location`.
+
+        For querying large sets of hazard curve data, this is a rather lean
+        and efficient method for getting the results.
+
+        :param dict filter_args:
+            Optional. Dictionary of filter arguments to apply to the query.
+        :param str order_by:
+            Defaults to the primary key ('id'). Field by which to order
+            results. Currently, only one `ORDER BY` field is supported.
+        """
+        if filter_args is None:
+            filter_args = dict()
+
+        return self\
+            .filter(**filter_args)\
+            .order_by(order_by)\
+            .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
+            .values_list('x', 'y', 'poes')\
+            .iterator()
 
 
 class IndividualHazardCurveChunk(object):
@@ -1543,6 +1615,8 @@ class HazardCurveData(djm.Model):
     hazard_curve = djm.ForeignKey('HazardCurve')
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    # weight can be null/None if the weight is implicit:
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     objects = HazardCurveDataManager()
 
@@ -2100,33 +2174,6 @@ class AggregateLossCurveData(djm.Model):
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
-class CollapseMap(djm.Model):
-    '''
-    Holds metadata for the collapse map
-    '''
-
-    output = djm.ForeignKey("Output")
-    exposure_model = djm.ForeignKey("ExposureModel")
-
-    class Meta:
-        db_table = 'riskr\".\"collapse_map'
-
-
-class CollapseMapData(djm.Model):
-    '''
-    Holds the actual data for the collapse map
-    '''
-
-    collapse_map = djm.ForeignKey("CollapseMap")
-    asset_ref = djm.TextField()
-    value = djm.FloatField()
-    std_dev = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'riskr\".\"collapse_map_data'
-
-
 class BCRDistribution(djm.Model):
     '''
     Holds metadata for the benefit-cost ratio distribution
@@ -2154,81 +2201,55 @@ class BCRDistributionData(djm.Model):
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
-class DmgDistPerAsset(djm.Model):
-    """Holds metadata for damage distributions per asset."""
-
+class DmgState(djm.Model):
+    """Holds the damage_states associated to a given output"""
+    # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
+    dmg_state = djm.TextField()
+    lsi = djm.PositiveSmallIntegerField(
+        help_text="limit state index, to order the limit states")
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_asset'
+        db_table = 'riskr\".\"dmg_state'
 
 
-class DmgDistPerAssetData(djm.Model):
+class DmgDistPerAsset(djm.Model):
     """Holds the actual data for damage distributions per asset."""
 
-    dmg_dist_per_asset = djm.ForeignKey("DmgDistPerAsset")
+    dmg_state = djm.ForeignKey("DmgState")
     exposure_data = djm.ForeignKey("ExposureData")
-    dmg_state = djm.TextField()
     mean = djm.FloatField()
     stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+        db_table = 'riskr\".\"dmg_dist_per_asset'
 
 
 class DmgDistPerTaxonomy(djm.Model):
-    """Hold metdata for damage distributions per taxonomy."""
+    """Holds the actual data for damage distributions per taxonomy."""
 
-    output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
+    dmg_state = djm.ForeignKey("DmgState")
+    taxonomy = djm.TextField()
+    mean = djm.FloatField()
+    stddev = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_taxonomy'
 
 
-class DmgDistPerTaxonomyData(djm.Model):
-    """Holds the actual data for damage distributions per taxonomy."""
-
-    dmg_dist_per_taxonomy = djm.ForeignKey("DmgDistPerTaxonomy")
-    taxonomy = djm.TextField()
-    dmg_state = djm.TextField()
-    mean = djm.FloatField()
-    stddev = djm.FloatField()
-
-    class Meta:
-        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
-
-
 class DmgDistTotal(djm.Model):
-    """Holds metadata for 'total damage distribution' values for an entire
-    calculation. This is the total over all assets and GMFs."""
-
-    output = djm.ForeignKey("Output")
-    dmg_states = fields.CharArrayField()
-    end_branch_label = djm.TextField(null=True)
-
-    class Meta:
-        db_table = 'riskr\".\"dmg_dist_total'
-
-
-class DmgDistTotalData(djm.Model):
     """Holds the actual 'total damage distribution' values for for an entire
     calculation. There should be  one record per calculation per damage state.
     """
 
-    dmg_dist_total = djm.ForeignKey("DmgDistTotal")
-    dmg_state = djm.TextField()
+    dmg_state = djm.ForeignKey("DmgState")
     mean = djm.FloatField()
     stddev = djm.FloatField()
 
     class Meta:
-        db_table = 'riskr\".\"dmg_dist_total_data'
-
+        db_table = 'riskr\".\"dmg_dist_total'
 
 ## Tables in the 'oqmif' schema.
 
@@ -2257,13 +2278,13 @@ class ExposureModel(djm.Model):
         (u'per_asset', u'Per asset economic value'),
     )
     stco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="structural cost type")
+                              help_text="structural cost type")
     stco_unit = djm.TextField(null=True, help_text="structural cost unit")
     reco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="retrofitting cost type")
+                              help_text="retrofitting cost type")
     reco_unit = djm.TextField(null=True, help_text="retrofitting cost unit")
     coco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                                 help_text="contents cost type")
+                              help_text="contents cost type")
     coco_unit = djm.TextField(null=True, help_text="contents cost unit")
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
@@ -2283,6 +2304,18 @@ class ExposureModel(djm.Model):
             self.id, region_constraint)
 
     def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
+        """
+        :returns: a list of `openquake.db.models.ExposureData` objects
+        of a given taxonomy contained in a region and paginated
+
+        :param str taxonomy: the taxonomy of the returned objects
+
+        :param Polygon region_constraint: a Polygon object with a wkt
+        property used to filter the exposure
+
+        :param int offset: An offset used to paginate the returned set
+        :param int count: An offset used to paginate the returned set
+        """
         return ExposureData.objects.contained_in(
             self.id, taxonomy, region_constraint, offset, count)
 
@@ -2377,7 +2410,7 @@ class ExposureData(djm.Model):
 
     @staticmethod
     def per_asset_value(
-        cost, cost_type, area, area_type, number_of_units, category):
+            cost, cost_type, area, area_type, number_of_units, category):
         """Return per-asset value for the given exposure data set.
 
         Calculate per asset value by considering the given exposure
@@ -2424,69 +2457,6 @@ class ExposureData(djm.Model):
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
-
-
-class FragilityModel(djm.Model):
-    """A risk fragility model"""
-
-    owner = djm.ForeignKey("OqUser")
-    input = djm.ForeignKey("Input")
-    description = djm.TextField(null=True)
-    FORMAT_CHOICES = (
-        (u"continuous", u"Continuous fragility model"),
-        (u"discrete", u"Discrete fragility model"),
-    )
-    format = djm.TextField(choices=FORMAT_CHOICES)
-    lss = fields.CharArrayField(help_text="limit states")
-    imls = fields.FloatArrayField(null=True,
-                                  help_text="Intensity measure levels")
-    imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
-                        help_text="Intensity measure type")
-    iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
-    min_iml = djm.FloatField(
-        null=True, help_text="Minimum IML value, for continuous models only")
-    max_iml = djm.FloatField(
-        null=True, help_text="Maximum IML value, for continuous models only")
-    no_damage_limit = djm.FloatField(
-        null=True, help_text="No Damage Limit value, for discrete models only")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"fragility_model'
-
-
-class Ffc(djm.Model):
-    """A continuous fragility function"""
-
-    fragility_model = djm.ForeignKey("FragilityModel")
-    lsi = djm.PositiveSmallIntegerField(
-        help_text="limit state index, facilitates ordering of fragility "
-                  "function in accordance with the limit states")
-    ls = djm.TextField(help_text="limit state")
-    taxonomy = djm.TextField()
-    ftype = djm.TextField(null=True, help_text="function/distribution type")
-    mean = djm.FloatField(help_text="Mean value")
-    stddev = djm.FloatField(help_text="Standard deviation")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"ffc'
-
-
-class Ffd(djm.Model):
-    """A discrete fragility function"""
-
-    fragility_model = djm.ForeignKey("FragilityModel")
-    lsi = djm.PositiveSmallIntegerField(
-        help_text="limit state index, facilitates ordering of fragility "
-                  "function in accordance with the limit states")
-    ls = djm.TextField(help_text="limit state")
-    taxonomy = djm.TextField()
-    poes = fields.FloatArrayField(help_text="Probabilities of exceedance")
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'riski\".\"ffd'
 
 
 ## Tables in the 'htemp' schema.
