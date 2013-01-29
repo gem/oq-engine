@@ -86,7 +86,7 @@ HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "calculation) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG)
+                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
 
 def set_up_arg_parser():
@@ -155,7 +155,7 @@ def set_up_arg_parser():
         HAZARD_CALCULATION_ARG,
         '--hc',
         help='Use the desired hazard calculation as input for the risk job',
-        metavar='HAZARD_CALCULATION')
+        metavar='HAZARD_CALCULATION_ID')
     risk_grp.add_argument(
         '--list-risk-calculations',
         '--lrc',
@@ -353,7 +353,8 @@ def export(fn, output_id, target_dir):
 
 def run_risk(
         cfg_file, log_level, log_file,
-        force_inputs, exports, hazard_output_id=None, hazard_calculation=None):
+        force_inputs, exports,
+        hazard_output_id=None, hazard_calculation_id=None):
     """
     Run a risk calculation using the specified config file and other options.
     One of hazard_output_id or hazard_calculation_id must be specified.
@@ -375,7 +376,7 @@ def run_risk(
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    assert not(hazard_output_id is None and hazard_calculation_id)
+    assert not(hazard_output_id is None and hazard_calculation_id is None)
     try:
         if log_file is not None:
             try:
@@ -480,7 +481,7 @@ def main():
         output_id, target_dir = args.export_risk
         export_risk(output_id, expanduser(target_dir))
     elif args.run_risk is not None:
-        if args.hazard_output_id is None and args.hazard_calculation_id:
+        if args.hazard_output_id is None and args.hazard_calculation_id is None:
             complain_and_exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,

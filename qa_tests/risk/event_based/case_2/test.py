@@ -25,6 +25,11 @@ from tests.utils import helpers
 from openquake.db import models
 
 
+# FIXME(lp). This is a regression testing. Data has not been validated
+# by an alternative reliable implemantation
+
+
+
 class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
