@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -320,6 +320,16 @@ class BaseRiskCalculator(base.CalculatorNext):
         path = self.rc.inputs.get(input_type=input_type).path
 
         vfs = dict()
+
+        # CAVEATS
+        # 1) We use the first imt returned by the parser 2) Use the
+        # last vf for a taxonomy returned by the parser (if multiple
+        # vf for the same taxonomy are given).
+
+        # We basically assume that the user will provide a
+        # vulnerability model where for each taxonomy there is only
+        # one vf for a taxonomy and an imt matching the ones in the
+        # hazard output
         for record in parsers.VulnerabilityModelParser(path):
             if self.imt is None:
                 self.imt = record['IMT']
