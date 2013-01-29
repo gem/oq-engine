@@ -156,7 +156,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
-        for hazard_output in self.hazard_outputs:
+        for hazard_output in self.considered_hazard_outputs():
             loss_curve = models.LossCurve.objects.get(
                 hazard_output=hazard_output,
                 aggregate=True, output__oq_job=self.job)
