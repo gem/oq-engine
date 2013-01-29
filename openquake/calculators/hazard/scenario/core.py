@@ -39,11 +39,6 @@ from openquake import writer
 from openquake.job.validation import MAX_SINT_32
 from openquake.utils import config
 
-# FIXME! Duplication in EventBased Hazard Calculator
-#: Ground motion correlation model map
-GM_CORRELATION_MODEL_MAP = {
-    'JB2009': correlation.JB2009CorrelationModel,
-}
 
 AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
@@ -51,6 +46,13 @@ GMF_REALIZATIONS = int(config.get('hazard', 'concurrent_tasks'))
 
 
 def realizations_per_task(num_realizations, num_concur_task):
+    """
+    Realizations per task return a tuple in the format
+    (spare : bool, realizations : int list) where spare
+    represents if there are spare realizations to create
+    and realizations the number of realizations for
+    each task.
+    """
     ntimes_concur_task, spare_realizations = divmod(
                                   num_realizations, num_concur_task)
     result = [ntimes_concur_task for _ in xrange(num_concur_task)]
@@ -109,10 +111,11 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
     sites = haz_general.get_site_collection(hc)
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]
+    correlation_model = haz_general.get_correl_model(hc)
     gmf = ground_motion_fields(
         rupture_mdl, sites, imts, gsim(),
         hc.truncation_level, realizations=realizations,
-        correlation_model=None)
+        correlation_model=correlation_model)
 
     save_gmf(output_id, gmf, sites.mesh, task_no)
 
