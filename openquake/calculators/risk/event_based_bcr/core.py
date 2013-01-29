@@ -149,8 +149,10 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         return [
             models.BCRDistribution.objects.create(
+                hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution for hazard %s" % hazard_output,
+                    self.job,
+                    "BCR Distribution for hazard %s" % hazard_output,
                     "bcr_distribution")).pk
         ]
 

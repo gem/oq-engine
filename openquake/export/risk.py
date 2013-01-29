@@ -37,9 +37,9 @@ def export(output_id, target_dir):
     details.
     """
     output = models.Output.objects.get(id=output_id)
-    return globals().get(
-        output.output_type, core._export_fn_not_implemented)(
-            output, os.path.expanduser(target_dir))
+    return globals().get("export_%s" % output.output_type,
+                         core._export_fn_not_implemented)(
+                             output, os.path.expanduser(target_dir))
 
 
 def _export_common(output):
@@ -78,9 +78,9 @@ def export_agg_loss_curve(output, target_dir):
     """
     args = _export_common(output)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
-        'loss_curve_id': output.losscurve.id})
+        'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
-        output.losscurve.aggregatelosscurvedata)
+        output.loss_curve.aggregatelosscurvedata)
     return [args['path']]
 
 
@@ -92,12 +92,12 @@ def export_loss_curve(output, target_dir):
     """
     args = _export_common(output)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
-        'loss_curve_id': output.losscurve.id})
-    if output.losscurve.insured:
+        'loss_curve_id': output.loss_curve.id})
+    if output.loss_curve.insured:
         args['insured'] = True
 
     writers.LossCurveXMLWriter(**args).serialize(
-        output.losscurve.losscurvedata_set.all().order_by('asset_ref'))
+        output.loss_curve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
 
 
@@ -111,12 +111,12 @@ def export_loss_map(output, target_dir):
     args = _export_common(output)
     args.update(
         dict(path=os.path.join(target_dir, LOSS_MAP_FILENAME_FMT % {
-            'loss_map_id': output.lossmap.id,
-            'poe': output.lossmap.poe}),
-            poe=output.lossmap.poe,
+            'loss_map_id': output.loss_map.id,
+            'poe': output.loss_map.poe}),
+            poe=output.loss_map.poe,
             loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
-        output.lossmap.lossmapdata_set.all().order_by('asset_ref'))
+        output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
     return [args['path']]
 
 
@@ -131,13 +131,13 @@ def export_bcr_distribution(output, target_dir):
 
     args.update(
         dict(path=os.path.join(target_dir, BCR_FILENAME_FMT % {
-            'bcr_distribution_id': output.bcrdistribution.id}),
+            'bcr_distribution_id': output.bcr_distribution.id}),
             interest_rate=risk_calculation.interest_rate,
             asset_life_expectancy=risk_calculation.asset_life_expectancy))
     del args['investigation_time']
 
     writers.BCRMapXMLWriter(**args).serialize(
-        output.bcrdistribution.bcrdistributiondata_set.all().order_by(
+        output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
     return [args['path']]
 

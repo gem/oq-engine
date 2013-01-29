@@ -994,11 +994,11 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     hazard_job, "Test Hazard output", "hazard_curve"),
-                    investigation_time=hc.investigation_time,
-                    imt="PGA", imls=[0.1, 0.2, 0.3],
-                    statistics="mean"),
-                    poes=[0.1, 0.2, 0.3],
-                    location="POINT(1 1)")
+                investigation_time=hc.investigation_time,
+                imt="PGA", imls=[0.1, 0.2, 0.3],
+                statistics="mean"),
+            poes=[0.1, 0.2, 0.3],
+            location="POINT(1 1)")
     else:
         hazard_output = models.Gmf.objects.create(
             gmf_set=models.GmfSet.objects.create(
@@ -1014,10 +1014,12 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 investigation_time=hc.investigation_time,
                 ses_ordinal=1,
                 complete_logic_tree_gmf=False),
-                imt="PGA", gmvs=[0.1, 0.2, 0.3],
-                result_grp_ordinal=1,
-                location="POINT(1 1)")
+            imt="PGA", gmvs=[0.1, 0.2, 0.3],
+            result_grp_ordinal=1,
+            location="POINT(1 1)")
 
+    hazard_job.status = "complete"
+    hazard_job.save()
     job = engine2.prepare_job(username)
     params, files = engine2.parse_config(
         open(risk_cfg, 'r'), force_inputs=True)
