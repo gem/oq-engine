@@ -79,9 +79,32 @@ def validates_against_xml_schema(xml_instance_path,
     return xmlschema.validate(xml_doc)
 
 
+def get_gmfs_per_site(output, imt):
+    for gmf in models.get_gmfs_scenario(output, imt):
+        yield [gmfnode.iml for gmfnode in gmf]
+
+
 def get_medians(output, imt):
     """
     Compute the median of ground motion fields on a per site basis.
     """
-    for gmf in models.get_gmfs_scenario(output, imt):
-        yield median([gmfnode.iml for gmfnode in gmf])  # don't use a genexp
+    for gmfs in get_gmfs_per_site(output, imt):
+        yield median(gmfs)  # don't use a genexp
+
+
+def count(gmf_value, gmfs_site_one, gmfs_site_two):
+    """
+    Count the number of pairs of gmf values
+    within the specified range.
+    """
+
+    count = 0
+    delta_prob = 0.1
+    lower_bound = (gmf_value - delta_prob) / 2.0
+    upper_bound = (gmf_value + delta_prob) / 2.0
+
+    for v1, v2 in zip(gmfs_site_one, gmfs_site_two):
+        if ((lower_bound <= v1 <= upper_bound) and
+            (lower_bound <= v2 <= upper_bound)):
+            count += 1
+    return count
