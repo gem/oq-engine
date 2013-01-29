@@ -336,13 +336,14 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         loss_map_ids = dict()
 
-        for poe in self.job.risk_calculation.conditional_loss_poes:
-            loss_map_ids[poe] = models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "Loss Map Set with poe %s" % poe,
-                    "loss_map"),
-                poe=poe).pk
+        if self.job.risk_calculation.conditional_loss_poes is not None:
+            for poe in self.job.risk_calculation.conditional_loss_poes:
+                loss_map_ids[poe] = models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Loss Map Set with poe %s" % poe,
+                        "loss_map"),
+                    poe=poe).pk
         return [loss_curve_id, loss_map_ids]
 
 
