@@ -36,25 +36,13 @@ def export(output_id, target_dir):
     specified directory. See `openquake.export.hazard.export` for more
     details.
     """
+    # for each output_type there must be a function
+    # export_<output_type>(output, target_dir)
     output = models.Output.objects.get(id=output_id)
-    export_fn = _export_fn_map().get(
-        output.output_type, core._export_fn_not_implemented)
+    export_fn = globals().get(
+        'export_' + output.output_type, core._export_fn_not_implemented)
 
     return export_fn(output, os.path.expanduser(target_dir))
-
-
-def _export_fn_map():
-    """
-    Creates a mapping from output type to risk export function
-    """
-    fn_map = {
-        'agg_loss_curve': export_agg_loss_curve,
-        'loss_curve': export_loss_curve,
-        'ins_loss_curve': export_loss_curve,
-        'loss_map': export_loss_map,
-        'bcr_distribution': export_bcr_distribution
-        }
-    return fn_map
 
 
 def _export_common(output):
@@ -113,6 +101,8 @@ def export_loss_curve(output, target_dir):
     writers.LossCurveXMLWriter(**args).serialize(
         output.losscurve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
+
+export_ins_loss_curve = export_loss_curve
 
 
 @core.makedirs

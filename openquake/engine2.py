@@ -33,6 +33,8 @@ from openquake.db import models
 from openquake.supervising import supervisor
 from openquake.utils import monitor
 
+INPUT_TYPES = set(item[0] for item in models.Input.INPUT_TYPE_CHOICES)
+
 
 def prepare_job(user_name="openquake", log_level='progress'):
     """
@@ -73,17 +75,6 @@ def prepare_user(user_name):
     return user
 
 
-_FILE_PARAMS_TO_INPUT_TYPE = {
-    'source_model_logic_tree_file': 'lt_source',
-    'gsim_logic_tree_file': 'lt_gsim',
-    'site_model_file': 'site_model',
-    'vulnerability_file': 'vulnerability',
-    'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
-    'exposure_file': 'exposure',
-    'rupture_model_file': 'rupture_model'
-}
-
-
 def parse_config(source, force_inputs=False):
     """Parse a dictionary of parameters from an INI-style config file.
 
@@ -106,9 +97,12 @@ def parse_config(source, force_inputs=False):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key in _FILE_PARAMS_TO_INPUT_TYPE:
-                # If this is a file, create (or reuse) an Input for the file.
-                input_type = _FILE_PARAMS_TO_INPUT_TYPE[key]
+            if key.endswith('_file'):
+                input_type = key[:-5]
+                if not input_type in INPUT_TYPES:
+                    raise ValueError(
+                        'The parameter %s in the .ini file does '
+                        'not correspond to a valid input type' % key)
                 path = value
                 # The `path` may be a path relative to the config file, or it
                 # could be an absolute path.

@@ -157,9 +157,9 @@ not_a_valid_file = foo.xml
             'site_model_file': models.Input.objects.filter(
                 input_type='site_model').latest('id'),
             'source_model_logic_tree_file': models.Input.objects.filter(
-                input_type='lt_source').latest('id'),
+                input_type='source_model_logic_tree').latest('id'),
             'gsim_logic_tree_file': models.Input.objects.filter(
-                input_type='lt_gsim').latest('id'),
+                input_type='gsim_logic_tree').latest('id'),
         }
 
         self.assertEqual(expected_params, params)

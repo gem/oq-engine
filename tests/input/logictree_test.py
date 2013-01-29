@@ -1180,7 +1180,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             self.assert_branch_equal(branch, *args)
 
     def test_only_source_models(self):
-        lt_source = _make_nrml("""\
+        source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -1199,7 +1199,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath',
+            'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm}, 'basepath',
             validate=False
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
@@ -1207,7 +1207,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                      ('b2', '0.4', 'sm2')])
 
     def test_two_levels(self):
-        lt_source = _make_nrml("""\
+        source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -1234,7 +1234,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1246,7 +1246,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
 
     def test_filters(self):
-        lt_source = _make_nrml("""\
+        source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -1274,7 +1274,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1286,7 +1286,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
 
     def test_apply_to_branches(self):
-        lt_source = _make_nrml("""\
+        source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -1328,7 +1328,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
+            'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
             validate=False
         )
         self.assert_branchset_equal(lt.root_branchset,
@@ -1351,7 +1351,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
 
     def test_comments(self):
-        lt_source = _make_nrml("""\
+        source_model_logic_tree = _make_nrml("""\
         <!-- comment -->
         <logicTree logicTreeID="lt1">
             <!-- comment -->
@@ -1376,7 +1376,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         <!-- comment -->
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},

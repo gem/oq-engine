@@ -24,6 +24,23 @@ Utility functions of general interest.
 import cPickle
 
 
+class Register(dict):
+    """
+    A registry for classes and functions. Here is an example of usage:
+
+    >>> register = Register()
+    >>> @register.add()  # if no name is specified uses the function name
+    def func1(): pass
+    >>> register
+    {'func1': <function __main__.func1>}
+    """
+    def add(self, name=None):
+        def dec(obj):
+            self[name or obj.__name__] = obj
+            return obj
+        return dec
+
+
 def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
     instances = {}

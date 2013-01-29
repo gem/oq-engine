@@ -1053,10 +1053,10 @@ class LogicTreeProcessor(object):
         ID of a :class:`openquake.db.models.HazardCalculation`.
     """
     def __init__(self, calc_id):
-        [smlt_input] = models.inputs4hcalc(calc_id, input_type='lt_source')
+        [smlt_input] = models.inputs4hcalc(calc_id, input_type='source_model_logic_tree')
         smlt_content = smlt_input.model_content.raw_content_ascii
 
-        [gmpelt_input] = models.inputs4hcalc(calc_id, input_type='lt_gsim')
+        [gmpelt_input] = models.inputs4hcalc(calc_id, input_type='gsim_logic_tree')
         gmpelt_content = gmpelt_input.model_content.raw_content_ascii
 
         self.source_model_lt = SourceModelLogicTree(

@@ -552,8 +552,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         logs.LOG.progress("initializing sources")
 
-        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
-        [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='lt_gsim')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='source_model_logic_tree')
+        [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='gsim_logic_tree')
         source_paths = logictree.read_logic_trees(
             self.hc.base_path, smlt.path, gsimlt.path)
 
@@ -689,7 +689,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id, input_type='lt_source')
+        [smlt] = models.inputs4hcalc(hc.id, input_type='source_model_logic_tree')
         ltp = logictree.LogicTreeProcessor(hc.id)
         hzrd_src_cache = {}
 
@@ -739,7 +739,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(self.hc.id, input_type='lt_source')
+        [smlt] = models.inputs4hcalc(self.hc.id, input_type='source_model_logic_tree')
 
         ltp = logictree.LogicTreeProcessor(self.hc.id)
 
