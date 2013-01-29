@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,7 +41,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     """
     Celery task for the event based risk calculator.
 
-    :param job_id: the id of the current `:class:openquake.db.models.OqJob`
+    :param job_id: the id of the current :class:`openquake.db.models.OqJob`
     :param assets: the list of `:class:risklib.scientific.Asset`
     instances considered
     :param hazard_getter: the name of an hazard getter to be used
@@ -106,7 +106,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
                     general.write_loss_curve(
                         insured_curve_id, assets[i], asset_output)
 
-    losses = sum([asset_output.losses for asset_output in asset_outputs])
+    losses = sum(asset_output.losses for asset_output in asset_outputs)
 
     general.update_aggregate_losses(aggregate_loss_curve_id, losses)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
