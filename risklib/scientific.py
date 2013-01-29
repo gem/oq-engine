@@ -270,9 +270,10 @@ DISTRIBUTIONS = utils.Register()
 
 class Distribution(object):
     """
-    A Distribution class models continuous random variables used to
-    sample losses of a set of assets. It is usually registered with a
-    name (e.g. LN, BT) by using :class:`risklib.utils.Register`
+    A Distribution class models continuous probability distribution of
+    random variables used to sample losses of a set of assets. It is
+    usually registered with a name (e.g. LN, BT) by using
+    :class:`risklib.utils.Register`
     """
 
     def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
@@ -315,6 +316,10 @@ class Distribution(object):
 
 
 class DegenerateDistribution(Distribution):
+    """
+    The degenerate distribution. E.g. a distribution with a delta
+    corresponding to the mean.
+    """
     def init(self, *args):
         pass
 
@@ -327,6 +332,17 @@ class DegenerateDistribution(Distribution):
 
 @DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(Distribution):
+    """
+    Model a distribution of a random variable whoose logarithm are
+    normally distributed.
+
+    :attr epsilons: A matrix of random numbers generated with
+    :func:`numpy.random.multivariate_normal` with dimensions
+    assets_num x samples_num.
+
+    :attr epsilon_idx: a counter used in sampling to iterate over the
+    attribute `epsilons`
+    """
     def __init__(self):
         self.epsilons = None
         self.epsilon_idx = 0
