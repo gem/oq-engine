@@ -139,7 +139,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         """
         super(EventBasedRiskCalculator, self).pre_execute()
 
-        hc = self.rc.hazard_output.oq_job.hazard_calculation
+        hc = self.rc.get_hazard_calculation()
 
         allowed_imts = hc.intensity_measure_types_and_levels.keys()
 
@@ -150,39 +150,49 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         if (self.rc.insured_losses and
             self.exposure_model.exposuredata_set.filter(
-                    (db.models.Q(deductible__isnull=True) |
-                     db.models.Q(ins_limit__isnull=True))).exists()):
+                (db.models.Q(deductible__isnull=True) |
+                 db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
-        loss_curve = models.LossCurve.objects.get(
-            aggregate=True, output__oq_job=self.job)
-        curve_data = loss_curve.aggregatelosscurvedata
+        for hazard_output in self.hazard_outputs:
+            loss_curve = models.LossCurve.objects.get(
+                hazard_output=hazard_output,
+                aggregate=True, output__oq_job=self.job)
+            curve_data = loss_curve.aggregatelosscurvedata
 
-        tses, time_span = self.hazard_times()
+            tses, time_span = self.hazard_times()
 
-        aggregate_loss_curve = scientific.event_based(
-            curve_data.losses, tses, time_span,
-            curve_resolution=self.rc.loss_curve_resolution)
+            aggregate_loss_curve = scientific.event_based(
+                curve_data.losses, tses, time_span,
+                curve_resolution=self.rc.loss_curve_resolution)
 
-        curve_data.losses = aggregate_loss_curve.abscissae.tolist()
-        curve_data.poes = aggregate_loss_curve.ordinates.tolist()
-        curve_data.save()
+            curve_data.losses = aggregate_loss_curve.abscissae.tolist()
+            curve_data.poes = aggregate_loss_curve.ordinates.tolist()
+            curve_data.save()
 
-    @property
-    def hazard_id(self):
+    def hazard_id(self, hazard_output):
         """
-        The ID of the :class:`openquake.db.models.GmfCollection`
-        object that stores the ground motion fields used by the risk
-        calculation
+        :returns: the ID of the
+        :class:`openquake.db.models.GmfCollection` object that stores
+        the ground motion fields associated with `hazard_output`
         """
 
-        if not self.rc.hazard_output.is_ground_motion_field():
+        if not hazard_output.is_ground_motion_field():
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
 
-        return self.rc.hazard_output.gmfcollection.id
+        return hazard_output.gmfcollection.id
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.Output` hazard
+        object that stores the ground motion fields associated with
+        `hazard_calculation`
+        """
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.filter(output_type='gmf_collection')
 
     def hazard_times(self):
         """
@@ -190,7 +200,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         motion field and the so-called time representative of the
         stochastic event set
         """
-        hc = self.rc.hazard_calculation
+        hc = self.rc.get_hazard_calculation()
 
         # atm, no complete_logic_tree gmf are supported
         realizations_nr = 1
@@ -216,16 +226,19 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 self.imt, time_span, tses,
                 self.rc.loss_curve_resolution, correlation]
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Add Aggregate loss curve and Insured Curve output containers
         """
-        outputs = super(EventBasedRiskCalculator, self).create_outputs()
+        outputs = super(EventBasedRiskCalculator, self).create_outputs(
+            hazard_output)
 
         aggregate_loss_curve = models.LossCurve.objects.create(
             aggregate=True,
+            hazard_output=hazard_output,
             output=models.Output.objects.create_output(
-                self.job, "Aggregate Loss Curve", "agg_loss_curve"))
+                self.job, "Aggregate Loss Curve for hazard %s" % hazard_output,
+                "agg_loss_curve"))
 
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
@@ -236,9 +249,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             insured_curve_id = (
                 models.LossCurve.objects.create(
                     insured=True,
+                    hazard_output=hazard_output,
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Insured Loss Curve Set",
+                        "Insured Loss Curve Set for hazard %s" % hazard_output,
                         "ins_loss_curve")
                 ).id)
         else:

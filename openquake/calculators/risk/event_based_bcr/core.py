@@ -139,7 +139,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to compute the aggregate loss curve in the BCR calculator.
         """
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
@@ -150,7 +150,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         return [
             models.BCRDistribution.objects.create(
                 output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk
+                    self.job, "BCR Distribution for hazard %s" % hazard_output,
+                    "bcr_distribution")).pk
         ]
 
     def set_risk_models(self):

@@ -37,24 +37,9 @@ def export(output_id, target_dir):
     details.
     """
     output = models.Output.objects.get(id=output_id)
-    export_fn = _export_fn_map().get(
-        output.output_type, core._export_fn_not_implemented)
-
-    return export_fn(output, os.path.expanduser(target_dir))
-
-
-def _export_fn_map():
-    """
-    Creates a mapping from output type to risk export function
-    """
-    fn_map = {
-        'agg_loss_curve': export_agg_loss_curve,
-        'loss_curve': export_loss_curve,
-        'ins_loss_curve': export_loss_curve,
-        'loss_map': export_loss_map,
-        'bcr_distribution': export_bcr_distribution
-        }
-    return fn_map
+    return globals().get(
+        output.output_type, core._export_fn_not_implemented)(
+            output, os.path.expanduser(target_dir))
 
 
 def _export_common(output):
@@ -63,7 +48,8 @@ def _export_common(output):
     serializers to serialize the risk calculation `output`.
     """
     risk_calculation = output.oq_job.risk_calculation
-    investigation_time = risk_calculation.hazard_calculation.investigation_time
+    investigation_time = (
+        risk_calculation.get_hazard_calculation().investigation_time)
     statistics, quantile_value = risk_calculation.hazard_statistics
 
     source_model_tree_path, gsim_tree_path = None, None
@@ -154,3 +140,8 @@ def export_bcr_distribution(output, target_dir):
         output.bcrdistribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
     return [args['path']]
+
+
+@core.makedirs
+def export_ins_loss_curve(*args, **kwargs):
+    return export_loss_curve(*args, **kwargs)

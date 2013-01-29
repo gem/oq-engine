@@ -114,7 +114,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         return [self.rc.lrem_steps_per_interval,
                 self.rc.asset_life_expectancy, self.rc.interest_rate]
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
@@ -122,9 +122,12 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
         :returns: A list containing the output container id
         """
-        return [models.BCRDistribution.objects.create(
+        return [
+            models.BCRDistribution.objects.create(
+                hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk]
+                    self.job, "BCR Distribution for hazard %s" % hazard_output,
+                    "bcr_distribution")).pk]
 
     def set_risk_models(self):
         """
