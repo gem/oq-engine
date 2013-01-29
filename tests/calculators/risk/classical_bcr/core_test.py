@@ -65,14 +65,22 @@ class ClassicalBCRRiskCalculatorTestCase(
         Test that the hazard output used by the calculator is a
         `openquake.db.models.HazardCurve` object
         """
+        outputs = self.calculator.hazard_outputs(
+            self.calculator.rc.get_hazard_calculation())
 
-        self.assertEqual(1, models.HazardCurve.objects.filter(
-            pk=self.calculator.hazard_id).count())
+        self.assertEqual(
+            set(["hazard_curve"]), set([o.output_type for o in outputs]))
+
+        self.assertEqual(
+            1, models.HazardCurve.objects.filter(
+                pk=self.calculator.hazard_id(outputs[0])).count())
 
     def test_create_outputs(self):
         """
         Test that the proper output containers are created
         """
 
-        self.assertTrue(models.BCRDistribution.objects.filter(
-            pk=self.calculator.create_outputs()[0]).exists())
+        for hazard_output in self.hazard_outputs:
+            self.assertTrue(models.BCRDistribution.objects.filter(
+                hazard_output=hazard_output,
+                pk=self.calculator.create_outputs(hazard_output)[0]).exists())
