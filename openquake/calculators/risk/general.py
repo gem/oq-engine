@@ -124,11 +124,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        asset_num = sum(self.taxonomies.values())
-        total = asset_num * len(self.considered_hazard_outputs())
-        logs.LOG.debug("Compute risks on %s assets for %d hazard outputs",
-                       asset_num, len(self.considered_hazard_outputs()))
-        self._initialize_progress(total)
+        self._initialize_progress(sum(self.taxonomies.values()))
 
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
@@ -181,17 +177,19 @@ class BaseRiskCalculator(base.CalculatorNext):
                     assets = self.exposure_model.get_asset_chunk(
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
-                for hazard_output in self.considered_hazard_outputs():
-                    tf_args = ([
-                        self.job.id,
-                        assets,
-                        self.hazard_getter,
-                        self.hazard_id(hazard_output)] +
-                        self.worker_args(taxonomy) +
-                        output_containers[hazard_output.id] +
-                        calculator_parameters)
 
-                    yield tf_args
+                hazard = dict((ho.id, self.hazard_output(ho))
+                              for ho in self.considered_hazard_outputs())
+
+                # FIXME(lp). Refactor the following arg list such that
+                # the arguments are grouped into namedtuples
+                yield ([
+                    self.job.id,
+                    assets,
+                    self.hazard_getter, hazard] +
+                    self.worker_args(taxonomy) +
+                    [output_containers] +
+                    calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -246,7 +244,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         pass
 
-    def hazard_id(self, hazard_output):
+    def hazard_output(self, output):
         """
         :returns: The ID of the output container of the hazard
         used for this risk calculation. E.g. an
@@ -263,86 +261,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         # Calculator must override this to select from the hazard
         # output/calculation the proper hazard output containers
         raise NotImplementedError
-
-    def post_process(self, **extra_curve_args):
-
-        curve_args = dict(
-            aggregate=False, insured=False)
-        curve_args.update(extra_curve_args)
-
-        with logs.tracing('post processing'):
-            if self.rc.will_compute_loss_curve_statistics():
-                num_rlzs = len(self.considered_hazard_outputs())
-                num_site_blocks_per_incr = max(1, _CURVE_CACHE_SIZE / num_rlzs)
-                slice_incr = num_site_blocks_per_incr * num_rlzs
-
-                # prepare `output` and `hazard_curve` containers in the DB:
-                container_ids = dict()
-                if self.rc.mean_loss_curves:
-                    container_ids['mean'] = models.LossCurve.objects.create(
-                        output=models.Output.objects.create_output(
-                            job=self.job,
-                            display_name='loss-curves',
-                            output_type='loss_curve'),
-                        statistics='mean', **curve_args).id
-
-                for quantile in self.rc.quantile_loss_curves or []:
-                    container_ids['q%s' % quantile] = (
-                        models.LossCurve.objects.create(
-                            output=models.Output.objects.create_output(
-                                job=self.job,
-                                display_name='quantile(%s)-curves' % quantile,
-                                output_type='loss_curve'),
-                            statistics='quantile',
-                            quantile=quantile,
-                            **curve_args).id)
-
-                curve_data_args = dict(('loss_curve__%s' % k, v)
-                                       for k, v in curve_args.items())
-                all_curves = models.LossCurveData.objects.filter(
-                    loss_curve__output__oq_job=self.job,
-                    **curve_data_args).order_by('location')
-
-            hc = self.rc.get_hazard_calculation()
-
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                inserter = writer.BulkInserter(
-                    models.LossCurveData, max_cache_size=_CURVE_CACHE_SIZE)
-
-                for chunk in models.queryset_iter(all_curves, slice_incr):
-                    # slice each chunk by `num_rlzs` into `site_chunk`
-                    # and compute the aggregate
-                    for site_chunk in utils.block_splitter(chunk, num_rlzs):
-                        site = site_chunk[0].location
-                        curves_poes = [x.poes for x in site_chunk]
-                        curves_weights = [x.weight for x in site_chunk]
-
-                        for quantile in self.rc.quantile_hazard_curves or []:
-                            if hc.number_of_logic_tree_samples == 0:
-                                # explicitly weighted quantiles
-                                q_curve = (
-                                    post_processing.weighted_quantile_curve(
-                                        curves_poes, curves_weights, quantile))
-                            else:
-                                # implicitly weighted quantiles
-                                q_curve = (
-                                    post_processing.quantile_curve(
-                                        curves_poes, quantile))
-
-                            inserter.add_entry(
-                                loss_curve_id=container_ids['q%s' % quantile],
-                                poes=q_curve.tolist(),
-                                location=site.wkt)
-
-                        # then means
-                        if self.hc.mean_hazard_curves:
-                            mean_curve = post_processing.compute_mean_curve(
-                                curves_poes, weights=curves_weights)
-                            inserter.add_entry(
-                                loss_curve_id=container_ids['mean'],
-                                poes=mean_curve.tolist(),
-                                location=site.wkt)
-                inserter.flush()
 
     @property
     def rc(self):
@@ -375,9 +293,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('storing exposure'):
             path = os.path.join(self.rc.base_path, exposure_model_input.path)
             exposure_stream = parsers.ExposureModelParser(path)
-            writer = exposure_writer.ExposureDBWriter(exposure_model_input)
-            writer.serialize(exposure_stream)
-        return writer.model
+            w = exposure_writer.ExposureDBWriter(exposure_model_input)
+            w.serialize(exposure_stream)
+        return w.model
 
     def _initialize_progress(self, total):
         """Record the total/completed number of work items.
@@ -577,3 +495,58 @@ def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
         average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
         location=asset.site)
+
+    models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+                job=self.job,
+                display_name='loss-curves',
+                output_type='loss_curve'),
+            statistics='mean'
+    for quantile in self.rc.quantile_loss_curves or []:
+        container_ids['q%s' % quantile] = (
+            models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='quantile(%s)-curves' % quantile,
+                    output_type='loss_curve'),
+                statistics='quantile',
+                quantile=quantile,
+                **curve_args).id)
+
+def curve_statistics(all_curves, num_rlzs, curve_weights,
+                     mean_loss_curve_id, quantile_loss_curve_ids,
+                     explicit_quantiles):
+    # Use the same approach used in classical hazard calculator.
+    num_site_blocks_per_incr = max(1, _CURVE_CACHE_SIZE / num_rlzs)
+    slice_incr = num_site_blocks_per_incr * num_rlzs
+
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        inserter = writer.BulkInserter(
+            models.LossCurveData, max_cache_size=_CURVE_CACHE_SIZE)
+
+        for site_chunk in utils.block_splitter(all_curves, num_rlzs):
+            site = site_chunk[0].location
+            curves_poes = [x.poes for x in site_chunk]
+
+            for quantile in quantile_loss_curve_ids.keys():
+                if explicit_quantiles:
+                    q_curve = post_processing.weighted_quantile_curve(
+                        curves_poes, curves_weights, quantile)
+                else:
+                    q_curve = post_processing.quantile_curve(
+                        curves_poes, quantile)
+
+                inserter.add_entry(
+                    loss_curve_id=quantile_loss_curve_ids[quantile],
+                    poes=q_curve.tolist(),
+                    location=site.wkt)
+
+            # then means
+            if mean_loss_curve_id:
+                mean_curve = post_processing.mean_curve(
+                    curves_poes, weights=curves_weights)
+                inserter.add_entry(
+                    loss_curve_id=mean_loss_curve_id,
+                    poes=mean_curve.tolist(),
+                    location=site.wkt)
+        inserter.flush()
