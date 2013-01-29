@@ -8,10 +8,9 @@ seismicity occurrence parameters.
 import unittest
 import numpy as np
 
-from hmtk.seismicity.occurrence.weichert_maximum_likelihood import \
-        WeichertMaxLikelihood
+from hmtk.seismicity.occurrence.b_maximum_likelihood import BMaxLikelihood
 
-class WeichertMaxLikelihoodTestCase(unittest.TestCase):
+class MaxLikelihoodTestCase(unittest.TestCase):
     
     def setUp(self):
         """
@@ -56,7 +55,7 @@ class WeichertMaxLikelihoodTestCase(unittest.TestCase):
             lidx = uidx 
 
         self.catalogue = {'magnitude' : magnitude, 'year' : year}
-        self.wei_ml = WeichertMaxLikelihood()
+        self.wei_ml = BMaxLikelihood()
         self.config = {'Average Type' : 'Weighted'}
         
     def test_weichert_maximum_likelihood(self):

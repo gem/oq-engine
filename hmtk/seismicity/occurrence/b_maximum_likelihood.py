@@ -7,7 +7,7 @@ from hmtk.seismicity.occurrence.utils import input_checks, recurrence_table
 from hmtk.seismicity.occurrence.base import SeismicityOccurrence
 from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
-class WeichertMaxLikelihood(SeismicityOccurrence):
+class BMaxLikelihood(SeismicityOccurrence):
     """ Implements maximum likelihood calculations taking into account time
     variation in completeness"
     """
