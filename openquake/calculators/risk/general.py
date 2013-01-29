@@ -118,8 +118,13 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        self.progress.update(total=sum(self.taxonomies.values()))
-        self._initialize_progress()
+        if self.rc.hazard_output:
+            total = sum(self.taxonomies.values())
+        else:
+            total = (sum(self.taxonomies.values()) *
+                     len(self.rc.hazard_outputs(
+                         self.rc.hazard_calculation)))
+        self._initialize_progress(total)
 
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
@@ -158,9 +163,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
 
         if self.rc.hazard_output:
-            hazard_outputs = [self.hazard_output]
+            hazard_outputs = [self.rc.hazard_output]
         else:
-            hazard_outputs = self.hazard_outputs(self.hazard_calculation)
+            hazard_outputs = self.hazard_outputs(self.rc.hazard_calculation)
 
         output_containers = dict((hazard_output.id,
                                   self.create_outputs(hazard_output))
@@ -285,13 +290,14 @@ class BaseRiskCalculator(base.CalculatorNext):
             writer.serialize(exposure_stream)
         return writer.model
 
-    def _initialize_progress(self):
+    def _initialize_progress(self, total):
         """Record the total/completed number of work items.
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        self.progress.update(total=total)
         stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", sum(self.taxonomies.values()))
+        stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
