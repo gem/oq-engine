@@ -118,12 +118,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        if self.rc.hazard_output:
-            total = sum(self.taxonomies.values())
-        else:
-            total = (sum(self.taxonomies.values()) *
-                     len(self.rc.hazard_outputs(
-                         self.rc.hazard_calculation)))
+        total = (sum(self.taxonomies.values()) *
+                 len(self.considered_hazard_outputs()))
         self._initialize_progress(total)
 
         self.rnd = random.Random()
@@ -162,14 +158,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        if self.rc.hazard_output:
-            hazard_outputs = [self.rc.hazard_output]
-        else:
-            hazard_outputs = self.hazard_outputs(self.rc.hazard_calculation)
-
         output_containers = dict((hazard_output.id,
                                   self.create_outputs(hazard_output))
-                                 for hazard_output in hazard_outputs)
+                                 for hazard_output
+                                 in self.considered_hazard_outputs())
 
         calculator_parameters = self.calculator_parameters
 
@@ -181,7 +173,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                     assets = self.exposure_model.get_asset_chunk(
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
-                for hazard_output in hazard_outputs:
+                for hazard_output in self.considered_hazard_outputs():
                     tf_args = ([
                         self.job.id,
                         assets,
@@ -225,6 +217,15 @@ class BaseRiskCalculator(base.CalculatorNext):
                 for exp_file in exported_files:
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
+
+    def considered_hazard_outputs(self):
+        """
+        Returns the list of hazard outputs to be considered
+        """
+        if self.rc.hazard_output:
+            return [self.rc.hazard_output]
+        else:
+            return self.hazard_outputs(self.rc.hazard_calculation)
 
     def hazard_outputs(self, hazard_calculation):
         """
