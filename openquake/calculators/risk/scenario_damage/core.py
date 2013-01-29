@@ -21,9 +21,10 @@ Core functionality for the scenario_damage risk calculator.
 """
 
 from django import db
-import risklib.api
+from risklib import api, scientific
 from openquake.calculators.risk import general
 from openquake.utils import tasks, stats
+from openquake.db import models
 from openquake import logs
 from openquake.calculators import base
 
@@ -46,25 +47,27 @@ def scenario_damage(job_id, assets, hazard_getter, hazard_id,
 
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-    calculator = risklib.api.ScenarioDamage(
+    calculator = api.ScenarioDamage(
         fragility_model, fragility_functions)
-    aggfractions = None  # TODO: finish this
-    for asset in assets:
-        output = calculator(asset, hazard_getter(asset.site))
-        aggfractions = aggregate([output], aggfractions)
 
-    #losses = None
-    #with db.transaction.commit_on_success(using='reslt_writer'):
-    #    logs.LOG.debug(
-    #        'launching compute_on_assets over %d assets' % len(assets))
-    #    for asset_output in api.compute_on_assets(
-    #            assets, hazard_getter, calculator):
-    #        losses = api.aggregate_losses([asset_output], losses)
+    outputs = calculator(
+        assets, hazard_getter([asset.site for asset in assets]))
+
+    with logs.tracing('save statistics per site'), \
+            db.transaction.commit_on_success(using='reslt_writer'):
+        for  output in outputs:
+            mean, std = scientific.mean_std(output.fractions)
+            for dmg_state in models.damageState.objects.filter(
+                output_id=output_id).order_by('lsi'):
+                dpa = models.DmgStatePerAsset(mean=mean[i], stddev=std[i])
+                dpa.save()
+
+    # send aggregate fractions to the controller, the hook will collect them
+    aggfractions = sum(o.fractions for o in outputs)
     base.signal_task_complete(job_id=job_id, num_items=len(assets),
                               fractions=aggfractions)
 
 scenario_damage.ignore_result = False
-
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
@@ -106,6 +109,18 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def create_outputs(self):
         """
         """
+        dda = models.Output.objects.create_output(
+            self.job, "Damage Distribution by Asses",
+            "dmg_dist_by_asset"))
+
+        ddta = models.Output.objects.create_output(
+        self.job, "Damage Distribution by Taxonomy",
+            "dmg_dist_by_taxonomy"))
+
+        ddt = models.Output.objects.create_output(
+            self.job, "Damage Distribution Total",
+            "dmg_dist_total"))
+
         return []
 
     def set_risk_models(self):
