@@ -99,8 +99,15 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             models.SiteModel(location='POINT(10 -10)'),
         ]
 
+        # The convex hull of site model geometry
+        # has zero area
+        cls.site_model_degen_case = [
+            models.SiteModel(location='POINT(0.0 0.0)'),
+            models.SiteModel(location='POINT(0.0 0.1)'),
+            models.SiteModel(location='POINT(0.0 0.2)')]
+
     def test_validate_site_model(self):
-        sites_of_interest = [
+        sites_of_interest_case1 = [
             # NOTE(larsbutler): Some of the coordinates which are very close to
             # 10 or -10 have been set to 9.9999999 or -9.9999999 instead.
             #
@@ -138,10 +145,17 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             nhlib_geo.Point(-2.5, -2.5),
             nhlib_geo.Point(2.5, -2.5),
         ]
-        mesh = nhlib_geo.Mesh.from_points_list(sites_of_interest)
+
+        sites_of_interest_case2 = [nhlib_geo.Point(0.0, 0.0),
+                                    nhlib_geo.Point(0.0, 0.1),
+                                    nhlib_geo.Point(0.0, 0.2)]
+
+        mesh_case1 = nhlib_geo.Mesh.from_points_list(sites_of_interest_case1)
+        mesh_case2 = nhlib_geo.Mesh.from_points_list(sites_of_interest_case2)
 
         # this should work without raising any errors
-        general.validate_site_model(self.site_model_nodes, mesh)
+        general.validate_site_model(self.site_model_nodes, mesh_case1)
+        general.validate_site_model(self.site_model_degen_case, mesh_case2)
 
     def test_validate_site_model_invalid(self):
         test_cases = [
