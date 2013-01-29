@@ -191,7 +191,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                         output_containers[hazard_output.id] +
                         calculator_parameters)
 
-                yield tf_args
+                    yield tf_args
 
     def worker_args(self, taxonomy):
         """
