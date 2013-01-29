@@ -118,9 +118,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        total = (sum(self.taxonomies.values()) *
-                 len(self.considered_hazard_outputs()))
-        self._initialize_progress(total)
+        self._initialize_progress(sum(self.taxonomies.values()))
 
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
@@ -173,17 +171,19 @@ class BaseRiskCalculator(base.CalculatorNext):
                     assets = self.exposure_model.get_asset_chunk(
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
-                for hazard_output in self.considered_hazard_outputs():
-                    tf_args = ([
-                        self.job.id,
-                        assets,
-                        self.hazard_getter,
-                        self.hazard_id(hazard_output)] +
-                        self.worker_args(taxonomy) +
-                        output_containers[hazard_output.id] +
-                        calculator_parameters)
 
-                    yield tf_args
+                hazard = dict((ho.id, self.hazard_output(ho))
+                              for ho in self.considered_hazard_outputs())
+
+                # FIXME(lp). Refactor the following arg list such that
+                # the arguments are grouped into namedtuples
+                yield ([
+                    self.job.id,
+                    assets,
+                    self.hazard_getter, hazard] +
+                    self.worker_args(taxonomy) +
+                    [output_containers] +
+                    calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -238,7 +238,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         pass
 
-    def hazard_id(self, hazard_output):
+    def hazard_output(self, output):
         """
         :returns: The ID of the output container of the hazard
         used for this risk calculation. E.g. an
