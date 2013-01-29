@@ -124,8 +124,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        total = (sum(self.taxonomies.values()) *
-                 len(self.considered_hazard_outputs()))
+        asset_num = sum(self.taxonomies.values())
+        total = asset_num * len(self.considered_hazard_outputs())
+        logs.LOG.debug("Compute risks on %s assets for %d hazard outputs",
+                       asset_num, len(self.considered_hazard_outputs()))
         self._initialize_progress(total)
 
         self.rnd = random.Random()
