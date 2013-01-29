@@ -1033,8 +1033,7 @@ class RiskCalculation(djm.Model):
         Return true if this risk calculation will compute mean and/or
         quantile loss curves
         """
-        return ((self.rc.mean_loss_curves or self.rc.quantile_loss_curves) and
-                len(self.considered_hazard_outputs) == 1 and
+        return ((self.mean_loss_curves or self.quantile_loss_curves) and
                 self.calculation_mode in ['classical', 'event_based'])
 
 
