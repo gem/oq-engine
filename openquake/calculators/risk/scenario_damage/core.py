@@ -20,6 +20,7 @@
 Core functionality for the scenario_damage risk calculator.
 """
 
+import numpy
 from django import db
 from risklib import api, scientific
 from openquake.calculators.risk import general
@@ -32,42 +33,90 @@ from openquake.calculators import base
 @tasks.oqtask
 @stats.count_progress('r')
 def scenario_damage(job_id, assets, hazard_getter, hazard_id,
-                    fragility_model, fragility_functions, imt):
+                    taxonomy, fragility_model, fragility_functions,
+                    ddpa_id, imt):
     """
     Celery task for the scenario damage risk calculator.
 
-    :param job_id: the id of the current `:class:openquake.db.models.OqJob`
-    :param assets: the list of `:class:risklib.scientific.Asset`
+    :param job_id: the id of the current :class:`openquake.db.models.OqJob`
+    :param assets: the list of :class:`risklib.scientific.Asset`
     instances considered
     :param hazard_getter: the name of an hazard getter to be used
     :param hazard_id: the hazard output id
-    :param seed: the seed used to initialize the rng
+    :param taxonomy: the taxonomy being considered
+    :param fragility_model: a :class:`risklib.models.input.FragilityModel object
+    :param fragility_functions: a :class:`risklib.models.input.FragilityFunctionSeq object
+    :param ddpa_id: the output.id of output_type "dmg_dist_per_asset"
+    :param: the Intensity Measure Type of the ground motion fields
     ...
     """
 
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-    calculator = api.ScenarioDamage(
-        fragility_model, fragility_functions)
+    calculator = api.ScenarioDamage(fragility_model, fragility_functions)
 
-    outputs = calculator(
-        assets, hazard_getter([asset.site for asset in assets]))
+    outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
 
     with logs.tracing('save statistics per site'), \
             db.transaction.commit_on_success(using='reslt_writer'):
-        for  output in outputs:
-            mean, std = scientific.mean_std(output.fractions)
-            for dmg_state in models.damageState.objects.filter(
-                output_id=output_id).order_by('lsi'):
-                dpa = models.DmgStatePerAsset(mean=mean[i], stddev=std[i])
-                dpa.save()
+        for output in outputs:
+            saveDistPerAsset(output.fractions, ddpa_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
     base.signal_task_complete(job_id=job_id, num_items=len(assets),
-                              fractions=aggfractions)
+                              fractions=aggfractions, taxonomy=taxonomy)
 
 scenario_damage.ignore_result = False
+
+
+### XXX: the three utilities below could go in models ###
+
+def saveDistPerAsset(fractions, output_id, asset):
+    """
+    Save the damage distribution for a given asset.
+    """
+    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    mean, std = scientific.mean_std(fractions)
+    for dmg_state in dmg_states:
+        lsi = dmg_state.lsi
+        ddpa = models.DmgDistPerAsset(
+            dmg_state=dmg_state,
+            mean=mean[lsi], stddev=std[lsi],
+            exposure_data=asset,
+            location=asset.site)
+        ddpa.save()
+
+
+def saveDistPerTaxonomy(fractions, output_id, taxonomy):
+    """
+    Save the damage distribution for a given taxonomy, by summing over
+    all assets.
+    """
+    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    mean, std = scientific.mean_std(fractions)
+    for dmg_state in dmg_states:
+        lsi = dmg_state.lsi
+        ddpt = models.DmgDistPerTaxonomy(
+            dmg_state=dmg_state,
+            mean=mean[lsi], stddev=std[lsi],
+            taxonomy=taxonomy)
+        ddpt.save()
+
+
+def saveDistTotal(fractions, output_id):
+    """
+    Save the total distribution, by summing over all assets and taxonomies.
+    """
+    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    mean, std = scientific.mean_std(fractions)
+    for dmg_state in dmg_states:
+        lsi = dmg_state.lsi
+        ddt = models.DmgDistTotal(
+            dmg_state=dmg_state,
+            mean=mean[lsi], stddev=std[lsi])
+        ddt.save()
+
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
@@ -97,7 +146,33 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         to pass to a worker. In this case the list of fragility_functions
         for the given taxonomy.
         """
-        return [self.fragility_model, self.fragility_functions[taxonomy]]
+        return [taxonomy, self.fragility_model,
+                self.fragility_functions[taxonomy]]
+
+    def task_completed_hook(self, message):
+        """
+        Update the dictionary self.ddpt, i.e. aggregate the damage distribution
+        by taxonomy; called every time a block of assets is computed for each
+        taxonomy.
+        """
+        taxonomy = message['taxonomy']
+        fractions = message['fractions']
+        if taxonomy not in self.ddpt:
+            self.ddpt[taxonomy] = numpy.zeros(fractions.shape)
+        self.ddpt[taxonomy] += fractions
+
+    def post_process(self):
+        """
+        Save the damage distributions by taxonomy and total on the db.
+        """
+        tot = None
+        for taxonomy, fractions in self.ddpt.iteritems():
+            saveDistPerTaxonomy(fractions, self.ddpt_output.id, taxonomy)
+            if tot is None:  # only the first time
+                tot = numpy.zeros(fractions.shape)
+            tot += fractions
+        if tot is not None:
+            saveDistTotal(tot, self.ddt_output.id)
 
     @property
     def calculator_parameters(self):
@@ -108,31 +183,43 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def create_outputs(self):
         """
+        Creates the three kind of outputs of a ScenarioDamage calculator
+        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
+        populate the corresponding entries in DmgState.
         """
-        dda = models.Output.objects.create_output(
-            self.job, "Damage Distribution by Asses",
-            "dmg_dist_by_asset"))
+        self.ddpa_output = models.Output.objects.create_output(
+            self.job, "Damage Distribution per Asset",
+            "dmg_dist_per_asset")
 
-        ddta = models.Output.objects.create_output(
-        self.job, "Damage Distribution by Taxonomy",
-            "dmg_dist_by_taxonomy"))
+        self.ddpt_output = models.Output.objects.create_output(
+            self.job, "Damage Distribution per Taxonomy",
+            "dmg_dist_per_taxonomy")
 
-        ddt = models.Output.objects.create_output(
+        self.ddt_output = models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
-            "dmg_dist_total"))
+            "dmg_dist_total")
 
-        return []
+        for output in self.ddpa_output, self.ddpt_output, self.ddt_output:
+            for lsi, dstate in enumerate(self.damage_states):
+                ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
+                ds.save()
+
+        return [self.ddpa_output.id]
 
     def set_risk_models(self):
-        self.fragility_model, self.fragility_functions = \
+        self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
+        self.ddpt = {}
 
     def parse_fragility_model(self):
+        ## this is hard-coded for the moment
+        ## TODO: read the model from the XML file
         from risklib.models import input as i
         self.rc.inputs.get(input_type='fragility').path  # will be used
         self.imt = "MMI"
         imls = [7.0, 8.0, 9.0, 10.0, 11.0]
         limit_states = ['minor', 'moderate', 'severe', 'collapse']
+        damage_states = ['no_damage'] + limit_states
         fm = i.FragilityModel('discrete', imls, limit_states)
         ffs = {}
 
@@ -149,4 +236,4 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
              [0.0, 0.0, 0.0, 0.3, 0.89],
              [0.0, 0.0, 0.0, 0.04, 0.64]])
 
-        return fm, ffs
+        return fm, ffs, damage_states
