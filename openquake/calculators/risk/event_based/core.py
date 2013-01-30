@@ -18,6 +18,8 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+from collections import OrderedDict
+
 from django import db
 
 from risklib import api, scientific
@@ -31,30 +33,33 @@ from openquake.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard_id,
+def event_based(job_id, assets, hazard_getter_name, hazard,
                 seed, vulnerability_function,
-                loss_curve_id, loss_map_ids,
-                insured_curve_id, aggregate_loss_curve_id,
+                output_containers,
                 conditional_loss_poes, insured_losses,
                 imt, time_span, tses,
-                loss_curve_resolution, asset_correlation):
+                loss_curve_resolution, asset_correlation,
+                hazard_montecarlo_p):
     """
     Celery task for the event based risk calculator.
 
     :param job_id: the id of the current :class:`openquake.db.models.OqJob`
     :param assets: the list of `:class:risklib.scientific.Asset`
     instances considered
-    :param hazard_getter: the name of an hazard getter to be used
-    :param hazard_id: the hazard output id
+    :param str hazard_getter_name: class name of a class defined in the
+      :mod:`openquake.calculators.risk.hazard_getters` to be instantiated to
+      get the hazard curves
+    :param dict hazard:
+      A dictionary mapping hazard Output ID to GmfCollection ID
     :param seed: the seed used to initialize the rng
-    :param loss_curve_id:
-      ID of the :class:`openquake.db.models.LossCurve` output container used
-      to store the computed loss curves
-    :param loss_map_ids:
-      Dictionary poe->ID of the :class:`openquake.db.models.LossMap` output
-      container used to store the computed loss maps
-    :param insured_curve_id: Same as loss_curve_id but for insured losses
-    :param aggregate_loss_curve_id: ID of the
+
+    :param dict output_containers: a dictionary mapping hazard Output
+      ID to a list (a, b, c, d) where a is the ID of the
+      :class:`openquake.db.models.LossCurve` output container used to
+      store the computed loss curves; b is the dictionary poe->ID of
+      the :class:`openquake.db.models.LossMap` output container used
+      to store the computed loss maps; c is the same as a but for
+      insured losses; d is the ID of the
       :class:`openquake.db.models.AggregateLossCurve` output container
       used to store the computed loss curves
     :param conditional_loss_poes:
@@ -68,47 +73,80 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
     :param float asset_correlation: a number ranging from 0 to 1
     representing the correlation between the generated loss ratios
     """
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-    calculator = api.ProbabilisticEventBased(
-        vulnerability_function,
-        curve_resolution=loss_curve_resolution,
-        time_span=time_span,
-        tses=tses,
-        seed=seed,
-        correlation=asset_correlation)
+    asset_outputs = OrderedDict()
+    for hazard_output_id, hazard_data in hazard.items():
+        hazard_id, _ = hazard_data
 
-    if insured_losses:
-        calculator = api.InsuredLosses(calculator)
+        (loss_curve_id, loss_map_ids,
+         mean_loss_curve_id, quantile_loss_curve_ids,
+         insured_curve_id, aggregate_loss_curve_id) = (
+             output_containers[hazard_output_id])
 
-    # if we need to compute the loss maps, we add the proper risk
-    # aggregator
-    if conditional_loss_poes:
-        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
+        hazard_getter = general.hazard_getter(
+            hazard_getter_name, hazard_id, imt)
 
-    with logs.tracing('getting hazard'):
-        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
+        calculator = api.ProbabilisticEventBased(
+            vulnerability_function,
+            curve_resolution=loss_curve_resolution,
+            time_span=time_span,
+            tses=tses,
+            seed=seed,
+            correlation=asset_correlation)
 
-    with logs.tracing('computing risk over %d assets' % len(assets)):
-        asset_outputs = calculator(assets, ground_motion_fields)
+        if insured_losses:
+            calculator = api.InsuredLosses(calculator)
 
-    with logs.tracing('writing results'):
-        with db.transaction.commit_on_success(using='reslt_writer'):
-            for i, asset_output in enumerate(asset_outputs):
-                general.write_loss_curve(
-                    loss_curve_id, assets[i], asset_output)
+        # if we need to compute the loss maps, we add the proper risk
+        # aggregator
+        if conditional_loss_poes:
+            calculator = api.ConditionalLosses(
+                conditional_loss_poes, calculator)
 
-                if asset_output.conditional_losses:
-                    general.write_loss_map(
-                        loss_map_ids, assets[i], asset_output)
+        with logs.tracing('getting hazard'):
+            ground_motion_fields = [hazard_getter(asset.site)
+                                    for asset in assets]
 
-                if asset_output.insured_losses:
+        with logs.tracing('computing risk over %d assets' % len(assets)):
+            asset_outputs[hazard_output_id] = calculator(
+                assets, ground_motion_fields)
+
+        with logs.tracing('writing results'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, asset_output in enumerate(
+                        asset_outputs[hazard_output_id]):
                     general.write_loss_curve(
-                        insured_curve_id, assets[i], asset_output)
+                        loss_curve_id, assets[i], asset_output)
 
-    losses = sum(asset_output.losses for asset_output in asset_outputs)
+                    if asset_output.conditional_losses:
+                        general.write_loss_map(
+                            loss_map_ids, assets[i], asset_output)
 
-    general.update_aggregate_losses(aggregate_loss_curve_id, losses)
+                    if asset_output.insured_losses:
+                        general.write_loss_curve(
+                            insured_curve_id, assets[i], asset_output)
+                losses = sum(asset_output.losses
+                             for asset_output
+                             in asset_outputs[hazard_output_id])
+                general.update_aggregate_losses(
+                    aggregate_loss_curve_id, losses)
+
+    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+        weights = [data[1] for _, data in hazard.items()]
+
+        with logs.tracing('writing curve statistics'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, asset in enumerate(assets):
+                    general.curve_statistics(
+                        asset,
+                        [asset_output[i].loss_ratio_curve
+                         for asset_output in asset_outputs.values()],
+                        weights,
+                        mean_loss_curve_id,
+                        quantile_loss_curve_ids,
+                        hazard_montecarlo_p,
+                        assume_equal="image")
+
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False
 
@@ -130,59 +168,69 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         Override the default pre_execute to provide more detailed
         validation.
 
-        1) In Event Based we get the intensity measure type considered
-        from the vulnerability model, then we check that the hazard
-        calculation includes outputs with that intensity measure type
-
         2) If insured losses are required we check for the presence of
         the deductible and insurance limit
         """
         super(EventBasedRiskCalculator, self).pre_execute()
 
-        hc = self.rc.hazard_output.oq_job.hazard_calculation
-
-        allowed_imts = hc.intensity_measure_types_and_levels.keys()
-
-        if not self.imt in allowed_imts:
-            raise RuntimeError(
-                "There is no ground motion field in the intensity measure %s" %
-                self.imt)
-
         if (self.rc.insured_losses and
             self.exposure_model.exposuredata_set.filter(
-                    (db.models.Q(deductible__isnull=True) |
-                     db.models.Q(ins_limit__isnull=True))).exists()):
+                (db.models.Q(deductible__isnull=True) |
+                 db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
-        loss_curve = models.LossCurve.objects.get(
-            aggregate=True, output__oq_job=self.job)
-        curve_data = loss_curve.aggregatelosscurvedata
+        # compute aggregate loss curves
+        for hazard_output in self.considered_hazard_outputs():
+            loss_curve = models.LossCurve.objects.get(
+                hazard_output=hazard_output,
+                aggregate=True, output__oq_job=self.job)
+            curve_data = loss_curve.aggregatelosscurvedata
 
-        tses, time_span = self.hazard_times()
+            tses, time_span = self.hazard_times()
 
-        aggregate_loss_curve = scientific.event_based(
-            curve_data.losses, tses, time_span,
-            curve_resolution=self.rc.loss_curve_resolution)
+            aggregate_loss_curve = scientific.event_based(
+                curve_data.losses, tses, time_span,
+                curve_resolution=self.rc.loss_curve_resolution)
 
-        curve_data.losses = aggregate_loss_curve.abscissae.tolist()
-        curve_data.poes = aggregate_loss_curve.ordinates.tolist()
-        curve_data.save()
+            curve_data.losses = aggregate_loss_curve.abscissae.tolist()
+            curve_data.poes = aggregate_loss_curve.ordinates.tolist()
+            curve_data.save()
 
-    @property
-    def hazard_id(self):
+    def hazard_output(self, output):
         """
-        The ID of the :class:`openquake.db.models.GmfCollection`
-        object that stores the ground motion fields used by the risk
-        calculation
+        :returns: the ID of the
+        :class:`openquake.db.models.GmfCollection` object that stores
+        the ground motion fields associated with `output`
         """
 
-        if not self.rc.hazard_output.is_ground_motion_field():
+        if not output.is_ground_motion_field():
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
 
-        return self.rc.hazard_output.gmfcollection.id
+        gmf = output.gmfcollection
+
+        if gmf.lt_realization:
+            weight = gmf.lt_realization.weight
+        else:
+            weight = None
+        return (gmf.id, weight)
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.Output` hazard
+        object that stores the ground motion fields associated with
+        `hazard_calculation` and a logic tree realization
+        """
+
+        # In order to avoid a big joint to filter per imt now, we let
+        # the hazard getter do the job
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.filter(
+                output_type='gmf',
+                gmfcollection__lt_realization__isnull=False,
+                gmfcollection__complete_logic_tree_gmf=False)
 
     def hazard_times(self):
         """
@@ -190,14 +238,12 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         motion field and the so-called time representative of the
         stochastic event set
         """
-        hc = self.rc.hazard_calculation
-
         # atm, no complete_logic_tree gmf are supported
         realizations_nr = 1
 
-        time_span = hc.investigation_time
+        time_span = self.hc.investigation_time
         return (time_span,
-                hc.ses_per_logic_tree_path * realizations_nr * time_span)
+                self.hc.ses_per_logic_tree_path * realizations_nr * time_span)
 
     @property
     def calculator_parameters(self):
@@ -211,21 +257,26 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             correlation = 0
         else:
             correlation = self.rc.asset_correlation
+
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
-                self.rc.loss_curve_resolution, correlation]
+                self.rc.loss_curve_resolution, correlation,
+                self.hc.number_of_logic_tree_samples == 0]
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Add Aggregate loss curve and Insured Curve output containers
         """
-        outputs = super(EventBasedRiskCalculator, self).create_outputs()
+        outputs = super(EventBasedRiskCalculator, self).create_outputs(
+            hazard_output)
 
         aggregate_loss_curve = models.LossCurve.objects.create(
             aggregate=True,
+            hazard_output=hazard_output,
             output=models.Output.objects.create_output(
-                self.job, "Aggregate Loss Curve", "agg_loss_curve"))
+                self.job, "Aggregate Loss Curve for hazard %s" % hazard_output,
+                "agg_loss_curve"))
 
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
@@ -236,9 +287,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             insured_curve_id = (
                 models.LossCurve.objects.create(
                     insured=True,
+                    hazard_output=hazard_output,
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Insured Loss Curve Set",
+                        "Insured Loss Curve Set for hazard %s" % hazard_output,
                         "ins_loss_curve")
                 ).id)
         else:
