@@ -410,7 +410,11 @@ CREATE TABLE uiapi.risk_calculation (
     calculation_mode VARCHAR NOT NULL,
 
     -- probabilistic parameters
-    asset_correlation VARCHAR NULL,
+    asset_correlation float NULL
+    CONSTRAINT asset_correlation_value
+    CHECK (
+      (asset_correlation IS NULL) OR
+      ((asset_correlation >= 0) AND (asset_correlation <= 1))),
     master_seed INTEGER NULL,
 
     -- classical parameters:
