@@ -946,6 +946,9 @@ class RiskCalculation(djm.Model):
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
 
+    ##########################################
+    # For calculators that outputs loss curves
+    ##########################################
     mean_loss_curves = fields.OqNullBooleanField(
         help_text='Compute mean loss curves',
         null=True,
