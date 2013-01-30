@@ -85,6 +85,13 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         `openquake.db.models.HazardCurve` object
         """
 
-        self.assertEqual(1,
-                         models.HazardCurve.objects.filter(
-                             pk=self.calculator.hazard_id).count())
+        outputs = self.calculator.hazard_outputs(
+            self.calculator.rc.get_hazard_calculation())
+
+        print [o.output_type for o in outputs]
+        self.assertEqual(
+            set(["hazard_curve"]), set([o.output_type for o in outputs]))
+
+        self.assertEqual(
+            1, models.HazardCurve.objects.filter(
+                pk=self.calculator.hazard_output(outputs[0])[0]).count())
