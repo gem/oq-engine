@@ -100,8 +100,8 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
     """
 
     count = 0
-    lower_bound = (gmf_value - delta_prob) / div_factor
-    upper_bound = (gmf_value + delta_prob) / div_factor
+    lower_bound = gmf_value - delta_prob / div_factor
+    upper_bound = gmf_value + delta_prob / div_factor
 
     for v1, v2 in zip(gmfs_site_one, gmfs_site_two):
         if ((lower_bound <= v1 <= upper_bound) and
