@@ -136,7 +136,7 @@ calculation_mode = classical
 gsim_logic_tree_file = %s
 source_model_logic_tree_file = %s
 site_model_file = %s
-not_a_valid_file = foo.xml
+not_a_valid_xml = foo.xml
 """ % (gsim_lt_input, sm_lt_input, site_model_input))
 
         # Add a 'name' to make this look like a real file:
@@ -148,7 +148,7 @@ not_a_valid_file = foo.xml
             'base_path': exp_base_path,
             'force_inputs': True,
             'calculation_mode': 'classical',
-            'not_a_valid_file': 'foo.xml',
+            'not_a_valid_xml': 'foo.xml',
         }
 
         params, files = engine2.parse_config(source, force_inputs=True)
@@ -360,7 +360,7 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         calculation = engine2.create_hazard_calculation(
             job.owner, params, files.values())
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=calculation, files=files
         )
         self.assertTrue(form.is_valid())

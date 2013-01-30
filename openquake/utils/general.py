@@ -40,7 +40,8 @@ def get_available_calculators(pkg):
             mod = importlib.import_module(pkg.__name__ + '.' + modname)
             for cls in mod.__dict__.itervalues():
                 if inspect.isclass(cls) and 'Calculator' in cls.__name__:
-                    calc[modname] = cls
+                    calc_mode = modname[:-5]  # strip _core
+                    calc[calc_mode] = cls
     return collections.OrderedDict((k, calc[k]) for k in sorted(calc))
 
 

@@ -18,7 +18,7 @@ import unittest
 
 import numpy
 
-from openquake.calculators.hazard.event_based import post_processing as pp
+from openquake.calculators.hazard import event_based_post_processing as pp
 
 from tests.calculators.hazard.event_based import _pp_test_data as test_data
 

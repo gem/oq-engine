@@ -50,10 +50,9 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.calc = disagg_core.DisaggHazardCalculator(self.job)
 
         # Mock `disagg_task_arg_gen`
-        disagg_path = 'openquake.calculators.hazard.disagg'
+        disagg_path = 'openquake.calculators.hazard.disaggregation_core'
         self.disagg_tag_patch = helpers.patch(
-            '%s.core.DisaggHazardCalculator.disagg_task_arg_gen'
-            % disagg_path)
+            '%s.DisaggHazardCalculator.disagg_task_arg_gen' % disagg_path)
         self.disagg_tag_mock = self.disagg_tag_patch.start()
         # fake disagg task arg generator:
         disagg_tag = iter(xrange(3))
@@ -274,7 +273,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         with mock.patch('nhlib.calc.disagg.disaggregation') as disagg_mock:
             disagg_mock.return_value = (None, None)
             with mock.patch(
-                '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:
+                    '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:
 
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.

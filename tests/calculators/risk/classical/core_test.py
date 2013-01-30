@@ -17,7 +17,7 @@ from tests.utils import helpers
 from tests.calculators.risk import general_test
 
 from openquake.db import models
-from openquake.calculators.risk.classical import core as classical
+from openquake.calculators.risk import classical_core as classical
 
 
 class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):

@@ -21,7 +21,7 @@ from risklib import api
 
 from openquake.calculators import base
 from openquake.calculators.risk import general
-from openquake.calculators.risk.classical import core as classical
+from openquake.calculators.risk import classical_core as classical
 from openquake.utils import stats
 from openquake.utils import tasks
 from openquake import logs

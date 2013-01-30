@@ -17,7 +17,7 @@ from tests.utils import helpers
 from tests.calculators.risk import general_test
 
 from openquake.db import models
-from openquake.calculators.risk.event_based import core as event_based
+from openquake.calculators.risk import event_based_core as event_based
 
 
 class EventBasedRiskCalculatorTestCase(

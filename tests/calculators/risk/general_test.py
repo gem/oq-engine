@@ -82,9 +82,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(3, actual_asset_queryset.count())
 
-        asset_refs = [a.asset_ref for a in actual_asset_queryset.all()]
+        asset_refs = set(a.asset_ref for a in actual_asset_queryset.all())
 
-        self.assertEqual(["a1", "a2", "a3"], asset_refs)
+        self.assertEqual(set(["a1", "a2", "a3"]), asset_refs)
 
     def test_set_risk_models(self):
         """

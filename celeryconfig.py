@@ -58,7 +58,7 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 CELERY_IMPORTS = (
     "openquake.calculators.hazard.classical_core",
     "openquake.calculators.hazard.classical_post_processing",
-    "openquake.calculators.hazard.event_based_core_next",
+    "openquake.calculators.hazard.event_based_core",
     "openquake.calculators.hazard.event_based_post_processing",
     "openquake.calculators.risk.classical_core",
     "openquake.calculators.risk.classical_bcr_core",
