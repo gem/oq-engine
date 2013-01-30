@@ -23,7 +23,7 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.calculators import base
-from openquake.calculators.hazard.classical import core
+from openquake.calculators.hazard import classical_core as core
 from openquake.db import models
 from openquake.utils import stats
 from tests.utils import helpers
@@ -47,7 +47,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
-        base_path = ('openquake.calculators.hazard.classical.core'
+        base_path = ('openquake.calculators.hazard.classical_core'
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))

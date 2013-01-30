@@ -14,7 +14,7 @@ Classical PSHA Calculator
 
 Classical PSHA Core
 ===================
-.. automodule:: openquake.calculators.hazard.classical.core
+.. automodule:: openquake.calculators.hazard.classical_core
 
 Classical PSHA Post-Processing
 ==============================
@@ -29,7 +29,7 @@ Event-Based PSHA Calculator
 
 Event-Based Core
 ================
-.. automodule:: openquake.calculators.hazard.event_based.core_next
+.. automodule:: openquake.calculators.hazard.event_based_core
 
 Event-Based Post-Proccessing
 ============================

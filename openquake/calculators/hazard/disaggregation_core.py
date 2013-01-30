@@ -51,7 +51,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         of disaggregation, this is a list of :class:`nhlib.site.Site` objects.
 
         For more info, see
-        :func:`openquake.calculators.hazard.classical.core.compute_hazard_curves`
+        :func:`openquake.calculators.hazard.classical_core.compute_hazard_curves`
         if ``calc_type`` is 'hazard_curve' and :func:`compute_disagg` if
         ``calc_type`` is 'disagg'.
     :param lt_rlz_id:
