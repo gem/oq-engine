@@ -139,7 +139,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='hazard_curve',
-                hazardcurve__lt_realization__isnull=False)
+                hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property
     def calculator_parameters(self):

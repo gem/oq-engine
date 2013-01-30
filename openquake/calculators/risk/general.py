@@ -233,10 +233,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         objects to be used for a risk calculation.
 
         Calculator must override this to select from the hazard
-        calculation which are the Output objects to be considered by
-        the risk calculation
+        calculation given in input which are the Output objects to be
+        considered by the risk calculation to get the actual hazard
+        input.
+
+        Result objects should be ordered (e.g. by id) and be
+        associated to an hazard logic tree realization
         """
-        pass
+        raise NotImplementedError
 
     def hazard_output(self, output):
         """
