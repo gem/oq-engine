@@ -31,6 +31,16 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             'classical_psha_based_risk/job.ini',
             'simple_fault_demo_hazard/job.ini')
 
+    @property
+    def hazard_calculation(self):
+        "A shortcut to a the corresponding hazard calculation"
+        return self.job.risk_calculation.get_hazard_calculation()
+
+    @property
+    def hazard_outputs(self):
+        return self.hazard_calculation.oqjob_set.latest(
+            'last_update').output_set.filter(output_type='hazard_curve')
+
 
 class FakeRiskCalculator(risk.BaseRiskCalculator):
     """
@@ -39,9 +49,8 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
 
     celery_task = mock.Mock()
 
-    @property
-    def hazard_id(self):
-        return 0
+    def hazard_output(self, output):
+        return 0, None
 
     @property
     def hazard_getter(self):
@@ -82,7 +91,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(3, actual_asset_queryset.count())
 
-        asset_refs = [a.asset_ref for a in actual_asset_queryset.all()]
+        asset_refs = [a.asset_ref
+                      for a
+                      in actual_asset_queryset.all().order_by('asset_ref')]
 
         self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
@@ -101,18 +112,23 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         Test that the proper output containers are created
         """
 
-        [loss_curve_id, loss_map_ids] = self.calculator.create_outputs()
+        for hazard_output in self.hazard_outputs:
+            [loss_curve_id, loss_map_ids,
+             mean, quantile] = self.calculator.create_outputs(
+                hazard_output)
 
-        self.assertTrue(
-            models.LossCurve.objects.filter(pk=loss_curve_id).exists())
+            self.assertIsNone(mean)
+            self.assertEqual({}, quantile)
+            self.assertTrue(
+                models.LossCurve.objects.filter(pk=loss_curve_id).exists())
 
-        self.assertEqual(
-            sorted(self.job.risk_calculation.conditional_loss_poes),
-            sorted(loss_map_ids.keys()))
+            self.assertEqual(
+                sorted(self.job.risk_calculation.conditional_loss_poes),
+                sorted(loss_map_ids.keys()))
 
-        for _, map_id in loss_map_ids.items():
-            self.assertTrue(models.LossMap.objects.filter(
-                pk=map_id).exists())
+            for _, map_id in loss_map_ids.items():
+                self.assertTrue(models.LossMap.objects.filter(
+                    pk=map_id).exists())
 
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
@@ -131,11 +147,12 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         mocks[0].return_value = mock.Mock()
         mocks[0].return_value.taxonomies_in.return_value = {'RC': 10}
 
+        self.calculator.imt = 'PGA'
         self.calculator.pre_execute()
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count,
-                "mock %d has not been called" % (i + 1))
+                             "mock %d has not been called" % (i + 1))
             m.stop()
             patches[i].stop()
 
@@ -145,9 +162,12 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         """
 
         self.calculator.pre_execute()
-        self.calculator._initialize_progress()
 
-        total = stats.pk_get(self.calculator.job.id, "nrisk_total")
+        total = 2  # expected
+        self.calculator._initialize_progress(total)
+
+        self.assertEqual(total, stats.pk_get(
+            self.calculator.job.id, "nrisk_total"))
         self.assertEqual(2, total)
         self.assertEqual({'VF': 2}, self.calculator.taxonomies)
         done = stats.pk_get(self.calculator.job.id, "nrisk_done")
