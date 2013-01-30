@@ -51,15 +51,13 @@ from openquake import logs
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+CD = os.path.dirname(__file__)  # current directory
 
-OUTPUT_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../data/output'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../bin/openquake'))
 
-SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../../openquake/nrml/schema/'))
+DATA_DIR = os.path.abspath(os.path.join(CD, '../data'))
 
-SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(SCHEMA_DIR, 'examples'))
+OUTPUT_DIR = os.path.abspath(os.path.join(CD, '../data/output'))
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
@@ -231,7 +229,7 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--run-hazard=%s" % config_file]
+    args = [RUNNER, "--run-hazard=%s" % config_file]
     if force_inputs:
         args.append('--force-inputs')
 
@@ -263,7 +261,7 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
       ID of the hazard output used by the risk calculation
     """
 
-    args = ["bin/openquake", "--run-risk=%s" % config_file,
+    args = [RUNNER, "--run-risk=%s" % config_file,
             "--hazard-output-id=%d" % hazard_id]
     if force_inputs:
         args.append('--force-inputs')

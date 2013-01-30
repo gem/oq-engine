@@ -66,7 +66,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         try:
             expected_data = self.expected_data()
-
             job = self.run_risk(self.cfg, self.hazard_id())
 
             actual_data = self.actual_data(job)
