@@ -1,18 +1,19 @@
 # coding=utf-8
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# OpenQuake Risklib is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
 #
-# OpenQuake is distributed in the hope that it will be useful,
+# OpenQuake Risklib is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Affero General Public
+# License along with OpenQuake Risklib. If not, see
+# <http://www.gnu.org/licenses/>.
 
 import numpy
 from risklib import scientific
@@ -142,14 +143,11 @@ class ProbabilisticEventBased(object):
     def __init__(
             self, vulnerability_function,
             time_span, tses,
-            seed=None, correlation_type=None,
+            seed=None, correlation=0,
             curve_resolution=scientific.DEFAULT_CURVE_RESOLUTION):
 
         self.seed = seed
-        if correlation_type == "perfect":
-            self.correlation = 1
-        else:
-            self.correlation = 0
+        self.correlation = correlation
         self.vulnerability_function = vulnerability_function
         self.time_span = time_span
         self.tses = tses
@@ -207,12 +205,9 @@ class InsuredLosses(object):
 
 class Scenario(object):
     def __init__(self, vulnerability_function,
-                 seed=None, correlation_type=None):
+                 seed=None, correlation=0):
         self.seed = seed
-        if correlation_type == "perfect":
-            self.correlation = 1
-        else:
-            self.correlation = 0
+        self.correlation = correlation
         self.vulnerability_function = vulnerability_function
 
     def __call__(self, assets, ground_motion_fields):

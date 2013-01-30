@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# OpenQuake Risklib is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
 #
-# OpenQuake is distributed in the hope that it will be useful,
+# OpenQuake Risklib is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Affero General Public
+# License along with OpenQuake Risklib. If not, see
+# <http://www.gnu.org/licenses/>.
 
 
 """
@@ -22,7 +23,6 @@ This module includes the scientific API of the oq-risklib
 
 import collections
 import itertools
-import random
 
 import numpy
 from scipy import interpolate, stats
@@ -97,14 +97,16 @@ class VulnerabilityFunction(object):
     def init_distribution(self, asset_count=1, sample_num=1,
                           seed=None, correlation=0):
 
-        assert correlation in [0, 1]
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
     def _cov_for(self, imls):
         """
         Clip `imls` to the range associated with the support of the
         vulnerability function and returns the corresponding
-        covariance values by linear interpolation
+        covariance values by linear interpolation. For instance
+        if the range is [0.005, 0.0269] and the imls are
+        [0.0049, 0.006, 0.027], the clipped imls are
+        [0.005,  0.006, 0.0269].
         """
         clipped_up = numpy.min(
             [imls, numpy.ones(len(imls)) * self.max_iml], axis=0)
@@ -113,7 +115,8 @@ class VulnerabilityFunction(object):
         return self._covs_i1d(clipped)
 
     def __getstate__(self):
-        return (self.imls, self.mean_loss_ratios, self.covs, self.distribution_name)
+        return (self.imls, self.mean_loss_ratios,
+                self.covs, self.distribution_name)
 
     def __setstate__(self, (imls, mean_loss_ratios, covs, distribution_name)):
         self.imls = imls
@@ -265,7 +268,58 @@ ScenarioRiskOutput.standard_deviation = property(
 DISTRIBUTIONS = utils.Register()
 
 
-class DegenerateDistribution(object):
+class Distribution(object):
+    """
+    A Distribution class models continuous probability distribution of
+    random variables used to sample losses of a set of assets. It is
+    usually registered with a name (e.g. LN, BT) by using
+    :class:`risklib.utils.Register`
+    """
+
+    def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
+        """
+        Abstract method to be extended by derived classes. It must be
+        called before any previous use of the method `sample`. It
+        initialize the random number generator and it may be
+        overridden to precompute random values with a given
+        correlation among assets.
+
+        :param int asset_count: the expected number of assets
+
+        :param int sample_count: the expected number of samples for
+        each asset
+
+        :param int seed: the seed used to initialize the random number
+        generator
+
+        :param float correlation: a value between 0 (inclusive) and 1
+        that indicates the correlation between samples across
+        different assets.
+        """
+        pass
+
+    def sample(self, means, covs=None, stddevs=None):
+        """
+        :returns: sample a set of losses
+        :param means: an array of mean losses
+        :param covs: an array of covariances
+        :param stddevs: an array of stddevs
+        """
+        pass
+
+    def survival(self, loss_ratio, mean, stddev):
+        """
+        Return the survival function of the distribution with `mean`
+        and `stddev` applied to `loss_ratio`
+        """
+        pass
+
+
+class DegenerateDistribution(Distribution):
+    """
+    The degenerate distribution. E.g. a distribution with a delta
+    corresponding to the mean.
+    """
     def init(self, *args):
         pass
 
@@ -277,27 +331,39 @@ class DegenerateDistribution(object):
 
 
 @DISTRIBUTIONS.add('LN')
-class LogNormalDistribution(object):
+class LogNormalDistribution(Distribution):
+    """
+    Model a distribution of a random variable whoose logarithm are
+    normally distributed.
+
+    :attr epsilons: A matrix of random numbers generated with
+    :func:`numpy.random.multivariate_normal` with dimensions
+    assets_num x samples_num.
+
+    :attr epsilon_idx: a counter used in sampling to iterate over the
+    attribute `epsilons`
+    """
     def __init__(self):
-        self.rnd = random.Random()
         self.epsilons = None
+        self.epsilon_idx = 0
 
     def init(self, asset_count=1, samples=1, seed=None, correlation=0):
-        assert correlation in [0, 1]
         if seed is not None:
-            self.rnd.seed(seed)
+            numpy.random.seed(seed)
 
-        if correlation == 0:
-            self.epsilons = [
-                [self.rnd.normalvariate(0, 1) for _ in range(0, samples)]
-                for __ in range(0, asset_count)]
-        else:
-            base_epsilons = [self.rnd.normalvariate(0, 1)
-                             for _ in range(0, samples)]
-            self.epsilons = itertools.repeat(base_epsilons, asset_count)
+        means_vector = numpy.zeros(asset_count)
+        covariance_matrix = (
+            numpy.ones((asset_count, asset_count)) * correlation +
+            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+        self.epsilons = numpy.random.multivariate_normal(
+            means_vector, covariance_matrix, samples).transpose()
 
     def sample(self, means, covs, _):
-        epsilons = self.epsilons.pop()
+        if self.epsilons is None:
+            raise ValueError("A LogNormalDistribution must be initialized "
+                             "before you can use it")
+        epsilons = self.epsilons[self.epsilon_idx]
+        self.epsilon_idx += 1
         variance = (means * covs) ** 2
         sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
         mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
@@ -312,7 +378,7 @@ class LogNormalDistribution(object):
 
 
 @DISTRIBUTIONS.add('BT')
-class BetaDistribution(object):
+class BetaDistribution(Distribution):
     def sample(self, means, _, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)

@@ -6,3 +6,5 @@ last_test_run.log
 .coverage
 *.png
 .ropeproject
+*~
+*_flymake.py
