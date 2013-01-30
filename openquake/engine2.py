@@ -16,7 +16,7 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-from __future__ import absolute_imports
+from __future__ import absolute_import
 import ConfigParser
 import getpass
 import md5

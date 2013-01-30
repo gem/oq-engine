@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 # Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -154,9 +155,9 @@ from openquake import logs
 from openquake import writer
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
-from openquake.calculators.hazard.classical import (
-    post_processing as cls_post_processing)
-from openquake.calculators.hazard.event_based import post_processing
+from openquake.calculators.hazard import (
+    classical_post_processing as cls_post_processing)
+from openquake.calculators.hazard import event_based_post_processing
 from openquake.db import models
 from openquake.db.aggregate_result_writer import MeanCurveWriter
 from openquake.db.aggregate_result_writer import QuantileCurveWriter
@@ -769,7 +770,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         logs.LOG.debug('> starting post processing')
 
         if self.hc.hazard_curves_from_gmfs:
-            post_processing.do_post_process(self.job)
+            event_based_post_processing.do_post_process(self.job)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -782,8 +783,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                  quantile_curves=QuantileCurveWriter))
 
                 utils_tasks.distribute(
-                        cls_post_processing.do_post_process,
-                        ("post_processing_task", tasks),
-                        tf_args=dict(job_id=self.job.id))
+                    cls_post_processing.do_post_process,
+                    ("post_processing_task", tasks),
+                    tf_args=dict(job_id=self.job.id))
 
         logs.LOG.debug('< done with post processing')
