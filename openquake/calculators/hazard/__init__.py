@@ -14,18 +14,3 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """This package contains Hazard calculator classes and utilities."""
-
-from __future__ import absolute_import
-
-from .classical_core import ClassicalHazardCalculator
-from .event_based_core import EventBasedHazardCalculator
-from .disaggregation_core import DisaggHazardCalculator
-from .scenario_core import ScenarioHazardCalculator
-
-
-CALCULATORS_NEXT = {
-    'classical': ClassicalHazardCalculator,
-    'event_based': EventBasedHazardCalculator,
-    'disaggregation': DisaggHazardCalculator,
-    'scenario': ScenarioHazardCalculator,
-}

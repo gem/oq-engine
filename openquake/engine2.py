@@ -16,6 +16,7 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+from __future__ import absolute_imports
 import ConfigParser
 import getpass
 import md5
@@ -27,11 +28,14 @@ import openquake
 from django.core import exceptions
 from django.db import close_connection, models as djm
 
-from openquake import kvs
-from openquake import logs
-from openquake.db import models
-from openquake.supervising import supervisor
-from openquake.utils import monitor
+from . import kvs
+from . import logs
+from .db import models
+from .supervising import supervisor
+from .utils import monitor
+from .utils.general import get_available_calculators
+from .calculators import hazard, risk
+
 
 INPUT_TYPES = set(item[0] for item in models.Input.INPUT_TYPE_CHOICES)
 
@@ -313,12 +317,10 @@ def run_hazard(job, log_level, log_file, exports):
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
     """
-    from openquake.calculators.hazard import CALCULATORS_NEXT
-
+    calculators = get_available_calculators(hazard)
     calc_mode = job.hazard_calculation.calculation_mode
     # - Instantiate the calculator class
-    calc = CALCULATORS_NEXT[calc_mode](job)
-
+    calc = calculators[calc_mode](job)
     return _run_calc(job, log_level, log_file, exports, calc, 'hazard')
 
 
@@ -339,12 +341,9 @@ def run_risk(job, log_level, log_file, exports):
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
     """
-
-    from openquake.calculators.risk import CALCULATORS
-
+    calculators = get_available_calculators(risk)
     calc_mode = job.risk_calculation.calculation_mode
-    calc = CALCULATORS[calc_mode](job)
-
+    calc = calculators[calc_mode](job)
     return _run_calc(job, log_level, log_file, exports, calc, 'risk')
 
 

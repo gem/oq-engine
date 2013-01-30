@@ -50,6 +50,9 @@ from openquake import engine2
 from openquake import logs
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
+from openquake.utils.general import get_available_calculators
+
+CALCULATORS = get_available_calculators(hazard)
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 
@@ -193,7 +196,7 @@ def run_hazard_job(cfg, exports=None):
     models.JobStats.objects.create(oq_job=job)
 
     calc_mode = job.hazard_calculation.calculation_mode
-    calc = hazard.CALCULATORS_NEXT[calc_mode](job)
+    calc = CALCULATORS[calc_mode](job)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
     job.is_running = False
     job.save()

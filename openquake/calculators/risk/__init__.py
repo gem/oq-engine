@@ -14,17 +14,3 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """Information about the calculators available for the Risk engine."""
-
-from __future__ import absolute_import
-
-from .classical_core import ClassicalRiskCalculator
-from .classical_bcr_core import ClassicalBCRRiskCalculator
-from .event_based_core import EventBasedRiskCalculator
-from .event_based_bcr_core import EventBasedBCRRiskCalculator
-
-CALCULATORS = {
-    'classical': ClassicalRiskCalculator,
-    'classical_bcr': ClassicalBCRRiskCalculator,
-    'event_based': EventBasedRiskCalculator,
-    'event_based_bcr': EventBasedBCRRiskCalculator,
-}
