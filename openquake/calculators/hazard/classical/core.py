@@ -224,6 +224,11 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # (if a site model was specified, that is).
         self.initialize_site_model()
 
+        # Once the site model is init'd, create and cache the site collection;
+        # this is done by simply accessing the `site_collection` property,
+        # which does the caching.
+        self.hc.site_collection
+
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
