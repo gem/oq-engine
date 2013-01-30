@@ -21,13 +21,11 @@ import random
 from cStringIO import StringIO
 from django.db import transaction
 import numpy
-from time import time
 
 from nrml.hazard.parsers import RuptureModelParser
 
 # NHLIB
 from nhlib.calc import ground_motion_fields
-from nhlib import correlation
 import nhlib.gsim
 
 from openquake.calculators.hazard import general as haz_general
@@ -37,22 +35,20 @@ from openquake.db import models
 from openquake.input import source
 from openquake import writer
 from openquake.job.validation import MAX_SINT_32
-from openquake.utils import config
 
 
 AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
-
-GMF_REALIZATIONS = int(config.get('hazard', 'concurrent_tasks'))
 
 
 def realizations_per_task(num_realizations, num_concur_task):
     """
     Realizations per task return a tuple in the format
     (spare : bool, realizations : int list) where spare
-    represents if there are spare realizations to create
+    represents if there are spare realizations
     and realizations the number of realizations for
     each task.
     """
+
     ntimes_concur_task, spare_realizations = divmod(
                                   num_realizations, num_concur_task)
     result = [ntimes_concur_task for _ in xrange(num_concur_task)]
@@ -71,6 +67,9 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
     :param task_seed:
         Value for seeding numpy/scipy in the computation of
         ground motion fields.
+    :param realizations:
+        Number of realizations which are going to be created
+        by the task.
     """
 
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
@@ -103,7 +102,10 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         The task_no in which the calculation results will be placed.
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
+    :param realizations:
+        Number of realizations which are going to be created.
     """
+
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
