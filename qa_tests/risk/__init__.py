@@ -72,7 +72,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
             for i, actual in enumerate(actual_data):
                 numpy.testing.assert_allclose(
-                    actual, expected_data[i],
+                    expected_data[i], actual,
                     rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
             expected_outputs = self.expected_outputs()
