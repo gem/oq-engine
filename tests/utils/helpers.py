@@ -606,24 +606,6 @@ class DbTestCase(object):
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
     @classmethod
-    def teardown_upload(cls, upload, filesystem_only=True):
-        """
-        Tear down the file system (and potentially db) artefacts for the
-        given upload.
-
-        :param upload: the :py:class:`db.models.Upload` instance
-            in question
-        :param bool filesystem_only: if set the upload/input database records
-            will be left intact. This saves time and the test db will be
-            dropped/recreated prior to the next db test suite run anyway.
-        """
-        # This is like "rm -rf path"
-        shutil.rmtree(upload.path, ignore_errors=True)
-        if filesystem_only:
-            return
-        upload.delete()
-
-    @classmethod
     def teardown_inputs(cls, inputs, filesystem_only):
         if filesystem_only:
             return
@@ -701,14 +683,13 @@ class DbTestCase(object):
         return oqjp
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None, force_inputs=False, omit_profile=False,
+    def setup_classic_job(cls, create_job_path=True, inputs=None,
+                          force_inputs=False, omit_profile=False,
                           user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
-        :param integer upload_id: if set use upload record with given db key.
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
         :param bool force_inputs: If `True` the model input files will be
@@ -718,8 +699,6 @@ class DbTestCase(object):
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        assert upload_id is None  # temporary
-
         job = engine.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job, force_inputs)
@@ -745,7 +724,7 @@ class DbTestCase(object):
         given job.
 
         :param job: a :py:class:`db.models.OqJob` instance
-        :param bool filesystem_only: if set the oq_job/oq_param/upload/
+        :param bool filesystem_only: if set the oq_job/oq_param/
             input database records will be left intact. This saves time and the
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
