@@ -76,7 +76,7 @@ def event_based(job_id, assets, hazard_getter, hazard_id,
         time_span=time_span,
         tses=tses,
         seed=seed,
-        correlation_type=asset_correlation)
+        correlation=asset_correlation)
 
     if insured_losses:
         calculator = api.InsuredLosses(calculator)
@@ -207,10 +207,14 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         time_span, tses = self.hazard_times()
 
+        if self.rc.asset_correlation is None:
+            correlation = 0
+        else:
+            correlation = self.rc.asset_correlation
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
-                self.rc.loss_curve_resolution, self.rc.asset_correlation]
+                self.rc.loss_curve_resolution, correlation]
 
     def create_outputs(self):
         """
@@ -228,11 +232,16 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         models.AggregateLossCurveData.objects.create(
             loss_curve=aggregate_loss_curve)
 
-        insured_curve_id = (
-            models.LossCurve.objects.create(
-                insured=True,
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "Insured Loss Curve Set",
-                    "ins_loss_curve")).id)
+        if self.rc.insured_losses:
+            insured_curve_id = (
+                models.LossCurve.objects.create(
+                    insured=True,
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Insured Loss Curve Set",
+                        "ins_loss_curve")
+                ).id)
+        else:
+            insured_curve_id = None
+
         return outputs + [insured_curve_id, aggregate_loss_curve.id]
