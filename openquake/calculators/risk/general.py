@@ -244,6 +244,9 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def hazard_output(self, output):
         """
+        Calculator must override this to select from the hazard
+        output/calculation the proper hazard output containers.
+
         :returns: The ID of the output container of the hazard
         used for this risk calculation. E.g. an
         :class:`openquake.db.models.HazardCurve'
@@ -255,9 +258,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         `hazard_output` is not suitable to be used with this
         calculator
         """
-
-        # Calculator must override this to select from the hazard
-        # output/calculation the proper hazard output containers
         raise NotImplementedError
 
     @property
