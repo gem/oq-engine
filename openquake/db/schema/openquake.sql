@@ -193,26 +193,7 @@ CREATE TABLE hzrdi.parsed_rupture_model (
 ) TABLESPACE hzrdi_ts;
 
 
--- A batch of OpenQuake input files uploaded by the user
-CREATE TABLE uiapi.upload (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- A user is looking for a batch of files uploaded in the past. How is he
-    -- supposed to find or recognize them? Maybe a description might help..?
-    description VARCHAR NOT NULL DEFAULT '',
-    -- The directory where the input files belonging to a batch live on the
-    -- server
-    path VARCHAR NOT NULL UNIQUE,
-    -- One of: pending, running, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT upload_status_value
-        CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
-    job_pid INTEGER NOT NULL DEFAULT 0,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
--- A single OpenQuake input file uploaded by the user
+-- A single OpenQuake input file imported by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -1064,15 +1045,6 @@ CREATE TABLE uiapi.src2ltsrc (
 ) TABLESPACE uiapi_ts;
 
 
--- Associate inputs and uploads
-CREATE TABLE uiapi.input2upload (
-    id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
-    upload_id INTEGER NOT NULL,
-    UNIQUE (input_id, upload_id)
-) TABLESPACE uiapi_ts;
-
-
 -- Associate jobs and their profiles, a job may be associated with one profile
 -- only.
 CREATE TABLE uiapi.job2profile (
@@ -1736,15 +1708,6 @@ uiapi.oq_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
