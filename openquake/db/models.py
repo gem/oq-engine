@@ -32,6 +32,7 @@ import re
 
 from datetime import datetime
 
+import nhlib
 import numpy
 
 from django.db import connection
@@ -842,7 +843,6 @@ class HazardCalculation(djm.Model):
             In this case, it obvious that such a thing should be done carefully
             and with much discretion.
         """
-        from openquake.calculators.hazard.general import get_site_collection
         if self._site_collection is None:
             # Compute the site collection, cache it, and save this record to
             # the DB:
@@ -913,6 +913,41 @@ class HazardCalculation(djm.Model):
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
         return self._points_to_compute
+
+
+def get_site_collection(hc):
+    """
+    Create a `SiteCollection`, which is needed by nhlib to perform various
+    calculation tasks (such computing hazard curves and GMFs).
+
+    :param hc:
+        Instance of a :class:`HazardCalculation`. We need this in order to get
+        the points of interest for a calculation as well as load pre-computed
+        site data or access reference site parameters.
+
+    :returns:
+        :class:`nhlib.site.SiteCollection` instance.
+    """
+    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
+    if len(site_data) > 0:
+        site_data = site_data[0]
+        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
+                    site_data.vs30_measured, site_data.z1pt0s,
+                    site_data.z2pt5s)
+        sites = [nhlib.site.Site(
+            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
+            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
+    else:
+        # Use the calculation reference parameters to make a site collection.
+        points = hc.points_to_compute()
+        measured = hc.reference_vs30_type == 'measured'
+        sites = [
+            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
+                            hc.reference_depth_to_2pt5km_per_sec,
+                            hc.reference_depth_to_1pt0km_per_sec)
+            for pt in points]
+
+    return nhlib.site.SiteCollection(sites)
 
 
 class RiskCalculation(djm.Model):
