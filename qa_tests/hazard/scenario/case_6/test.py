@@ -25,6 +25,7 @@ from qa_tests import _utils as qa_utils
 
 class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
 
+    @skip
     @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
