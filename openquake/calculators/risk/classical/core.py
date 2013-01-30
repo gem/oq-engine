@@ -17,9 +17,11 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+from collections import OrderedDict
 
 from django.db import transaction
 
+from openquake.db import models
 from openquake.calculators import base
 from openquake.calculators.risk import general
 from openquake.utils import tasks, stats
@@ -29,10 +31,11 @@ from risklib import api
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical(job_id, assets, hazard_getter, hazard_id,
+def classical(job_id, assets, hazard_getter_name, hazard,
               vulnerability_function,
-              loss_curve_id, loss_map_ids,
-              lrem_steps_per_interval, conditional_loss_poes):
+              output_containers,
+              lrem_steps_per_interval, conditional_loss_poes,
+              hazard_montecarlo_p):
     """
     Celery task for the classical risk calculator.
 
@@ -44,45 +47,78 @@ def classical(job_id, assets, hazard_getter, hazard_id,
     :param assets:
       iterator over :class:`openquake.db.models.ExposureData` to take into
       account
-    :param hazard_getter:
-      Strategy used to get the hazard curves
-    :param int hazard_id:
-      ID of the Hazard Output the risk calculation is based on
-    :param loss_curve_id:
-      ID of the :class:`openquake.db.models.LossCurve` output container used
-      to store the computed loss curves
-    :param loss_map_ids:
-      Dictionary poe->ID of the :class:`openquake.db.models.LossMap` output
-      container used to store the computed loss maps
+    :param str hazard_getter_name: class name of a class defined in the
+      :mod:`openquake.calculators.risk.hazard_getters` to be instantiated to
+      get the hazard curves
+    :param dict hazard:
+      A dictionary mapping hazard Output ID to HazardCurve ID
+    :param dict output_containers: A dictionary mapping hazard
+      Output ID to a tuple (a, b) where a is the ID of the
+      :class:`openquake.db.models.LossCurve` output container used to
+      store the computed loss curves and b is a the dictionary poe->ID
+      of the :class:`openquake.db.models.LossMap` output container
+      used to store the computed loss maps
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param conditional_loss_poes:
-      The poes taken into accout to compute the loss maps
+      The poes taken into account to compute the loss maps
+    :param bool hazard_montecarlo_p:
+     (meaningful only if curve statistics are computed). Wheter or not
+     the hazard calculation is montecarlo based
     """
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.Classical(vulnerability_function, lrem_steps_per_interval)
+    asset_outputs = OrderedDict()
 
-    # if we need to compute the loss maps, we add the proper risk
-    # aggregator
-    if conditional_loss_poes:
-        calculator = api.ConditionalLosses(conditional_loss_poes, calculator)
+    for hazard_output_id, hazard_data in hazard.items():
+        hazard_id, _ = hazard_data
+        (loss_curve_id, loss_map_ids,
+         mean_loss_curve_id, quantile_loss_curve_ids) = (
+             output_containers[hazard_output_id])
 
-    with logs.tracing('getting hazard'):
-        hazard_curves = [hazard_getter(asset.site) for asset in assets]
+        hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
 
-    with logs.tracing('computing risk over %d assets' % len(assets)):
-        asset_outputs = calculator(assets, hazard_curves)
+        calculator = api.Classical(
+            vulnerability_function, lrem_steps_per_interval)
 
-    with logs.tracing('writing results'):
-        with transaction.commit_on_success(using='reslt_writer'):
-            for i, asset_output in enumerate(asset_outputs):
-                general.write_loss_curve(
-                    loss_curve_id, assets[i], asset_output)
+        # if we need to compute the loss maps, we add the proper risk
+        # aggregator
+        if conditional_loss_poes:
+            calculator = api.ConditionalLosses(
+                conditional_loss_poes, calculator)
 
-                if asset_output.conditional_losses:
-                    general.write_loss_map(
-                        loss_map_ids, assets[i], asset_output)
+        with logs.tracing('getting hazard'):
+            hazard_curves = [hazard_getter(asset.site) for asset in assets]
+
+        with logs.tracing('computing risk over %d assets' % len(assets)):
+            asset_outputs[hazard_output_id] = calculator(assets, hazard_curves)
+
+        with logs.tracing('writing results'):
+            with transaction.commit_on_success(using='reslt_writer'):
+                for i, asset_output in enumerate(
+                        asset_outputs[hazard_output_id]):
+                    general.write_loss_curve(
+                        loss_curve_id, assets[i], asset_output)
+
+                    if asset_output.conditional_losses:
+                        general.write_loss_map(
+                            loss_map_ids, assets[i], asset_output)
+
+    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+        weights = [data[1] for _, data in hazard.items()]
+
+        with logs.tracing('writing curve statistics'):
+            with transaction.commit_on_success(using='reslt_writer'):
+                for i, asset in enumerate(assets):
+                    general.curve_statistics(
+                        asset,
+                        [asset_output[i].loss_ratio_curve
+                         for asset_output in asset_outputs.values()],
+                        weights,
+                        mean_loss_curve_id,
+                        quantile_loss_curve_ids,
+                        hazard_montecarlo_p,
+                        assume_equal="support")
+
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
 classical.ignore_result = False
@@ -107,17 +143,38 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    @property
-    def hazard_id(self):
+    def hazard_output(self, output):
         """
-        The ID of the :class:`openquake.db.models.HazardCurve` object that
-        stores the hazard curves used by the risk calculation.
+        :returns: the ID and the weight of the
+        :class:`openquake.db.models.HazardCurve` object that stores
+        the hazard curves associated to `output`
         """
-        if not self.rc.hazard_output.is_hazard_curve():
+        if not output.is_hazard_curve():
             raise RuntimeError(
                 "The provided hazard output is not an hazard curve")
 
-        return self.rc.hazard_output.hazardcurve.id
+        hc = output.hazardcurve
+        if hc.lt_realization:
+            weight = hc.lt_realization.weight
+        else:
+            weight = None
+        return (hc.id, weight)
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.HazardCurve`
+        object that stores the hazard curves associated to
+        `hazard_calculation` that are associated with a realization
+        """
+
+        imt, sa_period, sa_damping = models.parse_imt(self.imt)
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.filter(
+                output_type='hazard_curve',
+                hazardcurve__imt=imt,
+                hazardcurve__sa_period=sa_period,
+                hazardcurve__sa_damping=sa_damping,
+                hazardcurve__lt_realization__isnull=False)
 
     @property
     def calculator_parameters(self):
@@ -125,4 +182,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         Specific calculator parameters returned as list suitable to be
         passed in task_arg_gen
         """
-        return [self.rc.lrem_steps_per_interval, self.rc.conditional_loss_poes]
+
+        return [self.rc.lrem_steps_per_interval,
+                self.rc.conditional_loss_poes,
+                self.hc.number_of_logic_tree_samples == 0]
