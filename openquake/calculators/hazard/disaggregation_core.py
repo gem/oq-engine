@@ -27,7 +27,7 @@ from django.db import transaction
 from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
-from openquake.calculators.hazard.classical import core as classical
+from openquake.calculators.hazard import classical_core as classical
 from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source

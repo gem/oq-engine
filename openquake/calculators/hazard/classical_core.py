@@ -26,8 +26,8 @@ from django.db import transaction
 from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
-from openquake.calculators.hazard.classical import post_processing as post_proc
-from openquake.calculators.hazard.classical.post_processing import (
+from openquake.calculators.hazard import classical_post_processing as post_proc
+from openquake.calculators.hazard.classical_post_processing import (
     compute_mean_curve, compute_quantile_curve, compute_weighted_quantile_curve
 )
 from openquake.db import models

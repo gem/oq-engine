@@ -226,7 +226,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         return all_valid
 
 
-class ClassicalHazardCalculationForm(BaseHazardModelForm):
+class ClassicalHazardForm(BaseHazardModelForm):
 
     calc_mode = 'classical'
 
@@ -258,7 +258,7 @@ class ClassicalHazardCalculationForm(BaseHazardModelForm):
         )
 
 
-class EventBasedHazardCalculationForm(BaseHazardModelForm):
+class EventBasedHazardForm(BaseHazardModelForm):
 
     calc_mode = 'event_based'
 
@@ -298,7 +298,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
         )
 
     def is_valid(self):
-        super_valid = super(EventBasedHazardCalculationForm, self).is_valid()
+        super_valid = super(EventBasedHazardForm, self).is_valid()
         all_valid = super_valid
 
         hc = self.instance
@@ -307,8 +307,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
 
         # It doesn't make sense to capture/export the `complete_logic_tree_gmf`
         # when we're doing end-branch enumeration:
-        if (hc.number_of_logic_tree_samples == 0
-            and hc.complete_logic_tree_gmf is True):
+        if not hc.number_of_logic_tree_samples and hc.complete_logic_tree_gmf:
 
             msg = '`%s` is not available with end branch enumeration'
             msg %= 'complete_logic_tree_gmf'
@@ -317,7 +316,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
 
         # For the case where the user has requested to post-process GMFs into
         # hazard curves:
-        if hc.hazard_curves_from_gmfs is True:
+        if hc.hazard_curves_from_gmfs:
             # 1) We need to make sure `intensity_measure_types_and_levels` is
             #    defined (and valid)
             if hc.intensity_measure_types_and_levels is None:
@@ -350,7 +349,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
         return all_valid
 
 
-class DisaggHazardCalculationForm(BaseHazardModelForm):
+class DisaggHazardForm(BaseHazardModelForm):
 
     calc_mode = 'disaggregation'
 
@@ -384,7 +383,7 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
         )
 
 
-class ScenarioHazardCalculationForm(BaseHazardModelForm):
+class ScenarioHazardForm(BaseHazardModelForm):
 
     calc_mode = 'scenario'
 
@@ -409,16 +408,8 @@ class ScenarioHazardCalculationForm(BaseHazardModelForm):
             'export_dir',
         )
 
-#: Maps calculation_mode to the appropriate validator class
-HAZ_VALIDATOR_MAP = {
-    'classical': ClassicalHazardCalculationForm,
-    'event_based': EventBasedHazardCalculationForm,
-    'disaggregation': DisaggHazardCalculationForm,
-    'scenario': ScenarioHazardCalculationForm,
-}
 
-
-class ClassicalRiskCalculationForm(BaseOQModelForm):
+class ClassicalRiskForm(BaseOQModelForm):
     calc_mode = 'classical'
 
     class Meta:
@@ -429,10 +420,10 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'region_constraint',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
-            )
+        )
 
 
-class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
+class ClassicalBCRRiskForm(BaseOQModelForm):
     calc_mode = 'classical_bcr'
 
     class Meta:
@@ -443,10 +434,10 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
-            )
+        )
 
 
-class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
+class EventBasedBCRRiskForm(BaseOQModelForm):
     calc_mode = 'event_based_bcr'
 
     class Meta:
@@ -462,7 +453,7 @@ class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
         )
 
 
-class EventBasedRiskCalculationForm(BaseOQModelForm):
+class EventBasedRiskForm(BaseOQModelForm):
     calc_mode = 'event_based'
 
     class Meta:
@@ -474,16 +465,7 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'insured_losses',
             'master_seed',
             'asset_correlation',
-            )
-
-
-#: Maps calculation_mode to the appropriate validator class
-RISK_VALIDATOR_MAP = {
-    'classical': ClassicalRiskCalculationForm,
-    'classical_bcr': ClassicalRiskCalculationWithBCRForm,
-    'event_based': EventBasedRiskCalculationForm,
-    'event_based_bcr': EventBasedRiskCalculationWithBCRForm,
-}
+        )
 
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
