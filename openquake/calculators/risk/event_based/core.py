@@ -211,7 +211,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.filter(
                 output_type='gmf',
                 gmfcollection__lt_realization__isnull=False,
-                gmfcollection__complete_logic_tree_gmf=False)
+                gmfcollection__complete_logic_tree_gmf=False).order_by('id')
 
     def hazard_times(self):
         """
