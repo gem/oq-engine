@@ -200,9 +200,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def hazard_output(self, output):
         """
-        :returns: the ID of the
+        :returns: a tuple with the ID and the weight of the
         :class:`openquake.db.models.GmfCollection` object that stores
-        the ground motion fields associated with `output`
+        the ground motion fields associated with `output`.
         """
 
         if not output.is_ground_motion_field():
@@ -230,7 +230,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.filter(
                 output_type='gmf',
                 gmfcollection__lt_realization__isnull=False,
-                gmfcollection__complete_logic_tree_gmf=False)
+                gmfcollection__complete_logic_tree_gmf=False).order_by('id')
 
     def hazard_times(self):
         """
