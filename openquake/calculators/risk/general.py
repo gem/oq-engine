@@ -245,15 +245,22 @@ class BaseRiskCalculator(base.CalculatorNext):
         objects to be used for a risk calculation.
 
         Calculator must override this to select from the hazard
-        calculation which are the Output objects to be considered by
-        the risk calculation
+        calculation given in input which are the Output objects to be
+        considered by the risk calculation to get the actual hazard
+        input.
+
+        Result objects should be ordered (e.g. by id) and be
+        associated to an hazard logic tree realization
         """
         # FIXME(lp). It should accept an imt as a second parameter
         # instead of getting it from self.imt
-        pass
+        raise NotImplementedError
 
     def hazard_output(self, output):
         """
+        Calculator must override this to select from the hazard
+        output/calculation the proper hazard output containers.
+
         :returns: The ID of the output container of the hazard
         used for this risk calculation. E.g. an
         :class:`openquake.db.models.HazardCurve'
@@ -265,9 +272,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         `hazard_output` is not suitable to be used with this
         calculator
         """
-
-        # Calculator must override this to select from the hazard
-        # output/calculation the proper hazard output containers
         raise NotImplementedError
 
     @property
