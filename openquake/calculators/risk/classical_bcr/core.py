@@ -31,7 +31,7 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical_bcr(job_id, assets, hazard_getter, hazard,
+def classical_bcr(job_id, assets, hazard_getter_name, hazard,
                   vulnerability_function, vulnerability_function_retrofitted,
                   output_containers, lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
@@ -46,8 +46,9 @@ def classical_bcr(job_id, assets, hazard_getter, hazard,
       ID of the currently running job
     :param assets:
       list of Assets to take into account
-    :param hazard_getter:
-      Strategy used to get the hazard curves
+    :param str hazard_getter_name: class name of a class defined in the
+      :mod:`openquake.calculators.risk.hazard_getters` to be instantiated to
+      get the hazard curves
     :param dict hazard:
       A dictionary mapping hazard Output ID to HazardCurve ID
     :param output_containers: A dictionary mapping hazard Output ID to
@@ -66,7 +67,7 @@ def classical_bcr(job_id, assets, hazard_getter, hazard,
         hazard_id, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-        hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
+        hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
 
         calculator = api.BCR(
             api.Classical(vulnerability_function, lrem_steps_per_interval),
