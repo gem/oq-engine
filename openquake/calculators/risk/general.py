@@ -248,6 +248,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         calculation which are the Output objects to be considered by
         the risk calculation
         """
+        # FIXME(lp). It should accept an imt as a second parameter
+        # instead of getting it from self.imt
         pass
 
     def hazard_output(self, output):
@@ -403,7 +405,8 @@ class BaseRiskCalculator(base.CalculatorNext):
                         "loss_map"),
                     poe=poe).pk
 
-        if self.rc.mean_loss_curves:
+        if (self.rc.mean_loss_curves and
+            len(self.considered_hazard_outputs()) > 1):
             mean_loss_curve_id = models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.job,
@@ -414,15 +417,16 @@ class BaseRiskCalculator(base.CalculatorNext):
             mean_loss_curve_id = None
 
         quantile_loss_curve_ids = {}
-        for quantile in self.rc.quantile_loss_curves or []:
-            quantile_loss_curve_ids[quantile] = (
-                models.LossCurve.objects.create(
-                    output=models.Output.objects.create_output(
-                        job=self.job,
-                        display_name='quantile(%s)-curves' % quantile,
-                        output_type='loss_curve'),
-                    statistics='quantile',
-                    quantile=quantile).id)
+        if len(self.considered_hazard_outputs()) > 1:
+            for quantile in self.rc.quantile_loss_curves or []:
+                quantile_loss_curve_ids[quantile] = (
+                    models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name='quantile(%s)-curves' % quantile,
+                            output_type='loss_curve'),
+                        statistics='quantile',
+                        quantile=quantile).id)
 
         return [loss_curve_id, loss_map_ids,
                 mean_loss_curve_id, quantile_loss_curve_ids]

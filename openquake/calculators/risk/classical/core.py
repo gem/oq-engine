@@ -103,7 +103,7 @@ def classical(job_id, assets, hazard_getter_name, hazard,
                         general.write_loss_map(
                             loss_map_ids, assets[i], asset_output)
 
-    if mean_loss_curve_id or quantile_loss_curve_ids:
+    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
         weights = [data[1] for _, data in hazard.items()]
 
         with logs.tracing('writing curve statistics'):

@@ -60,7 +60,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.save()
         self.calculator.execute()
 
-        # 1 loss curve + 3 loss maps
+        # 1 loss curve + 3 loss maps + 1 mean + 2 quantile
         self.assertEqual(4,
                          models.Output.objects.filter(oq_job=self.job).count())
         self.assertEqual(1,
@@ -85,10 +85,10 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         `openquake.db.models.HazardCurve` object
         """
 
+        self.calculator.imt = 'PGA'
         outputs = self.calculator.hazard_outputs(
             self.calculator.rc.get_hazard_calculation())
 
-        print [o.output_type for o in outputs]
         self.assertEqual(
             set(["hazard_curve"]), set([o.output_type for o in outputs]))
 
