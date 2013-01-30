@@ -213,9 +213,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.initialize_site_model()
 
         # Once the site model is init'd, create and cache the site collection;
-        # this is done by simply accessing the `site_collection` property,
-        # which does the caching.
-        self.hc.site_collection
+        self.hc.init_site_collection()
 
         self.progress['total'] = self.hc.number_of_ground_motion_fields
 
