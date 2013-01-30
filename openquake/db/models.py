@@ -928,7 +928,7 @@ def get_site_collection(hc):
     :returns:
         :class:`nhlib.site.SiteCollection` instance.
     """
-    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
+    site_data = SiteData.objects.filter(hazard_calculation=hc.id)
     if len(site_data) > 0:
         site_data = site_data[0]
         sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
