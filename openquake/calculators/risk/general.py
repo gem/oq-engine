@@ -20,6 +20,7 @@
 import os
 import random
 
+
 import risklib
 
 from django import db
@@ -27,7 +28,7 @@ from django import db
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
-from openquake.calculators import base
+from openquake.calculators import base, post_processing
 from openquake import export
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
@@ -35,6 +36,10 @@ from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
+
+
+#: Maximum number of loss curves to cache in buffers, for selects and inserts
+_CURVE_CACHE_SIZE = 100000
 
 
 class BaseRiskCalculator(base.CalculatorNext):
@@ -118,8 +123,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        self.progress.update(total=sum(self.taxonomies.values()))
-        self._initialize_progress()
+        allowed_imts = self.hc.intensity_measure_types_and_levels.keys()
+
+        if not self.imt in allowed_imts:
+            raise RuntimeError(
+                "There is no hazard output in the intensity measure %s" %
+                self.imt)
+
+        self._initialize_progress(sum(self.taxonomies.values()))
 
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
@@ -157,7 +168,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        output_containers = self.create_outputs()
+        output_containers = dict((hazard_output.id,
+                                  self.create_outputs(hazard_output))
+                                 for hazard_output
+                                 in self.considered_hazard_outputs())
+
         calculator_parameters = self.calculator_parameters
 
         for taxonomy, assets_nr in self.taxonomies.items():
@@ -169,13 +184,18 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                tf_args = ([
-                    self.job.id,
-                    assets, self.hazard_getter, self.hazard_id] +
-                    self.worker_args(taxonomy) +
-                    output_containers + calculator_parameters)
+                hazard = dict((ho.id, self.hazard_output(ho))
+                              for ho in self.considered_hazard_outputs())
 
-                yield tf_args
+                # FIXME(lp). Refactor the following arg list such that
+                # the arguments are grouped into namedtuples
+                yield ([
+                    self.job.id,
+                    assets,
+                    self.hazard_getter, hazard] +
+                    self.worker_args(taxonomy) +
+                    [output_containers] +
+                    calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -210,18 +230,44 @@ class BaseRiskCalculator(base.CalculatorNext):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
-    def hazard_id(self):
+    def considered_hazard_outputs(self):
         """
-        :returns: The ID of the output container of the hazard used
-        for this risk calculation. E.g. an `openquake.db.models.HazardCurve'
+        Returns the list of hazard outputs to be considered
+        """
+        if self.rc.hazard_output:
+            return [self.rc.hazard_output]
+        else:
+            return self.hazard_outputs(self.rc.hazard_calculation)
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.Output`
+        objects to be used for a risk calculation.
+
+        Calculator must override this to select from the hazard
+        calculation which are the Output objects to be considered by
+        the risk calculation
+        """
+        # FIXME(lp). It should accept an imt as a second parameter
+        # instead of getting it from self.imt
+        pass
+
+    def hazard_output(self, output):
+        """
+        :returns: The ID of the output container of the hazard
+        used for this risk calculation. E.g. an
+        :class:`openquake.db.models.HazardCurve'
+
+        :param hazard_output: the ID of an
+        :class:`openquake.db.models.Output` object
 
         :raises: `RuntimeError` if the hazard associated with the
-        current risk calculation is not suitable to be used with this
+        `hazard_output` is not suitable to be used with this
         calculator
         """
 
         # Calculator must override this to select from the hazard
-        # output the proper hazard output container
+        # output/calculation the proper hazard output containers
         raise NotImplementedError
 
     @property
@@ -231,6 +277,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         :class:`~openquake.db.models.RiskCalculation`.
         """
         return self.job.risk_calculation
+
+    @property
+    def hc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.HazardCalculation`.
+        """
+        return self.rc.get_hazard_calculation()
 
     @property
     def calculator_parameters(self):
@@ -255,17 +309,18 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('storing exposure'):
             path = os.path.join(self.rc.base_path, exposure_model_input.path)
             exposure_stream = parsers.ExposureModelParser(path)
-            writer = exposure_writer.ExposureDBWriter(exposure_model_input)
-            writer.serialize(exposure_stream)
-        return writer.model
+            w = exposure_writer.ExposureDBWriter(exposure_model_input)
+            w.serialize(exposure_stream)
+        return w.model
 
-    def _initialize_progress(self):
+    def _initialize_progress(self, total):
         """Record the total/completed number of work items.
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        self.progress.update(total=total)
         stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", sum(self.taxonomies.values()))
+        stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
@@ -314,7 +369,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 record['probabilisticDistribution'])
         return vfs
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create outputs container objects (e.g. LossCurve, Output).
 
@@ -324,27 +379,57 @@ class BaseRiskCalculator(base.CalculatorNext):
         The default behavior is to create a loss curve and loss maps
         output.
 
-        :return a list of int (id of containers) or dict (poe->int)
+        :returns: a dictionary mapping an Output object ID to a list
+        of int (id of containers) or dict (poe->int)
         """
 
         job = self.job
 
         # add loss curve containers
         loss_curve_id = models.LossCurve.objects.create(
+            hazard_output_id=hazard_output.id,
             output=models.Output.objects.create_output(
-                job, "Loss Curve set", "loss_curve")).pk
+                job, "Loss Curve set for hazard %s" % hazard_output.id,
+                "loss_curve")).pk
 
         loss_map_ids = dict()
 
         if self.job.risk_calculation.conditional_loss_poes is not None:
             for poe in self.job.risk_calculation.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
+                    hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Loss Map Set with poe %s" % poe,
+                        "Loss Map Set with poe %s for hazard %s" % (
+                            poe, hazard_output.id),
                         "loss_map"),
                     poe=poe).pk
-        return [loss_curve_id, loss_map_ids]
+
+        if (self.rc.mean_loss_curves and
+            len(self.considered_hazard_outputs()) > 1):
+            mean_loss_curve_id = models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='loss-curves',
+                    output_type='loss_curve'),
+                statistics='mean').id
+        else:
+            mean_loss_curve_id = None
+
+        quantile_loss_curve_ids = {}
+        if len(self.considered_hazard_outputs()) > 1:
+            for quantile in self.rc.quantile_loss_curves or []:
+                quantile_loss_curve_ids[quantile] = (
+                    models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name='quantile(%s)-curves' % quantile,
+                            output_type='loss_curve'),
+                        statistics='quantile',
+                        quantile=quantile).id)
+
+        return [loss_curve_id, loss_map_ids,
+                mean_loss_curve_id, quantile_loss_curve_ids]
 
 
 def hazard_getter(hazard_getter_name, hazard_id, *args):
@@ -451,3 +536,47 @@ def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
         average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
         location=asset.site)
+
+
+def curve_statistics(asset, loss_ratio_curves, curves_weights,
+                     mean_loss_curve_id, quantile_loss_curve_ids,
+                     explicit_quantiles, assume_equal):
+
+    if assume_equal == 'support':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+    elif assume_equal == 'image':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinate_for(loss_ratios)
+                       for curve in loss_ratio_curves]
+    else:
+        raise NotImplementedError
+
+    for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
+        if explicit_quantiles:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, curves_weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(
+                curves_poes, quantile)
+
+        models.LossCurveData(
+            loss_curve_id=quantile_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=q_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)
+
+    # then means
+    if mean_loss_curve_id:
+        mean_curve = post_processing.mean_curve(
+            curves_poes, weights=curves_weights)
+
+        models.LossCurveData(
+            loss_curve_id=mean_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=mean_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)

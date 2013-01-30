@@ -46,6 +46,12 @@ from openquake.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
+#: Kind of supported curve statistics
+STAT_CHOICES = (
+    (u'mean', u'Mean'),
+    (u'quantile', u'Quantile'))
+
+
 #: System Reference ID used for geometry objects
 DEFAULT_SRID = 4326
 
@@ -929,11 +935,25 @@ class RiskCalculation(djm.Model):
 
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
-    hazard_output = djm.ForeignKey("Output", null=False, blank=False)
+    hazard_output = djm.ForeignKey("Output", null=True, blank=True)
+
+    # the HazardCalculation object used by the risk calculation (each
+    # Output (ergo each logic tree realization) is considered
+    hazard_calculation = djm.ForeignKey("HazardCalculation",
+                                        null=True, blank=True)
 
     # A seed used to generate random values to be applied to
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
+
+    mean_loss_curves = fields.OqNullBooleanField(
+        help_text='Compute mean loss curves',
+        null=True,
+        blank=True)
+    quantile_loss_curves = fields.FloatArrayField(
+        help_text='Compute quantile loss curves',
+        null=True,
+        blank=True)
 
     ##################################
     # Probabilistic shared parameters
@@ -967,13 +987,13 @@ class RiskCalculation(djm.Model):
         kwargs = _prep_geometry(kwargs)
         super(RiskCalculation, self).__init__(*args, **kwargs)
 
-    @property
-    def hazard_calculation(self):
+    def get_hazard_calculation(self):
         """
         :returns: the hazard calculation associated with the hazard
         output used as input in risk calculation
         """
-        return self.hazard_output.oq_job.hazard_calculation
+        return (self.hazard_calculation or
+                self.hazard_output.oq_job.hazard_calculation)
 
     @property
     def hazard_statistics(self):
@@ -1007,6 +1027,14 @@ class RiskCalculation(djm.Model):
     @property
     def exposure_model(self):
         return self.inputs.get(input_type="exposure").exposuremodel
+
+    def will_compute_loss_curve_statistics(self):
+        """
+        Return true if this risk calculation will compute mean and/or
+        quantile loss curves
+        """
+        return ((self.mean_loss_curves or self.quantile_loss_curves) and
+                self.calculation_mode in ['classical', 'event_based'])
 
 
 def _prep_geometry(kwargs):
@@ -1356,10 +1384,6 @@ class HazardMap(djm.Model):
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
-    STAT_CHOICES = (
-        (u'mean', u'Mean'),
-        (u'quantile', u'Quantile'),
-    )
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     sa_period = djm.FloatField(null=True)
@@ -2109,7 +2133,8 @@ class LossMap(djm.Model):
     Holds metadata for loss maps
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="loss_map")
+    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2137,9 +2162,15 @@ class LossCurve(djm.Model):
     Holds the parameters common to a set of loss curves
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="loss_curve")
+    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_curve")
     aggregate = djm.BooleanField(default=False)
     insured = djm.BooleanField(default=False)
+
+    # If the curve is a result of an aggregation over different
+    # hazard_output the following fields must be set
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2179,7 +2210,9 @@ class BCRDistribution(djm.Model):
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="bcr_distribution")
+    hazard_output = djm.OneToOneField(
+        "Output", related_name="risk_bcr_distribution")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
