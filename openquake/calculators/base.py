@@ -110,6 +110,8 @@ class CalculatorNext(object):
             assert job_id == self.job.id
             self.progress['computed'] += num_items
 
+            self.task_completed_hook(body)
+
             logs.log_percent_complete(job_id, "hazard")
 
             # Once we receive a completion signal, enqueue the next
@@ -130,7 +132,7 @@ class CalculatorNext(object):
     def task_completed_hook(self, body):
         """
         Performs an action when a task is completed successfully.
-        :param body: the message sent by the task. It contains at least
+        :param dict body: the message sent by the task. It contains at least
         the keys `job_id` and `num_items`. They idea is to add additional
         keys and then process them in the hook. Notice that the message
         is sent by using `openquake.calculators.base.signal_task_complete`.
@@ -293,5 +295,6 @@ def signal_task_complete(**kwargs):
     routing_key = ROUTING_KEY_FMT % dict(job_id=job_id)
 
     with kombu.BrokerConnection(**conn_args) as conn, conn.Producer(
-            exchange=exchange, routing_key=routing_key) as producer:
-            producer.publish(msg)
+            exchange=exchange, routing_key=routing_key,
+            serializer='pickle') as producer:
+        producer.publish(msg)
