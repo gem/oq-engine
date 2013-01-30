@@ -27,16 +27,15 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
     def test_realizations_per_task(self):
         num_concur_tasks = 32
         num_realizations = 1000
-        realizations = [31 for i in range(32)]
+        realizations = [31 for i in range(num_concur_tasks)]
         realizations.append(8)
 
         self.assertEqual(33, len(realizations))
         self.assertEqual((True, realizations), realizations_per_task(
             num_realizations, num_concur_tasks))
 
-        num_concur_task = 32
         num_realizations = 96
-        realizations = [3 for i in range(32)]
+        realizations = [3 for i in range(num_concur_tasks)]
 
         self.assertEqual((False, realizations), realizations_per_task(
             num_realizations, num_concur_tasks))
