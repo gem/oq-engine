@@ -938,12 +938,8 @@ class RiskCalculation(djm.Model):
     ##################################
     # Probabilistic shared parameters
     ##################################
-    ASSET_CORRELATION_CHOICES = (
-        (u'perfect', u'Perfect'),
-        (u'uncorrelated', u'Uncorrelated'),
-    )
-    asset_correlation = djm.TextField(null=True, blank=True,
-                                      choices=ASSET_CORRELATION_CHOICES)
+    # 0 == uncorrelated, 1 == perfect correlation by taxonomy
+    asset_correlation = djm.FloatField(null=True, blank=True, default=0)
 
     #######################
     # Classical parameters:
