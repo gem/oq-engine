@@ -51,9 +51,8 @@ def classical(job_id, assets, hazard_getter, hazard,
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.db.models.LossCurve` output container used to
-      store the computed loss curves and b is a the dictionary poe->ID
-      of the :class:`openquake.db.models.LossMap` output container
-      used to store the computed loss maps
+      store the computed loss curves and b is a dictionary that maps poe to ID
+      of the :class:`openquake.db.models.LossMap` used to store the loss maps
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param conditional_loss_poes:
@@ -116,7 +115,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     def hazard_output(self, output):
         """
-        :returns: the ID and the weight of the
+        :returns: a tuple with the ID and the weight associated with the
         :class:`openquake.db.models.HazardCurve` object that stores
         the hazard curves associated to `output`
         """
