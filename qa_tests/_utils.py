@@ -97,6 +97,8 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
     """
     Count the number of pairs of gmf values
     within the specified range.
+    See https://bugs.launchpad.net/openquake/+bug/1097646
+    attached Scenario Hazard script.
     """
 
     count = 0
