@@ -824,6 +824,17 @@ class HazardCalculation(djm.Model):
     @property
     def site_collection(self):
         """
+        Get the :class:`nhlib.site.SiteCollection` for this calculation.
+
+        Because this data is costly to compute, we try to only compute it once
+        and cache it in the DB. See :meth:`init_site_collection`.
+        """
+        if self._site_collection is None:
+            self.init_site_collection()
+        return self._site_collection
+
+    def init_site_collection(self):
+        """
         Compute, cache, and save (to the DB) the
         :class:`nhlib.site.SiteCollection` which represents the calculation
         sites of interest with associated soil parameters.
@@ -837,18 +848,16 @@ class HazardCalculation(djm.Model):
             computed once and cached in the database. If the computation
             geometry or site parameters change during runtime, which highly
             unlikely to occur in typical calculation scenarios, you will need
-            to clear the cache by setting `_site_collection` to `None` and
-            recompute the site collection by accessing this property.
+            to recompute the site collection by calling this method again.
 
             In this case, it obvious that such a thing should be done carefully
             and with much discretion.
+
+            Ideally, this method should only be called once at the very
+            beginning a calculation.
         """
-        if self._site_collection is None:
-            # Compute the site collection, cache it, and save this record to
-            # the DB:
-            self._site_collection = get_site_collection(self)
-            self.save()
-        return self._site_collection
+        self._site_collection = get_site_collection(self)
+        self.save()
 
     def individual_curves_per_location(self):
         """
