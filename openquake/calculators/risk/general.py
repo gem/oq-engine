@@ -20,12 +20,13 @@
 import os
 import random
 
+
 import risklib
 
 from django import db
 
 from openquake import logs
-from openquake.utils import config, general as utils
+from openquake.utils import config
 from openquake.db import models
 from openquake.calculators import base, post_processing
 from openquake import export
@@ -35,8 +36,6 @@ from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
-
-from openquake import writer
 
 
 #: Maximum number of loss curves to cache in buffers, for selects and inserts
@@ -123,6 +122,13 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         with logs.tracing('store risk model'):
             self.set_risk_models()
+
+        allowed_imts = self.hc.intensity_measure_types_and_levels.keys()
+
+        if not self.imt in allowed_imts:
+            raise RuntimeError(
+                "There is no hazard output in the intensity measure %s" %
+                self.imt)
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -271,6 +277,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         return self.job.risk_calculation
 
     @property
+    def hc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.HazardCalculation`.
+        """
+        return self.rc.get_hazard_calculation()
+
+    @property
     def calculator_parameters(self):
         """
         The specific calculation parameters passed as args to the
@@ -388,7 +402,30 @@ class BaseRiskCalculator(base.CalculatorNext):
                             poe, hazard_output.id),
                         "loss_map"),
                     poe=poe).pk
-        return [loss_curve_id, loss_map_ids]
+
+        if self.rc.mean_loss_curves:
+            mean_loss_curve_id = models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='loss-curves',
+                    output_type='loss_curve'),
+                statistics='mean').id
+        else:
+            mean_loss_curve_id = None
+
+        quantile_loss_curve_ids = {}
+        for quantile in self.rc.quantile_loss_curves or []:
+            quantile_loss_curve_ids[quantile] = (
+                models.LossCurve.objects.create(
+                    output=models.Output.objects.create_output(
+                        job=self.job,
+                        display_name='quantile(%s)-curves' % quantile,
+                        output_type='loss_curve'),
+                    statistics='quantile',
+                    quantile=quantile).id)
+
+        return [loss_curve_id, loss_map_ids,
+                mean_loss_curve_id, quantile_loss_curve_ids]
 
 
 def hazard_getter(hazard_getter_name, hazard_id, *args):
@@ -496,57 +533,46 @@ def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
         bcr=asset_output.bcr,
         location=asset.site)
 
-    models.LossCurve.objects.create(
-            output=models.Output.objects.create_output(
-                job=self.job,
-                display_name='loss-curves',
-                output_type='loss_curve'),
-            statistics='mean'
-    for quantile in self.rc.quantile_loss_curves or []:
-        container_ids['q%s' % quantile] = (
-            models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.job,
-                    display_name='quantile(%s)-curves' % quantile,
-                    output_type='loss_curve'),
-                statistics='quantile',
-                quantile=quantile,
-                **curve_args).id)
 
-def curve_statistics(all_curves, num_rlzs, curve_weights,
+def curve_statistics(asset, loss_ratio_curves, curves_weights,
                      mean_loss_curve_id, quantile_loss_curve_ids,
-                     explicit_quantiles):
-    # Use the same approach used in classical hazard calculator.
-    num_site_blocks_per_incr = max(1, _CURVE_CACHE_SIZE / num_rlzs)
-    slice_incr = num_site_blocks_per_incr * num_rlzs
+                     explicit_quantiles, assume_equal):
 
-    with db.transaction.commit_on_success(using='reslt_writer'):
-        inserter = writer.BulkInserter(
-            models.LossCurveData, max_cache_size=_CURVE_CACHE_SIZE)
+    if assume_equal == 'support':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+    elif assume_equal == 'image':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinate_for(loss_ratios)
+                       for curve in loss_ratio_curves]
+    else:
+        raise NotImplementedError
 
-        for site_chunk in utils.block_splitter(all_curves, num_rlzs):
-            site = site_chunk[0].location
-            curves_poes = [x.poes for x in site_chunk]
+    for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
+        if explicit_quantiles:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, curves_weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(
+                curves_poes, quantile)
 
-            for quantile in quantile_loss_curve_ids.keys():
-                if explicit_quantiles:
-                    q_curve = post_processing.weighted_quantile_curve(
-                        curves_poes, curves_weights, quantile)
-                else:
-                    q_curve = post_processing.quantile_curve(
-                        curves_poes, quantile)
+        models.LossCurveData(
+            loss_curve_id=quantile_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=q_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)
 
-                inserter.add_entry(
-                    loss_curve_id=quantile_loss_curve_ids[quantile],
-                    poes=q_curve.tolist(),
-                    location=site.wkt)
+    # then means
+    if mean_loss_curve_id:
+        mean_curve = post_processing.mean_curve(
+            curves_poes, weights=curves_weights)
 
-            # then means
-            if mean_loss_curve_id:
-                mean_curve = post_processing.mean_curve(
-                    curves_poes, weights=curves_weights)
-                inserter.add_entry(
-                    loss_curve_id=mean_loss_curve_id,
-                    poes=mean_curve.tolist(),
-                    location=site.wkt)
-        inserter.flush()
+        models.LossCurveData(
+            loss_curve_id=mean_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=mean_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)
