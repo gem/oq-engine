@@ -44,11 +44,12 @@ def scenario_damage(job_id, assets, hazard_getter, hazard_id,
     :param hazard_getter: the name of an hazard getter to be used
     :param hazard_id: the hazard output id
     :param taxonomy: the taxonomy being considered
-    :param fragility_model: a :class:`risklib.models.input.FragilityModel object
-    :param fragility_functions: a :class:`risklib.models.input.FragilityFunctionSeq object
+    :param fragility_model: a
+    :class:`risklib.models.input.FragilityModel object
+    :param fragility_functions: a
+    :class:`risklib.models.input.FragilityFunctionSeq object
     :param ddpa_id: the output.id of output_type "dmg_dist_per_asset"
-    :param: the Intensity Measure Type of the ground motion fields
-    ...
+    :param imt: the Intensity Measure Type of the ground motion field
     """
 
     hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
@@ -60,7 +61,7 @@ def scenario_damage(job_id, assets, hazard_getter, hazard_id,
     with logs.tracing('save statistics per site'), \
             db.transaction.commit_on_success(using='reslt_writer'):
         for output in outputs:
-            saveDistPerAsset(output.fractions, ddpa_id, output.asset)
+            save_dist_per_asset(output.fractions, ddpa_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
@@ -72,7 +73,7 @@ scenario_damage.ignore_result = False
 
 ### XXX: the three utilities below could go in models ###
 
-def saveDistPerAsset(fractions, output_id, asset):
+def save_dist_per_asset(fractions, output_id, asset):
     """
     Save the damage distribution for a given asset.
     """
@@ -88,7 +89,7 @@ def saveDistPerAsset(fractions, output_id, asset):
         ddpa.save()
 
 
-def saveDistPerTaxonomy(fractions, output_id, taxonomy):
+def save_dist_per_taxonomy(fractions, output_id, taxonomy):
     """
     Save the damage distribution for a given taxonomy, by summing over
     all assets.
@@ -104,7 +105,7 @@ def saveDistPerTaxonomy(fractions, output_id, taxonomy):
         ddpt.save()
 
 
-def saveDistTotal(fractions, output_id):
+def save_dist_total(fractions, output_id):
     """
     Save the total distribution, by summing over all assets and taxonomies.
     """
@@ -120,7 +121,8 @@ def saveDistTotal(fractions, output_id):
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
-    Scenario Damage Risk Calculator. Computes ...
+    Scenario Damage Risk Calculator. Computes three kinds of damage
+    distributions: per asset, per taxonomy and total.
     """
 
     #: The core calculation celery task function
@@ -167,12 +169,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         tot = None
         for taxonomy, fractions in self.ddpt.iteritems():
-            saveDistPerTaxonomy(fractions, self.ddpt_output.id, taxonomy)
+            save_dist_per_taxonomy(fractions, self.ddpt_output.id, taxonomy)
             if tot is None:  # only the first time
                 tot = numpy.zeros(fractions.shape)
             tot += fractions
         if tot is not None:
-            saveDistTotal(tot, self.ddt_output.id)
+            save_dist_total(tot, self.ddt_output.id)
 
     @property
     def calculator_parameters(self):
@@ -183,9 +185,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def create_outputs(self):
         """
-        Creates the three kind of outputs of a ScenarioDamage calculator
+        Create the three kind of outputs of a ScenarioDamage calculator
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
-        populate the corresponding entries in DmgState.
+        populate the corresponding entries in DmgState. Return the
+        id of the dmg_dist_per_asset output, to be passed to the celery
+        worker.
         """
         self.ddpa_output = models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
@@ -209,7 +213,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def set_risk_models(self):
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
-        self.ddpt = {}
+        self.ddpt = {}  # dictionary taxonomy -> fractions
 
     def parse_fragility_model(self):
         ## this is hard-coded for the moment
