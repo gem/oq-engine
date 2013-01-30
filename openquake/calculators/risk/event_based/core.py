@@ -113,7 +113,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
 
         with logs.tracing('writing results'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(asset_outputs):
+                for i, asset_output in enumerate(
+                        asset_outputs[hazard_output_id]):
                     general.write_loss_curve(
                         loss_curve_id, assets[i], asset_output)
 
@@ -124,8 +125,13 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                     if asset_output.insured_losses:
                         general.write_loss_curve(
                             insured_curve_id, assets[i], asset_output)
+                losses = sum(asset_output.losses
+                             for asset_output
+                             in asset_outputs[hazard_output_id])
+                general.update_aggregate_losses(
+                    aggregate_loss_curve_id, losses)
 
-    if mean_loss_curve_id or quantile_loss_curve_ids:
+    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
         weights = [data[1] for _, data in hazard.items()]
 
         with logs.tracing('writing curve statistics'):
@@ -140,9 +146,6 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                         quantile_loss_curve_ids,
                         hazard_montecarlo_p,
                         assume_equal="image")
-
-        losses = sum(asset_output.losses for asset_output in asset_outputs)
-        general.update_aggregate_losses(aggregate_loss_curve_id, losses)
 
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False

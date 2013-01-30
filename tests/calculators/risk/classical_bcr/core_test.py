@@ -65,6 +65,7 @@ class ClassicalBCRRiskCalculatorTestCase(
         Test that the hazard output used by the calculator is a
         `openquake.db.models.HazardCurve` object
         """
+        self.calculator.imt = 'PGA'
         outputs = self.calculator.hazard_outputs(
             self.calculator.rc.get_hazard_calculation())
 
