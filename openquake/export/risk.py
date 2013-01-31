@@ -53,12 +53,14 @@ def _export_common(output):
     statistics, quantile_value = risk_calculation.hazard_statistics
 
     source_model_tree_path, gsim_tree_path = None, None
-    if statistics is not None:
-        lt_paths = risk_calculation.hazard_logic_tree_paths
 
-        if lt_paths:
-            source_model_tree_path, gsim_tree_path = [
-                core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
+    if risk_calculation.calculation_mode != u'scenario':
+        if not statistics:
+            lt_paths = risk_calculation.hazard_logic_tree_paths
+
+            if lt_paths:
+                source_model_tree_path, gsim_tree_path = [
+                    core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
 
     unit = risk_calculation.exposure_model.stco_unit
 
