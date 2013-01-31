@@ -2217,8 +2217,6 @@ class DmgDistPerAsset(djm.Model):
     exposure_data = djm.ForeignKey("ExposureData")
     mean = djm.FloatField()
     stddev = djm.FloatField()
-    # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset'
