@@ -177,8 +177,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         object that stores the ground motion fields used by the risk
         calculation
         """
-
-        if not self.rc.hazard_output.is_ground_motion_field():
+        output_type = self.rc.hazard_output.output_type
+        if output_type not in ('gmf', 'complete_lt_gmf'):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
 
