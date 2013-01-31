@@ -130,6 +130,15 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = "GroundMotionScenarioGetter"
 
+    def __init__(self, job):
+        super(ScenarioDamageRiskCalculator, self).__init__(job)
+        # let's define a dictionary taxonomy -> fractions
+        # updated in task_completed_hook when the fractions per taxonomy
+        # becomes available, as computed by the workers
+        self.ddpt = {}
+        self.ddpt_output = None  # will be set in .create_outputs
+        self.ddt_output = None  # will be set in .create_outputs
+
     @property
     def hazard_id(self):
         """
@@ -137,7 +146,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         hazard getter can extract the ground motion fields used by the risk
         calculation
         """
-        if not self.rc.hazard_output.is_ground_motion_field():
+        if self.rc.hazard_output.output_type != 'gmf_scenario':
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
         return self.rc.hazard_output.id
@@ -189,9 +198,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
         populate the corresponding entries in DmgState. Return the
         id of the dmg_dist_per_asset output, to be passed to the celery
-        worker.
+        worker. Notice that the outputs ddpt_output and ddt_output do
+        not need to be passed to the workers, since the aggregation
+        per taxonomy and total are performed in the controller node,
+        in the task_completion_hook.
         """
-        self.ddpa_output = models.Output.objects.create_output(
+        ddpa_output = models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
@@ -203,7 +215,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        for output in self.ddpa_output, self.ddpt_output, self.ddt_output:
+        for output in ddpa_output, self.ddpt_output, self.ddt_output:
             for lsi, dstate in enumerate(self.damage_states):
                 ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
                 ds.save()
@@ -213,7 +225,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def set_risk_models(self):
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
-        self.ddpt = {}  # dictionary taxonomy -> fractions
 
     def parse_fragility_model(self):
         ## this is hard-coded for the moment
