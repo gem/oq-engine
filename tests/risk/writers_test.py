@@ -24,7 +24,8 @@ from tests import _utils
 
 
 LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
-BCR_NODE = collections.namedtuple("BCRNode",
+BCR_NODE = collections.namedtuple(
+    "BCRNode",
     "location asset_ref bcr average_annual_loss_original "
     "average_annual_loss_retrofitted")
 LOSS_CURVE = collections.namedtuple(
@@ -61,8 +62,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         self.remove_file()
 
     def test_empty_model_not_supported(self):
-        writer = writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0, statistics="mean")
+        writer = writers.LossCurveXMLWriter(
+            self.filename, investigation_time=10.0, statistics="mean")
 
         self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
@@ -90,16 +91,19 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossCurveXMLWriter(self.filename,
-            investigation_time=10.0, source_model_tree_path="b1_b2_b3",
+        writer = writers.LossCurveXMLWriter(
+            self.filename, investigation_time=10.0,
+            source_model_tree_path="b1_b2_b3",
             gsim_tree_path="b1_b2", unit="USD")
 
         data = [
-            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            LOSS_CURVE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None),
 
-            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
+            LOSS_CURVE(
+                asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None),
         ]
@@ -132,16 +136,19 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossCurveXMLWriter(self.filename,
+        writer = writers.LossCurveXMLWriter(
+            self.filename,
             investigation_time=10.0, source_model_tree_path="b1_b2_b3",
             gsim_tree_path="b1_b2", unit="USD", insured=True)
 
         data = [
-            LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            LOSS_CURVE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
                 loss_ratios=None),
 
-            LOSS_CURVE(asset_ref="asset_2", location=Point(2.0, 2.5),
+            LOSS_CURVE(
+                asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
                 loss_ratios=None),
         ]
@@ -168,13 +175,15 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossCurveXMLWriter(self.filename,
+        writer = writers.LossCurveXMLWriter(
+            self.filename,
             investigation_time=10.0, statistics="quantile",
             quantile_value=0.50)
 
-        data = [LOSS_CURVE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
-            loss_ratios=[0.4, 0.6, 0.8])]
+        data = [LOSS_CURVE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
+                poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
+                loss_ratios=[0.4, 0.6, 0.8])]
 
         writer.serialize(data)
 
@@ -199,8 +208,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         self.remove_file()
 
     def test_empty_model_not_supported(self):
-        writer = writers.AggregateLossCurveXMLWriter(self.filename,
-            investigation_time=10.0, statistics="mean")
+        writer = writers.AggregateLossCurveXMLWriter(
+            self.filename, investigation_time=10.0, statistics="mean")
 
         self.assertRaises(ValueError, writer.serialize, None)
 
@@ -221,7 +230,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.AggregateLossCurveXMLWriter(self.filename,
+        writer = writers.AggregateLossCurveXMLWriter(
+            self.filename,
             investigation_time=10.0, source_model_tree_path="b1_b2_b3",
             gsim_tree_path="b1_b2", unit="USD")
 
@@ -249,7 +259,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.AggregateLossCurveXMLWriter(self.filename,
+        writer = writers.AggregateLossCurveXMLWriter(
+            self.filename,
             investigation_time=10.0, statistics="quantile",
             quantile_value=0.50)
 
@@ -279,8 +290,8 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         self.remove_file()
 
     def test_empty_model_not_supported(self):
-        writer = writers.LossMapXMLWriter(self.filename,
-            investigation_time=10.0, poe=0.5, statistics="mean")
+        writer = writers.LossMapXMLWriter(
+            self.filename, investigation_time=10.0, poe=0.5, statistics="mean")
 
         self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
@@ -307,16 +318,16 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossMapXMLWriter(self.filename,
-            investigation_time=10.0, poe=0.8, statistics="mean")
+        writer = writers.LossMapXMLWriter(
+            self.filename, investigation_time=10.0, poe=0.8, statistics="mean")
 
         data = [
-            LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-                value=15.23),
-            LOSS_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
-                value=16.23),
-            LOSS_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
-                value=17.23),
+            LOSS_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23),
+            LOSS_NODE(
+                asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23),
+            LOSS_NODE(
+                asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23),
         ]
 
         writer.serialize(data)
@@ -339,12 +350,13 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossMapXMLWriter(self.filename,
+        writer = writers.LossMapXMLWriter(
+            self.filename,
             investigation_time=10.0, poe=0.80, statistics="quantile",
             quantile_value=0.50, unit="USD", loss_category="economic")
 
-        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            value=15.23)]
+        data = [LOSS_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23)]
 
         writer.serialize(data)
 
@@ -366,12 +378,13 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.LossMapXMLWriter(self.filename,
+        writer = writers.LossMapXMLWriter(
+            self.filename,
             investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
             gsim_tree_path="b1|b2", unit="USD", loss_category="economic")
 
-        data = [LOSS_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            value=15.23)]
+        data = [LOSS_NODE(asset_ref="asset_1",
+                          location=Point(1.0, 1.5), value=15.23)]
 
         writer.serialize(data)
 
@@ -396,7 +409,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         self.remove_file()
 
     def test_empty_model_not_supported(self):
-        writer = writers.BCRMapXMLWriter(self.filename,
+        writer = writers.BCRMapXMLWriter(
+            self.filename,
             interest_rate=10.0, asset_life_expectancy=0.5, statistics="mean")
 
         self.assertRaises(ValueError, writer.serialize, [])
@@ -424,20 +438,24 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.BCRMapXMLWriter(self.filename,
+        writer = writers.BCRMapXMLWriter(
+            self.filename,
             interest_rate=10.0, asset_life_expectancy=50.0, statistics="mean")
 
         data = [
-            BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
+            BCR_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
                 bcr=15.23, average_annual_loss_original=10.5,
                 average_annual_loss_retrofitted=20.5),
-            BCR_NODE(asset_ref="asset_2", location=Point(1.0, 1.5),
+            BCR_NODE(
+                asset_ref="asset_2", location=Point(1.0, 1.5),
                 bcr=16.23, average_annual_loss_original=11.5,
                 average_annual_loss_retrofitted=40.5),
-            BCR_NODE(asset_ref="asset_3", location=Point(2.0, 2.5),
+            BCR_NODE(
+                asset_ref="asset_3", location=Point(2.0, 2.5),
                 bcr=17.23, average_annual_loss_original=12.5,
                 average_annual_loss_retrofitted=10.5),
-            ]
+        ]
 
         writer.serialize(data)
 
@@ -459,14 +477,16 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.BCRMapXMLWriter(self.filename,
+        writer = writers.BCRMapXMLWriter(
+            self.filename,
             interest_rate=10.0, asset_life_expectancy=50.0,
             statistics="quantile", quantile_value=0.50, unit="USD",
             loss_category="economic")
 
-        data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            bcr=15.23, average_annual_loss_original=10.5,
-            average_annual_loss_retrofitted=20.5)]
+        data = [BCR_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
+                bcr=15.23, average_annual_loss_original=10.5,
+                average_annual_loss_retrofitted=20.5)]
 
         writer.serialize(data)
 
@@ -488,20 +508,63 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        writer = writers.BCRMapXMLWriter(self.filename,
+        writer = writers.BCRMapXMLWriter(
+            self.filename,
             interest_rate=10.0, asset_life_expectancy=50.0,
             source_model_tree_path="b1|b2", gsim_tree_path="b1|b2",
             unit="USD", loss_category="economic")
 
-        data = [BCR_NODE(asset_ref="asset_1", location=Point(1.0, 1.5),
-            bcr=15.23, average_annual_loss_original=10.5,
-            average_annual_loss_retrofitted=20.5)]
+        data = [BCR_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5),
+                bcr=15.23, average_annual_loss_original=10.5,
+                average_annual_loss_retrofitted=20.5)]
 
         writer.serialize(data)
 
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
+
+######################## Scenario Damage Writers #########################
+
+class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase):
+    expected = StringIO.StringIO('''\
+''')
+
+
+class DmgDistPerTaxonomyXMLWriterTestCase(unittest.TestCase):
+    expected = StringIO.StringIO('''\
+''')
+
+
+class DmgDistTotalXMLWriterTestCase(unittest.TestCase):
+    expected = StringIO.StringIO('''\
+''')
+
+
+class CollapseMapXMLWriterTestCase(unittest.TestCase):
+    expected = StringIO.StringIO('''\
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <collapseMap>
+        <CMNode>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-72.20 18.00</gml:pos>
+          </gml:Point>
+          <cf assetRef="a1" mean="1.6" stdDev="1.7"/>
+          <cf assetRef="a2" mean="2.9" stdDev="3.1"/>
+          <cf assetRef="a3" mean="4.9" stdDev="5.1"/>
+        </CMNode>
+        <CMNode>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-72.25 18.00</gml:pos>
+          </gml:Point>
+          <cf assetRef="a4" mean="10.6" stdDev="11.7"/>
+        </CMNode>
+    </collapseMap>
+</nrml>'''
+
+
+######################## Hazard Metadata Validation ########################
 
 class HazardMetadataValidationTestCase(unittest.TestCase):
 
@@ -524,7 +587,7 @@ class HazardMetadataValidationTestCase(unittest.TestCase):
             statistics="mean", quantile_value=0.50)
 
         writers.validate_hazard_metadata(quantile_value=0.50,
-            statistics="quantile")
+                                         statistics="quantile")
 
         writers.validate_hazard_metadata(statistics="mean")
 
@@ -539,7 +602,7 @@ class HazardMetadataValidationTestCase(unittest.TestCase):
             gsim_tree_path="b1|b2")
 
         writers.validate_hazard_metadata(source_model_tree_path="b1_b2_b3",
-            gsim_tree_path="b1_b2")
+                                         gsim_tree_path="b1_b2")
 
     def test_logic_tree_or_statistics_metadata_validation(self):
         # logic tree parameters or statistics, not both.
