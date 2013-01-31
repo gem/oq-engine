@@ -1498,8 +1498,6 @@ CREATE TABLE riskr.dmg_dist_per_asset (
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
-SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset', 'location', 4326, 'POINT', 2);
-ALTER TABLE riskr.dmg_dist_per_asset ALTER COLUMN location SET NOT NULL;
 
 
 -- Damage Distrubtion Per Taxonomy
