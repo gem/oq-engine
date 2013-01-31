@@ -421,6 +421,7 @@ CREATE TABLE uiapi.risk_calculation (
     lrem_steps_per_interval INTEGER,
     conditional_loss_poes float[],
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
+    hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
 
     -- event-based parameters:
     loss_curve_resolution INTEGER NOT NULL DEFAULT 50
@@ -1408,6 +1409,7 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    hazard_output_id INTEGER NOT NULL,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
         CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
@@ -1429,6 +1431,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    hazard_output_id INTEGER NOT NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false
 ) TABLESPACE riskr_ts;
@@ -1468,7 +1471,8 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 -- Benefit-cost ratio distribution
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL -- FK to output.id
+    output_id INTEGER NOT NULL, -- FK to output.id
+    hazard_output_id INTEGER NOT NULL
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.bcr_distribution_data (
@@ -1888,13 +1892,21 @@ ALTER TABLE riskr.loss_map
 ADD CONSTRAINT riskr_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.loss_map
+ADD CONSTRAINT riskr_loss_map_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
 ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.loss_curve
+ADD CONSTRAINT riskr_loss_curve_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
 ALTER TABLE riskr.bcr_distribution
-ADD CONSTRAINT riskr_bcr_distribution_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+ADD CONSTRAINT riskr_bcr_distribution_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
