@@ -564,7 +564,7 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             q_curve = post_processing.quantile_curve(
                 curves_poes, quantile)
 
-        models.LossCurveData(
+        models.LossCurveData.objects.create(
             loss_curve_id=quantile_loss_curve_id,
             asset_ref=asset.asset_ref,
             poes=q_curve.tolist(),
@@ -577,7 +577,7 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
         mean_curve = post_processing.mean_curve(
             curves_poes, weights=curves_weights)
 
-        models.LossCurveData(
+        models.LossCurveData.objects.create(
             loss_curve_id=mean_loss_curve_id,
             asset_ref=asset.asset_ref,
             poes=mean_curve.tolist(),
