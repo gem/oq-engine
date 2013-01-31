@@ -46,7 +46,9 @@ def scenario(job_id, assets, hazard_getter_name, hazard,
 
    with db.transaction.commit_on_success(using='reslt_writer'):
        for i, output in enumerate(outputs):
-           general.write_loss_map_data(outputs_id, assets[i], output)
+           general.write_loss_map_data(outputs_id, assets[i].asset_ref,
+                   value=output.mean, std_dev=output.standard_deviation,
+                   location=assets[i].site)
 
    base.signal_task_complete(job_id=job_id, num_items=len(assets))
    
