@@ -18,20 +18,42 @@ import os
 import unittest
 import StringIO
 import collections
-
 from nrml.risk import writers
 from tests import _utils
 
 
-LOSS_NODE = collections.namedtuple("LossNode", "location asset_ref value")
+LOSS_NODE = collections.namedtuple(
+    "LossNode", "location asset_ref value")
+
 BCR_NODE = collections.namedtuple(
     "BCRNode",
     "location asset_ref bcr average_annual_loss_original "
     "average_annual_loss_retrofitted")
+
 LOSS_CURVE = collections.namedtuple(
     "LossCurve", "poes losses location asset_ref loss_ratios")
+
 AGGREGATE_LOSS_CURVE = collections.namedtuple(
     "AggregateLossCurve", "poes losses")
+
+ExposureData = collections.namedtuple(
+    "ExposureData", 'asset_ref site')
+
+DMG_DIST_PER_ASSET = collections.namedtuple(
+    "DmgDistPerAsset", "exposure_data dmg_state mean stddev")
+
+DMG_DIST_PER_TAXONOMY = collections.namedtuple(
+    "DmgDistPerTaxonomy", "taxonomy dmg_state mean stddev")
+
+DMG_DIST_TOTAL = collections.namedtuple(
+    "DmgDistTotal", "dmg_state mean stddev")
+
+COLLAPSE_MAP = collections.namedtuple(
+    "CollapseMap", "asset_ref mean stddev location")
+
+
+def _starmap(func, lst):
+    return [func(*args) for args in lst]
 
 
 class Point(object):
@@ -45,21 +67,19 @@ class Point(object):
         return "POINT(%s %s)" % (self.x, self.y)
 
 
+def remove_file(self):
+    'Used in the tearDown methods'
+    try:
+        os.remove(self.filename)
+    except OSError:
+        pass
+
+
 class LossCurveXMLWriterTestCase(unittest.TestCase):
 
     filename = "loss_curves.xml"
 
-    def remove_file(self):
-        try:
-            os.remove(self.filename)
-        except OSError:
-            pass
-
-    def setUp(self):
-        self.remove_file()
-
-    def tearDown(self):
-        self.remove_file()
+    tearDown = remove_file
 
     def test_empty_model_not_supported(self):
         writer = writers.LossCurveXMLWriter(
@@ -195,17 +215,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 
     filename = "aggregate_loss_curves.xml"
 
-    def remove_file(self):
-        try:
-            os.remove(self.filename)
-        except OSError:
-            pass
-
-    def setUp(self):
-        self.remove_file()
-
-    def tearDown(self):
-        self.remove_file()
+    tearDown = remove_file
 
     def test_empty_model_not_supported(self):
         writer = writers.AggregateLossCurveXMLWriter(
@@ -277,17 +287,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 
     filename = "loss_map.xml"
 
-    def remove_file(self):
-        try:
-            os.remove(self.filename)
-        except OSError:
-            pass
-
-    def setUp(self):
-        self.remove_file()
-
-    def tearDown(self):
-        self.remove_file()
+    tearDown = remove_file
 
     def test_empty_model_not_supported(self):
         writer = writers.LossMapXMLWriter(
@@ -396,17 +396,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 
     filename = "bcr_map.xml"
 
-    def remove_file(self):
-        try:
-            os.remove(self.filename)
-        except OSError:
-            pass
-
-    def setUp(self):
-        self.remove_file()
-
-    def tearDown(self):
-        self.remove_file()
+    tearDown = remove_file
 
     def test_empty_model_not_supported(self):
         writer = writers.BCRMapXMLWriter(
@@ -528,40 +518,204 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 ######################## Scenario Damage Writers #########################
 
 class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase):
-    expected = StringIO.StringIO('''\
-''')
+    filename = "dmg-dist-per-asset.xml"
+
+    tearDown = remove_file
+
+    def test_serialize(self):
+        expected = StringIO.StringIO('''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <dmgDistPerAsset>
+    <damageStates>no_damage slight moderate extensive complete</damageStates>
+    <DDNode>
+      <gml:Point>
+        <gml:pos>-116.0 41.0</gml:pos>
+      </gml:Point>
+      <asset assetRef="asset_1">
+        <damage ds="no_damage" mean="1.0" stddev="1.6"/>
+        <damage ds="slight" mean="34.8" stddev="18.3"/>
+        <damage ds="moderate" mean="64.2" stddev="19.8"/>
+        <damage ds="extensive" mean="64.3" stddev="19.7"/>
+        <damage ds="complete" mean="64.3" stddev="19.7"/>
+      </asset>
+    </DDNode>
+    <DDNode>
+      <gml:Point>
+        <gml:pos>-117.0 42.0</gml:pos>
+      </gml:Point>
+      <asset assetRef="asset_2">
+        <damage ds="no_damage" mean="1.0" stddev="1.6"/>
+        <damage ds="slight" mean="34.8" stddev="18.3"/>
+        <damage ds="moderate" mean="64.2" stddev="19.8"/>
+        <damage ds="extensive" mean="64.3" stddev="19.7"/>
+        <damage ds="complete" mean="64.3" stddev="19.7"/>
+      </asset>
+      <asset assetRef="asset_3">
+        <damage ds="no_damage" mean="1.1" stddev="1.7"/>
+        <damage ds="slight" mean="34.9" stddev="18.4"/>
+        <damage ds="moderate" mean="64.2" stddev="19.8"/>
+        <damage ds="extensive" mean="64.3" stddev="19.7"/>
+        <damage ds="complete" mean="64.3" stddev="19.7"/>
+      </asset>
+    </DDNode>
+  </dmgDistPerAsset>
+</nrml>''')
+        dmg_states = 'no_damage slight moderate extensive complete'.split()
+        point1 = Point(-116., 41.)
+        point2 = Point(-117., 42.)
+
+        e1 = ExposureData('asset_1', point1)
+        e2 = ExposureData('asset_2', point2)
+        e3 = ExposureData('asset_3', point2)
+
+        data = [
+            (e1, "no_damage", 1.0, 1.6),
+            (e1, "slight", 34.8, 18.3),
+            (e1, "moderate", 64.2, 19.8),
+            (e1, "extensive", 64.3, 19.7),
+            (e1, "complete", 64.3, 19.7),
+
+            (e2, "no_damage", 1.0, 1.6),
+            (e2, "slight", 34.8, 18.3),
+            (e2, "moderate", 64.2, 19.8),
+            (e2, "extensive", 64.3, 19.7),
+            (e2, "complete", 64.3, 19.7),
+
+            (e3, "no_damage", 1.1, 1.7),
+            (e3, "slight", 34.9, 18.4),
+            (e3, "moderate", 64.2, 19.8),
+            (e3, "extensive", 64.3, 19.7),
+            (e3, "complete", 64.3, 19.7),
+        ]
+        writer = writers.DmgDistPerAssetXMLWriter(self.filename, dmg_states)
+        writer.serialize(_starmap(DMG_DIST_PER_ASSET, data))
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class DmgDistPerTaxonomyXMLWriterTestCase(unittest.TestCase):
-    expected = StringIO.StringIO('''\
-''')
+    filename = "dmg-dist-per-taxonomy.xml"
+
+    tearDown = remove_file
+
+    def test_serialize(self):
+        expected = StringIO.StringIO('''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <dmgDistPerTaxonomy>
+    <damageStates>no_damage slight moderate extensive complete</damageStates>
+    <DDNode>
+      <taxonomy>RC</taxonomy>
+      <damage ds="no_damage" mean="1.0" stddev="1.6"/>
+      <damage ds="slight" mean="34.8" stddev="18.3"/>
+      <damage ds="moderate" mean="64.2" stddev="19.8"/>
+      <damage ds="extensive" mean="64.3" stddev="19.7"/>
+      <damage ds="complete" mean="64.3" stddev="19.7"/>
+    </DDNode>
+    <DDNode>
+      <taxonomy>RM</taxonomy>
+      <damage ds="no_damage" mean="1.0" stddev="1.6"/>
+      <damage ds="slight" mean="34.8" stddev="18.3"/>
+      <damage ds="moderate" mean="64.2" stddev="19.8"/>
+      <damage ds="extensive" mean="64.3" stddev="19.7"/>
+      <damage ds="complete" mean="64.3" stddev="19.7"/>
+    </DDNode>
+  </dmgDistPerTaxonomy>
+</nrml>''')
+        dmg_states = 'no_damage slight moderate extensive complete'.split()
+        data = [
+            ('RC', "no_damage", 1.0, 1.6),
+            ('RC', "slight", 34.8, 18.3),
+            ('RC', "moderate", 64.2, 19.8),
+            ('RC', "extensive", 64.3, 19.7),
+            ('RC', "complete", 64.3, 19.7),
+
+            ('RM', "no_damage", 1.0, 1.6),
+            ('RM', "slight", 34.8, 18.3),
+            ('RM', "moderate", 64.2, 19.8),
+            ('RM', "extensive", 64.3, 19.7),
+            ('RM', "complete", 64.3, 19.7),
+
+        ]
+        writer = writers.DmgDistPerTaxonomyXMLWriter(self.filename, dmg_states)
+        writer.serialize(_starmap(DMG_DIST_PER_TAXONOMY, data))
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class DmgDistTotalXMLWriterTestCase(unittest.TestCase):
-    expected = StringIO.StringIO('''\
-''')
+
+    filename = "dmg-dist-total.xml"
+
+    tearDown = remove_file
+
+    def test_serialize(self):
+        expected = StringIO.StringIO('''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <totalDmgDist>
+    <damageStates>no_damage slight moderate extensive complete</damageStates>
+    <damage ds="no_damage" mean="1.0" stddev="1.6"/>
+    <damage ds="slight" mean="34.8" stddev="18.3"/>
+    <damage ds="moderate" mean="64.2" stddev="19.8"/>
+    <damage ds="extensive" mean="64.3" stddev="19.7"/>
+    <damage ds="complete" mean="64.3" stddev="19.7"/>
+  </totalDmgDist>
+</nrml>''')
+
+        damage_states = 'no_damage slight moderate extensive complete'.split()
+        writer = writers.DmgDistTotalXMLWriter(self.filename, damage_states)
+        data = [
+            ('no_damage', 1.0, 1.6),
+            ('slight', 34.8, 18.3),
+            ('moderate', 64.2, 19.8),
+            ('extensive', 64.3, 19.7),
+            ('complete', 64.3, 19.7),
+        ]
+        writer.serialize(_starmap(DMG_DIST_TOTAL, data))
+
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 class CollapseMapXMLWriterTestCase(unittest.TestCase):
-    expected = StringIO.StringIO('''\
+    filename = "collapse-map.xml"
+
+    tearDown = remove_file
+
+    def test_serialize(self):
+        expected = StringIO.StringIO('''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <collapseMap>
-        <CMNode>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>-72.20 18.00</gml:pos>
-          </gml:Point>
-          <cf assetRef="a1" mean="1.6" stdDev="1.7"/>
-          <cf assetRef="a2" mean="2.9" stdDev="3.1"/>
-          <cf assetRef="a3" mean="4.9" stdDev="5.1"/>
-        </CMNode>
-        <CMNode>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>-72.25 18.00</gml:pos>
-          </gml:Point>
-          <cf assetRef="a4" mean="10.6" stdDev="11.7"/>
-        </CMNode>
-    </collapseMap>
-</nrml>'''
+  <collapseMap>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>-72.2 18.0</gml:pos>
+      </gml:Point>
+      <cf assetRef="a1" mean="1.0" stdDev="1.6"/>
+      <cf assetRef="a2" mean="34.8" stdDev="18.3"/>
+      <cf assetRef="a3" mean="64.2" stdDev="19.8"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>-72.25 18.0</gml:pos>
+      </gml:Point>
+      <cf assetRef="a4" mean="64.3" stdDev="19.7"/>
+    </CMNode>
+  </collapseMap>
+</nrml>
+''')
+        writer = writers.CollapseMapXMLWriter(self.filename)
+        point1 = Point(-72.2, 18.)
+        point2 = Point(-72.25, 18.)
+        data = [
+            ('a1', 1.0, 1.6, point1),
+            ('a2', 34.8, 18.3, point1),
+            ('a3', 64.2, 19.8, point1),
+            ('a4', 64.3, 19.7, point2),
+        ]
+        writer.serialize(_starmap(COLLAPSE_MAP, data))
+        _utils.assert_xml_equal(expected, self.filename)
+        self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
 ######################## Hazard Metadata Validation ########################

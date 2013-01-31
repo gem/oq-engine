@@ -603,16 +603,8 @@ class DmgDistPerAssetXMLWriter(object):
         """
         Create the <DDNode /> element related to the given site.
         """
-
         dd_node_el = etree.SubElement(self.dmg_dist_el, "DDNode")
-        site_el = etree.SubElement(dd_node_el, self.RISK_SITE_TAG)
-
-        point_el = etree.SubElement(site_el, self.GML_POINT_TAG)
-        point_el.set(self.GML_SRS_ATTR_NAME, self.GML_SRS_EPSG_4326)
-
-        pos_el = etree.SubElement(point_el, self.GML_POS_TAG)
-        pos_el.text = "%s %s" % (site.x, site.y)
-
+        _append_location(dd_node_el, site)
         return dd_node_el
 
 
@@ -624,9 +616,8 @@ class CollapseMapXMLWriter(object):
     :type path: string
     """
 
-    def __init__(self, path, end_branch_label):
+    def __init__(self, path):
         self.path = path
-        self.elems_id = 1
         self.root = None
         self.collapse_map_el = None
 
@@ -675,30 +666,15 @@ class CollapseMapXMLWriter(object):
         """
         Create the <CMNode /> element related to the given site.
         """
-
         cm_node_el = etree.SubElement(self.collapse_map_el, "CMNode")
-        cm_node_el.set("%sid" % self.GML, "n" + str(self.elems_id))
-        self.elems_id += 1
-
-        site_el = etree.SubElement(cm_node_el, self.RISK_SITE_TAG)
-
-        point_el = etree.SubElement(site_el, self.GML_POINT_TAG)
-        point_el.set(self.GML_SRS_ATTR_NAME, self.GML_SRS_EPSG_4326)
-
-        pos_el = etree.SubElement(point_el, self.GML_POS_TAG)
-        pos_el.text = "%s %s" % (site.x, site.y)
-
+        _append_location(cm_node_el, site)
         return cm_node_el
 
     def _create_root_elems(self):
         """
         Create the <nrml /> and <collapseMap /> elements.
         """
-
         root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
-        root.set("%sid" % self.GML, "n" + str(self.elems_id))
-        self.elems_id += 1
-
         cm_el = etree.SubElement(root, "collapseMap")
         return root, cm_el
 
@@ -707,15 +683,10 @@ def _create_cf_elem(cfraction, cm_node_el):
     """
     Create the <cf /> element related to the given site.
     """
-
     cf_el = etree.SubElement(cm_node_el, "cf")
     cf_el.set("assetRef", cfraction.asset_ref)
-
-    mean_el = etree.SubElement(cf_el, "mean")
-    mean_el.text = str(cfraction.value)
-
-    std_el = etree.SubElement(cf_el, "stdDev")
-    std_el.text = str(cfraction.std_dev)
+    cf_el.set("mean", str(cfraction.mean))
+    cf_el.set("stdDev", str(cfraction.stddev))
 
 
 class DmgDistPerTaxonomyXMLWriter(object):
