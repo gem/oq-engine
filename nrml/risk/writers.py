@@ -59,7 +59,7 @@ class LossCurveXMLWriter(object):
                  insured=False):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
-            statistics, quantile_value)
+                                 statistics, quantile_value)
 
         self._unit = unit
         self._path = path
@@ -141,23 +141,23 @@ class LossCurveXMLWriter(object):
             self._loss_curves.set("insured", str(self._insured))
 
         self._loss_curves.set("investigationTime",
-            str(self._investigation_time))
+                              str(self._investigation_time))
 
         if self._source_model_tree_path is not None:
             self._loss_curves.set("sourceModelTreePath",
-                str(self._source_model_tree_path))
+                                  str(self._source_model_tree_path))
 
         if self._gsim_tree_path is not None:
             self._loss_curves.set("gsimTreePath",
-                str(self._gsim_tree_path))
+                                  str(self._gsim_tree_path))
 
         if self._statistics is not None:
             self._loss_curves.set("statistics",
-                str(self._statistics))
+                                  str(self._statistics))
 
         if self._quantile_value is not None:
             self._loss_curves.set("quantileValue",
-                str(self._quantile_value))
+                                  str(self._quantile_value))
 
         if self._unit is not None:
             self._loss_curves.set("unit", str(self._unit))
@@ -193,7 +193,7 @@ class AggregateLossCurveXMLWriter(object):
                  statistics=None, quantile_value=None, unit=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
-            statistics, quantile_value)
+                                 statistics, quantile_value)
 
         self._unit = unit
         self._path = path
@@ -229,23 +229,22 @@ class AggregateLossCurveXMLWriter(object):
             aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
 
             aggregate_loss_curve.set("investigationTime",
-                str(self._investigation_time))
+                                     str(self._investigation_time))
 
             if self._source_model_tree_path is not None:
                 aggregate_loss_curve.set("sourceModelTreePath",
-                    str(self._source_model_tree_path))
+                                         str(self._source_model_tree_path))
 
             if self._gsim_tree_path is not None:
                 aggregate_loss_curve.set("gsimTreePath",
-                    str(self._gsim_tree_path))
+                                         str(self._gsim_tree_path))
 
             if self._statistics is not None:
-                aggregate_loss_curve.set("statistics",
-                    str(self._statistics))
+                aggregate_loss_curve.set("statistics", str(self._statistics))
 
             if self._quantile_value is not None:
                 aggregate_loss_curve.set("quantileValue",
-                    str(self._quantile_value))
+                                         str(self._quantile_value))
 
             if self._unit is not None:
                 aggregate_loss_curve.set("unit", str(self._unit))
@@ -301,7 +300,7 @@ class LossMapXMLWriter(object):
                  loss_category=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
-            statistics, quantile_value)
+                                 statistics, quantile_value)
 
         self._poe = poe
         self._unit = unit
@@ -368,7 +367,7 @@ class LossMapXMLWriter(object):
 
         if self._source_model_tree_path is not None:
             self._loss_map.set("sourceModelTreePath",
-                str(self._source_model_tree_path))
+                               str(self._source_model_tree_path))
 
         if self._gsim_tree_path is not None:
             self._loss_map.set("gsimTreePath", str(self._gsim_tree_path))
@@ -424,7 +423,7 @@ class BCRMapXMLWriter(object):
                  loss_category=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
-            statistics, quantile_value)
+                                 statistics, quantile_value)
 
         self._unit = unit
         self._path = path
@@ -503,11 +502,11 @@ class BCRMapXMLWriter(object):
 
         self._bcr_map.set("interestRate", str(self._interest_rate))
         self._bcr_map.set("assetLifeExpectancy",
-            str(self._asset_life_expectancy))
+                          str(self._asset_life_expectancy))
 
         if self._source_model_tree_path is not None:
             self._bcr_map.set("sourceModelTreePath",
-                str(self._source_model_tree_path))
+                              str(self._source_model_tree_path))
 
         if self._gsim_tree_path is not None:
             self._bcr_map.set("gsimTreePath", str(self._gsim_tree_path))
@@ -525,13 +524,328 @@ class BCRMapXMLWriter(object):
             self._bcr_map.set("unit", str(self._unit))
 
 
+class DmgDistPerAssetXMLWriter(object):
+    """
+    Write the damage distribution per asset artifact
+    to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    :param damage_states: the damage states considered in this distribution.
+    :type damage_states: list of strings, for example:
+        ["no_damage", "slight", "moderate", "extensive", "complete"]
+    """
+
+    def __init__(self, path, damage_states):
+        self.path = path
+        self.damage_states = damage_states
+        self.root = None
+        self.dmg_dist_el = None
+
+    def serialize(self, assets_data):
+        """
+        Serialize the entire distribution.
+
+        :param assets_data: the distribution to be written.
+        :type assets_data: list of
+            :py:class:`openquake.db.models.DmgDistPerAsset` instances.
+            There are no restrictions about the ordering of the elements,
+            the component is able to correctly re-order the elements by
+            site and asset.
+
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if assets_data is None or not len(assets_data):
+            raise RuntimeError(
+                "empty damage distributions are not supported by the schema.")
+
+        # contains the set of <DDNode /> elements indexed per site
+        dd_nodes = {}
+
+        # contains the set of <asset /> elements indexed per asset ref
+        asset_nodes = {}
+
+        with open(self.path, "w") as fh:
+            self.root, self.dmg_dist_el = _create_root_elems(
+                self.damage_states, "dmgDistPerAsset")
+
+            for asset_data in assets_data:
+                site = asset_data.exposure_data.site
+                asset_ref = asset_data.exposure_data.asset_ref
+
+                # lookup the correct <DDNode /> element
+                dd_node_el = dd_nodes.get(site.wkt, None)
+
+                # nothing yet related to this site,
+                # creating the <DDNode /> element
+                if dd_node_el is None:
+                    dd_node_el = dd_nodes[site.wkt] = \
+                        self._create_dd_node_elem(site)
+
+                # lookup the correct <asset /> element
+                asset_node_el = asset_nodes.get(asset_ref, None)
+
+                # nothing yet related to this asset,
+                # creating the <asset /> element
+                if asset_node_el is None:
+                    asset_node_el = asset_nodes[asset_ref] = \
+                        _create_asset_elem(dd_node_el, asset_ref)
+
+                _create_damage_elem(asset_node_el, asset_data.dmg_state,
+                                    asset_data.mean, asset_data.stddev)
+
+            fh.write(etree.tostring(
+                self.root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+    def _create_dd_node_elem(self, site):
+        """
+        Create the <DDNode /> element related to the given site.
+        """
+        dd_node_el = etree.SubElement(self.dmg_dist_el, "DDNode")
+        _append_location(dd_node_el, site)
+        return dd_node_el
+
+
+class CollapseMapXMLWriter(object):
+    """
+    Write the collapse map artifact to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.root = None
+        self.collapse_map_el = None
+
+    def serialize(self, cmap_data):
+        """
+        Serialize the entire distribution.
+
+        :param cmap_data: the distribution to be written.
+        :type cmap_data: list of
+            :py:class:`openquake.db.models.CollapseMapData` instances.
+            There are no restrictions about the ordering of the elements,
+            the component is able to correctly re-order the elements by
+            site and asset.
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if cmap_data is None or not len(cmap_data):
+            raise RuntimeError(
+                "empty maps are not supported by the schema.")
+
+        # contains the set of <CMNode /> elements indexed per site
+        cm_nodes = {}
+
+        with open(self.path, "w") as fh:
+            self.root, self.collapse_map_el = self._create_root_elems()
+
+            for cfraction in cmap_data:
+                site = cfraction.location
+
+                # lookup the correct <CMNode /> element
+                cm_node_el = cm_nodes.get(site.wkt, None)
+
+                # nothing yet related to this site,
+                # creating the <CMNode /> element
+                if cm_node_el is None:
+                    cm_node_el = cm_nodes[site.wkt] = \
+                        self._create_cm_node_elem(site)
+
+                _create_cf_elem(cfraction, cm_node_el)
+
+            fh.write(etree.tostring(
+                self.root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+    def _create_cm_node_elem(self, site):
+        """
+        Create the <CMNode /> element related to the given site.
+        """
+        cm_node_el = etree.SubElement(self.collapse_map_el, "CMNode")
+        _append_location(cm_node_el, site)
+        return cm_node_el
+
+    def _create_root_elems(self):
+        """
+        Create the <nrml /> and <collapseMap /> elements.
+        """
+        root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+        cm_el = etree.SubElement(root, "collapseMap")
+        return root, cm_el
+
+
+def _create_cf_elem(cfraction, cm_node_el):
+    """
+    Create the <cf /> element related to the given site.
+    """
+    cf_el = etree.SubElement(cm_node_el, "cf")
+    cf_el.set("assetRef", cfraction.asset_ref)
+    cf_el.set("mean", str(cfraction.mean))
+    cf_el.set("stdDev", str(cfraction.stddev))
+
+
+class DmgDistPerTaxonomyXMLWriter(object):
+    """
+    Write the damage distribution per taxonomy artifact
+    to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    :param damage_states: the damage states considered in this distribution.
+    :type damage_states: list of strings, for example:
+        ["no_damage", "slight", "moderate", "extensive", "complete"]
+    """
+
+    def __init__(self, path, damage_states):
+        self.path = path
+        self.damage_states = damage_states
+        self.root = None
+        self.dmg_dist_el = None
+
+    def serialize(self, taxonomy_data):
+        """
+        Serialize the entire distribution.
+
+        :param taxonomy_data: the distribution to be written.
+        :type taxonomy_data: list of
+            :py:class:`openquake.db.models.DmgDistPerTaxonomy` instances.
+            There are no restrictions about the ordering of the elements,
+            the component is able to correctly re-order the elements by
+            asset taxonomy.
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if taxonomy_data is None or not len(taxonomy_data):
+            raise RuntimeError(
+                "empty damage distributions are not supported by the schema.")
+
+        # contains the set of <DDNode /> elements indexed per taxonomy
+        dd_nodes = {}
+
+        with open(self.path, "w") as fh:
+            self.root, self.dmg_dist_el = _create_root_elems(
+                self.damage_states, "dmgDistPerTaxonomy")
+
+            for tdata in taxonomy_data:
+                # lookup the correct <DDNode /> element
+                dd_node_el = dd_nodes.get(tdata.taxonomy, None)
+
+                # nothing yet related to this taxonomy,
+                # creating the <DDNode /> element
+                if dd_node_el is None:
+                    dd_node_el = dd_nodes[tdata.taxonomy] = \
+                        self._create_dd_node_elem(tdata.taxonomy)
+
+                _create_damage_elem(dd_node_el, tdata.dmg_state,
+                                    tdata.mean, tdata.stddev)
+
+            fh.write(
+                etree.tostring(
+                    self.root, pretty_print=True, xml_declaration=True,
+                    encoding="UTF-8"))
+
+    def _create_dd_node_elem(self, taxonomy):
+        """
+        Create the <DDNode /> element related to the given taxonomy.
+        """
+
+        dd_node_el = etree.SubElement(self.dmg_dist_el, "DDNode")
+
+        # <taxonomy /> node
+        taxonomy_el = etree.SubElement(dd_node_el, "taxonomy")
+        taxonomy_el.text = taxonomy
+
+        return dd_node_el
+
+
+class DmgDistTotalXMLWriter(object):
+    """
+    Write the total damage distribution artifact
+    to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    :param damage_states: the damage states considered in this distribution.
+    :type damage_states: list of strings, for example:
+        ["no_damage", "slight", "moderate", "extensive", "complete"]
+    """
+
+    def __init__(self, path, damage_states):
+        self.path = path
+        self.damage_states = damage_states
+        self.root = None
+
+    def serialize(self, total_dist_data):
+        """
+        Serialize the entire distribution.
+
+        :param total_dist_data: the distribution to be written.
+        :type total_dist_data: list of
+            :py:class:`openquake.db.models.DmgDistTotalData` instances.
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if total_dist_data is None or not len(total_dist_data):
+            raise RuntimeError(
+                "empty damage distributions are not supported by the schema.")
+
+        with open(self.path, "w") as fh:
+            self.root, dmg_dist_el = _create_root_elems(
+                self.damage_states, "totalDmgDist")
+
+            for tdata in total_dist_data:
+
+                _create_damage_elem(dmg_dist_el, tdata.dmg_state,
+                                    tdata.mean, tdata.stddev)
+
+            fh.write(
+                etree.tostring(self.root, pretty_print=True,
+                               xml_declaration=True, encoding="UTF-8"))
+
+
+def _create_root_elems(damage_states, distribution):
+    """
+    Create the <nrml /> and <dmgDistPer{Taxonomy,Asset} /> elements.
+    """
+
+    root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+
+    dmg_dist_el = etree.SubElement(root, distribution)
+    dmg_states = etree.SubElement(dmg_dist_el, "damageStates")
+    dmg_states.text = " ".join(damage_states)
+
+    return root, dmg_dist_el
+
+
+def _create_damage_elem(dd_node, dmg_state, mean, stddev):
+    """
+    Create the <damage /> element.
+    """
+    ds_node = etree.SubElement(dd_node, "damage")
+    ds_node.set("ds", dmg_state)
+    ds_node.set("mean", str(mean))
+    ds_node.set("stddev", str(stddev))
+
+
+def _create_asset_elem(dd_node_el, asset_ref):
+    """
+    Create the <asset /> element.
+    """
+    asset_node_el = etree.SubElement(dd_node_el, "asset")
+    asset_node_el.set("assetRef", asset_ref)
+    return asset_node_el
+
+
 def _append_location(element, location):
     """
     Append the geographical location to the given element.
     """
-
     gml_ns = nrml.SERIALIZE_NS_MAP["gml"]
-
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
     gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)
@@ -562,11 +876,11 @@ def _check_statistics_metadata(statistics, quantile_value):
 
     if statistics == "quantile" and quantile_value is None:
         raise ValueError("When `statistics` == 'quantile', "
-            "`quantile_value` must also be specified.")
+                         "`quantile_value` must also be specified.")
 
     if statistics == "mean" and quantile_value is not None:
         raise ValueError("When `statistics` == 'mean', "
-            "`quantile_value` must not be specified.")
+                         "`quantile_value` must not be specified.")
 
 
 def _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path):
@@ -576,8 +890,8 @@ def _check_logic_tree_metadata(source_model_tree_path, gsim_tree_path):
 
     if source_model_tree_path is None or gsim_tree_path is None:
         raise ValueError("When specifying a logic tree branch, "
-            "both `source_model_tree_path` and `gsim_tree_path` "
-            "must be specified.")
+                         "both `source_model_tree_path` and `gsim_tree_path` "
+                         "must be specified.")
 
 
 def _check_statistics_or_logic_tree(source_model_tree_path,
@@ -588,7 +902,8 @@ def _check_statistics_or_logic_tree(source_model_tree_path,
     """
 
     if source_model_tree_path is not None or gsim_tree_path is not None:
-        raise ValueError("You must choose `statistics` or "
+        raise ValueError(
+            "You must choose `statistics` or "
             "(`source_model_tree_path`, `gsim_tree_path`), not both.")
 
 
@@ -600,4 +915,4 @@ def _assert_valid_input(data):
 
     if not data or len(data) == 0:
         raise ValueError("At least one element must be present, "
-            "an empty document is not supported by the schema.")
+                         "an empty document is not supported by the schema.")
