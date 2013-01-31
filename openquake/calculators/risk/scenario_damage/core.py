@@ -220,7 +220,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
                 ds.save()
 
-        return [self.ddpa_output.id]
+        return [ddpa_output.id]
 
     def set_risk_models(self):
         self.fragility_model, self.fragility_functions, self.damage_states = \
