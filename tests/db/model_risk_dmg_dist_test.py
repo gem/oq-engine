@@ -111,21 +111,18 @@ class DamageStateTestCase(DjangoTestCase):
         for ds in self.dmg_states.itervalues():
             dd = models.DmgDistPerAsset(
                 exposure_data=self.exp_data,
-                dmg_state=ds, mean=0.0, stddev=0.0,
-                location=self.GRID_CELL_SITE.to_wkt())
+                dmg_state=ds, mean=0.0, stddev=0.0)
             dd.save()
 
     def test_ddpa_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerAsset(
-            exposure_data=self.exp_data,
-            mean=0.0, stddev=0.0, location=self.GRID_CELL_SITE.to_wkt())
+            exposure_data=self.exp_data, mean=0.0, stddev=0.0)
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 
     def test_ddpa_update_valid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
-            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.to_wkt())
+            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0)
         dd.save()
         dd.dmg_state = self.dmg_states['moderate']
         dd.save()
@@ -133,8 +130,7 @@ class DamageStateTestCase(DjangoTestCase):
     def test_ddpa_update_invalid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
-            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.to_wkt())
+            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0)
         dd.save()
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 

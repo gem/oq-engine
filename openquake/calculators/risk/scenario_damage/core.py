@@ -32,9 +32,9 @@ from openquake.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def scenario_damage(job_id, assets, hazard_getter, hazard_id,
+def scenario_damage(job_id, assets, hazard_getter, hazard,
                     taxonomy, fragility_model, fragility_functions,
-                    ddpa_id, imt):
+                    output_containers, imt):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -42,26 +42,25 @@ def scenario_damage(job_id, assets, hazard_getter, hazard_id,
     :param assets: the list of :class:`risklib.scientific.Asset`
     instances considered
     :param hazard_getter: the name of an hazard getter to be used
-    :param hazard_id: the hazard output id
+    :param hazard: the hazard output dictionary
     :param taxonomy: the taxonomy being considered
     :param fragility_model: a
     :class:`risklib.models.input.FragilityModel object
     :param fragility_functions: a
     :class:`risklib.models.input.FragilityFunctionSeq object
-    :param ddpa_id: the output.id of output_type "dmg_dist_per_asset"
+    :param output_containers: a dictionary {hazard_id: output_id}
+    of output_type "dmg_dist_per_asset"
     :param imt: the Intensity Measure Type of the ground motion field
     """
-
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
-
     calculator = api.ScenarioDamage(fragility_model, fragility_functions)
-
-    outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
-
-    with logs.tracing('save statistics per site'), \
-            db.transaction.commit_on_success(using='reslt_writer'):
-        for output in outputs:
-            save_dist_per_asset(output.fractions, ddpa_id, output.asset)
+    for hazard_id in hazard:
+        hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
+        outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
+        with logs.tracing('save statistics per site'), \
+                db.transaction.commit_on_success(using='reslt_writer'):
+            ddpa_id = output_containers[hazard_id]
+            for output in outputs:
+                save_dist_per_asset(output.fractions, ddpa_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
@@ -84,8 +83,7 @@ def save_dist_per_asset(fractions, output_id, asset):
         ddpa = models.DmgDistPerAsset(
             dmg_state=dmg_state,
             mean=mean[lsi], stddev=std[lsi],
-            exposure_data=asset,
-            location=asset.site)
+            exposure_data=asset)
         ddpa.save()
 
 
@@ -139,17 +137,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.ddpt_output = None  # will be set in .create_outputs
         self.ddt_output = None  # will be set in .create_outputs
 
-    @property
-    def hazard_id(self):
-        """
-        The ID of the :class:`openquake.db.models.Output` from which the
-        hazard getter can extract the ground motion fields used by the risk
-        calculation
-        """
-        if self.rc.hazard_output.output_type != 'gmf_scenario':
+    def hazard_output(self, output):
+        if output.output_type != 'gmf_scenario':
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
-        return self.rc.hazard_output.id
 
     def worker_args(self, taxonomy):
         """
@@ -192,7 +183,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.imt]
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create the three kind of outputs of a ScenarioDamage calculator
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
@@ -220,7 +211,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
                 ds.save()
 
-        return [ddpa_output.id]
+        return ddpa_output.id
 
     def set_risk_models(self):
         self.fragility_model, self.fragility_functions, self.damage_states = \
