@@ -53,7 +53,7 @@ def _export_common(output):
     statistics, quantile_value = risk_calculation.hazard_statistics
 
     source_model_tree_path, gsim_tree_path = None, None
-    if not statistics:
+    if statistics is not None:
         lt_paths = risk_calculation.hazard_logic_tree_paths
 
         if lt_paths:
