@@ -123,7 +123,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        allowed_imts = self.hc.intensity_measure_types_and_levels.keys()
+        allowed_imts = (self.hc.intensity_measure_types or
+                self.hc.intensity_measure_types_and_levels.keys())
 
         if not self.imt in allowed_imts:
             raise RuntimeError(
@@ -168,10 +169,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        output_containers = dict((hazard_output.id,
-                                  self.create_outputs(hazard_output))
-                                 for hazard_output
-                                 in self.considered_hazard_outputs())
+        output_containers = self.rc.output_container_builder(self)
 
         calculator_parameters = self.calculator_parameters
 
@@ -254,6 +252,9 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def hazard_output(self, output):
         """
+        Calculators must implement this method
+        in order to support hazard logic trees.
+
         :returns: The ID of the output container of the hazard
         used for this risk calculation. E.g. an
         :class:`openquake.db.models.HazardCurve'
@@ -394,8 +395,8 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         loss_map_ids = dict()
 
-        if self.job.risk_calculation.conditional_loss_poes is not None:
-            for poe in self.job.risk_calculation.conditional_loss_poes:
+        if self.rc.conditional_loss_poes is not None:
+            for poe in self.rc.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
                     hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
@@ -486,6 +487,31 @@ def write_loss_map(loss_map_ids, asset, asset_output):
             value=loss,
             std_dev=None,
             location=asset.site)
+
+
+def write_loss_map_scenario(loss_map_id, asset, asset_output):
+    """
+    Create :class:`openquake.db.models.LossMapData` objects where the
+    data are got by `asset_output` and the
+    :class:`openquake.db.models.LossMap` output containers are got by
+    `loss_map_ids`.
+
+    :param dict loss_map_ids: A dictionary storing that links poe to
+    :class:`openquake.db.models.LossMap` output container
+
+    :param asset: an instance of :class:`openquake.db.models.ExposureData`
+
+    :param asset_output: an instance of
+    :class:`risklib.models.output.ClassicalOutput` or of
+    :class:`risklib.models.output.ProbabilisticEventBasedOutput`
+    """
+
+    models.LossMapData.objects.create(
+        loss_map_id=loss_map_id,
+        asset_ref=asset.asset_ref,
+        value=asset_output.losses.mean(),
+        std_dev=asset_output.losses.std(),
+        location=asset.site)
 
 
 @db.transaction.commit_on_success

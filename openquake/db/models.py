@@ -925,7 +925,7 @@ class RiskCalculation(djm.Model):
         (u'event_based', u'Probabilistic Event-Based'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'scenario', u'Scenario'),
+        (u'scenario', u'Scenario'),
         # (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -995,6 +995,21 @@ class RiskCalculation(djm.Model):
         return (self.hazard_calculation or
                 self.hazard_output.oq_job.hazard_calculation)
 
+    def has_output_containers(self):
+        """
+        Calculators with one output container: Scenario.
+        """
+
+        return self.calculation_mode != "scenario" 
+    
+    def output_container_builder(self, risk_calculator):
+        if self.has_output_containers():
+            return dict((hazard_output.id, risk_calculator.create_outputs(hazard_output))
+                         for hazard_output in
+                         risk_calculator.considered_hazard_outputs())
+        else:
+            return {self.hazard_output.id:
+                    risk_calculator.create_outputs(self.hazard_output)}
     @property
     def hazard_statistics(self):
         """
