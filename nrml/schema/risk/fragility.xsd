@@ -45,6 +45,8 @@
                     <xs:element name="ffd" type="Ffd" minOccurs="0" maxOccurs="unbounded" />
                 </xs:sequence>
 
+                <!-- optional attribute for both continuous and discrete ffs -->
+                <xs:attribute name="noDamageLimit" type="PositiveDoubleType" use="optional"/>
                 <!-- optional function type for a continuous ffs -->
                 <xs:attribute name="type" type="xs:string" use="optional"/>
     </xs:complexType>

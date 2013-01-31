@@ -15,7 +15,7 @@
         </limitStates>
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs>
+        <ffs noDamageLimit="5">
             <taxonomy>RC/DMRF-D/LR</taxonomy>
 
             <!-- fragility function in discrete format, one per limit state -->
