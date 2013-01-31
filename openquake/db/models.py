@@ -1324,9 +1324,6 @@ class Output(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"output'
 
-    def is_ground_motion_field(self):
-        return self.output_type in ['gmf', 'gmf_scenario', 'complete_lt_gmf']
-
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
 
