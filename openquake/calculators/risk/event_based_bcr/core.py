@@ -31,9 +31,9 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
+def event_based_bcr(job_id, assets, hazard_getter, hazard, seed,
                     vulnerability_function, vulnerability_function_retrofitted,
-                    bcr_distribution_id, imt, time_span, tses,
+                    output_containers, imt, time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
@@ -49,11 +49,12 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
         list of assets to compute.
     :param hazard_getter:
         Strategy used to get the hazard inputs (ground motion fields).
-    :param int hazard_id
-        ID of the hazard output the risk calculation is based on.
-    :param int bcr_distribution_id
-        ID of the :class:`openquake.db.models.BCRDistribution` output
-        container used to store the computed BCR distribution.
+    :param dict hazard:
+      A dictionary mapping hazard Output ID to GmfCollection ID
+    :param output_containers: A dictionary mapping hazard Output ID to
+      a tuple with only the ID of the
+      :class:`openquake.db.models.BCRDistribution` output container
+      used to store the computed bcr distribution
     :param float imt:
         Intensity Measure Type to take into account.
     :param float time_span:
@@ -71,34 +72,40 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard_id, seed,
     :param float asset_life_expectancy
         The life expectancy used for every asset.
     """
-    hazard_getter = general.hazard_getter(
-        hazard_getter, hazard_id, imt)
 
-    calculator = api.ProbabilisticEventBased(
-        vulnerability_function, curve_resolution=loss_curve_resolution,
-        time_span=time_span, tses=tses,
-        seed=seed, correlation=asset_correlation)
+    for hazard_output_id, hazard_data in hazard.items():
+        hazard_id, _ = hazard_data
+        (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-    calculator_retrofitted = api.ProbabilisticEventBased(
-        vulnerability_function_retrofitted,
-        curve_resolution=loss_curve_resolution,
-        time_span=time_span, tses=tses,
-        seed=seed, correlation=asset_correlation)
+        hazard_getter = general.hazard_getter(
+            hazard_getter, hazard_id, imt)
 
-    bcr_calculator = api.BCR(calculator, calculator_retrofitted,
-                             interest_rate, asset_life_expectancy)
+        calculator = api.ProbabilisticEventBased(
+            vulnerability_function, curve_resolution=loss_curve_resolution,
+            time_span=time_span, tses=tses,
+            seed=seed, correlation=asset_correlation)
 
-    with logs.tracing('getting hazard'):
-        ground_motion_fields = [hazard_getter(asset.site) for asset in assets]
+        calculator_retrofitted = api.ProbabilisticEventBased(
+            vulnerability_function_retrofitted,
+            curve_resolution=loss_curve_resolution,
+            time_span=time_span, tses=tses,
+            seed=seed, correlation=asset_correlation)
 
-    with logs.tracing('computing risk over %d assets' % len(assets)):
-        asset_outputs = bcr_calculator(assets, ground_motion_fields)
+        bcr_calculator = api.BCR(calculator, calculator_retrofitted,
+                                 interest_rate, asset_life_expectancy)
 
-    with logs.tracing('writing results'):
-        with transaction.commit_on_success(using='reslt_writer'):
-            for i, asset_output in enumerate(asset_outputs):
-                general.write_bcr_distribution(
-                    bcr_distribution_id, assets[i], asset_output)
+        with logs.tracing('getting hazard'):
+            ground_motion_fields = [hazard_getter(asset.site)
+                                    for asset in assets]
+
+        with logs.tracing('computing risk over %d assets' % len(assets)):
+            asset_outputs = bcr_calculator(assets, ground_motion_fields)
+
+        with logs.tracing('writing results'):
+            with transaction.commit_on_success(using='reslt_writer'):
+                for i, asset_output in enumerate(asset_outputs):
+                    general.write_bcr_distribution(
+                        bcr_distribution_id, assets[i], asset_output)
 
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 
@@ -139,7 +146,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to compute the aggregate loss curve in the BCR calculator.
         """
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
@@ -149,8 +156,11 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         return [
             models.BCRDistribution.objects.create(
+                hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk
+                    self.job,
+                    "BCR Distribution for hazard %s" % hazard_output,
+                    "bcr_distribution")).pk
         ]
 
     def set_risk_models(self):

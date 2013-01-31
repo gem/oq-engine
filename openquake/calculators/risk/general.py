@@ -118,8 +118,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        self.progress.update(total=sum(self.taxonomies.values()))
-        self._initialize_progress()
+        self._initialize_progress(sum(self.taxonomies.values()))
 
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
@@ -157,7 +156,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        output_containers = self.create_outputs()
+        output_containers = dict((hazard_output.id,
+                                  self.create_outputs(hazard_output))
+                                 for hazard_output
+                                 in self.considered_hazard_outputs())
+
         calculator_parameters = self.calculator_parameters
 
         for taxonomy, assets_nr in self.taxonomies.items():
@@ -169,13 +172,18 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                tf_args = ([
-                    self.job.id,
-                    assets, self.hazard_getter, self.hazard_id] +
-                    self.worker_args(taxonomy) +
-                    output_containers + calculator_parameters)
+                hazard = dict((ho.id, self.hazard_output(ho))
+                              for ho in self.considered_hazard_outputs())
 
-                yield tf_args
+                # FIXME(lp). Refactor the following arg list such that
+                # the arguments are grouped into namedtuples
+                yield ([
+                    self.job.id,
+                    assets,
+                    self.hazard_getter, hazard] +
+                    self.worker_args(taxonomy) +
+                    [output_containers] +
+                    calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -210,18 +218,46 @@ class BaseRiskCalculator(base.CalculatorNext):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
-    def hazard_id(self):
+    def considered_hazard_outputs(self):
         """
-        :returns: The ID of the output container of the hazard used
-        for this risk calculation. E.g. an `openquake.db.models.HazardCurve'
+        Returns the list of hazard outputs to be considered
+        """
+        if self.rc.hazard_output:
+            return [self.rc.hazard_output]
+        else:
+            return self.hazard_outputs(self.rc.hazard_calculation)
+
+    def hazard_outputs(self, hazard_calculation):
+        """
+        :returns: a list of :class:`openquake.db.models.Output`
+        objects to be used for a risk calculation.
+
+        Calculator must override this to select from the hazard
+        calculation given in input which are the Output objects to be
+        considered by the risk calculation to get the actual hazard
+        input.
+
+        Result objects should be ordered (e.g. by id) and be
+        associated to an hazard logic tree realization
+        """
+        raise NotImplementedError
+
+    def hazard_output(self, output):
+        """
+        Calculator must override this to select from the hazard
+        output/calculation the proper hazard output containers.
+
+        :returns: The ID of the output container of the hazard
+        used for this risk calculation. E.g. an
+        :class:`openquake.db.models.HazardCurve'
+
+        :param hazard_output: the ID of an
+        :class:`openquake.db.models.Output` object
 
         :raises: `RuntimeError` if the hazard associated with the
-        current risk calculation is not suitable to be used with this
+        `hazard_output` is not suitable to be used with this
         calculator
         """
-
-        # Calculator must override this to select from the hazard
-        # output the proper hazard output container
         raise NotImplementedError
 
     @property
@@ -259,13 +295,14 @@ class BaseRiskCalculator(base.CalculatorNext):
             writer.serialize(exposure_stream)
         return writer.model
 
-    def _initialize_progress(self):
+    def _initialize_progress(self, total):
         """Record the total/completed number of work items.
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        self.progress.update(total=total)
         stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", sum(self.taxonomies.values()))
+        stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
@@ -314,7 +351,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 record['probabilisticDistribution'])
         return vfs
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create outputs container objects (e.g. LossCurve, Output).
 
@@ -324,24 +361,29 @@ class BaseRiskCalculator(base.CalculatorNext):
         The default behavior is to create a loss curve and loss maps
         output.
 
-        :return a list of int (id of containers) or dict (poe->int)
+        :returns: a dictionary mapping an Output object ID to a list
+        of int (id of containers) or dict (poe->int)
         """
 
         job = self.job
 
         # add loss curve containers
         loss_curve_id = models.LossCurve.objects.create(
+            hazard_output_id=hazard_output.id,
             output=models.Output.objects.create_output(
-                job, "Loss Curve set", "loss_curve")).pk
+                job, "Loss Curve set for hazard %s" % hazard_output.id,
+                "loss_curve")).pk
 
         loss_map_ids = dict()
 
         if self.job.risk_calculation.conditional_loss_poes is not None:
             for poe in self.job.risk_calculation.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
+                    hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
                         self.job,
-                        "Loss Map Set with poe %s" % poe,
+                        "Loss Map Set with poe %s for hazard %s" % (
+                            poe, hazard_output.id),
                         "loss_map"),
                     poe=poe).pk
         return [loss_curve_id, loss_map_ids]
