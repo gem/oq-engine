@@ -66,10 +66,10 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         return output.id
 
     def actual_data(self, job):
-        pass
+        return []
 
     def expected_data(self):
-        pass
+        return []
 
     def expected_outputs(self):
         return []

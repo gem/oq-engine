@@ -25,6 +25,10 @@ from tests.utils import helpers
 from openquake.db import models
 
 
+# FIXME(lp). This is a regression testing. Data has not been validated
+# by an alternative reliable implemantation
+
+
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
@@ -37,17 +41,17 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
       <gml:Point>
         <gml:pos>-122.0 38.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a1" ratio="77.9106047897"
-           aalOrig="1.50174981661" aalRetr="1.05122487163"/>
+      <bcr assetRef="a1" ratio="83.3032625707"
+           aalOrig="1.60569488103" aalRetr="1.12398641672"/>
     </node>
     <node>
       <gml:Point>
         <gml:pos>-120.0 37.225</gml:pos>
       </gml:Point>
-      <bcr assetRef="a2" ratio="54.1889945306"
-           aalOrig="2.08901760725" aalRetr="1.46231232508"/>
-      <bcr assetRef="a3" ratio="52.4972213244"
-           aalOrig="2.02379875523" aalRetr="1.41665912866"/>
+      <bcr assetRef="a2" ratio="64.4508095217"
+           aalOrig="2.48461661005" aalRetr="1.73923162703"/>
+      <bcr assetRef="a3" ratio="53.9756702454"
+           aalOrig="2.0807938306" aalRetr="1.45655568142"/>
     </node>
   </bcrMap>
 </nrml>
@@ -111,9 +115,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                         'asset_ref')]
 
     def expected_data(self):
-        return [[1.50174982, 1.05122487, 77.91060479],
-                [2.08901761, 1.46231233, 54.18899453],
-                [2.02379876, 1.41665913, 52.49722132]]
+        return [[1.60569488, 1.12398642, 83.30326257],
+                [2.48461661, 1.73923163, 64.45080952],
+                [2.08079383, 1.45655568, 53.97567025]]
 
     def expected_outputs(self):
         return [self.EXPECTED_BCR_DISTRIBUTION]
