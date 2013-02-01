@@ -39,6 +39,13 @@ AGGREGATE_LOSS_CURVE = collections.namedtuple(
 ExposureData = collections.namedtuple(
     "ExposureData", 'asset_ref site')
 
+DmgState = collections.namedtuple("DmgState", 'dmg_state')
+NO_DAMAGE = DmgState("no_damage")
+SLIGHT = DmgState("slight")
+MODERATE = DmgState("moderate")
+EXTENSIVE = DmgState("extensive")
+COMPLETE = DmgState("complete")
+
 DMG_DIST_PER_ASSET = collections.namedtuple(
     "DmgDistPerAsset", "exposure_data dmg_state mean stddev")
 
@@ -49,7 +56,7 @@ DMG_DIST_TOTAL = collections.namedtuple(
     "DmgDistTotal", "dmg_state mean stddev")
 
 COLLAPSE_MAP = collections.namedtuple(
-    "CollapseMap", "asset_ref mean stddev location")
+    "CollapseMap", "exposure_data mean stddev")
 
 
 def _starmap(func, lst):
@@ -569,23 +576,23 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase):
         e3 = ExposureData('asset_3', point2)
 
         data = [
-            (e1, "no_damage", 1.0, 1.6),
-            (e1, "slight", 34.8, 18.3),
-            (e1, "moderate", 64.2, 19.8),
-            (e1, "extensive", 64.3, 19.7),
-            (e1, "complete", 64.3, 19.7),
+            (e1, NO_DAMAGE, 1.0, 1.6),
+            (e1, SLIGHT, 34.8, 18.3),
+            (e1, MODERATE, 64.2, 19.8),
+            (e1, EXTENSIVE, 64.3, 19.7),
+            (e1, COMPLETE, 64.3, 19.7),
 
-            (e2, "no_damage", 1.0, 1.6),
-            (e2, "slight", 34.8, 18.3),
-            (e2, "moderate", 64.2, 19.8),
-            (e2, "extensive", 64.3, 19.7),
-            (e2, "complete", 64.3, 19.7),
+            (e2, NO_DAMAGE, 1.0, 1.6),
+            (e2, SLIGHT, 34.8, 18.3),
+            (e2, MODERATE, 64.2, 19.8),
+            (e2, EXTENSIVE, 64.3, 19.7),
+            (e2, COMPLETE, 64.3, 19.7),
 
-            (e3, "no_damage", 1.1, 1.7),
-            (e3, "slight", 34.9, 18.4),
-            (e3, "moderate", 64.2, 19.8),
-            (e3, "extensive", 64.3, 19.7),
-            (e3, "complete", 64.3, 19.7),
+            (e3, NO_DAMAGE, 1.1, 1.7),
+            (e3, SLIGHT, 34.9, 18.4),
+            (e3, MODERATE, 64.2, 19.8),
+            (e3, EXTENSIVE, 64.3, 19.7),
+            (e3, COMPLETE, 64.3, 19.7),
         ]
         writer = writers.DmgDistPerAssetXMLWriter(self.filename, dmg_states)
         writer.serialize(_starmap(DMG_DIST_PER_ASSET, data))
@@ -624,17 +631,17 @@ class DmgDistPerTaxonomyXMLWriterTestCase(unittest.TestCase):
 </nrml>''')
         dmg_states = 'no_damage slight moderate extensive complete'.split()
         data = [
-            ('RC', "no_damage", 1.0, 1.6),
-            ('RC', "slight", 34.8, 18.3),
-            ('RC', "moderate", 64.2, 19.8),
-            ('RC', "extensive", 64.3, 19.7),
-            ('RC', "complete", 64.3, 19.7),
+            ('RC', NO_DAMAGE, 1.0, 1.6),
+            ('RC', SLIGHT, 34.8, 18.3),
+            ('RC', MODERATE, 64.2, 19.8),
+            ('RC', EXTENSIVE, 64.3, 19.7),
+            ('RC', COMPLETE, 64.3, 19.7),
 
-            ('RM', "no_damage", 1.0, 1.6),
-            ('RM', "slight", 34.8, 18.3),
-            ('RM', "moderate", 64.2, 19.8),
-            ('RM', "extensive", 64.3, 19.7),
-            ('RM', "complete", 64.3, 19.7),
+            ('RM', NO_DAMAGE, 1.0, 1.6),
+            ('RM', SLIGHT, 34.8, 18.3),
+            ('RM', MODERATE, 64.2, 19.8),
+            ('RM', EXTENSIVE, 64.3, 19.7),
+            ('RM', COMPLETE, 64.3, 19.7),
 
         ]
         writer = writers.DmgDistPerTaxonomyXMLWriter(self.filename, dmg_states)
@@ -666,11 +673,11 @@ class DmgDistTotalXMLWriterTestCase(unittest.TestCase):
         damage_states = 'no_damage slight moderate extensive complete'.split()
         writer = writers.DmgDistTotalXMLWriter(self.filename, damage_states)
         data = [
-            ('no_damage', 1.0, 1.6),
-            ('slight', 34.8, 18.3),
-            ('moderate', 64.2, 19.8),
-            ('extensive', 64.3, 19.7),
-            ('complete', 64.3, 19.7),
+            (NO_DAMAGE, 1.0, 1.6),
+            (SLIGHT, 34.8, 18.3),
+            (MODERATE, 64.2, 19.8),
+            (EXTENSIVE, 64.3, 19.7),
+            (COMPLETE, 64.3, 19.7),
         ]
         writer.serialize(_starmap(DMG_DIST_TOTAL, data))
 
@@ -705,13 +712,20 @@ class CollapseMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 ''')
         writer = writers.CollapseMapXMLWriter(self.filename)
+
         point1 = Point(-72.2, 18.)
         point2 = Point(-72.25, 18.)
+
+        e1 = ExposureData('a1', point1)
+        e2 = ExposureData('a2', point1)
+        e3 = ExposureData('a3', point1)
+        e4 = ExposureData('a4', point2)
+
         data = [
-            ('a1', 1.0, 1.6, point1),
-            ('a2', 34.8, 18.3, point1),
-            ('a3', 64.2, 19.8, point1),
-            ('a4', 64.3, 19.7, point2),
+            (e1, 1.0, 1.6),
+            (e2, 34.8, 18.3),
+            (e3, 64.2, 19.8),
+            (e4, 64.3, 19.7),
         ]
         writer.serialize(_starmap(COLLAPSE_MAP, data))
         _utils.assert_xml_equal(expected, self.filename)

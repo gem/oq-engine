@@ -548,10 +548,9 @@ class DmgDistPerAssetXMLWriter(object):
 
         :param assets_data: the distribution to be written.
         :type assets_data: list of
-            :py:class:`openquake.db.models.DmgDistPerAsset` instances.
-            There are no restrictions about the ordering of the elements,
-            the component is able to correctly re-order the elements by
-            site and asset.
+            :class:`openquake.db.models.DmgDistPerAsset` instances.
+            The component is able to correctly re-order the elements by
+            site and asset, but the damage states must be ordered in advance.
 
         :raises: `RuntimeError` in case of list empty or `None`.
         """
@@ -592,8 +591,9 @@ class DmgDistPerAssetXMLWriter(object):
                     asset_node_el = asset_nodes[asset_ref] = \
                         _create_asset_elem(dd_node_el, asset_ref)
 
-                _create_damage_elem(asset_node_el, asset_data.dmg_state,
-                                    asset_data.mean, asset_data.stddev)
+                _create_damage_elem(
+                    asset_node_el, asset_data.dmg_state.dmg_state,
+                    asset_data.mean, asset_data.stddev)
 
             fh.write(etree.tostring(
                 self.root, pretty_print=True, xml_declaration=True,
@@ -645,7 +645,7 @@ class CollapseMapXMLWriter(object):
             self.root, self.collapse_map_el = self._create_root_elems()
 
             for cfraction in cmap_data:
-                site = cfraction.location
+                site = cfraction.exposure_data.site
 
                 # lookup the correct <CMNode /> element
                 cm_node_el = cm_nodes.get(site.wkt, None)
@@ -684,7 +684,7 @@ def _create_cf_elem(cfraction, cm_node_el):
     Create the <cf /> element related to the given site.
     """
     cf_el = etree.SubElement(cm_node_el, "cf")
-    cf_el.set("assetRef", cfraction.asset_ref)
+    cf_el.set("assetRef", cfraction.exposure_data.asset_ref)
     cf_el.set("mean", str(cfraction.mean))
     cf_el.set("stdDev", str(cfraction.stddev))
 
@@ -741,7 +741,7 @@ class DmgDistPerTaxonomyXMLWriter(object):
                     dd_node_el = dd_nodes[tdata.taxonomy] = \
                         self._create_dd_node_elem(tdata.taxonomy)
 
-                _create_damage_elem(dd_node_el, tdata.dmg_state,
+                _create_damage_elem(dd_node_el, tdata.dmg_state.dmg_state,
                                     tdata.mean, tdata.stddev)
 
             fh.write(
@@ -800,7 +800,7 @@ class DmgDistTotalXMLWriter(object):
 
             for tdata in total_dist_data:
 
-                _create_damage_elem(dmg_dist_el, tdata.dmg_state,
+                _create_damage_elem(dmg_dist_el, tdata.dmg_state.dmg_state,
                                     tdata.mean, tdata.stddev)
 
             fh.write(
