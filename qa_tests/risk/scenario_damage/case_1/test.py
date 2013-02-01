@@ -117,15 +117,15 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
   <collapseMap>
     <CMNode>
       <gml:Point>
-        <gml:pos>9.15333 45.122</gml:pos>
-      </gml:Point>
-      <cf assetRef="asset_02" mean="0.0" stdDev="0.0"/>
-    </CMNode>
-    <CMNode>
-      <gml:Point>
         <gml:pos>9.15 45.16667</gml:pos>
       </gml:Point>
       <cf assetRef="asset_01" mean="0.0" stdDev="0.0"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>9.15333 45.122</gml:pos>
+      </gml:Point>
+      <cf assetRef="asset_02" mean="0.0" stdDev="0.0"/>
     </CMNode>
     <CMNode>
       <gml:Point>

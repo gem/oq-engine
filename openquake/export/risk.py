@@ -198,6 +198,7 @@ def export_collapse_map(output, target_dir):
     dmg_states = models.DmgState.objects.filter(output=output).order_by('lsi')
     collapse = list(dmg_states)[-1]  # the last state
     writer = writers.CollapseMapXMLWriter(file_path)
-    data = models.DmgDistPerAsset.objects.filter(dmg_state=collapse)
+    data = models.DmgDistPerAsset.objects.filter(
+        dmg_state=collapse).order_by('exposure_data')
     writer.serialize(data)
     return [file_path]
