@@ -16,7 +16,7 @@
 
 import unittest
 
-from openquake.calculators.hazard.scenario.core import realizations_per_task
+from openquake.calculators.hazard.scenario.core import gmf_realiz_per_task
 
 
 class ScenarioHazardCalculatorTestCase(unittest.TestCase):
@@ -24,19 +24,19 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
     Tests for the main methods of the scenario hazard calculator.
     """
 
-    def test_realizations_per_task(self):
+    def test_num_realizations_per_task(self):
         num_concur_tasks = 32
-        num_realizations = 1000
-        realizations = [31 for i in range(num_concur_tasks)]
-        realizations.append(8)
+        gmf_realizations = 100
+        realiz_per_task = [3 for i in range(num_concur_tasks)]
+        realiz_per_task.append(4)
 
-        self.assertEqual(33, len(realizations))
-        self.assertEqual((True, realizations), realizations_per_task(
-            num_realizations, num_concur_tasks))
+        self.assertEqual(33, len(realiz_per_task))
+        self.assertEqual((True, realiz_per_task), gmf_realiz_per_task(
+            gmf_realizations, num_concur_tasks))
 
-        num_realizations = 96
-        realizations = [3 for i in range(num_concur_tasks)]
+        gmf_realizations = 96
+        realiz_per_task = [3 for i in range(num_concur_tasks)]
 
-        self.assertEqual((False, realizations), realizations_per_task(
-            num_realizations, num_concur_tasks))
+        self.assertEqual((False, realiz_per_task), gmf_realiz_per_task(
+            gmf_realizations, num_concur_tasks))
 
