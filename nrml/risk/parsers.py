@@ -88,10 +88,9 @@ class ExposureModelParser(object):
         schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
 
         for event, element in etree.iterparse(
-            self._source, events=('start', 'end'), schema=schema):
+                self._source, events=('start', 'end'), schema=schema):
 
-            if event == 'start' and element.tag == \
-               '%sexposureList' % NRML:
+            if event == 'start' and element.tag == '%sexposureList' % NRML:
                 # we need to get the exposureList id, description and
                 # asset category.
                 exp_id = element.get('%sid' % GML)
@@ -215,12 +214,13 @@ class VulnerabilityModelParser(object):
         """
 
         for vulnerability_set in self._vulnerability_model.findall(
-            ".//%sdiscreteVulnerabilitySet" % NRML):
+                ".//%sdiscreteVulnerabilitySet" % NRML):
 
-            vulnerability_function = _parse_set_attributes(vulnerability_set)
+            vulnerability_function = self._parse_set_attributes(
+                vulnerability_set)
 
             for vf in vulnerability_set.findall(
-                ".//%sdiscreteVulnerability" % NRML):
+                    ".//%sdiscreteVulnerability" % NRML):
 
                 loss_ratios = [float(x) for x in vf.find(
                     "%slossRatio" % NRML).text.strip().split()]
@@ -240,24 +240,101 @@ class VulnerabilityModelParser(object):
 
                 yield dict(vulnerability_function)
 
+    @staticmethod
+    def _parse_set_attributes(vset):
+        """
+        Extract the attributes common to all the vulnerability functions
+        belonging to the given set.
+        """
 
-def _parse_set_attributes(vset):
+        attrs = dict()
+        imls = vset.find(".//%sIML" % NRML)
+
+        attrs["IMT"] = imls.attrib["IMT"]
+        attrs["IML"] = [float(x) for x in imls.text.strip().split()]
+
+        attrs["lossCategory"] = vset.attrib["lossCategory"]
+        attrs["assetCategory"] = vset.attrib["assetCategory"]
+        attrs["vulnerabilitySetID"] = vset.attrib["vulnerabilitySetID"]
+
+        return attrs
+
+
+def find(tag, elem):
+    "Find all the subelements matching the given tag"
+    return elem.findall(NRML + tag, elem)
+
+
+def findone(tag, elem, default=None):
     """
-    Extract the attributes common to all the vulnerability functions
-    belonging to the given set.
+    Find the unique subelement matching the given tag. Raise ValueError
+    if there are too many elements and returns the default if there is
+    no match.
+    """
+    elems = elem.findall(NRML + tag, elem)
+    n = len(elems)
+    if n == 0:  # not found
+        return default
+    if n > 1:
+        raise ValueError('Found %d elements of kind %s, expected one'
+                         % (n, tag))
+    return elems[0]
+
+
+class FragilityModelParser(object):
+    """
+    Fragility model parser. This class is implemented as a generator.
+    It yields a triple (format, IML, limitStates), associated to a
+    fragility model, followed by a sequence of triples of the form
+    (taxonomy, params, no_damage_limit), associated each to a
+    different fragility function sequence.
+
+    :param source:
+        Filename or file-like object containing the XML data.
     """
 
-    attrs = dict()
-    imls = vset.find(".//%sIML" % NRML)
+    def __init__(self, source):
+        self._source = source
+        assert_is_valid(self._source)
+        self._fragility_model = etree.parse(self._source).getroot()
 
-    attrs["IMT"] = imls.attrib["IMT"]
-    attrs["IML"] = [float(x) for x in imls.text.strip().split()]
+    def __iter__(self):
+        """
+        Parse the fragility model.
+        """
+        fragilityModel = findone('fragilityModel', self._fragility_model)
+        format = fragilityModel.attrib['format']
+        if format == 'discrete':
+            IML = map(float, findone('IML', fragilityModel).text.split())
+        else:
+            IML = None
+        self.limit_states = findone('limitStates', fragilityModel).text.split()
+        yield format, IML, self.limit_states
+        for ffs in find('ffs', fragilityModel):
+            taxonomy = findone('taxonomy', ffs).text
+            no_damage_limit = ffs.attrib.get('noDamageLimit')
+            if no_damage_limit:
+                no_damage_limit = float(no_damage_limit)
+            if format == 'discrete':
+                all_poes = []
+                for lsi, ffd in enumerate(find('ffd', ffs)):
+                    self._check_limit_state(lsi, ffd.attrib['ls'])
+                    all_poes.append(
+                        map(float, findone('poEs', ffd).text.split()))
+                yield taxonomy, all_poes, no_damage_limit
+            else:  # continuous
+                all_params = []
+                for lsi, ffc in enumerate(find('ffc', ffs)):
+                    self._check_limit_state(lsi, ffc.attrib['ls'])
+                    params = findone('params', ffc).attrib
+                    all_params.append(
+                        (float(params['mean']), float(params['stddev'])))
+                yield taxonomy, all_params, no_damage_limit
 
-    attrs["lossCategory"] = vset.attrib["lossCategory"]
-    attrs["assetCategory"] = vset.attrib["assetCategory"]
-    attrs["vulnerabilitySetID"] = vset.attrib["vulnerabilitySetID"]
-
-    return attrs
+    def _check_limit_state(self, lsi, ls):
+        if ls != self.limit_states[lsi]:
+            raise ValueError('Expected limitState %s, got %s' %
+                             (self.limit_states[lsi], ls))
 
 
 def assert_is_valid(source):
