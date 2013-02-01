@@ -42,11 +42,10 @@ class EventBasedRiskCalculatorTestCase(
         Test that the specific calculation parameters are present
         """
 
-        params_as_list = self.calculator.calculator_parameters
         params = dict(zip(
             ['conditional_loss_poes', 'insured_losses',
              'imt', 'time_span', 'tses', 'loss_curve_resolution',
-             'asset_correlation'], params_as_list))
+             'asset_correlation'], self.calculator.calculator_parameters))
 
         self.assertEqual(80, params['loss_curve_resolution'])
         self.assertEqual([0.1, 0.2, 0.3], params['conditional_loss_poes'])
@@ -54,24 +53,32 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(250, params['tses'])
         self.assertEqual(50, params['time_span'])
         self.assertEqual('PGA', params['imt'])
-        self.assertEqual(None, params['asset_correlation'])
+        self.assertEqual(0.0, params['asset_correlation'])
 
     def test_hazard_id(self):
         """
         Test that the hazard output used by the calculator is a
-        `openquake.db.models.HazardCurve` object
+        `openquake.db.models.GmfCollection` object
         """
 
-        self.assertEqual(1,
-                         models.GmfCollection.objects.filter(
-                             pk=self.calculator.hazard_id).count())
+        outputs = self.calculator.hazard_outputs(
+            self.calculator.rc.get_hazard_calculation())
+
+        self.assertEqual(1, outputs.count())
+
+        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
+
+        self.assertEqual(
+            1,
+            models.GmfCollection.objects.filter(
+                pk=self.calculator.hazard_output(outputs[0])[0]).count())
 
     def test_imt_validation(self):
         # Test the validation of the imt associated with the
         # vulnerability model that must match the one of the hazard
         # output
         patch = helpers.patch(
-            'openquake.calculators.risk.general'\
+            'openquake.calculators.risk.general'
             '.BaseRiskCalculator.set_risk_models')
         patch.start()
         self.calculator.imt = 'fake'
