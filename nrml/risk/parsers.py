@@ -284,7 +284,7 @@ def findone(tag, elem, default=None):
 class FragilityModelParser(object):
     """
     Fragility model parser. This class is implemented as a generator.
-    It yields a triple (format, IML, limitStates), associated to a
+    It yields a triple (format, iml, limit_states), associated to a
     fragility model, followed by a sequence of triples of the form
     (taxonomy, params, no_damage_limit), associated each to a
     different fragility function sequence.
@@ -305,11 +305,13 @@ class FragilityModelParser(object):
         fragilityModel = findone('fragilityModel', self._fragility_model)
         format = fragilityModel.attrib['format']
         if format == 'discrete':
-            IML = map(float, findone('IML', fragilityModel).text.split())
+            iml = findone('IML', fragilityModel)
+            iml = dict(IMT=iml.attrib['IMT'],
+                       imls=map(float, iml.text.split()))
         else:
-            IML = None
+            iml = dict(IMT=None, imls=None)
         self.limit_states = findone('limitStates', fragilityModel).text.split()
-        yield format, IML, self.limit_states
+        yield format, iml, self.limit_states
         for ffs in find('ffs', fragilityModel):
             taxonomy = findone('taxonomy', ffs).text
             no_damage_limit = ffs.attrib.get('noDamageLimit')

@@ -291,9 +291,10 @@ class FragilityModelParserTestCase(unittest.TestCase):
     def test_parse_continuous(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_c.xml')))
 
-        format, IML, limit_states = p.next()
+        format, iml, limit_states = p.next()
         self.assertEqual(format, 'continuous')
-        self.assertIsNone(IML)
+        self.assertIsNone(iml['IMT'])
+        self.assertIsNone(iml['imls'])
         self.assertEqual(limit_states,
                          ['slight', 'moderate', 'extensive', 'complete'])
 
@@ -314,9 +315,10 @@ class FragilityModelParserTestCase(unittest.TestCase):
     def test_parse_discrete(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_d.xml')))
 
-        format, IML, limit_states = p.next()
+        format, iml, limit_states = p.next()
         self.assertEqual(format, 'discrete')
-        self.assertEqual(IML, [7.0, 8.0, 9.0, 10.0, 11.0])
+        self.assertEqual(iml['IMT'], 'MMI')
+        self.assertEqual(iml['imls'], [7.0, 8.0, 9.0, 10.0, 11.0])
         self.assertEqual(limit_states,
                          ['minor', 'moderate', 'severe', 'collapse'])
 
