@@ -40,7 +40,7 @@ from openquake.job.validation import MAX_SINT_32
 AVAILABLE_GSIMS = nhlib.gsim.get_available_gsims()
 
 
-def realizations_per_task(num_realizations, num_concur_task):
+def gmf_realiz_per_task(num_realizations, num_concur_task):
     """
     Realizations per task return a tuple in the format
     (spare : bool, realizations : int list) where spare
@@ -68,8 +68,8 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
         Value for seeding numpy/scipy in the computation of
         ground motion fields.
     :param realizations:
-        Number of realizations which are going to be created
-        by the task.
+        Number of ground motion field realizations which are
+        going to be created by the task.
     """
 
     logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
@@ -242,7 +242,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rupture_ids = [rupture.id for rupture in ruptures]
         num_concurrent_tasks = self.concurrent_tasks()
 
-        spare_realizations, realizations = realizations_per_task(
+        spare_realizations, realiz_per_task = gmf_realiz_per_task(
                 self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
 
         num_tasks = (num_concurrent_tasks + 1 if spare_realizations
@@ -252,5 +252,5 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
             task_seed = rnd.randint(0, MAX_SINT_32)
             task_args = (self.job.id, rupture_ids,
                          self.output.id, task_seed, task_no,
-                         realizations[task_no])
+                         realiz_per_task[task_no])
             yield task_args
