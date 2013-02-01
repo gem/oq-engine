@@ -157,9 +157,12 @@ def make_dmg_dist_export(damagecls, writercls, filename):
         :type target_dir: string
         """
         file_path = os.path.join(target_dir, filename % output.oq_job.id)
-        dmg_states = models.DmgState.objects.get(output=output)
-        writer = writercls(file_path, [ds.damage_state for ds in dmg_states])
-        data = [damagecls.objects.filter(dmg_state=ds) for ds in dmg_states]
+        dmg_states = models.DmgState.objects.filter(
+            output=output).order_by('lsi')
+        writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
+        # XXX: clearly this is not a good approach for large exposures
+        data = sum([list(damagecls.objects.filter(dmg_state=ds))
+                   for ds in dmg_states], [])
         writer.serialize(data)
         return [file_path]
 
@@ -184,16 +187,16 @@ def export_collapse_map(output, target_dir):
     """
     Export the collapse map identified
     by the given output to the `target_dir`.
-    
+
     :param output: db output record which identifies the distribution.
-    :type output: :py:class:`openquake.db.models.Output`
+    :type output: :class:`openquake.db.models.Output`
     :param target_dir: destination directory of the exported file.
     :type target_dir: string
     """
     file_name = "collapse-map-%s.xml" % output.oq_job.id
     file_path = os.path.join(target_dir, file_name)
-    dmg_states = models.DmgState.objects.get(output=output).order_by('lsi')
-    collapse = dmg_states[-1]  # the bigger one
+    dmg_states = models.DmgState.objects.filter(output=output).order_by('lsi')
+    collapse = list(dmg_states)[-1]  # the last state
     writer = writers.CollapseMapXMLWriter(file_path)
     data = models.DmgDistPerAsset.objects.filter(dmg_state=collapse)
     writer.serialize(data)

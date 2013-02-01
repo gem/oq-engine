@@ -1300,7 +1300,6 @@ class Output(djm.Model):
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'collapse_map', u'Collapse map'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
@@ -2211,7 +2210,8 @@ class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
-    dmg_state = djm.TextField()
+    dmg_state = djm.TextField(
+        help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(
         help_text="limit state index, to order the limit states")
 
