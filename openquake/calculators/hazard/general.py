@@ -33,6 +33,7 @@ from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist
 
 from nhlib import geo as nhlib_geo
+from nhlib import correlation
 from nrml import parsers as nrml_parsers
 from shapely import geometry
 
@@ -437,6 +438,27 @@ def update_realization(lt_rlz_id, num_items):
         lt_rlz.is_complete = True
 
     lt_rlz.save()
+
+
+def get_correl_model(hc):
+    """
+    Helper function for constructing the appropriate correlation model.
+
+    :param hc:
+        A :class:`openquake.db.models.HazardCalculation` instance.
+
+    :returns:
+        A correlation object. See :mod:`nhlib.correlation` for more info.
+    """
+    correl_model_cls = getattr(
+        correlation,
+        '%sCorrelationModel' % hc.ground_motion_correlation_model,
+        None)
+    if correl_model_cls is None:
+        # There's no correlation model for this calculation.
+        return None
+
+    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
 class BaseHazardCalculatorNext(base.CalculatorNext):
