@@ -58,12 +58,20 @@ class EventBasedRiskCalculatorTestCase(
     def test_hazard_id(self):
         """
         Test that the hazard output used by the calculator is a
-        `openquake.db.models.HazardCurve` object
+        `openquake.db.models.GmfCollection` object
         """
 
-        self.assertEqual(1,
-                         models.GmfCollection.objects.filter(
-                             pk=self.calculator.hazard_id).count())
+        outputs = self.calculator.hazard_outputs(
+            self.calculator.rc.get_hazard_calculation())
+
+        self.assertEqual(1, outputs.count())
+
+        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
+
+        self.assertEqual(
+            1,
+            models.GmfCollection.objects.filter(
+                pk=self.calculator.hazard_output(outputs[0])[0]).count())
 
     def test_imt_validation(self):
         # Test the validation of the imt associated with the

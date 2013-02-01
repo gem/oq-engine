@@ -31,9 +31,9 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical_bcr(job_id, assets, hazard_getter, hazard_id,
+def classical_bcr(job_id, assets, hazard_getter, hazard,
                   vulnerability_function, vulnerability_function_retrofitted,
-                  bcr_distribution_id, lrem_steps_per_interval,
+                  output_containers, lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
@@ -48,11 +48,12 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
       list of Assets to take into account
     :param hazard_getter:
       Strategy used to get the hazard curves
-    :param int hazard_id
-      ID of the Hazard Output the risk calculation is based on
-    :param bcr_distribution_id
-      ID of the :class:`openquake.db.models.BCRDistribution` output
-      container used to store the computed bcr distribution
+    :param dict hazard:
+      A dictionary mapping hazard Output ID to HazardCurve ID
+    :param output_containers: A dictionary mapping hazard Output ID to
+      a tuple with only the ID of the
+      :class:`openquake.db.models.BCRDistribution` output container
+      used to store the computed bcr distribution
     :param int lrem_steps_per_interval
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param float interest_rate
@@ -60,26 +61,31 @@ def classical_bcr(job_id, assets, hazard_getter, hazard_id,
     :param float asset_life_expectancy
       The life expectancy used for every asset
     """
-    hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    calculator = api.BCR(
-        api.Classical(vulnerability_function, lrem_steps_per_interval),
-        api.Classical(vulnerability_function_retrofitted,
-                      lrem_steps_per_interval),
-        interest_rate,
-        asset_life_expectancy)
+    for hazard_output_id, hazard_data in hazard.items():
+        hazard_id, _ = hazard_data
+        (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-    with logs.tracing('getting hazard'):
-        hazard_curves = [hazard_getter(asset.site) for asset in assets]
+        hazard_getter = general.hazard_getter(hazard_getter, hazard_id)
 
-    with logs.tracing('computing risk over %d assets' % len(assets)):
-        asset_outputs = calculator(assets, hazard_curves)
+        calculator = api.BCR(
+            api.Classical(vulnerability_function, lrem_steps_per_interval),
+            api.Classical(vulnerability_function_retrofitted,
+                          lrem_steps_per_interval),
+            interest_rate,
+            asset_life_expectancy)
 
-    with logs.tracing('writing results'):
-        with transaction.commit_on_success(using='reslt_writer'):
-            for i, asset_output in enumerate(asset_outputs):
-                general.write_bcr_distribution(
-                    bcr_distribution_id, assets[i], asset_output)
+        with logs.tracing('getting hazard'):
+            hazard_curves = [hazard_getter(asset.site) for asset in assets]
+
+        with logs.tracing('computing risk over %d assets' % len(assets)):
+            asset_outputs = calculator(assets, hazard_curves)
+
+        with logs.tracing('writing results'):
+            with transaction.commit_on_success(using='reslt_writer'):
+                for i, asset_output in enumerate(asset_outputs):
+                    general.write_bcr_distribution(
+                        bcr_distribution_id, assets[i], asset_output)
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 classical_bcr.ignore_result = False
 
@@ -114,7 +120,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         return [self.rc.lrem_steps_per_interval,
                 self.rc.asset_life_expectancy, self.rc.interest_rate]
 
-    def create_outputs(self):
+    def create_outputs(self, hazard_output):
         """
         Create BCR Distribution output container, i.e. a
         :class:`openquake.db.models.BCRDistribution` instance and its
@@ -122,9 +128,12 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
         :returns: A list containing the output container id
         """
-        return [models.BCRDistribution.objects.create(
+        return [
+            models.BCRDistribution.objects.create(
+                hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution", "bcr_distribution")).pk]
+                    self.job, "BCR Distribution for hazard %s" % hazard_output,
+                    "bcr_distribution")).pk]
 
     def set_risk_models(self):
         """
