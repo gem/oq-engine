@@ -49,9 +49,9 @@ def gmf_realiz_per_task(num_realizations, num_concur_task):
     each task.
     """
 
-    ntimes_concur_task, spare_realizations = divmod(
+    realiz_per_task, spare_realizations = divmod(
                                   num_realizations, num_concur_task)
-    result = [ntimes_concur_task for _ in xrange(num_concur_task)]
+    result = [realiz_per_task for _ in xrange(num_concur_task)]
     if spare_realizations:
         result.append(spare_realizations)
     return spare_realizations > 0, result
