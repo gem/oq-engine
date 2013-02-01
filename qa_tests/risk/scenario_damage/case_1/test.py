@@ -15,18 +15,127 @@
 
 import os
 import csv
-import numpy
+import shutil
+import tempfile
+import StringIO
 
+import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from tests.utils import helpers
-
 from openquake.db import models
+from openquake import export
 
 
 class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+
+    EXPECTED_DMG_DIST_PER_ASSET_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <dmgDistPerAsset>
+    <damageStates>no_damage minor moderate severe collapse</damageStates>
+    <DDNode>
+      <gml:Point>
+        <gml:pos>9.15333 45.122</gml:pos>
+      </gml:Point>
+      <asset assetRef="asset_02">
+        <damage ds="no_damage" mean="6.0" stddev="0.0"/>
+        <damage ds="minor" mean="0.0" stddev="0.0"/>
+        <damage ds="moderate" mean="0.0" stddev="0.0"/>
+        <damage ds="severe" mean="0.0" stddev="0.0"/>
+        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      </asset>
+    </DDNode>
+    <DDNode>
+      <gml:Point>
+        <gml:pos>9.15 45.16667</gml:pos>
+      </gml:Point>
+      <asset assetRef="asset_01">
+        <damage ds="no_damage" mean="7.0" stddev="0.0"/>
+        <damage ds="minor" mean="0.0" stddev="0.0"/>
+        <damage ds="moderate" mean="0.0" stddev="0.0"/>
+        <damage ds="severe" mean="0.0" stddev="0.0"/>
+        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      </asset>
+    </DDNode>
+    <DDNode>
+      <gml:Point>
+        <gml:pos>9.14777 45.17999</gml:pos>
+      </gml:Point>
+      <asset assetRef="asset_03">
+        <damage ds="no_damage" mean="5.0" stddev="0.0"/>
+        <damage ds="minor" mean="0.0" stddev="0.0"/>
+        <damage ds="moderate" mean="0.0" stddev="0.0"/>
+        <damage ds="severe" mean="0.0" stddev="0.0"/>
+        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      </asset>
+    </DDNode>
+  </dmgDistPerAsset>
+</nrml>
+'''
+
+    EXPECTED_DMG_DIST_PER_TAXONOMY_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <dmgDistPerTaxonomy>
+    <damageStates>no_damage minor moderate severe collapse</damageStates>
+    <DDNode>
+      <taxonomy>RC/DMRF-D/LR</taxonomy>
+      <damage ds="no_damage" mean="12.0" stddev="0.0"/>
+      <damage ds="minor" mean="0.0" stddev="0.0"/>
+      <damage ds="moderate" mean="0.0" stddev="0.0"/>
+      <damage ds="severe" mean="0.0" stddev="0.0"/>
+      <damage ds="collapse" mean="0.0" stddev="0.0"/>
+    </DDNode>
+    <DDNode>
+      <taxonomy>RC/DMRF-D/HR</taxonomy>
+      <damage ds="no_damage" mean="6.0" stddev="0.0"/>
+      <damage ds="minor" mean="0.0" stddev="0.0"/>
+      <damage ds="moderate" mean="0.0" stddev="0.0"/>
+      <damage ds="severe" mean="0.0" stddev="0.0"/>
+      <damage ds="collapse" mean="0.0" stddev="0.0"/>
+    </DDNode>
+  </dmgDistPerTaxonomy>
+</nrml>
+'''
+
+    EXPECTED_DMG_DIST_TOTAL_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <totalDmgDist>
+    <damageStates>no_damage minor moderate severe collapse</damageStates>
+    <damage ds="no_damage" mean="18.0" stddev="0.0"/>
+    <damage ds="minor" mean="0.0" stddev="0.0"/>
+    <damage ds="moderate" mean="0.0" stddev="0.0"/>
+    <damage ds="severe" mean="0.0" stddev="0.0"/>
+    <damage ds="collapse" mean="0.0" stddev="0.0"/>
+  </totalDmgDist>
+</nrml>
+'''
+
+    EXPECTED_COLLAPSE_MAP_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <collapseMap>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>9.15333 45.122</gml:pos>
+      </gml:Point>
+      <cf assetRef="asset_02" mean="0.0" stdDev="0.0"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>9.15 45.16667</gml:pos>
+      </gml:Point>
+      <cf assetRef="asset_01" mean="0.0" stdDev="0.0"/>
+    </CMNode>
+    <CMNode>
+      <gml:Point>
+        <gml:pos>9.14777 45.17999</gml:pos>
+      </gml:Point>
+      <cf assetRef="asset_03" mean="0.0" stdDev="0.0"/>
+    </CMNode>
+  </collapseMap>
+</nrml>
+'''
 
     @attr('qa', 'risk', 'scenario_damage')
     def test(self):
@@ -65,11 +174,30 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
 
         return output.id
 
+    # no time to implement this: checking the XML includes it
     def actual_data(self, job):
         return []
 
+    # no time to implement this: checking the XML includes it
     def expected_data(self):
         return []
 
     def expected_outputs(self):
-        return []
+        return [self.EXPECTED_DMG_DIST_PER_ASSET_XML,
+                self.EXPECTED_DMG_DIST_PER_TAXONOMY_XML,
+                self.EXPECTED_DMG_DIST_TOTAL_XML]
+
+    def test_export_collapse_map(self):
+        # the collapse map is a special case of dmt_dist_per_asset
+        result_dir = tempfile.mkdtemp()
+        try:
+            job = self.run_risk(self.cfg, self.hazard_id())
+            output = models.Output.objects.get(
+                oq_job=job, output_type='dmg_dist_per_asset')
+            [exported_file] = export.risk.export_collapse_map(
+                output, result_dir)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_COLLAPSE_MAP_XML),
+                exported_file)
+        finally:
+            shutil.rmtree(result_dir)

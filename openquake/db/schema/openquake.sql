@@ -996,7 +996,6 @@ CREATE TABLE uiapi.output (
     --      complete_lt_ses (complete logic tree SES)
     --      loss_curve
     --      loss_map
-    --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
     --      dmg_dist_per_asset
@@ -1006,7 +1005,6 @@ CREATE TABLE uiapi.output (
         CHECK(output_type IN (
             'agg_loss_curve',
             'bcr_distribution',
-            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
