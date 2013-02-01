@@ -929,7 +929,12 @@ class RiskCalculation(djm.Model):
 
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
-    hazard_output = djm.ForeignKey("Output", null=False, blank=False)
+    hazard_output = djm.ForeignKey("Output", null=True, blank=True)
+
+    # the HazardCalculation object used by the risk calculation (each
+    # Output (ergo each logic tree realization) is considered
+    hazard_calculation = djm.ForeignKey("HazardCalculation",
+                                        null=True, blank=True)
 
     # A seed used to generate random values to be applied to
     # vulnerability functions
@@ -938,12 +943,8 @@ class RiskCalculation(djm.Model):
     ##################################
     # Probabilistic shared parameters
     ##################################
-    ASSET_CORRELATION_CHOICES = (
-        (u'perfect', u'Perfect'),
-        (u'uncorrelated', u'Uncorrelated'),
-    )
-    asset_correlation = djm.TextField(null=True, blank=True,
-                                      choices=ASSET_CORRELATION_CHOICES)
+    # 0 == uncorrelated, 1 == perfect correlation by taxonomy
+    asset_correlation = djm.FloatField(null=True, blank=True, default=0)
 
     #######################
     # Classical parameters:
@@ -971,13 +972,13 @@ class RiskCalculation(djm.Model):
         kwargs = _prep_geometry(kwargs)
         super(RiskCalculation, self).__init__(*args, **kwargs)
 
-    @property
-    def hazard_calculation(self):
+    def get_hazard_calculation(self):
         """
         :returns: the hazard calculation associated with the hazard
         output used as input in risk calculation
         """
-        return self.hazard_output.oq_job.hazard_calculation
+        return (self.hazard_calculation or
+                self.hazard_output.oq_job.hazard_calculation)
 
     @property
     def hazard_statistics(self):
@@ -1327,9 +1328,6 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
-
-    def is_ground_motion_field(self):
-        return self.output_type in ['gmf', 'gmf_scenario', 'complete_lt_gmf']
 
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
@@ -2113,7 +2111,8 @@ class LossMap(djm.Model):
     Holds metadata for loss maps
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="loss_map")
+    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2141,7 +2140,8 @@ class LossCurve(djm.Model):
     Holds the parameters common to a set of loss curves
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="loss_curve")
+    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_curve")
     aggregate = djm.BooleanField(default=False)
     insured = djm.BooleanField(default=False)
 
@@ -2183,7 +2183,9 @@ class BCRDistribution(djm.Model):
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="bcr_distribution")
+    hazard_output = djm.OneToOneField("Output",
+                                      related_name="risk_bcr_distribution")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2224,8 +2226,6 @@ class DmgDistPerAsset(djm.Model):
     exposure_data = djm.ForeignKey("ExposureData")
     mean = djm.FloatField()
     stddev = djm.FloatField()
-    # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset'
