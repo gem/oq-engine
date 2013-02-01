@@ -22,7 +22,11 @@ Core functionality for the scenario_damage risk calculator.
 
 import numpy
 from django import db
+
+from nrml.risk import parsers
 from risklib import api, scientific
+from risklib.models.input import FragilityModel, FragilityFunctionSeq
+
 from openquake.calculators.risk import general
 from openquake.utils import tasks, stats
 from openquake.db import models
@@ -218,28 +222,13 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             self.parse_fragility_model()
 
     def parse_fragility_model(self):
-        ## this is hard-coded for the moment
-        ## TODO: read the model from the XML file
-        from risklib.models import input as i
-        self.rc.inputs.get(input_type='fragility').path  # will be used
-        self.imt = "MMI"
-        imls = [7.0, 8.0, 9.0, 10.0, 11.0]
-        limit_states = ['minor', 'moderate', 'severe', 'collapse']
+        path = self.rc.inputs.get(input_type='fragility').path  # will be used
+        iterparse = iter(parsers.FragilityModelParser(path))
+        format, iml, limit_states = iterparse.next()
+        self.imt = iml['IMT']
         damage_states = ['no_damage'] + limit_states
-        fm = i.FragilityModel('discrete', imls, limit_states)
+        fm = FragilityModel(format, iml['imls'], limit_states)
         ffs = {}
-
-        ffs['RC/DMRF-D/LR'] = i.FragilityFunctionSeq(
-            fm, i.FragilityFunctionDiscrete,
-            [[0.0, 0.09, 0.56, 0.91, 0.98],
-             [0.0, 0.0, 0.04, 0.78, 0.96],
-             [0.0, 0.0, 0.0, 0.29, 0.88],
-             [0.0, 0.0, 0.0, 0.03, 0.63]])
-        ffs['RC/DMRF-D/HR'] = i.FragilityFunctionSeq(
-            fm, i.FragilityFunctionDiscrete,
-            [[0.0, 0.09, 0.56, 0.92, 0.99],
-             [0.0, 0.0, 0.04, 0.79, 0.97],
-             [0.0, 0.0, 0.0, 0.3, 0.89],
-             [0.0, 0.0, 0.0, 0.04, 0.64]])
-
+        for taxonomy, values, no_damage_limit in iterparse:
+            ffs[taxonomy] = FragilityFunctionSeq(fm, values, no_damage_limit)
         return fm, ffs, damage_states
