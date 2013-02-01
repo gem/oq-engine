@@ -76,8 +76,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
             "discrete", [0.1, 0.2], ["LS1", "LS2"])
 
         fragility_functions = input.FragilityFunctionSeq(
-            fragility_model, input.FragilityFunctionDiscrete,
-            [[0.8, 0.7], [0.8, 0.7]])
+            fragility_model, [[0.8, 0.7], [0.8, 0.7]])
 
         asset = scientific.Asset(0, number_of_units=1.0)
 

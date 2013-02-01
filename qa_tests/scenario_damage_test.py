@@ -55,28 +55,25 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                      (expected_means[-1], expected_stdevs[-1]))
 
     def test_continuous_ff(self):
-        fragility_model = input.FragilityModel(
+        fragility_model_continuous = input.FragilityModel(
             "continuous", None, ["LS1", "LS2"])
 
-        fragility_functions = dict(
-            RC=input.FragilityFunctionSeq(
-                fragility_model,
-                input.FragilityFunctionContinuous,
-                [(0.2, 0.05), (0.35, 0.10)]),
-            RM=input.FragilityFunctionSeq(
-                fragility_model,
-                input.FragilityFunctionContinuous,
-                [(0.25, 0.08), (0.40, 0.12)]),
-        )
+        fragility_functions_rc = input.FragilityFunctionSeq(
+            fragility_model_continuous, [(0.2, 0.05), (0.35, 0.10)])
+
+        fragility_functions_rm = input.FragilityFunctionSeq(
+            fragility_model_continuous, [(0.25, 0.08), (0.40, 0.12)])
 
         calculator_rm = api.ScenarioDamage(
-            fragility_model, fragility_functions['RM'])
+            fragility_model_continuous, fragility_functions_rm)
+
         calculator_rc = api.ScenarioDamage(
-            fragility_model, fragility_functions['RC'])
+            fragility_model_continuous, fragility_functions_rc)
 
         [asset_output_a1] = calculator_rm(
             [scientific.Asset(3000, number_of_units=3000)],
             [self.hazard['a1']])
+
         expected_means = [1562.6067550208, 1108.0189275488, 329.3743174305]
         expected_stdevs = [968.93502576, 652.7358505746, 347.3929450270]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
@@ -93,6 +90,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         [asset_output_a2] = calculator_rc(
             [scientific.Asset(2000, number_of_units=2000)],
             [self.hazard['a2']])
+
         expected_means = [56.7201291212, 673.1047565606, 1270.1751143182]
         expected_stdevs = [117.7802813522, 485.2023172324, 575.8724057319]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
@@ -119,28 +117,24 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         #    stddevs, [1075.3192939160, 1076.4342601834, 687.0910669304])
 
     def test_discrete_ff(self):
-        fragility_model = input.FragilityModel(
+        fragility_model_discrete = input.FragilityModel(
             "discrete", [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"])
 
-        fragility_functions = dict(
-            RC=input.FragilityFunctionSeq(
-                fragility_model,
-                input.FragilityFunctionDiscrete,
-                [[0.0073, 0.35, 0.74, 0.99],
-                 [0.001, 0.02, 0.25, 0.72]]),
-            RM=input.FragilityFunctionSeq(
-                fragility_model,
-                input.FragilityFunctionDiscrete,
-                [[0.01, 0.64, 0.95, 1.0],
-                 [0.0003, 0.05, 0.40, 0.86]])
-        )
+        fragility_functions_rc = input.FragilityFunctionSeq(
+            fragility_model_discrete,
+            [[0.0073, 0.35, 0.74, 0.99], [0.001, 0.02, 0.25, 0.72]])
+
+        fragility_functions_rm = input.FragilityFunctionSeq(
+            fragility_model_discrete,
+            [[0.01, 0.64, 0.95, 1.0], [0.0003, 0.05, 0.40, 0.86]])
 
         calculator_rm = api.ScenarioDamage(
-            fragility_model, fragility_functions['RM'])
+            fragility_model_discrete, fragility_functions_rm)
 
         [asset_output_a1] = calculator_rm(
             [scientific.Asset(3000, number_of_units=3000)],
             [self.hazard['a1']])
+
         expected_means = [875.81078203, 1448.29628694, 675.89293103]
         expected_stdevs = [757.54019289, 256.15319254, 556.76593931]
         self.assert_ok(asset_output_a1, expected_means, expected_stdevs)
@@ -148,6 +142,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         [asset_output_a3] = calculator_rm(
             [scientific.Asset(1000, number_of_units=1000)],
             [self.hazard['a3']])
+
         expected_means = [224.4178072, 465.64396155, 309.93823125]
         expected_stdevs = [220.65161409, 136.92817619, 246.84424913]
         self.assert_ok(asset_output_a3, expected_means, expected_stdevs)
@@ -155,10 +150,11 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         rm = asset_output_a1.fractions + asset_output_a3.fractions
 
         calculator_rc = api.ScenarioDamage(
-            fragility_model, fragility_functions['RC'])
+            fragility_model_discrete, fragility_functions_rc)
         [asset_output_a2] = calculator_rc(
             [scientific.Asset(2000, number_of_units=2000)],
             [self.hazard['a2']])
+
         expected_means = [344.90849228, 747.62412976, 907.46737796]
         expected_stdevs = [300.61123079, 144.64852962, 417.30737837]
         self.assert_ok(asset_output_a2, expected_means, expected_stdevs)
