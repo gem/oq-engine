@@ -185,7 +185,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def create_outputs(self, hazard_output):
         """
-        Create the three kind of outputs of a ScenarioDamage calculator
+        Create the three kinds of outputs of a ScenarioDamage calculator
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
         populate the corresponding entries in DmgState. Return the
         id of the dmg_dist_per_asset output, to be passed to the celery

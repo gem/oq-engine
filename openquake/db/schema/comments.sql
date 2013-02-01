@@ -277,7 +277,9 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - gmf
     - loss_curve
     - loss_map
-    - collapse_map
+    - dmg_dist_per_asset
+    - dmg_dist_per_taxonomy
+    - dmg_dist_total
     - bcr_distribution';
 
 
