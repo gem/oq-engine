@@ -62,9 +62,8 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
         outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
         with logs.tracing('save statistics per site'), \
                 db.transaction.commit_on_success(using='reslt_writer'):
-            ddpa_id = output_containers[hazard_id]
             for output in outputs:
-                save_dist_per_asset(output.fractions, ddpa_id, output.asset)
+                save_dist_per_asset(output.fractions, job_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
@@ -74,13 +73,11 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
 scenario_damage.ignore_result = False
 
 
-### XXX: the three utilities below could go in models ###
-
-def save_dist_per_asset(fractions, output_id, asset):
+def save_dist_per_asset(fractions, job_id, asset):
     """
     Save the damage distribution for a given asset.
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(job_id=job_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -91,12 +88,12 @@ def save_dist_per_asset(fractions, output_id, asset):
         ddpa.save()
 
 
-def save_dist_per_taxonomy(fractions, output_id, taxonomy):
+def save_dist_per_taxonomy(fractions, job_id, taxonomy):
     """
     Save the damage distribution for a given taxonomy, by summing over
     all assets.
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(job_id=job_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -107,11 +104,11 @@ def save_dist_per_taxonomy(fractions, output_id, taxonomy):
         ddpt.save()
 
 
-def save_dist_total(fractions, output_id):
+def save_dist_total(fractions, job_id):
     """
     Save the total distribution, by summing over all assets and taxonomies.
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(job_id=job_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -173,12 +170,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         tot = None
         for taxonomy, fractions in self.ddpt.iteritems():
-            save_dist_per_taxonomy(fractions, self.ddpt_output.id, taxonomy)
+            save_dist_per_taxonomy(fractions, self.job.id, taxonomy)
             if tot is None:  # only the first time
                 tot = numpy.zeros(fractions.shape)
             tot += fractions
         if tot is not None:
-            save_dist_total(tot, self.ddt_output.id)
+            save_dist_total(tot, self.job.id)
 
     @property
     def calculator_parameters(self):
@@ -187,41 +184,35 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.imt]
 
-    def create_outputs(self, hazard_output):
+    # must be overridden, otherwise the parent will create loss curves
+    def create_outputs(self, hazard_ouput):
         """
         Create the three kinds of outputs of a ScenarioDamage calculator
-        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
-        populate the corresponding entries in DmgState. Return the
-        id of the dmg_dist_per_asset output, to be passed to the celery
-        worker. Notice that the outputs ddpt_output and ddt_output do
-        not need to be passed to the workers, since the aggregation
-        per taxonomy and total are performed in the controller node,
-        in the task_completion_hook.
+        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total
         """
-        ddpa_output = models.Output.objects.create_output(
+        models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
-        self.ddpt_output = models.Output.objects.create_output(
+        models.Output.objects.create_output(
             self.job, "Damage Distribution per Taxonomy",
             "dmg_dist_per_taxonomy")
 
-        self.ddt_output = models.Output.objects.create_output(
+        models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        for output in ddpa_output, self.ddpt_output, self.ddt_output:
-            for lsi, dstate in enumerate(self.damage_states):
-                ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
-                ds.save()
-
-        return ddpa_output.id
-
     def set_risk_models(self):
+        """
+        """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
+        for lsi, dstate in enumerate(self.damage_states):
+            models.DmgState(job=self.job, dmg_state=dstate, lsi=lsi).save()
 
     def parse_fragility_model(self):
+        """
+        """
         path = self.rc.inputs.get(input_type='fragility').path  # will be used
         iterparse = iter(parsers.FragilityModelParser(path))
         format, iml, limit_states = iterparse.next()
