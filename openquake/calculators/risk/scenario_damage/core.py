@@ -187,8 +187,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     # must be overridden, otherwise the parent will create loss curves
     def create_outputs(self, hazard_ouput):
         """
-        Create the three kinds of outputs of a ScenarioDamage calculator
-        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total
+        Create the outputs of a ScenarioDamage calculator
+        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total, collapse_map
         """
         models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
@@ -201,6 +201,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
+
+        models.Output.objects.create_output(
+            self.job, "Collapse Map per Asset",
+            "collapse_map")
 
     def set_risk_models(self):
         """
