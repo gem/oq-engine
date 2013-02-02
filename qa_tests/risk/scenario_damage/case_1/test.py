@@ -185,9 +185,10 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET_XML,
                 self.EXPECTED_DMG_DIST_PER_TAXONOMY_XML,
-                self.EXPECTED_DMG_DIST_TOTAL_XML]
+                self.EXPECTED_DMG_DIST_TOTAL_XML,
+                self.EXPECTED_COLLAPSE_MAP_XML]
 
-    def test_export_collapse_map(self):
+    def _test_export_collapse_map(self):
         # the collapse map is a special case of dmt_dist_per_asset
         result_dir = tempfile.mkdtemp()
         try:
