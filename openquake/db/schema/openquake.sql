@@ -1001,6 +1001,7 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_per_asset
     --      dmg_dist_per_taxonomy
     --      dmg_dist_total
+    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
@@ -1011,6 +1012,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
+            'collapse_map',
             'gmf',
             'gmf_scenario',
             'hazard_curve',

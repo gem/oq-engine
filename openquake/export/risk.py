@@ -145,6 +145,7 @@ def export_bcr_distribution(output, target_dir):
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
+    # XXX: clearly this is not a good approach for large exposures
     @core.makedirs
     def export_dmg_dist(output, target_dir):
         """
@@ -158,12 +159,16 @@ def make_dmg_dist_export(damagecls, writercls, filename):
         """
         job_id = output.oq_job.id
         file_path = os.path.join(target_dir, filename % job_id)
-        dmg_states = models.DmgState.objects.filter(
-            job_id=job_id).order_by('lsi')
-        writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
-        # XXX: clearly this is not a good approach for large exposures
-        data = sum([list(damagecls.objects.filter(dmg_state=ds))
-                   for ds in dmg_states], [])
+        dmg_states = list(models.DmgState.objects.filter(
+            job_id=job_id).order_by('lsi'))
+        if writercls is writers.CollapseMapXMLWriter:  # special case
+            writer = writercls(file_path)
+            data = damagecls.objects.filter(
+                dmg_state=dmg_states[-1]).order_by('exposure_data')
+        else:
+            writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
+            data = sum([list(damagecls.objects.filter(dmg_state=ds))
+                        for ds in dmg_states], [])
         writer.serialize(data)
         return [file_path]
 
@@ -181,26 +186,6 @@ export_dmg_dist_total = make_dmg_dist_export(
     models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
     "dmg-dist-total-%s.xml")
 
-
-# this is a special case of DmgDistPerAsset for the outmost damage state
-@core.makedirs
-def export_collapse_map(output, target_dir):
-    """
-    Export the collapse map identified
-    by the given output to the `target_dir`.
-
-    :param output: db output record which identifies the distribution.
-    :type output: :class:`openquake.db.models.Output`
-    :param target_dir: destination directory of the exported file.
-    :type target_dir: string
-    """
-    job_id = output.oq_job.id
-    file_name = "collapse-map-%s.xml" % job_id
-    file_path = os.path.join(target_dir, file_name)
-    dmg_states = models.DmgState.objects.filter(job_id=job_id).order_by('lsi')
-    collapse = list(dmg_states)[-1]  # the last state
-    writer = writers.CollapseMapXMLWriter(file_path)
-    data = models.DmgDistPerAsset.objects.filter(
-        dmg_state=collapse).order_by('exposure_data')
-    writer.serialize(data)
-    return [file_path]
+export_collapse_map = make_dmg_dist_export(
+    models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
+    "collapse-map-%s.xml")
