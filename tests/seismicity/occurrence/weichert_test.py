@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
 
-# -*- coding: utf-8 -*-
-
 """
 Unit tests for the Weichert algorithm class which computes 
 seismicity occurrence parameters.
@@ -77,7 +75,7 @@ class WeichertTestCase(unittest.TestCase):
         numobs[22:] *= 100
         # Define completeness window
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        self.compl = compl.transpose()
+        self.compl = np.flipud(compl.transpose())
         # Compute the number of observations (i.e. earthquakes) in each 
         # magnitude bin
         numobs = np.around(numobs)
