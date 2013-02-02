@@ -2209,7 +2209,7 @@ class BCRDistributionData(djm.Model):
 class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
-    output = djm.ForeignKey("Output")
+    job = djm.ForeignKey("OqJob")
     dmg_state = djm.TextField(
         help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(

@@ -156,9 +156,10 @@ def make_dmg_dist_export(damagecls, writercls, filename):
         :param target_dir: destination directory of the exported file.
         :type target_dir: string
         """
-        file_path = os.path.join(target_dir, filename % output.oq_job.id)
+        job_id = output.oq_job.id
+        file_path = os.path.join(target_dir, filename % job_id)
         dmg_states = models.DmgState.objects.filter(
-            output=output).order_by('lsi')
+            job_id=job_id).order_by('lsi')
         writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
         # XXX: clearly this is not a good approach for large exposures
         data = sum([list(damagecls.objects.filter(dmg_state=ds))
@@ -193,9 +194,10 @@ def export_collapse_map(output, target_dir):
     :param target_dir: destination directory of the exported file.
     :type target_dir: string
     """
-    file_name = "collapse-map-%s.xml" % output.oq_job.id
+    job_id = output.oq_job.id
+    file_name = "collapse-map-%s.xml" % job_id
     file_path = os.path.join(target_dir, file_name)
-    dmg_states = models.DmgState.objects.filter(output=output).order_by('lsi')
+    dmg_states = models.DmgState.objects.filter(job_id=job_id).order_by('lsi')
     collapse = list(dmg_states)[-1]  # the last state
     writer = writers.CollapseMapXMLWriter(file_path)
     data = models.DmgDistPerAsset.objects.filter(
