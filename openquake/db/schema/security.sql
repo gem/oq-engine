@@ -288,7 +288,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 
 -- uiapi.hazard_calculation
 GRANT SELECT ON uiapi.hazard_calculation TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON uiapi.hazard_calculation TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_calculation TO oq_job_init;
 
 -- uiapi.input2hcalc
 GRANT SELECT ON uiapi.input2hcalc TO GROUP openquake;

@@ -135,10 +135,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization))
 
-    logs.LOG.debug('> creating site collection')
-    site_coll = haz_general.get_site_collection(hc)
-    logs.LOG.debug('< done creating site collection')
-
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -151,7 +147,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        sources_sites = ((src, site_coll) for src in sources)
+        sources_sites = ((src, hc.site_collection) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
         filtered_sources = (src for src, _ in ssd_filter(sources_sites))
@@ -189,7 +185,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
                 gmf_calc_kwargs = {
                     'rupture': rupture,
-                    'sites': site_coll,
+                    'sites': hc.site_collection,
                     'imts': imts,
                     'gsim': gsims[rupture.tectonic_region_type],
                     'truncation_level': hc.truncation_level,
@@ -602,6 +598,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # If no site model file was specified, reference parameters are used
         # for all sites.
         self.initialize_site_model()
+
+        # Once the site model is init'd, create and cache the site collection;
+        self.hc.init_site_collection()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach

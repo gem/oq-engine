@@ -322,6 +322,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # (if a site model was specified, that is).
         self.initialize_site_model()
 
+        # Once the site model is init'd, create and cache the site collection;
+        self.hc.init_site_collection()
+
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
@@ -405,9 +408,9 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
             hazard_calculation=self.hc, is_complete=False)
 
         # then distribute tasks for disaggregation histogram computation
-        site_coll = haz_general.get_site_collection(self.hc)
         for lt_rlz in realizations:
-            for block in general_utils.block_splitter(site_coll, block_size):
+            for block in general_utils.block_splitter(self.hc.site_collection,
+                                                      block_size):
                 # job_id, Site block, lt rlz, calc_type
                 yield (self.job.id, block, lt_rlz.id, 'disagg')
 
