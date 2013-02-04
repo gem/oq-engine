@@ -14,38 +14,29 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import tempfile
-import shutil
 from nose.plugins.attrib import attr
+from unittest import skip
 from numpy.testing import assert_almost_equal
 
 from openquake import export
+from openquake.db import models
 from qa_tests import _utils as qa_utils
 
 
-class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
+class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
 
+    @skip
     @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id)
+        gmfs = list(qa_utils.get_gmfs_per_site(output, 'PGA'))
+        realizations = 1e5 
+        first_value = 0.5
+        second_value = 1.0
+        gmfs_within_range_fst = qa_utils.count(first_value, gmfs[0], gmfs[1]) 
+        gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
 
-        actual = list(qa_utils.get_medians(output, 'PGA'))
-        expected_medians = [0.48155582, 0.21123045, 0.14484586]
-
-        assert_almost_equal(actual, expected_medians, decimal=2)
-
-    @attr('qa', 'hazard', 'scenario')
-    def test_export(self):
-        result_dir = tempfile.mkdtemp()
-
-        try:
-            cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-            job = self.run_hazard(cfg)
-            [output] = export.core.get_outputs(job.id)
-            [exported_file] = export.hazard.export(
-                output.id, result_dir)
-            self.assertEqual(open(exported_file).read().count('\n'), 314)
-        finally:
-            shutil.rmtree(result_dir)
+        self.assertEqual(gmfs_within_range_fst / realizations, 0.055)
+        self.assertEqual(gmfs_within_range_snd / realizations, 0.0068)
