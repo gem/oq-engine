@@ -346,27 +346,6 @@ class ParsedRupture(djm.Model):
 ## Tables in the 'uiapi' schema.
 
 
-class Upload(djm.Model):
-    '''
-    A batch of OpenQuake input files uploaded by the user
-    '''
-    owner = djm.ForeignKey('OqUser')
-    description = djm.TextField(default='')
-    path = djm.TextField(unique=True)
-    STATUS_CHOICES = (
-        (u'pending', u'Pending'),
-        (u'running', u'Running'),
-        (u'failed', u'Failed'),
-        (u'succeeded', u'Succeeded'),
-    )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = djm.IntegerField(default=0)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'uiapi\".\"upload'
-
-
 class Input(djm.Model):
     '''
     A single OpenQuake input file uploaded by the user.
@@ -459,17 +438,6 @@ class Src2ltsrc(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"src2ltsrc'
-
-
-class Input2upload(djm.Model):
-    '''
-    Associates input model files and uploads.
-    '''
-    input = djm.ForeignKey('Input')
-    upload = djm.ForeignKey('Upload')
-
-    class Meta:
-        db_table = 'uiapi\".\"input2upload'
 
 
 class OqJob(djm.Model):

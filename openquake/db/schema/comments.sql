@@ -219,7 +219,7 @@ COMMENT ON COLUMN riskr.dmg_dist_per_asset.location IS 'Geometry for the computa
 COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
 
 -- uiapi schema tables ------------------------------------------
-COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
+COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file imported by the user';
 COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5sum digest, used to detect identical input model files';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
@@ -232,8 +232,6 @@ COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the se
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.input2job IS 'Associate inputs and jobs';
-
-COMMENT ON TABLE uiapi.input2upload IS 'Associate inputs and uploads';
 
 COMMENT ON TABLE uiapi.job2profile IS 'Associate jobs with their profiles';
 
@@ -287,11 +285,6 @@ COMMENT ON TABLE uiapi.src2ltsrc IS '
 Associate an "lt_source" type input (a logic tree source) with "source"
 type inputs (hazard sources referenced by the logic tree source).
 This is needed for worker-side logic tree processing.';
-
-COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
-COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
-COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
-COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or succeeded.';
 
 
 -- uiapi.error_msg
