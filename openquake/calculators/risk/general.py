@@ -123,8 +123,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        allowed_imts = (self.hc.intensity_measure_types or
-                self.hc.intensity_measure_types_and_levels.keys())
+        allowed_imts = self.hc.allowed_imts()
 
         if not self.imt in allowed_imts:
             raise RuntimeError(
