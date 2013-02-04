@@ -100,6 +100,8 @@ def export_loss_curve(output, target_dir):
         output.loss_curve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
 
+export_ins_loss_curve = export_loss_curve
+
 
 @core.makedirs
 def export_loss_map(output, target_dir):
@@ -142,6 +144,61 @@ def export_bcr_distribution(output, target_dir):
     return [args['path']]
 
 
+def make_dmg_dist_export(damagecls, writercls, filename):
+    @core.makedirs
+    def export_dmg_dist(output, target_dir):
+        """
+        Export the damage distribution identified
+        by the given output to the `target_dir`.
+
+        :param output: db output record which identifies the distribution.
+        :type output: :py:class:`openquake.db.models.Output`
+        :param target_dir: destination directory of the exported file.
+        :type target_dir: string
+        """
+        file_path = os.path.join(target_dir, filename % output.oq_job.id)
+        dmg_states = models.DmgState.objects.filter(
+            output=output).order_by('lsi')
+        writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
+        # XXX: clearly this is not a good approach for large exposures
+        data = sum([list(damagecls.objects.filter(dmg_state=ds))
+                   for ds in dmg_states], [])
+        writer.serialize(data)
+        return [file_path]
+
+    return export_dmg_dist
+
+export_dmg_dist_per_asset = make_dmg_dist_export(
+    models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter,
+    "dmg-dist-asset-%s.xml")
+
+export_dmg_dist_per_taxonomy = make_dmg_dist_export(
+    models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter,
+    "dmg-dist-taxonomy-%s.xml")
+
+export_dmg_dist_total = make_dmg_dist_export(
+    models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
+    "dmg-dist-total-%s.xml")
+
+
+# this is a special case of DmgDistPerAsset for the outmost damage state
 @core.makedirs
-def export_ins_loss_curve(*args, **kwargs):
-    return export_loss_curve(*args, **kwargs)
+def export_collapse_map(output, target_dir):
+    """
+    Export the collapse map identified
+    by the given output to the `target_dir`.
+
+    :param output: db output record which identifies the distribution.
+    :type output: :class:`openquake.db.models.Output`
+    :param target_dir: destination directory of the exported file.
+    :type target_dir: string
+    """
+    file_name = "collapse-map-%s.xml" % output.oq_job.id
+    file_path = os.path.join(target_dir, file_name)
+    dmg_states = models.DmgState.objects.filter(output=output).order_by('lsi')
+    collapse = list(dmg_states)[-1]  # the last state
+    writer = writers.CollapseMapXMLWriter(file_path)
+    data = models.DmgDistPerAsset.objects.filter(
+        dmg_state=collapse).order_by('exposure_data')
+    writer.serialize(data)
+    return [file_path]

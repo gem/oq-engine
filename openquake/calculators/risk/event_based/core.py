@@ -204,8 +204,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         :class:`openquake.db.models.GmfCollection` object that stores
         the ground motion fields associated with `output`.
         """
-
-        if not output.is_ground_motion_field():
+        if not output.output_type in ('gmf', 'complete_lt_gmf'):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field")
 

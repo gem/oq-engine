@@ -80,7 +80,8 @@ _FILE_PARAMS_TO_INPUT_TYPE = {
     'vulnerability_file': 'vulnerability',
     'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
     'exposure_file': 'exposure',
-    'rupture_model_file': 'rupture_model'
+    'rupture_model_file': 'rupture_model',
+    'fragility_file': 'fragility',
 }
 
 
@@ -233,8 +234,8 @@ def _identical_input(input_type, digest, owner):
     """
     queryset = models.Input.objects.filter(
         digest=digest, owner=owner, input_type=input_type).filter(
-        djm.Q(hazard_calculations__oqjob__status="complete") |
-        djm.Q(risk_calculations__oqjob__status="complete"))
+            djm.Q(hazard_calculations__oqjob__status="complete") |
+            djm.Q(risk_calculations__oqjob__status="complete"))
 
     if queryset.exists():
         return queryset.latest('last_update')
