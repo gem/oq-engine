@@ -20,6 +20,7 @@
 import os
 import random
 
+
 import risklib
 
 from django import db
@@ -27,7 +28,7 @@ from django import db
 from openquake import logs
 from openquake.utils import config
 from openquake.db import models
-from openquake.calculators import base
+from openquake.calculators import base, post_processing
 from openquake import export
 from openquake.utils import stats
 from openquake.calculators.risk import hazard_getters
@@ -35,6 +36,10 @@ from nrml.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.input import exposure as exposure_writer
+
+
+#: Maximum number of loss curves to cache in buffers, for selects and inserts
+_CURVE_CACHE_SIZE = 100000
 
 
 class BaseRiskCalculator(base.CalculatorNext):
@@ -117,6 +122,13 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         with logs.tracing('store risk model'):
             self.set_risk_models()
+
+        allowed_imts = self.hc.intensity_measure_types_and_levels.keys()
+
+        if not self.imt in allowed_imts:
+            raise RuntimeError(
+                "There is no hazard output in the intensity measure %s" %
+                self.imt)
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -240,6 +252,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         Result objects should be ordered (e.g. by id) and be
         associated to an hazard logic tree realization
         """
+        # FIXME(lp). It should accept an imt as a second parameter
+        # instead of getting it from self.imt
         raise NotImplementedError
 
     def hazard_output(self, output):
@@ -269,6 +283,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         return self.job.risk_calculation
 
     @property
+    def hc(self):
+        """
+        A shorter and more convenient way of accessing the
+        :class:`~openquake.db.models.HazardCalculation`.
+        """
+        return self.rc.get_hazard_calculation()
+
+    @property
     def calculator_parameters(self):
         """
         The specific calculation parameters passed as args to the
@@ -291,9 +313,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('storing exposure'):
             path = os.path.join(self.rc.base_path, exposure_model_input.path)
             exposure_stream = parsers.ExposureModelParser(path)
-            writer = exposure_writer.ExposureDBWriter(exposure_model_input)
-            writer.serialize(exposure_stream)
-        return writer.model
+            w = exposure_writer.ExposureDBWriter(exposure_model_input)
+            w.serialize(exposure_stream)
+        return w.model
 
     def _initialize_progress(self, total):
         """Record the total/completed number of work items.
@@ -386,7 +408,32 @@ class BaseRiskCalculator(base.CalculatorNext):
                             poe, hazard_output.id),
                         "loss_map"),
                     poe=poe).pk
-        return [loss_curve_id, loss_map_ids]
+
+        if (self.rc.mean_loss_curves and
+            len(self.considered_hazard_outputs()) > 1):
+            mean_loss_curve_id = models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='loss-curves',
+                    output_type='loss_curve'),
+                statistics='mean').id
+        else:
+            mean_loss_curve_id = None
+
+        quantile_loss_curve_ids = {}
+        if len(self.considered_hazard_outputs()) > 1:
+            for quantile in self.rc.quantile_loss_curves or []:
+                quantile_loss_curve_ids[quantile] = (
+                    models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name='quantile(%s)-curves' % quantile,
+                            output_type='loss_curve'),
+                        statistics='quantile',
+                        quantile=quantile).id)
+
+        return [loss_curve_id, loss_map_ids,
+                mean_loss_curve_id, quantile_loss_curve_ids]
 
 
 def hazard_getter(hazard_getter_name, hazard_id, *args):
@@ -493,3 +540,47 @@ def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
         average_annual_loss_retrofitted=asset_output.eal_retrofitted,
         bcr=asset_output.bcr,
         location=asset.site)
+
+
+def curve_statistics(asset, loss_ratio_curves, curves_weights,
+                     mean_loss_curve_id, quantile_loss_curve_ids,
+                     explicit_quantiles, assume_equal):
+
+    if assume_equal == 'support':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+    elif assume_equal == 'image':
+        loss_ratios = loss_ratio_curves[0].abscissae
+        curves_poes = [curve.ordinate_for(loss_ratios)
+                       for curve in loss_ratio_curves]
+    else:
+        raise NotImplementedError
+
+    for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
+        if explicit_quantiles:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, curves_weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(
+                curves_poes, quantile)
+
+        models.LossCurveData.objects.create(
+            loss_curve_id=quantile_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=q_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)
+
+    # then means
+    if mean_loss_curve_id:
+        mean_curve = post_processing.mean_curve(
+            curves_poes, weights=curves_weights)
+
+        models.LossCurveData.objects.create(
+            loss_curve_id=mean_loss_curve_id,
+            asset_ref=asset.asset_ref,
+            poes=mean_curve.tolist(),
+            loss_ratios=loss_ratios,
+            losses=loss_ratios * asset.value,
+            location=asset.site.wkt)

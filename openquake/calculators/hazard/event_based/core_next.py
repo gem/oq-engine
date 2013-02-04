@@ -38,7 +38,6 @@ import nhlib.source
 import numpy.random
 
 from django.db import transaction
-from nhlib import correlation
 from nhlib.calc import filters
 from nhlib.calc import gmf as gmf_calc
 from nhlib.calc import stochastic
@@ -58,11 +57,6 @@ from openquake.job.validation import MAX_SINT_32
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
-
-#: Ground motion correlation model map
-GM_CORRELATION_MODEL_MAP = {
-    'JB2009': correlation.JB2009CorrelationModel,
-}
 
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
@@ -128,7 +122,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         correl_model = None
         if hc.ground_motion_correlation_model is not None:
-            correl_model = _get_correl_model(hc)
+            correl_model = haz_general.get_correl_model(hc)
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
@@ -251,27 +245,6 @@ def _create_gmf_cache(n_sites, imts):
         cache[imt] = numpy.empty((n_sites, 0))
 
     return cache
-
-
-def _get_correl_model(hc):
-    """
-    Helper function for constructing the appropriate correlation model.
-
-    :param hc:
-        A :class:`openquake.db.models.HazardCalculation` instance.
-
-    :returns:
-        A correlation object. See :mod:`nhlib.correlation` for more info.
-    """
-    correl_model_cls = getattr(
-        correlation,
-        '%sCorrelationModel' % hc.ground_motion_correlation_model,
-        None)
-    if correl_model_cls is None:
-        # There's no correlation model for this calculation.
-        return None
-
-    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
 def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,

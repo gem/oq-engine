@@ -31,7 +31,7 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard_getter, hazard, seed,
+def event_based_bcr(job_id, assets, hazard_getter_name, hazard, seed,
                     vulnerability_function, vulnerability_function_retrofitted,
                     output_containers, imt, time_span, tses,
                     loss_curve_resolution, asset_correlation,
@@ -47,8 +47,9 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard, seed,
         ID of the currently running job.
     :param assets:
         list of assets to compute.
-    :param hazard_getter:
-        Strategy used to get the hazard inputs (ground motion fields).
+    :param str hazard_getter_name: class name of a class defined in the
+      :mod:`openquake.calculators.risk.hazard_getters` to be instantiated to
+      get the hazard curves
     :param dict hazard:
       A dictionary mapping hazard Output ID to GmfCollection ID
     :param output_containers: A dictionary mapping hazard Output ID to
@@ -78,7 +79,7 @@ def event_based_bcr(job_id, assets, hazard_getter, hazard, seed,
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
         hazard_getter = general.hazard_getter(
-            hazard_getter, hazard_id, imt)
+            hazard_getter_name, hazard_id, imt)
 
         calculator = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
@@ -137,7 +138,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         super_params = super(EventBasedBCRRiskCalculator,
                              self).calculator_parameters
 
-        return super_params[2:] + [
+        return super_params[2:-1] + [
             self.rc.asset_life_expectancy, self.rc.interest_rate
         ]
 
