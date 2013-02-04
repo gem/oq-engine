@@ -177,8 +177,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         # Now do checks which require more context.
 
         # Cannot specify region AND sites
-        if (hc.region is not None
-            and hc.sites is not None):
+        if (hc.region is not None and hc.sites is not None):
             all_valid = False
             err = 'Cannot specify `region` and `sites`. Choose one.'
             self._add_error('region', err)
@@ -420,6 +419,8 @@ class ClassicalRiskForm(BaseOQModelForm):
             'region_constraint',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
+            'mean_loss_curves',
+            'quantile_loss_curves',
         )
 
 
@@ -465,6 +466,18 @@ class EventBasedRiskForm(BaseOQModelForm):
             'insured_losses',
             'master_seed',
             'asset_correlation',
+            'mean_loss_curves',
+            'quantile_loss_curves',
+        )
+
+
+class ScenarioDamageForm(BaseOQModelForm):
+    calc_mode = 'scenario_damage'
+
+    class Meta:
+        fields = (
+            'description',
+            'region_constraint',
         )
 
 
@@ -704,12 +717,12 @@ def truncation_level_is_valid(mdl):
         if mdl.truncation_level is not None:
             if mdl.truncation_level <= 0:
                 return False, [
-                        'Truncation level must be > 0 for disaggregation'
-                           ' calculations']
+                    'Truncation level must be > 0 for disaggregation'
+                    ' calculations']
         else:
             return False, [
-                        'Truncation level must be set for disaggregation'
-                           ' calculations and it must be > 0']
+                'Truncation level must be set for disaggregation'
+                ' calculations and it must be > 0']
     else:
         if mdl.truncation_level is not None:
             if mdl.truncation_level < 0:
@@ -736,6 +749,20 @@ def quantile_hazard_curves_is_valid(mdl):
     if qhc is not None:
         if not all([0.0 <= x <= 1.0 for x in qhc]):
             return False, ['Quantile hazard curve values must in the range '
+                           '[0, 1]']
+    return True, []
+
+
+def mean_loss_curves_is_valid(_mdl):
+    return True, []
+
+
+def quantile_loss_curves_is_valid(mdl):
+    qhc = mdl.quantile_loss_curves
+
+    if qhc is not None:
+        if not all([0.0 <= x <= 1.0 for x in qhc]):
+            return False, ['Quantile loss curve values must in the range '
                            '[0, 1]']
     return True, []
 
@@ -877,7 +904,7 @@ def insured_losses_is_valid(_mdl):
 def loss_curve_resolution_is_valid(mdl):
     if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
-            mdl.loss_curve_resolution < 1):
+                mdl.loss_curve_resolution < 1):
             return False, ['Loss Curve Resolution must be > 1.']
     return True, []
 

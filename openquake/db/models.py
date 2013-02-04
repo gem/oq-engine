@@ -46,6 +46,12 @@ from openquake.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
+#: Kind of supported curve statistics
+STAT_CHOICES = (
+    (u'mean', u'Mean'),
+    (u'quantile', u'Quantile'))
+
+
 #: System Reference ID used for geometry objects
 DEFAULT_SRID = 4326
 
@@ -340,27 +346,6 @@ class ParsedRupture(djm.Model):
 ## Tables in the 'uiapi' schema.
 
 
-class Upload(djm.Model):
-    '''
-    A batch of OpenQuake input files uploaded by the user
-    '''
-    owner = djm.ForeignKey('OqUser')
-    description = djm.TextField(default='')
-    path = djm.TextField(unique=True)
-    STATUS_CHOICES = (
-        (u'pending', u'Pending'),
-        (u'running', u'Running'),
-        (u'failed', u'Failed'),
-        (u'succeeded', u'Succeeded'),
-    )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = djm.IntegerField(default=0)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'uiapi\".\"upload'
-
-
 class Input(djm.Model):
     '''
     A single OpenQuake input file uploaded by the user.
@@ -379,7 +364,7 @@ class Input(djm.Model):
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
-        (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
+        (u'vulnerability_retrofitted', u'Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
@@ -453,17 +438,6 @@ class Src2ltsrc(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"src2ltsrc'
-
-
-class Input2upload(djm.Model):
-    '''
-    Associates input model files and uploads.
-    '''
-    input = djm.ForeignKey('Input')
-    upload = djm.ForeignKey('Upload')
-
-    class Meta:
-        db_table = 'uiapi\".\"input2upload'
 
 
 class OqJob(djm.Model):
@@ -920,7 +894,7 @@ class RiskCalculation(djm.Model):
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
         # (u'scenario', u'Scenario'),
-        # (u'scenario_damage', u'Scenario Damage'),
+        (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
@@ -939,6 +913,15 @@ class RiskCalculation(djm.Model):
     # A seed used to generate random values to be applied to
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
+
+    mean_loss_curves = fields.OqNullBooleanField(
+        help_text='Compute mean loss curves',
+        null=True,
+        blank=True)
+    quantile_loss_curves = fields.FloatArrayField(
+        help_text='Compute quantile loss curves',
+        null=True,
+        blank=True)
 
     ##################################
     # Probabilistic shared parameters
@@ -1012,6 +995,14 @@ class RiskCalculation(djm.Model):
     @property
     def exposure_model(self):
         return self.inputs.get(input_type="exposure").exposuremodel
+
+    def will_compute_loss_curve_statistics(self):
+        """
+        Return true if this risk calculation will compute mean and/or
+        quantile loss curves
+        """
+        return ((self.mean_loss_curves or self.quantile_loss_curves) and
+                self.calculation_mode in ['classical', 'event_based'])
 
 
 def _prep_geometry(kwargs):
@@ -1300,7 +1291,6 @@ class Output(djm.Model):
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'collapse_map', u'Collapse map'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
@@ -1328,9 +1318,6 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
-
-    def is_ground_motion_field(self):
-        return self.output_type in ['gmf', 'complete_lt_gmf']
 
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
@@ -1361,10 +1348,6 @@ class HazardMap(djm.Model):
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
-    STAT_CHOICES = (
-        (u'mean', u'Mean'),
-        (u'quantile', u'Quantile'),
-    )
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     sa_period = djm.FloatField(null=True)
@@ -1929,7 +1912,7 @@ class GmfScenario(djm.Model):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`Gmf` objects associated
+    Iterator for walking through all :class:`GmfScenario` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -2148,6 +2131,11 @@ class LossCurve(djm.Model):
     aggregate = djm.BooleanField(default=False)
     insured = djm.BooleanField(default=False)
 
+    # If the curve is a result of an aggregation over different
+    # hazard_output the following fields must be set
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
+
     class Meta:
         db_table = 'riskr\".\"loss_curve'
 
@@ -2187,8 +2175,8 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
-    hazard_output = djm.OneToOneField("Output",
-                                      related_name="risk_bcr_distribution")
+    hazard_output = djm.OneToOneField(
+        "Output", related_name="risk_bcr_distribution")
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2214,7 +2202,8 @@ class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
-    dmg_state = djm.TextField()
+    dmg_state = djm.TextField(
+        help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(
         help_text="limit state index, to order the limit states")
 
@@ -2229,8 +2218,6 @@ class DmgDistPerAsset(djm.Model):
     exposure_data = djm.ForeignKey("ExposureData")
     mean = djm.FloatField()
     stddev = djm.FloatField()
-    # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset'

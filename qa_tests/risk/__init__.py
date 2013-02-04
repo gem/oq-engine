@@ -21,7 +21,7 @@ import shutil
 from qa_tests import _utils as qa_utils
 from tests.utils import helpers
 
-from openquake.export import risk as risk_export
+from openquake import export
 from openquake.db import models
 
 
@@ -66,7 +66,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         try:
             expected_data = self.expected_data()
-
             job = self.run_risk(self.cfg, self.hazard_id())
 
             actual_data = self.actual_data(job)
@@ -80,7 +79,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
             for i, output in enumerate(models.Output.objects.filter(
                     oq_job=job).order_by('id')):
-                [exported_file] = risk_export.export(output.id, result_dir)
+                [exported_file] = export.risk.export(output.id, result_dir)
                 self.assert_xml_equal(
                     StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:

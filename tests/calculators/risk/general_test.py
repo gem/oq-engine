@@ -113,9 +113,12 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         """
 
         for hazard_output in self.hazard_outputs:
-            [loss_curve_id, loss_map_ids] = self.calculator.create_outputs(
+            [loss_curve_id, loss_map_ids,
+             mean, quantile] = self.calculator.create_outputs(
                 hazard_output)
 
+            self.assertIsNone(mean)
+            self.assertEqual({}, quantile)
             self.assertTrue(
                 models.LossCurve.objects.filter(pk=loss_curve_id).exists())
 
@@ -144,6 +147,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         mocks[0].return_value = mock.Mock()
         mocks[0].return_value.taxonomies_in.return_value = {'RC': 10}
 
+        self.calculator.imt = 'PGA'
         self.calculator.pre_execute()
 
         for i, m in enumerate(mocks):

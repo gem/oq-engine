@@ -231,8 +231,8 @@ def _identical_input(input_type, digest, owner):
     """
     queryset = models.Input.objects.filter(
         digest=digest, owner=owner, input_type=input_type).filter(
-        djm.Q(hazard_calculations__oqjob__status="complete") |
-        djm.Q(risk_calculations__oqjob__status="complete"))
+            djm.Q(hazard_calculations__oqjob__status="complete") |
+            djm.Q(risk_calculations__oqjob__status="complete"))
 
     if queryset.exists():
         return queryset.latest('last_update')

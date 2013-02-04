@@ -38,7 +38,8 @@ from tests.utils import helpers
 from tests.utils.helpers import random_location_generator
 
 from openquake.db import models
-from openquake.calculators.hazard import classical_post_processing as cpp
+from openquake.calculators import post_processing
+from openquake.calculators.hazard import classical_post_processing as post_proc
 from openquake.calculators.hazard.classical_post_processing import (
     setup_tasks, mean_curves, quantile_curves, persite_result_decorator,
     mean_curves_weighted, quantile_curves_weighted,
@@ -433,8 +434,7 @@ class HazardMapsTestCase(unittest.TestCase):
 
         expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
-        actual = cpp.compute_hazard_maps(
-            curves, imls, poe)
+        actual = post_proc.compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
     def test_compute_hazard_map_poes_list_of_one(self):
@@ -455,8 +455,7 @@ class HazardMapsTestCase(unittest.TestCase):
 
         expected = [[0.0091, 0.00687952, 0.0098, 0.005, 0.007]]
 
-        actual = cpp.compute_hazard_maps(
-            curves, imls, poe)
+        actual = post_proc.compute_hazard_maps(curves, imls, poe)
         aaae(expected, actual)
 
     def test_compute_hazard_map_multi_poe(self):
@@ -475,8 +474,7 @@ class HazardMapsTestCase(unittest.TestCase):
             [0.0091, 0.00687952, 0.0098, 0.005, 0.007],
         ]
 
-        actual = cpp.compute_hazard_maps(
-            curves, imls, poes)
+        actual = post_proc.compute_hazard_maps(curves, imls, poes)
         aaae(expected, actual)
 
 
@@ -631,8 +629,7 @@ class MeanCurveTestCase(unittest.TestCase):
 
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
-            expected_mean_curve,
-            cpp.compute_mean_curve(curves))
+            expected_mean_curve, post_processing.mean_curve(curves))
 
     def test_compute_mean_curve_weighted(self):
         curves = [
@@ -645,8 +642,7 @@ class MeanCurveTestCase(unittest.TestCase):
         expected_mean_curve = numpy.array([0.885, 0.735, 0.586, 0.213])
         numpy.testing.assert_allclose(
             expected_mean_curve,
-            cpp.compute_mean_curve(
-                curves, weights=weights))
+            post_processing.mean_curve(curves, weights=weights))
 
     def test_compute_mean_curve_weights_None(self):
         # If all weight values are None, ignore the weights altogether
@@ -660,8 +656,7 @@ class MeanCurveTestCase(unittest.TestCase):
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
             expected_mean_curve,
-            cpp.compute_mean_curve(
-                curves, weights=weights))
+            post_processing.mean_curve(curves, weights=weights))
 
     def test_compute_mean_curve_invalid_weights(self):
         curves = [
@@ -672,8 +667,7 @@ class MeanCurveTestCase(unittest.TestCase):
         weights = [0.6, None, 0.4]
 
         self.assertRaises(
-            ValueError, cpp.compute_mean_curve,
-            curves, weights
+            ValueError, post_processing.mean_curve, curves, weights
         )
 
 
@@ -716,8 +710,7 @@ class QuantileCurveTestCase(unittest.TestCase):
              4.2766000e-02, 1.9643000e-02, 8.1923000e-03, 2.9157000e-03,
              7.9955000e-04, 1.5233000e-04, 1.5582000e-05],
         ]
-        actual_curve = cpp.compute_quantile_curve(
-            curves, quantile)
+        actual_curve = post_processing.quantile_curve(curves, quantile)
 
         # TODO(LB): Check with our hazard experts to see if this is reasonable
         # tolerance. Better yet, get a fresh set of test data. (This test data
@@ -742,8 +735,7 @@ class QuantileCurveTestCase(unittest.TestCase):
             [1.0000e+00, 9.9996e-01, 9.9947e-01],
         ]
         weights = [0.5, 0.3, 0.2]
-
-        actual_curve = cpp.compute_weighted_quantile_curve(
+        actual_curve = post_processing.weighted_quantile_curve(
             curves, weights, quantile)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
@@ -760,7 +752,7 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.2, 0.3, 0.5]
 
-        actual_curve = cpp.compute_weighted_quantile_curve(
+        actual_curve = post_processing.weighted_quantile_curve(
             curves, weights, quantile)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)

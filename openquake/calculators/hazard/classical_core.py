@@ -219,9 +219,9 @@ from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
 from openquake.calculators.hazard import classical_post_processing as post_proc
-from openquake.calculators.hazard.classical_post_processing import (
-    compute_mean_curve, compute_quantile_curve, compute_weighted_quantile_curve
-)
+from openquake.calculators.post_processing import (
+    mean_curve, quantile_curve, weighted_quantile_curve)
+
 from openquake.db import models
 from openquake.input import logictree
 from openquake.utils import stats
@@ -571,12 +571,12 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
                             for quantile in self.hc.quantile_hazard_curves:
                                 if self.hc.number_of_logic_tree_samples == 0:
                                     # explicitly weighted quantiles
-                                    q_curve = compute_weighted_quantile_curve(
+                                    q_curve = weighted_quantile_curve(
                                         curves_poes, curves_weights, quantile
                                     )
                                 else:
                                     # implicitly weighted quantiles
-                                    q_curve = compute_quantile_curve(
+                                    q_curve = quantile_curve(
                                         curves_poes, quantile
                                     )
                                 inserter.add_entry(
@@ -589,12 +589,12 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
                         # then means
                         if self.hc.mean_hazard_curves:
-                            mean_curve = compute_mean_curve(
+                            m_curve = mean_curve(
                                 curves_poes, weights=curves_weights
                             )
                             inserter.add_entry(
                                 hazard_curve_id=container_ids['mean'],
-                                poes=mean_curve.tolist(),
+                                poes=m_curve.tolist(),
                                 location=site.wkt
                             )
                 inserter.flush()
