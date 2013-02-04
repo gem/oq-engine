@@ -114,7 +114,7 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
     gsim = AVAILABLE_GSIMS[hc.gsim]
     correlation_model = haz_general.get_correl_model(hc)
     gmf = ground_motion_fields(
-        rupture_mdl, sites, imts, gsim(),
+        rupture_mdl, hc.site_collection, imts, gsim(),
         hc.truncation_level, realizations=realizations,
         correlation_model=correlation_model)
 
