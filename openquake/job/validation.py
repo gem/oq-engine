@@ -177,8 +177,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         # Now do checks which require more context.
 
         # Cannot specify region AND sites
-        if (hc.region is not None
-            and hc.sites is not None):
+        if (hc.region is not None and hc.sites is not None):
             all_valid = False
             err = 'Cannot specify `region` and `sites`. Choose one.'
             self._add_error('region', err)
@@ -307,8 +306,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
 
         # It doesn't make sense to capture/export the `complete_logic_tree_gmf`
         # when we're doing end-branch enumeration:
-        if (hc.number_of_logic_tree_samples == 0
-            and hc.complete_logic_tree_gmf is True):
+        if not hc.number_of_logic_tree_samples and hc.complete_logic_tree_gmf:
 
             msg = '`%s` is not available with end branch enumeration'
             msg %= 'complete_logic_tree_gmf'
@@ -317,7 +315,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
 
         # For the case where the user has requested to post-process GMFs into
         # hazard curves:
-        if hc.hazard_curves_from_gmfs is True:
+        if hc.hazard_curves_from_gmfs:
             # 1) We need to make sure `intensity_measure_types_and_levels` is
             #    defined (and valid)
             if hc.intensity_measure_types_and_levels is None:
@@ -431,7 +429,7 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
-            )
+        )
 
 
 class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
@@ -445,7 +443,7 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
-            )
+        )
 
 
 class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
@@ -478,8 +476,17 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'asset_correlation',
             'mean_loss_curves',
             'quantile_loss_curves',
-            )
+        )
 
+
+class ScenarioDamageRiskCalculationForm(BaseOQModelForm):
+    calc_mode = 'scenario_damage'
+
+    class Meta:
+        fields = (
+            'description',
+            'region_constraint',
+        )
 
 class ScenarioRiskCalculationForm(BaseOQModelForm):
     calc_mode = 'scenario'
@@ -501,6 +508,7 @@ RISK_VALIDATOR_MAP = {
     'event_based': EventBasedRiskCalculationForm,
     'event_based_bcr': EventBasedRiskCalculationWithBCRForm,
     'scenario': ScenarioRiskCalculationForm,
+    'scenario_damage': ScenarioDamageRiskCalculationForm,
 }
 
 
@@ -740,12 +748,12 @@ def truncation_level_is_valid(mdl):
         if mdl.truncation_level is not None:
             if mdl.truncation_level <= 0:
                 return False, [
-                        'Truncation level must be > 0 for disaggregation'
-                           ' calculations']
+                    'Truncation level must be > 0 for disaggregation'
+                    ' calculations']
         else:
             return False, [
-                        'Truncation level must be set for disaggregation'
-                           ' calculations and it must be > 0']
+                'Truncation level must be set for disaggregation'
+                ' calculations and it must be > 0']
     else:
         if mdl.truncation_level is not None:
             if mdl.truncation_level < 0:
@@ -927,7 +935,7 @@ def insured_losses_is_valid(_mdl):
 def loss_curve_resolution_is_valid(mdl):
     if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
-            mdl.loss_curve_resolution < 1):
+                mdl.loss_curve_resolution < 1):
             return False, ['Loss Curve Resolution must be > 1.']
     return True, []
 

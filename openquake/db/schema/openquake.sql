@@ -980,7 +980,6 @@ CREATE TABLE uiapi.output (
     --      complete_lt_ses (complete logic tree SES)
     --      loss_curve
     --      loss_map
-    --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
     --      dmg_dist_per_asset
@@ -990,7 +989,6 @@ CREATE TABLE uiapi.output (
         CHECK(output_type IN (
             'agg_loss_curve',
             'bcr_distribution',
-            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
@@ -1486,8 +1484,6 @@ CREATE TABLE riskr.dmg_dist_per_asset (
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
-SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset', 'location', 4326, 'POINT', 2);
-ALTER TABLE riskr.dmg_dist_per_asset ALTER COLUMN location SET NOT NULL;
 
 
 -- Damage Distrubtion Per Taxonomy
