@@ -427,6 +427,8 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'region_constraint',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
+            'mean_loss_curves',
+            'quantile_loss_curves',
         )
 
 
@@ -472,6 +474,8 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'insured_losses',
             'master_seed',
             'asset_correlation',
+            'mean_loss_curves',
+            'quantile_loss_curves',
         )
 
 
@@ -762,6 +766,20 @@ def quantile_hazard_curves_is_valid(mdl):
     if qhc is not None:
         if not all([0.0 <= x <= 1.0 for x in qhc]):
             return False, ['Quantile hazard curve values must in the range '
+                           '[0, 1]']
+    return True, []
+
+
+def mean_loss_curves_is_valid(_mdl):
+    return True, []
+
+
+def quantile_loss_curves_is_valid(mdl):
+    qhc = mdl.quantile_loss_curves
+
+    if qhc is not None:
+        if not all([0.0 <= x <= 1.0 for x in qhc]):
+            return False, ['Quantile loss curve values must in the range '
                            '[0, 1]']
     return True, []
 
