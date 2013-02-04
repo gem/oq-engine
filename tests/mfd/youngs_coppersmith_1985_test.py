@@ -1,5 +1,5 @@
 # nhlib: A New Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2013 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -130,8 +130,8 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
         # if we add 1e-4 to a_val, this raises the error
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=5.0, a_val=2.1888143 + 1e-4, b_val=1.0, char_mag=6.5, char_rate=0.001,
-            bin_width=0.1
+            min_mag=5.0, a_val=2.1888143 + 1e-4, b_val=1.0, char_mag=6.5,
+            char_rate=0.001, bin_width=0.1
         )
         error = 'Rate of events at the characteristic magnitude is not ' \
                 'equal to the rate of events for magnitude equal to ' \
