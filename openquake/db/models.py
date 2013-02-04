@@ -872,6 +872,7 @@ class HazardCalculation(djm.Model):
         return (self.intensity_measure_types or
                 self.intensity_measure_types_and_levels.keys())
 
+
 class RiskCalculation(djm.Model):
     '''
     Parameters needed to run a Risk job.
@@ -973,19 +974,27 @@ class RiskCalculation(djm.Model):
 
     def has_output_containers(self):
         """
-        Calculators with one output container: Scenario.
+        :returns: True if RiskCalculation has more than one output
+        container.
         """
 
-        return self.calculation_mode != "scenario" 
-    
+        return self.calculation_mode != "scenario"
+
     def output_container_builder(self, risk_calculator):
+        """
+        :returns: a dictionary mapping an hazard output id
+            to desired Output.
+        """
+
         if self.has_output_containers():
-            return dict((hazard_output.id, risk_calculator.create_outputs(hazard_output))
+            return dict((hazard_output.id,
+                         risk_calculator.create_outputs(hazard_output))
                          for hazard_output in
                          risk_calculator.considered_hazard_outputs())
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
+
     @property
     def hazard_statistics(self):
         """
