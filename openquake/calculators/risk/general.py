@@ -463,14 +463,19 @@ def write_loss_curve(loss_curve_id, asset, asset_output):
         loss_ratios=asset_output.loss_ratio_curve.abscissae)
 
 
+# FIXME
+# Temporary solution, loss map for Scenario Risk
+# is a different concept with respect to a loss map
+# for a different calculator.
+
 def write_loss_map_data(id, asset_ref, value, std_dev, location):
     """
     Create :class:`openquake.db.models.LossMapData`
 
-    :param asset_ref: 
-    :param value: 
-    :param std_dev:
-    :param location:
+    :param asset_ref: asset ref value.
+    :param value: asset loss value.
+    :param std_dev: asset std dev value.
+    :param location: asset location value.
     """
 
     models.LossMapData.objects.create(loss_map_id=id,
