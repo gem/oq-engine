@@ -404,6 +404,8 @@ class ScenarioHazardCalculationForm(BaseHazardModelForm):
             'maximum_distance',
             'number_of_ground_motion_fields',
             'gsim',
+            'ground_motion_correlation_model',
+            'ground_motion_correlation_params',
             'export_dir',
         )
 
