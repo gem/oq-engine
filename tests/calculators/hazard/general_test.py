@@ -15,7 +15,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import getpass
 import unittest
 
 import nhlib
@@ -316,51 +315,6 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)
-
-
-class GetSiteCollectionTestCase(unittest.TestCase):
-
-    @attr('slow')
-    def test_get_site_collection_with_site_model(self):
-        cfg = helpers.demo_file(
-            'simple_fault_demo_hazard/job_with_site_model.ini')
-        job = helpers.get_hazard_job(cfg)
-        calc = cls_core.ClassicalHazardCalculator(job)
-
-        # Bootstrap the `site_data` table:
-        calc.initialize_sources()
-        calc.initialize_site_model()
-
-        site_coll = general.get_site_collection(job.hazard_calculation)
-        # Since we're using a pretty big site model, it's a bit excessive to
-        # check each and every value.
-        # Instead, we'll just test that the lenth of each site collection attr
-        # is equal to the number of points of interest in the calculation.
-        expected_len = len(job.hazard_calculation.points_to_compute())
-
-        self.assertEqual(expected_len, len(site_coll))
-        self.assertEqual(expected_len, len(site_coll.vs30))
-        self.assertEqual(expected_len, len(site_coll.vs30measured))
-        self.assertEqual(expected_len, len(site_coll.z1pt0))
-        self.assertEqual(expected_len, len(site_coll.z2pt5))
-
-    def test_get_site_collection_with_reference_parameters(self):
-        cfg = helpers.demo_file(
-            'simple_fault_demo_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-
-        site_coll = general.get_site_collection(job.hazard_calculation)
-
-        # all of the parameters should be the same:
-        self.assertTrue((site_coll.vs30 == 760).all())
-        self.assertTrue((site_coll.vs30measured).all())
-        self.assertTrue((site_coll.z1pt0 == 5).all())
-        self.assertTrue((site_coll.z2pt5 == 100).all())
-
-        # just for sanity, make sure the meshes are correct (the locations)
-        job_mesh = job.hazard_calculation.points_to_compute()
-        self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
-        self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
 
 
 class ImtsToNhlibTestCase(unittest.TestCase):
