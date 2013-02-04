@@ -45,39 +45,56 @@
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
 
+# -*- coding: utf-8 -*-
+
+"""
+Unit tests for the Aki maximum likelihood algorithm class which computes 
+seismicity occurrence parameters.
+"""
+
 import unittest
-import os
+import numpy as np
 
-from hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
+from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
-class CsvCatalogueParserTestCase(unittest.TestCase):
-    """ 
-    Unit tests for the csv Catalogue Parser Class
-    """
-    
-    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+class AkiMaximumLikelihoodTestCase(unittest.TestCase):
     
     def setUp(self):
         """
-        Read a sample catalogue containing 8 events after instantiating
-        the CsvCatalogueParser object.
+        This generates a minimum data-set to be used for the regression.  
         """
-        filename = os.path.join(self.BASE_DATA_PATH, 'test_catalogue.csv') 
-        parser = CsvCatalogueParser(filename)
-        self.cat = parser.read_file()
+        # Test A: Generates a data set assuming b=1 and N(m=4.0)=10.0 events
+        self.dmag = 0.1
+        mext = np.arange(4.0,7.01,0.1)
+        self.mval = mext[0:-1] + self.dmag / 2.0
+        self.bval = 1.0
+        self.numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+8.0))))
+        # Test B: Generate a completely artificial catalogue using the 
+        # Gutenberg-Richter distribution defined above 
+        numobs = np.around(self.numobs)
+        magnitude = np.zeros( (np.sum(self.numobs)) )
+        lidx = 0
+        for mag, nobs in zip(self.mval, numobs):
+            uidx = int(lidx+nobs)
+            magnitude[lidx:uidx] = mag + 0.01 
+            lidx = uidx 
+        year = np.ones( (np.sum(numobs)) ) * 1999 
+        self.catalogue = {'magnitude' : magnitude, 'year': year}
+        # Create the seismicity occurrence calculator 
+        self.aki_ml = AkiMaxLikelihood()
 
-    def test_read_catalogue(self):
+    def test_aki_maximum_likelihood_A(self):
         """
-        Check that the some fields in the first row of the catalogue are read
-        correctly
+        Tests that the computed b value corresponds to the same value
+        used to generate the test data set 
         """
-        self.assertEqual(self.cat.data['eventID'][0], 54)
-        self.assertEqual(self.cat.data['Agency'][0], 'sheec')
-        self.assertEqual(self.cat.data['year'][0], 1011)
-        
-    def test_read_catalogue_num_events(self):
+        bval, sigma_b = self.aki_ml._aki_ml(self.mval, self.numobs)
+        self.assertAlmostEqual(self.bval, bval, 2)
+
+    def test_aki_maximum_likelihood_B(self):
         """
-        Check that the number of earthquakes read form the catalogue is 
-        correct
+        Tests that the computed b value corresponds to the same value
+        used to generate the test data set 
         """
-        self.assertEqual(self.cat.get_number_events(),8)
+        bval, sigma_b = self.aki_ml.calculate(self.catalogue)        
+        self.assertAlmostEqual(self.bval, bval, 2)

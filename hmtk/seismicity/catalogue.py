@@ -1,4 +1,51 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#
+# LICENSE
+#
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# D. Monelli.
+#
+# The Hazard Modeller's Toolkit is free software: you can redistribute 
+# it and/or modify it under the terms of the GNU Affero General Public 
+# License as published by the Free Software Foundation, either version 
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+# DISCLAIMER
+# 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein 
+# is released as a prototype implementation on behalf of 
+# scientists and engineers working within the GEM Foundation (Global 
+# Earthquake Model). 
+#
+# It is distributed for the purpose of open collaboration and in the 
+# hope that it will be useful to the scientific, engineering, disaster
+# risk and software design communities. 
+# 
+# The software is NOT distributed as part of GEM’s OpenQuake suite 
+# (http://www.globalquakemodel.org/openquake) and must be considered as a 
+# separate entity. The software provided herein is designed and implemented 
+# by scientific staff. It is not developed to the design standards, nor 
+# subject to same level of critical review by professional software 
+# developers, as GEM’s OpenQuake software suite.  
+# 
+# Feedback and contribution to the software is welcome, and can be 
+# directed to the hazard scientific staff of the GEM Model Facility 
+# (hazard@globalquakemodel.org). 
+# 
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# for more details.
+# 
+# The GEM Foundation, and the authors of the software, assume no 
+# liability for use of the software. 
+
+# -*- coding: utf-8 -*-
 
 """ 
 Prototype of a 'Catalogue' class
@@ -60,9 +107,29 @@ class Catalogue(object):
         # TODO 
         raise AttributeError('Not implemented yet!')
     
+    def load_to_array(self, keys):
+        """
+        This loads the data contained in the catalogue into a numpy array. The
+        method works only for float data
+        
+        :param keys:
+            A list of keys to be uploaded into the array 
+        :type list:
+        """
+        # Preallocate the numpy array
+        data = np.empty( (len(self.data[keys[0]]), len(keys)) )
+        for i in range(0, len(self.data[keys[0]]) ):
+            for j,key in enumerate(keys):
+                data[i,j] = self.data[key][i]
+        return data  
+    
     def load_from_array(self, keys, data_array):
         """
         This loads the data contained in an array into the catalogue object
+        
+        :param keys:
+            A list of keys explaining the content of the columns in the array
+        :type list:
         """
         for i,key in enumerate(keys):
             self.data[key] = data_array[:,i]

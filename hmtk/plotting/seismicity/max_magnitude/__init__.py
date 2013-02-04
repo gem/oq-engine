@@ -1,11 +1,14 @@
+# -*- coding: utf-8 -*-
+#
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# D. Monelli.
 #
-# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public License 
-# as published by the Free Software Foundation, either version 3 of the 
-# License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit is free software: you can redistribute 
+# it and/or modify it under the terms of the GNU Affero General Public 
+# License as published by the Free Software Foundation, either version 
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
