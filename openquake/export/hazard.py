@@ -34,8 +34,18 @@ from openquake.input import logictree
 
 LOG = logs.LOG
 
+HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
+HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
+GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
+SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
+COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
+COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
+GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
+
 
 def export(output_id, target_dir):
+    # for each output_type there must be a function
+    # export_<output_type>(output, target_dir)
     """
     Export the given hazard calculation output from the database to the
     specified directory.
@@ -54,44 +64,10 @@ def export(output_id, target_dir):
     """
     output = models.Output.objects.get(id=output_id)
 
-    export_fn = _export_fn_map().get(
-        output.output_type, core._export_fn_not_implemented)
+    export_fn = globals().get(
+        'export_' + output.output_type, core._export_fn_not_implemented)
 
     return export_fn(output, os.path.expanduser(target_dir))
-
-
-def _export_fn_map():
-    """
-    Creates a mapping from output type to export function.
-
-    Each export function should implement a common interface and accept two
-    arguments: a :class:`~openquake.db.models.Output` object and a target
-    dir (`str`).
-
-    Each function should return a list of the file names created by the export
-    action.
-    """
-
-    fn_map = {
-        'hazard_curve': export_hazard_curves,
-        'gmf': export_gmf,
-        'gmf_scenario': export_gmf_scenario,
-        'ses': export_ses,
-        'complete_lt_ses': export_ses,
-        'complete_lt_gmf': export_gmf,
-        'hazard_map': export_hazard_map,
-        'disagg_matrix': export_disagg,
-    }
-    return fn_map
-
-
-HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
-HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
-GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
-SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
-GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
 
 
 def _get_end_branch_export_path(target_dir, result, ltp):
@@ -143,7 +119,7 @@ def _get_end_branch_export_path(target_dir, result, ltp):
 
 
 @core.makedirs
-def export_hazard_curves(output, target_dir):
+def export_hazard_curve(output, target_dir):
     """
     Export the specified hazard curve ``output`` to the ``target_dir``.
 
@@ -245,6 +221,8 @@ def export_gmf(output, target_dir):
 
     return [path]
 
+export_complete_lt_gmf = export_gmf
+
 
 @core.makedirs
 def export_gmf_scenario(output, target_dir):
@@ -307,6 +285,8 @@ def export_ses(output, target_dir):
     writer.serialize(ses_coll)
 
     return [path]
+
+export_complete_lt_ses = export_ses
 
 
 @core.makedirs
@@ -398,7 +378,7 @@ class _DisaggMatrix(object):
 
 
 @core.makedirs
-def export_disagg(output, target_dir):
+def export_disagg_matrix(output, target_dir):
     """
     Export disaggregation histograms to the ``target_dir``.
 

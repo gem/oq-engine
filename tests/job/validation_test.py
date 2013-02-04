@@ -54,7 +54,7 @@ INVALID_IML_IMT = {
 }
 
 
-class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
+class ClassicalHazardFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
 
     def test_hazard_calculation_is_valid_region_only(self):
@@ -84,7 +84,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -113,7 +113,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -148,7 +148,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=dict(site_model_file=object())
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -176,7 +176,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -204,7 +204,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -236,7 +236,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertFalse(form.is_valid())
@@ -323,7 +323,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.00001, -0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
 
@@ -373,7 +373,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
 
@@ -412,7 +412,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
 
@@ -456,7 +456,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
 
@@ -500,7 +500,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None, exports=['xml']
         )
         self.assertFalse(form.is_valid())
@@ -537,13 +537,13 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardCalculationForm(
+        form = validation.ClassicalHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid())
 
 
-class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
+class EventBasedHazardFormTestCase(unittest.TestCase):
 
     def test_ses_per_logic_tree_path_is_not_valid(self):
         expected_errors = {
@@ -575,7 +575,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             truncation_level=0.0,
             maximum_distance=100.0,
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
         self.assertFalse(form.is_valid())
@@ -622,7 +622,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.5, 0.95],
             poes_hazard_maps=[0.1, 0.2],
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
 
@@ -668,7 +668,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             complete_logic_tree_gmf=True,
             ground_motion_fields=True,
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
 
@@ -717,7 +717,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             ground_motion_fields=True,
             hazard_curves_from_gmfs=True,
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
 
@@ -769,7 +769,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             ground_motion_fields=True,
             hazard_curves_from_gmfs=True,
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
 
@@ -816,7 +816,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
             complete_logic_tree_gmf=True,
             ground_motion_fields=True,
         )
-        form = validation.EventBasedHazardCalculationForm(
+        form = validation.EventBasedHazardForm(
             instance=hc, files=None
         )
 
@@ -825,7 +825,7 @@ class EventBasedHazardCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
 
-class DisaggHazardCalculationFormTestCase(unittest.TestCase):
+class DisaggHazardFormTestCase(unittest.TestCase):
 
     def test_valid_disagg_calc(self):
         hc = models.HazardCalculation(
@@ -852,7 +852,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             num_epsilon_bins=4,
             poes_disagg=[0.02, 0.1],
         )
-        form = validation.DisaggHazardCalculationForm(
+        form = validation.DisaggHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -893,7 +893,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             num_epsilon_bins=0,
             poes_disagg=[1.00001, -0.5, 0.0],
         )
-        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        form = validation.DisaggHazardForm(instance=hc, files=None)
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
@@ -901,7 +901,7 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
 
         # test with an empty `poes_disagg` list
         hc.poes_disagg = []
-        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        form = validation.DisaggHazardForm(instance=hc, files=None)
         expected_errors['poes_disagg'] = [(
             '`poes_disagg` must contain at least 1 value')]
         self.assertFalse(form.is_valid())
@@ -943,13 +943,13 @@ class DisaggHazardCalculationFormTestCase(unittest.TestCase):
             num_epsilon_bins=0,
             poes_disagg=[1.00001, -0.5, 0.0],
         )
-        form = validation.DisaggHazardCalculationForm(instance=hc, files=None)
+        form = validation.DisaggHazardForm(instance=hc, files=None)
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
 
 
-class ScenarioCalculationFormTestCase(unittest.TestCase):
+class ScenarioFormTestCase(unittest.TestCase):
 
     def test_valid_scenario_calc(self):
         hc = models.HazardCalculation(
@@ -970,7 +970,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
             ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=10,
         )
-        form = validation.ScenarioHazardCalculationForm(
+        form = validation.ScenarioHazardForm(
             instance=hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -1001,7 +1001,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
             ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=-10,
         )
-        form = validation.ScenarioHazardCalculationForm(
+        form = validation.ScenarioHazardForm(
             instance=hc, files=None
         )
 
@@ -1010,7 +1010,7 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
         self.assertTrue(equal, err)
 
 
-class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
+class ClassicalRiskFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
                                       'simple_fault_demo_hazard/job.ini')
@@ -1030,7 +1030,7 @@ class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
 
         rc = models.RiskCalculation(**args)
 
-        form = validation.ClassicalRiskCalculationForm(
+        form = validation.ClassicalRiskForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1048,13 +1048,13 @@ class ClassicalRiskCalculationFormTestCase(unittest.TestCase):
             compulsory_arguments.update(self.other_args)
             rc = models.RiskCalculation(**compulsory_arguments)
 
-            form = validation.ClassicalRiskCalculationForm(
+            form = validation.ClassicalRiskForm(
                 instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
 
 
-class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
+class ClassicalBCRRiskFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
                                       'simple_fault_demo_hazard/job.ini')
@@ -1077,7 +1077,7 @@ class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
 
         rc = models.RiskCalculation(**args)
 
-        form = validation.ClassicalRiskCalculationWithBCRForm(
+        form = validation.ClassicalBCRRiskForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1094,17 +1094,17 @@ class ClassicalRiskCalculationWithBCRFormTestCase(unittest.TestCase):
             compulsory_arguments.update(self.other_args)
             rc = models.RiskCalculation(**compulsory_arguments)
 
-            form = validation.ClassicalRiskCalculationWithBCRForm(
+            form = validation.ClassicalBCRRiskForm(
                 instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
 
 
-class EventBasedRiskCalculationWithBCRForm(unittest.TestCase):
+class EventBasedRiskBCRForm(unittest.TestCase):
 
     def setUp(self):
         self.job, _ = helpers.get_risk_job('event_based_bcr/job.ini',
-            'event_based_hazard/job.ini')
+                                           'event_based_hazard/job.ini')
 
     def test_valid_form(self):
         region_constraint = (
@@ -1121,7 +1121,7 @@ class EventBasedRiskCalculationWithBCRForm(unittest.TestCase):
             asset_life_expectancy=40,
         )
 
-        form = validation.EventBasedRiskCalculationWithBCRForm(
+        form = validation.EventBasedBCRRiskForm(
             instance=rc, files=None)
 
         self.assertTrue(form.is_valid(), dict(form.errors))
@@ -1139,7 +1139,7 @@ class EventBasedRiskCalculationWithBCRForm(unittest.TestCase):
             hazard_output=self.job.risk_calculation.hazard_output,
         )
 
-        form = validation.EventBasedRiskCalculationWithBCRForm(
+        form = validation.EventBasedBCRRiskForm(
             instance=rc, files=None)
 
         self.assertFalse(form.is_valid())
@@ -1159,7 +1159,7 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskCalculationForm(
+        form = validation.EventBasedRiskForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1173,7 +1173,7 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskCalculationForm(
+        form = validation.EventBasedRiskForm(
             instance=rc, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1187,6 +1187,6 @@ class EventBasedValidationTestCase(unittest.TestCase):
                 '-122.0 38.113))'),
             hazard_output=self.job.risk_calculation.hazard_output)
 
-        form = validation.EventBasedRiskCalculationForm(
+        form = validation.EventBasedRiskForm(
             instance=rc, files=None)
         self.assertFalse(form.is_valid())

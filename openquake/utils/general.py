@@ -21,7 +21,28 @@
 Utility functions of general interest.
 """
 
+import os
 import cPickle
+import inspect
+import importlib
+import collections
+
+
+def get_available_calculators(pkg):
+    '''
+    Return an OrderedDict {calc_mode: calc_class} built by looking at all the
+    calculators in a package.
+    '''
+    calc = {}  # calc_mode -> calc_class
+    for fname in os.listdir(pkg.__path__[0]):
+        if fname.endswith('_core.py'):
+            modname, _ext = os.path.splitext(fname)
+            mod = importlib.import_module(pkg.__name__ + '.' + modname)
+            for cls in mod.__dict__.itervalues():
+                if inspect.isclass(cls) and 'Calculator' in cls.__name__:
+                    calc_mode = modname[:-5]  # strip _core
+                    calc[calc_mode] = cls
+    return collections.OrderedDict((k, calc[k]) for k in sorted(calc))
 
 
 def singleton(cls):

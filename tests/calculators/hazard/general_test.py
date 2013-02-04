@@ -25,7 +25,7 @@ from nose.plugins.attrib import attr
 
 from openquake import engine2
 from openquake.calculators.hazard import general
-from openquake.calculators.hazard.classical import core as cls_core
+from openquake.calculators.hazard import classical_core as cls_core
 from openquake.db import models
 
 from tests.utils import helpers

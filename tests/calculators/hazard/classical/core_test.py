@@ -23,7 +23,7 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.calculators import base
-from openquake.calculators.hazard.classical import core
+from openquake.calculators.hazard import classical_core as core
 from openquake.db import models
 from openquake.utils import stats
 from tests.utils import helpers
@@ -47,7 +47,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
-        base_path = ('openquake.calculators.hazard.classical.core'
+        base_path = ('openquake.calculators.hazard.classical_core'
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
@@ -85,7 +85,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         # Finally, check the Src2ltsrc linkage:
         [smlt] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='lt_source')
+            self.job.hazard_calculation.id, input_type='source_model_logic_tree')
         [src2ltsrc] = models.Src2ltsrc.objects.filter(
             hzrd_src=source, lt_src=smlt)
         # Make sure the `filename` is exactly as it apprears in the logic tree.

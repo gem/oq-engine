@@ -36,12 +36,12 @@ def export(output_id, target_dir):
     specified directory. See `openquake.export.hazard.export` for more
     details.
     """
+    # for each output_type there must be a function
+    # export_<output_type>(output, target_dir)
     output = models.Output.objects.get(id=output_id)
     return globals().get("export_%s" % output.output_type,
                          core._export_fn_not_implemented)(
                              output, os.path.expanduser(target_dir))
-
-
 def _export_common(output):
     """
     Returns a dict containing the common arguments used by nrml

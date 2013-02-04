@@ -46,8 +46,8 @@ CALCULATION_MODE = {
 }
 
 INPUT_FILE_TYPES = {
-    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
-    'GMPE_LOGIC_TREE_FILE': 'lt_gsim',
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'source_model_logic_tree',
+    'GMPE_LOGIC_TREE_FILE': 'gsim_logic_tree',
     'EXPOSURE': 'exposure',
     'FRAGILITY': 'fragility',
     'VULNERABILITY': 'vulnerability',

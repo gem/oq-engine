@@ -225,7 +225,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         return all_valid
 
 
-class ClassicalHazardCalculationForm(BaseHazardModelForm):
+class ClassicalHazardForm(BaseHazardModelForm):
 
     calc_mode = 'classical'
 
@@ -257,7 +257,7 @@ class ClassicalHazardCalculationForm(BaseHazardModelForm):
         )
 
 
-class EventBasedHazardCalculationForm(BaseHazardModelForm):
+class EventBasedHazardForm(BaseHazardModelForm):
 
     calc_mode = 'event_based'
 
@@ -297,7 +297,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
         )
 
     def is_valid(self):
-        super_valid = super(EventBasedHazardCalculationForm, self).is_valid()
+        super_valid = super(EventBasedHazardForm, self).is_valid()
         all_valid = super_valid
 
         hc = self.instance
@@ -348,7 +348,7 @@ class EventBasedHazardCalculationForm(BaseHazardModelForm):
         return all_valid
 
 
-class DisaggHazardCalculationForm(BaseHazardModelForm):
+class DisaggHazardForm(BaseHazardModelForm):
 
     calc_mode = 'disaggregation'
 
@@ -382,7 +382,7 @@ class DisaggHazardCalculationForm(BaseHazardModelForm):
         )
 
 
-class ScenarioHazardCalculationForm(BaseHazardModelForm):
+class ScenarioHazardForm(BaseHazardModelForm):
 
     calc_mode = 'scenario'
 
@@ -407,16 +407,8 @@ class ScenarioHazardCalculationForm(BaseHazardModelForm):
             'export_dir',
         )
 
-#: Maps calculation_mode to the appropriate validator class
-HAZ_VALIDATOR_MAP = {
-    'classical': ClassicalHazardCalculationForm,
-    'event_based': EventBasedHazardCalculationForm,
-    'disaggregation': DisaggHazardCalculationForm,
-    'scenario': ScenarioHazardCalculationForm,
-}
 
-
-class ClassicalRiskCalculationForm(BaseOQModelForm):
+class ClassicalRiskForm(BaseOQModelForm):
     calc_mode = 'classical'
 
     class Meta:
@@ -432,7 +424,7 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
         )
 
 
-class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
+class ClassicalBCRRiskForm(BaseOQModelForm):
     calc_mode = 'classical_bcr'
 
     class Meta:
@@ -446,7 +438,7 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
         )
 
 
-class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
+class EventBasedBCRRiskForm(BaseOQModelForm):
     calc_mode = 'event_based_bcr'
 
     class Meta:
@@ -462,7 +454,7 @@ class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
         )
 
 
-class EventBasedRiskCalculationForm(BaseOQModelForm):
+class EventBasedRiskForm(BaseOQModelForm):
     calc_mode = 'event_based'
 
     class Meta:
@@ -479,7 +471,7 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
         )
 
 
-class ScenarioDamageRiskCalculationForm(BaseOQModelForm):
+class ScenarioDamageForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
 
     class Meta:
@@ -487,15 +479,6 @@ class ScenarioDamageRiskCalculationForm(BaseOQModelForm):
             'description',
             'region_constraint',
         )
-
-#: Maps calculation_mode to the appropriate validator class
-RISK_VALIDATOR_MAP = {
-    'classical': ClassicalRiskCalculationForm,
-    'classical_bcr': ClassicalRiskCalculationWithBCRForm,
-    'event_based': EventBasedRiskCalculationForm,
-    'event_based_bcr': EventBasedRiskCalculationWithBCRForm,
-    'scenario_damage': ScenarioDamageRiskCalculationForm,
-}
 
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation

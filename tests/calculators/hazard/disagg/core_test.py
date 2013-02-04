@@ -22,8 +22,8 @@ from nose.plugins.attrib import attr
 
 from openquake import engine2
 from openquake.calculators import base
-from openquake.calculators.hazard.disagg import core as disagg_core
-from openquake.calculators.hazard.classical import core as cls_core
+from openquake.calculators.hazard import disaggregation_core as disagg_core
+from openquake.calculators.hazard import classical_core as cls_core
 from openquake.db import models
 
 from tests.utils import helpers
@@ -50,10 +50,9 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.calc = disagg_core.DisaggHazardCalculator(self.job)
 
         # Mock `disagg_task_arg_gen`
-        disagg_path = 'openquake.calculators.hazard.disagg'
+        disagg_path = 'openquake.calculators.hazard.disaggregation_core'
         self.disagg_tag_patch = helpers.patch(
-            '%s.core.DisaggHazardCalculator.disagg_task_arg_gen'
-            % disagg_path)
+            '%s.DisaggHazardCalculator.disagg_task_arg_gen' % disagg_path)
         self.disagg_tag_mock = self.disagg_tag_patch.start()
         # fake disagg task arg generator:
         disagg_tag = iter(xrange(3))
@@ -219,7 +218,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         return job, calc
 
     def test_pre_execute(self):
-        base_path = ('openquake.calculators.hazard.disagg.core'
+        base_path = ('openquake.calculators.hazard.disaggregation_core'
                      '.DisaggHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
@@ -269,12 +268,12 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
 
-        base_path = 'openquake.calculators.hazard.disagg.core'
+        base_path = 'openquake.calculators.hazard.disaggregation_core'
 
         with mock.patch('nhlib.calc.disagg.disaggregation') as disagg_mock:
             disagg_mock.return_value = (None, None)
             with mock.patch(
-                '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:
+                    '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:
 
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.

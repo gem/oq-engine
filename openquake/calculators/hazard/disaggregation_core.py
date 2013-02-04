@@ -27,7 +27,7 @@ from django.db import transaction
 from openquake import logs
 from openquake.calculators import base
 from openquake.calculators.hazard import general as haz_general
-from openquake.calculators.hazard.classical import core as classical
+from openquake.calculators.hazard import classical_core as classical
 from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
@@ -51,7 +51,7 @@ def disagg_task(job_id, block, lt_rlz_id, calc_type):
         of disaggregation, this is a list of :class:`nhlib.site.Site` objects.
 
         For more info, see
-        :func:`openquake.calculators.hazard.classical.core.compute_hazard_curves`
+        :func:`openquake.calculators.hazard.classical_core.compute_hazard_curves`
         if ``calc_type`` is 'hazard_curve' and :func:`compute_disagg` if
         ``calc_type`` is 'disagg'.
     :param lt_rlz_id:
