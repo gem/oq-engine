@@ -109,7 +109,7 @@ def setup_tasks(job, calculation, curve_finder, writers,
                 for chunk in chunks:
                     tasks.append(
                         [quantile_curves_fn,
-                    (chunk, writer, use_weights, quantile)])
+                         (chunk, writer, use_weights, quantile)])
     return tasks
 
 
