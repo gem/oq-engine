@@ -18,6 +18,8 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+from collections import OrderedDict
+
 from django import db
 
 from risklib import api, scientific
@@ -31,19 +33,22 @@ from openquake.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter, hazard,
+def event_based(job_id, assets, hazard_getter_name, hazard,
                 seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
                 imt, time_span, tses,
-                loss_curve_resolution, asset_correlation):
+                loss_curve_resolution, asset_correlation,
+                hazard_montecarlo_p):
     """
     Celery task for the event based risk calculator.
 
     :param job_id: the id of the current :class:`openquake.db.models.OqJob`
     :param assets: the list of `:class:risklib.scientific.Asset`
     instances considered
-    :param hazard_getter: the name of an hazard getter to be used
+    :param str hazard_getter_name: class name of a class defined in the
+      :mod:`openquake.calculators.risk.hazard_getters` to be instantiated to
+      get the hazard curves
     :param dict hazard:
       A dictionary mapping hazard Output ID to GmfCollection ID
     :param seed: the seed used to initialize the rng
@@ -69,14 +74,17 @@ def event_based(job_id, assets, hazard_getter, hazard,
     representing the correlation between the generated loss ratios
     """
 
+    asset_outputs = OrderedDict()
     for hazard_output_id, hazard_data in hazard.items():
         hazard_id, _ = hazard_data
 
         (loss_curve_id, loss_map_ids,
+         mean_loss_curve_id, quantile_loss_curve_ids,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
-        hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
+        hazard_getter = general.hazard_getter(
+            hazard_getter_name, hazard_id, imt)
 
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
@@ -100,11 +108,13 @@ def event_based(job_id, assets, hazard_getter, hazard,
                                     for asset in assets]
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
-            asset_outputs = calculator(assets, ground_motion_fields)
+            asset_outputs[hazard_output_id] = calculator(
+                assets, ground_motion_fields)
 
         with logs.tracing('writing results'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(asset_outputs):
+                for i, asset_output in enumerate(
+                        asset_outputs[hazard_output_id]):
                     general.write_loss_curve(
                         loss_curve_id, assets[i], asset_output)
 
@@ -115,9 +125,27 @@ def event_based(job_id, assets, hazard_getter, hazard,
                     if asset_output.insured_losses:
                         general.write_loss_curve(
                             insured_curve_id, assets[i], asset_output)
+                losses = sum(asset_output.losses
+                             for asset_output
+                             in asset_outputs[hazard_output_id])
+                general.update_aggregate_losses(
+                    aggregate_loss_curve_id, losses)
 
-        losses = sum(asset_output.losses for asset_output in asset_outputs)
-        general.update_aggregate_losses(aggregate_loss_curve_id, losses)
+    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+        weights = [data[1] for _, data in hazard.items()]
+
+        with logs.tracing('writing curve statistics'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, asset in enumerate(assets):
+                    general.curve_statistics(
+                        asset,
+                        [asset_output[i].loss_ratio_curve
+                         for asset_output in asset_outputs.values()],
+                        weights,
+                        mean_loss_curve_id,
+                        quantile_loss_curve_ids,
+                        hazard_montecarlo_p,
+                        assume_equal="image")
 
     base.signal_task_complete(job_id=job_id, num_items=len(assets))
 event_based.ignore_result = False
@@ -140,23 +168,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         Override the default pre_execute to provide more detailed
         validation.
 
-        1) In Event Based we get the intensity measure type considered
-        from the vulnerability model, then we check that the hazard
-        calculation includes outputs with that intensity measure type
-
         2) If insured losses are required we check for the presence of
         the deductible and insurance limit
         """
         super(EventBasedRiskCalculator, self).pre_execute()
-
-        hc = self.rc.get_hazard_calculation()
-
-        allowed_imts = hc.intensity_measure_types_and_levels.keys()
-
-        if not self.imt in allowed_imts:
-            raise RuntimeError(
-                "There is no ground motion field in the intensity measure %s" %
-                self.imt)
 
         if (self.rc.insured_losses and
             self.exposure_model.exposuredata_set.filter(
@@ -166,6 +181,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
+        # compute aggregate loss curves
         for hazard_output in self.considered_hazard_outputs():
             loss_curve = models.LossCurve.objects.get(
                 hazard_output=hazard_output,
@@ -206,6 +222,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         object that stores the ground motion fields associated with
         `hazard_calculation` and a logic tree realization
         """
+
+        # In order to avoid a big joint to filter per imt now, we let
+        # the hazard getter do the job
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='gmf',
@@ -218,14 +237,12 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         motion field and the so-called time representative of the
         stochastic event set
         """
-        hc = self.rc.get_hazard_calculation()
-
         # atm, no complete_logic_tree gmf are supported
         realizations_nr = 1
 
-        time_span = hc.investigation_time
+        time_span = self.hc.investigation_time
         return (time_span,
-                hc.ses_per_logic_tree_path * realizations_nr * time_span)
+                self.hc.ses_per_logic_tree_path * realizations_nr * time_span)
 
     @property
     def calculator_parameters(self):
@@ -239,10 +256,12 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             correlation = 0
         else:
             correlation = self.rc.asset_correlation
+
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
-                self.rc.loss_curve_resolution, correlation]
+                self.rc.loss_curve_resolution, correlation,
+                self.hc.number_of_logic_tree_samples == 0]
 
     def create_outputs(self, hazard_output):
         """
