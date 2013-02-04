@@ -364,7 +364,7 @@ class Input(djm.Model):
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
-        (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
+        (u'vulnerability_retrofitted', u'Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
@@ -894,7 +894,7 @@ class RiskCalculation(djm.Model):
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
         (u'scenario', u'Scenario'),
-        # (u'scenario_damage', u'Scenario Damage'),
+        (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
@@ -1306,7 +1306,6 @@ class Output(djm.Model):
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'collapse_map', u'Collapse map'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
@@ -1334,9 +1333,6 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
-
-    def is_ground_motion_field(self):
-        return self.output_type in ['gmf', 'complete_lt_gmf']
 
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
@@ -1931,7 +1927,7 @@ class GmfScenario(djm.Model):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`Gmf` objects associated
+    Iterator for walking through all :class:`GmfScenario` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -2221,7 +2217,8 @@ class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
     output = djm.ForeignKey("Output")
-    dmg_state = djm.TextField()
+    dmg_state = djm.TextField(
+        help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(
         help_text="limit state index, to order the limit states")
 
@@ -2236,8 +2233,6 @@ class DmgDistPerAsset(djm.Model):
     exposure_data = djm.ForeignKey("ExposureData")
     mean = djm.FloatField()
     stddev = djm.FloatField()
-    # geometry for the computation cell which contains the referenced asset
-    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset'

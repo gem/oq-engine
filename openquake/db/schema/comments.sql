@@ -214,8 +214,6 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_original IS 'T
 COMMENT ON COLUMN riskr.bcr_distribution_data.average_annual_loss_retrofitted IS 'The Expected annual loss computed by using the retrofitted model';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
-COMMENT ON COLUMN riskr.dmg_dist_per_asset.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
-
 COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
 
 -- uiapi schema tables ------------------------------------------
@@ -277,7 +275,9 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - gmf
     - loss_curve
     - loss_map
-    - collapse_map
+    - dmg_dist_per_asset
+    - dmg_dist_per_taxonomy
+    - dmg_dist_total
     - bcr_distribution';
 
 

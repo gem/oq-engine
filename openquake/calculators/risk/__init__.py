@@ -22,6 +22,7 @@ from .classical_bcr.core import ClassicalBCRRiskCalculator
 from .event_based.core import EventBasedRiskCalculator
 from .event_based_bcr.core import EventBasedBCRRiskCalculator
 from .scenario.core import ScenarioRiskCalculator
+from .scenario_damage.core import ScenarioDamageRiskCalculator
 
 CALCULATORS = {
     'classical': ClassicalRiskCalculator,
@@ -29,4 +30,5 @@ CALCULATORS = {
     'event_based': EventBasedRiskCalculator,
     'event_based_bcr': EventBasedBCRRiskCalculator,
     'scenario': ScenarioRiskCalculator,
+    'scenario_damage': ScenarioDamageRiskCalculator,
 }
