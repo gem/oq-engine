@@ -77,7 +77,7 @@ _pkgtest_innervm_run () {
 }
 
 pkgtest_run () {
-    local le_addr="$1" haddr
+    local i e le_addr="$1" haddr
 
     #
     #  run build of package
@@ -136,14 +136,21 @@ EOF
 
     # waiting VM startup
     for i in $(seq 1 60); do
-        if grep -q "is running" ${haddr}.lxc.log; then
+        if grep -q "is running" ${haddr}.lxc.log 2>/dev/null; then
             machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
             echo "MACHINE NAME: [$machine_name]"
+            for e in $(seq 1 60); do
+                sleep 1
+                if lxc-ps -n "${machine_name}" | grep sshd; then
+                    sleep 1
+                    break
+                fi
+            done
             break
         fi
         sleep 1
     done
-    if [ $i -eq 60 ]; then
+    if [ $i -eq 60 -o $e -eq 60 ]; then
         echo "VM not responding"
         return 2
     fi
