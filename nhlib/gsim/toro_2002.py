@@ -91,9 +91,9 @@ class ToroEtAl2002(GMPE):
         # by the equations)
         if isinstance(imt, SA):
             if imt.period == 3.0:
-                mean /= 0.385
+                mean /= 0.612
             if imt.period == 4.0:
-                mean /= 0.1483
+                mean /= 0.559
 
         return mean, stddevs
 
@@ -194,23 +194,23 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
                                                    self.CONSTS_FS['Fnss'],
                                                    self.CONSTS_FS['pN'],
                                                    rup.rake) * C_ADJ['AFrock'])
-        stddevs = np.array(stddevs) * C_ADJ['sig_AFrock']
+        stddevs = np.array(stddevs)
 
         return mean, stddevs
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
-    IMT    Frss      AFrock    sig_AFrock
-    pga    1.220000  1.301180  0.338916
-    0.03   0.935198  0.735106  0.289785
-    0.04   0.907936  0.419632  0.320650
-    0.10   1.080000  0.477379  0.352442
-    0.20   1.190000  0.888509  0.281552
-    0.40   1.230000  1.197291  0.198424
-    1.00   1.177500  1.265762  0.154327
-    2.00   1.140000  1.215779  0.155520
-    3.00   1.140000  1.215779  0.155520
-    4.00   1.140000  1.215779  0.155520
+    IMT    Frss      AFrock
+    pga    1.220000  0.735106
+    0.03   1.179400  0.423049
+    0.04   1.164000  0.477379
+    0.10   1.080000  0.888509
+    0.20   1.190000  1.197291
+    0.40   1.230000  1.308267
+    1.00   1.196667  1.265762
+    2.00   1.140000  1.215779
+    3.00   1.140000  1.215779
+    4.00   1.140000  1.215779
     """)
 
     #: Constants for faulting style adjustment
