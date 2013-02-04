@@ -270,7 +270,7 @@ def queue_next(task_func, task_args):
 def signal_task_complete(**kwargs):
     """
     Send a signal back through a dedicated queue to the 'control node' to
-    notify of task completion and the number of sources computed.
+    notify of task completion and the number of items processed.
 
     Signalling back this metric is needed to tell the control node when it can
     conclude its `execute` phase.

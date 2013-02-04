@@ -110,7 +110,6 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
     rupture_mdl = source.nrml_to_nhlib(
         models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
         hc.rupture_mesh_spacing, None, None)
-    sites = haz_general.get_site_collection(hc)
     imts = [haz_general.imt_to_nhlib(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]
     correlation_model = haz_general.get_correl_model(hc)
@@ -119,7 +118,7 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         hc.truncation_level, realizations=realizations,
         correlation_model=correlation_model)
 
-    save_gmf(output_id, gmf, sites.mesh, task_no)
+    save_gmf(output_id, gmf, hc.site_collection.mesh, task_no)
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -212,6 +211,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # If no site model file was specified, reference parameters are used
         # for all sites.
         self.initialize_site_model()
+
+        # Once the site model is init'd, create and cache the site collection;
+        self.hc.init_site_collection()
+
         self.progress['total'] = self.hc.number_of_ground_motion_fields
 
         # Store a record in the output table.
