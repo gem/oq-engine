@@ -32,6 +32,7 @@ import re
 
 from datetime import datetime
 
+import nhlib
 import numpy
 
 from django.db import connection
@@ -585,6 +586,13 @@ class HazardCalculation(djm.Model):
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
 
+    # We we create a `nhlib.site.SiteCollection` for the calculation, we can
+    # cache it here to avoid recomputing every time we need to use it in a task
+    # context. For large regions, this can be quite expensive.
+    _site_collection = fields.PickleField(
+        null=True, blank=True, db_column='site_collection'
+    )
+
     ########################
     # Logic Tree parameters:
     ########################
@@ -808,7 +816,48 @@ class HazardCalculation(djm.Model):
 
     def __init__(self, *args, **kwargs):
         kwargs = _prep_geometry(kwargs)
+        # A place to cache computation geometry. Recomputing this many times
+        # for large regions is wasteful.
+        self._points_to_compute = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
+
+    @property
+    def site_collection(self):
+        """
+        Get the :class:`nhlib.site.SiteCollection` for this calculation.
+
+        Because this data is costly to compute, we try to only compute it once
+        and cache it in the DB. See :meth:`init_site_collection`.
+        """
+        if self._site_collection is None:
+            self.init_site_collection()
+        return self._site_collection
+
+    def init_site_collection(self):
+        """
+        Compute, cache, and save (to the DB) the
+        :class:`nhlib.site.SiteCollection` which represents the calculation
+        sites of interest with associated soil parameters.
+
+        A `SiteCollection` is a combination of the geometry of interest for the
+        calculation, which is basically just a collection of geographical
+        points, and the soil associated soil parameters for each point.
+
+        .. note::
+            For computational efficiency, the `site_collection` should only be
+            computed once and cached in the database. If the computation
+            geometry or site parameters change during runtime, which highly
+            unlikely to occur in typical calculation scenarios, you will need
+            to recompute the site collection by calling this method again.
+
+            In this case, it obvious that such a thing should be done carefully
+            and with much discretion.
+
+            Ideally, this method should only be called once at the very
+            beginning a calculation.
+        """
+        self._site_collection = get_site_collection(self)
+        self.save()
 
     def individual_curves_per_location(self):
         """
@@ -848,20 +897,66 @@ class HazardCalculation(djm.Model):
         The mesh can be calculated given a `region` polygon and
         `region_grid_spacing` (the discretization parameter), or from a list of
         `sites`.
+
+        .. note::
+            This mesh is cached for efficiency when dealing with large numbers
+            of calculation points. If you need to clear the cache and
+            recompute, set `_points_to_compute` to `None` and call this method
+            again.
         """
-        if self.region is not None and self.region_grid_spacing is not None:
-            # assume that the polygon is a single linear ring
-            coords = self.region.coords[0]
-            points = [nhlib_geo.Point(*x) for x in coords]
-            poly = nhlib_geo.Polygon(points)
-            return poly.discretize(self.region_grid_spacing)
-        elif self.sites is not None:
-            lons, lats = zip(*self.sites.coords)
-            return nhlib_geo.Mesh(
-                numpy.array(lons), numpy.array(lats), depths=None)
-        else:
-            # there's no geometry defined
-            return None
+        if self._points_to_compute is None:
+            if (self.region is not None
+                and self.region_grid_spacing is not None):
+                # assume that the polygon is a single linear ring
+                coords = self.region.coords[0]
+                points = [nhlib_geo.Point(*x) for x in coords]
+                poly = nhlib_geo.Polygon(points)
+                # Cache the mesh:
+                self._points_to_compute = poly.discretize(
+                    self.region_grid_spacing
+                )
+            elif self.sites is not None:
+                lons, lats = zip(*self.sites.coords)
+                # Cache the mesh:
+                self._points_to_compute = nhlib_geo.Mesh(
+                    numpy.array(lons), numpy.array(lats), depths=None
+                )
+        return self._points_to_compute
+
+
+def get_site_collection(hc):
+    """
+    Create a `SiteCollection`, which is needed by nhlib to perform various
+    calculation tasks (such computing hazard curves and GMFs).
+
+    :param hc:
+        Instance of a :class:`HazardCalculation`. We need this in order to get
+        the points of interest for a calculation as well as load pre-computed
+        site data or access reference site parameters.
+
+    :returns:
+        :class:`nhlib.site.SiteCollection` instance.
+    """
+    site_data = SiteData.objects.filter(hazard_calculation=hc.id)
+    if len(site_data) > 0:
+        site_data = site_data[0]
+        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
+                    site_data.vs30_measured, site_data.z1pt0s,
+                    site_data.z2pt5s)
+        sites = [nhlib.site.Site(
+            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
+            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
+    else:
+        # Use the calculation reference parameters to make a site collection.
+        points = hc.points_to_compute()
+        measured = hc.reference_vs30_type == 'measured'
+        sites = [
+            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
+                            hc.reference_depth_to_2pt5km_per_sec,
+                            hc.reference_depth_to_1pt0km_per_sec)
+            for pt in points]
+
+    return nhlib.site.SiteCollection(sites)
 
 
 class RiskCalculation(djm.Model):
