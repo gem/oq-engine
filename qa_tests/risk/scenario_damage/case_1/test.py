@@ -187,18 +187,3 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
                 self.EXPECTED_DMG_DIST_PER_TAXONOMY_XML,
                 self.EXPECTED_DMG_DIST_TOTAL_XML,
                 self.EXPECTED_COLLAPSE_MAP_XML]
-
-    def _test_export_collapse_map(self):
-        # the collapse map is a special case of dmt_dist_per_asset
-        result_dir = tempfile.mkdtemp()
-        try:
-            job = self.run_risk(self.cfg, self.hazard_id())
-            output = models.Output.objects.get(
-                oq_job=job, output_type='dmg_dist_per_asset')
-            [exported_file] = export.risk.export_collapse_map(
-                output, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_COLLAPSE_MAP_XML),
-                exported_file)
-        finally:
-            shutil.rmtree(result_dir)
