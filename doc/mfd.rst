@@ -22,6 +22,15 @@ Truncated Gutenberg-Richter
     :private-members:
 
 
+-----------------------
+Youngs Coppersmith 1985
+-----------------------
+
+.. automodule:: nhlib.mfd.youngs_coppersmith_1985
+    :members:
+    :private-members:
+
+
 
 --------------------------
 Abstract base distribution

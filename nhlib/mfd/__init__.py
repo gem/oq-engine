@@ -18,9 +18,11 @@ A Magnitude Frequency Distribution (MFD) is a function that describes the rate
 (per year) of earthquakes across all magnitudes.
 
 Package `mfd` contains the basic class for MFD --
-:class:`nhlib.mfd.base.BaseMFD`, and two actual implementations:
+:class:`nhlib.mfd.base.BaseMFD`, and three actual implementations:
 :class:`nhlib.mfd.evenly_discretized.EvenlyDiscretizedMFD`
-and :class:`nhlib.mfd.truncated_gr.TruncatedGRMFD`.
+:class:`nhlib.mfd.truncated_gr.TruncatedGRMFD` and
+:class:`nhlib.mfd.youngs_coppersmith_1985.YoungsCoppersmith1985MFD`.
 """
 from nhlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from nhlib.mfd.truncated_gr import TruncatedGRMFD
+from nhlib.mfd.youngs_coppersmith_1985 import YoungsCoppersmith1985MFD
