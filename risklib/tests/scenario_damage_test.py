@@ -38,8 +38,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
         funcs = input.FragilityFunctionSeq(
-            fm, input.FragilityFunctionDiscrete,
-            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
+            fm, [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
 
         self._close_to(funcs.ground_motion_value_fractions(0.7),
                        funcs.ground_motion_value_fractions(0.8))
@@ -58,8 +57,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
             "discrete", [0.1, 0.3, 0.5, 0.7], LIMIT_STATES)
 
         funcs = input.FragilityFunctionSeq(
-            fm, input.FragilityFunctionDiscrete,
-            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
+            fm, [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]])
 
         self._close_to([1.0, 0.0, 0.0],
                        funcs.ground_motion_value_fractions(0.05))
@@ -78,8 +76,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
                                   LIMIT_STATES)
 
         funcs = input.FragilityFunctionSeq(
-            fm, input.FragilityFunctionDiscrete,
-            [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]],
+            fm, [[0.05, 0.20, 0.50, 1.00], [0.05, 0.20, 0.50, 1.00]],
             no_damage_limit=0.05)
         self._close_to([1.0, 0.0, 0.0],
                        funcs.ground_motion_value_fractions(0.02))
@@ -98,8 +95,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
                                   LIMIT_STATES)
 
         funcs = input.FragilityFunctionSeq(
-            fm, input.FragilityFunctionDiscrete,
-            [[0.05, 0.20, 0.50, 1.00], [0.00, 0.05, 0.20, 0.50]],
+            fm, [[0.05, 0.20, 0.50, 1.00], [0.00, 0.05, 0.20, 0.50]],
             no_damage_limit=0.05)
 
         self._close_to([0.975, 0.025, 0.],

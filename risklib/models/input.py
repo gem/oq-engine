@@ -24,10 +24,9 @@ import numpy
 # TODO: validation on input values?
 class FragilityFunctionContinuous(object):
 
-    def __init__(self, funcs, (mean, stddev)):
-        self.mean = mean
-        self.stddev = stddev
-        self.funcs = funcs
+    def __init__(self, funcseq, mean_stddev):
+        self.funcs = funcseq
+        self.mean, self.stddev = mean_stddev
 
     def poe(self, iml):
         """
@@ -46,9 +45,9 @@ class FragilityFunctionContinuous(object):
 
 class FragilityFunctionDiscrete(object):
 
-    def __init__(self, funcs, poes):
+    def __init__(self, funcseq, poes):
+        self.funcs = funcseq
         self.poes = poes
-        self.funcs = funcs
         self._interp = None
 
     @property
@@ -88,10 +87,12 @@ class FragilityFunctionSeq(Sequence):
     An ordered sequence of fragility functions, one for each limit state
     except the "no_damage" state.
     """
-    def __init__(self, fragility_model, fftype, args, no_damage_limit=None):
+    def __init__(self, fragility_model, args, no_damage_limit=None):
         self.fragility_model = fragility_model
-        self.fftype = fftype
-        self.fflist = [fftype(self, arg) for arg in args]
+        self.fftype = (FragilityFunctionDiscrete
+                       if fragility_model.format == 'discrete'
+                       else FragilityFunctionContinuous)
+        self.fflist = [self.fftype(self, arg) for arg in args]
         self.no_damage_limit = no_damage_limit
 
     def __getitem__(self, i):
