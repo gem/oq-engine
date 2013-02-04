@@ -142,6 +142,7 @@ EOF
             for e in $(seq 1 60); do
                 sleep 1
                 if lxc-ps -n "${machine_name}" | grep sshd; then
+                    sleep 1
                     break
                 fi
             done
