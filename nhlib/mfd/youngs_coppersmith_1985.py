@@ -36,6 +36,7 @@ class YoungsCoppersmith1985MFD(BaseMFD):
     Society of America, Vol. 75, No. 4, pages 939-964, 1985.
     The class implements the MFD under the following assumptions as reported
     at page 954:
+
     1) Δ_mc (width of the boxcar distribution representing characteristic
        rate) is equal to 0.5 magnitude unit
     2) m' (maximum magnitude value for the Gutenberg-Richeter part of the
