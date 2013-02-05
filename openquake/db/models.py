@@ -996,6 +996,12 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
+    # Meaningful only for event_based and classical (that produces
+    # loss curves)
+    dont_save_absolute_losses = fields.OqNullBooleanField(
+        help_text='if true calculation does not store absolute losses',
+        null=True, blank=True)
+
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)

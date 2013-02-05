@@ -396,8 +396,8 @@ class BaseRiskCalculator(base.CalculatorNext):
                 job, "Loss Curve set for hazard %s" % hazard_output.id,
                 "loss_curve")).pk
 
+        # loss maps (or conditional loss maps) ...
         loss_map_ids = dict()
-
         if self.job.risk_calculation.conditional_loss_poes is not None:
             for poe in self.job.risk_calculation.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
@@ -409,8 +409,9 @@ class BaseRiskCalculator(base.CalculatorNext):
                         "loss_map"),
                     poe=poe).pk
 
-        if (self.rc.mean_loss_curves and
-            len(self.considered_hazard_outputs()) > 1):
+        # mean loss curves ...
+        multiple_hazard_outputs_p = len(self.considered_hazard_outputs()) > 1
+        if self.rc.mean_loss_curves and multiple_hazard_outputs_p:
             mean_loss_curve_id = models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.job,
@@ -420,9 +421,10 @@ class BaseRiskCalculator(base.CalculatorNext):
         else:
             mean_loss_curve_id = None
 
+        # quantile loss curves
         quantile_loss_curve_ids = {}
-        if len(self.considered_hazard_outputs()) > 1:
-            for quantile in self.rc.quantile_loss_curves or []:
+        if multiple_hazard_outputs_p and self.rc.quantile_loss_curves:
+            for quantile in self.rc.quantile_loss_curves:
                 quantile_loss_curve_ids[quantile] = (
                     models.LossCurve.objects.create(
                         output=models.Output.objects.create_output(
@@ -443,8 +445,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(loss_curve_id, asset, asset_output,
-                     dont_save_absolute_losses=False):
+def write_loss_curve(loss_curve_id, asset, asset_output):
     """
     Stores and returns a :class:`openquake.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -459,7 +460,12 @@ def write_loss_curve(loss_curve_id, asset, asset_output,
     returned by risklib
     """
 
-    if dont_save_absolute_losses:
+    if write_loss_curve.dont_save_absolute_losses is None:
+        job = models.LossCurve.objects.get(pk=loss_curve_id).output.oq_job
+        write_loss_curve.dont_save_absolute_losses = (
+            job.risk_calculation.dont_save_absolute_losses)
+
+    if write_loss_curve.dont_save_absolute_losses:
         absolute_losses = {}
     else:
         absolute_losses = dict(
@@ -472,6 +478,7 @@ def write_loss_curve(loss_curve_id, asset, asset_output,
         poes=asset_output.loss_ratio_curve.ordinates,
         loss_ratios=asset_output.loss_ratio_curve.abscissae,
         **absolute_losses)
+write_loss_curve.dont_save_absolute_losses = None
 
 
 def write_loss_map(loss_map_ids, asset, asset_output):
