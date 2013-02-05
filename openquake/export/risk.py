@@ -169,9 +169,6 @@ def make_dmg_dist_export(damagecls, writercls, filename):
             writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
             data = damagecls.objects.filter(
                 dmg_state__risk_calculation_id=rc_id)
-
-        if damagecls is models.DmgDistPerAsset:
-            data = data.order_by('exposure_data')
         writer.serialize(data.order_by('dmg_state__lsi'))
         return [file_path]
 
