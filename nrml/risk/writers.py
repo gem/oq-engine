@@ -18,6 +18,8 @@
 Module containing writers for risk output artifacts.
 """
 
+import itertools
+
 from lxml import etree
 
 import nrml
@@ -569,7 +571,15 @@ class DmgDistPerAssetXMLWriter(object):
             self.root, self.dmg_dist_el = _create_root_elems(
                 self.damage_states, "dmgDistPerAsset")
 
-            for asset_data in assets_data:
+            assets = []
+            # group by limit state index (lsi)
+            for lsi, rows in itertools.groupby(
+                    assets_data, lambda r: r.dmg_state.lsi):
+                # sort by asset_ref
+                for asset_data in sorted(
+                        rows, key=lambda r: r.exposure_data.asset_ref):
+                    assets.append(asset_data)
+            for asset_data in assets:
                 site = asset_data.exposure_data.site
                 asset_ref = asset_data.exposure_data.asset_ref
 
@@ -644,7 +654,9 @@ class CollapseMapXMLWriter(object):
         with open(self.path, "w") as fh:
             self.root, self.collapse_map_el = self._create_root_elems()
 
-            for cfraction in cmap_data:
+            # order by asset_ref
+            for cfraction in sorted(
+                    cmap_data, key=lambda r: r.exposure_data.asset_ref):
                 site = cfraction.exposure_data.site
 
                 # lookup the correct <CMNode /> element

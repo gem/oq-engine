@@ -39,12 +39,12 @@ AGGREGATE_LOSS_CURVE = collections.namedtuple(
 ExposureData = collections.namedtuple(
     "ExposureData", 'asset_ref site')
 
-DmgState = collections.namedtuple("DmgState", 'dmg_state')
-NO_DAMAGE = DmgState("no_damage")
-SLIGHT = DmgState("slight")
-MODERATE = DmgState("moderate")
-EXTENSIVE = DmgState("extensive")
-COMPLETE = DmgState("complete")
+DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
+NO_DAMAGE = DmgState("no_damage", 0)
+SLIGHT = DmgState("slight", 1)
+MODERATE = DmgState("moderate", 2)
+EXTENSIVE = DmgState("extensive", 3)
+COMPLETE = DmgState("complete", 4)
 
 DMG_DIST_PER_ASSET = collections.namedtuple(
     "DmgDistPerAsset", "exposure_data dmg_state mean stddev")
@@ -525,6 +525,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 ######################## Scenario Damage Writers #########################
 
 class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase):
+
     filename = "dmg-dist-per-asset.xml"
 
     tearDown = remove_file
