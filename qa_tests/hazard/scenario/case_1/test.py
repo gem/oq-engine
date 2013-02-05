@@ -46,6 +46,6 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
             [output] = export.core.get_outputs(job.id)
             [exported_file] = export.hazard.export(
                 output.id, result_dir)
-            self.assertEqual(open(exported_file).read().count('\n'), 311)
+            self.assertEqual(open(exported_file).read().count('\n'), 314)
         finally:
             shutil.rmtree(result_dir)
