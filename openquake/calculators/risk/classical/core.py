@@ -68,6 +68,9 @@ def classical(job_id, assets, hazard_getter_name, hazard,
 
     asset_outputs = OrderedDict()
 
+    calculator = api.Classical(
+        vulnerability_function, lrem_steps_per_interval)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_id, _ = hazard_data
         (loss_curve_id, loss_map_ids,
@@ -75,9 +78,6 @@ def classical(job_id, assets, hazard_getter_name, hazard,
              output_containers[hazard_output_id])
 
         hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
-
-        calculator = api.Classical(
-            vulnerability_function, lrem_steps_per_interval)
 
         # if we need to compute the loss maps, we add the proper risk
         # aggregator
