@@ -123,9 +123,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        allowed_imts = self.hc.intensity_measure_types_and_levels.keys()
+        imts = self.hc.get_imts()
 
-        if not self.imt in allowed_imts:
+        if not self.imt in imts:
             raise RuntimeError(
                 "There is no hazard output in the intensity measure %s" %
                 self.imt)
@@ -168,10 +168,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         6) the specific calculator parameter set
         """
 
-        output_containers = dict((hazard_output.id,
-                                  self.create_outputs(hazard_output))
-                                 for hazard_output
-                                 in self.considered_hazard_outputs())
+        output_containers = self.rc.output_container_builder(self)
 
         calculator_parameters = self.calculator_parameters
 
@@ -398,8 +395,8 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         loss_map_ids = dict()
 
-        if self.job.risk_calculation.conditional_loss_poes is not None:
-            for poe in self.job.risk_calculation.conditional_loss_poes:
+        if self.rc.conditional_loss_poes is not None:
+            for poe in self.rc.conditional_loss_poes:
                 loss_map_ids[poe] = models.LossMap.objects.create(
                     hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
@@ -466,6 +463,26 @@ def write_loss_curve(loss_curve_id, asset, asset_output):
         loss_ratios=asset_output.loss_ratio_curve.abscissae)
 
 
+# FIXME
+# Temporary solution, loss map for Scenario Risk
+# is a different concept with respect to a loss map
+# for a different calculator.
+
+def write_loss_map_data(id, asset_ref, value, std_dev, location):
+    """
+    Create :class:`openquake.db.models.LossMapData`
+
+    :param asset_ref: asset ref value.
+    :param value: asset loss value.
+    :param std_dev: asset std dev value.
+    :param location: asset location value.
+    """
+
+    models.LossMapData.objects.create(loss_map_id=id,
+            asset_ref=asset_ref, value=value,
+            std_dev=std_dev, location=location)
+
+
 def write_loss_map(loss_map_ids, asset, asset_output):
     """
     Create :class:`openquake.db.models.LossMapData` objects where the
@@ -484,12 +501,10 @@ def write_loss_map(loss_map_ids, asset, asset_output):
     """
 
     for poe, loss in asset_output.conditional_losses.items():
-        models.LossMapData.objects.create(
-            loss_map_id=loss_map_ids[poe],
-            asset_ref=asset.asset_ref,
-            value=loss,
-            std_dev=None,
-            location=asset.site)
+        write_loss_map_data(loss_map_ids[poe],
+               asset_ref=asset.asset_ref,
+               value=loss, std_dev=None,
+               location=asset.site)
 
 
 @db.transaction.commit_on_success

@@ -490,12 +490,26 @@ class ScenarioDamageRiskCalculationForm(BaseOQModelForm):
             'region_constraint',
         )
 
+class ScenarioRiskCalculationForm(BaseOQModelForm):
+    calc_mode = 'scenario'
+
+    class Meta:
+        fields = (
+            'description',
+            'no_progress_timeout',
+            'region_constraint',
+            'master_seed',
+            'asset_correlation',
+            )
+
+
 #: Maps calculation_mode to the appropriate validator class
 RISK_VALIDATOR_MAP = {
     'classical': ClassicalRiskCalculationForm,
     'classical_bcr': ClassicalRiskCalculationWithBCRForm,
     'event_based': EventBasedRiskCalculationForm,
     'event_based_bcr': EventBasedRiskCalculationWithBCRForm,
+    'scenario': ScenarioRiskCalculationForm,
     'scenario_damage': ScenarioDamageRiskCalculationForm,
 }
 
