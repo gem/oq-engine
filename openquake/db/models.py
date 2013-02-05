@@ -1392,6 +1392,7 @@ class Output(djm.Model):
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
+        (u'collapse_map', u'Collapse Map Distribution'),
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
@@ -2296,7 +2297,7 @@ class BCRDistributionData(djm.Model):
 class DmgState(djm.Model):
     """Holds the damage_states associated to a given output"""
     # they actually come from the fragility model xml input
-    output = djm.ForeignKey("Output")
+    risk_calculation = djm.ForeignKey("RiskCalculation")
     dmg_state = djm.TextField(
         help_text="The name of the damage state")
     lsi = djm.PositiveSmallIntegerField(

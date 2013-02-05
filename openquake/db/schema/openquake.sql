@@ -987,6 +987,7 @@ CREATE TABLE uiapi.output (
     --      dmg_dist_per_asset
     --      dmg_dist_per_taxonomy
     --      dmg_dist_total
+    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
@@ -997,6 +998,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
+            'collapse_map',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -1472,11 +1474,11 @@ ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 CREATE TABLE riskr.dmg_state (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    risk_calculation_id INTEGER NOT NULL REFERENCES uiapi.risk_calculation,
     dmg_state VARCHAR NOT NULL,
     lsi SMALLINT NOT NULL CHECK(lsi >= 0),
-    UNIQUE (output_id, dmg_state),
-    UNIQUE (output_id, lsi));
+    UNIQUE (risk_calculation_id, dmg_state),
+    UNIQUE (risk_calculation_id, lsi));
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
