@@ -63,10 +63,12 @@ CELERY_IMPORTS = (
     "openquake.calculators.risk.classical.core",
     "openquake.calculators.risk.classical_bcr.core",
     "openquake.calculators.risk.event_based.core",
-    "openquake.calculators.risk.event_based_bcr.core")
+    "openquake.calculators.risk.event_based_bcr.core",
+    "openquake.calculators.risk.scenario.core",)
 
 try:
-    imp.find_module("tasks", [ os.path.join(x, "tests/utils") for x in sys.path ])
+    imp.find_module("tasks", [os.path.join(x, "tests/utils")
+                                for x in sys.path])
     CELERY_IMPORTS = CELERY_IMPORTS + ("tests.utils.tasks",)
 except ImportError:
     pass
