@@ -38,11 +38,11 @@ def scenario(job_id, assets, hazard_getter_name, hazard,
     :param job_id: the id of the current :class:`openquake.db.models.OqJob`
     :param assets: the list of :class:`risklib.scientific.Asset`
         instances considered
-    :param hazard_getter: the name of an hazard getter to be used
+    :param hazard_getter_name: the name of an hazard getter to be used
     :param hazard: the hazard output dictionary
     :param seed: the seed used to initialize the rng
     :param output_containers: a dictionary {hazard_id: output_id}
-        of output_type "dmg_dist_per_asset"
+        where output id represents the id of the loss map
     :param imt: the Intensity Measure Type of the ground motion field
     :param asset_correlation: asset correlation coefficient
     """

@@ -863,7 +863,7 @@ class HazardCalculation(djm.Model):
             # there's no geometry defined
             return None
 
-    def allowed_imts(self):
+    def get_imts(self):
         """
         Returns intensity mesure types or
         intensity mesure types with levels.
