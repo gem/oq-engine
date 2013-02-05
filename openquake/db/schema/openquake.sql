@@ -1488,11 +1488,11 @@ ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 CREATE TABLE riskr.dmg_state (
     id SERIAL PRIMARY KEY,
-    job_id INTEGER NOT NULL REFERENCES uiapi.oq_job,
+    risk_calculation_id INTEGER NOT NULL REFERENCES uiapi.risk_calculation,
     dmg_state VARCHAR NOT NULL,
     lsi SMALLINT NOT NULL CHECK(lsi >= 0),
-    UNIQUE (job_id, dmg_state),
-    UNIQUE (job_id, lsi));
+    UNIQUE (risk_calculation_id, dmg_state),
+    UNIQUE (risk_calculation_id, lsi));
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
