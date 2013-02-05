@@ -62,9 +62,9 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
         outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
         with logs.tracing('save statistics per site'), \
                 db.transaction.commit_on_success(using='reslt_writer'):
-            ddpa_id = output_containers[hazard_id]
+            rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
             for output in outputs:
-                save_dist_per_asset(output.fractions, ddpa_id, output.asset)
+                save_dist_per_asset(output.fractions, rc_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
@@ -74,13 +74,15 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
 scenario_damage.ignore_result = False
 
 
-### XXX: the three utilities below could go in models ###
-
-def save_dist_per_asset(fractions, output_id, asset):
+def save_dist_per_asset(fractions, rc_id, asset):
     """
     Save the damage distribution for a given asset.
+
+    :param fractions: numpy array with the damage fractions
+    :param rc_id: the risk_calculation_id
+    :param asset: an ExposureData instance
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -91,12 +93,16 @@ def save_dist_per_asset(fractions, output_id, asset):
         ddpa.save()
 
 
-def save_dist_per_taxonomy(fractions, output_id, taxonomy):
+def save_dist_per_taxonomy(fractions, rc_id, taxonomy):
     """
     Save the damage distribution for a given taxonomy, by summing over
     all assets.
+
+    :param fractions: numpy array with the damage fractions
+    :param int rc_id: the risk_calculation_id
+    :param str: the taxonomy string
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -107,11 +113,14 @@ def save_dist_per_taxonomy(fractions, output_id, taxonomy):
         ddpt.save()
 
 
-def save_dist_total(fractions, output_id):
+def save_dist_total(fractions, rc_id):
     """
     Save the total distribution, by summing over all assets and taxonomies.
+
+    :param fractions: numpy array with the damage fractions
+    :param int rc_id: the risk_calculation_id
     """
-    dmg_states = models.DmgState.objects.filter(output_id=output_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -123,8 +132,8 @@ def save_dist_total(fractions, output_id):
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
-    Scenario Damage Risk Calculator. Computes three kinds of damage
-    distributions: per asset, per taxonomy and total.
+    Scenario Damage Risk Calculator. Computes four kinds of damage
+    distributions: per asset, per taxonomy, total and collapse map.
     """
 
     #: The core calculation celery task function
@@ -149,17 +158,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def worker_args(self, taxonomy):
         """
         :returns: a fixed list of arguments that a calculator may want
-        to pass to a worker. In this case the list of fragility_functions
-        for the given taxonomy.
+        to pass to a worker. In this case taxonomy, fragility_model and
+        fragility_functions for the given taxonomy.
         """
         return [taxonomy, self.fragility_model,
                 self.fragility_functions[taxonomy]]
 
     def task_completed_hook(self, message):
         """
+        :param dict message: the message sent by the worker
+
         Update the dictionary self.ddpt, i.e. aggregate the damage distribution
         by taxonomy; called every time a block of assets is computed for each
-        taxonomy.
+        taxonomy. Fractions and taxonomy are extracted from the message.
         """
         taxonomy = message['taxonomy']
         fractions = message['fractions']
@@ -173,55 +184,63 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         tot = None
         for taxonomy, fractions in self.ddpt.iteritems():
-            save_dist_per_taxonomy(fractions, self.ddpt_output.id, taxonomy)
+            save_dist_per_taxonomy(fractions, self.rc.id, taxonomy)
             if tot is None:  # only the first time
                 tot = numpy.zeros(fractions.shape)
             tot += fractions
         if tot is not None:
-            save_dist_total(tot, self.ddt_output.id)
+            save_dist_total(tot, self.rc.id)
 
     @property
     def calculator_parameters(self):
         """
-        Calculator specific parameters
+        Return the calculator specific Intensity Measure Type.
         """
         return [self.imt]
 
-    def create_outputs(self, hazard_output):
+    # must be overridden, otherwise the parent will create loss curves
+    def create_outputs(self, hazard_ouput):
         """
-        Create the three kinds of outputs of a ScenarioDamage calculator
-        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total and
-        populate the corresponding entries in DmgState. Return the
-        id of the dmg_dist_per_asset output, to be passed to the celery
-        worker. Notice that the outputs ddpt_output and ddt_output do
-        not need to be passed to the workers, since the aggregation
-        per taxonomy and total are performed in the controller node,
-        in the task_completion_hook.
+        Create the outputs of a ScenarioDamage calculator
+        dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total, collapse_map
         """
-        ddpa_output = models.Output.objects.create_output(
+        # NB: the outputs do not need to be passed to the workers, since
+        # the aggregation per taxonomy and total are performed in the
+        # controller node, in the task_completion_hook, whereas the
+        # computations per asset only need the risk_calculation_id,
+        # extracted from the job_id
+        models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
-        self.ddpt_output = models.Output.objects.create_output(
+        models.Output.objects.create_output(
             self.job, "Damage Distribution per Taxonomy",
             "dmg_dist_per_taxonomy")
 
-        self.ddt_output = models.Output.objects.create_output(
+        models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        for output in ddpa_output, self.ddpt_output, self.ddt_output:
-            for lsi, dstate in enumerate(self.damage_states):
-                ds = models.DmgState(output=output, dmg_state=dstate, lsi=lsi)
-                ds.save()
-
-        return ddpa_output.id
+        models.Output.objects.create_output(
+            self.job, "Collapse Map per Asset",
+            "collapse_map")
 
     def set_risk_models(self):
+        """
+        Set the attributes fragility_model, fragility_functions, damage_states
+        and populate the table DmgState for the current risk calculation.
+        """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
+        for lsi, dstate in enumerate(self.damage_states):
+            models.DmgState(risk_calculation=self.job.risk_calculation,
+                            dmg_state=dstate, lsi=lsi).save()
 
     def parse_fragility_model(self):
+        """
+        Parse the fragility XML file and return fragility_model,
+        fragility_functions, and damage_states for usage in set_risk_models.
+        """
         path = self.rc.inputs.get(input_type='fragility').path  # will be used
         iterparse = iter(parsers.FragilityModelParser(path))
         format, iml, limit_states = iterparse.next()
