@@ -33,7 +33,6 @@ CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
 CREATE INDEX uiapi_oq_job_profile_owner_id_idx on uiapi.oq_job_profile(owner_id);
 CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
 CREATE INDEX uiapi_output_owner_id_idx on uiapi.output(owner_id);
-CREATE INDEX uiapi_upload_owner_id_idx on uiapi.upload(owner_id);
 
 -- hzrdr indices on foreign keys
 -- hazard map
@@ -74,7 +73,7 @@ CREATE INDEX riskr_aggregate_loss_curve_data_loss_curve_id_idx on riskr.aggregat
 CREATE INDEX riskr_bcr_distribution_output_id_idx on riskr.bcr_distribution(output_id);
 CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_distribution_data(bcr_distribution_id);
 
-CREATE INDEX riskr_dmg_state_output_id_idx on riskr.dmg_state(output_id);
+CREATE INDEX riskr_dmg_state_rc_id_idx on riskr.dmg_state(risk_calculation_id);
 CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 
 -- oqmif indexes

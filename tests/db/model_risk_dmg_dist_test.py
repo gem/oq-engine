@@ -20,6 +20,7 @@ from django.test import TestCase as DjangoTestCase
 
 from shapely.geometry import Point
 from openquake.db import models
+from openquake import engine2
 
 from tests.utils import helpers
 
@@ -37,14 +38,11 @@ class DamageStateTestCase(DjangoTestCase):
         default_user = helpers.default_user()
 
         cls.job = models.OqJob(owner=default_user)
+        rc = engine2.create_risk_calculation(
+            cls.job.owner,
+            dict(calculation_mode='scenario_damage', base_path='/'), [])
+        cls.job.risk_calculation = rc
         cls.job.save()
-
-        # dmg dist per asset
-        cls.ddpa_output = models.Output(
-            owner=default_user, oq_job=cls.job,
-            display_name='Test dmg dist per asset',
-            output_type='dmg_dist_per_asset')
-        cls.ddpa_output.save()
 
         # We also need some sample exposure data records (to satisfy the dmg
         # dist per asset FK).
@@ -66,36 +64,17 @@ class DamageStateTestCase(DjangoTestCase):
             site=test_site.to_wkt(), stco=1234.56)
         cls.exp_data.save()
 
-        # dmg dist per asset
-        cls.ddpa_output = models.Output(
-            owner=default_user, oq_job=cls.job,
-            display_name='Test dmg dist per asset',
-            output_type='dmg_dist_per_asset')
-        cls.ddpa_output.save()
-
-        # dmg dist per taxonomy
-        cls.ddpt_output = models.Output(
-            owner=default_user, oq_job=cls.job,
-            display_name='Test dmg dist per taxonomy',
-            output_type='dmg_dist_per_taxonomy')
-        cls.ddpt_output.save()
-
-        # total dmg dist
-        cls.ddt_output = models.Output(
-            owner=default_user, oq_job=cls.job,
-            display_name='Test dmg dist total',
-            output_type='dmg_dist_total')
-        cls.ddt_output.save()
-
         cls.dmg_states = {}
-        for output in (cls.ddpa_output, cls.ddpt_output, cls.ddt_output):
-            for lsi, dmg_state in enumerate(cls.DMG_STATES):
-                dstate = models.DmgState(
-                    output=output, dmg_state=dmg_state, lsi=lsi)
-                cls.dmg_states[dmg_state] = dstate
-                dstate.save()
+
+        for lsi, dmg_state in enumerate(cls.DMG_STATES):
+            dstate = models.DmgState(
+                risk_calculation=cls.job.risk_calculation,
+                dmg_state=dmg_state, lsi=lsi)
+            cls.dmg_states[dmg_state] = dstate
+            dstate.save()
         cls.invalid_state = models.DmgState(
-            output=output, dmg_state='invalid state', lsi=0)
+            risk_calculation=cls.job.risk_calculation,
+            dmg_state='invalid state', lsi=0)
 
     def _test_insert_update_invalid(self, mdl, table):
         # Helper function for running tests for invalid damage states.
@@ -111,21 +90,18 @@ class DamageStateTestCase(DjangoTestCase):
         for ds in self.dmg_states.itervalues():
             dd = models.DmgDistPerAsset(
                 exposure_data=self.exp_data,
-                dmg_state=ds, mean=0.0, stddev=0.0,
-                location=self.GRID_CELL_SITE.to_wkt())
+                dmg_state=ds, mean=0.0, stddev=0.0)
             dd.save()
 
     def test_ddpa_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerAsset(
-            exposure_data=self.exp_data,
-            mean=0.0, stddev=0.0, location=self.GRID_CELL_SITE.to_wkt())
+            exposure_data=self.exp_data, mean=0.0, stddev=0.0)
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 
     def test_ddpa_update_valid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
-            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.to_wkt())
+            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0)
         dd.save()
         dd.dmg_state = self.dmg_states['moderate']
         dd.save()
@@ -133,8 +109,7 @@ class DamageStateTestCase(DjangoTestCase):
     def test_ddpa_update_invalid_dmg_state(self):
         dd = models.DmgDistPerAsset(
             exposure_data=self.exp_data,
-            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0,
-            location=self.GRID_CELL_SITE.to_wkt())
+            dmg_state=self.dmg_states['slight'], mean=0.0, stddev=0.0)
         dd.save()
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset')
 

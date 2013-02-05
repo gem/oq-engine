@@ -51,15 +51,13 @@ from openquake import logs
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+CD = os.path.dirname(__file__)  # current directory
 
-OUTPUT_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../data/output'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../bin/openquake'))
 
-SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../../openquake/nrml/schema/'))
+DATA_DIR = os.path.abspath(os.path.join(CD, '../data'))
 
-SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(SCHEMA_DIR, 'examples'))
+OUTPUT_DIR = os.path.abspath(os.path.join(CD, '../data/output'))
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
@@ -231,7 +229,7 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--run-hazard=%s" % config_file]
+    args = [RUNNER, "--run-hazard=%s" % config_file]
     if force_inputs:
         args.append('--force-inputs')
 
@@ -263,7 +261,7 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
       ID of the hazard output used by the risk calculation
     """
 
-    args = ["bin/openquake", "--run-risk=%s" % config_file,
+    args = [RUNNER, "--run-risk=%s" % config_file,
             "--hazard-output-id=%d" % hazard_id]
     if force_inputs:
         args.append('--force-inputs')
@@ -606,24 +604,6 @@ class DbTestCase(object):
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
     @classmethod
-    def teardown_upload(cls, upload, filesystem_only=True):
-        """
-        Tear down the file system (and potentially db) artefacts for the
-        given upload.
-
-        :param upload: the :py:class:`db.models.Upload` instance
-            in question
-        :param bool filesystem_only: if set the upload/input database records
-            will be left intact. This saves time and the test db will be
-            dropped/recreated prior to the next db test suite run anyway.
-        """
-        # This is like "rm -rf path"
-        shutil.rmtree(upload.path, ignore_errors=True)
-        if filesystem_only:
-            return
-        upload.delete()
-
-    @classmethod
     def teardown_inputs(cls, inputs, filesystem_only):
         if filesystem_only:
             return
@@ -701,14 +681,13 @@ class DbTestCase(object):
         return oqjp
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None, force_inputs=False, omit_profile=False,
+    def setup_classic_job(cls, create_job_path=True, inputs=None,
+                          force_inputs=False, omit_profile=False,
                           user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
-        :param integer upload_id: if set use upload record with given db key.
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
         :param bool force_inputs: If `True` the model input files will be
@@ -718,8 +697,6 @@ class DbTestCase(object):
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        assert upload_id is None  # temporary
-
         job = engine.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job, force_inputs)
@@ -745,7 +722,7 @@ class DbTestCase(object):
         given job.
 
         :param job: a :py:class:`db.models.OqJob` instance
-        :param bool filesystem_only: if set the oq_job/oq_param/upload/
+        :param bool filesystem_only: if set the oq_job/oq_param/
             input database records will be left intact. This saves time and the
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
