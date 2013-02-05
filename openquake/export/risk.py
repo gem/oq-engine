@@ -157,19 +157,22 @@ def make_dmg_dist_export(damagecls, writercls, filename):
         :param target_dir: destination directory of the exported file.
         :type target_dir: string
         """
-        job_id = output.oq_job.id
-        file_path = os.path.join(target_dir, filename % job_id)
+        job = output.oq_job
+        rc_id = job.risk_calculation.id
+        file_path = os.path.join(target_dir, filename % job.id)
         dmg_states = list(models.DmgState.objects.filter(
-            job_id=job_id).order_by('lsi'))
+            risk_calculation_id=rc_id).order_by('lsi'))
         if writercls is writers.CollapseMapXMLWriter:  # special case
             writer = writercls(file_path)
-            data = damagecls.objects.filter(
-                dmg_state=dmg_states[-1]).order_by('exposure_data')
+            data = damagecls.objects.filter(dmg_state=dmg_states[-1])
         else:
             writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
-            data = sum([list(damagecls.objects.filter(dmg_state=ds))
-                        for ds in dmg_states], [])
-        writer.serialize(data)
+            data = damagecls.objects.filter(
+                dmg_state__risk_calculation_id=rc_id)
+
+        if damagecls is models.DmgDistPerAsset:
+            data = data.order_by('exposure_data')
+        writer.serialize(data.order_by('dmg_state__lsi'))
         return [file_path]
 
     return export_dmg_dist
