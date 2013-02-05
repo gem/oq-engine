@@ -55,6 +55,7 @@ def scenario(job_id, assets, hazard_getter_name, hazard,
 
     outputs = calc(assets, [hazard_getter(a.site) for a in assets])
 
+    # Risk output container id
     outputs_id = output_containers.values()[0][0]
 
     with db.transaction.commit_on_success(using='reslt_writer'):
