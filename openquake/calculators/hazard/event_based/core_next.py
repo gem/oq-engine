@@ -38,7 +38,6 @@ import nhlib.source
 import numpy.random
 
 from django.db import transaction
-from nhlib import correlation
 from nhlib.calc import filters
 from nhlib.calc import gmf as gmf_calc
 from nhlib.calc import stochastic
@@ -58,11 +57,6 @@ from openquake.job.validation import MAX_SINT_32
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
-
-#: Ground motion correlation model map
-GM_CORRELATION_MODEL_MAP = {
-    'JB2009': correlation.JB2009CorrelationModel,
-}
 
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
@@ -128,7 +122,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         correl_model = None
         if hc.ground_motion_correlation_model is not None:
-            correl_model = _get_correl_model(hc)
+            correl_model = haz_general.get_correl_model(hc)
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
@@ -140,10 +134,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     sources = list(haz_general.gen_sources(
         src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
         hc.width_of_mfd_bin, hc.area_source_discretization))
-
-    logs.LOG.debug('> creating site collection')
-    site_coll = haz_general.get_site_collection(hc)
-    logs.LOG.debug('< done creating site collection')
 
     # Compute stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -157,7 +147,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        sources_sites = ((src, site_coll) for src in sources)
+        sources_sites = ((src, hc.site_collection) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
         filtered_sources = (src for src, _ in ssd_filter(sources_sites))
@@ -195,7 +185,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
                 gmf_calc_kwargs = {
                     'rupture': rupture,
-                    'sites': site_coll,
+                    'sites': hc.site_collection,
                     'imts': imts,
                     'gsim': gsims[rupture.tectonic_region_type],
                     'truncation_level': hc.truncation_level,
@@ -251,27 +241,6 @@ def _create_gmf_cache(n_sites, imts):
         cache[imt] = numpy.empty((n_sites, 0))
 
     return cache
-
-
-def _get_correl_model(hc):
-    """
-    Helper function for constructing the appropriate correlation model.
-
-    :param hc:
-        A :class:`openquake.db.models.HazardCalculation` instance.
-
-    :returns:
-        A correlation object. See :mod:`nhlib.correlation` for more info.
-    """
-    correl_model_cls = getattr(
-        correlation,
-        '%sCorrelationModel' % hc.ground_motion_correlation_model,
-        None)
-    if correl_model_cls is None:
-        # There's no correlation model for this calculation.
-        return None
-
-    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
 def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
@@ -629,6 +598,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         # If no site model file was specified, reference parameters are used
         # for all sites.
         self.initialize_site_model()
+
+        # Once the site model is init'd, create and cache the site collection;
+        self.hc.init_site_collection()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach

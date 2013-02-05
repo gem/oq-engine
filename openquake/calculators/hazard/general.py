@@ -33,6 +33,7 @@ from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist
 
 from nhlib import geo as nhlib_geo
+from nhlib import correlation
 from nrml import parsers as nrml_parsers
 from shapely import geometry
 
@@ -331,41 +332,6 @@ parse_source_model_logictree_path`
         yield nhlib_source
 
 
-def get_site_collection(hc):
-    """
-    Create a `SiteCollection`, which is needed by nhlib to perform various
-    calculation tasks (such computing hazard curves and GMFs).
-
-    :param hc:
-        Instance of a :class:`~openquake.db.models.HazardCalculation`. We need
-        this in order to get the points of interest for a calculation as well
-        as load pre-computed site data or access reference site parameters.
-
-    :returns:
-        :class:`nhlib.site.SiteCollection` instance.
-    """
-    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [nhlib.site.Site(
-            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-
-    return nhlib.site.SiteCollection(sites)
-
-
 def im_dict_to_nhlib(im_dict):
     """
     Given the dict of intensity measure types and levels, convert them to a
@@ -439,6 +405,27 @@ def update_realization(lt_rlz_id, num_items):
     lt_rlz.save()
 
 
+def get_correl_model(hc):
+    """
+    Helper function for constructing the appropriate correlation model.
+
+    :param hc:
+        A :class:`openquake.db.models.HazardCalculation` instance.
+
+    :returns:
+        A correlation object. See :mod:`nhlib.correlation` for more info.
+    """
+    correl_model_cls = getattr(
+        correlation,
+        '%sCorrelationModel' % hc.ground_motion_correlation_model,
+        None)
+    if correl_model_cls is None:
+        # There's no correlation model for this calculation.
+        return None
+
+    return correl_model_cls(**hc.ground_motion_correlation_params)
+
+
 class BaseHazardCalculatorNext(base.CalculatorNext):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -449,7 +436,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
-        self._computation_mesh = None
 
     @property
     def computation_mesh(self):
@@ -457,11 +443,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         :class:`nhlib.geo.mesh.Mesh` representing the points of interest for
         the calculation.
         """
-        if self._computation_mesh is None:
-            # for large geometries, the creation of this mesh can take a long
-            # time... so we cache the mesh
-            self._computation_mesh = self.hc.points_to_compute()
-        return self._computation_mesh
+        return self.hc.points_to_compute()
 
     @property
     def hc(self):

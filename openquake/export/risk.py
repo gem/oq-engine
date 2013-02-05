@@ -100,6 +100,8 @@ def export_loss_curve(output, target_dir):
         output.loss_curve.losscurvedata_set.all().order_by('asset_ref'))
     return [args['path']]
 
+export_ins_loss_curve = export_loss_curve
+
 
 @core.makedirs
 def export_loss_map(output, target_dir):
@@ -142,6 +144,48 @@ def export_bcr_distribution(output, target_dir):
     return [args['path']]
 
 
-@core.makedirs
-def export_ins_loss_curve(*args, **kwargs):
-    return export_loss_curve(*args, **kwargs)
+def make_dmg_dist_export(damagecls, writercls, filename):
+    # XXX: clearly this is not a good approach for large exposures
+    @core.makedirs
+    def export_dmg_dist(output, target_dir):
+        """
+        Export the damage distribution identified
+        by the given output to the `target_dir`.
+
+        :param output: db output record which identifies the distribution.
+        :type output: :py:class:`openquake.db.models.Output`
+        :param target_dir: destination directory of the exported file.
+        :type target_dir: string
+        """
+        job = output.oq_job
+        rc_id = job.risk_calculation.id
+        file_path = os.path.join(target_dir, filename % job.id)
+        dmg_states = list(models.DmgState.objects.filter(
+            risk_calculation_id=rc_id).order_by('lsi'))
+        if writercls is writers.CollapseMapXMLWriter:  # special case
+            writer = writercls(file_path)
+            data = damagecls.objects.filter(dmg_state=dmg_states[-1])
+        else:
+            writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
+            data = damagecls.objects.filter(
+                dmg_state__risk_calculation_id=rc_id)
+        writer.serialize(data.order_by('dmg_state__lsi'))
+        return [file_path]
+
+    return export_dmg_dist
+
+export_dmg_dist_per_asset = make_dmg_dist_export(
+    models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter,
+    "dmg-dist-asset-%s.xml")
+
+export_dmg_dist_per_taxonomy = make_dmg_dist_export(
+    models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter,
+    "dmg-dist-taxonomy-%s.xml")
+
+export_dmg_dist_total = make_dmg_dist_export(
+    models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
+    "dmg-dist-total-%s.xml")
+
+export_collapse_map = make_dmg_dist_export(
+    models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
+    "collapse-map-%s.xml")
