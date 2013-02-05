@@ -958,6 +958,15 @@ def get_site_collection(hc):
 
     return nhlib.site.SiteCollection(sites)
 
+    def get_imts(self):
+        """
+        Returns intensity mesure types or
+        intensity mesure types with levels.
+        """
+
+        return (self.intensity_measure_types or
+                self.intensity_measure_types_and_levels.keys())
+
 
 class RiskCalculation(djm.Model):
     '''
@@ -988,7 +997,7 @@ class RiskCalculation(djm.Model):
         (u'event_based', u'Probabilistic Event-Based'),
         # TODO(LB): Enable these once calculators are supported and
         # implemented.
-        # (u'scenario', u'Scenario'),
+        (u'scenario', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
@@ -1057,6 +1066,29 @@ class RiskCalculation(djm.Model):
         """
         return (self.hazard_calculation or
                 self.hazard_output.oq_job.hazard_calculation)
+
+    def has_output_containers(self):
+        """
+        :returns: True if RiskCalculation has more than one output
+        container.
+        """
+
+        return self.calculation_mode != "scenario"
+
+    def output_container_builder(self, risk_calculator):
+        """
+        :returns: a dictionary mapping openquake.db.models.Output ids
+            to a list of risk output container ids.
+        """
+
+        if self.has_output_containers():
+            return dict((hazard_output.id,
+                         risk_calculator.create_outputs(hazard_output))
+                         for hazard_output in
+                         risk_calculator.considered_hazard_outputs())
+        else:
+            return {self.hazard_output.id:
+                    risk_calculator.create_outputs(self.hazard_output)}
 
     @property
     def hazard_statistics(self):
