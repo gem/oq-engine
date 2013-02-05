@@ -193,26 +193,7 @@ CREATE TABLE hzrdi.parsed_rupture_model (
 ) TABLESPACE hzrdi_ts;
 
 
--- A batch of OpenQuake input files uploaded by the user
-CREATE TABLE uiapi.upload (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- A user is looking for a batch of files uploaded in the past. How is he
-    -- supposed to find or recognize them? Maybe a description might help..?
-    description VARCHAR NOT NULL DEFAULT '',
-    -- The directory where the input files belonging to a batch live on the
-    -- server
-    path VARCHAR NOT NULL UNIQUE,
-    -- One of: pending, running, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT upload_status_value
-        CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
-    job_pid INTEGER NOT NULL DEFAULT 0,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
--- A single OpenQuake input file uploaded by the user
+-- A single OpenQuake input file imported by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -330,6 +311,8 @@ CREATE TABLE uiapi.hazard_calculation (
             'scenario'
         )),
     region_grid_spacing float,
+    -- a pickled `nhlib.site.SiteCollection` object
+    site_collection BYTEA,
     -- logic tree parameters:
     random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
@@ -999,23 +982,23 @@ CREATE TABLE uiapi.output (
     --      complete_lt_ses (complete logic tree SES)
     --      loss_curve
     --      loss_map
-    --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
     --      dmg_dist_per_asset
     --      dmg_dist_per_taxonomy
     --      dmg_dist_total
+    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
             'bcr_distribution',
-            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
+            'collapse_map',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -1065,15 +1048,6 @@ CREATE TABLE uiapi.src2ltsrc (
     -- the current. We hence need to capture the latter.
     filename VARCHAR NOT NULL,
     UNIQUE (hzrd_src_id, lt_src_id)
-) TABLESPACE uiapi_ts;
-
-
--- Associate inputs and uploads
-CREATE TABLE uiapi.input2upload (
-    id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
-    upload_id INTEGER NOT NULL,
-    UNIQUE (input_id, upload_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1500,11 +1474,11 @@ ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 CREATE TABLE riskr.dmg_state (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    risk_calculation_id INTEGER NOT NULL REFERENCES uiapi.risk_calculation,
     dmg_state VARCHAR NOT NULL,
     lsi SMALLINT NOT NULL CHECK(lsi >= 0),
-    UNIQUE (output_id, dmg_state),
-    UNIQUE (output_id, lsi));
+    UNIQUE (risk_calculation_id, dmg_state),
+    UNIQUE (risk_calculation_id, lsi));
 
 -- Damage Distribution Per Asset
 CREATE TABLE riskr.dmg_dist_per_asset (
@@ -1514,8 +1488,6 @@ CREATE TABLE riskr.dmg_dist_per_asset (
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
-SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset', 'location', 4326, 'POINT', 2);
-ALTER TABLE riskr.dmg_dist_per_asset ALTER COLUMN location SET NOT NULL;
 
 
 -- Damage Distrubtion Per Taxonomy
@@ -1752,15 +1724,6 @@ uiapi.oq_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;

@@ -70,6 +70,25 @@ class HazardCurveGetterPerAsset(object):
         return hazard
 
 
+# Note on the algorithm: the idea is to first compute the minimal distance
+# between the given site and the ground motion fields in the mesh; then the
+# ground motion values are extracted from the points at that distance. To
+# cope with numerical errors we extract all the ground motion fields within
+# the minimal distance plus 10 centimers (any "small" number would do).
+# This is ~6 times faster than using a group by/order by to extract the
+# locations/gmvs directly with a single query.
+def _get_min_distance(self, cursor, min_dist_query, args):
+    # no docstring on purpose: private functions should not have it
+    cursor.execute(min_dist_query, args)
+    min_dist = cursor.fetchall()[0][0]  # returns only one row
+    if min_dist is None:
+        raise RuntimeError(
+            'Could not find any gmf_scenarios for IMT=%s '
+            'and output_id=%s' % (self._imt, self._hazard_output_id))
+
+    return min_dist + 0.1  # 0.1 meters = 10 cm
+
+
 class GroundMotionValuesGetter(object):
     """
     Hazard getter for loading ground motion values.
@@ -148,10 +167,7 @@ class GroundMotionValuesGetter(object):
         WHERE imt = %s AND gmf_set_id IN %s {}""".format(
             spectral_filters)
 
-        cursor.execute(min_dist_query, args)
-        min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
-
-        min_dist += 0.1  # 0.1 meters = 10 centimeters
+        min_dist = _get_min_distance(self, cursor, min_dist_query, args)
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf
@@ -219,10 +235,7 @@ class GroundMotionScenarioGetter(object):
         WHERE imt = %s AND output_id = %s {}""".format(
             spectral_filters)
 
-        cursor.execute(min_dist_query, args)
-        min_dist = cursor.fetchall()[0][0]  # breaks if there are no points
-
-        min_dist += 0.1  # 0.1 is some numerical tolerance
+        min_dist = _get_min_distance(self, cursor, min_dist_query, args)
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf_scenario

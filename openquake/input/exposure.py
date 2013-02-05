@@ -91,9 +91,9 @@ class ExposureDBWriter(object):
             taxonomy=values.get("taxonomy"),
             site="POINT(%s %s)" % (point[0], point[1]))
         for key, tag in [
-            ("coco", "coco"), ("reco", "reco"), ("stco", "stco"),
-            ("area", "area"), ("number_of_units", "number"),
-            ("deductible", "deductible"), ("ins_limit", "limit")]:
+                ("coco", "coco"), ("reco", "reco"), ("stco", "stco"),
+                ("area", "area"), ("number_of_units", "number"),
+                ("deductible", "deductible"), ("ins_limit", "limit")]:
             value = values.get(tag)
             if value:
                 setattr(data, key, value)
@@ -101,5 +101,5 @@ class ExposureDBWriter(object):
         for odata in occupancy:
             oobj = models.Occupancy(exposure_data=data,
                                     occupants=odata.occupants,
-                                    category=odata.description)
+                                    description=odata.description)
             oobj.save()
