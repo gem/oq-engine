@@ -15,9 +15,6 @@
 
 import os
 import csv
-import shutil
-import tempfile
-import StringIO
 
 import numpy
 from nose.plugins.attrib import attr
@@ -25,7 +22,6 @@ from nose.plugins.attrib import attr
 from qa_tests import risk
 from tests.utils import helpers
 from openquake.db import models
-from openquake import export
 
 
 class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
@@ -37,10 +33,10 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     <damageStates>no_damage minor moderate severe collapse</damageStates>
     <DDNode>
       <gml:Point>
-        <gml:pos>9.15333 45.122</gml:pos>
+        <gml:pos>9.15 45.16667</gml:pos>
       </gml:Point>
-      <asset assetRef="asset_02">
-        <damage ds="no_damage" mean="6.0" stddev="0.0"/>
+      <asset assetRef="asset_01">
+        <damage ds="no_damage" mean="7.0" stddev="0.0"/>
         <damage ds="minor" mean="0.0" stddev="0.0"/>
         <damage ds="moderate" mean="0.0" stddev="0.0"/>
         <damage ds="severe" mean="0.0" stddev="0.0"/>
@@ -49,10 +45,10 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     </DDNode>
     <DDNode>
       <gml:Point>
-        <gml:pos>9.15 45.16667</gml:pos>
+        <gml:pos>9.15333 45.122</gml:pos>
       </gml:Point>
-      <asset assetRef="asset_01">
-        <damage ds="no_damage" mean="7.0" stddev="0.0"/>
+      <asset assetRef="asset_02">
+        <damage ds="no_damage" mean="6.0" stddev="0.0"/>
         <damage ds="minor" mean="0.0" stddev="0.0"/>
         <damage ds="moderate" mean="0.0" stddev="0.0"/>
         <damage ds="severe" mean="0.0" stddev="0.0"/>
@@ -185,19 +181,5 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET_XML,
                 self.EXPECTED_DMG_DIST_PER_TAXONOMY_XML,
-                self.EXPECTED_DMG_DIST_TOTAL_XML]
-
-    def test_export_collapse_map(self):
-        # the collapse map is a special case of dmt_dist_per_asset
-        result_dir = tempfile.mkdtemp()
-        try:
-            job = self.run_risk(self.cfg, self.hazard_id())
-            output = models.Output.objects.get(
-                oq_job=job, output_type='dmg_dist_per_asset')
-            [exported_file] = export.risk.export_collapse_map(
-                output, result_dir)
-            self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_COLLAPSE_MAP_XML),
-                exported_file)
-        finally:
-            shutil.rmtree(result_dir)
+                self.EXPECTED_DMG_DIST_TOTAL_XML,
+                self.EXPECTED_COLLAPSE_MAP_XML]
