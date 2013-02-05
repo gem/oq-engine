@@ -77,6 +77,10 @@ scenario_damage.ignore_result = False
 def save_dist_per_asset(fractions, rc_id, asset):
     """
     Save the damage distribution for a given asset.
+
+    :param fractions: numpy array with the damage fractions
+    :param rc_id: the risk_calculation_id
+    :param asset: an ExposureData instance
     """
     dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
@@ -93,6 +97,10 @@ def save_dist_per_taxonomy(fractions, rc_id, taxonomy):
     """
     Save the damage distribution for a given taxonomy, by summing over
     all assets.
+
+    :param fractions: numpy array with the damage fractions
+    :param int rc_id: the risk_calculation_id
+    :param str: the taxonomy string
     """
     dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
@@ -108,6 +116,9 @@ def save_dist_per_taxonomy(fractions, rc_id, taxonomy):
 def save_dist_total(fractions, rc_id):
     """
     Save the total distribution, by summing over all assets and taxonomies.
+
+    :param fractions: numpy array with the damage fractions
+    :param int rc_id: the risk_calculation_id
     """
     dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
     mean, std = scientific.mean_std(fractions)
@@ -121,8 +132,8 @@ def save_dist_total(fractions, rc_id):
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
-    Scenario Damage Risk Calculator. Computes three kinds of damage
-    distributions: per asset, per taxonomy and total.
+    Scenario Damage Risk Calculator. Computes four kinds of damage
+    distributions: per asset, per taxonomy, total and collapse map.
     """
 
     #: The core calculation celery task function
@@ -147,17 +158,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def worker_args(self, taxonomy):
         """
         :returns: a fixed list of arguments that a calculator may want
-        to pass to a worker. In this case the list of fragility_functions
-        for the given taxonomy.
+        to pass to a worker. In this case taxonomy, fragility_model and
+        fragility_functions for the given taxonomy.
         """
         return [taxonomy, self.fragility_model,
                 self.fragility_functions[taxonomy]]
 
     def task_completed_hook(self, message):
         """
+        :param dict message: the message sent by the worker
+
         Update the dictionary self.ddpt, i.e. aggregate the damage distribution
         by taxonomy; called every time a block of assets is computed for each
-        taxonomy.
+        taxonomy. Fractions and taxonomy are extracted from the message.
         """
         taxonomy = message['taxonomy']
         fractions = message['fractions']
@@ -181,7 +194,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     @property
     def calculator_parameters(self):
         """
-        Calculator specific parameters
+        Return the calculator specific Intensity Measure Type.
         """
         return [self.imt]
 
@@ -191,6 +204,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Create the outputs of a ScenarioDamage calculator
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total, collapse_map
         """
+        # NB: the outputs do not need to be passed to the workers, since
+        # the aggregation per taxonomy and total are performed in the
+        # controller node, in the task_completion_hook, whereas the
+        # computations per asset only need the risk_calculation_id,
+        # extracted from the job_id
         models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
@@ -209,6 +227,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def set_risk_models(self):
         """
+        Set the attributes fragility_model, fragility_functions, damage_states
+        and populate the table DmgState for the current risk calculation.
         """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
@@ -218,6 +238,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def parse_fragility_model(self):
         """
+        Parse the fragility XML file and return fragility_model,
+        fragility_functions, and damage_states for usage in set_risk_models.
         """
         path = self.rc.inputs.get(input_type='fragility').path  # will be used
         iterparse = iter(parsers.FragilityModelParser(path))
