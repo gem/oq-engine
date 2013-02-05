@@ -982,8 +982,8 @@ class RiskCalculation(djm.Model):
 
     def output_container_builder(self, risk_calculator):
         """
-        :returns: a dictionary mapping an hazard output id
-            to desired Output.
+        :returns: a dictionary mapping openquake.db.models.Output ids
+            to a list of risk output container ids.
         """
 
         if self.has_output_containers():
