@@ -70,7 +70,7 @@ class ChiouYoungs2008(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
@@ -108,11 +108,11 @@ class ChiouYoungs2008(GMPE):
             ln_y_ref + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
             # second line
             + C['phi2'] * (exp1 - exp2)
-              * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
+            * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
             # third line
             + C['phi5']
-              * (1.0 - 1.0 / np.cosh(C['phi6']
-                       * (z1pt0 - C['phi7']).clip(0, np.inf)))
+            * (1.0 - 1.0 / np.cosh(
+                C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
             + C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
             # fourth line
             + eta + epsilon
@@ -145,8 +145,8 @@ class ChiouYoungs2008(GMPE):
         sigma = (
             # first line of eq. 20
             (C['sig1']
-               + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-               + C['sig4'] * AS)
+            + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+            + C['sig4'] * AS)
             # second line
             * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                       + (1 + NL) ** 2)
@@ -183,33 +183,33 @@ class ChiouYoungs2008(GMPE):
         ln_y_ref = (
             # first line of eq. 13a
             C['c1']
-              + (C['c1a'] * Frv
-                   + C['c1b'] * Fnm
-                   + C['c7'] * (rup.ztor - 4))
-                * (1 - AS)
+            + (C['c1a'] * Frv
+               + C['c1b'] * Fnm
+               + C['c7'] * (rup.ztor - 4))
+            * (1 - AS)
             + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
             # second line
             + C['c2'] * (rup.mag - 6)
-              + ((C['c2'] - C['c3']) / C['cn'])
-                * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+            + ((C['c2'] - C['c3']) / C['cn'])
+            * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
             # third line
             + C['c4']
-              * np.log(dists.rrup
-                       + C['c5']
-                         * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+            * np.log(dists.rrup
+                     + C['c5']
+                     * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
             # fourth line
             + (C['c4a'] - C['c4'])
-              * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+            * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
             # fifth line
             + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
-              * dists.rrup
+            * dists.rrup
             # sixth line
             + C['c9'] * Fhw
-              * np.tanh(dists.rx
-                        * (np.cos(np.radians(rup.dip)) ** 2)
-                        / C['c9a'])
-              * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-                  / (dists.rrup + 0.001))
+            * np.tanh(dists.rx
+                      * (np.cos(np.radians(rup.dip)) ** 2)
+                      / C['c9a'])
+            * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
+               / (dists.rrup + 0.001))
         )
         return ln_y_ref
 

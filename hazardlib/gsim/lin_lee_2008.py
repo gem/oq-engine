@@ -72,7 +72,7 @@ class LinLee2008SInter(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -196,7 +196,7 @@ class LinLee2008SSlab(LinLee2008SInter):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         mean, stddevs = super(LinLee2008SSlab, self).\
