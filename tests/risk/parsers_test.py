@@ -18,7 +18,7 @@ import os
 import unittest
 import StringIO
 
-from nrml.risk import parsers
+from openquake.nrmllib.risk import parsers
 
 
 EXAMPLES_DIR = os.path.join(

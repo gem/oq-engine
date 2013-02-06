@@ -18,7 +18,7 @@ import os
 import unittest
 import StringIO
 import collections
-from nrml.risk import writers
+from openquake.nrmllib.risk import writers
 from tests import _utils
 
 

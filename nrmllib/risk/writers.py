@@ -22,7 +22,7 @@ import itertools
 
 from lxml import etree
 
-import nrml
+import openquake.nrmllib
 
 
 class LossCurveXMLWriter(object):
@@ -105,7 +105,8 @@ class LossCurveXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "w") as output:
-            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml",
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             for curve in data:
                 if self._loss_curves is None:
@@ -226,7 +227,8 @@ class AggregateLossCurveXMLWriter(object):
             raise ValueError("You can not serialize an empty document")
 
         with open(self._path, "w") as output:
-            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml",
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
 
@@ -337,7 +339,8 @@ class LossMapXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "w") as output:
-            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml",
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             for loss in data:
                 if self._loss_map is None:
@@ -468,7 +471,8 @@ class BCRMapXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "w") as output:
-            root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element("nrml",
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             for bcr in data:
                 if self._bcr_map is None:
@@ -686,7 +690,7 @@ class CollapseMapXMLWriter(object):
         """
         Create the <nrml /> and <collapseMap /> elements.
         """
-        root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+        root = etree.Element("nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
         cm_el = etree.SubElement(root, "collapseMap")
         return root, cm_el
 
@@ -825,7 +829,7 @@ def _create_root_elems(damage_states, distribution):
     Create the <nrml /> and <dmgDistPer{Taxonomy,Asset} /> elements.
     """
 
-    root = etree.Element("nrml", nsmap=nrml.SERIALIZE_NS_MAP)
+    root = etree.Element("nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
     dmg_dist_el = etree.SubElement(root, distribution)
     dmg_states = etree.SubElement(dmg_dist_el, "damageStates")
@@ -857,7 +861,7 @@ def _append_location(element, location):
     """
     Append the geographical location to the given element.
     """
-    gml_ns = nrml.SERIALIZE_NS_MAP["gml"]
+    gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP["gml"]
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
     gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)

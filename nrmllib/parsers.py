@@ -17,4 +17,4 @@
 Only for backward-compatibility, to be deleted.
 """
 
-from nrml.hazard.writers import *
+from openquake.nrmllib.hazard.parsers import *

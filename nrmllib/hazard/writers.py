@@ -20,8 +20,8 @@ Classes for serializing various NRML XML artifacts.
 from lxml import etree
 from collections import OrderedDict
 
-import nrml
-from nrml import utils
+import openquake.nrmllib
+from openquake.nrmllib import utils
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -158,10 +158,11 @@ class HazardCurveXMLWriter(object):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        gml_ns = nrml.SERIALIZE_NS_MAP['gml']
+        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
 
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             hazard_curves = etree.SubElement(root, 'hazardCurves')
 
@@ -225,7 +226,8 @@ class EventBasedGMFXMLWriter(object):
               of the ground motion field
         """
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             if self.sm_lt_path is not None and self.gsim_lt_path is not None:
                 # A normal GMF collection
@@ -322,7 +324,8 @@ class SESXMLWriter(object):
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             if self.sm_lt_path is not None and self.gsim_lt_path is not None:
                 # A normal stochastic event set collection
@@ -471,7 +474,8 @@ class HazardMapXMLWriter(object):
         """
 
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             hazard_map = etree.SubElement(root, 'hazardMap')
 
@@ -565,7 +569,8 @@ class DisaggXMLWriter(object):
         """
 
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
             diss_matrices = etree.SubElement(root, 'disaggMatrices')
 
@@ -637,7 +642,8 @@ class ScenarioGMFXMLWriter(object):
               of the ground motion field
         """
         with open(self.path, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
             gmfset = etree.SubElement(root, 'gmfSet')
             for gmf in data:
                 gmf_elem = etree.SubElement(gmfset, 'gmf')

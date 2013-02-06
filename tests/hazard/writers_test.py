@@ -24,7 +24,7 @@ from collections import namedtuple
 
 from lxml import etree
 
-from nrml.hazard import writers
+from openquake.nrmllib.hazard import writers
 
 from tests import _utils as utils
 

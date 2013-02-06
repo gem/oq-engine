@@ -17,7 +17,7 @@
 import numpy
 import unittest
 
-from nrml import utils
+from openquake.nrmllib import utils
 
 
 class UtilsTestCase(unittest.TestCase):

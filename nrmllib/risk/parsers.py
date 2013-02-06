@@ -21,10 +21,10 @@ Module containing parsers for risk input artifacts.
 from lxml import etree
 from collections import namedtuple
 
-import nrml
+import openquake.nrmllib
 
-NRML = "{%s}" % nrml.NAMESPACE
-GML = "{%s}" % nrml.GML_NAMESPACE
+NRML = "{%s}" % openquake.nrmllib.NAMESPACE
+GML = "{%s}" % openquake.nrmllib.GML_NAMESPACE
 
 OCCUPANCY = namedtuple("OCCUPANCY", "occupants, description")
 
@@ -71,7 +71,8 @@ class ExposureModelParser(object):
         """
 
         exposure = etree.parse(self._source)
-        xmlschema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+        xmlschema = etree.XMLSchema(etree.parse(
+                openquake.nrmllib.nrml_schema_file()))
 
         if not xmlschema.validate(exposure):
             raise ValueError("Exposure model is not valid.")
@@ -85,7 +86,8 @@ class ExposureModelParser(object):
         Parse the document iteratively.
         """
 
-        schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+        schema = etree.XMLSchema(etree.parse(
+                openquake.nrmllib.nrml_schema_file()))
 
         for event, element in etree.iterparse(
                 self._source, events=('start', 'end'), schema=schema):
@@ -345,7 +347,8 @@ def assert_is_valid(source):
     """
 
     exposure = etree.parse(source)
-    xmlschema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+    xmlschema = etree.XMLSchema(etree.parse(
+            openquake.nrmllib.nrml_schema_file()))
 
     if not xmlschema.validate(exposure):
         raise ValueError("Exposure model is not valid.")
