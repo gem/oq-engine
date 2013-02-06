@@ -34,9 +34,9 @@ class Polygon(object):
     Polygon objects represent an area on the Earth surface.
 
     :param points:
-        The list of :class:`~openquake.hazardlib.geo.point.Point` objects defining the
-        polygon vertices. The points are connected by great circle arcs
-        in order of appearance. Polygon segment should not cross another
+        The list of :class:`~openquake.hazardlib.geo.point.Point` objects
+        defining the polygon vertices. The points are connected by great circle
+        arcs in order of appearance. Polygon segment should not cross another
         polygon segment. At least three points must be defined.
     :raises ValueError:
         If ``points`` contains less than three unique points or if polygon
@@ -85,7 +85,8 @@ class Polygon(object):
             Instance of ``shapely.geometry.Polygon``.
         :param proj:
             Projection object created
-            by :func:`~openquake.hazardlib.geo._utils.get_orthographic_projection`
+            by
+            :func:`~openquake.hazardlib.geo._utils.get_orthographic_projection`
             that was used to project ``polygon2d``. That projection
             will be used for projecting it back to get spherical
             coordinates from Cartesian ones.
@@ -180,8 +181,8 @@ class Polygon(object):
         with distance of ``mesh_spacing`` km between.
 
         :returns:
-            An instance of :class:`~openquake.hazardlib.geo.mesh.Mesh` that holds
-            the points data. Mesh is created with no depth information
+            An instance of :class:`~openquake.hazardlib.geo.mesh.Mesh` that
+            holds the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """
         self._init_polygon2d()

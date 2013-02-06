@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.mfd.youngs_coppersmith_1985` defines the Youngs and
-Coppersmith 1985 MFD.
+Module :mod:`openquake.hazardlib.mfd.youngs_coppersmith_1985` defines the
+Youngs and Coppersmith 1985 MFD.
 """
 import numpy
 
@@ -337,7 +337,8 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         Calculate and return the annual occurrence rates histogram.
 
         :returns:
-            See :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
+            See
+            :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []

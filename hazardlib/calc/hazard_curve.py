@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`openquake.hazardlib.calc.hazard_curve` implements :func:`hazard_curves_poissonian`.
+:mod:`openquake.hazardlib.calc.hazard_curve` implements
+:func:`hazard_curves_poissonian`.
 """
 import numpy
 
@@ -25,15 +26,15 @@ from openquake.hazardlib.calc import filters
 def hazard_curves_poissonian(
         sources, sites, imts, time_span, gsims, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter
-    ):
+        rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
     considered in the seismic sources).
 
-    The calculator assumes :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>`
-    temporal occurrence model.
+    The calculator assumes
+    :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>` temporal
+    occurrence model.
 
     The calculator computes probability of ground motion exceedance according
     to the equation as described in pag. 419 of "OpenSHA: A Developing
@@ -45,8 +46,8 @@ def hazard_curves_poissonian(
         An iterator of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.SeismicSource`).
     :param sites:
-        Instance of :class:`~openquake.hazardlib.site.SiteCollection` object, representing
-        sites of interest.
+        Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
+        representing sites of interest.
     :param imts:
         Dictionary mapping intensity measure type objects (see
         :mod:`openquake.hazardlib.imt`) to lists of intensity measure levels.
@@ -55,15 +56,18 @@ def hazard_curves_poissonian(
         floating point number in years.
     :param gsims:
         Dictionary mapping tectonic region types (members
-        of :class:`openquake.hazardlib.const.TRT`) to :class:`~openquake.hazardlib.gsim.base.GMPE`
-        or :class:`~openquake.hazardlib.gsim.base.IPE` objects.
+        of :class:`openquake.hazardlib.const.TRT`) to
+        :class:`~openquake.hazardlib.gsim.base.GMPE` or
+        :class:`~openquake.hazardlib.gsim.base.IPE` objects.
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
     :param source_site_filter:
-        Optional source-site filter function. See :mod:`openquake.hazardlib.calc.filters`.
+        Optional source-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
     :param rupture_site_filter:
-        Optional rupture-site filter function. See :mod:`openquake.hazardlib.calc.filters`.
+        Optional rupture-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         Dictionary mapping intensity measure type objects (same keys

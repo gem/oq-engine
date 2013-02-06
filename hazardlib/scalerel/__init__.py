@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`openquake.hazardlib.scalerel` contains base classes and implementations
-of magnitude-area and area-magnitude scaling relationships.
+Package :mod:`openquake.hazardlib.scalerel` contains base classes and
+implementations of magnitude-area and area-magnitude scaling relationships.
 """
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994

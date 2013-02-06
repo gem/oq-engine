@@ -1,11 +1,11 @@
-=====
+=========
 hazardlib
-=====
+=========
 hazardlib (a New Hazard Library) is open-source software for performing
 seismic hazard analysis.
 
 What is hazardlib?
---------------
+------------------
 hazardlib includes modules for modeling seismic sources (point, area and fault),
 earthquake ruptures, temporal (e.g. Poissonian) and magnitude occurrence
 models (e.g. Gutenberg-Richter), magnitude/area scaling relationships,

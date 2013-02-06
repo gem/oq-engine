@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`openquake.hazardlib.calc.stochastic` contains :func:`stochastic_event_set_poissonian`.
+:mod:`openquake.hazardlib.calc.stochastic` contains
+:func:`stochastic_event_set_poissonian`.
 """
 from openquake.hazardlib.tom import PoissonTOM
 
@@ -28,8 +29,9 @@ def stochastic_event_set_poissonian(sources, time_span):
     *realization* of the seismicity as described by the source model,
     in the given time span.
 
-    The calculator assumes :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>`
-    temporal occurrence model.
+    The calculator assumes
+    :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>` temporal
+    occurrence model.
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
@@ -39,9 +41,9 @@ def stochastic_event_set_poissonian(sources, time_span):
         floating point number in years.
 
     :returns:
-        Generator of :class:`~openquake.hazardlib.source.rupture.Rupture` objects that
-        are contained in an event set. Some ruptures can be missing from
-        it, others can appear one or more times in a row.
+        Generator of :class:`~openquake.hazardlib.source.rupture.Rupture`
+        objects that are contained in an event set. Some ruptures can be
+        missing from it, others can appear one or more times in a row.
     """
     tom = PoissonTOM(time_span)
 

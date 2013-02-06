@@ -27,8 +27,8 @@ class Site(object):
     as well as its soil characteristics.
 
     :param location:
-        Instance of :class:`~openquake.hazardlib.geo.point.Point` representing where the site
-        is located.
+        Instance of :class:`~openquake.hazardlib.geo.point.Point` representing
+        where the site is located.
     :param vs30:
         Average shear wave velocity in the top 30 m, in m/s.
     :param vs30measured:
@@ -278,6 +278,8 @@ class SiteCollection(object):
         num_values = data.shape[1]
         result = numpy.empty((total_sites, num_values))
         result.fill(placeholder)
+        #for i in xrange(num_values):
+        #    result[:, i].put(self.indices, data[:, i])
         for i, idx in enumerate(self.indices):
             result[idx] = data[i]
         return result

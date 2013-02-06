@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`~openquake.hazardlib.calc.gmf` exports :func:`ground_motion_fields`.
+Module :mod:`~openquake.hazardlib.calc.gmf` exports
+:func:`ground_motion_fields`.
 """
 import numpy
 import scipy.stats
@@ -42,22 +43,25 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :param openquake.hazardlib.site.SiteCollection sites:
         Sites of interest to calculate GMFs.
     :param imts:
-        List of intensity measure type objects (see :mod:`openquake.hazardlib.imt`).
+        List of intensity measure type objects (see
+        :mod:`openquake.hazardlib.imt`).
     :param gsim:
         Ground-shaking intensity model, instance of subclass of either
-        :class:`~openquake.hazardlib.gsim.base.GMPE` or :class:`~openquake.hazardlib.gsim.base.IPE`.
+        :class:`~openquake.hazardlib.gsim.base.GMPE` or
+        :class:`~openquake.hazardlib.gsim.base.IPE`.
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
     :param realizations:
         Integer number of GMF realizations to compute.
     :param correlation_model:
-        Instance of correlation model object. See :mod:`openquake.hazardlib.correlation`.
-        Can be ``None``, in which case non-correlated ground motion fields
-        are calculated. Correlation model is not used if ``truncation_level``
-        is zero.
+        Instance of correlation model object. See
+        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
+        non-correlated ground motion fields are calculated. Correlation model
+        is not used if ``truncation_level`` is zero.
     :param rupture_site_filter:
-        Optional rupture-site filter function. See :mod:`openquake.hazardlib.calc.filters`.
+        Optional rupture-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         Dictionary mapping intensity measure type objects (same

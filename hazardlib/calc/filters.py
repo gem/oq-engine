@@ -14,19 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`~openquake.hazardlib.calc.filters` contain filter functions for calculators.
+Module :mod:`~openquake.hazardlib.calc.filters` contain filter functions for
+calculators.
 
 Filters are functions (or other callable objects) that should take generators
 and return generators. There are two different kinds of filter functions:
 
 1. Source-site filters. Those functions take a generator of two-item tuples,
    each pair consists of seismic source object (that is, an instance of
-   a subclass of :class:`~openquake.hazardlib.source.base.SeismicSource`) and a site
-   collection (instance of :class:`~openquake.hazardlib.site.SiteCollection`).
+   a subclass of :class:`~openquake.hazardlib.source.base.SeismicSource`) and a
+   site collection (instance of
+   :class:`~openquake.hazardlib.site.SiteCollection`).
 2. Rupture-site filters. Those also take a generator of pairs, but in this
    case the first item in the pair is a rupture object (instance of
-   :class:`~openquake.hazardlib.source.rupture.Rupture`). The second element in generator
-   items is still site collection.
+   :class:`~openquake.hazardlib.source.rupture.Rupture`). The second element in
+   generator items is still site collection.
 
 The purpose of both kinds of filters is to limit the amount of calculation
 to be done based on some criteria, like the distance between the source
@@ -45,8 +47,8 @@ in the original generator or draw more than one pair at once. Ideally, they
 should also perform reasonably fast (filtering stage that takes longer than
 the actual calculation on unfiltered collection only decreases performance).
 
-Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based filter function
-of each kind (see :func:`source_site_distance_filter` and
+Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
+filter function of each kind (see :func:`source_site_distance_filter` and
 :func:`rupture_site_distance_filter`) as well as "no operation" filters
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """

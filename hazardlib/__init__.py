@@ -16,5 +16,7 @@
 """
 hazardlib stands for New Hazard Library.
 """
-from openquake.hazardlib import (calc, geo, gsim, mfd, scalerel, source, const,
-                   correlation, imt, pmf, site, tom)
+from openquake.hazardlib import (
+    calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
+    tom
+)

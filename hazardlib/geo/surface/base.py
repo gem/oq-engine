@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.geo.surface.base` implements :class:`BaseSurface`.
+Module :mod:`openquake.hazardlib.geo.surface.base` implements
+:class:`BaseSurface`.
 """
 import abc
 
@@ -42,8 +43,8 @@ class BaseSurface(object):
         of ``mesh``. This distance is sometimes called ``Rrup``.
 
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate minimum
-            distance to.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            minimum distance to.
         :returns:
             A numpy array of distances in km.
 
@@ -62,10 +63,11 @@ class BaseSurface(object):
         For each point from ``mesh`` find a closest point belonging to surface.
 
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to find closest points to.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to find
+            closest points to.
         :returns:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as ``mesh`` with
-            closest surface's points on respective indices.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
+            ``mesh`` with closest surface's points on respective indices.
 
         Base class implementation calls the :meth:`corresponding
         <openquake.hazardlib.geo.mesh.Mesh.get_closest_points>` method of the
@@ -79,8 +81,8 @@ class BaseSurface(object):
         to each point of ``mesh``.
 
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate Joyner-Boore
-            distance to.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Joyner-Boore distance to.
         :returns:
             Numpy array of closest distances between the projections of surface
             and each point of the ``mesh`` to the earth surface.
@@ -104,11 +106,12 @@ class BaseSurface(object):
         measured perpendicular to the strike. Values on the hanging wall
         are positive, values on the footwall are negative.
 
-        Base class calls :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
+        Base class calls
+        :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
 
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate Rx-distance
-            to.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Rx-distance to.
         :returns:
             Numpy array of distances in km.
         """
@@ -134,8 +137,8 @@ class BaseSurface(object):
 
     def _get_top_edge_centroid(self):
         """
-        Return :class:`~openquake.hazardlib.geo.point.Point` representing the surface's
-        top edge centroid.
+        Return :class:`~openquake.hazardlib.geo.point.Point` representing the
+        surface's top edge centroid.
         """
         top_edge = self.get_mesh()[0:1]
         return top_edge.get_middle_point()
@@ -164,7 +167,8 @@ class BaseSurface(object):
         Create and return the mesh of points covering the surface.
 
         :returns:
-            An instance of :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
+            An instance of
+            :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
         """
 
     @abc.abstractmethod
