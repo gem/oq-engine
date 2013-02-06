@@ -162,13 +162,16 @@ class Line(object):
         # (because it's already contained in the previous set of
         # resampled points).
 
-        resampled_points.extend(self.points[0].equally_spaced_points(
-                self.points[1], section_length))
+        resampled_points.extend(
+            self.points[0].equally_spaced_points(self.points[1],
+                                                 section_length)
+        )
 
         # Skip the first point, it's already resampled
         for i in range(2, len(self.points)):
             points = resampled_points[-1].equally_spaced_points(
-                    self.points[i], section_length)
+                self.points[i], section_length
+            )
 
             resampled_points.extend(points[1:])
 

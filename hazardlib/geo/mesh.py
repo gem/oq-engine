@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and its subclass
-:class:`RectangularMesh`.
+Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
+its subclass :class:`RectangularMesh`.
 """
 import numpy
 import shapely.geometry
@@ -98,8 +98,8 @@ class Mesh(object):
 
     def __iter__(self):
         """
-        Generate :class:`~openquake.hazardlib.geo.point.Point` objects the mesh is composed
-        of.
+        Generate :class:`~openquake.hazardlib.geo.point.Point` objects the mesh
+        is composed of.
 
         Coordinates arrays are processed sequentially (as if they were
         flattened).
@@ -249,7 +249,8 @@ class Mesh(object):
             points from this one at respective indices.
 
         This method is in general very similar to :meth:`get_min_distance`
-        and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance` internally.
+        and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance`
+        internally.
         """
         idxs = self._geodetic_min_distance(mesh, indices=True)
         lons = self.lons.take(idxs)
@@ -259,8 +260,8 @@ class Mesh(object):
 
     def _geodetic_min_distance(self, mesh, indices):
         """
-        Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance` for two meshes:
-        either (or both, or neither) can have empty depths.
+        Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance`
+        for two meshes: either (or both, or neither) can have empty depths.
         """
         if self.depths is None:
             depths1 = numpy.zeros_like(self.lons)
@@ -346,11 +347,11 @@ class Mesh(object):
         of the mesh.
 
         :returns:
-            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon` that is a convex
-            hull around all the points in this mesh. If the original mesh
-            had only one point, the resulting polygon has a square shape
-            with a side length of 10 meters. If there were only two points,
-            resulting polygon is a stripe 10 meters wide.
+            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon` that
+            is a convex hull around all the points in this mesh. If the
+            original mesh had only one point, the resulting polygon has a
+            square shape with a side length of 10 meters. If there were only
+            two points, resulting polygon is a stripe 10 meters wide.
         """
         proj, polygon2d = self._get_proj_convex_hull()
         # if mesh had only one point, the convex hull is a point. if there
@@ -386,7 +387,8 @@ class RectangularMesh(Mesh):
         Lists in a list are supposed to have the same length.
 
         :param point:
-            List of lists of :class:`~openquake.hazardlib.geo.point.Point` objects.
+            List of lists of :class:`~openquake.hazardlib.geo.point.Point`
+            objects.
         """
         assert points is not None and len(points) > 0 and len(points[0]) > 0, \
                'list of at least one non-empty list of points is required'

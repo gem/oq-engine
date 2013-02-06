@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common to several
-geographical primitives and some other low-level spatial operations.
+Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
+to several geographical primitives and some other low-level spatial operations.
 """
 import numpy
 import shapely.geometry
@@ -26,8 +26,8 @@ from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
 
 def clean_points(points):
     """
-    Given a list of :class:`~openquake.hazardlib.geo.point.Point` objects, return a new list
-    with adjacent duplicate points removed.
+    Given a list of :class:`~openquake.hazardlib.geo.point.Point` objects,
+    return a new list with adjacent duplicate points removed.
     """
     if not points:
         return points
@@ -162,14 +162,15 @@ def get_orthographic_projection(west, east, north, south):
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
     :func:`line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`openquake.hazardlib.geo.polygon.Polygon.discretize`). It can be also
-    used for measuring distance to an extent of around 700 kilometers (error
-    doesn't exceed 1 km up until then).
+    (like in :meth:`openquake.hazardlib.geo.polygon.Polygon.discretize`). It
+    can be also used for measuring distance to an extent of around 700
+    kilometers (error doesn't exceed 1 km up until then).
     """
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
     cos_phi0 = numpy.cos(phi0)
     sin_phi0 = numpy.sin(phi0)
     sin_pi_over_4 = (2 ** 0.5) / 2
+
     def proj(lons, lats, reverse=False):
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
@@ -186,8 +187,8 @@ def get_orthographic_projection(west, east, north, south):
                                  'center lon=%s lat=%s' %
                                  (numpy.degrees(lambda0), numpy.degrees(phi0)))
             xx = numpy.cos(phis) * numpy.sin(lambdas)
-            yy = cos_phi0 * numpy.sin(phis) \
-                 - sin_phi0 * cos_phis * numpy.cos(lambdas)
+            yy = (cos_phi0 * numpy.sin(phis) - sin_phi0 * cos_phis
+                  * numpy.cos(lambdas))
             return xx * EARTH_RADIUS, yy * EARTH_RADIUS
         else:
             # "reverse" mode, arguments are actually abscissae

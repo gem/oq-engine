@@ -42,7 +42,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     distance = numpy.arcsin(numpy.sqrt(
         numpy.sin((lats1 - lats2) / 2.0) ** 2.0
         + numpy.cos(lats1) * numpy.cos(lats2)
-          * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
+        * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
     ).clip(-1., 1.))
     return (2.0 * EARTH_RADIUS) * distance
 
@@ -112,7 +112,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
             numpy.arcsin(numpy.sqrt(
                 numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
                 + cos_mlats * cos_slats[i]
-                  * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+                * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
             ).clip(-1., 1.)).min()
             for i in xrange(len(slats))
         ),
@@ -185,7 +185,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         (numpy.arcsin(numpy.sqrt(
             numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
             + cos_mlats * cos_slats[i]
-              * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+            * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
         ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
         + (mdepths - sdepths[i]) ** 2
         for i in xrange(len(slats))
@@ -448,7 +448,6 @@ else:
 
     speedups.register(min_geodetic_distance, _c_min_geodetic_distance)
     del _c_min_geodetic_distance
-
 
     def _c_min_distance(mlons, mlats, mdepths,
                         slons, slats, sdepths, indices=False):
