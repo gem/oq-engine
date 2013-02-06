@@ -44,11 +44,12 @@ class FaccioliEtAl2010(CauzziFaccioli2008):
 
         SA = DSR * (2 * π / T) ** 2
 
-    This class extends
-    :class: `~openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008` because the
-    functional form is almost identical - the only difference is in the third
-    term which rather then using hypocentral distance, uses closest distance
-    to the rupture and additionaly considers a magnitude dependence.
+    This class extends :class:
+    `~openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
+    because the functional form is almost identical - the only
+    difference is in the third term which rather then using
+    hypocentral distance, uses closest distance to the rupture and
+    additionaly considers a magnitude dependence.
     """
 
     #: Supported intensity measure types are spectral acceleration,

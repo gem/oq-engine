@@ -54,8 +54,8 @@ class AbrahamsonSilva2008(GMPE):
     ])
 
     #: Supported intensity measure component is orientation-independent
-    #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`, see abstract,
-    #: page 67.
+    #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`,
+    #: see abstract, page 67.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
 
     #: Supported standard deviation types are inter-event, intra-event
@@ -81,7 +81,7 @@ class AbrahamsonSilva2008(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extract dictionaries of coefficients specific to required

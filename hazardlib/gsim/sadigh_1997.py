@@ -43,9 +43,10 @@ class SadighEtAl1997(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    #: see page 180.
+    #: Supported intensity measure component is the geometric mean of
+    #two : horizontal components
+    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, : see
+    #page 180.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 3.
@@ -74,7 +75,7 @@ class SadighEtAl1997(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -133,7 +134,7 @@ class SadighEtAl1997(GMPE):
         return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
                 - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
 
-    def _get_mean_rock(self, mag, rake, rrup, is_reverse, imt):
+    def _get_mean_rock(self, mag, _rake, rrup, is_reverse, imt):
         """
         Calculate and return the mean intensity for rock sites.
 

@@ -47,8 +47,9 @@ class Campbell2003(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: Supported intensity measure component is the geometric mean of
+    #two : horizontal components
+    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see equation 35, page
@@ -71,7 +72,7 @@ class Campbell2003(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -99,7 +100,7 @@ class Campbell2003(GMPE):
         Return total standard deviation as for equation 35, page 1021.
         """
         stddevs = []
-        for stddev_type in stddev_types:
+        for _ in stddev_types:
             if mag < 7.16:
                 sigma = C['c11'] + C['c12'] * mag
             elif mag >= 7.16:
@@ -169,9 +170,11 @@ class Campbell2003(GMPE):
 
 class Campbell2003SHARE(Campbell2003):
     """
-    Extends :class:`~openquake.hazardlib.gsim.campbell_2003.Campbell2003` and introduces
-    adjustments for style of faulting and default rock soil conditions as
-    needed by the SHARE (http://www.share-eu.org/) project.
+    Extends
+    :class:`~openquake.hazardlib.gsim.campbell_2003.Campbell2003` and
+    introduces adjustments for style of faulting and default rock soil
+    conditions as needed by the SHARE (http://www.share-eu.org/)
+    project.
     """
     #: Required rupture parameters are magnitude and rake
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
@@ -179,7 +182,7 @@ class Campbell2003SHARE(Campbell2003):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extract faulting style  and rock adjustment coefficients for the
