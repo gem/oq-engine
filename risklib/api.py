@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import numpy
-from risklib import scientific
+from openquake.risklib import scientific
 
 
 class Classical(object):

@@ -17,7 +17,7 @@
 import unittest
 import pickle
 import numpy
-from risklib.models import input
+from openquake.risklib.models import input
 
 
 LIMIT_STATES = ["state1", "state2"]

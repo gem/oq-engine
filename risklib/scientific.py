@@ -27,7 +27,7 @@ import itertools
 import numpy
 from scipy import interpolate, stats
 
-from risklib import curve, utils
+from openquake.risklib import curve, utils
 
 ###
 ### Constants & Defaults
@@ -175,7 +175,8 @@ class VulnerabilityFunction(object):
         :param vuln_function:
             The vulnerability function used to compute the LREM.
         :type vuln_function:
-            :class:`risklib.vulnerability_function.VulnerabilityFunction`
+            :class:`openquake.risklib.vulnerability_function.\
+            VulnerabilityFunction`
         :param int steps:
             Number of steps between loss ratios.
         """
@@ -204,7 +205,8 @@ class VulnerabilityFunction(object):
         :param vulnerability_function: the vulnerability function where
             the IMLs (Intensity Measure Level) are taken from.
         :type vuln_function:
-           :py:class:`risklib.vulnerability_function.VulnerabilityFunction`
+           :py:class:`openquake.risklib.vulnerability_function.\
+VulnerabilityFunction`
         """
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
@@ -273,7 +275,7 @@ class Distribution(object):
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
     usually registered with a name (e.g. LN, BT) by using
-    :class:`risklib.utils.Register`
+    :class:`openquake.risklib.utils.Register`
     """
 
     def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
@@ -405,6 +407,7 @@ class BetaDistribution(Distribution):
 ## Event Based
 ##
 
+
 def event_based(loss_values, tses, time_span,
                 curve_resolution=DEFAULT_CURVE_RESOLUTION):
     """
@@ -462,7 +465,8 @@ def classical(vuln_function, lrem, hazard_curve_values, steps):
 
     :param vuln_function: the vulnerability function used
         to compute the curve.
-    :type vuln_function: :py:class:`risklib.scientific.VulnerabilityFunction`
+    :type vuln_function: \
+    :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
     :param hazard_curve_values: the hazard curve used to compute the curve.
     :type hazard_curve_values: an association list with the
     imls/values of the hazard curve
@@ -482,7 +486,8 @@ def _loss_ratio_exceedance_matrix_per_poos(
 
     :param vuln_function: the vulnerability function used
         to compute the matrix.
-    :type vuln_function: :py:class:`risklib.scientific.VulnerabilityFunction`
+    :type vuln_function: \
+    :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
     :param hazard_curve: the hazard curve used to compute the matrix.
     :type hazard_curve_values: an association list with the hazard
     curve imls/values

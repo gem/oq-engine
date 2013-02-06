@@ -19,7 +19,7 @@ import numpy
 import unittest
 import itertools
 
-from risklib import scientific
+from openquake.risklib import scientific
 
 
 EPSILONS = list(itertools.repeat(

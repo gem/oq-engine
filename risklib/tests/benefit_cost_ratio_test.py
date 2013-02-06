@@ -16,8 +16,8 @@
 
 import unittest
 
-from risklib.curve import Curve
-from risklib.scientific import (
+from openquake.risklib.curve import Curve
+from openquake.risklib.scientific import (
     bcr, mean_loss)
 
 

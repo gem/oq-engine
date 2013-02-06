@@ -18,7 +18,7 @@
 import numpy
 import unittest
 
-from risklib.curve import Curve
+from openquake.risklib.curve import Curve
 
 
 class RangeClipTestCase(unittest.TestCase):
@@ -27,7 +27,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_low_iml_values(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that low values are clipped to the lowest valid value in the
         IML range.
         """
@@ -35,7 +35,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_low_imls_many_values(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that low values are clipped to the lowest valid value in the
         IML range.
         """
@@ -51,7 +51,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_high_iml_values(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that the high values are clipped to the highest valid value in
         the IML range.
         """
@@ -59,7 +59,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_high_imls_many_values(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that the high values are clipped to the highest valid value in
         the IML range.
         """
@@ -76,7 +76,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_iml_with_normal_value(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that normal values (values within the defined IML range) are not
         changed.
         """
@@ -86,7 +86,7 @@ class RangeClipTestCase(unittest.TestCase):
 
     def test_clip_imls_with_many_normal_values(self):
         """
-        Test :py:method:`risklib.range.Curve.range_clip` to
+        Test :py:method:`openquake.risklib.range.Curve.range_clip` to
         ensure that normal values (values within the defined IML range) are not
         changed.
         """

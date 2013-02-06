@@ -18,9 +18,9 @@
 import numpy
 import unittest
 
-from risklib import api
-from risklib import curve
-from risklib import scientific
+from openquake.risklib import api
+from openquake.risklib import curve
+from openquake.risklib import scientific
 
 
 class ClassicalTestCase(unittest.TestCase):

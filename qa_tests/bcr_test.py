@@ -17,8 +17,8 @@
 
 import unittest
 
-from risklib import api
-from risklib import scientific
+from openquake.risklib import api
+from openquake.risklib import scientific
 
 
 class BCRTestCase(unittest.TestCase):

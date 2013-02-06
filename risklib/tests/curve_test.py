@@ -19,7 +19,7 @@
 
 import unittest
 import pickle
-from risklib.curve import Curve
+from openquake.risklib.curve import Curve
 from numpy import allclose
 
 

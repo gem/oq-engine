@@ -22,9 +22,9 @@ import numpy
 import random
 import itertools
 
-from risklib import api
-from risklib import scientific
-from risklib.tests.utils import vectors_from_csv
+from openquake.risklib import api
+from openquake.risklib import scientific
+from openquake.risklib.tests.utils import vectors_from_csv
 
 #: The conditional loss poes used for testing
 CONDITIONAL_LOSS_POES = 0.50
