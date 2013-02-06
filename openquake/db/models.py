@@ -923,6 +923,15 @@ class HazardCalculation(djm.Model):
                 )
         return self._points_to_compute
 
+    def get_imts(self):
+        """
+        Returns intensity mesure types or
+        intensity mesure types with levels.
+        """
+
+        return (self.intensity_measure_types or
+                self.intensity_measure_types_and_levels.keys())
+
 
 def get_site_collection(hc):
     """
@@ -957,15 +966,6 @@ def get_site_collection(hc):
             for pt in points]
 
     return nhlib.site.SiteCollection(sites)
-
-    def get_imts(self):
-        """
-        Returns intensity mesure types or
-        intensity mesure types with levels.
-        """
-
-        return (self.intensity_measure_types or
-                self.intensity_measure_types_and_levels.keys())
 
 
 class RiskCalculation(djm.Model):
