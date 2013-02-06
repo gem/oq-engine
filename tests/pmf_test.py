@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@ from decimal import Decimal
 
 import unittest
 
-from nhlib.pmf import PMF
+from openquake.hazardlib.pmf import PMF
 
 
 class PMFTestCase(unittest.TestCase):

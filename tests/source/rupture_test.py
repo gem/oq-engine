@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,11 +17,11 @@ import unittest
 
 import numpy
 
-from nhlib import const
-from nhlib.geo import Point
-from nhlib.geo.surface.planar import PlanarSurface
-from nhlib.tom import PoissonTOM
-from nhlib.source.rupture import Rupture, ProbabilisticRupture
+from openquake.hazardlib import const
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture
 
 
 def make_rupture(rupture_class, **kwargs):

@@ -1,28 +1,28 @@
-python-nhlib (0.9.1-1) precise; urgency=low
+python-hazardlib (0.9.1-1) precise; urgency=low
 
   * Upstream release
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 19 Oct 2012 09:13:25 +0200
 
-python-nhlib (0.9-3) precise; urgency=low
+python-hazardlib (0.9-3) precise; urgency=low
 
   * Make sure the check_gsim.py module is included in the package
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 13 Sep 2012 09:25:39 +0200
 
-python-nhlib (0.9-2) precise; urgency=low
+python-hazardlib (0.9-2) precise; urgency=low
 
   * switch architecture to "any" (due to C extension modules)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Sep 2012 12:12:34 +0200
 
-python-nhlib (0.9-1) precise; urgency=low
+python-hazardlib (0.9-1) precise; urgency=low
 
   * Upstream release (LP: #1045213)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Sep 2012 08:26:10 +0200
 
-python-nhlib (0.8-1) precise; urgency=low
+python-hazardlib (0.8-1) precise; urgency=low
 
   * Upstream release
 

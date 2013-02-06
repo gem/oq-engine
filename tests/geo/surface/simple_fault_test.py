@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,9 @@ from math import pi, sin, cos, atan2, degrees
 
 import numpy
 
-from nhlib.geo.point import Point
-from nhlib.geo.line import Line
-from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 import _simple_fault_test_data as test_data
 from tests.geo.surface import _utils as utils

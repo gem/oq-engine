@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhlib.scalerel.peer import PeerMSR
-from nhlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.scalerel.peer import PeerMSR
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 
 class BaseMSRTestCase(unittest.TestCase):

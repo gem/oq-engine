@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@ import unittest
 from itertools import izip
 from types import GeneratorType
 
-from nhlib.calc import filters
+from openquake.hazardlib.calc import filters
 
 
 class SourceSiteDistanceFilterTestCase(unittest.TestCase):

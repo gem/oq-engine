@@ -1,4 +1,4 @@
-.. module:: nhlib
+.. module:: hazardlib
 
 .. include:: ../README.rst
 

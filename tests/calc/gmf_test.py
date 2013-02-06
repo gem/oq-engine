@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,12 @@ import unittest
 import numpy
 from numpy.testing import assert_allclose, assert_array_equal
 
-from nhlib import const
-from nhlib.imt import SA, PGV
-from nhlib.site import Site, SiteCollection
-from nhlib.geo import Point
-from nhlib.calc.gmf import ground_motion_fields
-from nhlib.correlation import JB2009CorrelationModel
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import SA, PGV
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.calc.gmf import ground_motion_fields
+from openquake.hazardlib.correlation import JB2009CorrelationModel
 
 
 class BaseGMFCalcTestCase(unittest.TestCase):

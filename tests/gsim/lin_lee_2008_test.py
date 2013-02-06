@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhlib.gsim.lin_lee_2008 import LinLee2008SInter, LinLee2008SSlab
+from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SInter, LinLee2008SSlab
 
 from tests.gsim.utils import BaseGSIMTestCase
 

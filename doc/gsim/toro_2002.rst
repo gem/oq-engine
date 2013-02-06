@@ -2,7 +2,7 @@
 Toro et al. 2003
 ================
 
-.. module:: nhlib.gsim.toro_2002
+.. module:: openquake.hazardlib.gsim.toro_2002
 
 .. autoclass:: ToroEtAl2002
     :members:

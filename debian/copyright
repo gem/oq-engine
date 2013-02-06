@@ -1,6 +1,6 @@
 Format: http://dep.debian.net/deps/dep5
-Upstream-Name: python-nhlib
-Source: http://github.com/gem/nhlib
+Upstream-Name: python-hazardlib
+Source: http://github.com/gem/hazardlib
 
 Files: *
 Copyright: 2012, GEM Foundation <info@globalquakemodel.org>

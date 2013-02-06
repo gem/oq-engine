@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -13,10 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
-from nhlib.gsim.base import SitesContext, RuptureContext, DistancesContext
-from nhlib.imt import PGA
-from nhlib.const import StdDev
+from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
+from openquake.hazardlib.gsim.base import SitesContext, RuptureContext, DistancesContext
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.const import StdDev
 
 from tests.gsim.utils import BaseGSIMTestCase
 

@@ -2,7 +2,7 @@
 Ground-shaking intensity models
 ===============================
 
-.. automodule:: nhlib.gsim
+.. automodule:: openquake.hazardlib.gsim
 
 
 --------------
@@ -32,7 +32,7 @@ Built-in GSIMs
 Base GSIM classes and functionality
 -----------------------------------
 
-.. automodule:: nhlib.gsim.base
+.. automodule:: openquake.hazardlib.gsim.base
 
 
 Intensity models

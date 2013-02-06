@@ -1,8 +1,8 @@
 import mock
 import unittest
 from nose.tools import assert_equal
-from nhlib.gsim import get_available_gsims
-from nhlib.gsim.base import GMPE
+from openquake.hazardlib.gsim import get_available_gsims
+from openquake.hazardlib.gsim.base import GMPE
 
 
 class FakeModule(object):
@@ -18,7 +18,7 @@ class FakeModule(object):
 
 
 def fake_import(modname):
-    if modname == 'nhlib.gsim.atkinson_boore_2006':
+    if modname == 'openquake.hazardlib.gsim.atkinson_boore_2006':
         return FakeModule
     return type('EmptyFakeModule', (), {})
 

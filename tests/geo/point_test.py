@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@ import unittest
 
 import numpy
 
-from nhlib import geo
-from nhlib.geo.utils import EARTH_RADIUS, spherical_to_cartesian
+from openquake.hazardlib import geo
+from openquake.hazardlib.geo.utils import EARTH_RADIUS, spherical_to_cartesian
 
 
 class PointPointAtTestCase(unittest.TestCase):

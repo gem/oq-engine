@@ -2,7 +2,7 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 # set -x
 set -e
-GEM_DEB_PACKAGE="python-nhlib"
+GEM_DEB_PACKAGE="python-hazardlib"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
