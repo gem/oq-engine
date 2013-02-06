@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-nhlib includes modules for modeling seismic sources (point, area and fault),
+hazardlib includes modules for modeling seismic sources (point, area and fault),
 earthquake ruptures, temporal (e.g. Poissonian) and magnitude occurrence
 models (e.g. Gutenberg-Richter), magnitude/area scaling relationships,
 ground motion and intensity prediction equations (i.e. GMPEs and IPEs).
 Eventually it will offer a number of calculators for hazard curves,
 stochastic event sets, ground motion fields and disaggregation histograms.
 
-nhlib aims at becoming an open and comprehensive tool for seismic hazard
+hazardlib aims at becoming an open and comprehensive tool for seismic hazard
 analysis. The GEM Foundation (http://www.globalquakemodel.org/) supports
 the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
@@ -34,13 +34,13 @@ from setuptools import setup, find_packages, Extension
 import numpy
 
 
-version = "0.01"
-url = "http://github.com/gem/nhlib"
+version = "0.9.1"
+url = "http://github.com/gem/hazardlib"
 
-geoutils_speedups = Extension('nhlib.geo._utils_speedups',
+geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',
                               sources=['speedups/geoutilsmodule.c'],
                               extra_compile_args=['-Wall', '-O2'])
-geodetic_speedups = Extension('nhlib.geo._geodetic_speedups',
+geodetic_speedups = Extension('openquake.hazardlib.geo._geodetic_speedups',
                               sources=['speedups/geodeticmodule.c'],
                               extra_compile_args=['-Wall', '-O2'])
 
@@ -48,9 +48,9 @@ include_dirs = [numpy.get_include()]
 
 
 setup(
-    name='nhlib',
+    name='hazardlib',
     version=version,
-    description="nhlib is a library for performing seismic hazard analysis",
+    description="hazardlib is a library for performing seismic hazard analysis",
     long_description=__doc__,
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
@@ -62,8 +62,8 @@ setup(
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
     scripts=['tests/gsim/check_gsim.py'],
-    maintainer='Anton Gritsay',
-    maintainer_email='anton@openquake.org',
+    maintainer='GEM',
+    maintainer_email='info@openquake.org',
     classifiers=(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Education',

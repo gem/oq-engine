@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,14 +24,14 @@ from decimal import Decimal
 
 import numpy
 
-from nhlib import const
-from nhlib.site import SiteCollection
-from nhlib.source import AreaSource, SimpleFaultSource
-from nhlib.pmf import PMF
-from nhlib.geo import NodalPlane
-from nhlib.scalerel import PeerMSR
-from nhlib.gsim.sadigh_1997 import SadighEtAl1997
-from nhlib.calc import hazard_curves_poissonian as hazard_curves
+from openquake.hazardlib import const
+from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.source import AreaSource, SimpleFaultSource
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.scalerel import PeerMSR
+from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
+from openquake.hazardlib.calc import hazard_curves_poissonian as hazard_curves
 
 from tests.acceptance import _peer_test_data as test_data
 

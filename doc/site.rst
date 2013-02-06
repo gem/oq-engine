@@ -2,5 +2,5 @@
 Site object
 ===========
 
-.. automodule:: nhlib.site
+.. automodule:: openquake.hazardlib.site
     :members:

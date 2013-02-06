@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,9 @@ import unittest
 import numpy
 import shapely.geometry
 
-from nhlib import geo
-from nhlib.geo import utils as geo_utils
-from nhlib.geo import polygon
+from openquake.hazardlib import geo
+from openquake.hazardlib.geo import utils as geo_utils
+from openquake.hazardlib.geo import polygon
 
 
 class PolygonCreationTestCase(unittest.TestCase):
@@ -427,7 +427,7 @@ class PolygonDilateTestCase(unittest.TestCase):
 
 class PolygonWKTTestCase(unittest.TestCase):
     """
-    Test generation of WKT from a :class:`~nhlib.geo.polygon.Polygon`.
+    Test generation of WKT from a :class:`~openquake.hazardlib.geo.polygon.Polygon`.
     """
 
     def test_wkt(self):

@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,8 @@
 import itertools
 import unittest
 
-from nhlib.geo.point import Point
-from nhlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.mesh import Mesh
 
 
 def assert_mesh_is(testcase, surface, expected_mesh):

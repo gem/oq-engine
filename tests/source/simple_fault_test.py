@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,13 +17,13 @@ import unittest
 
 import numpy
 
-from nhlib.const import TRT
-from nhlib.source.simple_fault import SimpleFaultSource
-from nhlib.source.rupture import ProbabilisticRupture
-from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhlib.scalerel import PeerMSR, WC1994
-from nhlib.geo import Point, Line
-from nhlib.tom import PoissonTOM
+from openquake.hazardlib.const import TRT
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.scalerel import PeerMSR, WC1994
+from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.tom import PoissonTOM
 
 from tests import assert_angles_equal
 from tests.geo.surface._utils import assert_mesh_is

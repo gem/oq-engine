@@ -4,10 +4,10 @@ Seismic Hazard Analysis Computer Programs" by  Patricia Thomas, Ivan Wong,
 Norman Abrahamson, see
 `http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`_.
 """
-from nhlib.geo import Polygon, Point, Line
-from nhlib.site import Site
-from nhlib.imt import PGA
-from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.geo import Polygon, Point, Line
+from openquake.hazardlib.site import Site
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
 
 IMT = PGA()

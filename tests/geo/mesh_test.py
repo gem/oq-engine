@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@ import math
 
 import numpy
 
-from nhlib.geo.point import Point
-from nhlib.geo.polygon import Polygon
-from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import utils as geo_utils
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo import utils as geo_utils
 
 from tests import assert_angles_equal
 from tests.geo import _mesh_test_data

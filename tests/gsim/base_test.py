@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,14 +18,14 @@ import collections
 
 import numpy
 
-from nhlib import const
-from nhlib.gsim.base import GMPE, IPE, SitesContext, RuptureContext, \
+from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GMPE, IPE, SitesContext, RuptureContext, \
                             DistancesContext
-from nhlib.geo.mesh import Mesh
-from nhlib.geo.point import Point
-from nhlib.imt import PGA, PGV
-from nhlib.site import Site, SiteCollection
-from nhlib.source.rupture import Rupture
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.imt import PGA, PGV
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.source.rupture import Rupture
 
 
 class _FakeGSIMTestCase(unittest.TestCase):

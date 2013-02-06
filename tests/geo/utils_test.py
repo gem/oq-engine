@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@ import unittest
 import numpy
 import shapely.geometry
 
-from nhlib import geo
-from nhlib.geo import utils
+from openquake.hazardlib import geo
+from openquake.hazardlib.geo import utils
 
 from tests import SpeedupsTestCase
 

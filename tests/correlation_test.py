@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@ import unittest
 
 import numpy
 
-from nhlib.imt import SA, PGA
-from nhlib.correlation import JB2009CorrelationModel
-from nhlib.site import Site, SiteCollection
-from nhlib.geo import Point
+from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.correlation import JB2009CorrelationModel
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.geo import Point
 
 
 aaae = numpy.testing.assert_array_almost_equal

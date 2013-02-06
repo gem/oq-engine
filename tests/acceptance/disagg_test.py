@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,16 +17,16 @@ import unittest
 
 import numpy
 
-from nhlib.source import AreaSource
-from nhlib.pmf import PMF
-from nhlib.scalerel import WC1994
-from nhlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from nhlib.calc import disagg
-from nhlib.geo import Point, Polygon, NodalPlane
-from nhlib.mfd import TruncatedGRMFD
-from nhlib.imt import SA
-from nhlib.tom import PoissonTOM
-from nhlib.site import Site
+from openquake.hazardlib.source import AreaSource
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.geo import Point, Polygon, NodalPlane
+from openquake.hazardlib.mfd import TruncatedGRMFD
+from openquake.hazardlib.imt import SA
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.site import Site
 
 
 class DisaggTestCase(unittest.TestCase):

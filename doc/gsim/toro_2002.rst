@@ -1,0 +1,11 @@
+================
+Toro et al. 2003
+================
+
+.. module:: openquake.hazardlib.gsim.toro_2002
+
+.. autoclass:: ToroEtAl2002
+    :members:
+
+.. autoclass:: ToroEtAl2002SHARE
+    :members:

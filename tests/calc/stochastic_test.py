@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhlib.tom import PoissonTOM
-from nhlib.calc.stochastic import stochastic_event_set_poissonian
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc.stochastic import stochastic_event_set_poissonian
 
 
 class StochasticEventSetTestCase(unittest.TestCase):

@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@ import unittest
 
 import numpy
 
-from nhlib.geo.point import Point
-from nhlib.geo.line import Line
-from nhlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
 from tests.geo.surface import _utils as utils
 
@@ -157,6 +157,17 @@ class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
         polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
         elons = [3., 1., 2., 4.]
         elats = [-2.1, -2., -1.9, -2.]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_edges_with_nonuniform_length(self):
+        edges = [Line([Point(1, -20, 30), Point(1, -20.2, 30),
+                       Point(2, -19.7, 30), Point(3, -19.5, 30)]),
+                 Line([Point(1, -20, 50), Point(1, -20.2, 50),
+                       Point(2, -19.7, 50)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [1, 1, 2, 3]
+        elats = [-20.2, -20., -19.7, -19.5]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
 

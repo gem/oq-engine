@@ -2,18 +2,18 @@
 Geographic primitives
 =====================
 
-Various primitives are needed to define :mod:`seismic sources <nhlib.source>`
-location and shape. Those implemented include :mod:`~nhlib.geo.point`,
-:mod:`~nhlib.geo.line` and :mod:`~nhlib.geo.polygon`.
+Various primitives are needed to define :mod:`seismic sources <openquake.hazardlib.source>`
+location and shape. Those implemented include :mod:`~openquake.hazardlib.geo.point`,
+:mod:`~openquake.hazardlib.geo.line` and :mod:`~openquake.hazardlib.geo.polygon`.
 
-:mod:`Mesh <nhlib.geo.mesh>` objects are used only internally.
+:mod:`Mesh <openquake.hazardlib.geo.mesh>` objects are used only internally.
 
 
 -----
 Point
 -----
 
-.. automodule:: nhlib.geo.point
+.. automodule:: openquake.hazardlib.geo.point
     :members:
 
 
@@ -21,7 +21,7 @@ Point
 Line
 ----
 
-.. automodule:: nhlib.geo.line
+.. automodule:: openquake.hazardlib.geo.line
     :members:
 
 
@@ -29,7 +29,7 @@ Line
 Polygon
 -------
 
-.. automodule:: nhlib.geo.polygon
+.. automodule:: openquake.hazardlib.geo.polygon
     :members:
 
 
@@ -37,7 +37,7 @@ Polygon
 Meshes
 ------
 
-.. automodule:: nhlib.geo.mesh
+.. automodule:: openquake.hazardlib.geo.mesh
 
 
 Simple mesh

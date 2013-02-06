@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@ import unittest
 
 import numpy
 
-from nhlib.site import Site, SiteCollection
-from nhlib.geo.point import Point
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.geo.point import Point
 
 
 class SiteTestCase(unittest.TestCase):

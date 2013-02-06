@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhlib import speedups
+from openquake.hazardlib import speedups
 
 
 class SpeedupsRegistryTestCase(unittest.TestCase):

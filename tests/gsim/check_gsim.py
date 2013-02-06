@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,10 +25,10 @@ import time
 
 import numpy
 
-from nhlib import const
-from nhlib.gsim.base import GroundShakingIntensityModel
-from nhlib.gsim.base import SitesContext, RuptureContext, DistancesContext
-from nhlib.imt import PGA, PGV, SA
+from openquake.hazardlib import const
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+from openquake.hazardlib.gsim.base import SitesContext, RuptureContext, DistancesContext
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -36,8 +36,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     Test GSIM against the data file and return test result.
 
     :param gsim_cls:
-        A subclass of either :class:`~nhlib.gsim.base.GMPE`
-        or :class:`~nhlib.gsim.base.IPE` to test.
+        A subclass of either :class:`~openquake.hazardlib.gsim.base.GMPE`
+        or :class:`~openquake.hazardlib.gsim.base.IPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -184,13 +184,13 @@ def _parse_csv_line(headers, values):
         A tuple of the following values (in specified order):
 
         sctx
-            An instance of :class:`nhlib.gsim.base.SitesContext` with
+            An instance of :class:`openquake.hazardlib.gsim.base.SitesContext` with
             attributes populated by the information from in row in a form
             of single-element numpy arrays.
         rctx
-            An instance of :class:`nhlib.gsim.base.RuptureContext`.
+            An instance of :class:`openquake.hazardlib.gsim.base.RuptureContext`.
         dctx
-            An instance of :class:`nhlib.gsim.base.DistancesContext`.
+            An instance of :class:`openquake.hazardlib.gsim.base.DistancesContext`.
         stddev_types
             An empty list, if the ``result_type`` column says "MEAN"
             for that row, otherwise it is a list with one item --
@@ -284,7 +284,7 @@ if __name__ == '__main__':
                 or not issubclass(gsim_class, GroundShakingIntensityModel):
             raise argparse.ArgumentTypeError(
                 "%r is not subclass of " \
-                "nhlib.gsim.base.GroundShakingIntensityModel" % import_path
+                "openquake.hazardlib.gsim.base.GroundShakingIntensityModel" % import_path
             )
         return gsim_class
 

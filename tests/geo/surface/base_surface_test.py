@@ -1,4 +1,4 @@
-# nhlib: A New Hazard Library
+# The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@ import unittest
 
 import numpy
 
-from nhlib.geo.point import Point
-from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 from tests.geo.surface import _planar_test_data as test_data
 

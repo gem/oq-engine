@@ -1,5 +1,5 @@
 include LICENSE README
-recursive-include nhlib *.py
+recursive-include hazardlib *.py
 recursive-include tests *.py *.csv
 include doc/Makefile doc/conf.py
 recursive-include doc *.rst

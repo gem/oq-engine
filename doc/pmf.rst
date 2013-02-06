@@ -2,5 +2,5 @@
 Probability mass function
 =========================
 
-.. automodule:: nhlib.pmf
+.. automodule:: openquake.hazardlib.pmf
     :members:
