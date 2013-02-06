@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`openquake.hazardlib.geo.surface` contains base and specific implementations
-of earthquake rupture surfaces.
+Package :mod:`openquake.hazardlib.geo.surface` contains base and specific
+implementations of earthquake rupture surfaces.
 """
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface

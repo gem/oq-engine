@@ -31,8 +31,8 @@ class SimpleFaultSurface(BaseSurface):
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
 
     :param mesh:
-        Instance of :class:`~openquake.hazardlib.geo.mesh.RectangularMesh` representing
-        surface geometry.
+        Instance of :class:`~openquake.hazardlib.geo.mesh.RectangularMesh`
+        representing surface geometry.
 
     Another way to construct the surface object is to call
     :meth:`from_fault_data`.
@@ -174,9 +174,9 @@ class SimpleFaultSurface(BaseSurface):
         mesh spacing.
 
         :returns:
-            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon` describing
-            the surface projection of the simple fault with specified
-            parameters.
+            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon`
+            describing the surface projection of the simple fault with
+            specified parameters.
         """
         # similar to :meth:`from_fault_data`, we just don't resample edges
         dip_tan = math.tan(math.radians(dip))
@@ -212,5 +212,5 @@ class SimpleFaultSurface(BaseSurface):
         """
         # calculate width only along the first mesh column, because
         # width is uniform for simple faults
-        left_column = self.get_mesh()[:,0:2]
+        left_column = self.get_mesh()[:, 0:2]
         return left_column.get_mean_width()

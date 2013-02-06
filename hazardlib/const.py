@@ -50,7 +50,8 @@ class TRT(ConstantContainer):
 class IMC(ConstantContainer):
     """
     The intensity measure component is the component of interest
-    of ground shaking for an :mod:`intensity measure <openquake.hazardlib.imt>`.
+    of ground shaking for an
+    :mod:`intensity measure <openquake.hazardlib.imt>`.
     """
     #: The horizontal component.
     HORIZONTAL = 'Horizontal'
@@ -85,5 +86,6 @@ class StdDev(ConstantContainer):
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
-    #: (see :meth:`openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes`).
+    #: (see
+    #: :meth:`openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes`).
     TOTAL = 'Total'
