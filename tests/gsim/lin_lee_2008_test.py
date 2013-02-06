@@ -13,7 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SInter, LinLee2008SSlab
+from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SInter
+from openquake.hazardlib.gsim.lin_lee_2008 import LinLee2008SSlab
 
 from tests.gsim.utils import BaseGSIMTestCase
 
@@ -25,7 +26,7 @@ class LinLee2008SInterTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('LL08/LL08SInter_MEAN.csv',
                     max_discrep_percentage=0.1)
-                    
+
     def test_total_std(self):
         self.check('LL08/LL08SInter_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)

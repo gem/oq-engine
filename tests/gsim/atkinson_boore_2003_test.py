@@ -13,8 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.atkinson_boore_2003 import AtkinsonBoore2003SInter, \
-    AtkinsonBoore2003SSlab
+from openquake.hazardlib.gsim.atkinson_boore_2003 import (
+    AtkinsonBoore2003SInter,  AtkinsonBoore2003SSlab
+)
 
 from tests.gsim.utils import BaseGSIMTestCase
 
@@ -28,7 +29,7 @@ class AtkinsonBoore2003SInterTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('AB03/AB03SInter_MEAN.csv',
                     max_discrep_percentage=0.1)
-                    
+
     def test_std_total(self):
         self.check('AB03/AB03SInter_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
