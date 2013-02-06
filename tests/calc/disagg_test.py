@@ -336,7 +336,9 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                           array([], dtype=float64), array([], dtype=float64),
                           array([], dtype=float64), array([], dtype=int64), [])
 
-        with mock.patch('openquake.hazardlib.calc.disagg._collect_bins_data') as cbd:
+        with mock.patch(
+            'openquake.hazardlib.calc.disagg._collect_bins_data'
+        ) as cbd:
             with warnings.catch_warnings(record=True) as w:
                 cbd.return_value = fake_bins_data
 

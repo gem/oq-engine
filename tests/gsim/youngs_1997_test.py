@@ -13,7 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.youngs_1997 import YoungsEtAl1997SInter, YoungsEtAl1997SSlab
+from openquake.hazardlib.gsim.youngs_1997 import YoungsEtAl1997SInter
+from openquake.hazardlib.gsim.youngs_1997 import YoungsEtAl1997SSlab
 
 from tests.gsim.utils import BaseGSIMTestCase
 

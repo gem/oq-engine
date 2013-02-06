@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
-from openquake.hazardlib.gsim.base import SitesContext, RuptureContext, DistancesContext
+from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+                                           DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 
@@ -25,14 +26,14 @@ import numpy
 
 class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore2006
-    
+
     # Test data generated from Fortran implementation
     # of Dave Boore (http://www.daveboore.com/pubs_online.html)
 
     def test_mean(self):
         self.check('AB06/AB06_MEAN.csv',
                     max_discrep_percentage=0.9)
-                    
+
     def test_std_total(self):
         self.check('AB06/AB06_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)

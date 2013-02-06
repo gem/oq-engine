@@ -359,7 +359,8 @@ class PolygonDilateTestCase(unittest.TestCase):
                          len(elons) + 1)
 
     def test_counterclockwise(self):
-        poly = polygon.Polygon([geo.Point(5, 6), geo.Point(4, 6), geo.Point(4, 5)])
+        poly = polygon.Polygon([geo.Point(5, 6), geo.Point(4, 6),
+                                geo.Point(4, 5)])
         dilated = poly.dilate(20)
         elons = [
             5.1280424, 4.1280406, 4.1149304, 4.1007112, 4.0855200, 4.0695036,
@@ -427,7 +428,8 @@ class PolygonDilateTestCase(unittest.TestCase):
 
 class PolygonWKTTestCase(unittest.TestCase):
     """
-    Test generation of WKT from a :class:`~openquake.hazardlib.geo.polygon.Polygon`.
+    Test generation of WKT from a
+    :class:`~openquake.hazardlib.geo.polygon.Polygon`.
     """
 
     def test_wkt(self):
