@@ -48,7 +48,7 @@ setup(
             "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
-    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
+    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"],
 
     namespace_packages=['openquake'],
 
