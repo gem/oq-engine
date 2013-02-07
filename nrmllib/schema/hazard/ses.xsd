@@ -21,6 +21,7 @@
             <xs:element name="rupture" type="SESRupture" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
         <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="id" type="PositiveNonZeroDoubleType" use="required" />
     </xs:complexType>
 
 
@@ -29,6 +30,7 @@
             <xs:element name="planarSurface" type="SESPlanarSurface" />
             <xs:element name="mesh" type="SESMesh" />
         </xs:choice>
+        <xs:attribute name="id" type="PositiveNonZeroDoubleType" use="required" />
         <xs:attribute name="magnitude" type="PositiveDoubleType" use="required" />
         <xs:attribute name="strike" type="Strike" use="required" />
         <xs:attribute name="dip" type="Dip" use="required" />

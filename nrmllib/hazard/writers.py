@@ -210,6 +210,7 @@ class EventBasedGMFXMLWriter(object):
             Each "GMF set" object should:
 
             * have an `investigation_time` attribute
+            * have an `stochastic_event_set_id` attribute
             * be iterable, yielding a sequence of "GMF" objects
 
             Each "GMF" object should:
@@ -217,13 +218,15 @@ class EventBasedGMFXMLWriter(object):
             * have an `imt` attribute
             * have an `sa_period` attribute (only if `imt` is 'SA')
             * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * have a `rupture_id` attribute (to indicate which rupture
+              contributed to this gmf)
             * be iterable, yielding a sequence of "GMF node" objects
 
             Each "GMF node" object should have:
 
-            * an `iml` attribute (to indicate the ground motion value
+            * a `gmv` attribute (to indicate the ground motion value
             * `lon` and `lat` attributes (to indicate the geographical location
-              of the ground motion field
+              of the ground motion field)
         """
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml',
@@ -247,6 +250,9 @@ class EventBasedGMFXMLWriter(object):
                 gmf_set_elem = etree.SubElement(gmf_container, 'gmfSet')
                 gmf_set_elem.set(
                     'investigationTime', str(gmf_set.investigation_time))
+                gmf_set_elem.set(
+                    'stochasticEventSetId',
+                    str(gmf_set.stochastic_event_set_id))
 
                 for gmf in gmf_set:
                     gmf_elem = etree.SubElement(gmf_set_elem, 'gmf')
@@ -254,10 +260,11 @@ class EventBasedGMFXMLWriter(object):
                     if gmf.imt == 'SA':
                         gmf_elem.set('saPeriod', str(gmf.sa_period))
                         gmf_elem.set('saDamping', str(gmf.sa_damping))
+                    gmf_elem.set('ruptureId', str(gmf.rupture_id))
 
                     for gmf_node in gmf:
                         node_elem = etree.SubElement(gmf_elem, 'node')
-                        node_elem.set('iml', str(gmf_node.iml))
+                        node_elem.set('gmv', str(gmf_node.gmv))
                         node_elem.set('lon', str(gmf_node.location.x))
                         node_elem.set('lat', str(gmf_node.location.y))
 
@@ -292,9 +299,11 @@ class SESXMLWriter(object):
             Each "SES" object should:
 
             * have an `investigation_time` attribute
+            * have an `id` attribute
             * be iterable, yielding a sequence of "rupture" objects
 
             Each "rupture" should have the following attributes:
+            * `id`
             * `magnitude`
             * `strike`
             * `dip`
@@ -349,10 +358,12 @@ class SESXMLWriter(object):
             for ses in data:
                 ses_elem = etree.SubElement(
                     ses_container, 'stochasticEventSet')
+                ses_elem.set('id', str(ses.id))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
 
                 for rupture in ses:
                     rup_elem = etree.SubElement(ses_elem, 'rupture')
+                    rup_elem.set('id', str(rupture.id))
                     rup_elem.set('magnitude', str(rupture.magnitude))
                     rup_elem.set('strike', str(rupture.strike))
                     rup_elem.set('dip', str(rupture.dip))
@@ -637,7 +648,7 @@ class ScenarioGMFXMLWriter(object):
 
             Each "GMF node" object should have:
 
-            * an `iml` attribute (to indicate the ground motion value
+            * an `gmv` attribute (to indicate the ground motion value
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field
         """
@@ -653,7 +664,7 @@ class ScenarioGMFXMLWriter(object):
                     gmf_elem.set('saDamping', str(gmf.sa_damping))
                 for gmf_node in gmf:
                     node_elem = etree.SubElement(gmf_elem, 'node')
-                    node_elem.set('iml', str(gmf_node.iml))
+                    node_elem.set('gmv', str(gmf_node.gmv))
                     node_elem.set('lon', str(gmf_node.location.x))
                     node_elem.set('lat', str(gmf_node.location.y))
 
