@@ -35,22 +35,22 @@ import sys
 import re
 from setuptools import setup, find_packages
 
-for line in open('nrml/__init__.py'):
+for line in open('nrmllib/__init__.py'):
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     version = re.search(VSRE, line, re.M)
     if version:
         break
 else:
-    sys.exit('variable __version__ not found in nrml/__init__.py')
+    sys.exit('variable __version__ not found in nrmllib/__init__.py')
 version = version.group(1)
 
-url = 'http://github.com/gem/nrml'
+url = 'http://github.com/gem/oq-nrmllib'
 
 
 def _package_data():
     cur_dir = os.getcwd()
 
-    nrml_dir = os.path.join(os.path.dirname(__file__), 'nrml')
+    nrml_dir = os.path.join(os.path.dirname(__file__), 'nrmllib')
     os.chdir(nrml_dir)
 
     try:
@@ -66,7 +66,7 @@ def _package_data():
 package_data = _package_data()
 
 setup(
-    name='NRML',
+    name='openquake.nrmllib',
     version=version,
     maintainer='The OpenQuake Team',
     maintainer_email='devops@openquake.org',
@@ -91,4 +91,8 @@ setup(
         'Programming Language :: Python :: 2',
         'Topic :: Scientific/Engineering',
     ),
+    namespace_packages=['openquake'],
+
+    zip_safe=False,
+
 )
