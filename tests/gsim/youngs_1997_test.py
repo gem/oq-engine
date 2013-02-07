@@ -18,9 +18,8 @@ from openquake.hazardlib.gsim.youngs_1997 import YoungsEtAl1997SSlab
 
 from tests.gsim.utils import BaseGSIMTestCase
 
-import numpy
-
 # Test data generated from OpenSHA implementation.
+
 
 class YoungsEtAl1997SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997SInter
@@ -32,6 +31,7 @@ class YoungsEtAl1997SInterTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('YOUNGS97/Y97SInter_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
 
 class YoungsEtAl1997SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YoungsEtAl1997SSlab

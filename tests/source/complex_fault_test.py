@@ -270,10 +270,10 @@ class ComplexFaultSourceRupEnclPolyTestCase(
 
 class FloatRupturesTestCase(unittest.TestCase):
     def test_reshaping_along_length(self):
-        cell_area = numpy.array([ [1, 1, 1],
-                                  [1, 1, 1] ], dtype=float)
-        cell_length = numpy.array([ [1, 1, 1],
-                                    [1, 1, 1] ], dtype=float)
+        cell_area = numpy.array([[1, 1, 1],
+                                 [1, 1, 1]], dtype=float)
+        cell_length = numpy.array([[1, 1, 1],
+                                   [1, 1, 1]], dtype=float)
         rupture_area = 3.1
         rupture_length = 1.0
 
@@ -291,10 +291,10 @@ class FloatRupturesTestCase(unittest.TestCase):
         self.assertEqual(slices, [s1])
 
     def test_reshaping_along_width(self):
-        cell_area = numpy.array([ [4, 4],
-                                  [4, 4],
-                                  [2, 2] ], dtype=float)
-        cell_length = numpy.array([ [2, 2], [2, 2], [2, 2] ], dtype=float)
+        cell_area = numpy.array([[4, 4],
+                                 [4, 4],
+                                 [2, 2]], dtype=float)
+        cell_length = numpy.array([[2, 2], [2, 2], [2, 2]], dtype=float)
         rupture_area = 13.0
         rupture_length = 12.0
 
@@ -306,10 +306,10 @@ class FloatRupturesTestCase(unittest.TestCase):
         self.assertEqual(s2, (slice(1, 4), slice(0, 3)))
 
     def test_varying_width(self):
-        cell_area = numpy.array([ [1, 1, 1],
-                                  [1, 0.1, 1],
-                                  [1, 0.1, 1] ], dtype=float)
-        cell_length = numpy.array([ [1, 1, 1], [1, 1, 1], [1, 1, 1] ],
+        cell_area = numpy.array([[1, 1, 1],
+                                 [1, 0.1, 1],
+                                 [1, 0.1, 1]], dtype=float)
+        cell_length = numpy.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]],
                                   dtype=float)
         rupture_area = 2.1
         rupture_length = 1.0

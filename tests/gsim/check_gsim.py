@@ -63,7 +63,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(datafile, debug):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
-                = testcase
+            = testcase
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
@@ -144,13 +144,13 @@ def _parse_csv(datafile, debug):
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
-            = _parse_csv_line(headers, next(reader))
+        = _parse_csv_line(headers, next(reader))
     sattrs = [slot for slot in SitesContext.__slots__ if hasattr(sctx, slot)]
     dattrs = [slot for slot in DistancesContext.__slots__
               if hasattr(dctx, slot)]
     for line in reader:
         (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
-                = _parse_csv_line(headers, line)
+            = _parse_csv_line(headers, line)
         if not debug \
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
@@ -168,8 +168,8 @@ def _parse_csv(datafile, debug):
         else:
             yield sctx, rctx, dctx, stddev_types, expected_results, result_type
             (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
-            = (sctx2, rctx2, dctx2, stddev_types2,
-               expected_results2, result_type2)
+                = (sctx2, rctx2, dctx2, stddev_types2,
+                   expected_results2, result_type2)
     yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
@@ -275,7 +275,7 @@ if __name__ == '__main__':
             module = __import__(module_name, fromlist=[class_name])
         except ImportError:
             raise argparse.ArgumentTypeError(
-                'can not import module %r, make sure ' \
+                'can not import module %r, make sure '
                 'it is in your $PYTHONPATH' % module_name
             )
         if not hasattr(module, class_name):
@@ -294,15 +294,15 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
     parser.add_argument('gsim', type=gsim_by_import_path,
-                        help='an import path of the ground shaking ' \
-                             'intensity model class in a form ' \
-                             '"package.module.ClassName".')
+                        help='an import path of the ground shaking '
+                        'intensity model class in a form '
+                        '"package.module.ClassName".')
     parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format. use "-" for ' \
+                        help='test data file in a csv format. use "-" for '
                              'reading from standard input')
     parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
-                        help='the maximum discrepancy allowed for result ' \
-                             'value to be considered matching, expressed ' \
+                        help='the maximum discrepancy allowed for result '
+                        'value to be considered matching, expressed '
                              'in percentage points. default value is 0.5.',
                         nargs='?', default=0.5, dest='max_discrep_percentage')
     dbg_group = parser.add_mutually_exclusive_group()
@@ -312,8 +312,8 @@ if __name__ == '__main__':
                                 'and print information about line containing '
                                 'failing test')
     dbg_group.add_argument('-q', '--quiet', action='store_true',
-                           help="don't print stats at the end. use exit " \
-                                "code to determine if test succeeded.")
+                           help="don't print stats at the end. use exit "
+                           "code to determine if test succeeded.")
 
     args = parser.parse_args()
 
