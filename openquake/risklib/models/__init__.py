@@ -18,5 +18,4 @@
 
 from openquake.risklib.models import input
 
-
 __all__ = [input.__name__]  # ugly

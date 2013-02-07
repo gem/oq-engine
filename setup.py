@@ -29,13 +29,14 @@ url = "http://github.com/gem/oq-risklib"
 
 
 setup(
-    name='oq-risklib',
+    name='openquake.risklib',
     version=version,
     description="oq-risklib is a library for performing seismic risk analysis",
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=['tests', 'tests.*']),
+    packages=find_packages(exclude=['tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
     install_requires=[
+        'openquake',
         'numpy',
         'scipy'
     ],
@@ -52,5 +53,8 @@ setup(
     ),
     keywords="seismic risk",
     license="GNU AGPL v3",
-    platforms=["any"]
+    platforms=["any"],
+    namespace_packages=['openquake'],
+
+    zip_safe=False,
 )
