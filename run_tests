@@ -8,7 +8,7 @@ error=0
 xmllint --noout --schema nrmllib/schema/nrml.xsd `find ./examples -name "*.xml"`
 validation_retcode=$?
 
-nosetests --with-doctest "$@"
+python /usr/bin/nosetests --with-doctest "$@"
 nosetests_ret_code=$?
 
 if [ "$validation_retcode" -ne "0" ]; then
