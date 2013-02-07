@@ -27,9 +27,10 @@ import pwd
 import sys
 
 import openquake.engine
+from os.path import realpath, dirname
 from openquake.engine.utils import general
 
-OQDIR = os.path.dirname(openquake.engine.__path__[0])
+OQDIR = realpath(dirname(dirname(realpath(openquake.engine.__file__))))
 
 
 @general.singleton

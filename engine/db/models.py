@@ -2003,8 +2003,9 @@ class _GroundMotionField(object):
 
 class _GroundMotionFieldNode(object):
 
-    def __init__(self, iml, location):
+    def __init__(self, iml, location, rupture_id):
         self.iml = iml
+        self.rupture_id = rupture_id
         self.location = location  # must have x and y attributes
 
 
@@ -2019,6 +2020,7 @@ class Gmf(djm.Model):
     sa_damping = djm.FloatField(null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
+    rupture_ids = fields.IntegerArrayField()
     result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
