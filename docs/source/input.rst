@@ -10,4 +10,4 @@ Classes to take NRML input and serialize it to the database.
 Seismic Sources
 ---------------
 
-.. automodule:: openquake.input.source
+.. automodule:: openquake.engine.input.source

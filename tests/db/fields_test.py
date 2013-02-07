@@ -19,7 +19,7 @@ import unittest
 
 from django import forms
 
-from openquake.db import fields
+from openquake.engine.db import fields
 
 
 class FloatArrayFormFieldTestCase(unittest.TestCase):
@@ -63,12 +63,13 @@ class FloatArrayFormFieldTestCase(unittest.TestCase):
 
 
 class FloatArrayFieldTestCase(unittest.TestCase):
-    """Test for the custom :py:class:`openquake.db.models.FloatArrayField`
-    type"""
+    """Test for the custom
+       :py:class:`openquake.engine.db.models.FloatArrayField` type"""
 
     def test_get_prep_value(self):
         """Test the proper behavior of
-        :py:method:`openquake.db.models.FloatArrayField.get_prep_value`."""
+        :py:method:`openquake.engine.db.models.FloatArrayField.get_prep_value`.
+        """
         expected = '{3.14, 10, -0.111}'
 
         faf = fields.FloatArrayField()
@@ -78,12 +79,13 @@ class FloatArrayFieldTestCase(unittest.TestCase):
 
 
 class CharArrayFieldTestCase(unittest.TestCase):
-    """Tests for the custom :py:class:`openquake.db.models.CharArrayField`
-    type"""
+    """Tests for the custom
+       :py:class:`openquake.engine.db.models.CharArrayField` type"""
 
     def test_get_prep_value(self):
         """Test the proper behavior of
-        :py:method:`openquake.db.models.CharArrayField.get_prep_value`."""
+        :py:method:`openquake.engine.db.models.CharArrayField.get_prep_value`.
+        """
         expected = '{"MagPMF", "MagDistPMF", "LatLonPMF"}'
 
         caf = fields.CharArrayField()

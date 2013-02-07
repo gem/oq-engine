@@ -21,9 +21,9 @@ import unittest
 from lxml import etree
 from nose.plugins.attrib import attr
 
-from openquake.db import models
-from openquake.export import core as export_core
-from openquake.export import hazard
+from openquake.engine.db import models
+from openquake.engine.export import core as export_core
+from openquake.engine.export import hazard
 
 from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
@@ -35,18 +35,23 @@ class UtilsTestCase(unittest.TestCase):
         class FakeLtRealization(object):
             def __init__(self, gsim_lt_path):
                 self.gsim_lt_path = gsim_lt_path
+
         class FakeResult(object):
             def __init__(self, lt_realization, imt, sa_period):
                 self.lt_realization = lt_realization
                 self.imt = imt
                 self.sa_period = sa_period
+
         class FakeGMPE(object):
             pass
+
         class FakeGMPELTBranch(object):
             value = FakeGMPE()
+
         class FakeGMPELT(object):
             def __init__(self, branches):
                 self.branches = branches
+
         class FakeLogicTreeProcessor(object):
             def __init__(self, gmpe_lt):
                 self.gmpe_lt = gmpe_lt
@@ -164,8 +169,8 @@ class EventBasedExportTestCase(BaseExportTestCase):
         # Run an event-based hazard calculation to compute SESs and GMFs
         # Call the exporters for both SES and GMF results  and verify that
         # files were created
-        # Since the XML writers (in `nrml.writers`) are concerned with
-        # correctly generating the XML, we don't test that here...
+        # Since the XML writers (in `openquake.nrmllib.writers`) are concerned
+        # with correctly generating the XML, we don't test that here...
         # but we should still have an end-to-end QA test.
         target_dir = tempfile.mkdtemp()
 

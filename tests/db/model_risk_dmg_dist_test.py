@@ -19,8 +19,8 @@ from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
 
 from shapely.geometry import Point
-from openquake.db import models
-from openquake import engine2
+from openquake.engine.db import models
+from openquake.engine import engine2
 
 from tests.utils import helpers
 

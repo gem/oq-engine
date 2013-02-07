@@ -21,9 +21,9 @@ import numpy
 
 import unittest
 
-from openquake import kvs
-from openquake import logs
-from openquake.utils import stats
+from openquake.engine import kvs
+from openquake.engine import logs
+from openquake.engine.utils import stats
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
@@ -116,7 +116,7 @@ class JobTokensTestCase(unittest.TestCase):
     def test_mark_job_as_current(self):
         """
         Test the generation of job keys using
-        :py:function:`openquake.kvs.mark_job_as_current`.
+        :py:function:`openquake.engine.kvs.mark_job_as_current`.
         """
 
         job_id_1 = 1
@@ -134,7 +134,7 @@ class JobTokensTestCase(unittest.TestCase):
     def test_current_jobs(self):
         """
         Test the retrieval of the current jobs from the CURRENT_JOBS set.
-        Exercises :py:function:`openquake.kvs.tokens.current_jobs`.
+        Exercises :py:function:`openquake.engine.kvs.tokens.current_jobs`.
         """
         self.assertFalse(self.client.exists(kvs.tokens.CURRENT_JOBS))
 
@@ -198,8 +198,8 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
     def test_gc_dataless_job(self):
         """
-        Test that :py:function:`openquake.kvs.cache_gc` returns 0 (to indicate
-        that the job existed but there was nothing to delete).
+        Test that :py:function:`openquake.engine.kvs.cache_gc` returns 0
+        (to indicate that the job existed but there was nothing to delete).
 
         The job key should key should be removed from CURRENT_JOBS.
         """
@@ -217,7 +217,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
     def test_gc_nonexistent_job(self):
         """
         If we try to run garbage collection on a nonexistent job, the result of
-        :py:function:`openquake.kvs.cache_gc` should be None.
+        :py:function:`openquake.engine.kvs.cache_gc` should be None.
         """
         nonexist_job = '1234nonexistent'
 
