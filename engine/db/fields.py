@@ -138,6 +138,17 @@ class FloatArrayField(djm.Field):
         return super(FloatArrayField, self).formfield(**defaults)
 
 
+class IntArrayField(djm.Field):
+    """This field models a postgresql `int` array"""
+
+    # TODO(lp) implement the corresponding form field
+    def db_type(self, connection):
+        return 'int[]'
+
+    def get_prep_value(self, value):
+        return "{%s}" % ','.join(str(v) for v in value)
+
+
 class CharArrayField(djm.Field):
     """This field models a postgres `varchar` array."""
 
