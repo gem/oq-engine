@@ -17,15 +17,15 @@
 
 import unittest
 
-import nhlib
+import openquake.hazardlib
 
-from nhlib import geo as nhlib_geo
+from openquake.hazardlib import geo as hazardlib_geo
 from nose.plugins.attrib import attr
 
-from openquake import engine2
-from openquake.calculators.hazard import general
-from openquake.calculators.hazard.classical import core as cls_core
-from openquake.db import models
+from openquake.engine import engine2
+from openquake.engine.calculators.hazard import general
+from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.db import models
 
 from tests.utils import helpers
 
@@ -77,7 +77,8 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
 class ValidateSiteModelTestCase(unittest.TestCase):
     """Tests for
-    :function:`openquake.calculators.hazard.general.validate_site_model`.
+    :function:`openquake.engine.calculators.hazard.general.\
+validate_site_model`.
     """
 
     @classmethod
@@ -122,35 +123,37 @@ class ValidateSiteModelTestCase(unittest.TestCase):
 
             # the edges of the polygon
             # East edge
-            nhlib_geo.Point(9.9999999, 0),
+            hazardlib_geo.Point(9.9999999, 0),
             # West edge
-            nhlib_geo.Point(-9.9999999, 0),
+            hazardlib_geo.Point(-9.9999999, 0),
             # NOTE: The values for the north and south edges were obtained by
             # trial and error.
             # North edge
-            nhlib_geo.Point(0, 10.1507381),
+            hazardlib_geo.Point(0, 10.1507381),
             # South edge
-            nhlib_geo.Point(0, -10.1507381),
+            hazardlib_geo.Point(0, -10.1507381),
             # the corners
-            nhlib_geo.Point(-10, 10),
-            nhlib_geo.Point(10, 10),
-            nhlib_geo.Point(-10, -10),
-            nhlib_geo.Point(10, -10),
+            hazardlib_geo.Point(-10, 10),
+            hazardlib_geo.Point(10, 10),
+            hazardlib_geo.Point(-10, -10),
+            hazardlib_geo.Point(10, -10),
             # a few points somewhere in the middle, which are obviously inside
             # the target area
-            nhlib_geo.Point(0.0, 0.0),
-            nhlib_geo.Point(-2.5, 2.5),
-            nhlib_geo.Point(2.5, 2.5),
-            nhlib_geo.Point(-2.5, -2.5),
-            nhlib_geo.Point(2.5, -2.5),
+            hazardlib_geo.Point(0.0, 0.0),
+            hazardlib_geo.Point(-2.5, 2.5),
+            hazardlib_geo.Point(2.5, 2.5),
+            hazardlib_geo.Point(-2.5, -2.5),
+            hazardlib_geo.Point(2.5, -2.5),
         ]
 
-        sites_of_interest_case2 = [nhlib_geo.Point(0.0, 0.0),
-                                    nhlib_geo.Point(0.0, 0.1),
-                                    nhlib_geo.Point(0.0, 0.2)]
+        sites_of_interest_case2 = [hazardlib_geo.Point(0.0, 0.0),
+                                    hazardlib_geo.Point(0.0, 0.1),
+                                    hazardlib_geo.Point(0.0, 0.2)]
 
-        mesh_case1 = nhlib_geo.Mesh.from_points_list(sites_of_interest_case1)
-        mesh_case2 = nhlib_geo.Mesh.from_points_list(sites_of_interest_case2)
+        mesh_case1 = hazardlib_geo.Mesh.from_points_list(
+            sites_of_interest_case1)
+        mesh_case2 = hazardlib_geo.Mesh.from_points_list(
+            sites_of_interest_case2)
 
         # this should work without raising any errors
         general.validate_site_model(self.site_model_nodes, mesh_case1)
@@ -160,32 +163,32 @@ class ValidateSiteModelTestCase(unittest.TestCase):
         test_cases = [
             # outside of the edges
             # East edge
-            [nhlib_geo.Point(10.0000001, 0)],
+            [hazardlib_geo.Point(10.0000001, 0)],
             # West edge
-            [nhlib_geo.Point(-10.0000001, 0)],
+            [hazardlib_geo.Point(-10.0000001, 0)],
             # NOTE: The values for the north south edges were obtained by
             # trial and error.
             # North edge
-            [nhlib_geo.Point(0, 10.1507382)],
+            [hazardlib_geo.Point(0, 10.1507382)],
             # South edge
-            [nhlib_geo.Point(0, -10.1507382)],
+            [hazardlib_geo.Point(0, -10.1507382)],
             # outside of the corners
             # first corner (a)
-            [nhlib_geo.Point(-10.0000001, 10)],
-            [nhlib_geo.Point(-10, 10.0000001)],
+            [hazardlib_geo.Point(-10.0000001, 10)],
+            [hazardlib_geo.Point(-10, 10.0000001)],
             # second corner (b)
-            [nhlib_geo.Point(10.0000001, 10)],
-            [nhlib_geo.Point(10, 10.0000001)],
+            [hazardlib_geo.Point(10.0000001, 10)],
+            [hazardlib_geo.Point(10, 10.0000001)],
             # third corner (d)
-            [nhlib_geo.Point(-10.0000001, -10)],
-            [nhlib_geo.Point(-10, -10.0000001)],
+            [hazardlib_geo.Point(-10.0000001, -10)],
+            [hazardlib_geo.Point(-10, -10.0000001)],
             # fourth corner (e)
-            [nhlib_geo.Point(10.0000001, -10)],
-            [nhlib_geo.Point(10, -10.0000001)],
+            [hazardlib_geo.Point(10.0000001, -10)],
+            [hazardlib_geo.Point(10, -10.0000001)],
         ]
 
         for tc in test_cases:
-            mesh = nhlib_geo.Mesh.from_points_list(tc)
+            mesh = hazardlib_geo.Mesh.from_points_list(tc)
             self.assertRaises(RuntimeError, general.validate_site_model,
                               self.site_model_nodes, mesh)
 
@@ -272,7 +275,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # We haven't yet linked any site model data to this input, so we
         # expect a result of `None`.
         self.assertIsNone(general.get_closest_site_model_data(
-            self.site_model_inp, nhlib_geo.Point(0, 0))
+            self.site_model_inp, hazardlib_geo.Point(0, 0))
         )
 
     def test_get_closest_site_model_data(self):
@@ -307,8 +310,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         #
         # Thus, I decided to not include this in my test case, since it caused
         # the test to intermittently fail.
-        point1 = nhlib_geo.Point(-0.0000001, 0)
-        point2 = nhlib_geo.Point(0.0000001, 0)
+        point1 = hazardlib_geo.Point(-0.0000001, 0)
+        point2 = hazardlib_geo.Point(0.0000001, 0)
 
         res1 = general.get_closest_site_model_data(self.site_model_inp, point1)
         res2 = general.get_closest_site_model_data(self.site_model_inp, point2)
@@ -317,13 +320,13 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         self.assertEqual(sm2, res2)
 
 
-class ImtsToNhlibTestCase(unittest.TestCase):
+class ImtsToHazardlibTestCase(unittest.TestCase):
     """
     Tests for
-    :func:`openquake.calculators.hazard.general.im_dict_to_nhlib`.
+    :func:`openquake.engine.calculators.hazard.general.im_dict_to_hazardlib`.
     """
 
-    def test_im_dict_to_nhlib(self):
+    def test_im_dict_to_hazardlib(self):
         imts_in = {
             'PGA': [1, 2],
             'PGV': [2, 3],
@@ -336,17 +339,19 @@ class ImtsToNhlibTestCase(unittest.TestCase):
         }
 
         expected = {
-            nhlib.imt.PGA(): [1, 2],
-            nhlib.imt.PGV(): [2, 3],
-            nhlib.imt.PGD(): [3, 4],
-            nhlib.imt.SA(0.1, models.DEFAULT_SA_DAMPING): [0.1, 0.2],
-            nhlib.imt.SA(0.025, models.DEFAULT_SA_DAMPING): [0.2, 0.3],
-            nhlib.imt.IA(): [0.3, 0.4],
-            nhlib.imt.RSD(): [0.4, 0.5],
-            nhlib.imt.MMI(): [0.5, 0.6],
+            openquake.hazardlib.imt.PGA(): [1, 2],
+            openquake.hazardlib.imt.PGV(): [2, 3],
+            openquake.hazardlib.imt.PGD(): [3, 4],
+            openquake.hazardlib.imt.SA(0.1, models.DEFAULT_SA_DAMPING): [
+                0.1, 0.2],
+            openquake.hazardlib.imt.SA(0.025, models.DEFAULT_SA_DAMPING): [
+                0.2, 0.3],
+            openquake.hazardlib.imt.IA(): [0.3, 0.4],
+            openquake.hazardlib.imt.RSD(): [0.4, 0.5],
+            openquake.hazardlib.imt.MMI(): [0.5, 0.6],
         }
 
-        actual = general.im_dict_to_nhlib(imts_in)
+        actual = general.im_dict_to_hazardlib(imts_in)
         self.assertEqual(len(expected), len(actual))
 
         for exp_imt, exp_imls in expected.items():
