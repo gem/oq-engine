@@ -27,8 +27,8 @@ class AreaSource(PointSource):
     region.
 
     :param polygon:
-        An instance of :class:`openquake.hazardlib.geo.polygon.Polygon` that defines
-        source's area.
+        An instance of :class:`openquake.hazardlib.geo.polygon.Polygon`
+        that defines source's area.
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.
         See :meth:`iter_ruptures`.
@@ -76,7 +76,8 @@ class AreaSource(PointSource):
         Ruptures of area source are just a union of ruptures
         of those point sources. The actual positions of the implied
         point sources form a uniformly spaced mesh on the polygon.
-        Polygon's method :meth:`~openquake.hazardlib.geo.polygon.Polygon.discretize`
+        Polygon's method :meth:
+        `~openquake.hazardlib.geo.polygon.Polygon.discretize`
         is used for creating a mesh of points on the source's area.
         Constructor's parameter ``area_discretization`` is used as
         polygon's discretization spacing (not to be confused with

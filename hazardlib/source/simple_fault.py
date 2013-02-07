@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.source.simple_fault` defines :class:`SimpleFaultSource`.
+Module :mod:`openquake.hazardlib.source.simple_fault` defines
+:class:`SimpleFaultSource`.
 """
 import math
 
@@ -34,15 +35,16 @@ class SimpleFaultSource(SeismicSource):
     :param lower_seismogenic_depth:
         Maximum depth an earthquake rupture can reach, in km.
     :param fault_trace:
-        A :class:`~openquake.hazardlib.geo.line.Line` representing the line of intersection
-        between the fault plane and the Earth's surface.
+        A :class:`~openquake.hazardlib.geo.line.Line` representing
+        the line of intersection between the fault plane and the Earth's
+        surface.
     :param dip:
         Angle between earth surface and fault plane in decimal degrees.
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource` for description of other
-    parameters.
+    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    for description of other parameters.
 
     :raises ValueError:
         If :meth:`~openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface.check_fault_data`
@@ -83,8 +85,8 @@ class SimpleFaultSource(SeismicSource):
         """
         Uses :meth:`openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface.surface_projection_from_fault_data`
         for getting the fault's surface projection and then calls
-        its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate` method passing
-        in ``dilation`` parameter.
+        its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate`
+        method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
         <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
@@ -101,7 +103,8 @@ class SimpleFaultSource(SeismicSource):
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        See :meth:`openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
 
         Generates a ruptures using the "floating" algorithm: for all the
         magnitude values of assigned MFD calculates the rupture size with
@@ -131,8 +134,8 @@ class SimpleFaultSource(SeismicSource):
 
             for first_row in xrange(num_rup_along_width):
                 for first_col in xrange(num_rup_along_length):
-                    mesh = whole_fault_mesh[first_row : first_row + rup_rows,
-                                            first_col : first_col + rup_cols]
+                    mesh = whole_fault_mesh[first_row: first_row + rup_rows,
+                                            first_col: first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
                     surface = SimpleFaultSurface(mesh)
                     yield ProbabilisticRupture(

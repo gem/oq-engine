@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.source.complex_fault` defines :class:`ComplexFaultSource`.
+Module :mod:`openquake.hazardlib.source.complex_fault`
+defines :class:`ComplexFaultSource`.
 """
 import numpy
 
@@ -30,14 +31,14 @@ class ComplexFaultSource(SeismicSource):
     surface with an arbitrarily complex geometry.
 
     :param edges:
-        A list of :class:`~openquake.hazardlib.geo.line.Line` objects, representing fault
-        source geometry. See
+        A list of :class:`~openquake.hazardlib.geo.line.Line` objects,
+        representing fault source geometry. See
         :meth:`openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.from_fault_data`.
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource` for description of other
-    parameters.
+    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    for description of other parameters.
 
     :raises ValueError:
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
@@ -62,8 +63,8 @@ class ComplexFaultSource(SeismicSource):
         """
         Uses :meth:`openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.surface_projection_from_fault_data`
         for getting the fault's surface projection and then calls
-        its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate` method passing
-        in ``dilation`` parameter.
+        its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate`
+        method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
         <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
@@ -79,7 +80,8 @@ class ComplexFaultSource(SeismicSource):
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        See :meth:`openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
 
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.

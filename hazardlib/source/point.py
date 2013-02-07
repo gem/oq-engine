@@ -34,19 +34,22 @@ class PointSource(SeismicSource):
     :param lower_seismogenic_depth:
         Maximum depth an earthquake rupture can reach, in km.
     :param location:
-        :class:`~openquake.hazardlib.geo.point.Point` object representing the location
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
-        :class:`~openquake.hazardlib.pmf.PMF` object with values that are instances
-        of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`. Shows the distribution
+        :class:`~openquake.hazardlib.pmf.PMF` object with values
+        that are instances
+        of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`.
+        Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
-        :class:`~openquake.hazardlib.pmf.PMF` with values being float numbers in km
-        representing the depth of the hypocenter. Latitude and longitude
-        of the hypocenter is always set to ones of ``location``.
+        :class:`~openquake.hazardlib.pmf.PMF` with values being float
+        numbers in km representing the depth of the hypocenter. Latitude
+        and longitude of the hypocenter is always set to ones of ``location``.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource` for description of other
-    parameters.
+    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    for description of other parameters.
 
     :raises ValueError:
         If upper seismogenic depth is negative or below lower seismogenic
@@ -147,7 +150,8 @@ class PointSource(SeismicSource):
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        See :meth:`openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
 
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
@@ -164,7 +168,8 @@ class PointSource(SeismicSource):
         :param temporal_occurrence_model:
             The same object as given to :meth:`iter_ruptures`.
         :param location:
-            A :class:`~openquake.hazardlib.geo.point.Point` object representing the hypocenter
+            A :class:`~openquake.hazardlib.geo.point.Point`
+            object representing the hypocenter
             location. In case of :class:`PointSource` it is the one provided
             to constructor, and for area source the location points are taken
             from polygon discretization.
@@ -202,7 +207,8 @@ class PointSource(SeismicSource):
             Tuple of two items: rupture length in width in km.
 
         The rupture area is calculated using method
-        :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area` of source's
+        :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
+        of source's
         magnitude-scaling relationship. In any case the returned
         dimensions multiplication is equal to that value. Than
         the area is decomposed to length and width with respect
@@ -244,7 +250,7 @@ class PointSource(SeismicSource):
             Instance of :class:`~openquake.hazardlib.geo.surface.planar.PlanarSurface`.
         """
         assert self.upper_seismogenic_depth <= hypocenter.depth \
-               and self.lower_seismogenic_depth >= hypocenter.depth
+            and self.lower_seismogenic_depth >= hypocenter.depth
         rdip = math.radians(nodal_plane.dip)
 
         # precalculated azimuth values for horizontal-only and vertical-only

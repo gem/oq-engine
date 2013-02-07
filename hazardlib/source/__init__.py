@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`openquake.hazardlib.source` deals with various types of seismic sources.
+Package :mod:`openquake.hazardlib.source` deals with various types
+of seismic sources.
 """
 from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture
 from openquake.hazardlib.source.point import PointSource

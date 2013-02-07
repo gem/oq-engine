@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.source.rupture` defines classes :class:`Rupture`
-and its subclass :class:`ProbabilisticRupture`.
+Module :mod:`openquake.hazardlib.source.rupture` defines classes
+:class:`Rupture` and its subclass :class:`ProbabilisticRupture`.
 """
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 
@@ -104,20 +104,21 @@ class ProbabilisticRupture(Rupture):
         """
         Return the probability of this rupture to occur exactly one time.
 
-        Uses :meth:`~openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
+        Uses :meth:
+        `~openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
         of an assigned temporal occurrence model.
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
         return tom.get_probability_one_occurrence(rate)
 
-
     def sample_number_of_occurrences(self):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
 
-        Uses :meth:`~openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
+        Uses :meth:
+        `~openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
         of an assigned temporal occurrence model.
         """
         return self.temporal_occurrence_model.sample_number_of_occurrences(
