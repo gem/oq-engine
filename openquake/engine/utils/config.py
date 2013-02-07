@@ -29,8 +29,7 @@ import sys
 import openquake.engine
 from openquake.engine.utils import general
 
-OQDIR = os.path.dirname(openquake.engine.__path__[0])
-
+OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 
 @general.singleton
 class Config(object):
