@@ -16,7 +16,8 @@
 
 import unittest
 
-from openquake.calculators.hazard.scenario.core import gmf_realiz_per_task
+from openquake.engine.calculators.hazard.scenario.core import (
+    gmf_realiz_per_task)
 
 
 class ScenarioHazardCalculatorTestCase(unittest.TestCase):
@@ -39,4 +40,3 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual((False, realiz_per_task), gmf_realiz_per_task(
             gmf_realizations, num_concur_tasks))
-

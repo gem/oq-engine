@@ -26,9 +26,9 @@ import unittest
 
 from django.test import TestCase as DjangoTestCase
 
-from openquake import engine
-from openquake.db import models
-from openquake.utils import monitor
+from openquake.engine import engine
+from openquake.engine.db import models
+from openquake.engine.utils import monitor
 
 from tests.utils.helpers import patch
 
@@ -150,8 +150,10 @@ class CountFailedNodesTestCase(unittest.TestCase):
         cls.job = engine.prepare_job()
 
     def setUp(self):
-        self.db_patch = patch('openquake.utils.monitor._db_cnode_status')
-        self.live_patch = patch('openquake.utils.monitor._live_cnode_status')
+        self.db_patch = patch(
+            'openquake.engine.utils.monitor._db_cnode_status')
+        self.live_patch = (
+            patch('openquake.engine.utils.monitor._live_cnode_status'))
         self.db_mock = self.db_patch.start()
         self.live_mock = self.live_patch.start()
 

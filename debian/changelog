@@ -601,7 +601,7 @@ python-oq (0.4.3-7) natty; urgency=low
 
 python-oq (0.4.3-6) natty; urgency=low
 
-  * Delay the import of openquake.job to allow the user to see the version
+  * Delay the import of openquake.engine.job to allow the user to see the version
     and/or help without errors (LP: #842604)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 14:37:06 +0200

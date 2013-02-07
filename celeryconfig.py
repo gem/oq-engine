@@ -27,7 +27,7 @@ import os
 import sys
 import imp
 
-from openquake.utils import config
+from openquake.engine.utils import config
 
 
 config.abort_if_no_config_available()
@@ -56,15 +56,15 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 
 
 CELERY_IMPORTS = (
-    "openquake.calculators.hazard.classical.core",
-    "openquake.calculators.hazard.classical.post_processing",
-    "openquake.calculators.hazard.event_based.core_next",
-    "openquake.calculators.hazard.event_based.post_processing",
-    "openquake.calculators.risk.classical.core",
-    "openquake.calculators.risk.classical_bcr.core",
-    "openquake.calculators.risk.event_based.core",
-    "openquake.calculators.risk.event_based_bcr.core",
-    "openquake.calculators.risk.scenario.core",)
+    "openquake.engine.calculators.hazard.classical.core",
+    "openquake.engine.calculators.hazard.classical.post_processing",
+    "openquake.engine.calculators.hazard.event_based.core_next",
+    "openquake.engine.calculators.hazard.event_based.post_processing",
+    "openquake.engine.calculators.risk.classical.core",
+    "openquake.engine.calculators.risk.classical_bcr.core",
+    "openquake.engine.calculators.risk.event_based.core",
+    "openquake.engine.calculators.risk.event_based_bcr.core",
+    "openquake.engine.calculators.risk.scenario.core",)
 
 try:
     imp.find_module("tasks", [os.path.join(x, "tests/utils")
@@ -73,4 +73,4 @@ try:
 except ImportError:
     pass
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
+os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"

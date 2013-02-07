@@ -57,7 +57,7 @@ import sys
 
 from os.path import expanduser
 
-from openquake.utils import config
+from openquake.engine.utils import config
 
 config.abort_if_no_config_available()
 
@@ -72,14 +72,14 @@ try:
 except ImportError:
     pass
 
-import openquake
-from openquake import __version__
-from openquake import engine2
-from openquake.db import models
-from openquake.export import hazard as hazard_export
-from openquake.export import risk as risk_export
-from openquake.job import validation
-from openquake.utils import version as utils_version
+import openquake.engine
+from openquake.engine import __version__
+from openquake.engine import engine2
+from openquake.engine.db import models
+from openquake.engine.export import hazard as hazard_export
+from openquake.engine.export import risk as risk_export
+from openquake.engine.job import validation
+from openquake.engine.utils import version as utils_version
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -297,7 +297,7 @@ def list_risk_calculations():
 def list_hazard_outputs(hc_id):
     """
     List the outputs for a given
-    :class:`~openquake.db.models.HazardCalculation`.
+    :class:`~openquake.engine.db.models.HazardCalculation`.
 
     :param hc_id:
         ID of a hazard calculation.
@@ -312,7 +312,7 @@ def list_hazard_outputs(hc_id):
 def list_risk_outputs(rc_id):
     """
     List the outputs for a given
-    :class:`~openquake.db.models.RiskCalculation`.
+    :class:`~openquake.engine.db.models.RiskCalculation`.
 
     :param rc_id:
         ID of a risk calculation.
@@ -335,7 +335,7 @@ def export_risk(risk_output_id, target_dir):
 def export(fn, output_id, target_dir):
     """
     Simple UI wrapper around
-    :func:`openquake.export.hazard.export` which prints a summary of files
+    :func:`openquake.engine.export.hazard.export` which prints a summary of files
     exported, if any.
     """
     if not models.Output.objects.filter(pk=output_id).exists():
@@ -458,7 +458,7 @@ def main():
         complain_and_exit(utils_version.info(__version__))
 
     if args.no_distribute:
-        os.environ[openquake.NO_DISTRIBUTE_VAR] = '1'
+        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     # hazard
     if args.list_hazard_calculations:

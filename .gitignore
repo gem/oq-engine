@@ -12,7 +12,7 @@ tests/data/loss-curves.xml
 tests/data/loss-ratio-curves.xml
 tests/data/example-loss-curves-for-plotting.svg
 tests/data/**/**/computed_output/*
-openquake.db
+openquake.engine.db
 coverage.ec
 *.rdb
 *.log

@@ -40,16 +40,16 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.calculators import hazard
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
-from openquake.db import models
-from openquake.engine import JobContext
-from openquake import engine
-from openquake import engine2
-from openquake import logs
-from openquake.input.logictree import LogicTreeProcessor
-from openquake.utils import config
+from openquake.engine.calculators import hazard
+from openquake.engine.calculators.hazard.general import store_gmpe_map
+from openquake.engine.calculators.hazard.general import store_source_model
+from openquake.engine.db import models
+from openquake.engine.engine import JobContext
+from openquake.engine import engine
+from openquake.engine import engine2
+from openquake.engine import logs
+from openquake.engine.input.logictree import LogicTreeProcessor
+from openquake.engine.utils import config
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -179,7 +179,7 @@ def run_hazard_job(cfg, exports=None):
     :param list exports:
         A list of export format types. Currently only 'xml' is supported.
     :returns:
-        The completed :class:`~openquake.db.models.OqJob`.
+        The completed :class:`~openquake.engine.db.models.OqJob`.
     """
     if exports is None:
         exports = []
@@ -285,7 +285,7 @@ def store_hazard_logic_trees(a_job):
     KVS so that it can be read by the Java code.
 
     :param a_job:
-        :class:`openquake.engine.JobContext` instance.
+        :class:`openquake.engine.engine.JobContext` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -613,14 +613,15 @@ class DbTestCase(object):
     def setup_job_profile(cls, job, force_inputs, save2db=True):
         """Create a profile for the given job.
 
-        :param job: The :class:`openquake.db.models.OqJob` instance to use
+        :param job: The :class:`openquake.engine.db.models.OqJob`
+            instance to use.
         :param bool force_inputs: If `True` the model input files will be
             parsed and the resulting content written to the database no matter
             what.
         :param bool save2db: If `False` the job profile instance will be
             returned but not saved to the database. Otherwise it is saved to
             the database and returned then.
-        :returns: a :class:`openquake.db.models.OqJobProfile` instance
+        :returns: a :class:`openquake.engine.db.models.OqJobProfile` instance
         """
         oqjp = models.OqJobProfile()
         oqjp.owner = job.owner
@@ -931,7 +932,7 @@ def _deep_eq(a, b, decimal):
 def get_hazard_job(cfg, username=None):
     """
     Given a path to a config file, create a
-    :class:`openquake.db.models.OqJob` object for a hazard calculation.
+    :class:`openquake.engine.db.models.OqJob` object for a hazard calculation.
     """
     username = username if username is not None else default_user().user_name
 
@@ -951,7 +952,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     risk and hazard demo file config, respectively.
 
     Creates the hazard outputs suitable to be used by a risk
-    calculation and then creates a :class:`openquake.db.models.OqJob`
+    calculation and then creates a :class:`openquake.engine.db.models.OqJob`
     object for a risk calculation. It also returns the input files
     referenced by the risk config file.
 

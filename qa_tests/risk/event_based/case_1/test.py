@@ -22,7 +22,7 @@ from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 from tests.utils import helpers
 
-from openquake.db import models
+from openquake.engine.db import models
 
 
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
