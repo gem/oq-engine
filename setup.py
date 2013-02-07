@@ -35,7 +35,7 @@ import numpy
 
 
 version = "0.9.1"
-url = "http://github.com/gem/hazardlib"
+url = "http://github.com/gem/oq-hazardlib"
 
 geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',
                               sources=['speedups/geoutilsmodule.c'],
@@ -48,13 +48,14 @@ include_dirs = [numpy.get_include()]
 
 
 setup(
-    name='hazardlib',
+    name='openquake.hazardlib',
     version=version,
     description="hazardlib is a library for performing seismic hazard analysis",
     long_description=__doc__,
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
+        'openquake',
         'numpy',
         'scipy',
         'shapely'
@@ -75,5 +76,9 @@ setup(
     ),
     keywords="seismic hazard",
     license="GNU AGPL v3",
-    platforms=["any"]
+    platforms=["any"],
+    namespace_packages=['openquake'],
+
+    zip_safe=False,
+
 )
