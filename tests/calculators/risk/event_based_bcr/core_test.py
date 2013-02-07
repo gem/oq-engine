@@ -16,8 +16,8 @@
 from tests.calculators.risk import general_test
 from tests.utils import helpers
 
-from openquake.db import models
-from openquake.calculators.risk.event_based_bcr import core
+from openquake.engine.db import models
+from openquake.engine.calculators.risk.event_based_bcr import core
 
 
 class EventBasedBCRRiskCalculatorTestCase(
@@ -63,7 +63,7 @@ class EventBasedBCRRiskCalculatorTestCase(
     def test_hazard_id(self):
         """
         Test that the hazard output used by the calculator is a
-        `openquake.db.models.HazardCurve` object
+        `openquake.engine.db.models.HazardCurve` object
         """
 
         outputs = self.calculator.hazard_outputs(

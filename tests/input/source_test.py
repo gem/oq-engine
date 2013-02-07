@@ -17,16 +17,16 @@
 import decimal
 import unittest
 
-from nhlib import geo
-from nhlib import mfd
-from nhlib import pmf
-from nhlib import scalerel
-from nhlib import source
-from nrml import parsers as nrml_parsers
+from openquake.hazardlib import geo
+from openquake.hazardlib import mfd
+from openquake.hazardlib import pmf
+from openquake.hazardlib import scalerel
+from openquake.hazardlib import source
+from openquake.nrmllib import parsers as nrml_parsers
 from shapely import wkt
 
-from openquake.db import models
-from openquake.input import source as source_input
+from openquake.engine.db import models
+from openquake.engine.input import source as source_input
 
 from tests.utils import helpers
 
@@ -40,8 +40,8 @@ BIN_WIDTH = 1  # for Truncated GR MFDs
 AREA_SRC_DISC = 1  # area source discretization, in km
 
 
-class NrmlSourceToNhlibTestCase(unittest.TestCase):
-    """Tests for converting NRML source model objects to the nhlib
+class NrmlSourceToHazardlibTestCase(unittest.TestCase):
+    """Tests for converting NRML source model objects to the hazardlib
     representation.
     """
 
@@ -197,9 +197,9 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         return cmplx
 
-    def test_point_to_nhlib(self):
+    def test_point_to_hazardlib(self):
         exp = self._expected_point
-        actual = source_input.nrml_to_nhlib(
+        actual = source_input.nrml_to_hazardlib(
             self.point, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
@@ -207,9 +207,9 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         self.assertTrue(eq, msg)
 
-    def test_area_to_nhlib(self):
+    def test_area_to_hazardlib(self):
         exp = self._expected_area
-        actual = source_input.nrml_to_nhlib(
+        actual = source_input.nrml_to_hazardlib(
             self.area, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
@@ -217,9 +217,9 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         self.assertTrue(eq, msg)
 
-    def test_simple_to_nhlib(self):
+    def test_simple_to_hazardlib(self):
         exp = self._expected_simple
-        actual = source_input.nrml_to_nhlib(
+        actual = source_input.nrml_to_hazardlib(
             self.simple, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
@@ -227,9 +227,9 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         self.assertTrue(eq, msg)
 
-    def test_complex_to_nhlib(self):
+    def test_complex_to_hazardlib(self):
         exp = self._expected_complex
-        actual = source_input.nrml_to_nhlib(
+        actual = source_input.nrml_to_hazardlib(
             self.cmplx, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
@@ -240,7 +240,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
 class SourceDBWriterTestCase(unittest.TestCase):
     """Test DB serialization of seismic sources using
-    :class:`openquake.input.source.SourceDBWriter`.
+    :class:`openquake.engine.input.source.SourceDBWriter`.
     """
 
     def test_serialize(self):
@@ -284,15 +284,15 @@ class SourceDBWriterTestCase(unittest.TestCase):
 
         # now check that the ParsedSource geometry is correct
         # it should be the same as the 'rupture-enclosing' geometry for the
-        # nhlib representation of each source
+        # hazardlib representation of each source
         for i, (ns, ps) in enumerate(zip(nrml_sources, parsed_sources)):
-            nhlib_src = source_input.nrml_to_nhlib(
+            hazardlib_src = source_input.nrml_to_hazardlib(
                 ns, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
             )
 
-            nhlib_poly = nhlib_src.get_rupture_enclosing_polygon()
-            # nhlib tests the generation of wkt from a polygon, so we can trust
-            # that it is well-formed.
+            hazardlib_poly = hazardlib_src.get_rupture_enclosing_polygon()
+            # hazardlib tests the generation of wkt from a polygon, so we can
+            # trust that it is well-formed.
 
             # Since we save the rupture enclosing polygon as geometry (not wkt)
             # in the database, the WKT we get back from the DB might have
@@ -301,6 +301,6 @@ class SourceDBWriterTestCase(unittest.TestCase):
             # at a specific level of precision (default=6 digits after the
             # decimal point).
             expected_poly = wkt.loads(ps.polygon.wkt)
-            actual_poly = wkt.loads(nhlib_poly.wkt)
+            actual_poly = wkt.loads(hazardlib_poly.wkt)
 
             self.assertTrue(expected_poly.almost_equals(actual_poly))

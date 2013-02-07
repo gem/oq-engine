@@ -2,4 +2,4 @@
 Engine
 ######
 
-.. automodule:: openquake.engine
+.. automodule:: openquake.engine.engine

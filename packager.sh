@@ -66,13 +66,13 @@ _pkgtest_innervm_run () {
     #
     #  dependencies repos
 
-    # python-nrml
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nrml $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nrml ./\""
+    # python-nrmllib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nrmllib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nrmllib ./\""
 
-    # python-nhlib
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nhlib $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nhlib ./\""
+    # python-hazardlib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-hazardlib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-hazardlib ./\""
 
     # python-oq-risklib
     scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-risklib $haddr:repo/
@@ -103,7 +103,7 @@ _pkgtest_innervm_run () {
     # run all demos found
     ssh $haddr "cd demos
     for ini in \$(find . -name job.ini); do
-        DJANGO_SETTINGS_MODULE=openquake.settings openquake --run-hazard  \$ini --exports xml
+        DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
 
     trap ERR

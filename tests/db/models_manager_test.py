@@ -29,8 +29,8 @@ import unittest
 from django.contrib.gis.geos.point import Point
 from django.contrib.gis.geos.polygon import Polygon
 
-from openquake.db import models
-from openquake.calculators.risk import general as general_risk
+from openquake.engine.db import models
+from openquake.engine.calculators.risk import general as general_risk
 
 from tests.utils import helpers
 

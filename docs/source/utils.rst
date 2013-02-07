@@ -13,26 +13,26 @@ OpenQuake python code base.
 :mod:`general`
 --------------
 
-.. automodule:: openquake.utils.general
+.. automodule:: openquake.engine.utils.general
 
 :mod:`version`
 --------------
 
-.. automodule:: openquake.utils.version
+.. automodule:: openquake.engine.utils.version
 
 :mod:`config`
 -------------
 
-.. automodule:: openquake.utils.config
+.. automodule:: openquake.engine.utils.config
 
 :mod:`stats`
 ------------
 
-.. automodule:: openquake.utils.stats
+.. automodule:: openquake.engine.utils.stats
 
 :mod:`tasks`
 ------------
 Various utility functions related to splitting work into tasks and/or
 managing these.
 
-.. automodule:: openquake.utils.tasks
+.. automodule:: openquake.engine.utils.tasks

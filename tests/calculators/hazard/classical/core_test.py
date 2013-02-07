@@ -22,10 +22,10 @@ import numpy
 
 from nose.plugins.attrib import attr
 
-from openquake.calculators import base
-from openquake.calculators.hazard.classical import core
-from openquake.db import models
-from openquake.utils import stats
+from openquake.engine.calculators import base
+from openquake.engine.calculators.hazard.classical import core
+from openquake.engine.db import models
+from openquake.engine.utils import stats
 from tests.utils import helpers
 
 
@@ -47,7 +47,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
-        base_path = ('openquake.calculators.hazard.classical.core'
+        base_path = ('openquake.engine.calculators.hazard.classical.core'
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
@@ -133,7 +133,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(num_pts_to_compute, len(site_data.z2pt5s))
 
     def test_initialize_site_model_no_site_model(self):
-        patch_path = 'openquake.calculators.hazard.general.store_site_model'
+        patch_path = 'openquake.engine.calculators.hazard.general.\
+store_site_model'
         with helpers.patch(patch_path) as store_sm_patch:
             self.calc.initialize_site_model()
             # We should never try to store a site model in this case.

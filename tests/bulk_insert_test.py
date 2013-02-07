@@ -21,10 +21,10 @@ import unittest
 
 from django.db import transaction
 
-from openquake import writer
+from openquake.engine import writer
 
-from openquake.db.models import OqUser, GmfData
-from openquake.writer import BulkInserter
+from openquake.engine.db.models import OqUser, GmfData
+from openquake.engine.writer import BulkInserter
 
 
 def _map_values(fields, values):
