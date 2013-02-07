@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AtkinsonBoore2003SInter`, \
-    class:`AtkinsonBoore2003SSlab`.
+Module exports :class:`AtkinsonBoore2003SInter`, class:`AtkinsonBoore2003SSlab`
 """
 from __future__ import division
 
@@ -57,9 +56,10 @@ class AtkinsonBoore2003SInter(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is the random horizontal component
-    #: attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`, see paragraph 'Functional
-    #: Form', page 1706
+    #: Supported intensity measure component is the random horizontal
+    #component :
+    #attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`, see
+    #paragraph 'Functional : Form', page 1706
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
@@ -85,7 +85,7 @@ class AtkinsonBoore2003SInter(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
@@ -262,7 +262,7 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required

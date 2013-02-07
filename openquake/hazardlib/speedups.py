@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.speedups` contains internal utilities for managing
-alternative implementation of the same functionality depending on their
-availability.
+Module :mod:`openquake.hazardlib.speedups` contains internal utilities for
+managing alternative implementation of the same functionality depending on
+their availability.
 """
 import inspect
 
@@ -80,8 +80,8 @@ class SpeedupsRegistry(object):
             the same way as ``func``.
         """
         assert inspect.getargspec(func) == inspect.getargspec(altfunc), \
-               "functions signatures are different in %s and %s" % \
-               (func, altfunc)
+            "functions signatures are different in %s and %s" % \
+            (func, altfunc)
         self.funcs[func] = (func.func_code, altfunc.func_code)
         if self.enabled:
             # here we substitute the "func_code" attribute of the function,

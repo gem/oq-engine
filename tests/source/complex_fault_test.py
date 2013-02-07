@@ -17,7 +17,8 @@ import unittest
 
 import numpy
 
-from openquake.hazardlib.source.complex_fault import ComplexFaultSource, _float_ruptures
+from openquake.hazardlib.source.complex_fault import (ComplexFaultSource,
+                                                      _float_ruptures)
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -269,10 +270,10 @@ class ComplexFaultSourceRupEnclPolyTestCase(
 
 class FloatRupturesTestCase(unittest.TestCase):
     def test_reshaping_along_length(self):
-        cell_area = numpy.array([ [1, 1, 1],
-                                  [1, 1, 1] ], dtype=float)
-        cell_length = numpy.array([ [1, 1, 1],
-                                    [1, 1, 1] ], dtype=float)
+        cell_area = numpy.array([[1, 1, 1],
+                                 [1, 1, 1]], dtype=float)
+        cell_length = numpy.array([[1, 1, 1],
+                                   [1, 1, 1]], dtype=float)
         rupture_area = 3.1
         rupture_length = 1.0
 
@@ -290,10 +291,10 @@ class FloatRupturesTestCase(unittest.TestCase):
         self.assertEqual(slices, [s1])
 
     def test_reshaping_along_width(self):
-        cell_area = numpy.array([ [4, 4],
-                                  [4, 4],
-                                  [2, 2] ], dtype=float)
-        cell_length = numpy.array([ [2, 2], [2, 2], [2, 2] ], dtype=float)
+        cell_area = numpy.array([[4, 4],
+                                 [4, 4],
+                                 [2, 2]], dtype=float)
+        cell_length = numpy.array([[2, 2], [2, 2], [2, 2]], dtype=float)
         rupture_area = 13.0
         rupture_length = 12.0
 
@@ -305,10 +306,10 @@ class FloatRupturesTestCase(unittest.TestCase):
         self.assertEqual(s2, (slice(1, 4), slice(0, 3)))
 
     def test_varying_width(self):
-        cell_area = numpy.array([ [1, 1, 1],
-                                  [1, 0.1, 1],
-                                  [1, 0.1, 1] ], dtype=float)
-        cell_length = numpy.array([ [1, 1, 1], [1, 1, 1], [1, 1, 1] ],
+        cell_area = numpy.array([[1, 1, 1],
+                                 [1, 0.1, 1],
+                                 [1, 0.1, 1]], dtype=float)
+        cell_length = numpy.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]],
                                   dtype=float)
         rupture_area = 2.1
         rupture_length = 1.0

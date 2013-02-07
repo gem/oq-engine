@@ -14,12 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`openquake.hazardlib.geo` contains implementations of different geographical
-primitives, such as :class:`~openquake.hazardlib.geo.point.Point`,
-:class:`~openquake.hazardlib.geo.line.Line` :class:`~openquake.hazardlib.geo.polygon.Polygon`
-and :class:`~openquake.hazardlib.geo.mesh.Mesh`, as well as different :mod:`surface
-<openquake.hazardlib.geo.surface>` implementations and utility class
-:class:`~openquake.hazardlib.geo.nodalplane.NodalPlane`.
+Package :mod:`openquake.hazardlib.geo` contains implementations of different
+geographical primitives, such as :class:`~openquake.hazardlib.geo.point.Point`,
+:class:`~openquake.hazardlib.geo.line.Line`
+:class:`~openquake.hazardlib.geo.polygon.Polygon` and
+:class:`~openquake.hazardlib.geo.mesh.Mesh`, as well as different
+:mod:`surface <openquake.hazardlib.geo.surface>` implementations and utility
+class :class:`~openquake.hazardlib.geo.nodalplane.NodalPlane`.
 """
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line

@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.correlation` defines correlation models for spatially-\
-distributed ground-shaking intensities.
+Module :mod:`openquake.hazardlib.correlation` defines correlation models for
+spatially-distributed ground-shaking intensities.
 """
 import abc
 import numpy
@@ -58,7 +58,8 @@ class BaseCorrelationModel(object):
         Apply correlation to randomly sampled residuals.
 
         :param sites:
-            :class:`~openquake.hazardlib.site.SiteCollection` residuals were sampled for.
+            :class:`~openquake.hazardlib.site.SiteCollection` residuals were
+            sampled for.
         :param imt:
             Intensity measure type object, see :mod:`openquake.hazardlib.imt`.
         :param residuals:

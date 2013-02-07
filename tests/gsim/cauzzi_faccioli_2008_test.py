@@ -16,7 +16,8 @@
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
 
 from tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import SitesContext, RuptureContext, DistancesContext
+from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+                                           DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 

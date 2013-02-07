@@ -30,8 +30,8 @@ class ComplexFaultSurface(BaseSurface):
     uniformly spaced across the surface area).
 
     :param mesh:
-        Instance of :class:`~openquake.hazardlib.geo.mesh.RectangularMesh` representing
-        surface geometry.
+        Instance of :class:`~openquake.hazardlib.geo.mesh.RectangularMesh`
+        representing surface geometry.
 
     Another way to construct the surface object is to call
     :meth:`from_fault_data`.
@@ -103,9 +103,8 @@ class ComplexFaultSurface(BaseSurface):
 
         :param edges:
             A list of at least two horizontal edges of the surface
-            as instances of :class:`openquake.hazardlib.geo.line.Line`. The list
-            should be in top-to-bottom order (the shallowest edge
-            first).
+            as instances of :class:`openquake.hazardlib.geo.line.Line`. The
+            list should be in top-to-bottom order (the shallowest edge first).
         :param mesh_spacing:
             Distance between two subsequent points in a mesh, in km.
         :returns:
@@ -154,8 +153,8 @@ class ComplexFaultSurface(BaseSurface):
             A list of horizontal edges of the surface as instances
             of :class:`openquake.hazardlib.geo.line.Line`.
         :returns:
-            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon` describing
-            the surface projection of the complex fault.
+            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon`
+            describing the surface projection of the complex fault.
         """
         # collect lons and lats of all the vertices of all the edges
         lons = []

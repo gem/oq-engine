@@ -64,7 +64,8 @@ class CauzziFaccioli2008(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     #: see paragraph 'On functional forms', page 462.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
@@ -88,7 +89,7 @@ class CauzziFaccioli2008(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extract dictionaries of coefficients specific to required

@@ -43,8 +43,9 @@ class AkkarBommer2010(GMPE):
     # 'Introduction', page 195.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
-    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>` this GSIM can
-    #: calculate. A set should contain classes from module :mod:`openquake.hazardlib.imt`.
+    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
+    #: this GSIM can calculate. A set should contain classes from module
+    #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
@@ -52,8 +53,8 @@ class AkkarBommer2010(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
-    #: see page 196.
+    #: horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see page 196.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
@@ -77,7 +78,7 @@ class AkkarBommer2010(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required

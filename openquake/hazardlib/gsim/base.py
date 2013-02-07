@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.gsim.base` defines base classes for different kinds
-of :class:`ground shaking intensity models <GroundShakingIntensityModel>`.
+Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
+different kinds of :class:`ground shaking intensity models
+<GroundShakingIntensityModel>`.
 """
 from __future__ import division
 
@@ -48,26 +49,32 @@ class GroundShakingIntensityModel(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: Reference to a :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
+    #: Reference to a
+    #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
     DEFINED_FOR_TECTONIC_REGION_TYPE = abc.abstractproperty()
 
-    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>` this GSIM can
-    #: calculate. A set should contain classes from module :mod:`openquake.hazardlib.imt`.
+    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
+    #this GSIM can
+    #: calculate. A set should contain classes from module
+    #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
     #: Reference to a :class:`intensity measure component type
-    #: <openquake.hazardlib.const.IMC>` this GSIM can calculate mean and standard
+    #: <openquake.hazardlib.const.IMC>` this GSIM can calculate mean
+    #: and standard
     #: deviation for.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = abc.abstractproperty()
 
-    #: Set of :class:`standard deviation types <openquake.hazardlib.const.StdDev>`
+    #: Set of
+    #: :class:`standard deviation types <openquake.hazardlib.const.StdDev>`
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
-    #: <openquake.hazardlib.site.Site>` object. Those attributes are then available in the
+    #: <openquake.hazardlib.site.Site>` object.
+    #: Those attributes are then available in the
     #: :class:`SitesContext` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
@@ -80,8 +87,8 @@ class GroundShakingIntensityModel(object):
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
     #:     Angle describing the slip propagation on the rupture surface,
-    #:     in decimal degrees. See :mod:`~openquake.hazardlib.geo.nodalplane` for more
-    #:     detailed description of dip and rake.
+    #:     in decimal degrees. See :mod:`~openquake.hazardlib.geo.nodalplane`
+    #:     for more detailed description of dip and rake.
     #: ``ztor``
     #:     Depth of rupture's top edge in km. See
     #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
@@ -94,8 +101,8 @@ class GroundShakingIntensityModel(object):
     #: values are:
     #:
     #: ``rrup``
-    #:     Closest distance to rupture surface.
-    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance`.
+    #:     Closest distance to rupture surface.  See
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance`.
     #: ``rjb``
     #:     Distance to rupture's surface projection. See
     #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`.
@@ -136,7 +143,8 @@ class GroundShakingIntensityModel(object):
             See :mod:`openquake.hazardlib.imt`.
         :param stddev_types:
             List of standard deviation types, constants from
-            :class:`openquake.hazardlib.const.StdDev`. Method result value should include
+            :class:`openquake.hazardlib.const.StdDev`.
+            Method result value should include
             standard deviation values for each of types in this list.
 
         :returns:
@@ -279,8 +287,8 @@ class GroundShakingIntensityModel(object):
         epsilons = numpy.linspace(- truncation_level, truncation_level,
                                   n_epsilons + 1)
         # compute epsilon bins contributions
-        contribution_by_bands = distribution.cdf(epsilons[1:]) \
-                                - distribution.cdf(epsilons[:-1])
+        contribution_by_bands = (distribution.cdf(epsilons[1:]) -
+                                 distribution.cdf(epsilons[:-1]))
 
         # take the minimum epsilon larger than standard_iml
         iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
@@ -342,16 +350,20 @@ class GroundShakingIntensityModel(object):
 
         :param site_collection:
             Instance of :class:`openquake.hazardlib.site.SiteCollection`.
+
         :param rupture:
-            Instance of :class:`~openquake.hazardlib.source.rupture.Rupture` (or its subclass
+            Instance of
+            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
+            its subclass
             :class:`~openquake.hazardlib.source.rupture.ProbabilisticRupture`).
 
         :returns:
             Tuple of three items: sites context, rupture context and
-            distances context, that is, instances of :class:`SitesContext`,
-            :class:`RuptureContext` and :class:`DistancesContext` in a specified
-            order. Only those values that are required by GSIM are filled in
-            in contexts.
+            distances context, that is, instances of
+            :class:`SitesContext`, :class:`RuptureContext` and
+            :class:`DistancesContext` in a specified order. Only those
+            values that are required by GSIM are filled in in
+            contexts.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
@@ -614,8 +626,8 @@ class CoeffsTable(object):
         ...
     TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
 
-    If there are :class:`~openquake.hazardlib.imt.SA` IMTs in the table, they are not
-    referenced by name, because they require parametrization:
+    If there are :class:`~openquake.hazardlib.imt.SA` IMTs in the table, they
+    are not referenced by name, because they require parametrization:
 
     >>> CoeffsTable(table='''imt  x
     ...                      sa   15''')
@@ -659,10 +671,11 @@ class CoeffsTable(object):
     KeyError: SA(period=1.0, damping=4)
 
     Table of coefficients for spectral acceleration could be indexed
-    by instances of :class:`openquake.hazardlib.imt.SA` with period value that is not specified
-    in the table. The coefficients then get interpolated between the ones for
-    closest higher and closest lower period. That scaling of coefficients works
-    in a logarithmic scale of periods and only within the same damping:
+    by instances of :class:`openquake.hazardlib.imt.SA` with period
+    value that is not specified in the table. The coefficients then
+    get interpolated between the ones for closest higher and closest
+    lower period. That scaling of coefficients works in a logarithmic
+    scale of periods and only within the same damping:
 
     >>> '%.5f' % ct[imt.SA(period=0.2, damping=5)]['a']
     '7.29073'
@@ -720,8 +733,9 @@ class CoeffsTable(object):
         """
         Return a dictionary of coefficients corresponding to ``imt``
         from this table (if there is a line for requested IMT in it),
-        or the dictionary of interpolated coefficients, if ``imt``
-        is of type :class:`~openquake.hazardlib.imt.SA` and interpolation is possible.
+        or the dictionary of interpolated coefficients, if ``imt`` is
+        of type :class:`~openquake.hazardlib.imt.SA` and interpolation
+        is possible.
 
         :raises KeyError:
             If ``imt`` is not available in the table and no interpolation

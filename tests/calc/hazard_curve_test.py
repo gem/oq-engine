@@ -145,32 +145,42 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
     def test_point_sources(self):
         sources = [
-            openquake.hazardlib.source.PointSource(source_id='point1', name='point1',
+            openquake.hazardlib.source.PointSource(
+                source_id='point1', name='point1',
                 tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
-                mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=1,
-                                                   occurrence_rates=[5]),
+                mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
+                    min_mag=4, bin_width=1, occurrence_rates=[5]
+                ),
                 nodal_plane_distribution=openquake.hazardlib.pmf.PMF([
-                    (1, openquake.hazardlib.geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0))
+                    (1, openquake.hazardlib.geo.NodalPlane(strike=0.0,
+                                                           dip=90.0,
+                                                           rake=0.0))
                 ]),
                 hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
-                magnitude_scaling_relationship = openquake.hazardlib.scalerel.PeerMSR(),
+                magnitude_scaling_relationship = \
+                    openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 10)
             ),
-            openquake.hazardlib.source.PointSource(source_id='point2', name='point2',
+            openquake.hazardlib.source.PointSource(
+                source_id='point2', name='point2',
                 tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
-                mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=2,
-                                                   occurrence_rates=[5, 6, 7]),
+                mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
+                    min_mag=4, bin_width=2, occurrence_rates=[5, 6, 7]
+                ),
                 nodal_plane_distribution=openquake.hazardlib.pmf.PMF([
-                    (1, openquake.hazardlib.geo.NodalPlane(strike=0, dip=90, rake=0.0)),
+                    (1, openquake.hazardlib.geo.NodalPlane(strike=0,
+                                                           dip=90,
+                                                           rake=0.0)),
                 ]),
                 hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
-                magnitude_scaling_relationship = openquake.hazardlib.scalerel.PeerMSR(),
+                magnitude_scaling_relationship = \
+                    openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 11)

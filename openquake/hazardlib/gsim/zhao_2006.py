@@ -78,7 +78,7 @@ class ZhaoEtAl2006Asc(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
@@ -226,13 +226,14 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
     Classification Based on Predominant Period" (2006, Bulletin of the
-    Seismological Society of America, Volume 96, No. 3, pages 898-913).
-    This class implements the equations for 'Subduction Interface'
-    (that's why the class name ends with 'SInter').
-    This class extends the :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
-    because the equation for subduction interface is obtained from the equation
-    for active shallow crust, by removing the faulting style term and
-    adding a subduction interface term.
+    Seismological Society of America, Volume 96, No. 3, pages
+    898-913). This class implements the equations for 'Subduction
+    Interface' (that's why the class name ends with 'SInter'). This
+    class extends the
+    :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction interface is obtained from the
+    equation for active shallow crust, by removing the faulting style
+    term and adding a subduction interface term.
     """
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
@@ -241,7 +242,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
@@ -305,13 +306,14 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
     Classification Based on Predominant Period" (2006, Bulletin of the
-    Seismological Society of America, Volume 96, No. 3, pages 898-913).
-    This class implements the equations for 'Subduction Slab'.
-    (that's why the class name ends with 'SSlab').
-    This class extends the :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
-    because the equation for subduction slab is obtained from the equation
-    for active shallow crust, by removing the faulting style term and
-    adding subduction slab terms.
+    Seismological Society of America, Volume 96, No. 3, pages
+    898-913). This class implements the equations for 'Subduction
+    Slab'. (that's why the class name ends with 'SSlab'). This class
+    extends the
+    :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction slab is obtained from the
+    equation for active shallow crust, by removing the faulting style
+    term and adding subduction slab terms.
     """
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
@@ -320,7 +322,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required

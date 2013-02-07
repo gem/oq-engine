@@ -140,7 +140,8 @@ class Point(object):
         Compute distance (in km) between this point and each point of ``mesh``.
 
         :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate distance to.
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            distance to.
         :param with_depths:
             If ``True`` (by default), distance is calculated between actual
             point and the mesh, geodetic distance of projections is combined
@@ -170,7 +171,8 @@ class Point(object):
         '<Latitude=-40.000000, Longitude=0.333333, Depth=1.6667>'
         """
         return "<Latitude=%.6f, Longitude=%.6f, Depth=%.4f>" % (
-                self.latitude, self.longitude, self.depth)
+            self.latitude, self.longitude, self.depth
+        )
 
     def __repr__(self):
         """
@@ -242,8 +244,8 @@ class Point(object):
         :param radius:
             Required radius of a new polygon, in km.
         :returns:
-            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon` that approximates
-            a circle around the point with specified radius.
+            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon` that
+            approximates a circle around the point with specified radius.
         """
         assert radius > 0
         # avoid circular imports
@@ -271,8 +273,8 @@ class Point(object):
             Numpy array of boolean values in the same shape as the mesh
             coordinate arrays with ``True`` on indexes of points that
             are not further than ``radius`` km from this point. Function
-            :func:`~openquake.hazardlib.geo.geodetic.distance` is used to calculate
-            distances to points of the mesh. Points of the mesh that
+            :func:`~openquake.hazardlib.geo.geodetic.distance` is used to
+            calculate distances to points of the mesh. Points of the mesh that
             lie exactly ``radius`` km away from this point also have
             ``True`` in their indices.
         """
