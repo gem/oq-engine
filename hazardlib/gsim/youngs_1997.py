@@ -50,8 +50,9 @@ class YoungsEtAl1997SInter(GMPE):
     ])
 
     #: Supported intensity measure component is the average horizontal
-    #: component attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see paragraph
-    #: 'Analysis of peak horizontal accelerations', p. 59.
+    #: component
+    #attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
+    #paragraph : 'Analysis of peak horizontal accelerations', p. 59.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, table 2, page 67.
@@ -77,7 +78,7 @@ class YoungsEtAl1997SInter(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -208,7 +209,7 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         mean, stddevs = super(YoungsEtAl1997SSlab, self).\

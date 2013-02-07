@@ -14,17 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`openquake.hazardlib.calc.disagg` contains :func:`disaggregation` as well as several
-aggregation functions for extracting a specific PMF from the result of
-:func:`disaggregation`.
+:mod:`openquake.hazardlib.calc.disagg` contains :func:`disaggregation` as well
+as several aggregation functions for extracting a specific PMF from the result
+of :func:`disaggregation`.
 """
 import numpy
 import warnings
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box, \
-                            get_longitudinal_extent
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
 
@@ -61,21 +61,23 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
     April 1999".
 
     :param sources:
-        Seismic source model, as for :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>`
-        calculator it should be an iterator of seismic sources.
+        Seismic source model, as for
+        :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
+        should be an iterator of seismic sources.
     :param site:
-        :class:`~openquake.hazardlib.site.Site` of interest to calculate disaggregation
-        matrix for.
+        :class:`~openquake.hazardlib.site.Site` of interest to calculate
+        disaggregation matrix for.
     :param imt:
-        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>` class.
+        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
+        class.
     :param iml:
         Intensity measure level. A float value in units of ``imt``.
     :param gsims:
         Tectonic region type to GSIM objects mapping.
     :param tom:
         Instance of temporal occurrence model object,
-        such as :class:`~openquake.hazardlib.tom.PoissonTOM`. It is used for calculation
-        of rupture occurrence probability.
+        such as :class:`~openquake.hazardlib.tom.PoissonTOM`. It is used for
+        calculation of rupture occurrence probability.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -89,9 +91,11 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
         Longitude and latitude histograms discretization step,
         in decimal degrees.
     :param source_site_filter:
-        Optional source-site filter function. See :mod:`openquake.hazardlib.calc.filters`.
+        Optional source-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
     :param rupture_site_filter:
-        Optional rupture-site filter function. See :mod:`openquake.hazardlib.calc.filters`.
+        Optional rupture-site filter function. See
+        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
@@ -279,10 +283,10 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                         for i_trt in xrange(len(trt_bins)):
                             trt_idx = tect_reg_types == i_trt
 
-                            prob_idx = mag_idx & dist_idx & lon_idx \
-                                       & lat_idx & trt_idx
-                            diss_idx = i_mag, i_dist, i_lon, \
-                                       i_lat, i_eps, i_trt
+                            prob_idx = (mag_idx & dist_idx & lon_idx
+                                        & lat_idx & trt_idx)
+                            diss_idx = (i_mag, i_dist, i_lon,
+                                        i_lat, i_eps, i_trt)
 
                             diss_matrix[diss_idx] = numpy.sum(
                                 joint_probs[prob_idx, i_eps]
@@ -359,7 +363,7 @@ def mag_dist_pmf(matrix):
         second one -- distance histogram bins.
     """
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_dist_pmf = numpy.zeros((nmags,ndists))
+    mag_dist_pmf = numpy.zeros((nmags, ndists))
     for i in xrange(nmags):
         for j in xrange(ndists):
             mag_dist_pmf[i][j] = sum(matrix[i][j][k][l][m][n]
@@ -380,7 +384,7 @@ def mag_dist_eps_pmf(matrix):
         histogram bins.
     """
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_dist_eps_pmf = numpy.zeros((nmags,ndists,neps))
+    mag_dist_eps_pmf = numpy.zeros((nmags, ndists, neps))
     for i in xrange(nmags):
         for j in xrange(ndists):
             for m in xrange(neps):
@@ -400,7 +404,7 @@ def lon_lat_pmf(matrix):
         second one -- latitude histogram bins.
     """
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    lon_lat_pmf = numpy.zeros((nlons,nlats))
+    lon_lat_pmf = numpy.zeros((nlons, nlats))
     for k in xrange(nlons):
         for l in xrange(nlats):
             lon_lat_pmf[k][l] = sum(matrix[i][j][k][l][m][n]
@@ -421,7 +425,7 @@ def mag_lon_lat_pmf(matrix):
         histogram bins.
     """
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_lon_lat_pmf = numpy.zeros((nmags,nlons,nlats))
+    mag_lon_lat_pmf = numpy.zeros((nmags, nlons, nlats))
     for i in xrange(nmags):
         for k in xrange(nlons):
             for l in xrange(nlats):
@@ -442,7 +446,7 @@ def lon_lat_trt_pmf(matrix):
         type histogram bins respectively.
     """
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    lon_lat_trt_pmf = numpy.zeros((nlons,nlats,ntrts))
+    lon_lat_trt_pmf = numpy.zeros((nlons, nlats, ntrts))
     for k in xrange(nlons):
         for l in xrange(nlats):
             for n in xrange(ntrts):

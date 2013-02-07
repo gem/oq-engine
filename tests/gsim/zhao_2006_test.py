@@ -13,9 +13,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc, ZhaoEtAl2006SInter,\
-    ZhaoEtAl2006SSlab
-from openquake.hazardlib.gsim.base import SitesContext, RuptureContext, DistancesContext
+from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
+                                                ZhaoEtAl2006SInter,
+                                                ZhaoEtAl2006SSlab)
+from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+                                           DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 

@@ -58,8 +58,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     ])
 
     #: Supported intensity measure component is horizontal
-    #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`, see paragraph 'Results',
-    #: pag 2190, and caption to table 6, p. 2192
+    #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
+    #: see paragraph 'Results', pag 2190, and caption to table 6, p. 2192
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type is total, see table 6
@@ -83,7 +83,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extract dictionaries of coefficients specific to required
@@ -171,7 +171,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
         return f2
 
-    def _compute_mean(self, C, f0, f1, f2, mag, rrup, sites, idxs, mean):
+    def _compute_mean(self, C, f0, f1, f2, mag, rrup, _sites, idxs, mean):
         """
         Compute mean value (for a set of indexes) without site amplification
         terms. This is equation (5), p. 2191, without S term.

@@ -4,3 +4,5 @@
 doc/build
 build
 *.so
+.coverage
+.DS_Store

@@ -548,13 +548,15 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         assert_angles_equal(self, strike, 360, delta=1e-7)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
-        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
+        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1),
+                Point(-89.8, 0.1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertAlmostEqual(strike, 45, delta=1e-4)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
-        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
+        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1),
+                Point(-89.8, 0.1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertAlmostEqual(strike, 45, delta=1e-3)

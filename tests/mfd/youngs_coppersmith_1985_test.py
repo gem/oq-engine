@@ -112,9 +112,9 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=4.3, char_rate=0.001,
             bin_width=0.1
         )
-        error = 'Maximum magnitude of the G-R distribution (char_mag - 0.25) ' \
-                'must be greater than the minimum magnitude by at least one ' \
-                'magnitude bin.'
+        error = ('Maximum magnitude of the G-R distribution (char_mag - 0.25) '
+                 'must be greater than the minimum magnitude by at least one '
+                 'magnitude bin.')
         self.assertEqual(exc.message, error)
 
     def test_rate_char_mag_not_equal_rate_char_mag_less_1_pt_25(self):

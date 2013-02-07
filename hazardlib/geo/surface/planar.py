@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.geo.surface.planar` contains :class:`PlanarSurface`.
+Module :mod:`openquake.hazardlib.geo.surface.planar` contains
+:class:`PlanarSurface`.
 """
 import numpy
 
@@ -40,15 +41,16 @@ class PlanarSurface(BaseSurface):
     :param dip:
         Dip is the angle between the surface itself and the earth surface.
 
-    Other parameters are points (instances of :class:`~openquake.hazardlib.geo.point.Point`)
-    defining the surface corners in clockwise direction starting from top
-    left corner. Top and bottom edges of the polygon must be parallel
-    to earth surface and to each other.
+    Other parameters are points (instances of
+    :class:`~openquake.hazardlib.geo.point.Point`) defining the surface
+    corners in clockwise direction starting from top left corner. Top and
+    bottom edges of the polygon must be parallel to earth surface and to each
+    other.
 
-    See :class:`~openquake.hazardlib.geo.nodalplane.NodalPlane` for more detailed definition
-    of ``strike`` and ``dip``. Note that these parameters are supposed
-    to match the factual surface geometry (defined by corner points), but
-    this is not enforced or even checked.
+    See :class:`~openquake.hazardlib.geo.nodalplane.NodalPlane` for more
+    detailed definition of ``strike`` and ``dip``. Note that these parameters
+    are supposed to match the factual surface geometry (defined by corner
+    points), but this is not enforced or even checked.
 
     :raises ValueError:
         If either top or bottom points differ in depth or if top edge
@@ -104,8 +106,8 @@ class PlanarSurface(BaseSurface):
         self.length = (length1 + length2) / 2.0
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
-        tolerance = self.width * self.length \
-                    * self.IMPERFECT_RECTANGLE_TOLERANCE
+        tolerance = (self.width * self.length
+                     * self.IMPERFECT_RECTANGLE_TOLERANCE)
         if numpy.max(numpy.abs(dists)) > tolerance:
             raise ValueError("corner points do not lie on the same plane")
         if length2 < 0:
@@ -143,11 +145,11 @@ class PlanarSurface(BaseSurface):
         Translate the surface for a specific distance along a specific azimuth
         direction.
 
-        Parameters are two points (instances of :class:`openquake.hazardlib.geo.point.Point`)
-        representing the direction and an azimuth for translation. The
-        resulting surface corner points will be that far along that azimuth
-        from respective corner points of this surface as ``p2`` is located
-        with respect to ``p1``.
+        Parameters are two points (instances of
+        :class:`openquake.hazardlib.geo.point.Point`) representing the
+        direction and an azimuth for translation. The resulting surface corner
+        points will be that far along that azimuth from respective corner
+        points of this surface as ``p2`` is located with respect to ``p1``.
 
         :returns:
             A new :class:`PlanarSurface` object with the same mesh spacing,
@@ -196,7 +198,8 @@ class PlanarSurface(BaseSurface):
 
     def _create_mesh(self):
         """
-        See :meth:`openquake.hazardlib.geo.surface.base.BaseSurface._create_mesh`.
+        See
+        :meth:`openquake.hazardlib.geo.surface.base.BaseSurface._create_mesh`.
         """
         llons, llats, ldepths = geodetic.intervals_between(
             self.top_left.longitude, self.top_left.latitude,
@@ -272,10 +275,10 @@ class PlanarSurface(BaseSurface):
         :return:
             Tuple of longitudes, latitudes and depths numpy arrays.
         """
-        vectors = self.zero_zero \
-                  + self.uv1 * xx.reshape(xx.shape + (1, )) \
-                  + self.uv2 * yy.reshape(yy.shape + (1, )) \
-                  + self.normal * dists.reshape(dists.shape + (1, ))
+        vectors = (self.zero_zero
+                   + self.uv1 * xx.reshape(xx.shape + (1, ))
+                   + self.uv2 * yy.reshape(yy.shape + (1, ))
+                   + self.normal * dists.reshape(dists.shape + (1, )))
         return geo_utils.cartesian_to_spherical(vectors)
 
     def get_min_distance(self, mesh):

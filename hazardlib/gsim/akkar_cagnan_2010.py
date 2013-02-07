@@ -30,13 +30,14 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class AkkarCagnan2010(BooreAtkinson2008):
     """
-    Implements GMPE developed by Sinnan Akkar and Zehra Cagnan and published
-    as "A Local Ground-Motion Predictive Model for Turkey, and Its Comparison
-    with Other Regional and Global Ground-Motion Models" (2010, Bulletin of
-    the Seismological Society of America, Volume 100, No. 6, pages 2978-2995).
-    It extends :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`
-    because the linear and non-linear site effects are described by the same
-    site response function used in Boore and Atkinson 2008.
+    Implements GMPE developed by Sinnan Akkar and Zehra Cagnan and
+    published as "A Local Ground-Motion Predictive Model for Turkey,
+    and Its Comparison with Other Regional and Global Ground-Motion
+    Models" (2010, Bulletin of the Seismological Society of America,
+    Volume 100, No. 6, pages 2978-2995). It extends
+    :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`
+    because the linear and non-linear site effects are described by
+    the same site response function used in Boore and Atkinson 2008.
     """
     #: Supported tectonic region type is active shallow crust (the
     #: equations being developed for Turkey, see paragraph 'Strong Motion
@@ -81,7 +82,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients (for soil amplification)

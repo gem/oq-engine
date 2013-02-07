@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.mfd.evenly_discretized` defines an evenly discretized MFD.
+Module :mod:`openquake.hazardlib.mfd.evenly_discretized` defines an evenly
+discretized MFD.
 """
 from openquake.hazardlib.mfd.base import BaseMFD
 

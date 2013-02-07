@@ -55,8 +55,9 @@ class ToroEtAl2002(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: Supported intensity measure component is the geometric mean of
+    #two : horizontal components
+    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
@@ -76,7 +77,7 @@ class ToroEtAl2002(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -177,7 +178,7 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extract faulting style and rock adjustment coefficients for the

@@ -74,7 +74,7 @@ class BooreAtkinson2008(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
@@ -176,7 +176,7 @@ class BooreAtkinson2008(GMPE):
         """
         return C['blin'] * np.log(sites.vs30 / 760.0)
 
-    def _get_pga_on_rock(self, rup, dists, C):
+    def _get_pga_on_rock(self, rup, dists, _C):
         """
         Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
         This is needed to compute non-linear site amplification term
