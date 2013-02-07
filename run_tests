@@ -5,7 +5,7 @@ find . -name "*.pyc" -delete
 
 error=0
 
-xmllint --noout --schema nrml/schema/nrml.xsd `find ./examples -name "*.xml"`
+xmllint --noout --schema nrmllib/schema/nrml.xsd `find ./examples -name "*.xml"`
 validation_retcode=$?
 
 nosetests --with-doctest "$@"
