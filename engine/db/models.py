@@ -1797,11 +1797,6 @@ class SES(djm.Model):
         """
         return SESRupture.objects.filter(ses=self.id).iterator()
 
-    def ground_motion_field_set(self):
-        return GmfSet.objects.get(
-            gmfcollection_ltrealization=self.ses_collection.lt_realization,
-            ses_ordinal=self.ordinal)
-
 
 class SESRupture(djm.Model):
     """
@@ -1928,6 +1923,20 @@ class GmfSet(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
 
+    @property
+    def stochastic_event_set_id(self):
+        if self.complete_logic_tree_gmf:
+            job = self.gmf_collection.output.oq_job
+            return SES.objects.get(
+                complete_logic_tree_ses=True,
+                ses_collection__output__oq_job=job).id
+        else:
+            rlz = self.gmf_collection.lt_realization
+            return SES.objects.get(
+                complete_logic_tree_ses=False,
+                ses_collection__lt_realization=rlz,
+                ordinal=self.ses_ordinal).id
+
     # Disabling pylint for 'Too many local variables'
     # pylint: disable=R0914
     def __iter__(self):
@@ -1976,22 +1985,24 @@ class GmfSet(djm.Model):
                         gmf_nodes = []
                         for gmf in gmfs:
                             assert len(gmf.gmvs) == num_ruptures
-                            # TODO: Rename `iml` to `gmv`,
-                            # in NRML serializer as well
                             gmf_nodes.append(_GroundMotionFieldNode(
-                                iml=gmf.gmvs[i], location=gmf.location))
+                                gmv=gmf.gmvs[i],
+                                location=gmf.location))
                         yield _GroundMotionField(
                             imt=first.imt, sa_period=first.sa_period,
-                            sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
+                            sa_damping=first.sa_damping,
+                            rupture_id=first.rupture_ids[i],
+                            gmf_nodes=gmf_nodes)
                         del gmf_nodes
 
 
 class _GroundMotionField(object):
 
-    def __init__(self, imt, sa_period, sa_damping, gmf_nodes):
+    def __init__(self, imt, sa_period, sa_damping, rupture_id, gmf_nodes):
         self.imt = imt
         self.sa_period = sa_period
         self.sa_damping = sa_damping
+        self.rupture_id = rupture_id
         self.gmf_nodes = gmf_nodes
 
     def __iter__(self):
@@ -2003,9 +2014,8 @@ class _GroundMotionField(object):
 
 class _GroundMotionFieldNode(object):
 
-    def __init__(self, iml, location, rupture_id):
-        self.iml = iml
-        self.rupture_id = rupture_id
+    def __init__(self, gmv, location):
+        self.gmv = gmv
         self.location = location  # must have x and y attributes
 
 
@@ -2020,7 +2030,7 @@ class Gmf(djm.Model):
     sa_damping = djm.FloatField(null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntegerArrayField()
+    rupture_ids = fields.IntArrayField()
     result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
