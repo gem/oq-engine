@@ -36,7 +36,6 @@ setup(
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
     install_requires=[
-        'openquake',
         'numpy',
         'scipy'
     ],
