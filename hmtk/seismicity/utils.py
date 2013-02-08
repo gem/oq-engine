@@ -245,4 +245,4 @@ def piecewise_linear_scalar(params, xval):
         return gradients[-1] * xval + c_val[-1]
     else:
         select = np.nonzero(turning_points <= xval)[0][-1] + 1
-        return gradients[select] * xval + c_val[select]
+    return gradients[select] * xval + c_val[select]

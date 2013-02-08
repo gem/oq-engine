@@ -53,8 +53,10 @@
 
 import unittest
 import numpy as np
-
+from nhlib.geo.mesh import Mesh
+from nhlib.geo.utils import spherical_to_cartesian
 from hmtk.seismicity.catalogue import Catalogue
+from hmtk.seismicity.utils import decimal_time
 
 class CatalogueTestCase(unittest.TestCase):
     """ 
@@ -105,4 +107,78 @@ class CatalogueTestCase(unittest.TestCase):
         yea = np.array([1920, 1970, 1960, 1960])
         self.assertTrue(np.allclose(cat.data['magnitude'],mag))
         self.assertTrue(np.allclose(cat.data['year'],yea))
-        
+       
+
+    def test_get_decimal_time(self):
+        '''
+        Tests the decimal time function. The function itself is tested in 
+        tests.seismicity.utils so only minimal testing is undertaken here to
+        ensure coverage
+        '''
+        time_dict = {'year': np.array([1990, 2000]),
+                     'month': np.array([3, 9]),
+                     'day': np.ones(2, dtype=int),
+                     'hour': np.ones(2, dtype=int),
+                     'minute': np.ones(2, dtype=int),
+                     'second': np.ones(2, dtype=float)}
+        expected_dec_time = decimal_time(time_dict['year'],
+                                         time_dict['month'],
+                                         time_dict['day'],
+                                         time_dict['hour'],
+                                         time_dict['minute'],
+                                         time_dict['second'])
+
+        cat = Catalogue()
+        for key in ['year', 'month', 'day', 'hour', 'minute', 'second']:
+            cat.data[key] = np.copy(time_dict[key])
+        np.testing.assert_array_almost_equal(expected_dec_time,
+                                             cat.get_decimal_time())
+
+    def test_hypocentres_as_mesh(self):
+        '''
+        Tests the function to render the hypocentres to a 
+        nhlib.geo.mesh.Mesh object. 
+        '''
+        cat = Catalogue()
+        cat.data['longitude'] = np.array([2., 3.])
+        cat.data['latitude'] = np.array([2., 3.])
+        cat.data['depth'] = np.array([2., 3.])
+        self.assertTrue(isinstance(cat.hypocentres_as_mesh(), Mesh))
+
+    def test_hypocentres_to_cartesian(self):
+        '''
+        Tests the function to render the hypocentres to a cartesian array.
+        The invoked function nhlib.geo.utils.spherical_to_cartesian is 
+        tested as part of the nhlib suite. The test here is included for
+        coverage
+        '''
+
+        cat = Catalogue()
+        cat.data['longitude'] = np.array([2., 3.])
+        cat.data['latitude'] = np.array([2., 3.])
+        cat.data['depth'] = np.array([2., 3.])
+        expected_data = spherical_to_cartesian(cat.data['longitude'],
+                                               cat.data['latitude'],
+                                               cat.data['depth'])
+        model_output = cat.hypocentres_to_cartesian()
+        np.testing.assert_array_almost_equal(expected_data, model_output)
+
+    def test_purge_catalogue(self):
+        '''
+        Tests the function to purge the catalogue of invalid events
+        '''
+        cat1 = Catalogue()
+        cat1.data['eventID'] = np.array([100, 101, 102], dtype=int)
+        cat1.data['magnitude'] = np.array([4., 5., 6.], dtype=float)
+        cat1.data['Agency'] = ['XXX', 'YYY', 'ZZZ']
+
+        flag_vector = np.array([False, True, False])
+        cat1.purge_catalogue(flag_vector)
+        np.testing.assert_array_almost_equal(cat1.data['magnitude'], 
+                                             np.array([5.]))
+        np.testing.assert_array_equal(cat1.data['eventID'], 
+                                             np.array([101]))
+        self.assertListEqual(cat1.data['Agency'], ['YYY'])
+
+
+
