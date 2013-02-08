@@ -15,7 +15,7 @@ import datetime
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import (_check_depth_limits, 
                                       _get_decimal_from_datetime,
-                                      Selector)
+                                      CatalogueSelector)
 from nhlib.geo.point import Point
 from nhlib.geo.polygon import Polygon
 from nhlib.geo.line import Line
@@ -75,7 +75,7 @@ class TestSelector(unittest.TestCase):
 
         # No events selected
         flag_none = np.zeros(5, dtype=bool)
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         test_cat1 = selector0.select_catalogue(flag_none)
         self.assertEqual(len(test_cat1.data['longitude']), 0)
         self.assertEqual(len(test_cat1.data['latitude']), 0)
@@ -115,7 +115,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['latitude'] = np.arange(4.0, 7.5, 0.5)
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
         # Simple case with nodes inside, outside and on the border of polygon
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         test_cat1 = selector0.within_polygon(polygon0)
         self.assertTrue(np.allclose(test_cat1.data['longitude'], 
                                     np.array([5.0, 5.5, 6.0])))
@@ -126,7 +126,7 @@ class TestSelector(unittest.TestCase):
         # CASE 2: As case 1 with one of the inside nodes outside of the depths 
         self.catalogue.data['depth'] = \
             np.array([1.0, 1.0, 1.0, 50.0, 1.0, 1.0, 1.0], dtype=float)
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         test_cat1 = selector0.within_polygon(polygon0, upper_depth=0.0,
                                              lower_depth=10.0)
         self.assertTrue(np.allclose(test_cat1.data['longitude'], 
@@ -145,7 +145,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
         test_point = Point(5.5, 5.5)
         test_mesh = self.catalogue.hypocentres_as_mesh()
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Within 10 km
         test_cat_10 = selector0.circular_distance_from_point(
             test_point, 10., distance_type='epicentral')
@@ -185,7 +185,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
         test_point = Point(5.5, 5.5)
         test_mesh = self.catalogue.hypocentres_as_mesh()
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Within 10 km
         test_cat_10 = selector0.cartesian_square_centred_on_point(
             test_point, 10., distance_type='epicentral')
@@ -223,7 +223,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['longitude'] = np.arange(4.0, 7.5, 0.5)
         self.catalogue.data['latitude'] = np.arange(4.0, 7.5, 0.5)
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
         fault_trace = Line([Point(trace0[i, 0], trace0[i, 1]) 
@@ -263,7 +263,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['longitude'] = np.arange(4.0, 7.5, 0.5)
         self.catalogue.data['latitude'] = np.arange(4.0, 7.5, 0.5)
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
         fault_trace = Line([Point(trace0[i, 0], trace0[i, 1]) 
@@ -306,7 +306,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['minute'] = np.zeros(6, dtype=int)
         self.catalogue.data['second'] = np.ones(6, dtype=float)
 
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
 
         # Start time and End time not defined
         test_cat_1 = selector0.within_time_period()
@@ -375,7 +375,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue = Catalogue()
         self.catalogue.data['depth'] = np.array([5., 15., 25., 35., 45.])
 
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Test case 1: No limits specified - all catalogue valid
         test_cat_1 = selector0.within_depth_range()
         np.testing.assert_array_almost_equal(test_cat_1.data['depth'],
@@ -405,7 +405,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue = Catalogue()
         self.catalogue.data['magnitude'] = np.array([4., 5., 6., 7., 8.])
 
-        selector0 = Selector(self.catalogue)
+        selector0 = CatalogueSelector(self.catalogue)
         # Test case 1: No limits specified - all catalogue valid
         test_cat_1 = selector0.within_magnitude_range()
         np.testing.assert_array_almost_equal(test_cat_1.data['magnitude'],

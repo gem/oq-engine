@@ -111,7 +111,7 @@ def _get_decimal_from_datetime(time):
                         np.array([temp_seconds], dtype=int))
 
 
-class Selector(object):
+class CatalogueSelector(object):
     '''
     Class to implement methods for selecting subsets of the catalogue 
     according to various attribute criteria
