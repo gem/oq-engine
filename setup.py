@@ -23,7 +23,7 @@ setup(
             "oq_cache_gc = openquake.engine.bin.cache_gc:main",
             "oq_monitor = openquake.engine.bin.openquake_supervisor:main",
             ]},
-    name="openquake",
+    name="openquake.engine",
     version=version,
     author="The OpenQuake team",
     author_email="devops@openquake.org",
@@ -48,5 +48,9 @@ setup(
             "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
-    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
+    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"],
+
+    namespace_packages=['openquake'],
+
+    zip_safe=False,
     )

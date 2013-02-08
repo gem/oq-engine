@@ -13,5 +13,5 @@ find . -name "*.pyc" -delete
 # Use the current dir as a working directory for test discovery.
 # This should pick up everything in tests/ and qa_tests/
 (export DJANGO_SETTINGS_MODULE="openquake.engine.settings";
- PYTHONPATH="$PYTHONPATH:openquake/nrml";
- nosetests "$@" -w . 2>&1 | tee last_test_run.log)
+ # PYTHONPATH="$PYTHONPATH:openquake/nrml";
+ python $(which nosetests) "$@" -w . 2>&1 | tee last_test_run.log)
