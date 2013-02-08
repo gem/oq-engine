@@ -55,7 +55,6 @@ setup(
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
-        'openquake',
         'numpy',
         'scipy',
         'shapely'
