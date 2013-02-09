@@ -29,7 +29,7 @@ Development and support
 hazardlib is being actively developed by GEM foundation as a part of OpenQuake
 project (though it doesn’t mean hazardlib depends on openquake). The OpenQuake
 development infrastructure is used for developing hazardlib: the public repository
-is available on github: http://github.com/gem/hazardlib. Bugs can be reported
+is available on github: http://github.com/gem/oq-hazardlib. Bugs can be reported
 on launchpad: https://bugs.launchpad.net/openquake/. Mailing list is available
 as well: http://groups.google.com/group/openquake-dev. You can also ask for
 support on IRC channel #openquake on freenode.
