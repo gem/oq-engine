@@ -32,7 +32,7 @@ export MPLCONFIGDIR=/tmp
 export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-amd64/jre
 export DJANGO_SETTINGS_MODULE="openquake.engine.settings"
 
-cd /usr/openquake
+cd /usr/openquake/engine
 
 if [ -z "$1" ]; then
     concurrency=`cat /proc/cpuinfo | grep processor | wc -l`
