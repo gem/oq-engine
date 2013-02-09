@@ -1,6 +1,6 @@
 Format: http://dep.debian.net/deps/dep5
-Upstream-Name: python-nrml
-Source: http://github.com/gem/nrml
+Upstream-Name: python-oq-nrmllib
+Source: http://github.com/gem/oq-nrmllib
 
 Files: *
 Copyright: 2012, GEM Foundation <info@globalquakemodel.org>

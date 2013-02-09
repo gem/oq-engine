@@ -1,22 +1,28 @@
-python-nrml (0.4.3-1) precise; urgency=low
+python-oq-nrmllib (0.4.4-0) precise; urgency=low
+
+  * Rename of the package and namespace refactoring
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sat, 09 Feb 2013 08:44:20 +0100
+
+python-oq-nrmllib (0.4.3-1) precise; urgency=low
 
   * Upstream release
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 18 Oct 2012 23:14:54 +0200
 
-python-nrml (0.4.2-1) precise; urgency=low
+python-oq-nrmllib (0.4.2-1) precise; urgency=low
 
   * Fix orig tar ball
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Sep 2012 12:31:37 +0200
 
-python-nrml (0.4.1-1) precise; urgency=low
+python-oq-nrmllib (0.4.1-1) precise; urgency=low
 
   * Upstream release (LP: #1045211)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 10 Sep 2012 16:03:10 +0200
 
-python-nrml (0.4-1) precise; urgency=low
+python-oq-nrmllib (0.4-1) precise; urgency=low
 
   * Upstream release
 

@@ -2,7 +2,7 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 # set -x
 set -e
-GEM_DEB_PACKAGE="python-nrml"
+GEM_DEB_PACKAGE="python-oq-nrmllib"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -255,7 +255,7 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version from nrml/__init__.py
-stp_vers="$(cat nrml/__init__.py | grep "^__version__[ 	]*=[ 	]*['\"]" | sed -n "s/^__version__[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
+stp_vers="$(cat openquake/nrmllib/__init__.py | grep "^__version__[ 	]*=[ 	]*['\"]" | sed -n "s/^__version__[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"

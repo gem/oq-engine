@@ -18,7 +18,7 @@
 
 import os
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
