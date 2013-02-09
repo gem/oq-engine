@@ -264,9 +264,9 @@ stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')
 
 if [ 0 -eq 1 ]; then
     # version info from openquake/__init__.py
-    ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_maj="$(cat openquake/hazardlib/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_min="$(cat openquake/hazardlib/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_bfx="$(cat openquake/hazardlib/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
     ini_suf="" # currently not included into the version array structure
 # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 else
