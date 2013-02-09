@@ -13,12 +13,14 @@ set -e
 # the final step in the removal of this package, after the package's
 # conffiles have been removed.
 
+GEM_DEB_PACKAGE="python-oq-engine"
+
 case "$1" in
   remove)
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
-    for dir in  /usr/share/pyshared/openquake /usr/share/doc/python-oq /usr/share/pyshared/openquake*egg-info
+    for dir in  /usr/share/pyshared/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/share/pyshared/openquake.engine-*egg-info
     do
         rm -rf $dir
     done
@@ -27,7 +29,7 @@ case "$1" in
     # This package has previously been removed and is now having
     # its configuration purged from the system.
     :
-    for dir in  /etc/openquake /usr/share/pyshared/openquake /usr/share/doc/python-oq /usr/share/pyshared/openquake*egg-info
+    for dir in  /etc/openquake /usr/share/pyshared/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/share/pyshared/openquake.engine-*egg-info
     do
         rm -rf $dir
     done

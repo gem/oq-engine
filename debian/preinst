@@ -6,7 +6,9 @@
 #set -x
 set -e
 
-for dir in  /usr/share/pyshared/openquake /usr/share/doc/python-oq /usr/share/pyshared/openquake*egg-info
+GEM_DEB_PACKAGE="python-oq-engine"
+
+for dir in  /usr/share/pyshared/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/share/pyshared/openquake.engine-*egg-info
 do
     rm -rf $dir
 done
