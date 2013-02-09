@@ -140,15 +140,12 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     def hazard_id(self):
         job = helpers.get_hazard_job(
             helpers.demo_file("scenario_hazard/job.ini"))
-
+        hc = job.hazard_calculation
         job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=job.hazard_calculation.owner,
-            truncation_level=job.hazard_calculation.truncation_level,
-            maximum_distance=job.hazard_calculation.maximum_distance,
-            intensity_measure_types_and_levels=(
-                job.hazard_calculation.intensity_measure_types_and_levels),
+            owner=hc.owner, truncation_level=hc.truncation_level,
+            maximum_distance=hc.maximum_distance,
+            intensity_measure_types=["MMI"],
             calculation_mode="scenario")
-
         job.save()
 
         output = models.Output.objects.create_output(
