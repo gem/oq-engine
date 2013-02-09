@@ -91,3 +91,6 @@ SITE_ID = 1
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'change-me-in-production'
+
+USE_I18N = False
+USE_L10N = False
