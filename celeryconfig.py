@@ -27,6 +27,13 @@ import os
 import sys
 import imp
 
+# just in the case that are you using oq-engine from sources
+# with the rest of oq libraries installed into the system (or a
+# virtual environment) you must set this environment variable
+if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+    sys.modules['openquake'].__dict__["__path__"].insert(
+            0, os.path.join(os.path.dirname(__file__)), "openquake"))
+
 from openquake.engine.utils import config
 
 
