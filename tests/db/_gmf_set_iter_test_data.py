@@ -17,8 +17,6 @@ from django.contrib.gis.geos.point import Point
 
 from openquake.engine.db import models
 
-GmfNode = models._GroundMotionFieldNode
-
 GMVS = iter([
     0.252294938306868,
     0.00894558476907964,
@@ -92,189 +90,257 @@ GMVS = iter([
 
 GMFS_GMF_SET_0 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(gmv=GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(gmv=GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                gmv=GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                gmv=GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(gmv=GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                gmv=GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=3, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=4, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=5, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=6, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=7, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=8, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=9, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=10, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=11, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=12, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 ]
 
 GMFS_GMF_SET_1 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 ]
 
 GMFS_GMF_SET_2 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=3, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=4, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 ]
 
 GMFS_GMF_SET_3 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=3, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=4, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=5, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=6, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=7, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=8, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=9, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 
 ]
 
 GMFS_GMF_SET_4 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=3, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=4, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 ]
 
 GMFS_GMF_SET_5 = [
     models._GroundMotionField(
-        imt='PGA', sa_period=None, sa_damping=None, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='PGA', sa_period=None, sa_damping=None, rupture_id=1, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
     models._GroundMotionField(
-        imt='SA', sa_period=0.1, sa_damping=5.0, gmf_nodes=[
-            GmfNode(GMVS.next(), location=Point(0.0, 0.0)),
-            GmfNode(GMVS.next(), location=Point(0.0, 0.5)),
+        imt='SA', sa_period=0.1, sa_damping=5.0, rupture_id=2, gmf_nodes=[
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.0)),
+            models._GroundMotionFieldNode(
+                GMVS.next(), location=Point(0.0, 0.5)),
         ]),
 ]
