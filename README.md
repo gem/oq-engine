@@ -23,7 +23,7 @@ Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 D. Monelli.
 
 
-disclaimer
+Disclaimer
 ----
 
 The software Hazard Modeller's Toolkit (hmtk) provided herein 
