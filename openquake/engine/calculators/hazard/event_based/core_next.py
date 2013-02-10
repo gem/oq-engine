@@ -377,16 +377,22 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         imt_name = imt.__class__.__name__
 
         for i, location in enumerate(points_to_compute):
-            inserter.add_entry(
-                gmf_set_id=gmf_set.id,
-                imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                location=location.wkt2d,
-                gmvs=gmfs[i].tolist(),
-                rupture_ids=rupture_ids,
-                result_grp_ordinal=result_grp_ordinal,
-            )
+            gmf = gmfs[i]
+            if gmf[gmf > 0].any():
+                inserter.add_entry(
+                    gmf_set_id=gmf_set.id,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    location=location.wkt2d,
+                    gmvs=gmf.tolist(),
+                    rupture_ids=rupture_ids,
+                    result_grp_ordinal=result_grp_ordinal,
+                    )
+            else:
+                logs.LOG.debug(
+                    "No ground motion field in point %s "
+                    "as it is too far from ruptures" % location.wkt2d)
 
     inserter.flush()
 

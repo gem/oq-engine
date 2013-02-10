@@ -16,9 +16,11 @@
 
 import getpass
 import unittest
-
+import mock
+import numpy
 import kombu
 
+from openquake.hazardlib import imt
 from nose.plugins.attrib import attr
 
 from openquake.engine.db import models
@@ -39,6 +41,23 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
+
+    def test_donot_save_trivial_gmf(self):
+        gmf_set = mock.Mock()
+        gmvs = numpy.append(
+            numpy.matrix(numpy.ones((2, 2))),
+            numpy.matrix(numpy.zeros((1, 2))),
+            axis=0)
+        gmf_dict = {imt.PGA: dict(rupture_ids=[1], gmvs=gmvs)}
+
+        fake_bulk_inserter = mock.Mock()
+        p = helpers.patch('openquake.engine.writer.BulkInserter')
+        m = p.start()
+        m.return_value = fake_bulk_inserter
+        core_next._save_gmfs(
+            gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
+        self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
+        p.stop()
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation
