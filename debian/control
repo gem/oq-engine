@@ -10,6 +10,7 @@ Homepage: http://github.com/gem/oq-nrmllib
 
 Package: python-oq-nrmllib
 Architecture: all
+Conflicts: python-nrml
 Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml
 Description: Natural hazards' Risk Markup Language (NRML) is a collection of
  XML schema definitions for modelling inputs and outputs for seismic hazard
