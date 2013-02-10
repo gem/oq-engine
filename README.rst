@@ -1,7 +1,7 @@
 =========
 hazardlib
 =========
-hazardlib (a New Hazard Library) is open-source software for performing
+hazardlib (the Openquake Hazard Library) is open-source software for performing
 seismic hazard analysis.
 
 What is hazardlib?
