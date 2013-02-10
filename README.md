@@ -8,7 +8,8 @@ GEM (i.e. Global Earthquake Model) Model Facility.
 The Hazard Modeller's Toolkit is free software: you can redistribute 
 it and/or modify it under the terms of the GNU Affero General Public 
 License as published by the Free Software Foundation, either version 
-3 of the License, or (at your option) any later version. 
+3 of the License, or (at your option) any later version. Please take 
+a minute of your time to read the disclaimer below.
 
 The main dependencies of this library are the following:
 * csv
