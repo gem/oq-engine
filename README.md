@@ -1,4 +1,4 @@
-hmtk
+Hazard Modeller's Toolkik (hmtk)
 ====
 
 This is the web repository of the Hazard Modeller's Toolkit (hmtk). 
@@ -24,7 +24,7 @@ D. Monelli.
 
 
 disclaimer
-===
+----
 
 The software Hazard Modeller's Toolkit (hmtk) provided herein 
 is released as a prototype implementation on behalf of 
