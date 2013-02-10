@@ -44,6 +44,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def test_donot_save_trivial_gmf(self):
         gmf_set = mock.Mock()
+
+        # two gmvs are not nonzero, one is zero, then we expecting to
+        # call to the bulk inserter
         gmvs = numpy.append(
             numpy.matrix(numpy.ones((2, 2))),
             numpy.matrix(numpy.zeros((1, 2))),
