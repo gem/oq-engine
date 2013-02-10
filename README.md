@@ -1,9 +1,11 @@
-Hazard Modeller's Toolkik (hmtk)
+Hazard Modeller's Toolkit (hmtk)
 ====
 
 This is the web repository of the Hazard Modeller's Toolkit (hmtk). 
 The hmtk is a suite of tools developed by Scientists working at the 
-GEM (i.e. Global Earthquake Model) Model Facility. 
+GEM (i.e. Global Earthquake Model) Model Facility. The main purpouse
+of the hmtk is to provide a suite of tools for the creation of PSHA 
+input models.
 
 The Hazard Modeller's Toolkit is free software: you can redistribute 
 it and/or modify it under the terms of the GNU Affero General Public 
