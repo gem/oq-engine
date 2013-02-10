@@ -1088,8 +1088,8 @@ class RiskCalculation(djm.Model):
         if self.has_output_containers():
             return dict((hazard_output.id,
                          risk_calculator.create_outputs(hazard_output))
-                         for hazard_output in
-                         risk_calculator.considered_hazard_outputs())
+                        for hazard_output in
+                    risk_calculator.considered_hazard_outputs())
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
@@ -2094,12 +2094,13 @@ def get_gmfs_scenario(output, imt=None):
             for gmf in rows:
                 for gmv in gmf.gmvs:
                     gmf_nodes.append(
-                        _GroundMotionFieldNode(iml=gmv, location=loc))
+                        _GroundMotionFieldNode(gmv=gmv, location=loc))
             yield _GroundMotionField(
                 imt=imt,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
-                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('iml')))
+                rupture_id=None,
+                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('gmv')))
 
 
 class DisaggResult(djm.Model):
