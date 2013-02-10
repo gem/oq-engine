@@ -388,7 +388,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     gmvs=gmf.tolist(),
                     rupture_ids=rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
-                    )
+                )
             else:
                 logs.LOG.debug(
                     "No ground motion field in point %s "
