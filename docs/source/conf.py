@@ -36,6 +36,14 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath('../..'))
 
+# just in the case that are you using oq-engine from sources
+# with the rest of oq libraries installed into the system (or a
+# virtual environment) you must set this environment variable
+if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+    sys.modules['openquake'].__dict__["__path__"].insert(
+            0, os.path.join(os.path.dirname(os.path.dirname(
+                            os.path.dirname(__file__))), "openquake"))
+
 import openquake.engine
 
 # -- General configuration ----------------------------------------------------

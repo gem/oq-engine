@@ -849,7 +849,7 @@ def prepare_cli_output(raw_output, discard_header=True):
     return lines
 
 
-def deep_eq(a, b, decimal=7):
+def deep_eq(a, b, decimal=7, exclude=None):
     """Deep compare two objects for equality by traversing __dict__ and
     __slots__.
 
@@ -859,24 +859,31 @@ def deep_eq(a, b, decimal=7):
         Desired precision (digits after the decimal point) for numerical
         comparisons.
 
+    :param exclude: a list of attributes that will be excluded when
+    traversing objects
+
     :returns:
         Return `True` or `False` (to indicate if objects are equal) and a `str`
         message. If the two objects are equal, the message is empty. If the two
         objects are not equal, the message indicates which part of the
         comparison failed.
     """
+    exclude = exclude or []
+
     try:
-        _deep_eq(a, b, decimal=decimal)
+        _deep_eq(a, b, decimal=decimal, exclude=exclude)
     except AssertionError, err:
         return False, err.message
     return True, ''
 
 
-def _deep_eq(a, b, decimal):
+def _deep_eq(a, b, decimal, exclude=None):
     """Do the actual deep comparison. If the two items up for comparison are
     not equal, a :exception:`AssertionError` is raised (to
     :function:`deep_eq`).
     """
+
+    exclude = exclude or []
 
     def _test_dict(a, b):
         """Compare `dict` types recursively."""
@@ -886,7 +893,8 @@ def _deep_eq(a, b, decimal):
                 a=a, b=b, len_a=len(a), len_b=len(b))
 
         for key in a:
-            _deep_eq(a[key], b[key], decimal)
+            if not key in exclude:
+                _deep_eq(a[key], b[key], decimal)
 
     def _test_seq(a, b):
         """Compare `list` or `tuple` types recursively."""
@@ -921,7 +929,8 @@ def _deep_eq(a, b, decimal):
         assert a.__slots__ == b.__slots__, (
             "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
         for slot in a.__slots__:
-            _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
+            if not slot in exclude:
+                _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
     else:
         # Objects must be primitives
 
