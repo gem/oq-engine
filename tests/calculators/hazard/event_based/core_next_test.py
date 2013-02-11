@@ -47,10 +47,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # two gmvs are not nonzero, one is zero, then we expecting to
         # call to the bulk inserter
-        gmvs = numpy.append(
-            numpy.matrix(numpy.ones((2, 2))),
-            numpy.matrix(numpy.zeros((1, 2))),
-            axis=0)
+        gmvs = numpy.matrix([[1., 1.],
+                             [1., 1.],
+                             [0., 0.]])
         gmf_dict = {imt.PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
 
         fake_bulk_inserter = mock.Mock()
