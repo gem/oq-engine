@@ -24,6 +24,7 @@
             Not used for 'Scenario' calculations.
         -->
         <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="optional" />
+        <xs:attribute name="stochasticEventSetId" type="PositiveNonZeroDoubleType" use="optional" />
     </xs:complexType>
 
     <xs:element name="gmf" type="GMF" />
@@ -31,6 +32,11 @@
         <xs:sequence>
             <xs:element name="node" type="GMFNode" minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
+        <!--
+            Optional; used only for 'Event-Based' calculations.
+            Not used for 'Scenario' calculations.
+        -->
+        <xs:attribute name="ruptureId" type="PositiveNonZeroDoubleType" use="optional" />
         <xs:attribute name="IMT" type="IMTType" use="required" />
         <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
         <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />
@@ -38,7 +44,7 @@
     </xs:complexType>
 
     <xs:complexType name="GMFNode">
-        <xs:attribute name="iml" type="xs:float" use="required" />
+        <xs:attribute name="gmv" type="xs:float" use="required" />
         <xs:attribute name="lon" type="xs:float" use="required" />
         <xs:attribute name="lat" type="xs:float" use="required" />
     </xs:complexType>
