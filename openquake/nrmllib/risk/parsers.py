@@ -306,12 +306,9 @@ class FragilityModelParser(object):
         """
         fragilityModel = findone('fragilityModel', self._fragility_model)
         format = fragilityModel.attrib['format']
-        if format == 'discrete':
-            iml = findone('IML', fragilityModel)
-            iml = dict(IMT=iml.attrib['IMT'],
-                       imls=map(float, iml.text.split()))
-        else:
-            iml = dict(IMT=None, imls=None)
+        iml = findone('IML', fragilityModel)
+        iml = dict(IMT=iml.attrib['IMT'],
+                   imls=map(float, iml.text.split()))
         self.limit_states = findone('limitStates', fragilityModel).text.split()
         yield format, iml, self.limit_states
         for ffs in find('ffs', fragilityModel):
