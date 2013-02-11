@@ -27,107 +27,99 @@ from openquake.engine.db import models
 class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
-    EXPECTED_DMG_DIST_PER_ASSET_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <dmgDistPerAsset>
-    <damageStates>no_damage minor moderate severe collapse</damageStates>
+    <damageStates>no_damage LS1 LS2</damageStates>
     <DDNode>
       <gml:Point>
-        <gml:pos>9.15 45.16667</gml:pos>
+        <gml:pos>15.48 38.09</gml:pos>
       </gml:Point>
-      <asset assetRef="asset_01">
-        <damage ds="no_damage" mean="7.0" stddev="0.0"/>
-        <damage ds="minor" mean="0.0" stddev="0.0"/>
-        <damage ds="moderate" mean="0.0" stddev="0.0"/>
-        <damage ds="severe" mean="0.0" stddev="0.0"/>
-        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      <asset assetRef="a1">
+        <damage ds="no_damage" mean="875.81199" stddev="757.540852525"/>
+        <damage ds="LS1" mean="1448.2960791" stddev="256.15318195"/>
+        <damage ds="LS2" mean="675.8919309" stddev="556.765558354"/>
       </asset>
     </DDNode>
     <DDNode>
       <gml:Point>
-        <gml:pos>9.15333 45.122</gml:pos>
+        <gml:pos>15.56 38.17</gml:pos>
       </gml:Point>
-      <asset assetRef="asset_02">
-        <damage ds="no_damage" mean="6.0" stddev="0.0"/>
-        <damage ds="minor" mean="0.0" stddev="0.0"/>
-        <damage ds="moderate" mean="0.0" stddev="0.0"/>
-        <damage ds="severe" mean="0.0" stddev="0.0"/>
-        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      <asset assetRef="a2">
+        <damage ds="no_damage" mean="344.90869" stddev="300.611885456"/>
+        <damage ds="LS1" mean="747.62374" stddev="144.648244809"/>
+        <damage ds="LS2" mean="907.46757" stddev="417.307715071"/>
       </asset>
     </DDNode>
     <DDNode>
       <gml:Point>
-        <gml:pos>9.14777 45.17999</gml:pos>
+        <gml:pos>15.48 38.25</gml:pos>
       </gml:Point>
-      <asset assetRef="asset_03">
-        <damage ds="no_damage" mean="5.0" stddev="0.0"/>
-        <damage ds="minor" mean="0.0" stddev="0.0"/>
-        <damage ds="moderate" mean="0.0" stddev="0.0"/>
-        <damage ds="severe" mean="0.0" stddev="0.0"/>
-        <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      <asset assetRef="a3">
+        <damage ds="no_damage" mean="224.41751" stddev="220.650927184"/>
+        <damage ds="LS1" mean="465.6442715" stddev="136.927805797"/>
+        <damage ds="LS2" mean="309.9382185" stddev="246.84411292"/>
       </asset>
     </DDNode>
   </dmgDistPerAsset>
 </nrml>
 '''
 
-    EXPECTED_DMG_DIST_PER_TAXONOMY_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    EXPECTED_DMG_DIST_PER_TAXONOMY = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <dmgDistPerTaxonomy>
-    <damageStates>no_damage minor moderate severe collapse</damageStates>
+    <damageStates>no_damage LS1 LS2</damageStates>
     <DDNode>
-      <taxonomy>RC/DMRF-D/LR</taxonomy>
-      <damage ds="no_damage" mean="12.0" stddev="0.0"/>
-      <damage ds="minor" mean="0.0" stddev="0.0"/>
-      <damage ds="moderate" mean="0.0" stddev="0.0"/>
-      <damage ds="severe" mean="0.0" stddev="0.0"/>
-      <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      <taxonomy>RM</taxonomy>
+      <damage ds="no_damage" mean="1100.2295" stddev="880.276624388"/>
+      <damage ds="LS1" mean="1913.9403506" stddev="296.218619036"/>
+      <damage ds="LS2" mean="985.8301494" stddev="616.562370911"/>
     </DDNode>
     <DDNode>
-      <taxonomy>RC/DMRF-D/HR</taxonomy>
-      <damage ds="no_damage" mean="6.0" stddev="0.0"/>
-      <damage ds="minor" mean="0.0" stddev="0.0"/>
-      <damage ds="moderate" mean="0.0" stddev="0.0"/>
-      <damage ds="severe" mean="0.0" stddev="0.0"/>
-      <damage ds="collapse" mean="0.0" stddev="0.0"/>
+      <taxonomy>RC</taxonomy>
+      <damage ds="no_damage" mean="344.90869" stddev="300.611885456"/>
+      <damage ds="LS1" mean="747.62374" stddev="144.648244809"/>
+      <damage ds="LS2" mean="907.46757" stddev="417.307715071"/>
     </DDNode>
   </dmgDistPerTaxonomy>
 </nrml>
 '''
 
-    EXPECTED_DMG_DIST_TOTAL_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    EXPECTED_DMG_DIST_TOTAL = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <totalDmgDist>
-    <damageStates>no_damage minor moderate severe collapse</damageStates>
-    <damage ds="no_damage" mean="18.0" stddev="0.0"/>
-    <damage ds="minor" mean="0.0" stddev="0.0"/>
-    <damage ds="moderate" mean="0.0" stddev="0.0"/>
-    <damage ds="severe" mean="0.0" stddev="0.0"/>
-    <damage ds="collapse" mean="0.0" stddev="0.0"/>
+    <damageStates>no_damage LS1 LS2</damageStates>
+    <damage ds="no_damage" mean="1445.13819" stddev="824.78005267"/>
+    <damage ds="LS1" mean="2661.5640906" stddev="373.99997281"/>
+    <damage ds="LS2" mean="1893.2977194" stddev="661.810775842"/>
   </totalDmgDist>
 </nrml>
 '''
 
-    EXPECTED_COLLAPSE_MAP_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    EXPECTED_COLLAPSE_MAP = '''<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <collapseMap>
     <CMNode>
       <gml:Point>
-        <gml:pos>9.15 45.16667</gml:pos>
+        <gml:pos>15.48 38.09</gml:pos>
       </gml:Point>
-      <cf assetRef="asset_01" mean="0.0" stdDev="0.0"/>
+      <cf assetRef="a1" mean="675.8919309" stdDev="556.765558354"/>
     </CMNode>
     <CMNode>
       <gml:Point>
-        <gml:pos>9.15333 45.122</gml:pos>
+        <gml:pos>15.56 38.17</gml:pos>
       </gml:Point>
-      <cf assetRef="asset_02" mean="0.0" stdDev="0.0"/>
+      <cf assetRef="a2" mean="907.46757" stdDev="417.307715071"/>
     </CMNode>
     <CMNode>
       <gml:Point>
-        <gml:pos>9.14777 45.17999</gml:pos>
+        <gml:pos>15.48 38.25</gml:pos>
       </gml:Point>
-      <cf assetRef="asset_03" mean="0.0" stdDev="0.0"/>
+      <cf assetRef="a3" mean="309.9382185" stdDev="246.84411292"/>
     </CMNode>
   </collapseMap>
 </nrml>
@@ -144,8 +136,9 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         job.hazard_calculation = models.HazardCalculation.objects.create(
             owner=hc.owner, truncation_level=hc.truncation_level,
             maximum_distance=hc.maximum_distance,
-            intensity_measure_types=["MMI"],
+            intensity_measure_types=["PGA"],
             calculation_mode="scenario")
+        job.status = "complete"
         job.save()
 
         output = models.Output.objects.create_output(
@@ -156,27 +149,19 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
 
-            arr = numpy.array([map(float, row) for row in gmfreader])
+            arr = numpy.array([[float(x) for x in row] for row in gmfreader])
             for i, gmvs in enumerate(arr.transpose()):
                 models.GmfScenario.objects.create(
                     output=output,
-                    imt="MMI",
+                    imt="PGA",
                     gmvs=gmvs,
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
         return output.id
 
-    # no time to implement this: checking the XML includes it
-    def actual_data(self, job):
-        return []
-
-    # no time to implement this: checking the XML includes it
-    def expected_data(self):
-        return []
-
     def expected_outputs(self):
-        return [self.EXPECTED_DMG_DIST_PER_ASSET_XML,
-                self.EXPECTED_DMG_DIST_PER_TAXONOMY_XML,
-                self.EXPECTED_DMG_DIST_TOTAL_XML,
-                self.EXPECTED_COLLAPSE_MAP_XML]
+        return [self.EXPECTED_DMG_DIST_PER_ASSET,
+                self.EXPECTED_DMG_DIST_PER_TAXONOMY,
+                self.EXPECTED_DMG_DIST_TOTAL,
+                self.EXPECTED_COLLAPSE_MAP]
