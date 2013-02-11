@@ -52,6 +52,9 @@ Prototype of a 'Catalogue' class
 """
 
 import numpy as np
+from hmtk.seismicity.utils import decimal_time
+from nhlib.geo.mesh import Mesh
+from nhlib.geo.utils import spherical_to_cartesian
 
 class Catalogue(object):
     """
@@ -149,3 +152,56 @@ class Catalogue(object):
             if len(self.data[key]):
                 self.data[key] = self.data[key][np.nonzero(flag)]
 
+
+    def get_decimal_time(self):                                                 
+        '''                                                                     
+        Returns the time of the catalogue as a decimal                          
+        '''                                                                     
+        return decimal_time(self.data['year'],                             
+                            self.data['month'],                            
+                            self.data['day'],                              
+                            self.data['hour'],                             
+                            self.data['minute'],                           
+                            self.data['second'])                           
+                                                                                
+    def hypocentres_as_mesh(self):                                              
+        '''                                                                     
+        Render the hypocentres to a nhlib.geo.mesh.Mesh object                  
+        '''                                                                     
+        return Mesh(self.data['longitude'], 
+                    self.data['latitude'], 
+                    self.data['depth'])                                    
+                                                                                
+                                                                                
+    def hypocentres_to_cartesian(self):                                         
+        '''                                                                     
+        Render the hypocentres to a cartesian array                             
+        '''                                                                     
+        return spherical_to_cartesian(self.data['longitude'], 
+                                        self.data['latitude'], 
+                                        self.data['depth'])
+
+
+    def purge_catalogue(self, flag_vector):            
+        '''                                                                         
+        Purges present catalogue with invalid events defined by flag_vector
+                                                                                 
+        :param numpy.ndarray flag_vector:                                           
+            Boolean vector showing if events are selected (True) or not (False)     
+                                                                                    
+        '''                                                                         
+        
+        id0 = np.where(flag_vector)[0]                                          
+                                                                                 
+        for key in self.data.keys():
+            if isinstance(self.data[key], np.ndarray) and \
+                len(self.data[key]) > 0:
+                # Dictionary element is numpy array - use logical indexing
+                self.data[key] = self.data[key][id0]
+            elif isinstance(self.data[key], list) and \
+                len(self.data[key]) > 0:
+                # Dictionary element is list
+                self.data[key] = [self.data[key][iloc] for iloc in id0]
+            else:
+                continue
+        self.get_number_events()
