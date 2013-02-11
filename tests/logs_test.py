@@ -26,9 +26,9 @@ import kombu
 import kombu.entity
 import kombu.messaging
 
-from openquake import logs
-from openquake.utils import config
-from openquake.utils import stats
+from openquake.engine import logs
+from openquake.engine.utils import config
+from openquake.engine.utils import stats
 
 from tests.utils import helpers
 
@@ -260,7 +260,7 @@ class LogPercentCompleteTestCase(unittest.TestCase):
     def test_log_percent_complete_with_invalid_area(self):
         # nothing is reported, -1 is returned
         job_id = 11
-        with mock.patch("openquake.logs.LOG.progress") as lpm:
+        with mock.patch("openquake.engine.logs.LOG.progress") as lpm:
             rv = logs.log_percent_complete(job_id, "invalid calculation")
             self.assertEqual(-1, rv)
             self.assertEqual(0, lpm.call_count)
@@ -272,7 +272,7 @@ class LogPercentCompleteTestCase(unittest.TestCase):
         stats.pk_set(job_id, "nhzrd_done", 12)
         stats.pk_set(job_id, "lvr", 12)
 
-        with mock.patch("openquake.logs.LOG.progress") as lpm:
+        with mock.patch("openquake.engine.logs.LOG.progress") as lpm:
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(12, rv)
             self.assertEqual(0, lpm.call_count)
@@ -284,7 +284,7 @@ class LogPercentCompleteTestCase(unittest.TestCase):
         stats.pk_set(job_id, "nhzrd_done", 0)
         stats.pk_set(job_id, "lvr", -1)
 
-        with mock.patch("openquake.logs.LOG.progress") as lpm:
+        with mock.patch("openquake.engine.logs.LOG.progress") as lpm:
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(0, rv)
             self.assertEqual(0, lpm.call_count)
@@ -297,7 +297,7 @@ class LogPercentCompleteTestCase(unittest.TestCase):
         stats.pk_set(job_id, "nhzrd_done", 20)
         stats.pk_set(job_id, "lvr", 12)
 
-        with mock.patch("openquake.logs.LOG.progress") as lpm:
+        with mock.patch("openquake.engine.logs.LOG.progress") as lpm:
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(20, rv)
             self.assertEqual(1, lpm.call_count)
@@ -312,7 +312,7 @@ class LogPercentCompleteTestCase(unittest.TestCase):
         stats.pk_set(job_id, "nhzrd_done", 46)
         stats.pk_set(job_id, "lvr", 12)
 
-        with mock.patch("openquake.logs.LOG.progress") as lpm:
+        with mock.patch("openquake.engine.logs.LOG.progress") as lpm:
             rv = logs.log_percent_complete(job_id, "hazard")
             self.assertEqual(12, rv)
             self.assertEqual(0, lpm.call_count)

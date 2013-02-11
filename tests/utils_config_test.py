@@ -25,7 +25,7 @@ import os
 import textwrap
 import unittest
 
-from openquake.utils import config
+from openquake.engine.utils import config
 
 from tests.utils.helpers import ConfigTestCase
 from tests.utils.helpers import patch
@@ -228,7 +228,7 @@ class GetTestCase(unittest.TestCase):
 
     def test_get_with_empty_section_data(self):
         """config.get() returns `None` if the section data dict is empty."""
-        with patch('openquake.utils.config.get_section') as mock:
+        with patch('openquake.engine.utils.config.get_section') as mock:
             mock.return_value = dict()
             self.assertTrue(config.get("whatever", "key") is None)
             self.assertEqual(1, mock.call_count)
@@ -239,7 +239,7 @@ class GetTestCase(unittest.TestCase):
         config.get() correctly returns the configuration datum for known
         sections/keys.
         """
-        with patch('openquake.utils.config.get_section') as mock:
+        with patch('openquake.engine.utils.config.get_section') as mock:
             mock.return_value = dict(a=11)
             self.assertEqual(11, config.get("hmmm", "a"))
             self.assertEqual(1, mock.call_count)
@@ -247,7 +247,7 @@ class GetTestCase(unittest.TestCase):
 
     def test_get_with_unknown_key(self):
         """config.get() returns `None` if the `key` is not known."""
-        with patch('openquake.utils.config.get_section') as mock:
+        with patch('openquake.engine.utils.config.get_section') as mock:
             mock.return_value = dict(b=1)
             self.assertTrue(config.get("arghh", "c") is None)
             self.assertEqual(1, mock.call_count)
@@ -298,7 +298,7 @@ class HazardBlockSizeTestCase(unittest.TestCase):
         The hazard block size was not set in openquake.cfg, the default
         is returned.
         """
-        with patch("openquake.utils.config.get") as mget:
+        with patch("openquake.engine.utils.config.get") as mget:
             mget.return_value = None
             self.assertEqual(8192, config.hazard_block_size())
 
@@ -307,13 +307,13 @@ class HazardBlockSizeTestCase(unittest.TestCase):
         The hazard block size was not set in openquake.cfg, the default
         is specified by the caller is returned.
         """
-        with patch("openquake.utils.config.get") as mget:
+        with patch("openquake.engine.utils.config.get") as mget:
             mget.return_value = None
             self.assertEqual(333, config.hazard_block_size(333))
 
     def test_configured(self):
         """The hazard block size *was* configured in openquake.cfg"""
-        with patch("openquake.utils.config.get") as mget:
+        with patch("openquake.engine.utils.config.get") as mget:
             mget.return_value = "33"
             self.assertEqual(33, config.hazard_block_size())
 
@@ -322,14 +322,14 @@ class HazardBlockSizeTestCase(unittest.TestCase):
         The hazard block size *was* configured in openquake.cfg but
         the setting is not a valid number.
         """
-        with patch("openquake.utils.config.get") as mget:
+        with patch("openquake.engine.utils.config.get") as mget:
             mget.return_value = "not a number"
             self.assertRaises(ValueError, config.hazard_block_size)
 
 
 class FlagSetTestCase(ConfigTestCase, unittest.TestCase):
     """
-    Tests for openquake.utils.config.flag_set()
+    Tests for openquake.engine.utils.config.flag_set()
     """
 
     def setUp(self):

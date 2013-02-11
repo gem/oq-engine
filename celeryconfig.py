@@ -27,7 +27,14 @@ import os
 import sys
 import imp
 
-from openquake.utils import config
+# just in the case that are you using oq-engine from sources
+# with the rest of oq libraries installed into the system (or a
+# virtual environment) you must set this environment variable
+if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+    sys.modules['openquake'].__dict__["__path__"].insert(
+            0, os.path.join(os.path.dirname(__file__), "openquake"))
+
+from openquake.engine.utils import config
 
 
 config.abort_if_no_config_available()
@@ -56,19 +63,21 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 
 
 CELERY_IMPORTS = (
-    "openquake.calculators.hazard.classical.core",
-    "openquake.calculators.hazard.classical.post_processing",
-    "openquake.calculators.hazard.event_based.core_next",
-    "openquake.calculators.hazard.event_based.post_processing",
-    "openquake.calculators.risk.classical.core",
-    "openquake.calculators.risk.classical_bcr.core",
-    "openquake.calculators.risk.event_based.core",
-    "openquake.calculators.risk.event_based_bcr.core")
+    "openquake.engine.calculators.hazard.classical.core",
+    "openquake.engine.calculators.hazard.classical.post_processing",
+    "openquake.engine.calculators.hazard.event_based.core_next",
+    "openquake.engine.calculators.hazard.event_based.post_processing",
+    "openquake.engine.calculators.risk.classical.core",
+    "openquake.engine.calculators.risk.classical_bcr.core",
+    "openquake.engine.calculators.risk.event_based.core",
+    "openquake.engine.calculators.risk.event_based_bcr.core",
+    "openquake.engine.calculators.risk.scenario.core",)
 
 try:
-    imp.find_module("tasks", [ os.path.join(x, "tests/utils") for x in sys.path ])
+    imp.find_module("tasks", [os.path.join(x, "tests/utils")
+                                for x in sys.path])
     CELERY_IMPORTS = CELERY_IMPORTS + ("tests.utils.tasks",)
 except ImportError:
     pass
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
+os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"

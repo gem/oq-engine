@@ -26,7 +26,7 @@ from datetime import datetime
 from datetime import timedelta
 import unittest
 
-from openquake.utils import version
+from openquake.engine.utils import version
 
 
 class VersionInfoTestCase(unittest.TestCase):

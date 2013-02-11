@@ -29,14 +29,22 @@
 import os
 import sys
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath('../..'))
 
-import openquake
+# just in the case that are you using oq-engine from sources
+# with the rest of oq libraries installed into the system (or a
+# virtual environment) you must set this environment variable
+if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+    sys.modules['openquake'].__dict__["__path__"].insert(
+            0, os.path.join(os.path.dirname(os.path.dirname(
+                            os.path.dirname(__file__))), "openquake"))
+
+import openquake.engine
 
 # -- General configuration ----------------------------------------------------
 
@@ -70,7 +78,7 @@ copyright = u'2013, GEM Foundation'
 # built documents.
 #
 # The short X.Y version.
-version = '.'.join([str(x) for x in openquake.__version__[:3]])
+version = '.'.join([str(x) for x in openquake.engine.__version__[:3]])
 # The full version, including alpha/beta/rc tags.
 release = version
 

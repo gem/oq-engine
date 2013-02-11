@@ -27,8 +27,8 @@ Includes:
 import os
 import unittest
 
-from openquake import kvs
-from openquake import logs
+from openquake.engine import kvs
+from openquake.engine import logs
 
 
 from tests.utils import helpers

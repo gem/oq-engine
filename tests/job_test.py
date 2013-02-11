@@ -25,13 +25,13 @@ from tempfile import gettempdir
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
-from openquake import engine
-from openquake.db import models
-from openquake.engine import _parse_config_file
-from openquake.engine import _prepare_config_parameters
-from openquake.engine import _prepare_job
-from openquake.job import config
-from openquake.job.params import config_text_to_list
+from openquake.engine import engine
+from openquake.engine.db import models
+from openquake.engine.engine import _parse_config_file
+from openquake.engine.engine import _prepare_config_parameters
+from openquake.engine.engine import _prepare_job
+from openquake.engine.job import config
+from openquake.engine.job.params import config_text_to_list
 
 from tests.utils import helpers
 
@@ -455,7 +455,8 @@ class JobUtilsTestCase(unittest.TestCase):
     """Tests for utility functions in the job module."""
 
     def test_config_text_to_list(self):
-        """Exercise :function:`openquake.job.params.config_text_to_list`."""
+        """Exercise :function:`openquake.engine.job.params.\
+config_text_to_list`."""
         expected = ['MagDistPMF', 'MagDistEpsPMF', 'FullDisaggMatrix']
 
         # the input mixes spaces and commas for robustness testing:
@@ -464,8 +465,8 @@ class JobUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, config_text_to_list(test_input))
 
     def test_config_text_to_list_with_transform(self):
-        """Exercise :function:`openquake.job.params.config_text_to_list` with a
-        transform specified.
+        """Exercise :function:`openquake.engine.job.params.\
+config_text_to_list` with a transform specified.
         """
         expected = [0.01, 0.02, 0.03, 0.04]
 
@@ -475,8 +476,8 @@ class JobUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, config_text_to_list(test_input, float))
 
     def test_config_text_to_list_all_whitespace_input(self):
-        """Exercise :function:`openquake.job.params.config_text_to_list` with
-        an input of only spaces. """
+        """Exercise :function:`openquake.engine.job.params.\
+config_text_to_list` with an input of only spaces. """
 
         expected = []
 

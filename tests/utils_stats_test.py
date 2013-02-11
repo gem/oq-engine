@@ -28,9 +28,9 @@ import string
 import sys
 import unittest
 
-from openquake import engine
-from openquake.db.models import HazardCalculation, JobPhaseStats
-from openquake.utils import stats
+from openquake.engine import engine
+from openquake.engine.db.models import HazardCalculation, JobPhaseStats
+from openquake.engine.utils import stats
 
 from tests.utils import helpers
 
