@@ -1,8 +1,8 @@
-python-oq-engine (0.10.0-1) precise; urgency=low
+python-oq-engine (0.9.1-1) precise; urgency=low
 
-  * Rename of the package and namespace refactoring
+  * upstream release
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sat, 09 Feb 2013 16:46:21 +0100
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 11 Feb 2013 11:00:54 +0100
 
 python-oq-engine (0.8.3-3) precise; urgency=low
 
