@@ -1925,6 +1925,10 @@ class GmfSet(djm.Model):
 
     @property
     def stochastic_event_set_id(self):
+        """
+        :returns: the ID of the stochastic event set which this ground
+        motion field set has been generated from
+        """
         if self.complete_logic_tree_gmf:
             job = self.gmf_collection.output.oq_job
             return SES.objects.get(
