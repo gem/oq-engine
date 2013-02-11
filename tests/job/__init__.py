@@ -13,4 +13,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests for the :module:`openquake.job` package."""
+"""Tests for the :module:`openquake.engine.job` package."""

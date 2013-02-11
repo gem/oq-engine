@@ -23,8 +23,8 @@ Test related to code in openquake/utils/general.py
 
 import unittest
 
-from openquake.utils import general
-from openquake.utils.general import block_splitter
+from openquake.engine.utils import general
+from openquake.engine.utils.general import block_splitter
 
 
 class SingletonTestCase(unittest.TestCase):
@@ -93,7 +93,7 @@ class MemoizerTestCase(unittest.TestCase):
 
 
 class BlockSplitterTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.utils.general.block_splitter`."""
+    """Tests for :function:`openquake.engine.utils.general.block_splitter`."""
 
     DATA = range(10)
 

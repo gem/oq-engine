@@ -28,8 +28,8 @@ from __future__ import absolute_import
 
 import random
 import unittest
-from openquake.db import models as openquake
-from openquake.db.aggregate_result_writer import (
+from openquake.engine.db import models as oq_models
+from openquake.engine.db.aggregate_result_writer import (
     MeanCurveWriter, QuantileCurveWriter)
 
 from ..utils import helpers
@@ -48,10 +48,10 @@ class AggregateResultWriterFactoryTestCase(unittest.TestCase):
         writer = MeanCurveWriter(self.job, imt="PGA")
         curve, output = writer.create_aggregate_result()
         self.assertEqual(1,
-                         openquake.Output.objects.filter(pk=output.id).count())
+                         oq_models.Output.objects.filter(pk=output.id).count())
         self.assertEqual(
             1,
-            openquake.HazardCurve.objects.filter(pk=curve.id).count())
+            oq_models.HazardCurve.objects.filter(pk=curve.id).count())
         self.assertEqual("hazard_curve", output.output_type)
         self.assertFalse(curve.lt_realization)
         self.assertEqual("mean", curve.statistics)
@@ -62,10 +62,10 @@ class AggregateResultWriterFactoryTestCase(unittest.TestCase):
 
         curve, output = writer.create_aggregate_result()
         self.assertEqual(1,
-                         openquake.Output.objects.filter(pk=output.id).count())
+                         oq_models.Output.objects.filter(pk=output.id).count())
         self.assertEqual(
             1,
-            openquake.HazardCurve.objects.filter(pk=curve.id).count())
+            oq_models.HazardCurve.objects.filter(pk=curve.id).count())
         self.assertEqual(curve.output, output)
 
     def test_create_quantile_output(self):
@@ -75,15 +75,15 @@ class AggregateResultWriterFactoryTestCase(unittest.TestCase):
             self.job, quantile=0.5, imt="SA(%s)" % period)
         curve, output = writer.create_aggregate_result()
         self.assertEqual(1,
-                         openquake.Output.objects.filter(pk=output.id).count())
+                         oq_models.Output.objects.filter(pk=output.id).count())
         self.assertEqual(
             1,
-            openquake.HazardCurve.objects.filter(pk=curve.id).count())
+            oq_models.HazardCurve.objects.filter(pk=curve.id).count())
         self.assertEqual("hazard_curve", output.output_type)
         self.assertFalse(curve.lt_realization)
         self.assertEqual("quantile", curve.statistics)
         self.assertEqual("SA", curve.imt)
-        self.assertEqual(openquake.DEFAULT_SA_DAMPING, curve.sa_damping)
+        self.assertEqual(oq_models.DEFAULT_SA_DAMPING, curve.sa_damping)
         self.assertEqual(period, curve.sa_period)
         self.assertEqual(curve.output, output)
 
@@ -121,7 +121,7 @@ class AggregateResultWriterTestCase(unittest.TestCase):
         curvedata = self.mean_curve.hazardcurvedata_set.all()[0]
         self.assertEqual(
             1,
-            openquake.HazardCurveData.objects.filter(pk=curvedata.id).count())
+            oq_models.HazardCurveData.objects.filter(pk=curvedata.id).count())
 
     def test_create_quantile_curves(self):
         a_location = helpers.random_location_generator()
@@ -137,4 +137,4 @@ class AggregateResultWriterTestCase(unittest.TestCase):
 
         self.assertEqual(
             1,
-            openquake.HazardCurveData.objects.filter(pk=curvedata.id).count())
+            oq_models.HazardCurveData.objects.filter(pk=curvedata.id).count())

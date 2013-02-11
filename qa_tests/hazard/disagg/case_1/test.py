@@ -21,8 +21,8 @@ import tempfile
 
 from nose.plugins.attrib import attr
 
-from openquake.db import models
-from openquake.export import hazard as haz_export
+from openquake.engine.db import models
+from openquake.engine.export import hazard as haz_export
 
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.disagg.case_1 import _test_data as test_data

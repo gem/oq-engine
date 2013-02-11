@@ -10,7 +10,7 @@ Collection of base classes for processing spatially-related data.
 The :mod:`shapes` Module
 ------------------------
 
-.. automodule:: openquake.shapes
+.. automodule:: openquake.engine.shapes
     :members:
     :undoc-members:
     :show-inheritance:

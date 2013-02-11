@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.9.0"
+version = "0.9.2"
 url = "http://openquake.org/"
 
 README = """
@@ -11,19 +11,19 @@ Please note: the /usr/bin/openquake script requires a celeryconfig.py
 file in the PYTHONPATH.  Please make sure this is the case and that your
 celeryconfig.py file works with your python-celery setup.
 
-Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
+Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
 """
 
-PY_MODULES = ['openquake.bin.cache_gc', 'openquake.bin.oqscript']
+PY_MODULES = ['openquake.engine.bin.cache_gc', 'openquake.engine.bin.oqscript']
 
 setup(
     entry_points={
         "console_scripts": [
-            "openquake = openquake.bin.oqscript:main",
-            "oq_cache_gc = openquake.bin.cache_gc:main",
-            "oq_monitor = openquake.bin.openquake_supervisor:main",
+            "openquake = openquake.engine.bin.oqscript:main",
+            "oq_cache_gc = openquake.engine.bin.cache_gc:main",
+            "oq_monitor = openquake.engine.bin.openquake_supervisor:main",
             ]},
-    name="openquake",
+    name="openquake.engine",
     version=version,
     author="The OpenQuake team",
     author_email="devops@openquake.org",
@@ -39,14 +39,18 @@ setup(
         ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools", "tests", "tests.*",
-                                    "openquake.bin",
-                                    "openquake.bin.*"]),
+                                    "openquake.engine.bin",
+                                    "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
 
     include_package_data=True,
-    package_data={"openquake": [
+    package_data={"openquake.engine": [
             "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
-    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"]
+    scripts=["openquake/engine/bin/oq_create_db", "openquake/engine/bin/oq_restart_workers"],
+
+    namespace_packages=['openquake'],
+
+    zip_safe=False,
     )
