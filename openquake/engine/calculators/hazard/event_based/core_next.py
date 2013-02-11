@@ -128,7 +128,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     ltp = logictree.LogicTreeProcessor(hc.id)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     sources = list(haz_general.gen_sources(
@@ -172,7 +172,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
             # Prepare and save SES ruptures to the db:
             logs.LOG.debug('> saving SES rupture to DB')
-            _save_ses_rupture(
+            rupture_id = _save_ses_rupture(
                 ses, rupture, cmplt_lt_ses, result_grp_ordinal,
                 rupture_ordinal)
             logs.LOG.debug('> done saving SES rupture to DB')
@@ -192,17 +192,18 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     'realizations': DEFAULT_GMF_REALIZATIONS,
                     'correlation_model': correl_model,
                     'rupture_site_filter':
-                        filters.rupture_site_distance_filter(
-                            hc.maximum_distance),
+                    filters.rupture_site_distance_filter(
+                        hc.maximum_distance),
                 }
                 logs.LOG.debug('> computing ground motion fields')
                 gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
                 logs.LOG.debug('< done computing ground motion fields')
 
                 # update the gmf cache:
-                for k, v in gmf_dict.iteritems():
-                    gmf_cache[k] = numpy.append(
-                        gmf_cache[k], v, axis=1)
+                for imt_key, v in gmf_dict.iteritems():
+                    gmf_cache[imt_key]['gmvs'] = numpy.append(
+                        gmf_cache[imt_key]['gmvs'], v, axis=1)
+                    gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
 
         logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
@@ -240,11 +241,13 @@ def _create_gmf_cache(n_sites, imts):
     cache = dict()
 
     for imt in imts:
-        cache[imt] = numpy.empty((n_sites, 0))
+        cache[imt] = dict(gmvs=numpy.empty((n_sites, 0)),
+                          rupture_ids=[])
 
     return cache
 
 
+@transaction.commit_on_success(using='reslt_writer')
 def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
                       result_grp_ordinal, rupture_ordinal):
     """
@@ -299,7 +302,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
-    models.SESRupture.objects.create(
+    rupture_id = models.SESRupture.objects.create(
         ses=ses,
         magnitude=rupture.mag,
         strike=rupture.surface.get_strike(),
@@ -312,7 +315,10 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         depths=depths,
         result_grp_ordinal=result_grp_ordinal,
         rupture_ordinal=rupture_ordinal,
-    )
+    ).id
+
+    # FIXME(lp): do not save a copy. use the same approach used for
+    # gmf and gmfset
     if complete_logic_tree_ses is not None:
         models.SESRupture.objects.create(
             ses=complete_logic_tree_ses,
@@ -328,6 +334,8 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
             result_grp_ordinal=result_grp_ordinal,
             rupture_ordinal=rupture_ordinal,
         )
+
+    return rupture_id
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -352,8 +360,10 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     """
     inserter = writer.BulkInserter(models.Gmf)
 
-    for imt, gmfs in gmf_dict.iteritems():
+    for imt, gmf_data in gmf_dict.iteritems():
 
+        gmfs = gmf_data['gmvs']
+        rupture_ids = gmf_data['rupture_ids']
         # ``gmfs`` comes in as a numpy.matrix
         # we want it is an array; it handles subscripting
         # in the way that we want
@@ -374,35 +384,11 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                 sa_damping=sa_damping,
                 location=location.wkt2d,
                 gmvs=gmfs[i].tolist(),
+                rupture_ids=rupture_ids,
                 result_grp_ordinal=result_grp_ordinal,
             )
 
     inserter.flush()
-
-
-def _create_gmf_record(gmf_set, imt):
-    """
-    Helper function to create :class:`openquake.engine.db.models.Gmf` records.
-    The record will be saved to the DB and returned.
-
-    :param gmf_set:
-        :class:`openquake.engine.db.models.GmfSet` instance.
-    :param imt:
-        An instance of one of the IMT classes defined in
-        :mod:`openquake.hazardlib.imt`.
-
-    :returns:
-        The newly created :class:`openquake.engine.db.models.Gmf` object.
-    """
-    gmf = models.Gmf(
-        gmf_set=gmf_set, imt=imt.__class__.__name__)
-
-    if isinstance(imt, openquake.hazardlib.imt.SA):
-        gmf.sa_period = imt.period
-        gmf.sa_damping = imt.damping
-
-    gmf.save()
-    return gmf
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
@@ -650,8 +636,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                                  quantile_curves=QuantileCurveWriter))
 
                 utils_tasks.distribute(
-                        cls_post_processing.do_post_process,
-                        ("post_processing_task", tasks),
-                        tf_args=dict(job_id=self.job.id))
+                    cls_post_processing.do_post_process,
+                    ("post_processing_task", tasks),
+                    tf_args=dict(job_id=self.job.id))
 
         logs.LOG.debug('< done with post processing')
