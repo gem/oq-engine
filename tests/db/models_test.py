@@ -161,9 +161,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
-                        if x.input_type == 'lt_source']
+                        if x.input_type == 'source_model_logic_tree']
 
-        inputs = models.inputs4hcalc(hc.id, input_type='lt_source')
+        inputs = models.inputs4hcalc(hc.id, input_type='source_model_logic_tree')
 
         actual_ids = sorted([x.id for x in inputs])
 

@@ -549,7 +549,7 @@ def _insert_input_files(params, job, force_inputs):
         path = os.path.join(params['BASE_PATH'], params[param_key])
         input_obj = ln_input2job(path, file_type)
 
-        if file_type == "lt_source":
+        if file_type == "source_model_logic_tree":
             # collect relative paths to source model files
             # that are referenced by the logic tree
             source_models = logictree.read_logic_trees(
