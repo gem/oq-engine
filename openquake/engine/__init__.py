@@ -57,7 +57,7 @@ from openquake.engine.utils import general as general_utils
 __version__ = (
     0,  # major
     9,  # minor
-    0,  # sprint number
+    2,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
 
 # The path to the OpenQuake root directory
