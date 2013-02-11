@@ -23,7 +23,7 @@ from nose.plugins.attrib import attr
 
 from openquake.engine.db import models
 from openquake.engine.calculators import base
-from openquake.engine.calculators.hazard.event_based import core_next
+from openquake.engine.calculators.hazard.event_based import core
 from openquake.engine.utils import stats
 
 from tests.utils import helpers
@@ -37,7 +37,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        self.calc = core_next.EventBasedHazardCalculator(self.job)
+        self.calc = core.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
 
     def test_initialize_ses_db_records(self):
@@ -213,7 +213,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
                 for args in task_arg_list:
-                    core_next.ses_and_gmfs(*args)
+                    core.ses_and_gmfs(*args)
 
                     # wait for the completion signal
                     conn.drain_events()

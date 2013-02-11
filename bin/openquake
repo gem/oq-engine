@@ -66,7 +66,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
                             os.path.dirname(__file__)), "openquake"))
 
 from openquake.engine.utils import config
-
+ 
 config.abort_if_no_config_available()
 
 try:
@@ -88,6 +88,8 @@ from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.job import validation
 from openquake.engine.utils import version as utils_version
+from openquake.engine.utils.general import get_available_calculators
+from openquake.engine.calculators import risk, hazard
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -96,6 +98,19 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "calculation) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
+
+def get_form_class(calculators, calc_mode):
+    """
+    Assume there is a validation class into job.validation for each
+    calculation mode; the validation class name must be derived from the
+    calculator class name, with Calculator replaced by Form.
+    """
+    try:
+        clsname = calculators[calc_mode].__name__
+    except KeyError:
+        sys.exit('Calculation mode "%s" not supported' % calc_mode)
+    formname = clsname.replace('Calculator', 'Form')
+    return getattr(validation, formname)
 
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
@@ -206,6 +221,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         A list of export types requested by the user. Currently only 'xml'
         is supported.
     """
+    calculators = get_available_calculators(hazard)
     try:
         if log_file is not None:
             try:
@@ -225,11 +241,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
         # Validate the job:
         calc_mode = job.hazard_calculation.calculation_mode
-        form_class = validation.HAZ_VALIDATOR_MAP.get(calc_mode)
-        if form_class is None:
-            print 'Calculation mode "%s" not supported' % calc_mode
-            sys.exit(1)
-
+        form_class = get_form_class(calculators, calc_mode)
+        form = form_class(instance=calculation, files=files, exports=exports)
+         # For now, just print whether or not the job is valid
         form = form_class(instance=calculation, files=files, exports=exports)
         # For now, just print whether or not the job is valid
         # (and any errors if it isn't valid)
@@ -386,6 +400,7 @@ def run_risk(
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
     assert not(hazard_output_id is None and hazard_calculation_id is None)
+    calculators = get_available_calculators(risk)
     try:
         if log_file is not None:
             try:
@@ -411,18 +426,14 @@ def run_risk(
 
         # Validate the job:
         calc_mode = job.risk_calculation.calculation_mode
-
-        form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
-        if form_class is None:
-            print 'Calculation mode "%s" not supported' % calc_mode
-            sys.exit(1)
-
+        form_class = get_form_class(calculators, calc_mode)
         form = form_class(instance=calculation, files=files, exports=exports)
         # For now, just print whether or not the job is valid
         # (and any errors if it isn't valid)
         if not form.is_valid():
             complain_and_exit(
-                'Job configuration is not valid. Errors: %s' % dict(form.errors), 1)
+                'Job configuration is not valid. Errors: %s'
+                % dict(form.errors), 1)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
