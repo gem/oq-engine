@@ -99,6 +99,7 @@ COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard 
 COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
 COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
+COMMENT ON COLUMN hzrdr.gmf IS 'a vector of ids to the hzrdr.ses_rupture table. for each id you can find the corresponding ground motion value in gmvs at the same index';
 
 COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
 COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
