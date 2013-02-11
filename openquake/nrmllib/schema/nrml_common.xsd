@@ -18,7 +18,7 @@
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="IMT" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
