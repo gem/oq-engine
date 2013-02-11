@@ -16,8 +16,8 @@
 from tests.utils import helpers
 from tests.calculators.risk import general_test
 
-from openquake.db import models
-from openquake.calculators.risk.event_based import core as event_based
+from openquake.engine.db import models
+from openquake.engine.calculators.risk.event_based import core as event_based
 
 
 class EventBasedRiskCalculatorTestCase(
@@ -58,7 +58,7 @@ class EventBasedRiskCalculatorTestCase(
     def test_hazard_id(self):
         """
         Test that the hazard output used by the calculator is a
-        `openquake.db.models.GmfCollection` object
+        `openquake.engine.db.models.GmfCollection` object
         """
 
         outputs = self.calculator.hazard_outputs(
@@ -78,7 +78,7 @@ class EventBasedRiskCalculatorTestCase(
         # vulnerability model that must match the one of the hazard
         # output
         patch = helpers.patch(
-            'openquake.calculators.risk.general'
+            'openquake.engine.calculators.risk.general'
             '.BaseRiskCalculator.set_risk_models')
         patch.start()
         self.calculator.imt = 'fake'
@@ -90,8 +90,9 @@ class EventBasedRiskCalculatorTestCase(
         # specific method to write loss curves
 
         patches = [helpers.patch(x) for x in [
-            'openquake.calculators.risk.general.write_loss_curve',
-            'openquake.calculators.risk.general.update_aggregate_losses']]
+            'openquake.engine.calculators.risk.general.write_loss_curve',
+            'openquake.engine.calculators.risk.general.\
+update_aggregate_losses']]
 
         mocked_loss_writer = patches[0].start()
         mocked_agg_loss_writer = patches[1].start()

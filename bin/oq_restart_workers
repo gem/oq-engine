@@ -30,9 +30,9 @@ fi
 
 export MPLCONFIGDIR=/tmp
 export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-amd64/jre
-export DJANGO_SETTINGS_MODULE="openquake.settings"
+export DJANGO_SETTINGS_MODULE="openquake.engine.settings"
 
-cd /usr/openquake
+cd /usr/openquake/engine
 
 if [ -z "$1" ]; then
     concurrency=`cat /proc/cpuinfo | grep processor | wc -l`
@@ -45,6 +45,6 @@ fi
 
 echo -n "Starting $concurrency celery workers for OpenQuake... "
 
-celeryd -c $concurrency --purge > /tmp/celeryd.log 2>&1 3>&1 &
+python $(which celeryd) -c $concurrency --purge > /tmp/celeryd.log 2>&1 3>&1 &
 
 echo "done."

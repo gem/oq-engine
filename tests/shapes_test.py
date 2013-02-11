@@ -24,8 +24,8 @@ import unittest
 
 from numpy import allclose
 
-from openquake import shapes
-from openquake.utils import round_float
+from openquake.engine import shapes
+from openquake.engine.utils import round_float
 
 from tests.utils import helpers
 
@@ -52,8 +52,8 @@ class ShapesTestCase(unittest.TestCase):
 
     def test_round_float(self):
         """
-        This test exercises the :py:function:`openquake.utils.round_float`
-        function.
+        This test exercises the
+        :py:function:`openquake.engine.utils.round_float` function.
 
         Basically, the function should take any float number and round it to a
         fixed number of decimal places (for example, 7 places). The rounding
@@ -79,7 +79,7 @@ class ShapesTestCase(unittest.TestCase):
 
         Since the rounding method can be set in a global context for the
         :py:module:`decimal` module, we want to make sure the
-        :py:function:`openquake.utils.round_float` is unaffected context
+        :py:function:`openquake.engine.utils.round_float` is unaffected context
         changes.
         """
         decimal.getcontext().rounding = decimal.ROUND_FLOOR
@@ -94,10 +94,10 @@ class ShapesTestCase(unittest.TestCase):
     def test_simple_region_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
-        instances of :py:class:`openquake.shapes.Region`.
+        instances of :py:class:`openquake.engine.shapes.Region`.
 
         The region will be created using the
-        :py:method:`openquake.shapes.Region.from_simple` method.
+        :py:method:`openquake.engine.shapes.Region.from_simple` method.
         """
         up_left = (29.00000006, 40.90000003)
         low_right = (25.70000005, 46.00000009)
@@ -121,10 +121,10 @@ class ShapesTestCase(unittest.TestCase):
     def test_complex_region_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
-        instance of :py:class:`openquake.shapes.Region`.
+        instance of :py:class:`openquake.engine.shapes.Region`.
 
         The region will be created using the
-        :py:method:`openquake.shapes.Region.from_coordinates` method.
+        :py:method:`openquake.engine.shapes.Region.from_coordinates` method.
         """
         # triangle
         input_coord_pairs = [
@@ -155,7 +155,7 @@ class ShapesTestCase(unittest.TestCase):
 
 class SiteTestCase(unittest.TestCase):
     """
-    Tests for the :py:class:`openquake.shapes.Site` class.
+    Tests for the :py:class:`openquake.engine.shapes.Site` class.
     """
 
     def test_sites_can_be_keys(self):
@@ -184,7 +184,7 @@ class SiteTestCase(unittest.TestCase):
     def test_site_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
-        instances of :py:class:`openquake.shapes.Site`.
+        instances of :py:class:`openquake.engine.shapes.Site`.
         """
         lon = -121.00000004
         lat = 29.00000006
@@ -252,7 +252,7 @@ class ShapesUtilsTestCase(unittest.TestCase):
     def test_multipoint_ewkt(self):
         '''
         Test typical usage of
-        :py:function:`openquake.shapes.multipoint_ewkt_from_coords`
+        :py:function:`openquake.engine.shapes.multipoint_ewkt_from_coords`
         '''
         expected_ewkt = \
             'SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))'
@@ -266,9 +266,9 @@ class ShapesUtilsTestCase(unittest.TestCase):
     def test_multipoint_ewkt_round_float(self):
         '''
         Test usage of
-        :py:function:`openquake.shapes.multipoint_ewkt_from_coords` to ensure
-        that high-precision coordinate values are rounded down a reasonable
-        level of precision.
+        :py:function:`openquake.engine.shapes.multipoint_ewkt_from_coords`
+        to ensure that high-precision coordinate values are rounded down a
+        reasonable level of precision.
         '''
         expected_ewkt = \
             'SRID=4326;MULTIPOINT((-122.0 38.1130001), (-122.114 38.113))'
@@ -282,7 +282,7 @@ class ShapesUtilsTestCase(unittest.TestCase):
     def test_polygon_ewkt(self):
         '''
         Test typical usage of
-        :py:function:`openquake.shapes.polygon_ewkt_from_coords`
+        :py:function:`openquake.engine.shapes.polygon_ewkt_from_coords`
         '''
         # Note that the first & last coord are the same to form a closed loop.
         expected_ewkt = (
@@ -298,9 +298,9 @@ class ShapesUtilsTestCase(unittest.TestCase):
     def test_polygon_ewkt_round_float(self):
         '''
         Test usage of
-        :py:function:`openquake.shapes.polygon_ewkt_from_coords` to ensure
-        that high-precision coordinate values are rounded down a reasonable
-        level of precision.
+        :py:function:`openquake.engine.shapes.polygon_ewkt_from_coords` to
+        ensure that high-precision coordinate values are rounded down a
+        reasonable level of precision.
         '''
         # Note that the first & last coord are the same to form a closed loop.
         expected_ewkt = (

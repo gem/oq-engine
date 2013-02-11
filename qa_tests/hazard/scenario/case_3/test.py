@@ -17,7 +17,7 @@ import os
 from nose.plugins.attrib import attr
 from numpy.testing import assert_almost_equal
 
-from openquake import export
+from openquake.engine import export
 from qa_tests import _utils as qa_utils
 
 

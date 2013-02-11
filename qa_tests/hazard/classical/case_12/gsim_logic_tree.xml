@@ -8,7 +8,7 @@
                     applyToTectonicRegionType="active shallow crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>nhlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
@@ -20,7 +20,7 @@
                     applyToTectonicRegionType="stable continental">
 
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>nhlib.gsim.boore_atkinson_2008.BooreAtkinson2008</uncertaintyModel>
+                    <uncertaintyModel>openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
