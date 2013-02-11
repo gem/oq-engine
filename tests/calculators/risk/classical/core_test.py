@@ -16,8 +16,8 @@
 from tests.utils import helpers
 from tests.calculators.risk import general_test
 
-from openquake.db import models
-from openquake.calculators.risk.classical import core as classical
+from openquake.engine.db import models
+from openquake.engine.calculators.risk.classical import core as classical
 
 
 class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
@@ -36,7 +36,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.save()
 
         patch = helpers.patch(
-            'openquake.calculators.risk.general.write_loss_curve')
+            'openquake.engine.calculators.risk.general.write_loss_curve')
         mocked_writer = patch.start()
 
         classical.classical(*self.calculator.task_arg_gen(
@@ -82,7 +82,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
     def test_hazard_id(self):
         """
         Test that the hazard output used by the calculator is a
-        `openquake.db.models.HazardCurve` object
+        `openquake.engine.db.models.HazardCurve` object
         """
 
         self.calculator.imt = 'PGA'

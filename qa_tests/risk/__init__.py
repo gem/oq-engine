@@ -21,8 +21,8 @@ import shutil
 from qa_tests import _utils as qa_utils
 from tests.utils import helpers
 
-from openquake import export
-from openquake.db import models
+from openquake.engine import export
+from openquake.engine.db import models
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -33,10 +33,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     1) a cfg property holding the path to job.ini to execute
     2) a method hazard_id() that creates a proper hazard input
     3) a method actual_data that gets a list of
-       individual risk output (e.g. a `openquake.db.models.LossCurveData`)
+       individual risk output (e.g. a `openquake.engine.db.models.LossCurveData`)
     4) a method expected_data to assert against the actual_data
     5) a method actual_outputs that gets a list of the created risk
-       `openquake.db.models.Output`
+       `openquake.engine.db.models.Output`
     6) a method expected_outputs to assert against the actual_outputs
     """
 
@@ -50,7 +50,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :param int hazard_id:
             ID of the hazard output used by the risk calculation
         :returns:
-            The completed :class:`~openquake.db.models.OqJob`.
+            The completed :class:`~openquake.engine.db.models.OqJob`.
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """

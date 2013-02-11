@@ -20,11 +20,11 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from openquake import engine2
-from openquake.calculators import base
-from openquake.calculators.hazard.disagg import core as disagg_core
-from openquake.calculators.hazard.classical import core as cls_core
-from openquake.db import models
+from openquake.engine import engine2
+from openquake.engine.calculators import base
+from openquake.engine.calculators.hazard.disagg import core as disagg_core
+from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.db import models
 
 from tests.utils import helpers
 
@@ -50,7 +50,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.calc = disagg_core.DisaggHazardCalculator(self.job)
 
         # Mock `disagg_task_arg_gen`
-        disagg_path = 'openquake.calculators.hazard.disagg'
+        disagg_path = 'openquake.engine.calculators.hazard.disagg'
         self.disagg_tag_patch = helpers.patch(
             '%s.core.DisaggHazardCalculator.disagg_task_arg_gen'
             % disagg_path)
@@ -60,12 +60,12 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         self.disagg_tag_mock.return_value = disagg_tag
 
         # Mock `haz_general.queue_next`
-        base_path = 'openquake.calculators.base'
+        base_path = 'openquake.engine.calculators.base'
         self.queue_next_patch = helpers.patch('%s.queue_next' % base_path)
         self.queue_next_mock = self.queue_next_patch.start()
 
         # Mock `finalize_hazard_curves`
-        general_path = 'openquake.calculators.hazard.general'
+        general_path = 'openquake.engine.calculators.hazard.general'
         self.finalize_curves_patch = helpers.patch(
             '%s.BaseHazardCalculatorNext.finalize_hazard_curves'
             % general_path)
@@ -219,7 +219,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         return job, calc
 
     def test_pre_execute(self):
-        base_path = ('openquake.calculators.hazard.disagg.core'
+        base_path = ('openquake.engine.calculators.hazard.disagg.core'
                      '.DisaggHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
@@ -275,9 +275,10 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
 
-        base_path = 'openquake.calculators.hazard.disagg.core'
+        base_path = 'openquake.engine.calculators.hazard.disagg.core'
 
-        with mock.patch('nhlib.calc.disagg.disaggregation') as disagg_mock:
+        with mock.patch(
+            'openquake.hazardlib.calc.disagg.disaggregation') as disagg_mock:
             disagg_mock.return_value = (None, None)
             with mock.patch(
                 '%s.%s' % (base_path, '_save_disagg_matrix')) as save_mock:

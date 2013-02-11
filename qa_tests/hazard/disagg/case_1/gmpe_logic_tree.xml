@@ -8,7 +8,7 @@
                     applyToTectonicRegionType="Active Shallow Crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyModel>openquake.hazardlib.gsim.chiou_youngs_2008.ChiouYoungs2008</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 

@@ -18,8 +18,8 @@ import json
 import unittest
 import itertools
 
-from openquake.db import models
-from openquake.job import validation
+from openquake.engine.db import models
+from openquake.engine.job import validation
 
 from tests.utils import helpers
 
@@ -977,7 +977,8 @@ class ScenarioCalculationFormTestCase(unittest.TestCase):
 
     def test_invalid_scenario_calc(self):
         expected_errors = {
-            'gsim': ["The gsim u'BooreAtkinson208' is not in in nhlib.gsim"],
+            'gsim': ["The gsim u'BooreAtkinson208' is not in in \
+openquake.hazardlib.gsim"],
             'number_of_ground_motion_fields': [
                 'The number_of_ground_motion_fields must be a positive '
                 'integer, got -10']

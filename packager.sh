@@ -2,7 +2,7 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 # set -x
 set -e
-GEM_DEB_PACKAGE="python-oq"
+GEM_DEB_PACKAGE="python-oq-engine"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -66,13 +66,13 @@ _pkgtest_innervm_run () {
     #
     #  dependencies repos
 
-    # python-nrml
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nrml $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nrml ./\""
+    # python-oq-nrmllib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-nrmllib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-nrmllib ./\""
 
-    # python-nhlib
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-nhlib $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-nhlib ./\""
+    # python-oq-hazardlib
+    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-hazardlib $haddr:repo/
+    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-hazardlib ./\""
 
     # python-oq-risklib
     scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-risklib $haddr:repo/
@@ -92,18 +92,18 @@ _pkgtest_innervm_run () {
 
     ssh $haddr "sudo service postgresql restart"
     ssh $haddr "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
-    ssh $haddr "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/db/schema"
+    ssh $haddr "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
     # run celeryd daemon
-    ssh $haddr "cd /usr/openquake/ ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $haddr "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     # copy demos file to $HOME
-    ssh $haddr "cp -a /usr/share/doc/python-oq/examples/demos ."
+    ssh $haddr "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
     # run all demos found
     ssh $haddr "cd demos
     for ini in \$(find . -name job.ini); do
-        DJANGO_SETTINGS_MODULE=openquake.settings openquake --run-hazard  \$ini --exports xml
+        DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
 
     trap ERR
@@ -299,9 +299,9 @@ stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')
 
 if [ 1 -eq 1 ]; then
     # version info from openquake/__init__.py
-    ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+    ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
     ini_suf="" # currently not included into the version array structure
     # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 else
@@ -367,13 +367,13 @@ if [ 1 -eq 1 ]; then
     sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
     # mods pre-packaging
-    mv LICENSE         openquake
-    mv README.txt      openquake/README
-    mv celeryconfig.py openquake
-    mv openquake.cfg   openquake
+    mv LICENSE         openquake/engine
+    mv README.txt      openquake/engine/README
+    mv celeryconfig.py openquake/engine
+    mv openquake.cfg   openquake/engine
 
     mv bin/openquake   bin/oqscript.py
-    mv bin             openquake/bin
+    mv bin             openquake/engine/bin
 
     rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 fi

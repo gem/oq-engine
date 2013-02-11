@@ -2,4 +2,4 @@
 Job Profile Validation
 ######################
 
-.. automodule:: openquake.job.validation
+.. automodule:: openquake.engine.job.validation
