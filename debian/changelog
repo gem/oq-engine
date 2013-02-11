@@ -1,9 +1,3 @@
-python-oq-engine (0.10.0-1) precise; urgency=low
-
-  * Rename of the package and namespace refactoring
-
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sat, 09 Feb 2013 16:46:21 +0100
-
 python-oq-engine (0.8.3-3) precise; urgency=low
 
   * Add missing monitor.py source
