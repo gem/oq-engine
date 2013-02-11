@@ -23,7 +23,7 @@
             </rupture>
         </stochasticEventSet>
         <stochasticEventSet id="2" investigationTime="40.0">
-            <rupture magnitude="5.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Stable Shallow Crust">
+            <rupture id="3" magnitude="5.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Stable Shallow Crust">
                 <planarSurface>
                     <topLeft lon="1.1" lat="1.1" depth="1.1" />
                     <topRight lon="1.2" lat="1.2" depth="1.2" />
