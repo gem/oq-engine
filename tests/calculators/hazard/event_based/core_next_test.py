@@ -51,7 +51,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             numpy.matrix(numpy.ones((2, 2))),
             numpy.matrix(numpy.zeros((1, 2))),
             axis=0)
-        gmf_dict = {imt.PGA: dict(rupture_ids=[1], gmvs=gmvs)}
+        gmf_dict = {imt.PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
 
         fake_bulk_inserter = mock.Mock()
         p = helpers.patch('openquake.engine.writer.BulkInserter')
@@ -60,6 +60,26 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         core_next._save_gmfs(
             gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
         self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
+        p.stop()
+
+    def test_save_only_nonzero_gmvs(self):
+        gmf_set = mock.Mock()
+
+        gmvs = numpy.matrix([[0.0, 0, 1]])
+        gmf_dict = {imt.PGA: dict(rupture_ids=[1, 2, 3], gmvs=gmvs)}
+
+        fake_bulk_inserter = mock.Mock()
+        p = helpers.patch('openquake.engine.writer.BulkInserter')
+        m = p.start()
+        m.return_value = fake_bulk_inserter
+        core_next._save_gmfs(
+            gmf_set, gmf_dict, [mock.Mock()], 1)
+        self.assertEqual(
+            [1],
+            fake_bulk_inserter.add_entry.call_args_list[0][1]['gmvs'])
+        self.assertEqual(
+            [3],
+            fake_bulk_inserter.add_entry.call_args_list[0][1]['rupture_ids'])
         p.stop()
 
     def test_initialize_ses_db_records(self):
