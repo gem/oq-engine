@@ -364,11 +364,11 @@ class BaseRiskCalculator(base.CalculatorNext):
             if self.imt is None:
                 self.imt = record['IMT']
             vfs[record['ID']] = openquake.risklib.scientific.\
-VulnerabilityFunction(
-                record['IML'],
-                record['lossRatio'],
-                record['coefficientsVariation'],
-                record['probabilisticDistribution'])
+                VulnerabilityFunction(
+                    record['IML'],
+                    record['lossRatio'],
+                    record['coefficientsVariation'],
+                    record['probabilisticDistribution'])
         return vfs
 
     def create_outputs(self, hazard_output):
