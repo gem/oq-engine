@@ -36,6 +36,7 @@ import openquake.hazardlib
 import numpy
 
 from django.db import connection
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -1070,8 +1071,9 @@ class RiskCalculation(djm.Model):
         hcalc = (self.hazard_calculation or
                  self.hazard_output.oq_job.hazard_calculation)
         if hcalc is None:
-            raise RuntimeError('The job #%d has not hazard calculation '
-                               'associated' % self.hazard_output.oq_job.id)
+            raise ObjectDoesNotExist(
+                'The job #%d has no hazard calculation '
+                'associated' % self.hazard_output.oq_job.id)
         return hcalc
 
     def has_output_containers(self):

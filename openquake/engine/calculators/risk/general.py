@@ -127,7 +127,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         if not self.imt in imts:
             raise RuntimeError(
-                "There is no hazard output in the intensity measure %s; "
+                "There is no hazard output for the intensity measure %s; "
                 "the available IMTs are %s" % (self.imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
