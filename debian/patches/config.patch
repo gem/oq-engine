@@ -1,5 +1,5 @@
---- a/openquake/openquake.cfg
-+++ b/openquake/openquake.cfg
+--- a/openquake/engine/openquake.cfg
++++ b/openquake/engine/openquake.cfg
 @@ -24,7 +24,7 @@
  # so set 'timeout=0' in /etc/redis/redis.conf -- please see
  #       https://bugs.launchpad.net/openquake/+bug/907760
