@@ -108,14 +108,6 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             rc.std(0, ddof=1),
             [117.7802813522, 485.2023172324, 575.8724057319])
 
-        # aggregations for total; this comment will be removed once
-        # we decided where to put the aggregation by total
-        #means, stddevs = calculator.damage_distribution_total(distr)
-        #assert_close(
-        #    means, [2036.6565789692, 2168.332122474, 1795.0112985561])
-        #assert_close(
-        #    stddevs, [1075.3192939160, 1076.4342601834, 687.0910669304])
-
     def test_discrete_ff(self):
         fragility_model_discrete = input.FragilityModel(
             "discrete", [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"])
@@ -171,9 +163,3 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         assert_close(
             rc.std(0, ddof=1),
             [300.6112307894, 144.6485296163, 417.307378365])
-
-        # aggregations for total; this comment will be removed once
-        # we decided where to put the aggregation by total
-        # means, stddevs = calculator.damage_distribution_total(distr)
-        #assert_close(means, [1445.1370815035, 2661.5643782540, 1893.298540242])
-        #assert_close(stddevs, [824.7812010370, 374.0010314384, 661.8114364615])
