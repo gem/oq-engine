@@ -163,14 +163,14 @@ def make_dmg_dist_export(damagecls, writercls, filename):
         rc_id = job.risk_calculation.id
         file_path = os.path.join(target_dir, filename % job.id)
         dmg_states = list(models.DmgState.objects.filter(
-            risk_calculation_id=rc_id).order_by('lsi'))
+            risk_calculation__id=rc_id).order_by('lsi'))
         if writercls is writers.CollapseMapXMLWriter:  # special case
             writer = writercls(file_path)
             data = damagecls.objects.filter(dmg_state=dmg_states[-1])
         else:
             writer = writercls(file_path, [ds.dmg_state for ds in dmg_states])
             data = damagecls.objects.filter(
-                dmg_state__risk_calculation_id=rc_id)
+                dmg_state__risk_calculation__id=rc_id)
         writer.serialize(data.order_by('dmg_state__lsi'))
         return [file_path]
 

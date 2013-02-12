@@ -60,6 +60,7 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
     calculator = api.ScenarioDamage(fragility_model, fragility_functions)
     for hazard_id in hazard:
         hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
+
         outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
         with logs.tracing('save statistics per site'), \
                 db.transaction.commit_on_success(using='reslt_writer'):
@@ -83,7 +84,7 @@ def save_dist_per_asset(fractions, rc_id, asset):
     :param rc_id: the risk_calculation_id
     :param asset: an ExposureData instance
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -103,7 +104,7 @@ def save_dist_per_taxonomy(fractions, rc_id, taxonomy):
     :param int rc_id: the risk_calculation_id
     :param str: the taxonomy string
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -121,7 +122,7 @@ def save_dist_total(fractions, rc_id):
     :param fractions: numpy array with the damage fractions
     :param int rc_id: the risk_calculation_id
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation_id=rc_id)
+    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
     mean, std = scientific.mean_std(fractions)
     for dmg_state in dmg_states:
         lsi = dmg_state.lsi
@@ -148,8 +149,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # updated in task_completed_hook when the fractions per taxonomy
         # becomes available, as computed by the workers
         self.ddpt = {}
-        self.ddpt_output = None  # will be set in .create_outputs
-        self.ddt_output = None  # will be set in .create_outputs
+        self.ddpt_output = None  # will be set in #create_outputs
+        self.ddt_output = None  # will be set in #create_outputs
+        self.fragility_model = None  # will be set in #set_risk_models
+        self.fragility_functions = None  # will be set in #set_risk_models
+        self.damage_states = None  # will be set in #set_risk_models
+
+    def hazard_outputs(self, hazard_calculation):
+        raise RuntimeError(
+            "This calculator can not be run against "
+            "a whole hazard calculation")
 
     def hazard_output(self, output):
         if output.output_type != 'gmf_scenario':
@@ -200,7 +209,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         return [self.imt]
 
     # must be overridden, otherwise the parent will create loss curves
-    def create_outputs(self, hazard_ouput):
+    def create_outputs(self, _hazard_ouput):
         """
         Create the outputs of a ScenarioDamage calculator
         dmg_dist_per_asset, dmg_dist_per_taxonomy, dmg_dist_total, collapse_map
@@ -244,10 +253,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         path = self.rc.inputs.get(input_type='fragility').path  # will be used
         iterparse = iter(parsers.FragilityModelParser(path))
-        format, iml, limit_states = iterparse.next()
+        fmt, iml, limit_states = iterparse.next()
         self.imt = iml['IMT']
         damage_states = ['no_damage'] + limit_states
-        fm = FragilityModel(format, iml['imls'], limit_states)
+        fm = FragilityModel(fmt, iml['imls'], limit_states)
         ffs = {}
         for taxonomy, values, no_damage_limit in iterparse:
             ffs[taxonomy] = FragilityFunctionSeq(fm, values, no_damage_limit)
