@@ -39,7 +39,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                 conditional_loss_poes, insured_losses,
                 imt, time_span, tses,
                 loss_curve_resolution, asset_correlation,
-                hazard_montecarlo_p):
+                hazard_montecarlo_p,
+                dont_save_absolute_losses):
     """
     Celery task for the event based risk calculator.
 
@@ -74,6 +75,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
     number of points which defines the loss curves
     :param float asset_correlation: a number ranging from 0 to 1
     representing the correlation between the generated loss ratios
+    :param bool dont_save_absolute_losses: if True only loss ratios will
+    be stored
     """
 
     asset_outputs = OrderedDict()
@@ -118,7 +121,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                 for i, asset_output in enumerate(
                         asset_outputs[hazard_output_id]):
                     general.write_loss_curve(
-                        loss_curve_id, assets[i], asset_output)
+                        loss_curve_id, assets[i], asset_output,
+                        dont_save_absolute_losses)
 
                     if asset_output.conditional_losses:
                         general.write_loss_map(
@@ -126,7 +130,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
 
                     if asset_output.insured_losses:
                         general.write_loss_curve(
-                            insured_curve_id, assets[i], asset_output)
+                            insured_curve_id, assets[i], asset_output,
+                            dont_save_absolute_losses)
                 losses = sum(asset_output.losses
                              for asset_output
                              in asset_outputs[hazard_output_id])
@@ -263,7 +268,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 self.rc.insured_losses,
                 self.imt, time_span, tses,
                 self.rc.loss_curve_resolution, correlation,
-                self.hc.number_of_logic_tree_samples == 0]
+                self.hc.number_of_logic_tree_samples == 0,
+                self.rc.dont_save_absolute_losses]
 
     def create_outputs(self, hazard_output):
         """

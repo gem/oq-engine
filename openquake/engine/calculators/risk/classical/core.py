@@ -35,7 +35,8 @@ def classical(job_id, assets, hazard_getter_name, hazard,
               vulnerability_function,
               output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
-              hazard_montecarlo_p):
+              hazard_montecarlo_p,
+              dont_save_absolute_losses):
     """
     Celery task for the classical risk calculator.
 
@@ -65,6 +66,8 @@ def classical(job_id, assets, hazard_getter_name, hazard,
     :param bool hazard_montecarlo_p:
      (meaningful only if curve statistics are computed). Wheter or not
      the hazard calculation is montecarlo based
+    :param bool dont_save_absolute_losses: if True only loss ratios will
+    be stored
     """
 
     asset_outputs = OrderedDict()
@@ -97,7 +100,8 @@ def classical(job_id, assets, hazard_getter_name, hazard,
                 for i, asset_output in enumerate(
                         asset_outputs[hazard_output_id]):
                     general.write_loss_curve(
-                        loss_curve_id, assets[i], asset_output)
+                        loss_curve_id, assets[i],
+                        asset_output, dont_save_absolute_losses)
 
                     if asset_output.conditional_losses:
                         general.write_loss_map(
@@ -185,4 +189,5 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
         return [self.rc.lrem_steps_per_interval,
                 self.rc.conditional_loss_poes,
-                self.hc.number_of_logic_tree_samples == 0]
+                self.hc.number_of_logic_tree_samples == 0,
+                self.rc.dont_save_absolute_losses]

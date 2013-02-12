@@ -444,7 +444,8 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(loss_curve_id, asset, asset_output):
+def write_loss_curve(
+        loss_curve_id, asset, asset_output, dont_save_absolute_losses=True):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -458,14 +459,11 @@ def write_loss_curve(loss_curve_id, asset, asset_output):
     :class:`openquake.risklib.models.output.ClassicalOutput` or of
     :class:`openquake.risklib.models.output.ProbabilisticEventBasedOutput`
     returned by risklib
+    :param bool dont_save_absolute: if True only loss ratio values
+    will be saved
     """
 
-    if write_loss_curve.dont_save_absolute_losses is None:
-        job = models.LossCurve.objects.get(pk=loss_curve_id).output.oq_job
-        write_loss_curve.dont_save_absolute_losses = (
-            job.risk_calculation.dont_save_absolute_losses)
-
-    if write_loss_curve.dont_save_absolute_losses:
+    if dont_save_absolute_losses:
         absolute_losses = {}
     else:
         absolute_losses = dict(
@@ -478,7 +476,6 @@ def write_loss_curve(loss_curve_id, asset, asset_output):
         poes=asset_output.loss_ratio_curve.ordinates,
         loss_ratios=asset_output.loss_ratio_curve.abscissae,
         **absolute_losses)
-write_loss_curve.dont_save_absolute_losses = None
 
 
 # FIXME
@@ -486,7 +483,7 @@ write_loss_curve.dont_save_absolute_losses = None
 # is a different concept with respect to a loss map
 # for a different calculator.
 
-def write_loss_map_data(id, asset_ref, value, std_dev, location):
+def write_loss_map_data(loss_map_id, asset_ref, value, std_dev, location):
     """
     Create :class:`openquake.engine.db.models.LossMapData`
 
@@ -496,9 +493,9 @@ def write_loss_map_data(id, asset_ref, value, std_dev, location):
     :param location: asset location value.
     """
 
-    models.LossMapData.objects.create(loss_map_id=id,
-            asset_ref=asset_ref, value=value,
-            std_dev=std_dev, location=location)
+    models.LossMapData.objects.create(loss_map_id=loss_map_id,
+                                      asset_ref=asset_ref, value=value,
+                                      std_dev=std_dev, location=location)
 
 
 def write_loss_map(loss_map_ids, asset, asset_output):
@@ -521,9 +518,9 @@ def write_loss_map(loss_map_ids, asset, asset_output):
 
     for poe, loss in asset_output.conditional_losses.items():
         write_loss_map_data(loss_map_ids[poe],
-               asset_ref=asset.asset_ref,
-               value=loss, std_dev=None,
-               location=asset.site)
+                            asset_ref=asset.asset_ref,
+                            value=loss, std_dev=None,
+                            location=asset.site)
 
 
 @db.transaction.commit_on_success
