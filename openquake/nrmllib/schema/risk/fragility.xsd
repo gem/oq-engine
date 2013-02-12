@@ -16,7 +16,7 @@
     <xs:complexType name="FragilityModel">
                 <xs:sequence>
                     <xs:element name="description" type="xs:string"/>
-                    <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1" />
+                    <xs:element name="IML" type="IMLType" minOccurs="1" maxOccurs="1" />
                     <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
                 </xs:sequence>
