@@ -48,7 +48,8 @@ class BaseQATestCase(unittest.TestCase):
         """
         # Set OQ_NO_DISTRIBUTE to true, so we can benefit from including these
         # tests in our code coverage
-        with patch.dict('os.environ', {openquake.engine.NO_DISTRIBUTE_VAR: '1'}):
+        with patch.dict('os.environ',
+                        {openquake.engine.NO_DISTRIBUTE_VAR: '1'}):
             completed_job = helpers.run_hazard_job(cfg, exports=exports)
 
             self.assertEqual('complete', completed_job.status)
@@ -69,8 +70,8 @@ class BaseQATestCase(unittest.TestCase):
         self.assertEqual(contents_a, contents_b)
 
 
-def validates_against_xml_schema(xml_instance_path,
-                                 schema_path=openquake.nrmllib.nrml_schema_file()):
+def validates_against_xml_schema(
+        xml_instance_path, schema_path=openquake.nrmllib.nrml_schema_file()):
     """
     Check whether an XML file validates against an XML schema.
     """
@@ -81,7 +82,7 @@ def validates_against_xml_schema(xml_instance_path,
 
 def get_gmfs_per_site(output, imt):
     for gmf in models.get_gmfs_scenario(output, imt):
-        yield [gmfnode.iml for gmfnode in gmf]
+        yield [gmfnode.gmv for gmfnode in gmf]
 
 
 def get_medians(output, imt):
