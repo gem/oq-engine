@@ -1,3 +1,9 @@
+python-oq-risklib (0.2.0-1) precise; urgency=low
+
+  * Rename of the package and namespace refactoring
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sat, 09 Feb 2013 10:18:32 +0100
+
 python-oq-risklib (0.1.0-1) precise; urgency=low
 
   * Upstream release
