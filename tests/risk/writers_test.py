@@ -23,7 +23,7 @@ from tests import _utils
 
 
 LOSS_NODE = collections.namedtuple(
-    "LossNode", "location asset_ref value")
+    "LossNode", "location asset_ref value std_dev")
 
 BCR_NODE = collections.namedtuple(
     "BCRNode",
@@ -330,11 +330,14 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 
         data = [
             LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23),
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
+                std_dev=None),
             LOSS_NODE(
-                asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23),
+                asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23,
+                std_dev=None),
             LOSS_NODE(
-                asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23),
+                asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23,
+                std_dev=None),
         ]
 
         writer.serialize(data)
@@ -351,7 +354,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
       </gml:Point>
-      <loss assetRef="asset_1" value="15.23"/>
+      <loss assetRef="asset_1" mean="15.23" stdDev="2"/>
     </node>
   </lossMap>
 </nrml>
@@ -363,7 +366,8 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
             quantile_value=0.50, unit="USD", loss_category="economic")
 
         data = [LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23)]
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
+                std_dev=2)]
 
         writer.serialize(data)
 
@@ -391,7 +395,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
             gsim_tree_path="b1|b2", unit="USD", loss_category="economic")
 
         data = [LOSS_NODE(asset_ref="asset_1",
-                          location=Point(1.0, 1.5), value=15.23)]
+                          location=Point(1.0, 1.5), value=15.23, std_dev=None)]
 
         writer.serialize(data)
 
