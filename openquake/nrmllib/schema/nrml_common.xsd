@@ -15,10 +15,15 @@
         </xs:sequence>
     </xs:complexType>
 
+<!-- TODO <xs:attribute name="IMT" type="xs:string" use="required"/>
+     should be replaced with <xs:attribute name="IMT" type="IMTType" use="required"/>
+     once we define a IMTType general enough to manage SA types with a parameter
+-->
+
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="IMT" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
