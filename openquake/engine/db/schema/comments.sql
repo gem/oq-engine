@@ -194,7 +194,7 @@ COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance
 COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_value IS 'The value of the asset';
 COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 

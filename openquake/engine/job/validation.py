@@ -432,7 +432,6 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'dont_save_absolute_losses'
         )
 
 
@@ -480,7 +479,6 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'asset_correlation',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'dont_save_absolute_losses'
         )
 
 
@@ -787,10 +785,6 @@ def quantile_hazard_curves_is_valid(mdl):
         if not all([0.0 <= x <= 1.0 for x in qhc]):
             return False, ['Quantile hazard curve values must in the range '
                            '[0, 1]']
-    return True, []
-
-
-def dont_save_absolute_losses_is_valid(_mdl):
     return True, []
 
 

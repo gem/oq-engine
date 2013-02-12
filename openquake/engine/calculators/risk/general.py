@@ -444,8 +444,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(
-        loss_curve_id, asset, asset_output, dont_save_absolute_losses=True):
+def write_loss_curve(loss_curve_id, asset, asset_output):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -463,19 +462,13 @@ def write_loss_curve(
     will be saved
     """
 
-    if dont_save_absolute_losses:
-        absolute_losses = {}
-    else:
-        absolute_losses = dict(
-            losses=asset_output.loss_curve.abscissae)
-
     return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset.asset_ref,
         location=asset.site,
         poes=asset_output.loss_ratio_curve.ordinates,
         loss_ratios=asset_output.loss_ratio_curve.abscissae,
-        **absolute_losses)
+        asset_value=asset.value)
 
 
 # FIXME
@@ -601,7 +594,7 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             asset_ref=asset.asset_ref,
             poes=q_curve.tolist(),
             loss_ratios=loss_ratios,
-            losses=loss_ratios * asset.value,
+            asset_value=asset.value,
             location=asset.site.wkt)
 
     # then means
@@ -614,5 +607,5 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             asset_ref=asset.asset_ref,
             poes=mean_curve.tolist(),
             loss_ratios=loss_ratios,
-            losses=loss_ratios * asset.value,
+            asset_value=asset.value,
             location=asset.site.wkt)

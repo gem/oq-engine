@@ -1009,12 +1009,6 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
-    # Meaningful only for event_based and classical (that produce
-    # loss curves)
-    dont_save_absolute_losses = fields.OqNullBooleanField(
-        help_text='if true calculation does not store absolute losses',
-        null=True, blank=True)
-
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
@@ -2313,13 +2307,17 @@ class LossCurveData(djm.Model):
 
     loss_curve = djm.ForeignKey("LossCurve")
     asset_ref = djm.TextField()
-    losses = fields.FloatArrayField()
+    asset_value = djm.FloatField()
     loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
+
+    @property
+    def losses(self):
+        return numpy.array(self.loss_ratios) * self.asset_value
 
 
 class AggregateLossCurveData(djm.Model):
