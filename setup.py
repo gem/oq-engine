@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.9.0"
+version = "0.9.2"
 url = "http://openquake.org/"
 
 README = """
@@ -11,7 +11,7 @@ Please note: the /usr/bin/openquake script requires a celeryconfig.py
 file in the PYTHONPATH.  Please make sure this is the case and that your
 celeryconfig.py file works with your python-celery setup.
 
-Feel free to copy /usr/openquake/celeryconfig.py and revise it as needed.
+Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
 """
 
 PY_MODULES = ['openquake.engine.bin.cache_gc', 'openquake.engine.bin.oqscript']
@@ -44,11 +44,11 @@ setup(
     py_modules=PY_MODULES,
 
     include_package_data=True,
-    package_data={"openquake": [
+    package_data={"openquake.engine": [
             "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
-    scripts=["openquake/bin/oq_create_db", "openquake/bin/oq_restart_workers"],
+    scripts=["openquake/engine/bin/oq_create_db", "openquake/engine/bin/oq_restart_workers"],
 
     namespace_packages=['openquake'],
 
