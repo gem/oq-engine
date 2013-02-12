@@ -33,7 +33,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     1) a cfg property holding the path to job.ini to execute
     2) a method hazard_id() that creates a proper hazard input
     3) a method actual_data that gets a list of
-       individual risk output (e.g. a `openquake.engine.db.models.LossCurveData`)
+       individual risk output (e.g. a
+       :class:`openquake.engine.db.models.LossCurveData`)
     4) a method expected_data to assert against the actual_data
     5) a method actual_outputs that gets a list of the created risk
        `openquake.engine.db.models.Output`
@@ -84,3 +85,17 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                     StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+    def actual_data(self, _job):
+        """
+        Derived QA tests can implement this in order to also check
+        data stored on the database
+        """
+        return []
+
+    def expected_data(self):
+        """
+        Derived QA tests can implement this in order to also check
+        data stored on the database
+        """
+        return []

@@ -14,17 +14,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
-from qa_tests import risk
-from tests.utils import helpers
-from openquake.engine.db import models
+from qa_tests.risk.scenario_damage.case_1 import test
 
 
-class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
+class ScenarioDamageRiskCase2TestCase(test.ScenarioDamageRiskCase1TestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -37,9 +33,9 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         <gml:pos>15.48 38.09</gml:pos>
       </gml:Point>
       <asset assetRef="a1">
-        <damage ds="no_damage" mean="875.81199" stddev="757.540852525"/>
-        <damage ds="LS1" mean="1448.2960791" stddev="256.15318195"/>
-        <damage ds="LS2" mean="675.8919309" stddev="556.765558354"/>
+        <damage ds="no_damage" mean="1562.60873676" stddev="968.935196007"/>
+        <damage ds="LS1" mean="1108.0179559" stddev="652.736659161"/>
+        <damage ds="LS2" mean="329.37330734" stddev="347.391647796"/>
       </asset>
     </DDNode>
     <DDNode>
@@ -47,9 +43,9 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         <gml:pos>15.56 38.17</gml:pos>
       </gml:Point>
       <asset assetRef="a2">
-        <damage ds="no_damage" mean="344.90869" stddev="300.611885456"/>
-        <damage ds="LS1" mean="747.62374" stddev="144.648244809"/>
-        <damage ds="LS2" mean="907.46757" stddev="417.307715071"/>
+        <damage ds="no_damage" mean="56.7203646693" stddev="117.780724159"/>
+        <damage ds="LS1" mean="673.104377189" stddev="485.202354464"/>
+        <damage ds="LS2" mean="1270.17525814" stddev="575.872927586"/>
       </asset>
     </DDNode>
     <DDNode>
@@ -57,9 +53,9 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         <gml:pos>15.48 38.25</gml:pos>
       </gml:Point>
       <asset assetRef="a3">
-        <damage ds="no_damage" mean="224.41751" stddev="220.650927184"/>
-        <damage ds="LS1" mean="465.6442715" stddev="136.927805797"/>
-        <damage ds="LS2" mean="309.9382185" stddev="246.84411292"/>
+        <damage ds="no_damage" mean="417.329450348" stddev="304.476603429"/>
+        <damage ds="LS1" mean="387.208726145" stddev="181.141228526"/>
+        <damage ds="LS2" mean="195.461823506" stddev="253.91290672"/>
       </asset>
     </DDNode>
   </dmgDistPerAsset>
@@ -73,15 +69,15 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     <damageStates>no_damage LS1 LS2</damageStates>
     <DDNode>
       <taxonomy>RM</taxonomy>
-      <damage ds="no_damage" mean="1100.2295" stddev="880.276624388"/>
-      <damage ds="LS1" mean="1913.9403506" stddev="296.218619036"/>
-      <damage ds="LS2" mean="985.8301494" stddev="616.562370911"/>
+      <damage ds="no_damage" mean="1979.93818711" stddev="1103.59950218"/>
+      <damage ds="LS1" mean="1495.22668204" stddev="745.325447387"/>
+      <damage ds="LS2" mean="524.835130846" stddev="401.918282572"/>
     </DDNode>
     <DDNode>
       <taxonomy>RC</taxonomy>
-      <damage ds="no_damage" mean="344.90869" stddev="300.611885456"/>
-      <damage ds="LS1" mean="747.62374" stddev="144.648244809"/>
-      <damage ds="LS2" mean="907.46757" stddev="417.307715071"/>
+      <damage ds="no_damage" mean="56.7203646693" stddev="117.780724159"/>
+      <damage ds="LS1" mean="673.104377189" stddev="485.202354464"/>
+      <damage ds="LS2" mean="1270.17525814" stddev="575.872927586"/>
     </DDNode>
   </dmgDistPerTaxonomy>
 </nrml>
@@ -92,9 +88,9 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <totalDmgDist>
     <damageStates>no_damage LS1 LS2</damageStates>
-    <damage ds="no_damage" mean="1445.13819" stddev="824.78005267"/>
-    <damage ds="LS1" mean="2661.5640906" stddev="373.99997281"/>
-    <damage ds="LS2" mean="1893.2977194" stddev="661.810775842"/>
+    <damage ds="no_damage" mean="2036.65855178" stddev="1075.31798196"/>
+    <damage ds="LS1" mean="2168.33105923" stddev="1076.43488958"/>
+    <damage ds="LS2" mean="1795.01038899" stddev="687.09098615"/>
   </totalDmgDist>
 </nrml>
 '''
@@ -107,19 +103,19 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
       <gml:Point>
         <gml:pos>15.48 38.09</gml:pos>
       </gml:Point>
-      <cf assetRef="a1" mean="675.8919309" stdDev="556.765558354"/>
+      <cf assetRef="a1" mean="329.37330734" stdDev="347.391647796"/>
     </CMNode>
     <CMNode>
       <gml:Point>
         <gml:pos>15.56 38.17</gml:pos>
       </gml:Point>
-      <cf assetRef="a2" mean="907.46757" stdDev="417.307715071"/>
+      <cf assetRef="a2" mean="1270.17525814" stdDev="575.872927586"/>
     </CMNode>
     <CMNode>
       <gml:Point>
         <gml:pos>15.48 38.25</gml:pos>
       </gml:Point>
-      <cf assetRef="a3" mean="309.9382185" stdDev="246.84411292"/>
+      <cf assetRef="a3" mean="195.461823506" stdDev="253.91290672"/>
     </CMNode>
   </collapseMap>
 </nrml>
@@ -128,37 +124,6 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test(self):
         self._run_test()
-
-    def hazard_id(self):
-        job = helpers.get_hazard_job(
-            helpers.demo_file("scenario_hazard/job.ini"))
-        hc = job.hazard_calculation
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=hc.owner, truncation_level=hc.truncation_level,
-            maximum_distance=hc.maximum_distance,
-            intensity_measure_types=["PGA"],
-            calculation_mode="scenario")
-        job.status = "complete"
-        job.save()
-
-        output = models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario")
-
-        fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        with open(fname, 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            arr = numpy.array([[float(x) for x in row] for row in gmfreader])
-            for i, gmvs in enumerate(arr.transpose()):
-                models.GmfScenario.objects.create(
-                    output=output,
-                    imt="PGA",
-                    gmvs=gmvs,
-                    result_grp_ordinal=1,
-                    location="POINT(%s)" % locations[i])
-
-        return output.id
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,
