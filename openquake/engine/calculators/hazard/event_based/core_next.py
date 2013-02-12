@@ -363,7 +363,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     for imt, gmf_data in gmf_dict.iteritems():
 
         gmfs = gmf_data['gmvs']
-        # ``gmfs`` and ``rupture_ids`` comes in as a numpy.matrix and
+        # ``gmfs`` and ``rupture_ids`` come in as a numpy.matrix and
         # a list. we want them as an array; it handles subscripting in
         # the way that we want
         gmfs = numpy.array(gmfs)
