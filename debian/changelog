@@ -1,282 +1,288 @@
-python-oq (0.8.3-3) precise; urgency=low
+python-oq-engine (0.9.1-1) precise; urgency=low
+
+  * upstream release
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 11 Feb 2013 11:00:54 +0100
+
+python-oq-engine (0.8.3-3) precise; urgency=low
 
   * Add missing monitor.py source
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 23 Oct 2012 10:16:18 +0200
 
-python-oq (0.8.3-2) precise; urgency=low
+python-oq-engine (0.8.3-2) precise; urgency=low
 
   * Use arch-independent JAVA_HOME env. variable values (LP: #1069804)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 22 Oct 2012 15:30:39 +0200
 
-python-oq (0.8.3-1) precise; urgency=low
+python-oq-engine (0.8.3-1) precise; urgency=low
 
   * upstream release
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 19 Oct 2012 19:53:00 +0200
 
-python-oq (0.8.2-5) precise; urgency=low
+python-oq-engine (0.8.2-5) precise; urgency=low
 
   * Make sure the vs30_type param is capitalized (LP: #1050792)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 21 Sep 2012 12:01:34 +0200
 
-python-oq (0.8.2-4) precise; urgency=low
+python-oq-engine (0.8.2-4) precise; urgency=low
 
   * fix JAVA_HOME value so it works in ubuntu 12.04 LTS (LP: #1051941)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 17 Sep 2012 14:52:12 +0200
 
-python-oq (0.8.2-3) precise; urgency=low
+python-oq-engine (0.8.2-3) precise; urgency=low
 
   * Insured loss probabilistic event based calculator (LP: #1045318)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 05 Sep 2012 09:22:36 +0200
 
-python-oq (0.8.2-2) precise; urgency=low
+python-oq-engine (0.8.2-2) precise; urgency=low
 
   * remove namespace/module ambiguity
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 04 Sep 2012 17:08:17 +0200
 
-python-oq (0.8.2-1) precise; urgency=low
+python-oq-engine (0.8.2-1) precise; urgency=low
 
   * Upstream release (LP: #1045214)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 04 Sep 2012 08:52:53 +0200
 
-python-oq (0.8.1-5) precise; urgency=low
+python-oq-engine (0.8.1-5) precise; urgency=low
 
   * rm threaded serialization patch (since it increases overall run time)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 25 Jul 2012 17:01:32 +0200
 
-python-oq (0.8.1-4) precise; urgency=low
+python-oq-engine (0.8.1-4) precise; urgency=low
 
   * Try threaded serialization in order to fix performance regression
     (LP: #1027874)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 23 Jul 2012 13:21:32 +0200
 
-python-oq (0.8.1-3) precise; urgency=low
+python-oq-engine (0.8.1-3) precise; urgency=low
 
   * Fix import exception when DJANGO_SETTINGS_MODULE is not set (LP: #1027776)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 23 Jul 2012 09:08:01 +0200
 
-python-oq (0.8.1-2) precise; urgency=low
+python-oq-engine (0.8.1-2) precise; urgency=low
 
   * Fix for region discretization bug (LP: #1027041)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sun, 22 Jul 2012 10:12:25 +0200
 
-python-oq (0.8.1-1) precise; urgency=low
+python-oq-engine (0.8.1-1) precise; urgency=low
 
   * new upstream release (LP: #1027030)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 20 Jul 2012 15:06:18 +0200
 
-python-oq (0.7.0-4) precise; urgency=low
+python-oq-engine (0.7.0-4) precise; urgency=low
 
   * fix typo in oq_restart script (LP: #994565)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 04 May 2012 15:01:54 +0200
 
-python-oq (0.7.0-3) precise; urgency=low
+python-oq-engine (0.7.0-3) precise; urgency=low
 
   * Correct the version displayed by OpenQuake (on demand).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 04 May 2012 08:20:18 +0200
 
-python-oq (0.7.0-2) oneiric; urgency=low
+python-oq-engine (0.7.0-2) oneiric; urgency=low
 
   * Fix bug in the classical PSHA calculator (LP: #984055)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 02 May 2012 22:00:59 +0200
 
-python-oq (0.7.0-1) oneiric; urgency=low
+python-oq-engine (0.7.0-1) oneiric; urgency=low
 
   * Upstream release, rev. 0.7.0
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 02 May 2012 21:34:03 +0200
 
-python-oq (0.6.1-9) oneiric; urgency=low
+python-oq-engine (0.6.1-9) oneiric; urgency=low
 
   * Fix db router config for the oqmif schema (LP: #993256)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 02 May 2012 15:23:40 +0200
 
-python-oq (0.6.1-8) oneiric; urgency=low
+python-oq-engine (0.6.1-8) oneiric; urgency=low
 
   * Re-apply fix for ERROR: role "oq_ged4gem" does not exist (LP: #968056)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 02 May 2012 10:23:40 +0200
 
-python-oq (0.6.1-7) oneiric; urgency=low
+python-oq-engine (0.6.1-7) oneiric; urgency=low
 
   * delete obsolete .pyc files in /usr/openquake (LP: #984912)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 19 Apr 2012 10:28:45 +0200
 
-python-oq (0.6.1-6) oneiric; urgency=low
+python-oq-engine (0.6.1-6) oneiric; urgency=low
 
   * Remove spurious 'oqmif' db user from settings.py (LP: #980769)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 13 Apr 2012 14:35:54 +0200
 
-python-oq (0.6.1-5) oneiric; urgency=low
+python-oq-engine (0.6.1-5) oneiric; urgency=low
 
   * Pass the postgres port to the 'createlang' command as well.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 13 Apr 2012 10:37:26 +0200
 
-python-oq (0.6.1-4) oneiric; urgency=low
+python-oq-engine (0.6.1-4) oneiric; urgency=low
 
   * Fix psql invocation.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 13 Apr 2012 06:01:12 +0200
 
-python-oq (0.6.1-3) oneiric; urgency=low
+python-oq-engine (0.6.1-3) oneiric; urgency=low
 
   * Support machines with multiple postgres versions (LP: #979881)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 13 Apr 2012 05:49:41 +0200
 
-python-oq (0.6.1-2) oneiric; urgency=low
+python-oq-engine (0.6.1-2) oneiric; urgency=low
 
   * Fix oq_restart_workers script so it uses the correct db table (oq_job)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 04 Apr 2012 11:29:36 +0200
 
-python-oq (0.6.1-1) oneiric; urgency=low
+python-oq-engine (0.6.1-1) oneiric; urgency=low
 
   * OpenQuake 0.6.1 upstream release (LP: #971541)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 03 Apr 2012 08:52:39 +0200
 
-python-oq (0.6.0-15) oneiric; urgency=low
+python-oq-engine (0.6.0-15) oneiric; urgency=low
 
   * Support machines with multiple postgres versions (LP: #979881)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 12 Apr 2012 18:56:58 +0200
 
-python-oq (0.6.0-14) oneiric; urgency=low
+python-oq-engine (0.6.0-14) oneiric; urgency=low
 
   * Improved version string, post-installation actions
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 30 Mar 2012 17:21:40 +0200
 
-python-oq (0.6.0-13) oneiric; urgency=low
+python-oq-engine (0.6.0-13) oneiric; urgency=low
 
   * proper fix for GMF serialization problem (LP: #969014)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 30 Mar 2012 15:14:41 +0200
 
-python-oq (0.6.0-12) oneiric; urgency=low
+python-oq-engine (0.6.0-12) oneiric; urgency=low
 
   * Fix GMF serialization in the hazard event based calculator (LP: #969014)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 30 Mar 2012 12:15:44 +0200
 
-python-oq (0.6.0-11) oneiric; urgency=low
+python-oq-engine (0.6.0-11) oneiric; urgency=low
 
   * Fix ERROR: role "oq_ged4gem" does not exist (LP: #968056)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 29 Mar 2012 10:44:23 +0200
 
-python-oq (0.6.0-10) oneiric; urgency=low
+python-oq-engine (0.6.0-10) oneiric; urgency=low
 
   * Fix BaseHazardCalculator, so self.calc gets initialized.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 23 Mar 2012 07:20:47 +0100
 
-python-oq (0.6.0-9) oneiric; urgency=low
+python-oq-engine (0.6.0-9) oneiric; urgency=low
 
   * Turn off accidental worker-side logic tree processing (LP: #962788)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 23 Mar 2012 06:27:36 +0100
 
-python-oq (0.6.0-8) oneiric; urgency=low
+python-oq-engine (0.6.0-8) oneiric; urgency=low
 
   * Package tested and ready for deployment.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 20 Mar 2012 15:54:31 +0100
 
-python-oq (0.6.0-7) oneiric; urgency=low
+python-oq-engine (0.6.0-7) oneiric; urgency=low
 
   * All demos pass, rebuild this package
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Mar 2012 18:12:26 +0100
 
-python-oq (0.6.0-6) oneiric; urgency=low
+python-oq-engine (0.6.0-6) oneiric; urgency=low
 
   * Another db user fix
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Mar 2012 17:18:31 +0100
 
-python-oq (0.6.0-5) oneiric; urgency=low
+python-oq-engine (0.6.0-5) oneiric; urgency=low
 
   * Fix database users
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Mar 2012 16:39:49 +0100
 
-python-oq (0.6.0-4) oneiric; urgency=low
+python-oq-engine (0.6.0-4) oneiric; urgency=low
 
   * Fix distro series
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Mar 2012 09:25:57 +0100
 
-python-oq (0.6.0-3) precise; urgency=low
+python-oq-engine (0.6.0-3) precise; urgency=low
 
   * Added license file
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Mar 2012 08:35:12 +0100
 
-python-oq (0.6.0-2) oneiric; urgency=low
+python-oq-engine (0.6.0-2) oneiric; urgency=low
 
   * added sample celeryconfig.py file
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Mar 2012 20:07:23 +0100
 
-python-oq (0.6.0-1) oneiric; urgency=low
+python-oq-engine (0.6.0-1) oneiric; urgency=low
 
   * OpenQuake rev. 0.6.0 upstream release (LP: #946879)
   * add postgresql-plpython-9.1 dependency (LP: #929429)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Mar 2012 11:05:22 +0100
 
-python-oq (0.5.1-2) oneiric; urgency=low
+python-oq-engine (0.5.1-2) oneiric; urgency=low
 
   * add postrm script (LP: #906613)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 02 Feb 2012 13:00:06 +0100
 
-python-oq (0.5.1-1) oneiric; urgency=low
+python-oq-engine (0.5.1-1) oneiric; urgency=low
 
   * 0.5.1 upstream release (LP: #925339)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 02 Feb 2012 10:11:58 +0100
 
-python-oq (0.5.0-9) oneiric; urgency=low
+python-oq-engine (0.5.0-9) oneiric; urgency=low
 
   * Fix error resulting from backporting code.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 25 Jan 2012 16:27:49 +0100
 
-python-oq (0.5.0-8) oneiric; urgency=low
+python-oq-engine (0.5.0-8) oneiric; urgency=low
 
   * Fix hazard map serialization failure (LP: #921604)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 25 Jan 2012 16:06:54 +0100
 
-python-oq (0.5.0-7) oneiric; urgency=low
+python-oq-engine (0.5.0-7) oneiric; urgency=low
 
   * Remove one last 'sudo' from db setup script
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 25 Jan 2012 12:17:35 +0100
 
-python-oq (0.5.0-6) oneiric; urgency=low
+python-oq-engine (0.5.0-6) oneiric; urgency=low
 
   * NRML files are written only once (LP: #914614)
   * optimize parallel results collection (LP: #914613)
@@ -284,220 +290,220 @@ python-oq (0.5.0-6) oneiric; urgency=low
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 19 Jan 2012 15:16:51 +0100
 
-python-oq (0.5.0-5) oneiric; urgency=low
+python-oq-engine (0.5.0-5) oneiric; urgency=low
 
   * Revert to the usual database user names.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 10 Jan 2012 10:49:49 +0100
 
-python-oq (0.5.0-4) oneiric; urgency=low
+python-oq-engine (0.5.0-4) oneiric; urgency=low
 
   * Remove "sudo" from db setup script (LP: #914139)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 10 Jan 2012 08:18:14 +0100
 
-python-oq (0.5.0-3) oneiric; urgency=low
+python-oq-engine (0.5.0-3) oneiric; urgency=low
 
   * Fix demo files.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 09 Jan 2012 21:10:08 +0100
 
-python-oq (0.5.0-2) oneiric; urgency=low
+python-oq-engine (0.5.0-2) oneiric; urgency=low
 
   * Calculation and serialization are to be carried out in parallel
     (LP: #910985)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 09 Jan 2012 15:53:05 +0100
 
-python-oq (0.5.0-1) oneiric; urgency=low
+python-oq-engine (0.5.0-1) oneiric; urgency=low
 
-  * Prepare rel. 0.5.0 of python-oq (LP: #913540)
+  * Prepare rel. 0.5.0 of python-oq-engine (LP: #913540)
   * set JAVA_HOME for celeryd (LP: #911697)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 09 Jan 2012 07:15:31 +0100
 
-python-oq (0.4.6-11) oneiric; urgency=low
+python-oq-engine (0.4.6-11) oneiric; urgency=low
 
   * Facilitate java-side kvs connection caching
     (LP: #894261, #907760, #907993).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 02 Jan 2012 13:42:42 +0100
 
-python-oq (0.4.6-10) oneiric; urgency=low
+python-oq-engine (0.4.6-10) oneiric; urgency=low
 
   * Only use one amqp log handler per celery worker (LP: #907360).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 02 Jan 2012 13:10:50 +0100
 
-python-oq (0.4.6-9) oneiric; urgency=low
+python-oq-engine (0.4.6-9) oneiric; urgency=low
 
   * add a debian/preinst script that makes sure we have no garbage
     from previous package installation lying around (LP: #906613).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 20 Dec 2011 10:43:12 +0100
 
-python-oq (0.4.6-8) oneiric; urgency=low
+python-oq-engine (0.4.6-8) oneiric; urgency=low
 
   * Repackage 0.4.6-6 (no asynchronous classical PSHA code)
     for oneiric (also fix the postgres-9.1 issues).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 16 Dec 2011 11:34:47 +0100
 
-python-oq (0.4.6-6) oneiric; urgency=low
+python-oq-engine (0.4.6-6) oneiric; urgency=low
 
   * Make sure /var/lib/openquake/disagg-results exists and has an
     appropriate owner and permissions (LP: #904659)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 15 Dec 2011 12:26:28 +0100
 
-python-oq (0.4.6-5) natty; urgency=low
+python-oq-engine (0.4.6-5) natty; urgency=low
 
   * Make sure the demos that were broken in 0.4.6 are not installed
     (LP: #901112)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Dec 2011 16:40:50 +0100
 
-python-oq (0.4.6-4) natty; urgency=low
+python-oq-engine (0.4.6-4) natty; urgency=low
 
   * Tolerate the failure of chown and/or chmod on /var/lib/openquake
     (LP: #902083)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Dec 2011 10:38:46 +0100
 
-python-oq (0.4.6-3) natty; urgency=low
+python-oq-engine (0.4.6-3) natty; urgency=low
 
   * Remove UHS changes in order to fix python-java-bridge failures
     (LP: #900617)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Dec 2011 07:51:19 +0100
 
-python-oq (0.4.6-2) oneiric; urgency=low
+python-oq-engine (0.4.6-2) oneiric; urgency=low
 
   * Add missing dependency, python-h5py (LP: #900300)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Dec 2011 15:09:37 +0100
 
-python-oq (0.4.6-1) oneiric; urgency=low
+python-oq-engine (0.4.6-1) oneiric; urgency=low
 
   * Upstream release (LP: #898634)
   * Make postgres dependencies less version dependent (LP: #898622)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Dec 2011 10:51:46 +0100
 
-python-oq (0.4.4-19) oneiric; urgency=low
+python-oq-engine (0.4.4-19) oneiric; urgency=low
 
   * Functions called from celery tasks should not make use of logic trees
     (LP: #880743)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 24 Oct 2011 14:37:41 +0200
 
-python-oq (0.4.4-18) oneiric; urgency=low
+python-oq-engine (0.4.4-18) oneiric; urgency=low
 
-  * Add python-setuptools as a python-oq dependency (LP: #877915)
+  * Add python-setuptools as a python-oq-engine dependency (LP: #877915)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sun, 23 Oct 2011 18:29:41 +0200
 
-python-oq (0.4.4-17) oneiric; urgency=low
+python-oq-engine (0.4.4-17) oneiric; urgency=low
 
   * Refresh the demos and make sure the newest ones are always installed
     under /usr/openquake/demos
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sun, 23 Oct 2011 18:12:59 +0200
 
-python-oq (0.4.4-16) oneiric; urgency=low
+python-oq-engine (0.4.4-16) oneiric; urgency=low
 
   * Remove superfluous OPENQUAKE_ROOT import.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sun, 23 Oct 2011 16:42:17 +0200
 
-python-oq (0.4.4-15) oneiric; urgency=low
+python-oq-engine (0.4.4-15) oneiric; urgency=low
 
   * Added the python code needed for the new logic tree implementation
     (LP: #879451)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sun, 23 Oct 2011 12:27:15 +0200
 
-python-oq (0.4.4-14) oneiric; urgency=low
+python-oq-engine (0.4.4-14) oneiric; urgency=low
 
   * leave exceptions raised by celery tasks alone (LP: #878736)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 20 Oct 2011 12:30:50 +0200
 
-python-oq (0.4.4-13) oneiric; urgency=low
+python-oq-engine (0.4.4-13) oneiric; urgency=low
 
   * Avoid failures while reraising exceptions (LP: #877992)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 19 Oct 2011 15:03:58 +0200
 
-python-oq (0.4.4-12) natty; urgency=low
+python-oq-engine (0.4.4-12) natty; urgency=low
 
   * Impose upper limit on JVM memory usage (LP: #821002)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 17 Oct 2011 17:35:40 +0200
 
-python-oq (0.4.4-11) oneiric; urgency=low
+python-oq-engine (0.4.4-11) oneiric; urgency=low
 
-  * add python-oq_0.4.4.orig.tar.gz to upload
+  * add python-oq-engine_0.4.4.orig.tar.gz to upload
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 14 Oct 2011 11:57:11 +0200
 
-python-oq (0.4.4-10) oneiric; urgency=low
+python-oq-engine (0.4.4-10) oneiric; urgency=low
 
   * Ubuntu 11.10 upload.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 14 Oct 2011 11:37:17 +0200
 
-python-oq (0.4.4-9) natty; urgency=low
+python-oq-engine (0.4.4-9) natty; urgency=low
 
   * 'new_in_this_release' files apply to latest upgrade (LP: #873205)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 13 Oct 2011 10:36:04 +0200
 
-python-oq (0.4.4-8) natty; urgency=low
+python-oq-engine (0.4.4-8) natty; urgency=low
 
   * Make sure all demo files are unzipped (LP: #872816)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 13 Oct 2011 10:17:08 +0200
 
-python-oq (0.4.4-7) natty; urgency=low
+python-oq-engine (0.4.4-7) natty; urgency=low
 
   * More robust detection of the 'openquake' system group (LP #872814)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 12 Oct 2011 14:37:40 +0200
 
-python-oq (0.4.4-6) natty; urgency=low
+python-oq-engine (0.4.4-6) natty; urgency=low
 
   * make the demo files writable by owner *and* group.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 16:09:51 +0200
 
-python-oq (0.4.4-5) natty; urgency=low
+python-oq-engine (0.4.4-5) natty; urgency=low
 
   * Remove unneeded database users (LP #872277)
   * fix smoketests (add DEPTHTO1PT0KMPERSEC, VS30_TYPE parameter defaults)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 15:48:20 +0200
 
-python-oq (0.4.4-4) natty; urgency=low
+python-oq-engine (0.4.4-4) natty; urgency=low
 
   * turn off -x flag in debian/postinst
   * unzip the example files in /usr/openquake/demos
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 14:55:30 +0200
 
-python-oq (0.4.4-3) natty; urgency=low
+python-oq-engine (0.4.4-3) natty; urgency=low
 
   * fix lintian warning
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 14:26:25 +0200
 
-python-oq (0.4.4-2) natty; urgency=low
+python-oq-engine (0.4.4-2) natty; urgency=low
 
   * Use dh_installexamples to include the smoketests in the package.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 12:23:06 +0200
 
-python-oq (0.4.4-1) natty; urgency=low
+python-oq-engine (0.4.4-1) natty; urgency=low
 
   * fix permissions for config files in /etc/openquake (LP #850766)
   * be more intelligent about pg_hba.conf files (LP #848579)
@@ -505,208 +511,208 @@ python-oq (0.4.4-1) natty; urgency=low
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 11 Oct 2011 11:47:30 +0200
 
-python-oq (0.4.3-21) natty; urgency=low
+python-oq-engine (0.4.3-21) natty; urgency=low
 
   * Remove unneeded dependency on fabric (LP: #852004)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 16 Sep 2011 20:47:49 +0000
 
-python-oq (0.4.3-20) natty; urgency=low
+python-oq-engine (0.4.3-20) natty; urgency=low
 
   * Shut down celery prior to restarting postgres and setting up the database
     (LP: #846388)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sat, 10 Sep 2011 19:47:56 +0200
 
-python-oq (0.4.3-19) natty; urgency=low
+python-oq-engine (0.4.3-19) natty; urgency=low
 
   * Close all db connections in order to prevent package upgrade failures
    (LP: 846279)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Sat, 10 Sep 2011 09:37:34 +0200
 
-python-oq (0.4.3-18) natty; urgency=low
+python-oq-engine (0.4.3-18) natty; urgency=low
 
   * declare the "include_defaults" flag in the openquake script (LP: #845994)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 22:38:40 +0200
 
-python-oq (0.4.3-17) natty; urgency=low
+python-oq-engine (0.4.3-17) natty; urgency=low
 
   * package the correct software revision (LP: #845583)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 15:00:05 +0200
 
-python-oq (0.4.3-16) natty; urgency=low
+python-oq-engine (0.4.3-16) natty; urgency=low
 
   * Add all required db users to pg_hba.conf (LP: #845461)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 11:25:41 +0200
 
-python-oq (0.4.3-15) natty; urgency=low
+python-oq-engine (0.4.3-15) natty; urgency=low
 
   * Remove obsolete dependency on python-geoalchemy (LP: #845439)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 10:25:25 +0200
 
-python-oq (0.4.3-14) natty; urgency=low
+python-oq-engine (0.4.3-14) natty; urgency=low
 
   * turn off 'set -x' in debian/postinst
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 07:18:34 +0200
 
-python-oq (0.4.3-13) natty; urgency=low
+python-oq-engine (0.4.3-13) natty; urgency=low
 
   * Better detection of postgresql-8.4
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 07:16:11 +0200
 
-python-oq (0.4.3-12) natty; urgency=low
+python-oq-engine (0.4.3-12) natty; urgency=low
 
   * detect the absence of the rabbitmq and postgres services and refrain
     from the corresponding initialization actions  (LP: #845344)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Fri, 09 Sep 2011 06:47:32 +0200
 
-python-oq (0.4.3-11) natty; urgency=low
+python-oq-engine (0.4.3-11) natty; urgency=low
 
   * Fix logging sink configuration file and location.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Sep 2011 14:31:51 +0200
 
-python-oq (0.4.3-10) natty; urgency=low
+python-oq-engine (0.4.3-10) natty; urgency=low
 
   * Fix database user/permissions for admin schema.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Wed, 07 Sep 2011 14:07:30 +0200
 
-python-oq (0.4.3-9) natty; urgency=low
+python-oq-engine (0.4.3-9) natty; urgency=low
 
   * turn off 'set -x' in debian/postinst
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 17:44:37 +0200
 
-python-oq (0.4.3-8) natty; urgency=low
+python-oq-engine (0.4.3-8) natty; urgency=low
 
   * Fixed database (user) setup and general breakage (LP: #842472)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 17:42:51 +0200
 
-python-oq (0.4.3-7) natty; urgency=low
+python-oq-engine (0.4.3-7) natty; urgency=low
 
   * Fix database (user) setup (LP: #842472)
   * Copy configuration file to /etc/openquake (LP: #842468)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 15:34:17 +0200
 
-python-oq (0.4.3-6) natty; urgency=low
+python-oq-engine (0.4.3-6) natty; urgency=low
 
   * Delay the import of openquake.engine.job to allow the user to see the version
     and/or help without errors (LP: #842604)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 14:37:06 +0200
 
-python-oq (0.4.3-5) natty; urgency=low
+python-oq-engine (0.4.3-5) natty; urgency=low
 
   * Copy configuration file to /usr/openquake (LP: #842468)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 06 Sep 2011 11:45:55 +0200
 
-python-oq (0.4.3-4) natty; urgency=low
+python-oq-engine (0.4.3-4) natty; urgency=low
 
   * Fix 'Architecture' field in debian/control.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Sep 2011 21:35:10 +0200
 
-python-oq (0.4.3-3) natty; urgency=low
+python-oq-engine (0.4.3-3) natty; urgency=low
 
   * Add Django as a dependency (LP: #830974)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Sep 2011 21:33:01 +0200
 
-python-oq (0.4.3-2) natty; urgency=low
+python-oq-engine (0.4.3-2) natty; urgency=low
 
   * Make db error detection smarter (LP: #819710)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Sep 2011 21:30:16 +0200
 
-python-oq (0.4.3-1) natty; urgency=low
+python-oq-engine (0.4.3-1) natty; urgency=low
 
   * Upstream release (LP: #839424)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 05 Sep 2011 18:13:42 +0200
 
-python-oq (0.4.1-12) natty; urgency=low
+python-oq-engine (0.4.1-12) natty; urgency=low
 
   * Better error detection for schema creation output (LP #819710)
   * Remove unneeded python-guppy dependency (LP #826487)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 15 Aug 2011 03:16:43 +0200
 
-python-oq (0.4.1-11) natty; urgency=low
+python-oq-engine (0.4.1-11) natty; urgency=low
 
   * Add the cache garbage collector script (LP #817541)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 28 Jul 2011 16:56:33 +0200
 
-python-oq (0.4.1-10) natty; urgency=low
+python-oq-engine (0.4.1-10) natty; urgency=low
 
   * The name of the default db should be 'openquake'
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 15:47:18 +0200
 
-python-oq (0.4.1-9) natty; urgency=low
+python-oq-engine (0.4.1-9) natty; urgency=low
 
   * postgresql reload after pg_hba.conf modification was missing
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 15:28:52 +0200
 
-python-oq (0.4.1-8) natty; urgency=low
+python-oq-engine (0.4.1-8) natty; urgency=low
 
   * log4j.properties needs to live in the openquake source code tree
     (LP #816397)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 14:52:20 +0200
 
-python-oq (0.4.1-7) natty; urgency=low
+python-oq-engine (0.4.1-7) natty; urgency=low
 
   * Fix obsolete celeryconfig.py file.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 14:24:25 +0200
 
-python-oq (0.4.1-6) natty; urgency=low
+python-oq-engine (0.4.1-6) natty; urgency=low
 
   * Move xml schemas to the openquake source code tree (LP #816375)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 13:52:56 +0200
 
-python-oq (0.4.1-5) natty; urgency=low
+python-oq-engine (0.4.1-5) natty; urgency=low
 
   * Fix mistake in postinst (db init output in now redirected correctly)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 12:16:20 +0200
 
-python-oq (0.4.1-4) natty; urgency=low
+python-oq-engine (0.4.1-4) natty; urgency=low
 
   * database initialisation is now checked for errors
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 11:25:18 +0200
 
-python-oq (0.4.1-3) natty; urgency=low
+python-oq-engine (0.4.1-3) natty; urgency=low
 
   * when invoked from postinst the sudo commands in the create_oq_schema
     script break it (since the latter is run by the postgres user)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 07:58:31 +0200
 
-python-oq (0.4.1-2) natty; urgency=low
+python-oq-engine (0.4.1-2) natty; urgency=low
 
   * get_uiapi_writer_session() has defaults (LP #815912)
   * moved the db-rooted source code tree under openquake (LP #816232)
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 26 Jul 2011 06:35:03 +0200
 
-python-oq (0.4.1-1) natty; urgency=low
+python-oq-engine (0.4.1-1) natty; urgency=low
 
   * OpenQuake 0.4.1 release
   * add postgresql-8.4 as a recommended package (LP #810953)
@@ -716,7 +722,7 @@ python-oq (0.4.1-1) natty; urgency=low
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 21 Jul 2011 11:48:36 +0200
 
-python-oq (0.3.9-6) natty; urgency=low
+python-oq-engine (0.3.9-6) natty; urgency=low
 
   * The rabbitmq-server and redis-server packages should be merely recommended
     since we may want to install the openquake package on worker machines but
@@ -724,32 +730,32 @@ python-oq (0.3.9-6) natty; urgency=low
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 14 Jun 2011 20:12:50 +0200
 
-python-oq (0.3.9-5) natty; urgency=low
+python-oq-engine (0.3.9-5) natty; urgency=low
 
   * The number of celery tasks is based on the number of CPUs/cores
     (when the HAZARD_TASKS parameter is not set).
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Thu, 09 Jun 2011 15:15:54 +0200
 
-python-oq (0.3.9-4) natty; urgency=low
+python-oq-engine (0.3.9-4) natty; urgency=low
 
   * Create /usr/openquake in postinst
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 07 Jun 2011 16:43:24 +0200
 
-python-oq (0.3.9-3) natty; urgency=low
+python-oq-engine (0.3.9-3) natty; urgency=low
 
   * Added java-oq dependency
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 07 Jun 2011 14:58:44 +0200
 
-python-oq (0.3.9-2) natty; urgency=low
+python-oq-engine (0.3.9-2) natty; urgency=low
 
   * Added the python-geoalchemy dependency.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Tue, 07 Jun 2011 10:30:02 +0200
 
-python-oq (0.3.9-1) natty; urgency=low
+python-oq-engine (0.3.9-1) natty; urgency=low
 
   * Upstream OpenQuake python sources.
 

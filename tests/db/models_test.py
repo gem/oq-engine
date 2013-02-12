@@ -25,7 +25,6 @@ from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine import engine2
-from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
@@ -540,8 +539,8 @@ class GmfSetIterTestCase(unittest.TestCase):
             for j, exp_gmf in enumerate(exp_gmf_set):
                 act_gmf = list(act_gmf_set)[j]
 
-                equal, error = helpers.deep_eq(exp_gmf, act_gmf)
-
+                equal, error = helpers.deep_eq(
+                    exp_gmf, act_gmf, exclude=["rupture_id"])
                 self.assertTrue(equal, error)
 
 
@@ -555,7 +554,7 @@ class PrepGeometryTestCase(unittest.TestCase):
             'region': '-1 1 1 1 1 -1 -1 -1',
             # with randomly placed commas
             'region_constraint': (
-                    '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
+            '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
             'something': 'else',
         }
 
