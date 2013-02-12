@@ -72,7 +72,7 @@ class ExposureModelParser(object):
 
         exposure = etree.parse(self._source)
         xmlschema = etree.XMLSchema(etree.parse(
-                openquake.nrmllib.nrml_schema_file()))
+            openquake.nrmllib.nrml_schema_file()))
 
         if not xmlschema.validate(exposure):
             raise ValueError("Exposure model is not valid.")
@@ -87,7 +87,7 @@ class ExposureModelParser(object):
         """
 
         schema = etree.XMLSchema(etree.parse(
-                openquake.nrmllib.nrml_schema_file()))
+            openquake.nrmllib.nrml_schema_file()))
 
         for event, element in etree.iterparse(
                 self._source, events=('start', 'end'), schema=schema):
@@ -299,27 +299,31 @@ class FragilityModelParser(object):
         self._source = source
         assert_is_valid(self._source)
         self._fragility_model = etree.parse(self._source).getroot()
+        self.limit_states = None
 
     def __iter__(self):
         """
         Parse the fragility model.
         """
         fragilityModel = findone('fragilityModel', self._fragility_model)
-        format = fragilityModel.attrib['format']
-        if format == 'discrete':
-            iml = findone('IML', fragilityModel)
-            iml = dict(IMT=iml.attrib['IMT'],
-                       imls=map(float, iml.text.split()))
+        fmt = fragilityModel.attrib['format']
+        iml_element = findone('IML', fragilityModel)
+        iml = dict(IMT=iml_element.attrib['IMT'])
+
+        # in discrete case we expect to find the levels in the text of IML
+        # element.
+        if fmt == 'discrete':
+            iml['imls'] = [float(level) for level in iml_element.text.split()]
         else:
-            iml = dict(IMT=None, imls=None)
+            iml['imls'] = None
         self.limit_states = findone('limitStates', fragilityModel).text.split()
-        yield format, iml, self.limit_states
+        yield fmt, iml, self.limit_states
         for ffs in find('ffs', fragilityModel):
             taxonomy = findone('taxonomy', ffs).text
             no_damage_limit = ffs.attrib.get('noDamageLimit')
             if no_damage_limit:
                 no_damage_limit = float(no_damage_limit)
-            if format == 'discrete':
+            if fmt == 'discrete':
                 all_poes = []
                 for lsi, ffd in enumerate(find('ffd', ffs)):
                     self._check_limit_state(lsi, ffd.attrib['ls'])
@@ -348,7 +352,7 @@ def assert_is_valid(source):
 
     exposure = etree.parse(source)
     xmlschema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
+        openquake.nrmllib.nrml_schema_file()))
 
     if not xmlschema.validate(exposure):
-        raise ValueError("Exposure model is not valid.")
+        raise ValueError("Model %s is not valid." % exposure)
