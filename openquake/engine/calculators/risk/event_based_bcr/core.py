@@ -138,7 +138,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         super_params = super(EventBasedBCRRiskCalculator,
                              self).calculator_parameters
 
-        return super_params[2:-2] + [
+        return super_params[2:-1] + [
             self.rc.asset_life_expectancy, self.rc.interest_rate
         ]
 
