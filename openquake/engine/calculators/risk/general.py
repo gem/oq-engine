@@ -127,7 +127,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         if not self.imt in imts:
             raise RuntimeError(
-                "There is no hazard output in the intensity measure %s; "
+                "There is no hazard output for the intensity measure %s; "
                 "the available IMTs are %s" % (self.imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
@@ -364,11 +364,11 @@ class BaseRiskCalculator(base.CalculatorNext):
             if self.imt is None:
                 self.imt = record['IMT']
             vfs[record['ID']] = openquake.risklib.scientific.\
-VulnerabilityFunction(
-                record['IML'],
-                record['lossRatio'],
-                record['coefficientsVariation'],
-                record['probabilisticDistribution'])
+                VulnerabilityFunction(
+                    record['IML'],
+                    record['lossRatio'],
+                    record['coefficientsVariation'],
+                    record['probabilisticDistribution'])
         return vfs
 
     def create_outputs(self, hazard_output):

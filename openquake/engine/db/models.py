@@ -36,6 +36,7 @@ import openquake.hazardlib
 import numpy
 
 from django.db import connection
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -908,8 +909,7 @@ class HazardCalculation(djm.Model):
             again.
         """
         if self._points_to_compute is None:
-            if (self.region is not None
-                and self.region_grid_spacing is not None):
+            if self.region and self.region_grid_spacing:
                 # assume that the polygon is a single linear ring
                 coords = self.region.coords[0]
                 points = [hazardlib_geo.Point(*x) for x in coords]
@@ -965,8 +965,8 @@ def get_site_collection(hc):
         sites = [
             openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
                                           measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
+                                          hc.reference_depth_to_2pt5km_per_sec,
+                                          hc.reference_depth_to_1pt0km_per_sec)
             for pt in points]
 
     return openquake.hazardlib.site.SiteCollection(sites)
@@ -1068,15 +1068,19 @@ class RiskCalculation(djm.Model):
         :returns: the hazard calculation associated with the hazard
         output used as input in risk calculation
         """
-        return (self.hazard_calculation or
-                self.hazard_output.oq_job.hazard_calculation)
+        hcalc = (self.hazard_calculation or
+                 self.hazard_output.oq_job.hazard_calculation)
+        if hcalc is None:
+            raise ObjectDoesNotExist(
+                'The job #%d has no hazard calculation '
+                'associated' % self.hazard_output.oq_job.id)
+        return hcalc
 
     def has_output_containers(self):
         """
         :returns: True if RiskCalculation has more than one output
         container.
         """
-
         return self.calculation_mode != "scenario"
 
     def output_container_builder(self, risk_calculator):
@@ -1084,12 +1088,11 @@ class RiskCalculation(djm.Model):
         :returns: a dictionary mapping openquake.engine.db.models.Output ids
             to a list of risk output container ids.
         """
-
         if self.has_output_containers():
             return dict((hazard_output.id,
                          risk_calculator.create_outputs(hazard_output))
                         for hazard_output in
-                    risk_calculator.considered_hazard_outputs())
+                        risk_calculator.considered_hazard_outputs())
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
