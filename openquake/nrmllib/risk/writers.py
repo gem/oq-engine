@@ -358,7 +358,12 @@ class LossMapXMLWriter(object):
 
                 loss_elem = etree.SubElement(loss_node, "loss")
                 loss_elem.set("assetRef", str(loss.asset_ref))
-                loss_elem.set("value", str(loss.value))
+
+                if loss.std_dev:
+                    loss_elem.set("mean", str(loss.value))
+                    loss_elem.set("stdDev", str(loss.std_dev))
+                else:
+                    loss_elem.set("value", str(loss.value))
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
