@@ -253,7 +253,7 @@ class FragilityModelParserTestCase(unittest.TestCase):
 
     <fragilityModel format="continuous" imlUnit="m" minIML="0.1" maxIML="9.9">
         <description>Fragility model for Pavia (continuous)</description>
-        <IML IMT="PGA">7 8 9 10 11</IML>
+        <IML IMT="PGA"/>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
             slight
@@ -295,7 +295,7 @@ class FragilityModelParserTestCase(unittest.TestCase):
         format, iml, limit_states = p.next()
         self.assertEqual(format, 'continuous')
         self.assertEqual("PGA", iml['IMT'])
-        self.assertEqual([7, 8, 9, 10, 11], iml['imls'])
+        self.assertEqual([], iml['imls'])
         self.assertEqual(limit_states,
                          ['slight', 'moderate', 'extensive', 'complete'])
 
