@@ -1009,7 +1009,7 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
-    # Meaningful only for event_based and classical (that produces
+    # Meaningful only for event_based and classical (that produce
     # loss curves)
     dont_save_absolute_losses = fields.OqNullBooleanField(
         help_text='if true calculation does not store absolute losses',
@@ -1029,7 +1029,7 @@ class RiskCalculation(djm.Model):
     master_seed = djm.IntegerField(null=True, blank=True)
 
     ##########################################
-    # For calculators that outputs loss curves
+    # For calculators that output loss curves
     ##########################################
     mean_loss_curves = fields.OqNullBooleanField(
         help_text='Compute mean loss curves',
