@@ -36,6 +36,7 @@ import openquake.hazardlib
 import numpy
 
 from django.db import connection
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -908,8 +909,7 @@ class HazardCalculation(djm.Model):
             again.
         """
         if self._points_to_compute is None:
-            if (self.region is not None
-                and self.region_grid_spacing is not None):
+            if self.region and self.region_grid_spacing:
                 # assume that the polygon is a single linear ring
                 coords = self.region.coords[0]
                 points = [hazardlib_geo.Point(*x) for x in coords]
@@ -965,8 +965,8 @@ def get_site_collection(hc):
         sites = [
             openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
                                           measured,
-                            hc.reference_depth_to_2pt5km_per_sec,
-                            hc.reference_depth_to_1pt0km_per_sec)
+                                          hc.reference_depth_to_2pt5km_per_sec,
+                                          hc.reference_depth_to_1pt0km_per_sec)
             for pt in points]
 
     return openquake.hazardlib.site.SiteCollection(sites)
@@ -1077,15 +1077,19 @@ class RiskCalculation(djm.Model):
         :returns: the hazard calculation associated with the hazard
         output used as input in risk calculation
         """
-        return (self.hazard_calculation or
-                self.hazard_output.oq_job.hazard_calculation)
+        hcalc = (self.hazard_calculation or
+                 self.hazard_output.oq_job.hazard_calculation)
+        if hcalc is None:
+            raise ObjectDoesNotExist(
+                'The job #%d has no hazard calculation '
+                'associated' % self.hazard_output.oq_job.id)
+        return hcalc
 
     def has_output_containers(self):
         """
         :returns: True if RiskCalculation has more than one output
         container.
         """
-
         return self.calculation_mode != "scenario"
 
     def output_container_builder(self, risk_calculator):
@@ -1093,12 +1097,11 @@ class RiskCalculation(djm.Model):
         :returns: a dictionary mapping openquake.engine.db.models.Output ids
             to a list of risk output container ids.
         """
-
         if self.has_output_containers():
             return dict((hazard_output.id,
                          risk_calculator.create_outputs(hazard_output))
-                         for hazard_output in
-                         risk_calculator.considered_hazard_outputs())
+                        for hazard_output in
+                        risk_calculator.considered_hazard_outputs())
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
@@ -1839,7 +1842,7 @@ class SESRupture(djm.Model):
     depths = fields.PickleField()
     result_grp_ordinal = djm.IntegerField()
     # NOTE(LB): The ordinal of a rupture within a given result group (indicated
-    # by ``result_grp_ordinal``). This rupture correspond indices of the
+    # by ``result_grp_ordinal``). This rupture correspond to the indices of the
     # ``gmvs`` field in Gmf. Thus, if you join SESRupture and Gmf records on
     # the ``result_grp_ordinal``, you can extract ground motion values for a
     # specific rupture.
@@ -1932,6 +1935,24 @@ class GmfSet(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
 
+    @property
+    def stochastic_event_set_id(self):
+        """
+        :returns: the ID of the stochastic event set which this ground
+        motion field set has been generated from
+        """
+        if self.complete_logic_tree_gmf:
+            job = self.gmf_collection.output.oq_job
+            return SES.objects.get(
+                complete_logic_tree_ses=True,
+                ses_collection__output__oq_job=job).id
+        else:
+            rlz = self.gmf_collection.lt_realization
+            return SES.objects.get(
+                complete_logic_tree_ses=False,
+                ses_collection__lt_realization=rlz,
+                ordinal=self.ses_ordinal).id
+
     # Disabling pylint for 'Too many local variables'
     # pylint: disable=R0914
     def __iter__(self):
@@ -1980,22 +2001,24 @@ class GmfSet(djm.Model):
                         gmf_nodes = []
                         for gmf in gmfs:
                             assert len(gmf.gmvs) == num_ruptures
-                            # TODO: Rename `iml` to `gmv`,
-                            # in NRML serializer as well
                             gmf_nodes.append(_GroundMotionFieldNode(
-                                iml=gmf.gmvs[i], location=gmf.location))
+                                gmv=gmf.gmvs[i],
+                                location=gmf.location))
                         yield _GroundMotionField(
                             imt=first.imt, sa_period=first.sa_period,
-                            sa_damping=first.sa_damping, gmf_nodes=gmf_nodes)
+                            sa_damping=first.sa_damping,
+                            rupture_id=first.rupture_ids[i],
+                            gmf_nodes=gmf_nodes)
                         del gmf_nodes
 
 
 class _GroundMotionField(object):
 
-    def __init__(self, imt, sa_period, sa_damping, gmf_nodes):
+    def __init__(self, imt, sa_period, sa_damping, rupture_id, gmf_nodes):
         self.imt = imt
         self.sa_period = sa_period
         self.sa_damping = sa_damping
+        self.rupture_id = rupture_id
         self.gmf_nodes = gmf_nodes
 
     def __iter__(self):
@@ -2007,8 +2030,8 @@ class _GroundMotionField(object):
 
 class _GroundMotionFieldNode(object):
 
-    def __init__(self, iml, location):
-        self.iml = iml
+    def __init__(self, gmv, location):
+        self.gmv = gmv
         self.location = location  # must have x and y attributes
 
 
@@ -2023,6 +2046,7 @@ class Gmf(djm.Model):
     sa_damping = djm.FloatField(null=True)
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
+    rupture_ids = fields.IntArrayField()
     result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
@@ -2086,12 +2110,13 @@ def get_gmfs_scenario(output, imt=None):
             for gmf in rows:
                 for gmv in gmf.gmvs:
                     gmf_nodes.append(
-                        _GroundMotionFieldNode(iml=gmv, location=loc))
+                        _GroundMotionFieldNode(gmv=gmv, location=loc))
             yield _GroundMotionField(
                 imt=imt,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
-                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('iml')))
+                rupture_id=None,
+                gmf_nodes=sorted(gmf_nodes, key=operator.attrgetter('gmv')))
 
 
 class DisaggResult(djm.Model):
