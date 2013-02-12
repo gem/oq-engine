@@ -392,8 +392,6 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
-    dont_save_absolute_losses boolean DEFAULT false,
-
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
 
@@ -1445,8 +1443,8 @@ CREATE TABLE riskr.loss_curve_data (
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR NOT NULL,
-    losses float[] NOT NULL CONSTRAINT non_negative_losses
-        CHECK (0 <= ALL(losses)),
+    -- needed to compute absolute losses in the export phase
+    asset_value float NOT NULL, 
     loss_ratios float[] NOT NULL CONSTRAINT check_loss_ratios
         CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Probabilities of exceedence

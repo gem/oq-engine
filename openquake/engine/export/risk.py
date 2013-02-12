@@ -95,11 +95,11 @@ def export_loss_curve(output, target_dir):
     args = _export_common(output)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
-    if output.loss_curve.insured:
-        args['insured'] = True
+    args['insured'] = output.loss_curve.insured
 
-    writers.LossCurveXMLWriter(**args).serialize(
-        output.loss_curve.losscurvedata_set.all().order_by('asset_ref'))
+    data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
+
+    writers.LossCurveXMLWriter(**args).serialize(data)
     return [args['path']]
 
 export_ins_loss_curve = export_loss_curve
