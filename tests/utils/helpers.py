@@ -1018,6 +1018,40 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     return job, files
 
 
+def get_scenario_risk_job(risk_cfg, hazard_cfg, username=None):
+    """
+    Takes in input the paths to a risk and hazard config file, respectively.
+
+    Creates a gmf_scenario output and then creates a :class:
+    `openquake.engine.db.models.OqJob` object for a risk calculation.
+    It also returns the input files referenced by the risk config file.
+    """
+    username = username if username is not None else default_user().user_name
+
+    hazard_job = get_hazard_job(hazard_cfg, username)
+    output = models.Output.objects.create_output(
+        hazard_job, "Test GMFScenario output", "gmf_scenario")
+    hazard_output = models.GmfScenario.objects.create(
+        output=output,
+        imt="PGA",
+        gmvs=[0.1, 0.2, 0.3],
+        result_grp_ordinal=1,
+        location="POINT(1 1)")
+    hazard_job.status = "complete"
+    hazard_job.save()
+    job = engine2.prepare_job(username)
+    params, files = engine2.parse_config(
+        open(risk_cfg, 'r'), force_inputs=True)
+    params.update(dict(hazard_output_id=hazard_output.id))
+
+    risk_calc = engine2.create_risk_calculation(
+        job.owner, params, files.values())
+    job.hazard_calculation = hazard_job.hazard_calculation
+    job.risk_calculation = risk_calc
+    job.save()
+    return job, files
+
+
 def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
     return shapely.geometry.Point(
         (min_x + random.random() * (max_x - min_x),
