@@ -315,7 +315,7 @@ class FragilityModelParser(object):
         if fmt == 'discrete':
             iml['imls'] = [float(level) for level in iml_element.text.split()]
         else:
-            iml['imls'] = []
+            iml['imls'] = None
         self.limit_states = findone('limitStates', fragilityModel).text.split()
         yield fmt, iml, self.limit_states
         for ffs in find('ffs', fragilityModel):
