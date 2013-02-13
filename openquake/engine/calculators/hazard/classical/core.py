@@ -125,12 +125,12 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     logs.LOG.debug('< done computing hazard matrices')
 
     logs.LOG.debug('> starting transaction')
-    _update_progress(hc, matrices, lt_rlz, src_ids)
+    _update_curves(hc, matrices, lt_rlz, src_ids)
     logs.LOG.debug('< transaction complete')
 
 
 @transaction.commit_on_success
-def _update_progress(hc, matrices, lt_rlz, src_ids):
+def _update_curves(hc, matrices, lt_rlz, src_ids):
     """
     Helper function for updating source, hazard curve, and realization progress
     records in the database.
