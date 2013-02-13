@@ -48,3 +48,45 @@ class ScenarioRiskCalculatorTestCase(
 
         self.assertEqual('PGA', params['imt'])
         self.assertEqual(0.0, params['asset_correlation'])
+
+    def test_imt_validation(self):
+        # Test the validation of the imt associated with the
+        # vulnerability model that must match the one of the hazard
+        # output.
+
+        patch = helpers.patch(
+            'openquake.engine.calculators.risk.general'
+            '.BaseRiskCalculator.set_risk_models')
+        patch.start()
+        self.calculator.imt = 'Hope'
+        self.assertRaises(RuntimeError, self.calculator.pre_execute)
+        patch.stop()
+
+    def test_celery_task(self):
+        # Test that the celery task when called properly call the
+        # specific method to write loss map data.
+
+        patch_dbwriter = helpers.patch(
+            'openquake.engine.calculators.risk.general.write_loss_map_data',)
+        write_lossmap_mock = patch_dbwriter.start()
+        scenario.scenario(
+            *self.calculator.task_arg_gen(self.calculator.block_size()).next())
+        patch_dbwriter.stop()
+
+        self.assertEqual(1, write_lossmap_mock.call_count)
+
+    def test_complete_workflow(self):
+        """
+        Test the complete risk scenario calculation workflow and test
+        for the presence of the outputs
+        """
+        self.calculator.execute()
+
+        # One Loss map
+        self.assertEqual(1,
+                         models.Output.objects.filter(oq_job=self.job).count())
+        self.assertEqual(1, models.LossMap.objects.filter(
+                            output__oq_job=self.job).count())
+
+        files = self.calculator.export(exports='xml')
+        self.assertEqual(1, len(files))
