@@ -502,7 +502,7 @@ class ScenarioRiskCalculationForm(BaseOQModelForm):
             'region_constraint',
             'master_seed',
             'asset_correlation',
-            )
+        )
 
 
 #: Maps calculation_mode to the appropriate validator class
