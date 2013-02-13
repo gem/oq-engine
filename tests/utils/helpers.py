@@ -462,7 +462,7 @@ def cleanup_loggers():
     for h in list(root.handlers):
         if (isinstance(h, logging.FileHandler) or
             isinstance(h, logging.StreamHandler) or
-            isinstance(h, logs.AMQPHandler)):
+                isinstance(h, logs.AMQPHandler)):
             root.removeHandler(h)
 
     # restore the damage created by redirect_stdouts_to_logger; this is only
