@@ -66,14 +66,14 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         self.calculator.taxonomies = {'RC/DMRF-D/LR': 2, 'RC': 1}
 
     def test_taxonomies_from_fragility_true(self):
-        self.calculator.job.rc.taxonomies_from_fragility_model = True
+        self.calculator.job.rc.taxonomies_from_model = True
         with mock.patch('openquake.nrmllib.risk.parsers.FragilityModelParser',
                         lambda p: FMParser(FRAGILITY_FILE)):
             self.calculator.set_risk_models()
         self.assertEqual(sorted(self.calculator.taxonomies), ['RC/DMRF-D/LR'])
 
     def test_taxonomies_from_fragility_false(self):
-        self.calculator.job.rc.taxonomies_from_fragility_model = False
+        self.calculator.job.rc.taxonomies_from_model = False
         with mock.patch('openquake.nrmllib.risk.parsers.FragilityModelParser',
                         lambda p: FMParser(FRAGILITY_FILE)):
             with self.assertRaises(RuntimeError) as cm:

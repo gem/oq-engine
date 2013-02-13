@@ -923,7 +923,7 @@ def asset_life_expectancy_is_valid(mdl):
     return True, []
 
 
-def taxonomies_from_fragility_model_is_valid(mdl):
+def taxonomies_from_model_is_valid(mdl):
     return True, []
 
 
