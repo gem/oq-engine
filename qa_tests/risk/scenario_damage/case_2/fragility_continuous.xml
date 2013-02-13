@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+     <fragilityModel format="continuous">
+        <description>Fragility model for QA test</description>
+        <IML IMT="PGA">0.1 0.2 0.3 0.5</IML>
+        <limitStates>LS1 LS2</limitStates>
+        <ffs type="lognormal">
+            <taxonomy>RC</taxonomy>
+            <ffc ls="LS1">
+                <params mean="0.2" stddev="0.05" />
+            </ffc>
+            <ffc ls="LS2">
+                <params mean="0.35" stddev="0.10" />
+            </ffc>
+        </ffs>
+        <ffs type="lognormal">
+            <taxonomy>RM</taxonomy>
+            <ffc ls="LS1">
+                <params mean="0.25" stddev="0.08" />
+            </ffc>
+            <ffc ls="LS2">
+                <params mean="0.40" stddev="0.12" /> 
+            </ffc>
+        </ffs>
+    </fragilityModel>
+</nrml>
+
