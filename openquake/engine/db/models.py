@@ -1059,7 +1059,7 @@ class RiskCalculation(djm.Model):
     #############################
     # Scenario Damage parameters:
     #############################
-    taxonomies_from_fragility_model = fields.OqNullBooleanField(
+    taxonomies_from_model = fields.OqNullBooleanField(
         help_text='if true calculation only consider the taxonomies in '
         'the fragility model', null=True, blank=True)
 
