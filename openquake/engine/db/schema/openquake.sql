@@ -420,7 +420,7 @@ CREATE TABLE uiapi.risk_calculation (
     asset_life_expectancy float,
 
     -- Scenario Damage parameters:
-    taxonomies_from_fragility_model BOOLEAN
+    taxonomies_from_model BOOLEAN
 
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);

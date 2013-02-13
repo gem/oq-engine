@@ -254,7 +254,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         if orphans:
             msg = ('The following taxonomies are in the exposure model '
                    'but not in the fragility model: %s' % sorted(orphans))
-            if self.rc.taxonomies_from_fragility_model:
+            if self.rc.taxonomies_from_model:
                 # only consider the taxonomies in the fragility model
                 self.taxonomies = dict((t, self.taxonomies[t])
                                        for t in self.fragility_functions

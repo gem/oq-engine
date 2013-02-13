@@ -31,7 +31,7 @@ CSVFILE = os.path.join(os.path.dirname(os.path.dirname(__file__)),
 class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
     """
     There are not enough taxonomies in the fragility_function (RM is missing)
-    but the parameter taxonomies_from_fragility_model is set, so assets of
+    but the parameter taxonomies_from_model is set, so assets of
     unknown taxonomy are simply ignored.
     """
 
