@@ -80,4 +80,4 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
                 self.calculator.set_risk_models()
         self.assertEqual(str(cm.exception),
                          'The following taxonomies are in the exposure '
-                         "model bad not in the fragility model: ['RC']")
+                         "model but not in the fragility model: ['RC']")
