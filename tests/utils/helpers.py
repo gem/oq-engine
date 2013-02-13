@@ -273,6 +273,7 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
     if silence:
         devnull = open(os.devnull, 'wb')
 
+    print 'Running:', ' '.join(args)  # this is useful for debugging
     try:
         return subprocess.check_call(args, stderr=devnull, stdout=devnull)
     finally:
