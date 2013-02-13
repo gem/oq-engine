@@ -101,9 +101,15 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
 
 def get_form_class(calculators, calc_mode):
     """
-    Assume there is a validation class into job.validation for each
-    calculation mode; the validation class name must be derived from the
-    calculator class name, with Calculator replaced by Form.
+    :param dict calculators:
+       a dictionary {calc_mode: calc_class}
+    :param str calc_mode
+       the calculations mode identifier string
+
+    This function assumes that there is a validation class in job/validation.py
+    for each calculation mode; the validation class name must be derived from
+    the calculator class name, with Calculator replaced by Form. If it cannot
+    find a Form class raises a SystemExit.
     """
     try:
         clsname = calculators[calc_mode].__name__
