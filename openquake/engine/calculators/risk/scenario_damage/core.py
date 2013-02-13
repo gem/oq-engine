@@ -236,6 +236,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
+        # save the damage states for the given risk calculation
+        for lsi, dstate in enumerate(self.damage_states):
+            models.DmgState(risk_calculation=self.job.risk_calculation,
+                            dmg_state=dstate, lsi=lsi).save()
+
     def set_risk_models(self):
         """
         Set the attributes fragility_model, fragility_functions, damage_states
@@ -243,17 +248,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
-
-        orphans = set(self.taxonomies) - set(self.fragility_functions)
-        if orphans:
-            raise RuntimeError(
-                'The following taxonomies are in the exposure '
-                'model bad not in the fragility model: %s' % orphans)
-
-        # save the damage states for the given risk calculation
-        for lsi, dstate in enumerate(self.damage_states):
-            models.DmgState(risk_calculation=self.job.risk_calculation,
-                            dmg_state=dstate, lsi=lsi).save()
+        if self.rc.taxonomies_from_fragility_model:
+            # only consider the taxonomies in the fragility model
+            self.taxonomies = dict((t, self.taxonomies[t])
+                                   for t in self.fragility_functions
+                                   if t in self.taxonomies)
+        else:
+            # make sure all taxonomies in the exposure are covered
+            orphans = set(self.taxonomies) - set(self.fragility_functions)
+            if orphans:
+                raise RuntimeError(
+                    'The following taxonomies are in the exposure '
+                    'model bad not in the fragility model: %s' %
+                    sorted(orphans))
 
     def parse_fragility_model(self):
         """
