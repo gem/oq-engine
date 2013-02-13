@@ -248,21 +248,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
-
-        # manage orphan taxonomies
-        orphans = set(self.taxonomies) - set(self.fragility_functions)
-        if orphans:
-            msg = ('The following taxonomies are in the exposure model '
-                   'but not in the fragility model: %s' % sorted(orphans))
-            if self.rc.taxonomies_from_model:
-                # only consider the taxonomies in the fragility model
-                self.taxonomies = dict((t, self.taxonomies[t])
-                                       for t in self.fragility_functions
-                                       if t in self.taxonomies)
-                logs.LOG.warn(msg)
-            else:
-                # all taxonomies in the exposure must be covered
-                raise RuntimeError(msg)
+        self.check_taxonomies(self.fragility_functions)
 
     def parse_fragility_model(self):
         """

@@ -326,6 +326,29 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def set_risk_models(self):
         self.vulnerability_functions = self.parse_vulnerability_model()
+        self.check_taxonomies(self.vulnerability_functions)
+
+    def check_taxonomies(self, taxonomies):
+        """
+        :param taxonomies:
+           taxonomies coming from the fragility/vulnerability model
+
+        If the model has less taxonomies than the exposure raises an
+        error unless the parameter ``taxonomies_from_model`` is set.
+        """
+        orphans = set(self.taxonomies) - set(taxonomies)
+        if orphans:
+            msg = ('The following taxonomies are in the exposure model '
+                   'but not in the fragility model: %s' % sorted(orphans))
+            if self.rc.taxonomies_from_model:
+                # only consider the taxonomies in the fragility model
+                self.taxonomies = dict((t, self.taxonomies[t])
+                                       for t in self.fragility_functions
+                                       if t in self.taxonomies)
+                logs.LOG.warn(msg)
+            else:
+                # all taxonomies in the exposure must be covered
+                raise RuntimeError(msg)
 
     def parse_vulnerability_model(self, retrofitted=False):
         """
