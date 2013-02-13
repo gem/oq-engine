@@ -99,6 +99,7 @@ COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard 
 COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
 COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
+COMMENT ON COLUMN hzrdr.gmf.rupture_ids IS 'a vector of ids to the hzrdr.ses_rupture table. for each id you can find the corresponding ground motion value in gmvs at the same index';
 
 COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
 COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
@@ -194,7 +195,7 @@ COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance
 COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_value IS 'The value of the asset';
 COMMENT ON COLUMN riskr.loss_curve_data.loss_ratios IS 'Loss ratios';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
