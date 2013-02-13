@@ -244,23 +244,25 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def set_risk_models(self):
         """
         Set the attributes fragility_model, fragility_functions, damage_states
-        and populate the table DmgState for the current risk calculation.
+        and manage the case of missing taxonomies.
         """
         self.fragility_model, self.fragility_functions, self.damage_states = \
             self.parse_fragility_model()
-        if self.rc.taxonomies_from_fragility_model:
-            # only consider the taxonomies in the fragility model
-            self.taxonomies = dict((t, self.taxonomies[t])
-                                   for t in self.fragility_functions
-                                   if t in self.taxonomies)
-        else:
-            # make sure all taxonomies in the exposure are covered
-            orphans = set(self.taxonomies) - set(self.fragility_functions)
-            if orphans:
-                raise RuntimeError(
-                    'The following taxonomies are in the exposure '
-                    'model bad not in the fragility model: %s' %
-                    sorted(orphans))
+
+        # manage orphan taxonomies
+        orphans = set(self.taxonomies) - set(self.fragility_functions)
+        if orphans:
+            msg = ('The following taxonomies are in the exposure model '
+                   'but not in the fragility model: %s' % sorted(orphans))
+            if self.rc.taxonomies_from_fragility_model:
+                # only consider the taxonomies in the fragility model
+                self.taxonomies = dict((t, self.taxonomies[t])
+                                       for t in self.fragility_functions
+                                       if t in self.taxonomies)
+                logs.LOG.warn(msg)
+            else:
+                # all taxonomies in the exposure must be covered
+                raise RuntimeError(msg)
 
     def parse_fragility_model(self):
         """
