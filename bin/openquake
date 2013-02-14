@@ -87,8 +87,8 @@ from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.job import validation
-from openquake.engine.utils import version as utils_version
-from openquake.engine.utils.general import get_available_calculators
+from openquake.engine.utils import version as utils_version, \
+    get_calculator_class
 from openquake.engine.calculators import risk, hazard
 
 
@@ -98,25 +98,6 @@ MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "calculation) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
 
-
-def get_form_class(calculators, calc_mode):
-    """
-    :param dict calculators:
-       a dictionary {calc_mode: calc_class}
-    :param str calc_mode
-       the calculations mode identifier string
-
-    This function assumes that there is a validation class in job/validation.py
-    for each calculation mode; the validation class name must be derived from
-    the calculator class name, with Calculator replaced by Form. If it cannot
-    find a Form class raises a SystemExit.
-    """
-    try:
-        clsname = calculators[calc_mode].__name__
-    except KeyError:
-        sys.exit('Calculation mode "%s" not supported' % calc_mode)
-    formname = clsname.replace('Calculator', 'Form')
-    return getattr(validation, formname)
 
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
@@ -210,6 +191,30 @@ def set_up_arg_parser():
     return parser
 
 
+def _validate(job, jobtype, files, exports):
+    assert jobtype in ('hazard', 'risk'), jobtype
+    calculator_pkg = globals()[jobtype]
+    calculation = getattr(job, '%s_calculation' % jobtype)
+    calc_mode = calculation.calculation_mode
+    try:
+        calculator = get_calculator_class(calculator_pkg, calc_mode)
+    except KeyError:
+        sys.exit('Could not find calculator "%s"' % calc_mode)
+    try:
+        formname = calculator.__name__.replace('Calculator', 'Form')
+        form_class = getattr(validation, formname)
+    except AttributeError:
+        sys.exit('Could not find form class for "%s"' % calc_mode)
+    form = form_class(instance=calculation, files=files, exports=exports)
+     # For now, just print whether or not the job is valid
+    form = form_class(instance=calculation, files=files, exports=exports)
+    # For now, just print whether or not the job is valid
+    # (and any errors if it isn't valid)
+    if not form.is_valid():
+        print ('Job configuration is not valid. Errors: %s'
+               % dict(form.errors))
+        sys.exit(1)
+
 def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
     """
     Run a hazard calculation using the specified config file and other options.
@@ -227,7 +232,6 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         A list of export types requested by the user. Currently only 'xml'
         is supported.
     """
-    calculators = get_available_calculators(hazard)
     try:
         if log_file is not None:
             try:
@@ -245,18 +249,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         job.hazard_calculation = calculation
         job.save()
 
-        # Validate the job:
-        calc_mode = job.hazard_calculation.calculation_mode
-        form_class = get_form_class(calculators, calc_mode)
-        form = form_class(instance=calculation, files=files, exports=exports)
-         # For now, just print whether or not the job is valid
-        form = form_class(instance=calculation, files=files, exports=exports)
-        # For now, just print whether or not the job is valid
-        # (and any errors if it isn't valid)
-        if not form.is_valid():
-            print ('Job configuration is not valid. Errors: %s'
-                   % dict(form.errors))
-            sys.exit(1)
+        _validate(job, 'hazard', files, exports)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
@@ -406,7 +399,6 @@ def run_risk(
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
     assert not(hazard_output_id is None and hazard_calculation_id is None)
-    calculators = get_available_calculators(risk)
     try:
         if log_file is not None:
             try:
@@ -430,16 +422,7 @@ def run_risk(
         job.risk_calculation = calculation
         job.save()
 
-        # Validate the job:
-        calc_mode = job.risk_calculation.calculation_mode
-        form_class = get_form_class(calculators, calc_mode)
-        form = form_class(instance=calculation, files=files, exports=exports)
-        # For now, just print whether or not the job is valid
-        # (and any errors if it isn't valid)
-        if not form.is_valid():
-            complain_and_exit(
-                'Job configuration is not valid. Errors: %s'
-                % dict(form.errors), 1)
+        _validate(job, 'risk', files,  exports)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
