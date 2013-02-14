@@ -474,7 +474,7 @@ class EventBasedRiskForm(BaseOQModelForm):
         )
 
 
-class ScenarioDamageForm(BaseOQModelForm):
+class ScenarioDamageRiskForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
 
     class Meta:

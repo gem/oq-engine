@@ -57,7 +57,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         fake_bulk_inserter = mock.Mock()
         with helpers.patch('openquake.engine.writer.BulkInserter') as m:
             m.return_value = fake_bulk_inserter
-            core_next._save_gmfs(
+            core._save_gmfs(
                 gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
             self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
 
@@ -70,7 +70,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         fake_bulk_inserter = mock.Mock()
         with helpers.patch('openquake.engine.writer.BulkInserter') as m:
             m.return_value = fake_bulk_inserter
-            core_next._save_gmfs(
+            core._save_gmfs(
                 gmf_set, gmf_dict, [mock.Mock()], 1)
             call_args = fake_bulk_inserter.add_entry.call_args_list[0][1]
             self.assertEqual([1], call_args['gmvs'])
