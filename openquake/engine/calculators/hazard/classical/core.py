@@ -125,9 +125,27 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     logs.LOG.debug('< done computing hazard matrices')
 
     logs.LOG.debug('> starting transaction')
-    with transaction.commit_on_success():
-        logs.LOG.debug('looping over IMTs')
+    _update_curves(hc, matrices, lt_rlz, src_ids)
+    logs.LOG.debug('< transaction complete')
 
+
+@transaction.commit_on_success
+def _update_curves(hc, matrices, lt_rlz, src_ids):
+    """
+    Helper function for updating source, hazard curve, and realization progress
+    records in the database.
+
+    This is intended to be used by :func:`compute_hazard_curves`.
+
+    :param hc:
+        :class:`openquake.engine.db.models.HazardCalculation` instance.
+    :param lt_rlz:
+        :class:`openquake.engine.db.models.LtRealization` record for the
+        current realization.
+    :param src_ids:
+        List of source IDs considered for this calculation task.
+    """
+    with logs.tracing('_update_curves for all IMTs'):
         for imt in hc.intensity_measure_types_and_levels.keys():
             logs.LOG.debug('> updating hazard for IMT=%s' % imt)
             hazardlib_imt = haz_general.imt_to_hazardlib(imt)
@@ -169,8 +187,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
         # Update realiation progress,
         # mark realization as complete if it is done
         haz_general.update_realization(lt_rlz.id, len(src_ids))
-
-    logs.LOG.debug('< transaction complete')
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
