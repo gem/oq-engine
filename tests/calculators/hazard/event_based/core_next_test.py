@@ -16,9 +16,11 @@
 
 import getpass
 import unittest
-
+import mock
+import numpy
 import kombu
 
+from openquake.hazardlib import imt
 from nose.plugins.attrib import attr
 
 from openquake.engine.db import models
@@ -39,6 +41,40 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
+
+    def test_donot_save_trivial_gmf(self):
+        gmf_set = mock.Mock()
+
+        # setup two ground motion fields on a region made by three
+        # locations. On the first two locations the values are
+        # nonzero, in the third one is zero. Then, we will expect the
+        # bulk inserter to add only two entries.
+        gmvs = numpy.matrix([[1., 1.],
+                             [1., 1.],
+                             [0., 0.]])
+        gmf_dict = {imt.PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
+
+        fake_bulk_inserter = mock.Mock()
+        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
+            m.return_value = fake_bulk_inserter
+            core_next._save_gmfs(
+                gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
+            self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
+
+    def test_save_only_nonzero_gmvs(self):
+        gmf_set = mock.Mock()
+
+        gmvs = numpy.matrix([[0.0, 0, 1]])
+        gmf_dict = {imt.PGA: dict(rupture_ids=[1, 2, 3], gmvs=gmvs)}
+
+        fake_bulk_inserter = mock.Mock()
+        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
+            m.return_value = fake_bulk_inserter
+            core_next._save_gmfs(
+                gmf_set, gmf_dict, [mock.Mock()], 1)
+            call_args = fake_bulk_inserter.add_entry.call_args_list[0][1]
+            self.assertEqual([1], call_args['gmvs'])
+            self.assertEqual([3], call_args['rupture_ids'])
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation
