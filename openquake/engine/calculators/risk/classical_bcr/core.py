@@ -63,6 +63,11 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
       The life expectancy used for every asset
     """
 
+    calc_original = api.Classical(
+        vulnerability_function, lrem_steps_per_interval)
+    calc_retrofitted = api.Classical(
+        vulnerability_function_retrofitted, lrem_steps_per_interval)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_id, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
@@ -70,9 +75,8 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
         hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
 
         calculator = api.BCR(
-            api.Classical(vulnerability_function, lrem_steps_per_interval),
-            api.Classical(vulnerability_function_retrofitted,
-                          lrem_steps_per_interval),
+            calc_original,
+            calc_retrofitted,
             interest_rate,
             asset_life_expectancy)
 
