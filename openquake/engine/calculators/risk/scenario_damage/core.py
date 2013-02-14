@@ -163,7 +163,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def hazard_output(self, output):
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
-                "The provided hazard output is not a ground motion field")
+                "The provided hazard output is not a ground motion field: %s"
+                % output.output_type)
 
     def worker_args(self, taxonomy):
         """
@@ -235,16 +236,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
-    def set_risk_models(self):
-        """
-        Set the attributes fragility_model, fragility_functions, damage_states
-        and populate the table DmgState for the current risk calculation.
-        """
-        self.fragility_model, self.fragility_functions, self.damage_states = \
-            self.parse_fragility_model()
+        # save the damage states for the given risk calculation
         for lsi, dstate in enumerate(self.damage_states):
             models.DmgState(risk_calculation=self.job.risk_calculation,
                             dmg_state=dstate, lsi=lsi).save()
+
+    def set_risk_models(self):
+        """
+        Set the attributes fragility_model, fragility_functions, damage_states
+        and manage the case of missing taxonomies.
+        """
+        self.fragility_model, self.fragility_functions, self.damage_states = \
+            self.parse_fragility_model()
+        self.check_taxonomies(self.fragility_functions)
 
     def parse_fragility_model(self):
         """

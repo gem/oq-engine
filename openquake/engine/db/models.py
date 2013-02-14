@@ -1034,6 +1034,10 @@ class RiskCalculation(djm.Model):
         null=True,
         blank=True)
 
+    taxonomies_from_model = fields.OqNullBooleanField(
+        help_text='if true calculation only consider the taxonomies in '
+        'the fragility model', null=True, blank=True)
+
     ##################################
     # Probabilistic shared parameters
     ##################################
