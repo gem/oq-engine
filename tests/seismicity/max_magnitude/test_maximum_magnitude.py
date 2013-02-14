@@ -42,6 +42,8 @@
 
 '''Prototype unittest code for mmax module'''
 
+import os
+import warnings
 import unittest
 import numpy as np
 from hmtk.parsers.catalogue import CsvCatalogueParser
@@ -57,9 +59,7 @@ from hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian import \
     KijkoNonParametricGaussian, _get_exponential_spaced_values
 
 
-TEST_CAT_1 = 'tests/seismicity/completeness/data/completeness_test_cat.csv'
-
-
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), './../completeness/data')
 
 class MmaxTestCase(unittest.TestCase):
     '''Testing class for Mmax functions'''
@@ -137,9 +137,8 @@ class TestCumulativeMoment(unittest.TestCase):
     module
     '''
     def setUp(self):
-        test_data = np.genfromtxt(TEST_CAT_1, delimiter=',', skip_header=1)
-        
-        parser0 = CsvCatalogueParser(TEST_CAT_1)
+        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         
         self.config = {'algorithm': None,
@@ -217,7 +216,8 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         '''
         Set up test class
         '''
-        parser0 = CsvCatalogueParser(TEST_CAT_1)
+        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'b-value': 1.0,
                        'input_mmin': 5.0,
@@ -240,19 +240,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         self.assertAlmostEqual(self.model._ks_intfunc(mval, neq, mmax, mmin, 
                                beta), 0.04151379)
 
-        # Simple test case 2 - Mmin == Mmax (returns inf)
-        mmin = 6.0
-        mmax = 6.0
-        self.assertTrue(np.isinf(self.model._ks_intfunc(mval, neq, mmax, mmin, 
-                                 beta)))
-        
-        # Test case 3 - Mmin > MMax (raises value Error)
-        mmin = 6.1
-        with self.assertRaises(ValueError) as ae:
-            _ = self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
-            self.assertEqual(ae.exception.message, 
-            'Maximum magnitude smaller than minimum magnitude'
-            ' in Kijko & Sellevol (Fixed-b) integral')
+         
         
         # Test case 4 - Number of earthquakes is 0
         mmax = 8.5
@@ -296,26 +284,53 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         mmax_2, sigma_mmax_2 = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax_1, mmax_2)
 
-        # Test case with b-value = 0
+        # Case where the maximum magnitude is overriden
+#        self.config['input_mmax'] = 7.6
+#        self.config['b-value'] = 1.0
+#        self.config['input_mmax_uncertainty'] = 0.2
+#        mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
+#        self.assertAlmostEqual(mmax_1, 8.1380422)
+#        self.assertAlmostEqual(sigma_mmax_1, 0.57401164)
+
+    def test_raise_runTimeWarning(self):
+        """Test case with b-value = 0
+        """
         self.config['input_mmin'] = 5.0
         self.config['b-value'] = 0.0
-        mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
-        self.assertAlmostEqual(mmax_1, 7.4)
-        self.assertAlmostEqual(sigma_mmax_1, 0.1)
+        with warnings.catch_warnings(True) as cm:
+            self.model.get_mmax(self.catalogue, self.config)
+            assert len(cm) > 0
 
-        # With b < 0, results should be the same as b = 0.
-        self.config['b-value'] = 0.0
-        mmax_2, sigma_mmax_2 = self.model.get_mmax(self.catalogue, self.config)
-        self.assertAlmostEqual(mmax_2, mmax_1)
-        self.assertAlmostEqual(sigma_mmax_2, sigma_mmax_1)
+    def test_raise_valueError(self):
+        """Simple test case 2 - Mmin == Mmax (returns inf)
+        """
+        mmin = 6.0
+        mmax = 6.0
+        mval = 6.5
+        beta = np.log(10.)
+        neq = 100.
+        with self.assertRaises(ValueError) as cm:
+            print 'type',type(cm), cm
+            self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
+        self.assertEqual(cm.exception.message, 
+                'Maximum magnitude smaller than minimum magnitude'
+                ' in Kijko & Sellevol (Fixed-b) integral')
 
-        # Case where the maximum magnitude is overriden
-        self.config['input_mmax'] = 7.6
-        self.config['b-value'] = 1.0
-        self.config['input_mmax_uncertainty'] = 0.2
-        mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
-        self.assertAlmostEqual(mmax_1, 8.1380422)
-        self.assertAlmostEqual(sigma_mmax_1, 0.57401164)
+
+    def test_raise_valueError_1(self):
+        """Test case 3 - Mmin > MMax (raises value Error)
+        """
+        mmin = 6.2
+        mmax = 6.0
+        mval = 6.5
+        beta = np.log(10.)
+        neq = 100.
+        with self.assertRaises(ValueError) as ae:
+            self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
+        exception = ae.exception
+        self.assertEqual(exception.message, 
+               'Maximum magnitude smaller than minimum magnitude'
+               ' in Kijko & Sellevol (Fixed-b) integral')
 
 
 class TestKijkoSellevolBayes(unittest.TestCase):
@@ -323,7 +338,8 @@ class TestKijkoSellevolBayes(unittest.TestCase):
     Test the hmtk.seismicity.max_magnitude.KijkoSellevolBayes module
     '''
     def setUp(self):
-        parser0 = CsvCatalogueParser(TEST_CAT_1)
+        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'b-value': 1.0,
                        'sigma-b': 0.05,
@@ -420,7 +436,8 @@ class TestKijkoNPG(unittest.TestCase):
     Class to test the Kijko Nonparametric Gaussian function
     '''
     def setUp(self):
-        parser0 = CsvCatalogueParser(TEST_CAT_1)
+        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'maximum_iterations': 1000,
                        'number_earthquakes': 100,

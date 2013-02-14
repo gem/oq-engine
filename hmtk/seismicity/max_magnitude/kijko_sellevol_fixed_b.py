@@ -45,6 +45,7 @@ Module :mod: 'hmtk.seismicity.max_magnitude.kijko_sellevol defines the
 Kijko & Sellevol algorithm for maximum magnitude
 '''
 
+import warnings
 import numpy as np
 from math import fabs
 from scipy.integrate import quadrature
@@ -149,10 +150,13 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
         :returns: 
             Integrand of Kijko-Sellevol estimator
         '''
-        if mmin > mmax:
+        if mmin >= mmax:
             raise ValueError('Maximum magnitude smaller than minimum magnitude'
                              ' in Kijko & Sellevol (Fixed-b) integral')
                              
         func1 = 1. - np.exp(-beta * (mval - mmin)) 
-        func1 = (func1 / (1. - np.exp(-beta * (mmax - mmin)))) ** neq
+        if np.fabs(beta) > 1e-3:
+            func1 = (func1 / (1. - np.exp(-beta * (mmax - mmin)))) ** neq
+        else:
+            warnings.warn('beta is lower or equal to 0',RuntimeWarning)
         return func1
