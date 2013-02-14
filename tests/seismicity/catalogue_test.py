@@ -53,8 +53,8 @@
 
 import unittest
 import numpy as np
-from nhlib.geo.mesh import Mesh
-from nhlib.geo.utils import spherical_to_cartesian
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.utils import decimal_time
 

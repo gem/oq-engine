@@ -8,12 +8,11 @@ import decimal
 
 from lxml import etree
 
-import nrml
-from nrml import models
-from nrml import utils
-from nhlib.geo.point import Point
-from nhlib.geo.line import Line
-from nhlib.geo.polygon import Polygon
+import openquake.nrmllib as nrml
+from openquake.nrmllib import models
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.polygon import Polygon
 from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource

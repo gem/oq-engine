@@ -53,8 +53,8 @@ Prototype of a 'Catalogue' class
 
 import numpy as np
 from hmtk.seismicity.utils import decimal_time
-from nhlib.geo.mesh import Mesh
-from nhlib.geo.utils import spherical_to_cartesian
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
 class Catalogue(object):
     """

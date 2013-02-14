@@ -56,7 +56,7 @@ import unittest
 import warnings
 import numpy as np
 from copy import deepcopy
-from nhlib.geo.point import Point
+from openquake.hazardlib.geo.point import Point
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector

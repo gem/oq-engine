@@ -16,10 +16,10 @@ from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import (_check_depth_limits, 
                                       _get_decimal_from_datetime,
                                       CatalogueSelector)
-from nhlib.geo.point import Point
-from nhlib.geo.polygon import Polygon
-from nhlib.geo.line import Line
-from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 
 class TestSelector(unittest.TestCase):

@@ -55,9 +55,9 @@ nrml.models.SimpleFaultSource
 import warnings
 import numpy as np
 from math import fabs
-from nhlib.geo.point import Point
-from nhlib.geo.line import Line
-from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 class mtkSimpleFaultSource(object):
     '''

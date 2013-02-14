@@ -55,8 +55,8 @@ hmtk.sources.complex_fault_source.mtkComplexFaultSource
 import unittest
 import warnings
 import numpy as np
-from nhlib.geo import point, line
-from nhlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.geo import point, line
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector

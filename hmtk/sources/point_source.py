@@ -53,7 +53,7 @@ the class nrml.models.PointSource
 '''
 import warnings
 import numpy as np
-from nhlib.geo.point import Point
+from openquake.hazardlib.geo.point import Point
 
 class mtkPointSource(object):
     '''New class to describe the mtkPointsource object

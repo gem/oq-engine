@@ -54,8 +54,8 @@ nrml.models.AreaSource
 '''
 import warnings
 import numpy as np
-from nhlib.geo.point import Point
-from nhlib.geo.polygon import Polygon
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
 
 
 class mtkAreaSource(object):

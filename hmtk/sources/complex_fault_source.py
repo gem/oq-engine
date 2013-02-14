@@ -54,9 +54,9 @@ nrml.models.ComplexFaultSource
 import warnings
 import numpy as np
 from math import fabs
-from nhlib.geo.point import Point
-from nhlib.geo.line import Line
-from nhlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
 class mtkComplexFaultSource(object):
     '''

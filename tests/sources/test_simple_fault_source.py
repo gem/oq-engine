@@ -55,8 +55,8 @@ hmtk.sources.simple_fault_source.mtkSimpleFaultSource
 import unittest
 import warnings
 import numpy as np
-from nhlib.geo import point, line
-from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo import point, line
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector

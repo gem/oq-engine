@@ -55,7 +55,7 @@ hmtk.sources.area_source.mtkAreaSource
 import unittest
 import warnings
 import numpy as np
-from nhlib.geo import point, polygon
+from openquake.hazardlib.geo import point, polygon
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
