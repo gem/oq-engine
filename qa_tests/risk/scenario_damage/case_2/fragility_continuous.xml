@@ -4,7 +4,7 @@
 
      <fragilityModel format="continuous">
         <description>Fragility model for QA test</description>
-        <IML IMT="PGA">0.1 0.2 0.3 0.5</IML>
+        <IML IMT="PGA"/>
         <limitStates>LS1 LS2</limitStates>
         <ffs type="lognormal">
             <taxonomy>RC</taxonomy>
