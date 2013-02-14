@@ -145,48 +145,48 @@ def _update_curves(hc, matrices, lt_rlz, src_ids):
     :param src_ids:
         List of source IDs considered for this calculation task.
     """
-    logs.LOG.debug('looping over IMTs')
-    for imt in hc.intensity_measure_types_and_levels.keys():
-        logs.LOG.debug('> updating hazard for IMT=%s' % imt)
-        hazardlib_imt = haz_general.imt_to_hazardlib(imt)
-        query = """
-        SELECT * FROM htemp.hazard_curve_progress
-        WHERE lt_realization_id = %s
-        AND imt = %s
-        FOR UPDATE"""
-        [hc_progress] = models.HazardCurveProgress.objects.raw(
-            query, [lt_rlz.id, imt])
+    with logs.tracing('_update_curves for all IMTs'):
+        for imt in hc.intensity_measure_types_and_levels.keys():
+            logs.LOG.debug('> updating hazard for IMT=%s' % imt)
+            hazardlib_imt = haz_general.imt_to_hazardlib(imt)
+            query = """
+            SELECT * FROM htemp.hazard_curve_progress
+            WHERE lt_realization_id = %s
+            AND imt = %s
+            FOR UPDATE"""
+            [hc_progress] = models.HazardCurveProgress.objects.raw(
+                query, [lt_rlz.id, imt])
 
-        hc_progress.result_matrix = update_result_matrix(
-            hc_progress.result_matrix, matrices[hazardlib_imt])
-        hc_progress.save()
+            hc_progress.result_matrix = update_result_matrix(
+                hc_progress.result_matrix, matrices[hazardlib_imt])
+            hc_progress.save()
 
-        logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
+            logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
 
-    # Before the transaction completes:
+        # Before the transaction completes:
 
-    # Check here if any of records in source progress model
-    # with parsed_source_id from src_ids are marked as complete,
-    # and rollback and abort if there is at least one
-    src_prog = models.SourceProgress.objects.filter(
-        lt_realization=lt_rlz, parsed_source__in=src_ids)
+        # Check here if any of records in source progress model
+        # with parsed_source_id from src_ids are marked as complete,
+        # and rollback and abort if there is at least one
+        src_prog = models.SourceProgress.objects.filter(
+            lt_realization=lt_rlz, parsed_source__in=src_ids)
 
-    if any(x.is_complete for x in src_prog):
-        msg = (
-            'One or more `source_progress` records were marked as '
-            'complete. This was unexpected and probably means that the'
-            ' calculation workload was not distributed properly.'
-        )
-        logs.LOG.critical(msg)
-        transaction.rollback()
-        raise RuntimeError(msg)
+        if any(x.is_complete for x in src_prog):
+            msg = (
+                'One or more `source_progress` records were marked as '
+                'complete. This was unexpected and probably means that the'
+                ' calculation workload was not distributed properly.'
+            )
+            logs.LOG.critical(msg)
+            transaction.rollback()
+            raise RuntimeError(msg)
 
-    # Mark source_progress records as complete
-    src_prog.update(is_complete=True)
+        # Mark source_progress records as complete
+        src_prog.update(is_complete=True)
 
-    # Update realiation progress,
-    # mark realization as complete if it is done
-    haz_general.update_realization(lt_rlz.id, len(src_ids))
+        # Update realiation progress,
+        # mark realization as complete if it is done
+        haz_general.update_realization(lt_rlz.id, len(src_ids))
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
