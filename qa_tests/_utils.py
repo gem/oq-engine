@@ -94,7 +94,7 @@ def get_medians(output, imt):
 
 
 def count(gmf_value, gmfs_site_one, gmfs_site_two,
-        delta_prob=0.1, div_factor=2.0):
+          delta_prob=0.1, div_factor=2.0):
     """
     Count the number of pairs of gmf values
     within the specified range.
@@ -108,6 +108,6 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
 
     for v1, v2 in zip(gmfs_site_one, gmfs_site_two):
         if ((lower_bound <= v1 <= upper_bound) and
-            (lower_bound <= v2 <= upper_bound)):
+                (lower_bound <= v2 <= upper_bound)):
             count += 1
     return count
