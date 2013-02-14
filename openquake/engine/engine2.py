@@ -31,12 +31,11 @@ from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
-from openquake.engine.utils import monitor
-from openquake.engine.utils.general import get_available_calculators
+from openquake.engine.utils import monitor, get_available_calculators
 from openquake.engine.calculators import hazard, risk
 
 
-INPUT_TYPES = set(item[0] for item in models.Input.INPUT_TYPE_CHOICES)
+INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
 
 
 def prepare_job(user_name="openquake", log_level='progress'):

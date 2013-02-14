@@ -30,12 +30,12 @@ import imp
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
 # virtual environment) you must set this environment variable
-if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
-            0, os.path.join(os.path.dirname(__file__), "openquake"))
+        0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-from openquake.engine.utils import config
-
+from openquake.engine.utils import config, get_calculator_modules
+from openquake.engine.calculators import hazard, risk
 
 config.abort_if_no_config_available()
 
@@ -61,22 +61,16 @@ CELERY_RESULT_BACKEND = "amqp"
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
 
+HAZARD_MODULES = get_calculator_modules(hazard)
 
-CELERY_IMPORTS = (
-    "openquake.engine.calculators.hazard.classical.core",
-    "openquake.engine.calculators.hazard.classical.post_processing",
-    "openquake.engine.calculators.hazard.event_based.core",
-    "openquake.engine.calculators.hazard.event_based.post_processing",
-    "openquake.engine.calculators.risk.classical.core",
-    "openquake.engine.calculators.risk.classical_bcr.core",
-    "openquake.engine.calculators.risk.event_based.core",
-    "openquake.engine.calculators.risk.event_based_bcr.core",
-    "openquake.engine.calculators.risk.scenario.core",)
+RISK_MODULES = get_calculator_modules(risk)
+
+CELERY_IMPORTS = HAZARD_MODULES + RISK_MODULES
 
 try:
     imp.find_module("tasks", [os.path.join(x, "tests/utils")
-                                for x in sys.path])
-    CELERY_IMPORTS = CELERY_IMPORTS + ("tests.utils.tasks",)
+                              for x in sys.path])
+    CELERY_IMPORTS.append("tests.utils.tasks")
 except ImportError:
     pass
 

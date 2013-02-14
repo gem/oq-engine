@@ -49,8 +49,7 @@ from openquake.engine import engine
 from openquake.engine import engine2
 from openquake.engine import logs
 from openquake.engine.input.logictree import LogicTreeProcessor
-from openquake.engine.utils import config
-from openquake.engine.utils.general import get_available_calculators
+from openquake.engine.utils import config, get_available_calculators
 
 CALCULATORS = get_available_calculators(hazard)
 
