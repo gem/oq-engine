@@ -1022,6 +1022,9 @@ class RiskCalculation(djm.Model):
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
 
+    ##########################################
+    # For calculators that output loss curves
+    ##########################################
     mean_loss_curves = fields.OqNullBooleanField(
         help_text='Compute mean loss curves',
         null=True,
@@ -2308,13 +2311,17 @@ class LossCurveData(djm.Model):
 
     loss_curve = djm.ForeignKey("LossCurve")
     asset_ref = djm.TextField()
-    losses = fields.FloatArrayField()
+    asset_value = djm.FloatField()
     loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
+
+    @property
+    def losses(self):
+        return numpy.array(self.loss_ratios) * self.asset_value
 
 
 class AggregateLossCurveData(djm.Model):

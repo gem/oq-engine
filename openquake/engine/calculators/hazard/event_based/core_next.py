@@ -363,11 +363,11 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     for imt, gmf_data in gmf_dict.iteritems():
 
         gmfs = gmf_data['gmvs']
-        rupture_ids = gmf_data['rupture_ids']
-        # ``gmfs`` comes in as a numpy.matrix
-        # we want it is an array; it handles subscripting
-        # in the way that we want
+        # ``gmfs`` and ``rupture_ids`` come in as a numpy.matrix and
+        # a list. we want them as an array; it handles subscripting in
+        # the way that we want
         gmfs = numpy.array(gmfs)
+        rupture_ids = numpy.array(gmf_data['rupture_ids'])
 
         sa_period = None
         sa_damping = None
@@ -377,16 +377,29 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         imt_name = imt.__class__.__name__
 
         for i, location in enumerate(points_to_compute):
-            inserter.add_entry(
-                gmf_set_id=gmf_set.id,
-                imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                location=location.wkt2d,
-                gmvs=gmfs[i].tolist(),
-                rupture_ids=rupture_ids,
-                result_grp_ordinal=result_grp_ordinal,
-            )
+            all_gmvs = gmfs[i]
+
+            # take only the nonzero ground motion values and the
+            # corresponding rupture ids
+            nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
+            gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
+            relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
+
+            if gmvs:
+                inserter.add_entry(
+                    gmf_set_id=gmf_set.id,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    location=location.wkt2d,
+                    gmvs=gmvs,
+                    rupture_ids=relevant_rupture_ids,
+                    result_grp_ordinal=result_grp_ordinal,
+                )
+            else:
+                logs.LOG.debug(
+                    "No ground motion field in point %s "
+                    "as it is too far from any rupture" % location.wkt2d)
 
     inserter.flush()
 
