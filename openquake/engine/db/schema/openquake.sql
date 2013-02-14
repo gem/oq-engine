@@ -395,6 +395,8 @@ CREATE TABLE uiapi.risk_calculation (
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
 
+    taxonomies_from_model BOOLEAN,
+
     -- probabilistic parameters
     asset_correlation float NULL
     CONSTRAINT asset_correlation_value
@@ -417,10 +419,7 @@ CREATE TABLE uiapi.risk_calculation (
 
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
-    asset_life_expectancy float,
-
-    -- Scenario Damage parameters:
-    taxonomies_from_model BOOLEAN
+    asset_life_expectancy float
 
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
