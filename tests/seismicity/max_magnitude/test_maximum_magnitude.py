@@ -310,7 +310,6 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         beta = np.log(10.)
         neq = 100.
         with self.assertRaises(ValueError) as cm:
-            print 'type',type(cm), cm
             self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
         self.assertEqual(cm.exception.message, 
                 'Maximum magnitude smaller than minimum magnitude'
