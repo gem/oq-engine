@@ -30,7 +30,8 @@ import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import base
-from openquake.engine import utils, logs
+from openquake.engine import logs
+from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
@@ -50,15 +51,15 @@ def gmf_realiz_per_task(num_realizations, num_concur_task):
     """
 
     realiz_per_task, spare_realizations = divmod(
-                                  num_realizations, num_concur_task)
+        num_realizations, num_concur_task)
     result = [realiz_per_task for _ in xrange(num_concur_task)]
     if spare_realizations:
         result.append(spare_realizations)
     return spare_realizations > 0, result
 
 
-@utils.tasks.oqtask
-@utils.stats.count_progress('h')
+@tasks.oqtask
+@stats.count_progress('h')
 def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.

@@ -543,8 +543,10 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         logs.LOG.progress("initializing sources")
 
-        [smlt] = models.inputs4hcalc(self.hc.id, input_type='source_model_logic_tree')
-        [gsimlt] = models.inputs4hcalc(self.hc.id, input_type='gsim_logic_tree')
+        [smlt] = models.inputs4hcalc(
+            self.hc.id, input_type='source_model_logic_tree')
+        [gsimlt] = models.inputs4hcalc(
+            self.hc.id, input_type='gsim_logic_tree')
         source_paths = logictree.read_logic_trees(
             self.hc.base_path, smlt.path, gsimlt.path)
 
@@ -588,8 +590,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         validation step to ensure that the area covered by the site model
         completely envelops the calculation geometry. (If this requirement is
         not satisfied, an exception will be raised. See
-        :func:`openquake.engine.calculators.hazard.general.\
-validate_site_model`.)
+        :func:`openquake.engine.calculators.hazard.general.validate_site_model`.)
 
         Then, take all of the points/locations of interest defined by the
         calculation geometry. For each point, do distance queries on the site
