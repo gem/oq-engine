@@ -502,7 +502,7 @@ class ScenarioRiskCalculationForm(BaseOQModelForm):
             'region_constraint',
             'master_seed',
             'asset_correlation',
-            )
+        )
 
 
 #: Maps calculation_mode to the appropriate validator class
@@ -923,6 +923,10 @@ def asset_life_expectancy_is_valid(mdl):
     return True, []
 
 
+def taxonomies_from_model_is_valid(mdl):
+    return True, []
+
+
 def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
         if mdl.interest_rate is None or mdl.interest_rate <= 0:
@@ -960,8 +964,8 @@ def master_seed_is_valid(_mdl):
 def gsim_is_valid(mdl):
     if mdl.gsim in AVAILABLE_GSIMS:
         return True, []
-    return False, ['The gsim %r is not in in openquake.hazardlib.gsim' % (
-            mdl.gsim)]
+    return False, ['The gsim %r is not in in openquake.hazardlib.gsim' %
+                   mdl.gsim]
 
 
 def number_of_ground_motion_fields_is_valid(mdl):

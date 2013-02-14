@@ -102,9 +102,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         Test that Vulnerability model and functions are properly
         stored and associated with the calculator
         """
-
+        self.calculator.taxonomies = {'VF': 10}
         self.calculator.set_risk_models()
-
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
 
     def test_create_outputs(self):
@@ -114,8 +113,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         for hazard_output in self.hazard_outputs:
             [loss_curve_id, loss_map_ids,
-             mean, quantile] = self.calculator.create_outputs(
-                hazard_output)
+             mean, quantile] = self.calculator.create_outputs(hazard_output)
 
             self.assertIsNone(mean)
             self.assertEqual({}, quantile)
