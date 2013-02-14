@@ -1031,6 +1031,10 @@ class RiskCalculation(djm.Model):
         null=True,
         blank=True)
 
+    taxonomies_from_model = fields.OqNullBooleanField(
+        help_text='if true calculation only consider the taxonomies in '
+        'the fragility model', null=True, blank=True)
+
     ##################################
     # Probabilistic shared parameters
     ##################################
@@ -1055,13 +1059,6 @@ class RiskCalculation(djm.Model):
     ######################################
     interest_rate = djm.FloatField(null=True, blank=True)
     asset_life_expectancy = djm.FloatField(null=True, blank=True)
-
-    #############################
-    # Scenario Damage parameters:
-    #############################
-    taxonomies_from_model = fields.OqNullBooleanField(
-        help_text='if true calculation only consider the taxonomies in '
-        'the fragility model', null=True, blank=True)
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
