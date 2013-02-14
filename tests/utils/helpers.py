@@ -276,6 +276,7 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
     if silence:
         devnull = open(os.devnull, 'wb')
 
+    print 'Running:', ' '.join(args)  # this is useful for debugging
     try:
         return subprocess.check_call(args, stderr=devnull, stdout=devnull)
     finally:
@@ -464,7 +465,7 @@ def cleanup_loggers():
     for h in list(root.handlers):
         if (isinstance(h, logging.FileHandler) or
             isinstance(h, logging.StreamHandler) or
-            isinstance(h, logs.AMQPHandler)):
+                isinstance(h, logs.AMQPHandler)):
             root.removeHandler(h)
 
     # restore the damage created by redirect_stdouts_to_logger; this is only
@@ -994,6 +995,16 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 imt="PGA", imls=[0.1, 0.2, 0.3]),
             poes=[0.1, 0.2, 0.3],
             location="POINT(1 1)")
+
+    elif output_type == "gmf_scenario":
+        hazard_output = models.GmfScenario.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "gmf_scenario"),
+            imt="PGA",
+            location="POINT(1 1)",
+            gmvs=[0.1, 0.2, 0.3],
+            result_grp_ordinal=1)
+
     else:
         hazard_output = models.Gmf.objects.create(
             gmf_set=models.GmfSet.objects.create(
@@ -1018,6 +1029,10 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     if output_type == "curve":
         params.update(
             dict(hazard_output_id=hazard_output.hazard_curve.output.id))
+
+    elif output_type == "gmf_scenario":
+        params.update(
+            dict(hazard_output_id=hazard_output.output.id))
     else:
         output = hazard_output.gmf_set.gmf_collection.output
         params.update(dict(hazard_output_id=output.id))
