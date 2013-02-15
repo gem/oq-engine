@@ -29,7 +29,7 @@ Event-Based PSHA Calculator
 
 Event-Based Core
 ================
-.. automodule:: openquake.engine.calculators.hazard.event_based.core_next
+.. automodule:: openquake.engine.calculators.hazard.event_based.core
 
 Event-Based Post-Proccessing
 ============================
