@@ -66,7 +66,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
                             os.path.dirname(__file__)), "openquake"))
 
 from openquake.engine.utils import config
-
+ 
 config.abort_if_no_config_available()
 
 try:
@@ -82,12 +82,11 @@ except ImportError:
 
 import openquake.engine
 from openquake.engine import __version__
-from openquake.engine import engine2
+from openquake.engine import engine2, utils
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
-from openquake.engine.job import validation
-from openquake.engine.utils import version as utils_version
+from openquake.engine.job.validation import validate
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -223,24 +222,14 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         job.hazard_calculation = calculation
         job.save()
 
-        # Validate the job:
-        calc_mode = job.hazard_calculation.calculation_mode
-        form_class = validation.HAZ_VALIDATOR_MAP.get(calc_mode)
-        if form_class is None:
-            print 'Calculation mode "%s" not supported' % calc_mode
-            sys.exit(1)
-
-        form = form_class(instance=calculation, files=files, exports=exports)
-        # For now, just print whether or not the job is valid
-        # (and any errors if it isn't valid)
-        if not form.is_valid():
-            print ('Job configuration is not valid. Errors: %s'
-                   % dict(form.errors))
-            sys.exit(1)
+        error_message = validate(job, 'hazard', files, exports)
+        if error_message:
+            sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_hazard(job, log_level, log_file, exports)
+        completed_job = engine2.run_calc(
+            job, log_level, log_file, exports, 'hazard')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -343,8 +332,8 @@ def export_risk(risk_output_id, target_dir):
 def export(fn, output_id, target_dir):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.hazard.export` which prints a summary of files
-    exported, if any.
+    :func:`openquake.engine.export.hazard.export` which prints a summary
+    of files exported, if any.
     """
     if not models.Output.objects.filter(pk=output_id).exists():
         print 'No output found for OUTPUT_ID %s' % output_id
@@ -404,30 +393,19 @@ def run_risk(
         params.update(dict(hazard_output_id=hazard_output_id,
                            hazard_calculation_id=hazard_calculation_id))
 
-        calculation = engine2.create_risk_calculation(job.owner, params,
-                                                      files.values())
+        calculation = engine2.create_risk_calculation(
+            job.owner, params, files.values())
         job.risk_calculation = calculation
         job.save()
 
-        # Validate the job:
-        calc_mode = job.risk_calculation.calculation_mode
-
-        form_class = validation.RISK_VALIDATOR_MAP.get(calc_mode)
-        if form_class is None:
-            print 'Calculation mode "%s" not supported' % calc_mode
-            sys.exit(1)
-
-        form = form_class(instance=calculation, files=files, exports=exports)
-        # For now, just print whether or not the job is valid
-        # (and any errors if it isn't valid)
-        if not form.is_valid():
-            complain_and_exit(
-                'Job configuration is not valid. Errors: %s' % dict(form.errors), 1)
+        error_message = validate(job, 'risk', files,  exports)
+        if error_message:
+            sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_risk(
-            job, log_level, log_file, exports)
+        completed_job = engine2.run_calc(
+            job, log_level, log_file, exports, 'risk')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -463,7 +441,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(utils_version.info(__version__))
+        complain_and_exit(utils.version.info(__version__))
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
@@ -479,7 +457,8 @@ def main():
 
         export_hazard(output_id, expanduser(target_dir))
     elif args.run_hazard is not None:
-        log_file = expanduser(args.log_file) if args.log_file is not None else None
+        log_file = expanduser(args.log_file) \
+            if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
                    args.force_inputs, args.exports)
     # risk

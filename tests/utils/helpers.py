@@ -40,7 +40,6 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.engine.calculators import hazard
 from openquake.engine.calculators.hazard.general import store_gmpe_map
 from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
@@ -49,7 +48,7 @@ from openquake.engine import engine
 from openquake.engine import engine2
 from openquake.engine import logs
 from openquake.engine.input.logictree import LogicTreeProcessor
-from openquake.engine.utils import config
+from openquake.engine.utils import config, get_calculator_class
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -191,7 +190,7 @@ def run_hazard_job(cfg, exports=None):
     models.JobStats.objects.create(oq_job=job)
 
     calc_mode = job.hazard_calculation.calculation_mode
-    calc = hazard.CALCULATORS_NEXT[calc_mode](job)
+    calc = get_calculator_class('hazard', calc_mode)(job)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
     job.is_running = False
     job.save()

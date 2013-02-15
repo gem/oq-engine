@@ -25,7 +25,7 @@ from nose.plugins.attrib import attr
 
 from openquake.engine.db import models
 from openquake.engine.calculators import base
-from openquake.engine.calculators.hazard.event_based import core_next
+from openquake.engine.calculators.hazard.event_based import core
 from openquake.engine.utils import stats
 
 from tests.utils import helpers
@@ -39,7 +39,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        self.calc = core_next.EventBasedHazardCalculator(self.job)
+        self.calc = core.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
 
     def test_donot_save_trivial_gmf(self):
@@ -57,7 +57,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         fake_bulk_inserter = mock.Mock()
         with helpers.patch('openquake.engine.writer.BulkInserter') as m:
             m.return_value = fake_bulk_inserter
-            core_next._save_gmfs(
+            core._save_gmfs(
                 gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
             self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
 
@@ -70,7 +70,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         fake_bulk_inserter = mock.Mock()
         with helpers.patch('openquake.engine.writer.BulkInserter') as m:
             m.return_value = fake_bulk_inserter
-            core_next._save_gmfs(
+            core._save_gmfs(
                 gmf_set, gmf_dict, [mock.Mock()], 1)
             call_args = fake_bulk_inserter.add_entry.call_args_list[0][1]
             self.assertEqual([1], call_args['gmvs'])
@@ -249,7 +249,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
                 for args in task_arg_list:
-                    core_next.ses_and_gmfs(*args)
+                    core.ses_and_gmfs(*args)
 
                     # wait for the completion signal
                     conn.drain_events()
