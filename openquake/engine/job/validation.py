@@ -17,14 +17,14 @@
 This module contains functions and Django model forms for carrying out job
 profile validation.
 """
-
-
 import re
+import importlib
 
 from django.forms import ModelForm
-import openquake.hazardlib
 
+import openquake.hazardlib
 from openquake.engine.db import models
+from openquake.engine.utils import get_calculator_class
 
 #: Minimum value for a signed 32-bit int
 MIN_SINT_32 = -(2 ** 31)
@@ -32,6 +32,34 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
+
+
+# used in bin/openquake
+def validate(job, jobtype, files, exports):
+    """
+    Validate a job of type 'hazard' or 'risk' by instantiating its
+    form class with the given files and exports.
+
+    :param job: an instance of :class:`openquake.engine.db.models.OqJob`
+    :param str jobtype: "hazard" or "risk"
+    :param dict files: {fname: :class:`openquake.engine.db.models.Input` obj}
+    :param exports: a list of export types
+    :returns: an error message if the form is invalid, None otherwise.
+    """
+    assert jobtype in ('hazard', 'risk'), jobtype
+    calculation = getattr(job, '%s_calculation' % jobtype)
+    calc_mode = calculation.calculation_mode
+    calculator_pkg = importlib.import_module(
+        'openquake.engine.calculators.%s' % jobtype)
+    calculator = get_calculator_class(calculator_pkg, calc_mode)
+    formname = calculator.__name__.replace('Calculator', 'Form')
+    try:
+        form_class = globals()[formname]
+    except KeyError:
+        return 'Could not find form class for "%s"' % calc_mode
+    form = form_class(instance=calculation, files=files, exports=exports)
+    if not form.is_valid():
+        return 'Job configuration is not valid. Errors: %s' % dict(form.errors)
 
 
 class BaseOQModelForm(ModelForm):

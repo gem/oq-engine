@@ -426,9 +426,9 @@ class Input2job(djm.Model):
 
 class Src2ltsrc(djm.Model):
     '''
-    Associate an "source_model_logic_tree" type input (a logic tree source) with "source"
-    type inputs (hazard sources referenced by the logic tree source).
-    This is needed for worker-side logic tree processing.
+    Associate an "source_model_logic_tree" type input (a logic tree source)
+    with "source" type inputs (hazard sources referenced by the logic tree
+    source). This is needed for worker-side logic tree processing.
     '''
     hzrd_src = djm.ForeignKey("Input", related_name='+',
                               help_text="Hazard source input referenced "
