@@ -40,7 +40,6 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.engine.calculators import hazard
 from openquake.engine.calculators.hazard.general import store_gmpe_map
 from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
@@ -191,7 +190,7 @@ def run_hazard_job(cfg, exports=None):
     models.JobStats.objects.create(oq_job=job)
 
     calc_mode = job.hazard_calculation.calculation_mode
-    calc = get_calculator_class(hazard, calc_mode)(job)
+    calc = get_calculator_class('hazard', calc_mode)(job)
     completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
     job.is_running = False
     job.save()

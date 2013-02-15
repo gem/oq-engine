@@ -53,8 +53,8 @@ def get_core_modules(pkg):
 def get_available_calculators(pkg):
     """
     :param pkg: a Python package
-    :return: an OrderedDict {calc_mode: calc_class} built by looking at all the
-    calculators in the package.
+    :returns: an OrderedDict {calc_mode: calc_class} built by looking
+    at all the calculators in the package.
     """
     calc = {}  # calc_mode -> calc_class
     for modname in get_core_modules(pkg):
@@ -66,10 +66,12 @@ def get_available_calculators(pkg):
     return collections.OrderedDict((k, calc[k]) for k in sorted(calc))
 
 
-def get_calculator_class(pkg, calc_mode):
+def get_calculator_class(job_type, calc_mode):
     """
-    :param pkg: a Python package
+    :param str job_type: "hazard" or "risk"
     :param str calc_mode: a calculator identifier
-    :return: a Calculator class
+    :returns: a Calculator class
     """
+    assert job_type in ("hazard", "risk"), job_type
+    pkg = importlib.import_module('openquake.engine.calculators.%s' % job_type)
     return get_available_calculators(pkg)[calc_mode]
