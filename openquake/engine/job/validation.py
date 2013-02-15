@@ -18,7 +18,6 @@ This module contains functions and Django model forms for carrying out job
 profile validation.
 """
 import re
-import importlib
 
 from django.forms import ModelForm
 
@@ -41,7 +40,7 @@ def validate(job, job_type, files, exports):
     form class with the given files and exports.
 
     :param job: an instance of :class:`openquake.engine.db.models.OqJob`
-    :param str jobtype: "hazard" or "risk"
+    :param str job_type: "hazard" or "risk"
     :param dict files: {fname: :class:`openquake.engine.db.models.Input` obj}
     :param exports: a list of export types
     :returns: an error message if the form is invalid, None otherwise.
