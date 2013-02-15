@@ -228,7 +228,8 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_hazard(job, log_level, log_file, exports)
+        completed_job = engine2.run_calc(
+            job, log_level, log_file, exports, 'hazard')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -403,8 +404,8 @@ def run_risk(
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_risk(
-            job, log_level, log_file, exports)
+        completed_job = engine2.run_calc(
+            job, log_level, log_file, exports, 'risk')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
@@ -440,7 +441,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(utils_version.info(__version__))
+        complain_and_exit(utils.version.info(__version__))
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
