@@ -34,11 +34,10 @@ def round_float(value):
             rounding=decimal.ROUND_HALF_EVEN))
 
 
-def get_calculator_modules(pkg):
+def get_core_modules(pkg):
     """
     :param pkg: a Python package
-    :return: a sorted list of the form
-    ["openquake.engine.calculators.<calc_name>.core", ...]
+    :return: a sorted list of the fully qualified module names ending in "core"
     """
     modules = []
     pkgdir = pkg.__path__[0]
@@ -58,7 +57,7 @@ def get_available_calculators(pkg):
     calculators in the package.
     """
     calc = {}  # calc_mode -> calc_class
-    for modname in get_calculator_modules(pkg):
+    for modname in get_core_modules(pkg):
         name = modname.split('.')[-2]  # openquake...<name>.core
         mod = importlib.import_module(modname)
         for cls in mod.__dict__.itervalues():
