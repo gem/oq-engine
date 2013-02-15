@@ -24,6 +24,7 @@ from django import db
 
 from openquake.risklib import api, scientific
 
+from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks, stats
@@ -33,7 +34,7 @@ from openquake.engine.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter_name, hazard,
+def event_based(job_id, assets, hazard,
                 seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
@@ -47,12 +48,12 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
         :class:`openquake.engine.db.models.OqJob`
     :param assets: the list of `:class:openquake.risklib.scientific.Asset`
     instances considered
-    :param str hazard_getter_name: class name of a class defined in the
-      :mod:`openquake.engine.calculators.risk.hazard_getters` to be
-      instantiated to
-      get the hazard curves
     :param dict hazard:
-      A dictionary mapping hazard Output ID to GmfCollection ID
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'hazard_curve') to a tuple where the first element is a list
+      of list (one for each asset) with the ground motion values used by the
+      calculation, and the second element is the corresponding weight.
     :param seed: the seed used to initialize the rng
 
     :param dict output_containers: a dictionary mapping hazard Output
@@ -78,15 +79,12 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
 
     asset_outputs = OrderedDict()
     for hazard_output_id, hazard_data in hazard.items():
-        hazard_id, _ = hazard_data
+        hazard_getter, _ = hazard_data
 
         (loss_curve_id, loss_map_ids,
          mean_loss_curve_id, quantile_loss_curve_ids,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
-
-        hazard_getter = general.hazard_getter(
-            hazard_getter_name, hazard_id, imt)
 
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
@@ -106,8 +104,7 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                 conditional_loss_poes, calculator)
 
         with logs.tracing('getting hazard'):
-            ground_motion_fields = [hazard_getter(asset.site)
-                                    for asset in assets]
+            ground_motion_fields = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs[hazard_output_id] = calculator(
@@ -163,7 +160,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     core_calc_task = event_based
 
-    hazard_getter = "GroundMotionValuesGetter"
+    hazard_getter = hazard_getters.GroundMotionValuesGetter
 
     def pre_execute(self):
         """
@@ -200,7 +197,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
 
-    def hazard_output(self, output):
+    def hazard_output(self, output, assets):
         """
         :returns: a tuple with the ID and the weight of the
         :class:`openquake.engine.db.models.GmfCollection` object that stores
@@ -216,7 +213,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             weight = gmf.lt_realization.weight
         else:
             weight = None
-        return (gmf.id, weight)
+
+        hazard_getter = self.hazard_getter(gmf.id, self.imt, assets)
+        return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):
         """
