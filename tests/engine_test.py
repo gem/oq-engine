@@ -171,7 +171,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def setUp(self):
         # md5sum digest incorrect
-        self.glt_i = models.Input(input_type="lt_gsim", size=123,
+        self.glt_i = models.Input(input_type="gsim_logic_tree", size=123,
                                   path=self.GLT, owner=self.old_job.owner,
                                   digest="0" * 32)
         self.glt_i.save()
@@ -183,7 +183,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
             digest = subprocess.check_output(["md5", slt_path]).split()[-1]
         else:
             digest = subprocess.check_output(["md5sum", slt_path]).split()[0]
-        self.slt_i = models.Input(input_type="lt_source", size=123,
+        self.slt_i = models.Input(input_type="source_model_logic_tree", size=123,
                                   path=self.SLT, owner=self.old_job.owner,
                                   digest=digest)
         self.slt_i.save()
@@ -200,7 +200,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
         expected_content = open(slt_path, 'r').read()
         engine._insert_input_files(self.PARAMS, self.job, True)
-        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
+        [slt] = models.inputs4job(self.job.id, input_type="source_model_logic_tree")
 
         self.assertEqual('xml', slt.model_content.content_type)
         self.assertEqual(expected_content, slt.model_content.raw_content)
@@ -212,8 +212,8 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         glt_content = open(glt_path, 'r').read()
 
         engine._insert_input_files(self.PARAMS, self.job, True)
-        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
+        [slt] = models.inputs4job(self.job.id, input_type="source_model_logic_tree")
+        [glt] = models.inputs4job(self.job.id, input_type="gsim_logic_tree")
 
         self.assertEqual('xml', slt.model_content.content_type)
         self.assertEqual(slt_content, slt.model_content.raw_content)
@@ -232,7 +232,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
+        [glt] = models.inputs4job(self.job.id, input_type="gsim_logic_tree")
         self.assertEqual('html', glt.model_content.content_type)
 
     def test_model_content_unknown_content_type(self):
@@ -241,5 +241,5 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
+        [glt] = models.inputs4job(self.job.id, input_type="gsim_logic_tree")
         self.assertEqual('unknown', glt.model_content.content_type)
