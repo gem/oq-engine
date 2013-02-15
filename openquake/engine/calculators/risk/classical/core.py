@@ -21,6 +21,7 @@ from collections import OrderedDict
 
 from django.db import transaction
 
+from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
@@ -31,7 +32,7 @@ from openquake.risklib import api
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical(job_id, assets, hazard_getter_name, hazard,
+def classical(job_id, assets, hazard,
               vulnerability_function,
               output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
@@ -47,11 +48,12 @@ def classical(job_id, assets, hazard_getter_name, hazard,
     :param assets:
       iterator over :class:`openquake.engine.db.models.ExposureData` to take
       into account
-    :param str hazard_getter_name: class name of a class defined in the
-      :mod:`openquake.engine.calculators.risk.hazard_getters` to be
-      instantiated to get the hazard curves
     :param dict hazard:
-      A dictionary mapping hazard Output ID to HazardCurve ID
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'hazard_curve') to a tuple where the first element is a list
+      of list (one for each asset) with the poEs used by the
+      calculation, and the second element is the corresponding weight.
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -73,12 +75,13 @@ def classical(job_id, assets, hazard_getter_name, hazard,
         vulnerability_function, lrem_steps_per_interval)
 
     for hazard_output_id, hazard_data in hazard.items():
-        hazard_id, _ = hazard_data
+        # the second item of the tuple is the weight of the hazard (at
+        # this moment we are not interested in it)
+        hazard_getter, _ = hazard_data
+
         (loss_curve_id, loss_map_ids,
          mean_loss_curve_id, quantile_loss_curve_ids) = (
              output_containers[hazard_output_id])
-
-        hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
 
         # if we need to compute the loss maps, we add the proper risk
         # aggregator
@@ -87,7 +90,7 @@ def classical(job_id, assets, hazard_getter_name, hazard,
                 conditional_loss_poes, calculator)
 
         with logs.tracing('getting hazard'):
-            hazard_curves = [hazard_getter(asset.site) for asset in assets]
+            hazard_curves = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs[hazard_output_id] = calculator(assets, hazard_curves)
@@ -134,7 +137,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
     #: celery task
     core_calc_task = classical
 
-    hazard_getter = 'HazardCurveGetterPerAsset'
+    hazard_getter = hazard_getters.HazardCurveGetterPerAsset
 
     def worker_args(self, taxonomy):
         """
@@ -144,7 +147,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    def hazard_output(self, output):
+    def hazard_output(self, output, assets):
         """
         :returns: a tuple with the ID and the weight associated with the
         :class:`openquake.engine.db.models.HazardCurve` object that stores
@@ -159,7 +162,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             weight = hc.lt_realization.weight
         else:
             weight = None
-        return (hc.id, weight)
+
+        hazard_getter = self.hazard_getter(hc.id, self.imt, assets)
+
+        return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):
         """
