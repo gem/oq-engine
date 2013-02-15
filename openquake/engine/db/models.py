@@ -2504,17 +2504,19 @@ class AssetManager(djm.GeoManager):
     def contained_in(self, exposure_model_id, taxonomy,
                      region_constraint, offset, size):
         """
-        :returns the asset ids (ordered by id) contained in
+        :returns the asset ids (ordered by location) contained in
         `region_constraint` of `taxonomy` associated with an
         `openquake.engine.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
+        # FIXME(lp). Add a functional index for st_x(site) st_y(site)
         return list(
             self.raw("""
             SELECT * FROM oqmif.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
-            ORDER BY taxonomy, id LIMIT %s OFFSET %s
+            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
+            LIMIT %s OFFSET %s
             """, [exposure_model_id, taxonomy,
                   "SRID=4326; %s" % region_constraint.wkt,
                   size, offset]))
@@ -2571,6 +2573,12 @@ class ExposureData(djm.Model):
 
     class Meta:
         db_table = 'oqmif\".\"exposure_data'
+
+    def __str__(self):
+        return "<ExposureData %s (%s-%s @ %s)>" % (
+            self.id,
+            self.exposure_model_id, self.asset_ref,
+            self.site)
 
     @staticmethod
     def per_asset_value(

@@ -1263,9 +1263,10 @@ CREATE TABLE hzrdr.gmf (
 -- find the corresponding ground motion value in gmvs at the same
 -- index.
     rupture_ids int[],
-    result_grp_ordinal INTEGER NOT NULL
+    result_grp_ordinal INTEGER NOT NULL,
+
+    location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
 
 
 CREATE TABLE hzrdr.gmf_scenario (
@@ -1282,10 +1283,9 @@ CREATE TABLE hzrdr.gmf_scenario (
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
-    result_grp_ordinal INTEGER NOT NULL
+    result_grp_ordinal INTEGER NOT NULL,
+    location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_scenario', 'location', 4326, 'POINT', 2);
-
 
 
 CREATE TABLE hzrdr.disagg_result (

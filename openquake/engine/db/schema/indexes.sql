@@ -41,7 +41,11 @@ CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
 -- gmf
-CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
+CREATE INDEX hzrdr_gmf_result_grp_ordinal_idx on hzrdr.gmf(result_grp_ordinal);
+CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf(imt);
+CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf(sa_period);
+CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf(sa_damping);
+
 
 CREATE INDEX hzrdr_gmf_collection_output_id_idx on hzrdr.gmf_collection(output_id);
 CREATE INDEX hzrdr_gmf_collection_lt_realization_idx on hzrdr.gmf_collection(lt_realization_id);
