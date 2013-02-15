@@ -35,7 +35,7 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
 
 
 # used in bin/openquake
-def validate(job, jobtype, files, exports):
+def validate(job, job_type, files, exports):
     """
     Validate a job of type 'hazard' or 'risk' by instantiating its
     form class with the given files and exports.
@@ -46,13 +46,10 @@ def validate(job, jobtype, files, exports):
     :param exports: a list of export types
     :returns: an error message if the form is invalid, None otherwise.
     """
-    assert jobtype in ('hazard', 'risk'), jobtype
-    calculation = getattr(job, '%s_calculation' % jobtype)
+    calculation = getattr(job, '%s_calculation' % job_type)
     calc_mode = calculation.calculation_mode
-    calculator_pkg = importlib.import_module(
-        'openquake.engine.calculators.%s' % jobtype)
-    calculator = get_calculator_class(calculator_pkg, calc_mode)
-    formname = calculator.__name__.replace('Calculator', 'Form')
+    calculator_cls = get_calculator_class(job_type, calc_mode)
+    formname = calculator_cls.__name__.replace('Calculator', 'Form')
     try:
         form_class = globals()[formname]
     except KeyError:
