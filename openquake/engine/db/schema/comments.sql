@@ -222,8 +222,8 @@ COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file imported by the u
 COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5sum digest, used to detect identical input model files';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
-    - source logic tree (lt_source)
-    - GSIM (Ground Shaking Intensity Model) logic tree (lt_gsim)
+    - source logic tree (source_model_logic_tree)
+    - GSIM (Ground Shaking Intensity Model) logic tree (gsim_logic_tree)
     - exposure file (exposure)
     - vulnerability file (vulnerability)
     - rupture file (rupture)';
@@ -283,7 +283,7 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
 
 
 COMMENT ON TABLE uiapi.src2ltsrc IS '
-Associate an "lt_source" type input (a logic tree source) with "source"
+Associate an "source_model_logic_tree" type input (a logic tree source) with "source"
 type inputs (hazard sources referenced by the logic tree source).
 This is needed for worker-side logic tree processing.';
 
