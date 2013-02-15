@@ -181,18 +181,20 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                hazard = dict((ho.id, self.hazard_output(ho))
-                              for ho in self.considered_hazard_outputs())
+                    # worker expects assets ordered by ID
+                    assets = sorted(assets, key=lambda a: a.id)
 
-                # FIXME(lp). Refactor the following arg list such that
-                # the arguments are grouped into namedtuples
-                yield ([
-                    self.job.id,
-                    assets,
-                    self.hazard_getter, hazard] +
-                    self.worker_args(taxonomy) +
-                    [output_containers] +
-                    calculator_parameters)
+                hazard = dict((ho.id, self.hazard_output(ho, assets))
+                              for ho in self.considered_hazard_outputs())
+                worker_args = self.worker_args(taxonomy)
+
+                logs.LOG.debug("Task with assets %s got args %s",
+                               assets, worker_args)
+
+                yield ([self.job.id, assets, hazard] +
+                       worker_args +
+                       [output_containers] +
+                       calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -253,7 +255,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         # instead of getting it from self.imt
         raise NotImplementedError
 
-    def hazard_output(self, output):
+    def hazard_output(self, output, assets):
         """
         Calculator must override this to select from the hazard
         output/calculation the proper hazard output containers.

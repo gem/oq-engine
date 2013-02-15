@@ -262,6 +262,7 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
     """
 
     args = [RUNNER, "--run-risk=%s" % config_file,
+            "--log-level=debug",
             "--hazard-output-id=%d" % hazard_id]
     if force_inputs:
         args.append('--force-inputs')

@@ -22,22 +22,77 @@ An HazardGetter is responsible to get hazard outputs needed by a risk
 calculation.
 """
 
+from collections import OrderedDict
+from openquake.engine import logs
+from openquake.hazardlib import geo
 from openquake.engine.db import models
 from django.db import connection
 
 
-class HazardCurveGetterPerAsset(object):
+DEFAULT_MAXIMUM_DISTANCE = 50000
+
+
+class HazardGetter(object):
+    def __init__(self, hazard_id, imt, assets,
+                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
+        self.hazard_id = hazard_id
+        self.imt = imt
+        self.assets = assets
+        self.max_distance = max_distance
+        self._assets_extent = None  # A polygon that includes all the assets
+        self.setup()
+
+    def setup(self):
+        self._assets_extent = geo.mesh.Mesh.from_points_list([
+            geo.point.Point(asset.site.x, asset.site.y)
+            for asset in self.assets]).get_convex_hull()
+
+    def __call__(self):
+        raise NotImplementedError
+
+    def __getstate__(self):
+        return (self.hazard_id, self.imt, self.assets, self.max_distance)
+
+    def __setstate__(self, params):
+        self.hazard_id = params[0]
+        self.imt = params[1]
+        self.assets = params[2]
+        self.max_distance = params[3]
+        self.setup()
+
+
+class HazardCurveGetterPerAsset(HazardGetter):
     """
     Simple HazardCurve Getter that performs a query per asset.
 
     It caches the computed hazard curve object on a per-location basis.
     """
-    def __init__(self, hazard_curve_id):
-        self.hazard_curve_id = hazard_curve_id
-        self.imls = models.HazardCurve.objects.get(pk=hazard_curve_id).imls
+
+    # FIXME(lp). There is a room for optimization here.... A possible
+    # solution is to use the same approach used in GmfValuesGetter
+
+    def __init__(self, hazard_id, imt, assets,
+                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
+        super(HazardCurveGetterPerAsset, self).__init__(
+            hazard_id, imt, assets, max_distance)
+
+        self.imls = None
+        self._cache = None
+
+    def setup(self):
+        super(HazardCurveGetterPerAsset, self).setup()
+        self.imls = models.HazardCurve.objects.get(
+            pk=self.hazard_id).imls
         self._cache = {}
 
-    def __call__(self, site):
+    def __call__(self):
+        """
+        :returns: a list of poEs for each asset.
+        :params assets: an interable over point objects
+        """
+        return [self.get_by_site(asset.site) for asset in self.assets]
+
+    def get_by_site(self, site):
         """
         :param location:
             `django.contrib.gis.geos.point.Point` object.
@@ -58,7 +113,7 @@ class HazardCurveGetterPerAsset(object):
         ORDER BY min_distance
         LIMIT 1;"""
 
-        args = ('SRID=4326; %s' % site.wkt, self.hazard_curve_id)
+        args = ('SRID=4326; %s' % site.wkt, self.hazard_id)
 
         cursor.execute(query, args)
         poes = cursor.fetchone()[0]
@@ -70,26 +125,7 @@ class HazardCurveGetterPerAsset(object):
         return hazard
 
 
-# Note on the algorithm: the idea is to first compute the minimal distance
-# between the given site and the ground motion fields in the mesh; then the
-# ground motion values are extracted from the points at that distance. To
-# cope with numerical errors we extract all the ground motion fields within
-# the minimal distance plus 10 centimers (any "small" number would do).
-# This is ~6 times faster than using a group by/order by to extract the
-# locations/gmvs directly with a single query.
-def _get_min_distance(self, cursor, min_dist_query, args):
-    # no docstring on purpose: private functions should not have it
-    cursor.execute(min_dist_query, args)
-    min_dist = cursor.fetchall()[0][0]  # returns only one row
-    if min_dist is None:
-        raise RuntimeError(
-            'Could not find any gmf_scenarios for IMT=%s '
-            'and output_id=%s' % (self._imt, self._hazard_output_id))
-
-    return min_dist + 0.1  # 0.1 meters = 10 cm
-
-
-class GroundMotionValuesGetter(object):
+class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     It caches the ground motion values on a per-location basis.
@@ -103,18 +139,23 @@ class GroundMotionValuesGetter(object):
         values have been computed (long form).
 
     """
+    def __init__(self, hazard_id, imt, assets,
+                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
+        super(GroundMotionValuesGetter, self).__init__(
+            hazard_id, imt, assets, max_distance)
+        self._imt = None
+        self._sa_period = None
+        self._sa_damping = None
+        self._gmf_set_ids = None
 
-    def __init__(self, hazard_output_id, imt):
-        imt, sa_period, sa_damping = models.parse_imt(imt)
+        self._cache = None
 
-        self._imt = imt
-        self._sa_period = sa_period
-        self._sa_damping = sa_damping
-        self._hazard_output_id = hazard_output_id
-
-        self._cache = {}
-
+    def setup(self):
+        super(GroundMotionValuesGetter, self).setup()
+        self._imt, self._sa_period, self._sa_damping = (
+            models.parse_imt(self.imt))
         self._gmf_set_ids = self._load_gmf_set_ids()
+        self._cache = {}
 
     def _load_gmf_set_ids(self):
         """
@@ -122,7 +163,7 @@ class GroundMotionValuesGetter(object):
         fields coming from a specific realization.
         """
         gmf_collection = models.GmfCollection.objects.get(
-            id=self._hazard_output_id)
+            id=self.hazard_id)
 
         if gmf_collection.output.output_type == "gmf":
             return tuple(
@@ -133,54 +174,62 @@ class GroundMotionValuesGetter(object):
                 "At the moment, we only support computation of loss curves "
                 "for a specific logic tree branch.")
 
-    # Note on the algorithm: the idea is to first compute the minimal distance
-    # between the given site and the ground motion fields in the mesh; then the
-    # ground motion values are extracted from the points at that distance. To
-    # cope with numerical errors we extract all the ground motion fields within
-    # the minimal distance plus 10 centimers (any "small" number would do).
-    # This is ~6 times faster than using a group by/order by to extract the
-    # locations/gmvs directly with a single query.
-    def __call__(self, site):
-        """
-        Return the closest ground motion values to the given location.
-
-        :param site:
-            The reference location. The closest ground motion values
-            to this location are returned.
-        :type site: `django.contrib.gis.geos.point.Point` object
-        """
-
-        if site.wkt in self._cache:
-            return self._cache[site.wkt]
-
+    def __call__(self):
         cursor = connection.cursor()
 
         spectral_filters = ""
-        args = ("SRID=4326; %s" % site.wkt, self._imt, self._gmf_set_ids)
+        args = (self._imt, self._gmf_set_ids)
 
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
             args += (self._sa_period, self._sa_damping)
 
-        min_dist_query = """-- find the distance of the closest location
-        SELECT min(ST_Distance_Sphere(location, %s)) FROM hzrdr.gmf
-        WHERE imt = %s AND gmf_set_id IN %s {}""".format(
-            spectral_filters)
+        query = """
+  SELECT DISTINCT ON (oqmif.exposure_data.id)
+  oqmif.exposure_data.id, ST_AsText(location), gmf_table.allgmvs_arr
+  FROM oqmif.exposure_data JOIN
+    (SELECT location,
+            array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal)
+     AS allgmvs_arr FROM hzrdr.gmf
+     WHERE imt = %s AND gmf_set_id IN %s {}
+     AND location && %s
+     GROUP BY location) AS gmf_table
+  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
+  WHERE oqmif.exposure_data.site && %s
+  AND taxonomy = %s AND exposure_model_id = %s
+  ORDER BY oqmif.exposure_data.id,
+           ST_Distance(oqmif.exposure_data.site, gmf_table.location)
+           """.format(spectral_filters)  # this will fill in the {}
 
-        min_dist = _get_min_distance(self, cursor, min_dist_query, args)
+        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
+                 self.max_distance,
+                 self._assets_extent.wkt,
+                 self.assets[0].taxonomy,
+                 self.assets[0].exposure_model_id)
 
-        gmvs_query = """-- return all the gmvs inside the min_dist radius
-        SELECT gmvs FROM hzrdr.gmf
-        WHERE %s > ST_Distance_Sphere(location, %s)
-        AND imt = %s AND gmf_set_id IN %s {}
-        ORDER BY gmf_set_id, result_grp_ordinal
-        """.format(spectral_filters)
+        cursor.execute(query, args)
 
-        cursor.execute(gmvs_query, (min_dist,) + args)
+        data = cursor.fetchall()
+        gmvs = OrderedDict((row[0], row[2]) for row in data)
 
-        ground_motion_values = sum([row[0] for row in cursor], [])
-        self._cache[site.wkt] = ground_motion_values
-        return ground_motion_values
+        if len(gmvs) > len(self.assets):
+            logs.LOG.error(
+                "More assets %s returned than requested %s",
+                gmvs.keys(), self.assets)
+            raise RuntimeError("More assets returned than requested")
+        elif len(gmvs) < len(self.assets):
+            for asset in self.assets:
+                if not asset.id in gmvs.keys():
+                    logs.LOG.warn(
+                        "Asset %s has no hazard within a distance of %s m",
+                        asset, self.max_distance)
+        else:
+            for asset_id, location, _gmvs in data:
+                logs.LOG.debug(
+                    "Asset with id %s got the hazard in location %s",
+                    asset_id, location)
+
+        return gmvs.values()
 
 
 class GroundMotionScenarioGetter(object):
@@ -189,7 +238,7 @@ class GroundMotionScenarioGetter(object):
     gmf_scenario.
     It caches the ground motion values on a per-location basis.
 
-    :param int hazard_output_id:
+    :param int hazard_id:
         Id of the hazard output (`openquake.engine.db.models.Output`) used to
         look up the ground motion values. This implementation only supports
         plain `gmf` output types (single logic tree branch or realization).
@@ -198,14 +247,32 @@ class GroundMotionScenarioGetter(object):
         values have been computed (long form).
     """
 
-    def __init__(self, hazard_output_id, imt):
+    def __init__(self, hazard_id, imt):
         imt, sa_period, sa_damping = models.parse_imt(imt)
 
         self._imt = imt
         self._sa_period = sa_period
         self._sa_damping = sa_damping
-        self._hazard_output_id = hazard_output_id
+        self.hazard_id = hazard_id
         self._cache = {}
+
+    # Note on the algorithm: the idea is to first compute the minimal distance
+    # between the given site and the ground motion fields in the mesh; then the
+    # ground motion values are extracted from the points at that distance. To
+    # cope with numerical errors we extract all the ground motion fields within
+    # the minimal distance plus 10 centimers (any "small" number would do).
+    # This is ~6 times faster than using a group by/order by to extract the
+    # locations/gmvs directly with a single query.
+    def _get_min_distance(self, cursor, min_dist_query, args):
+        # no docstring on purpose: private functions should not have it
+        cursor.execute(min_dist_query, args)
+        min_dist = cursor.fetchall()[0][0]  # returns only one row
+        if min_dist is None:
+            raise RuntimeError(
+                'Could not find any gmf with IMT=%s '
+                'and output_id=%s' % (self._imt, self._hazard_output_id))
+
+        return min_dist + 0.1  # 0.1 meters = 10 cm
 
     # this is basically the same algorithm used in GroundMotionValuesGetter
     def __call__(self, site):
@@ -224,7 +291,7 @@ class GroundMotionScenarioGetter(object):
         cursor = connection.cursor()
 
         spectral_filters = ""
-        args = ("SRID=4326; %s" % site.wkt, self._imt, self._hazard_output_id)
+        args = ("SRID=4326; %s" % site.wkt, self._imt, self.hazard_id)
 
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
