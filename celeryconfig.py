@@ -34,7 +34,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-from openquake.engine.utils import config, get_calculator_modules
+from openquake.engine.utils import config, get_core_modules
 from openquake.engine.calculators import hazard, risk
 
 config.abort_if_no_config_available()
@@ -61,9 +61,9 @@ CELERY_RESULT_BACKEND = "amqp"
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
 
-HAZARD_MODULES = get_calculator_modules(hazard)
+HAZARD_MODULES = get_core_modules(hazard)
 
-RISK_MODULES = get_calculator_modules(risk)
+RISK_MODULES = get_core_modules(risk)
 
 CELERY_IMPORTS = HAZARD_MODULES + RISK_MODULES
 

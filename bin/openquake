@@ -82,14 +82,11 @@ except ImportError:
 
 import openquake.engine
 from openquake.engine import __version__
-from openquake.engine import engine2
+from openquake.engine import engine2, utils
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
-from openquake.engine.job import validation
-from openquake.engine.utils import version as utils_version, \
-    get_calculator_class
-from openquake.engine.calculators import risk, hazard
+from openquake.engine.job.validation import validate
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -191,30 +188,6 @@ def set_up_arg_parser():
     return parser
 
 
-def _validate(job, jobtype, files, exports):
-    assert jobtype in ('hazard', 'risk'), jobtype
-    calculator_pkg = globals()[jobtype]
-    calculation = getattr(job, '%s_calculation' % jobtype)
-    calc_mode = calculation.calculation_mode
-    try:
-        calculator = get_calculator_class(calculator_pkg, calc_mode)
-    except KeyError:
-        sys.exit('Could not find calculator "%s"' % calc_mode)
-    try:
-        formname = calculator.__name__.replace('Calculator', 'Form')
-        form_class = getattr(validation, formname)
-    except AttributeError:
-        sys.exit('Could not find form class for "%s"' % calc_mode)
-    form = form_class(instance=calculation, files=files, exports=exports)
-     # For now, just print whether or not the job is valid
-    form = form_class(instance=calculation, files=files, exports=exports)
-    # For now, just print whether or not the job is valid
-    # (and any errors if it isn't valid)
-    if not form.is_valid():
-        print ('Job configuration is not valid. Errors: %s'
-               % dict(form.errors))
-        sys.exit(1)
-
 def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
     """
     Run a hazard calculation using the specified config file and other options.
@@ -249,7 +222,9 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         job.hazard_calculation = calculation
         job.save()
 
-        _validate(job, 'hazard', files, exports)
+        error_message = validate(job, 'hazard', files, exports)
+        if error_message:
+            sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
@@ -356,8 +331,8 @@ def export_risk(risk_output_id, target_dir):
 def export(fn, output_id, target_dir):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.hazard.export` which prints a summary of files
-    exported, if any.
+    :func:`openquake.engine.export.hazard.export` which prints a summary
+    of files exported, if any.
     """
     if not models.Output.objects.filter(pk=output_id).exists():
         print 'No output found for OUTPUT_ID %s' % output_id
@@ -417,12 +392,14 @@ def run_risk(
         params.update(dict(hazard_output_id=hazard_output_id,
                            hazard_calculation_id=hazard_calculation_id))
 
-        calculation = engine2.create_risk_calculation(job.owner, params,
-                                                      files.values())
+        calculation = engine2.create_risk_calculation(
+            job.owner, params, files.values())
         job.risk_calculation = calculation
         job.save()
 
-        _validate(job, 'risk', files,  exports)
+        error_message = validate(job, 'risk', files,  exports)
+        if error_message:
+            sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
@@ -479,7 +456,8 @@ def main():
 
         export_hazard(output_id, expanduser(target_dir))
     elif args.run_hazard is not None:
-        log_file = expanduser(args.log_file) if args.log_file is not None else None
+        log_file = expanduser(args.log_file) \
+            if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
                    args.force_inputs, args.exports)
     # risk
