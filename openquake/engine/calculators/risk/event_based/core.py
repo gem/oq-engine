@@ -38,7 +38,7 @@ def event_based(job_id, assets, hazard,
                 seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
-                imt, time_span, tses,
+                time_span, tses,
                 loss_curve_resolution, asset_correlation,
                 hazard_montecarlo_p):
     """
@@ -68,7 +68,6 @@ def event_based(job_id, assets, hazard,
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     :param bool insured_losses: True if insured losses should be computed
-    :param str imt: the imt used to filter ground motion fields
     :param time_span: the time span considered
     :param tses: time of the stochastic event set
     :param loss_curve_resolution: the curve resolution, i.e. the
@@ -86,6 +85,8 @@ def event_based(job_id, assets, hazard,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
+        # FIXME(lp). We should not pass the exact same seed for
+        # different hazard
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
             curve_resolution=loss_curve_resolution,
@@ -260,7 +261,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
-                self.imt, time_span, tses,
+                time_span, tses,
                 self.rc.loss_curve_resolution, correlation,
                 self.hc.number_of_logic_tree_samples == 0]
 
