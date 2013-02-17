@@ -32,30 +32,7 @@ from openquake.engine.db import models
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
-    EXPECTED_BCR_DISTRIBUTION = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <bcrMap interestRate="0.05" assetLifeExpectancy="40.0"
-          sourceModelTreePath="test_sm" gsimTreePath="test_gsim" unit="USD">
-    <node>
-      <gml:Point>
-        <gml:pos>-122.0 38.225</gml:pos>
-      </gml:Point>
-      <bcr assetRef="a1" ratio="83.3032625707"
-           aalOrig="1.60569488103" aalRetr="1.12398641672"/>
-    </node>
-    <node>
-      <gml:Point>
-        <gml:pos>-120.0 37.225</gml:pos>
-      </gml:Point>
-      <bcr assetRef="a2" ratio="64.4508095217"
-           aalOrig="2.48461661005" aalRetr="1.73923162703"/>
-      <bcr assetRef="a3" ratio="53.9756702454"
-           aalOrig="2.0807938306" aalRetr="1.45655568142"/>
-    </node>
-  </bcrMap>
-</nrml>
-"""
+    check_exports = False
 
     @noseattr('qa', 'risk', 'event_based_bcr')
     def test(self):
@@ -115,9 +92,6 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                         'asset_ref')]
 
     def expected_data(self):
-        return [[1.60569488, 1.12398642, 83.30326257],
-                [2.48461661, 1.73923163, 64.45080952],
+        return [[1.37096021, 0.95967214, 71.12525504],
+                [0.7280975, 0.50966825, 18.88680667],
                 [2.08079383, 1.45655568, 53.97567025]]
-
-    def expected_outputs(self):
-        return [self.EXPECTED_BCR_DISTRIBUTION]
