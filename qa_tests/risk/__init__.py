@@ -41,6 +41,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     6) a method expected_outputs to assert against the actual_outputs
     """
 
+    check_exports = True
+
     def run_risk(self, cfg, hazard_id):
         """
         Given the path to job config file, run the job and assert that it was
@@ -55,7 +57,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        job_status = helpers.run_risk_job_sp(cfg, hazard_id, silence=False)
+        job_status = helpers.run_risk_job_sp(cfg, hazard_id, silence=True)
         self.assertEqual(0, job_status)
 
         completed_job = models.OqJob.objects.latest('last_update')
@@ -76,13 +78,13 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                     expected_data[i], actual,
                     rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
-            expected_outputs = self.expected_outputs()
-
-            for i, output in enumerate(models.Output.objects.filter(
-                    oq_job=job).order_by('id')):
-                [exported_file] = export.risk.export(output.id, result_dir)
-                self.assert_xml_equal(
-                    StringIO.StringIO(expected_outputs[i]), exported_file)
+            if self.check_exports:
+                expected_outputs = self.expected_outputs()
+                for i, output in enumerate(models.Output.objects.filter(
+                                           oq_job=job).order_by('id')):
+                    [exported_file] = export.risk.export(output.id, result_dir)
+                    self.assert_xml_equal(
+                        StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
 

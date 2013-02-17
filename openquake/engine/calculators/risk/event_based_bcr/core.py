@@ -31,9 +31,9 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard_getter_name, hazard, seed,
+def event_based_bcr(job_id, assets, hazard, seed,
                     vulnerability_function, vulnerability_function_retrofitted,
-                    output_containers, imt, time_span, tses,
+                    output_containers, time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
@@ -47,17 +47,16 @@ def event_based_bcr(job_id, assets, hazard_getter_name, hazard, seed,
         ID of the currently running job.
     :param assets:
         list of assets to compute.
-    :param str hazard_getter_name: class name of a class defined in the
-      :mod:`openquake.engine.calculators.risk.hazard_getters` to be
-      instantiated to get the hazard curves
     :param dict hazard:
-      A dictionary mapping hazard Output ID to GmfCollection ID
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'hazard_curve') to a tuple where the first element is a list
+      of list (one for each asset) with the ground motion values used by the
+      calculation, and the second element is the corresponding weight.
     :param output_containers: A dictionary mapping hazard Output ID to
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
       used to store the computed bcr distribution
-    :param float imt:
-        Intensity Measure Type to take into account.
     :param float time_span:
         Time Span of the hazard calculation.
     :param float tses:
@@ -75,12 +74,11 @@ def event_based_bcr(job_id, assets, hazard_getter_name, hazard, seed,
     """
 
     for hazard_output_id, hazard_data in hazard.items():
-        hazard_id, _ = hazard_data
+        hazard_getter, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-        hazard_getter = general.hazard_getter(
-            hazard_getter_name, hazard_id, imt)
-
+        # FIXME(lp). We should not pass the exact same seed for
+        # different hazard
         calculator = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
@@ -96,8 +94,7 @@ def event_based_bcr(job_id, assets, hazard_getter_name, hazard, seed,
                                  interest_rate, asset_life_expectancy)
 
         with logs.tracing('getting hazard'):
-            ground_motion_fields = [hazard_getter(asset.site)
-                                    for asset in assets]
+            ground_motion_fields = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs = bcr_calculator(assets, ground_motion_fields)
