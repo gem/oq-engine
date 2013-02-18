@@ -36,9 +36,9 @@ from openquake.engine.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def scenario_damage(job_id, assets, hazard_getter, hazard,
+def scenario_damage(job_id, assets, hazard,
                     taxonomy, fragility_model, fragility_functions,
-                    output_containers, imt):
+                    _output_containers):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -46,27 +46,31 @@ def scenario_damage(job_id, assets, hazard_getter, hazard,
     :class:`openquake.engine.db.models.OqJob`
     :param assets: the list of :class:`openquake.risklib.scientific.Asset`
     instances considered
-    :param hazard_getter: the name of an hazard getter to be used
-    :param hazard: the hazard output dictionary
+    :param dict hazard:
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'gmfscenario') to a tuple where the first element is a list
+      of list (one for each asset) with the ground motion values used by the
+      calculation, and the second element is the corresponding weight.
     :param taxonomy: the taxonomy being considered
     :param fragility_model: a
     :class:`openquake.risklib.models.input.FragilityModel object
     :param fragility_functions: a
     :class:`openquake.risklib.models.input.FragilityFunctionSeq object
-    :param output_containers: a dictionary {hazard_id: output_id}
+    :param _output_containers: a dictionary {hazard_id: output_id}
     of output_type "dmg_dist_per_asset"
-    :param imt: the Intensity Measure Type of the ground motion field
     """
     calculator = api.ScenarioDamage(fragility_model, fragility_functions)
-    for hazard_id in hazard:
-        hazard_getter = general.hazard_getter(hazard_getter, hazard_id, imt)
 
-        outputs = calculator(assets, [hazard_getter(a.site) for a in assets])
-        with logs.tracing('save statistics per site'), \
-                db.transaction.commit_on_success(using='reslt_writer'):
-            rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
-            for output in outputs:
-                save_dist_per_asset(output.fractions, rc_id, output.asset)
+    # Scenario Damage works only on one hazard
+    hazard_getter = hazard.values()[0][0]
+
+    outputs = calculator(assets, hazard_getter())
+    with logs.tracing('save statistics per site'), \
+            db.transaction.commit_on_success(using='reslt_writer'):
+        rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
+        for output in outputs:
+            save_dist_per_asset(output.fractions, rc_id, output.asset)
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
@@ -141,7 +145,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     core_calc_task = scenario_damage
 
-    hazard_getter = "GroundMotionScenarioGetter"
+    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter2
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -156,15 +160,31 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.damage_states = None  # will be set in #set_risk_models
 
     def hazard_outputs(self, hazard_calculation):
-        raise RuntimeError(
-            "This calculator can not be run against "
-            "a whole hazard calculation")
+        """
+        :returns: the single hazard output associated to
+        `hazard_calculation`
+        """
 
-    def hazard_output(self, output):
+        # in scenario hazard calculation we do not have hazard logic
+        # tree realizations, and we have only one output
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.get(
+                output_type='gmf_scenario')
+
+    def hazard_output(self, output, assets):
+        """
+        :param output: an instance of
+          :class:`openquake.engine.db.models.Output` having
+          output_type == gmf_scenario
+        :param assets: a list of assets
+        :returns: a tuple with an instance of an hazard getter for the
+        specified hazard output and assets
+        """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
+        return (self.hazard_getter(output.id, self.imt, assets), 1)
 
     def worker_args(self, taxonomy):
         """
@@ -201,13 +221,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             tot += fractions
         if tot is not None:
             save_dist_total(tot, self.rc.id)
-
-    @property
-    def calculator_parameters(self):
-        """
-        Return the calculator specific Intensity Measure Type.
-        """
-        return [self.imt]
 
     # must be overridden, otherwise the parent will create loss curves
     def create_outputs(self, _hazard_ouput):

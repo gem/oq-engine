@@ -40,12 +40,20 @@ class HazardGetter(object):
         self.assets = assets
         self.max_distance = max_distance
         self._assets_extent = None  # A polygon that includes all the assets
+
+        # IMT exploded in three variables
+        self._imt = None
+        self._sa_period = None
+        self._sa_damping = None
+
         self.setup()
 
     def setup(self):
         self._assets_extent = geo.mesh.Mesh.from_points_list([
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets]).get_convex_hull()
+        self._imt, self._sa_period, self._sa_damping = (
+            models.parse_imt(self.imt))
 
     def __call__(self):
         raise NotImplementedError
@@ -139,23 +147,6 @@ class GroundMotionValuesGetter(HazardGetter):
         values have been computed (long form).
 
     """
-    def __init__(self, hazard_id, imt, assets,
-                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
-        super(GroundMotionValuesGetter, self).__init__(
-            hazard_id, imt, assets, max_distance)
-        self._imt = None
-        self._sa_period = None
-        self._sa_damping = None
-        self._gmf_set_ids = None
-
-        self._cache = None
-
-    def setup(self):
-        super(GroundMotionValuesGetter, self).setup()
-        self._imt, self._sa_period, self._sa_damping = (
-            models.parse_imt(self.imt))
-        self._gmf_set_ids = self._load_gmf_set_ids()
-        self._cache = {}
 
     def _load_gmf_set_ids(self):
         """
@@ -178,7 +169,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor = connection.cursor()
 
         spectral_filters = ""
-        args = (self._imt, self._gmf_set_ids)
+        args = (self._imt, self._load_gmf_set_ids())
 
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
@@ -232,7 +223,7 @@ class GroundMotionValuesGetter(HazardGetter):
         return gmvs.values()
 
 
-class GroundMotionScenarioGetter(object):
+class GroundMotionScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values from the table
     gmf_scenario.
@@ -247,35 +238,14 @@ class GroundMotionScenarioGetter(object):
         values have been computed (long form).
     """
 
-    def __init__(self, hazard_id, imt):
-        imt, sa_period, sa_damping = models.parse_imt(imt)
-
-        self._imt = imt
-        self._sa_period = sa_period
-        self._sa_damping = sa_damping
-        self.hazard_id = hazard_id
+    def setup(self):
+        super(GroundMotionScenarioGetter, self).setup()
         self._cache = {}
 
-    # Note on the algorithm: the idea is to first compute the minimal distance
-    # between the given site and the ground motion fields in the mesh; then the
-    # ground motion values are extracted from the points at that distance. To
-    # cope with numerical errors we extract all the ground motion fields within
-    # the minimal distance plus 10 centimers (any "small" number would do).
-    # This is ~6 times faster than using a group by/order by to extract the
-    # locations/gmvs directly with a single query.
-    def _get_min_distance(self, cursor, min_dist_query, args):
-        # no docstring on purpose: private functions should not have it
-        cursor.execute(min_dist_query, args)
-        min_dist = cursor.fetchall()[0][0]  # returns only one row
-        if min_dist is None:
-            raise RuntimeError(
-                'Could not find any gmf with IMT=%s '
-                'and output_id=%s' % (self._imt, self._hazard_output_id))
+    def __call__(self):
+        return [self.get_per_site(a.site) for a in self.assets]
 
-        return min_dist + 0.1  # 0.1 meters = 10 cm
-
-    # this is basically the same algorithm used in GroundMotionValuesGetter
-    def __call__(self, site):
+    def get_per_site(self, site):
         """
         Return the closest ground motion values to the given location.
 
@@ -298,15 +268,22 @@ class GroundMotionScenarioGetter(object):
             args += (self._sa_period, self._sa_damping)
 
         min_dist_query = """-- find the distance of the closest location
-        SELECT min(ST_Distance_Sphere(location, %s)) FROM hzrdr.gmf_scenario
+        SELECT min(ST_Distance(location, %s)) FROM hzrdr.gmf_scenario
         WHERE imt = %s AND output_id = %s {}""".format(
             spectral_filters)
 
-        min_dist = _get_min_distance(self, cursor, min_dist_query, args)
+        cursor.execute(min_dist_query, args)
+        min_dist = cursor.fetchall()[0][0]  # returns only one row
+        if min_dist is None:
+            raise RuntimeError(
+                'Could not find any gmf with IMT=%s '
+                'and output_id=%s' % (self._imt, self._hazard_output_id))
+
+        min_dist = min_dist + 0.1  # 0.1 meters = 10 cm
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf_scenario
-        WHERE %s > ST_Distance_Sphere(location, %s)
+        WHERE %s > ST_Distance(location, %s)
         AND imt = %s AND output_id = %s {}
         ORDER BY result_grp_ordinal
         """.format(spectral_filters)
@@ -316,3 +293,62 @@ class GroundMotionScenarioGetter(object):
         ground_motion_values = sum([row[0] for row in cursor], [])
         self._cache[site.wkt] = ground_motion_values
         return ground_motion_values
+
+
+class GroundMotionScenarioGetter2(HazardGetter):
+    """
+    Hazard getter for loading ground motion values.
+    It uses the same approach used in GroundMotionValuesGetter
+    """
+
+    def __call__(self):
+        cursor = connection.cursor()
+
+        spectral_filters = ""
+        args = (self.max_distance, self._imt, self.hazard_id)
+
+        if self._imt == "SA":
+            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
+            args += (self._sa_period, self._sa_damping)
+
+        query = """
+  SELECT DISTINCT ON (oqmif.exposure_data.id)
+  oqmif.exposure_data.id, ST_AsText(location), gmvs
+  FROM oqmif.exposure_data JOIN hzrdr.gmf_scenario
+  ON ST_DWithin(oqmif.exposure_data.site, gmf_scenario.location, %s)
+  WHERE hzrdr.gmf_scenario.imt = %s AND hzrdr.gmf_scenario.output_id = %s {}
+    AND hzrdr.gmf_scenario.location && %s
+    AND oqmif.exposure_data.site && %s
+    AND taxonomy = %s AND exposure_model_id = %s
+  ORDER BY oqmif.exposure_data.id,
+           ST_Distance(oqmif.exposure_data.site, hzrdr.gmf_scenario.location)
+           """.format(spectral_filters)  # this will fill in the {}
+
+        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
+                 self._assets_extent.wkt,
+                 self.assets[0].taxonomy,
+                 self.assets[0].exposure_model_id)
+
+        cursor.execute(query, args)
+
+        data = cursor.fetchall()
+        gmvs = OrderedDict((row[0], row[2]) for row in data)
+
+        if len(gmvs) > len(self.assets):
+            logs.LOG.error(
+                "More assets %s returned than requested %s",
+                gmvs.keys(), self.assets)
+            raise RuntimeError("More assets returned than requested")
+        elif len(gmvs) < len(self.assets):
+            for asset in self.assets:
+                if not asset.id in gmvs.keys():
+                    logs.LOG.warn(
+                        "Asset %s has no hazard within a distance of %s m",
+                        asset, self.max_distance)
+        else:
+            for asset_id, location, _gmvs in data:
+                logs.LOG.debug(
+                    "Asset with id %s got the hazard in location %s",
+                    asset_id, location)
+
+        return gmvs.values()
