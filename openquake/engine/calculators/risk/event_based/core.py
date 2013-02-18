@@ -34,7 +34,7 @@ from openquake.engine.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard,
+def event_based(job_id, hazard,
                 seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
@@ -46,16 +46,15 @@ def event_based(job_id, assets, hazard,
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param assets: the list of `:class:openquake.risklib.scientific.Asset`
-    instances considered
     :param dict hazard:
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmf_collection') to a tuple where the first element is a list
-      of list (one for each asset) with the ground motion values used by the
-      calculation, and the second element is the corresponding weight.
-    :param seed: the seed used to initialize the rng
-
+      to 'gmf_collection') to a tuple where the first element is an
+      instance of
+      :class:`..hazard_getters.GroundMotionValuesGetter`,
+      and the second element is the corresponding weight.
+    :param seed:
+      the seed used to initialize the rng
     :param dict output_containers: a dictionary mapping hazard Output
       ID to a list (a, b, c, d) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -104,12 +103,12 @@ def event_based(job_id, assets, hazard,
             calculator = api.ConditionalLosses(
                 conditional_loss_poes, calculator)
 
-        with logs.tracing('getting hazard'):
-            ground_motion_fields = hazard_getter()
+        with logs.tracing('getting input data from db'):
+            assets, ground_motion_values, missings = hazard_getter()
 
-        with logs.tracing('computing risk over %d assets' % len(assets)):
+        with logs.tracing('computing risk'):
             asset_outputs[hazard_output_id] = calculator(
-                assets, ground_motion_fields)
+                assets, ground_motion_values)
 
         with logs.tracing('writing results'):
             with db.transaction.commit_on_success(using='reslt_writer'):
@@ -147,7 +146,8 @@ def event_based(job_id, assets, hazard,
                         hazard_montecarlo_p,
                         assume_equal="image")
 
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 event_based.ignore_result = False
 
 
@@ -215,7 +215,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         else:
             weight = None
 
-        hazard_getter = self.hazard_getter(gmf.id, self.imt, assets)
+        hazard_getter = self.hazard_getter(
+            gmf.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
         return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):

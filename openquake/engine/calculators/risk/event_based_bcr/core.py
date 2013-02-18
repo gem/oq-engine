@@ -31,7 +31,7 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based_bcr(job_id, assets, hazard, seed,
+def event_based_bcr(job_id, hazard, seed,
                     vulnerability_function, vulnerability_function_retrofitted,
                     output_containers, time_span, tses,
                     loss_curve_resolution, asset_correlation,
@@ -45,8 +45,6 @@ def event_based_bcr(job_id, assets, hazard, seed,
 
     :param int job_id:
         ID of the currently running job.
-    :param assets:
-        list of assets to compute.
     :param dict hazard:
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
@@ -94,7 +92,7 @@ def event_based_bcr(job_id, assets, hazard, seed,
                                  interest_rate, asset_life_expectancy)
 
         with logs.tracing('getting hazard'):
-            ground_motion_fields = hazard_getter()
+            assets, ground_motion_fields, missings = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs = bcr_calculator(assets, ground_motion_fields)
@@ -105,7 +103,8 @@ def event_based_bcr(job_id, assets, hazard, seed,
                     general.write_bcr_distribution(
                         bcr_distribution_id, assets[i], asset_output)
 
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 
 event_based_bcr.ignore_result = False
 

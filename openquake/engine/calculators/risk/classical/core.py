@@ -32,9 +32,7 @@ from openquake.risklib import api
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical(job_id, assets, hazard,
-              vulnerability_function,
-              output_containers,
+def classical(job_id, hazard, vulnerability_function, output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
               hazard_montecarlo_p):
     """
@@ -45,15 +43,12 @@ def classical(job_id, assets, hazard,
 
     :param int job_id:
       ID of the currently running job
-    :param assets:
-      iterator over :class:`openquake.engine.db.models.ExposureData` to take
-      into account
     :param dict hazard:
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'hazard_curve') to a tuple where the first element is a list
-      of list (one for each asset) with the poEs used by the
-      calculation, and the second element is the corresponding weight.
+      to 'hazard_curve') to a tuple where the first element is an instance of
+      :class:`..hazard_getters.HazardCurveGetter`, and the second element is
+      the corresponding weight.
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -90,7 +85,7 @@ def classical(job_id, assets, hazard,
                 conditional_loss_poes, calculator)
 
         with logs.tracing('getting hazard'):
-            hazard_curves = hazard_getter()
+            assets, hazard_curves, missings = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs[hazard_output_id] = calculator(assets, hazard_curves)
@@ -123,7 +118,8 @@ def classical(job_id, assets, hazard,
                         hazard_montecarlo_p,
                         assume_equal="support")
 
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 
 classical.ignore_result = False
 
@@ -163,7 +159,8 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         else:
             weight = None
 
-        hazard_getter = self.hazard_getter(hc.id, self.imt, assets)
+        hazard_getter = self.hazard_getter(
+            hc.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
 
         return (hazard_getter, weight)
 

@@ -29,12 +29,8 @@ from openquake.engine.db import models
 from django.db import connection
 
 
-DEFAULT_MAXIMUM_DISTANCE = 50000
-
-
 class HazardGetter(object):
-    def __init__(self, hazard_id, imt, assets,
-                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
+    def __init__(self, hazard_id, imt, assets, max_distance):
         self.hazard_id = hazard_id
         self.imt = imt
         self.assets = assets
@@ -46,6 +42,9 @@ class HazardGetter(object):
         self._sa_period = None
         self._sa_damping = None
 
+        # a dictionary mapping ID -> Asset
+        self.asset_dict = None
+
         self.setup()
 
     def setup(self):
@@ -54,9 +53,27 @@ class HazardGetter(object):
             for asset in self.assets]).get_convex_hull()
         self._imt, self._sa_period, self._sa_damping = (
             models.parse_imt(self.imt))
+        self.asset_dict = dict((asset.id, asset) for asset in self.assets)
 
     def __call__(self):
-        raise NotImplementedError
+        data = OrderedDict(self.get_data())
+
+        actual_asset_ids = set(data.keys())
+        expected_asset_ids = set(self.asset_dict.keys())
+
+        # check that we have not got extra assets
+        if actual_asset_ids - expected_asset_ids:
+            logs.LOG.error("Extra assets have been computed")
+
+        missing_asset_ids = expected_asset_ids - actual_asset_ids
+
+        for missing_asset_id in missing_asset_ids:
+            logs.LOG.warn(
+                "No hazard has been found for the asset %s",
+                self.asset_dict[missing_asset_id].asset_ref)
+
+        return ([self.asset_dict[asset_id] for asset_id in data],
+                data.values(), missing_asset_ids)
 
     def __getstate__(self):
         return (self.hazard_id, self.imt, self.assets, self.max_distance)
@@ -79,13 +96,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
     # FIXME(lp). There is a room for optimization here.... A possible
     # solution is to use the same approach used in GmfValuesGetter
 
-    def __init__(self, hazard_id, imt, assets,
-                 max_distance=DEFAULT_MAXIMUM_DISTANCE):
+    def __init__(self, hazard_id, imt, assets, max_distance):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard_id, imt, assets, max_distance)
 
         self.imls = None
-        self._cache = None
+        self._cache = {}
+        self.setup()
 
     def setup(self):
         super(HazardCurveGetterPerAsset, self).setup()
@@ -93,12 +110,11 @@ class HazardCurveGetterPerAsset(HazardGetter):
             pk=self.hazard_id).imls
         self._cache = {}
 
-    def __call__(self):
-        """
-        :returns: a list of poEs for each asset.
-        :params assets: an interable over point objects
-        """
-        return [self.get_by_site(asset.site) for asset in self.assets]
+    def get_data(self):
+        return [(data[0], data[1][0]) for data in
+                [(asset.id, self.get_by_site(asset.site))
+                 for asset in self.assets]
+                if data[1][1] < self.max_distance]
 
     def get_by_site(self, site):
         """
@@ -124,13 +140,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
         args = ('SRID=4326; %s' % site.wkt, self.hazard_id)
 
         cursor.execute(query, args)
-        poes = cursor.fetchone()[0]
+        poes, distance = cursor.fetchone()
 
         hazard = zip(self.imls, poes)
 
-        self._cache[site.wkt] = hazard
+        self._cache[site.wkt] = (hazard, distance)
 
-        return hazard
+        return hazard, distance
 
 
 class GroundMotionValuesGetter(HazardGetter):
@@ -165,7 +181,7 @@ class GroundMotionValuesGetter(HazardGetter):
                 "At the moment, we only support computation of loss curves "
                 "for a specific logic tree branch.")
 
-    def __call__(self):
+    def get_data(self):
         cursor = connection.cursor()
 
         spectral_filters = ""
@@ -177,7 +193,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id)
-  oqmif.exposure_data.id, ST_AsText(location), gmf_table.allgmvs_arr
+  oqmif.exposure_data.id, gmf_table.allgmvs_arr
   FROM oqmif.exposure_data JOIN
     (SELECT location,
             array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal)
@@ -200,27 +216,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         cursor.execute(query, args)
 
-        data = cursor.fetchall()
-        gmvs = OrderedDict((row[0], row[2]) for row in data)
-
-        if len(gmvs) > len(self.assets):
-            logs.LOG.error(
-                "More assets %s returned than requested %s",
-                gmvs.keys(), self.assets)
-            raise RuntimeError("More assets returned than requested")
-        elif len(gmvs) < len(self.assets):
-            for asset in self.assets:
-                if not asset.id in gmvs.keys():
-                    logs.LOG.warn(
-                        "Asset %s has no hazard within a distance of %s m",
-                        asset, self.max_distance)
-        else:
-            for asset_id, location, _gmvs in data:
-                logs.LOG.debug(
-                    "Asset with id %s got the hazard in location %s",
-                    asset_id, location)
-
-        return gmvs.values()
+        return cursor.fetchall()
 
 
 class GroundMotionScenarioGetter(HazardGetter):
@@ -242,8 +238,11 @@ class GroundMotionScenarioGetter(HazardGetter):
         super(GroundMotionScenarioGetter, self).setup()
         self._cache = {}
 
-    def __call__(self):
-        return [self.get_per_site(a.site) for a in self.assets]
+    def get_data(self):
+        return [(data[0], data[1][0]) for data in
+                [(asset.id, self.get_by_site(asset.site))
+                 for asset in self.assets]
+                if data[1][1] < self.max_distance]
 
     def get_per_site(self, site):
         """
@@ -279,7 +278,7 @@ class GroundMotionScenarioGetter(HazardGetter):
                 'Could not find any gmf with IMT=%s '
                 'and output_id=%s' % (self._imt, self._hazard_output_id))
 
-        min_dist = min_dist + 0.1  # 0.1 meters = 10 cm
+        dilated_dist = min_dist + 0.1  # 0.1 meters = 10 cm
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf_scenario
@@ -288,11 +287,11 @@ class GroundMotionScenarioGetter(HazardGetter):
         ORDER BY result_grp_ordinal
         """.format(spectral_filters)
 
-        cursor.execute(gmvs_query, (min_dist,) + args)
+        cursor.execute(gmvs_query, (dilated_dist,) + args)
 
         ground_motion_values = sum([row[0] for row in cursor], [])
         self._cache[site.wkt] = ground_motion_values
-        return ground_motion_values
+        return ground_motion_values, min_dist
 
 
 class GroundMotionScenarioGetter2(HazardGetter):
@@ -301,7 +300,7 @@ class GroundMotionScenarioGetter2(HazardGetter):
     It uses the same approach used in GroundMotionValuesGetter
     """
 
-    def __call__(self):
+    def get_data(self):
         cursor = connection.cursor()
 
         spectral_filters = ""
@@ -312,8 +311,7 @@ class GroundMotionScenarioGetter2(HazardGetter):
             args += (self._sa_period, self._sa_damping)
 
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id)
-  oqmif.exposure_data.id, ST_AsText(location), gmvs
+  SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id, gmvs
   FROM oqmif.exposure_data JOIN hzrdr.gmf_scenario
   ON ST_DWithin(oqmif.exposure_data.site, gmf_scenario.location, %s)
   WHERE hzrdr.gmf_scenario.imt = %s AND hzrdr.gmf_scenario.output_id = %s {}
@@ -331,24 +329,4 @@ class GroundMotionScenarioGetter2(HazardGetter):
 
         cursor.execute(query, args)
 
-        data = cursor.fetchall()
-        gmvs = OrderedDict((row[0], row[2]) for row in data)
-
-        if len(gmvs) > len(self.assets):
-            logs.LOG.error(
-                "More assets %s returned than requested %s",
-                gmvs.keys(), self.assets)
-            raise RuntimeError("More assets returned than requested")
-        elif len(gmvs) < len(self.assets):
-            for asset in self.assets:
-                if not asset.id in gmvs.keys():
-                    logs.LOG.warn(
-                        "Asset %s has no hazard within a distance of %s m",
-                        asset, self.max_distance)
-        else:
-            for asset_id, location, _gmvs in data:
-                logs.LOG.debug(
-                    "Asset with id %s got the hazard in location %s",
-                    asset_id, location)
-
-        return gmvs.values()
+        return cursor.fetchall()
