@@ -330,13 +330,15 @@ def mag_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     mag_pmf = numpy.zeros(nmags)
     for i in xrange(nmags):
-        mag_pmf[i] = sum(matrix[i][j][k][l][m][n]
-                         for j in xrange(ndists)
-                         for k in xrange(nlons)
-                         for l in xrange(nlats)
-                         for m in xrange(neps)
-                         for n in xrange(ntrts))
-    return mag_pmf
+        mag_pmf[i] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for j in xrange(ndists)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)
+             for n in xrange(ntrts)]
+        )
+    return 1 - mag_pmf
 
 
 def dist_pmf(matrix):
@@ -349,13 +351,15 @@ def dist_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     dist_pmf = numpy.zeros(ndists)
     for j in xrange(ndists):
-        dist_pmf[j] = sum(matrix[i][j][k][l][m][n]
-                          for i in xrange(nmags)
-                          for k in xrange(nlons)
-                          for l in xrange(nlats)
-                          for m in xrange(neps)
-                          for n in xrange(ntrts))
-    return dist_pmf
+        dist_pmf[j] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for i in xrange(nmags)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)
+             for n in xrange(ntrts)]
+        )
+    return 1 - dist_pmf
 
 
 def trt_pmf(matrix):
@@ -368,13 +372,15 @@ def trt_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     trt_pmf = numpy.zeros(ntrts)
     for n in xrange(ntrts):
-        trt_pmf[n] = sum(matrix[i][j][k][l][m][n]
-                         for i in xrange(nmags)
-                         for j in xrange(ndists)
-                         for k in xrange(nlons)
-                         for l in xrange(nlats)
-                         for m in xrange(neps))
-    return trt_pmf
+        trt_pmf[n] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for i in xrange(nmags)
+             for j in xrange(ndists)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)]
+        )
+    return 1 - trt_pmf
 
 
 def mag_dist_pmf(matrix):
@@ -389,12 +395,14 @@ def mag_dist_pmf(matrix):
     mag_dist_pmf = numpy.zeros((nmags, ndists))
     for i in xrange(nmags):
         for j in xrange(ndists):
-            mag_dist_pmf[i][j] = sum(matrix[i][j][k][l][m][n]
-                                     for k in xrange(nlons)
-                                     for l in xrange(nlats)
-                                     for m in xrange(neps)
-                                     for n in xrange(ntrts))
-    return mag_dist_pmf
+            mag_dist_pmf[i][j] = numpy.prod(
+                [1 - matrix[i][j][k][l][m][n]
+                 for k in xrange(nlons)
+                 for l in xrange(nlats)
+                 for m in xrange(neps)
+                 for n in xrange(ntrts)]
+            )
+    return 1 - mag_dist_pmf
 
 
 def mag_dist_eps_pmf(matrix):
@@ -411,11 +419,13 @@ def mag_dist_eps_pmf(matrix):
     for i in xrange(nmags):
         for j in xrange(ndists):
             for m in xrange(neps):
-                mag_dist_eps_pmf[i][j][m] = sum(matrix[i][j][k][l][m][n]
-                                                for k in xrange(nlons)
-                                                for l in xrange(nlats)
-                                                for n in xrange(ntrts))
-    return mag_dist_eps_pmf
+                mag_dist_eps_pmf[i][j][m] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for k in xrange(nlons)
+                     for l in xrange(nlats)
+                     for n in xrange(ntrts)]
+                )
+    return 1 - mag_dist_eps_pmf
 
 
 def lon_lat_pmf(matrix):
@@ -430,12 +440,14 @@ def lon_lat_pmf(matrix):
     lon_lat_pmf = numpy.zeros((nlons, nlats))
     for k in xrange(nlons):
         for l in xrange(nlats):
-            lon_lat_pmf[k][l] = sum(matrix[i][j][k][l][m][n]
-                                    for i in xrange(nmags)
-                                    for j in xrange(ndists)
-                                    for m in xrange(neps)
-                                    for n in xrange(ntrts))
-    return lon_lat_pmf
+            lon_lat_pmf[k][l] = numpy.prod(
+                [1 - matrix[i][j][k][l][m][n]
+                 for i in xrange(nmags)
+                 for j in xrange(ndists)
+                 for m in xrange(neps)
+                 for n in xrange(ntrts)]
+            )
+    return 1 - lon_lat_pmf
 
 
 def mag_lon_lat_pmf(matrix):
@@ -452,11 +464,13 @@ def mag_lon_lat_pmf(matrix):
     for i in xrange(nmags):
         for k in xrange(nlons):
             for l in xrange(nlats):
-                mag_lon_lat_pmf[i][k][l] = sum(matrix[i][j][k][l][m][n]
-                                               for j in xrange(ndists)
-                                               for m in xrange(neps)
-                                               for n in xrange(ntrts))
-    return mag_lon_lat_pmf
+                mag_lon_lat_pmf[i][k][l] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for j in xrange(ndists)
+                     for m in xrange(neps)
+                     for n in xrange(ntrts)]
+                )
+    return 1 - mag_lon_lat_pmf
 
 
 def lon_lat_trt_pmf(matrix):
@@ -473,8 +487,10 @@ def lon_lat_trt_pmf(matrix):
     for k in xrange(nlons):
         for l in xrange(nlats):
             for n in xrange(ntrts):
-                lon_lat_trt_pmf[k][l][n] = sum(matrix[i][j][k][l][m][n]
-                                               for i in xrange(nmags)
-                                               for j in xrange(ndists)
-                                               for m in xrange(neps))
-    return lon_lat_trt_pmf
+                lon_lat_trt_pmf[k][l][n] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for i in xrange(nmags)
+                     for j in xrange(ndists)
+                     for m in xrange(neps)]
+                )
+    return 1 - lon_lat_trt_pmf
