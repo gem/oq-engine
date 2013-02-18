@@ -29,43 +29,46 @@ from openquake.engine.db import models
 
 @tasks.oqtask
 @stats.count_progress('r')
-def scenario(job_id, assets, hazard_getter_name, hazard,
-        seed, vulnerability_function, output_containers,
-        imt, asset_correlation):
+def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
+             asset_correlation):
     """
     Celery task for the scenario damage risk calculator.
 
     :param job_id: the id of the current
     :class:`openquake.engine.db.models.OqJob`
-    :param assets: the list of :class:`openquake.risklib.scientific.Asset`
-        instances considered
-    :param hazard_getter_name: the name of an hazard getter to be used
-    :param hazard: the hazard output dictionary
+    :param dict hazard:
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'gmfscenario') to a tuple where the first element is an instance of
+      :class:`..hazard_getters.GroundMotionScenarioGetter2`, and the second
+      element is the corresponding weight.
     :param seed: the seed used to initialize the rng
     :param output_containers: a dictionary {hazard_id: output_id}
         where output id represents the id of the loss map
-    :param imt: the Intensity Measure Type of the ground motion field
     :param asset_correlation: asset correlation coefficient
     """
 
-    calc = openquake.risklib.api.Scenario(vulnerability_function,
-            seed, asset_correlation)
+    calc = openquake.risklib.api.Scenario(
+        vulnerability_function, seed, asset_correlation)
 
-    hazard_getter = general.hazard_getter(hazard_getter_name,
-                    hazard.keys()[0], imt)
+    hazard_getter = hazard.values()[0][0]
 
-    outputs = calc(assets, [hazard_getter(a.site) for a in assets])
+    assets, ground_motion_values, missings = hazard_getter()
+
+    outputs = calc(assets, ground_motion_values)
 
     # Risk output container id
     outputs_id = output_containers.values()[0][0]
 
     with db.transaction.commit_on_success(using='reslt_writer'):
         for i, output in enumerate(outputs):
-            general.write_loss_map_data(outputs_id, assets[i].asset_ref,
+            general.write_loss_map_data(
+                outputs_id, assets[i].asset_ref,
                 value=output.mean, std_dev=output.standard_deviation,
                 location=assets[i].site)
 
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
@@ -73,17 +76,38 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     Scenario Risk Calculator. Computes a Loss Map,
     for a given set of assets.
     """
-
-    hazard_getter = "GroundMotionScenarioGetter"
+    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter2
 
     core_calc_task = scenario
 
-    def hazard_output(self, output):
+    def hazard_outputs(self, hazard_calculation):
         """
-        Returns hazard output id
+        :returns: the single hazard output associated to
+        `hazard_calculation`
         """
 
-        return output.id
+        # in scenario hazard calculation we do not have hazard logic
+        # tree realizations, and we have only one output
+        return hazard_calculation.oqjob_set.filter(status="complete").latest(
+            'last_update').output_set.get(
+                output_type='gmf_scenario')
+
+    def hazard_output(self, output, assets):
+        """
+        :param output: an instance of
+          :class:`openquake.engine.db.models.Output` having
+          output_type == gmf_scenario
+        :param assets: a list of assets
+        :returns: a tuple with an instance of an hazard getter for the
+        specified hazard output and assets
+        """
+        if output.output_type != 'gmf_scenario':
+            raise RuntimeError(
+                "The provided hazard output is not a ground motion field: %s"
+                % output.output_type)
+        return (self.hazard_getter(
+            output.id, self.imt, assets,
+            self.rc.get_hazard_maximum_distance()), 1)
 
     @property
     def calculator_parameters(self):
@@ -95,10 +119,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         correlation value.
         """
 
-        if self.rc.asset_correlation is None:
-            return [self.imt, 0]
-        else:
-            return [self.imt, self.rc.asset_correlation]
+        return [self.rc.asset_correlation or 0]
 
     def create_outputs(self, hazard_output):
         """
@@ -108,5 +129,5 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         return [models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
-                                self.job, "Loss Map", "loss_map"),
-                                hazard_output=hazard_output).id]
+                    self.job, "Loss Map", "loss_map"),
+                hazard_output=hazard_output).id]

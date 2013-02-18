@@ -428,6 +428,7 @@ class ClassicalRiskCalculationForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
+            'hazard_maximum_distance',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
             'mean_loss_curves',
@@ -443,6 +444,7 @@ class ClassicalRiskCalculationWithBCRForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
+            'hazard_maximum_distance',
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
@@ -457,6 +459,7 @@ class EventBasedRiskCalculationWithBCRForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
+            'hazard_maximum_distance',
             'loss_curve_resolution',
             'master_seed',
             'asset_correlation',
@@ -473,6 +476,7 @@ class EventBasedRiskCalculationForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
+            'hazard_maximum_distance',
             'loss_curve_resolution',
             'insured_losses',
             'master_seed',
@@ -489,6 +493,7 @@ class ScenarioDamageRiskCalculationForm(BaseOQModelForm):
         fields = (
             'description',
             'region_constraint',
+            'hazard_maximum_distance',
         )
 
 
@@ -500,6 +505,7 @@ class ScenarioRiskCalculationForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
+            'hazard_maximum_distance',
             'master_seed',
             'asset_correlation',
         )
@@ -766,6 +772,13 @@ def truncation_level_is_valid(mdl):
     return True, []
 
 
+def hazard_maximum_distance_is_valid(mdl):
+    if mdl.hazard_maximum_distance is not None:
+       if not mdl.hazard_maximum_distance > 0:
+        return False, ['Hazard maximum distance must be > 0']
+    return True, []
+
+
 def maximum_distance_is_valid(mdl):
     if not mdl.maximum_distance > 0:
         return False, ['Maximum distance must be > 0']
@@ -923,7 +936,7 @@ def asset_life_expectancy_is_valid(mdl):
     return True, []
 
 
-def taxonomies_from_model_is_valid(mdl):
+def taxonomies_from_model_is_valid(_mdl):
     return True, []
 
 
