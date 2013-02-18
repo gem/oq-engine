@@ -264,6 +264,11 @@ def list_risk_calculations():
 
 
 def _print_calcs_summary(calcs):
+    """
+    :param calcs:
+        List of :class:`openquake.engine.db.models.HazardCalculation` or
+        :class:`openquake.engine.db.models.RiskCalculation` objects.
+    """
     if len(calcs) == 0:
         print 'None'
     else:
