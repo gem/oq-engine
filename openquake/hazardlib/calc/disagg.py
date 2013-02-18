@@ -141,6 +141,9 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = []
     lats = []
     tect_reg_types = []
+    probs_one_or_more = []
+    probs_exceed_given_rup = []
+    src_idxs = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
@@ -151,7 +154,9 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
     # out and doesn't show up in the filter's output
-    for source, s_sites in source_site_filter(sources_sites):
+    for src_idx, (source, s_sites) in \
+        enumerate(source_site_filter(sources_sites)):
+
         tect_reg = source.tectonic_region_type
         gsim = gsims[tect_reg]
 
@@ -180,18 +185,34 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
             )
 
+            # compute probability of one or more rupture occurrences
+            probs_one_or_more.append(
+                rupture.get_probability_one_or_more_occurrences()
+            )
+
+            # collect probability of exceedance given the rupture
+            probs_exceed_given_rup.append(poes_given_rup_eps)
+
+            # keep track of the source index, so that the probabilities can be
+            # associated to each source
+            src_idxs.append(src_idx)
+
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
     tect_reg_types = numpy.array(tect_reg_types, int)
+    probs_one_or_more = numpy.array(probs_one_or_more, float)
+    probs_exceed_given_rup = numpy.array(probs_exceed_given_rup, float)
+    src_idxs = numpy.array(src_idxs, int)
 
     trt_bins = [
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
 
-    return mags, dists, lons, lats, tect_reg_types, trt_bins
+    return (mags, dists, lons, lats, tect_reg_types, trt_bins,
+            probs_one_or_more, probs_exceed_given_rup, src_idxs)
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -204,7 +225,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins, _, _, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -241,11 +262,14 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins = bins_data
+    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_one_or_more,
+     probs_exceed_given_rup, src_idxs) = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
     diss_matrix = numpy.zeros(shape)
+
+    src_indices = numpy.unique(src_idxs)
 
     for i_mag in xrange(len(mag_bins) - 1):
         mag_idx = mags <= mag_bins[i_mag + 1]
@@ -274,16 +298,24 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                         for i_trt in xrange(len(trt_bins)):
                             trt_idx = tect_reg_types == i_trt
 
-                            prob_idx = (mag_idx & dist_idx & lon_idx
-                                        & lat_idx & trt_idx)
                             diss_idx = (i_mag, i_dist, i_lon,
                                         i_lat, i_eps, i_trt)
 
-                            diss_matrix[diss_idx] = numpy.sum(
-                                joint_probs[prob_idx, i_eps]
-                            )
+                            # compute probability of exceedance due to the set
+                            # of ruptures in the current disaggregation bin
+                            poe = 1.0
+                            for i_src in src_indices:
+                                src_idx = src_idxs == i_src
+                                prob_idx = (mag_idx & dist_idx & lon_idx
+                                            & lat_idx & trt_idx & src_idx)
 
-    diss_matrix /= numpy.sum(diss_matrix)
+                                poe *= numpy.prod(
+                                    (1 - probs_one_or_more[prob_idx]) **
+                                    probs_exceed_given_rup[prob_idx, i_eps]
+                                )
+                            poe = 1 - poe
+
+                            diss_matrix[diss_idx] = poe
 
     return diss_matrix
 
