@@ -250,14 +250,12 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
 
 def list_hazard_calculations():
-    print "Hazard calculations:"
     hcs = models.HazardCalculation.objects.filter(
         owner__user_name=getpass.getuser())
     _print_calcs_summary(hcs)
 
 
 def list_risk_calculations():
-    print "Risk calculations:"
     rcs = models.RiskCalculation.objects.filter(
         owner__user_name=getpass.getuser())
     _print_calcs_summary(rcs)
