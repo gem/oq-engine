@@ -141,7 +141,6 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = []
     lats = []
     tect_reg_types = []
-    joint_probs = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
@@ -180,27 +179,19 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
             )
-            # compute the probability of the rupture occurring once,
-            # that is ``P(rup)``
-            p_rup = rupture.get_probability_one_occurrence()
-
-            # compute joint probability of rupture occurrence and
-            # iml exceedance for the different epsilon levels
-            joint_probs.append(poes_given_rup_eps * p_rup)
 
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
     tect_reg_types = numpy.array(tect_reg_types, int)
-    joint_probs = numpy.array(joint_probs, float)
 
     trt_bins = [
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
 
-    return mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins
+    return mags, dists, lons, lats, tect_reg_types, trt_bins
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
