@@ -57,6 +57,8 @@ import sys
 
 from os.path import expanduser
 
+from django.core.exceptions import ObjectDoesNotExist
+
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
 # virtual environment) you must set this environment variable
@@ -66,7 +68,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
                             os.path.dirname(__file__)), "openquake"))
 
 from openquake.engine.utils import config
- 
+
 config.abort_if_no_config_available()
 
 try:
@@ -251,44 +253,45 @@ def list_hazard_calculations():
     print "Hazard calculations:"
     hcs = models.HazardCalculation.objects.filter(
         owner__user_name=getpass.getuser())
-    if len(hcs) == 0:
-        print 'None'
-    else:
-        for hc in hcs:
-            print 'Calculation ID: %s, Description: %s' % (
-                hc.id, hc.description)
-            jobs = models.OqJob.objects.filter(hazard_calculation=hc.id)
-            for j in jobs:
-                if j.is_running:
-                    status = 'pending'
-                else:
-                    if j.status == 'complete':
-                        status = 'successful'
-                    else:
-                        status = 'failed'
-                print '\tJob ID: %s, Status: %s' % (j.id, status)
+    _print_calcs_summary(hcs)
 
 
 def list_risk_calculations():
     print "Risk calculations:"
     rcs = models.RiskCalculation.objects.filter(
         owner__user_name=getpass.getuser())
-    if len(rcs) == 0:
+    _print_calcs_summary(rcs)
+
+
+def _print_calcs_summary(calcs):
+    if len(calcs) == 0:
         print 'None'
     else:
-        for rc in rcs:
-            print 'Calculation ID: %s, Description: %s' % (
-                rc.id, rc.description)
-            jobs = models.OqJob.objects.filter(risk_calculation=rc.id)
-            for j in jobs:
-                if j.is_running:
+        print 'calc_id | num_jobs | latest_job_status | last_update | description'
+        for calc in calcs:
+            jobs = calc.oqjob_set.all()
+
+            try:
+                latest_job = jobs.latest('id')
+            except ObjectDoesNotExist:
+                # no jobs associated with the calculation
+                status = ''
+                last_update = ''
+            else:
+                if latest_job.is_running:
                     status = 'pending'
                 else:
-                    if j.status == 'complete':
+                    if latest_job.status == 'complete':
                         status = 'successful'
                     else:
                         status = 'failed'
-                print '\tJob ID: %s, Status: %s' % (j.id, status)
+                last_update = latest_job.last_update.strftime(
+                    '%Y-%m-%d %H:%M:%S %Z'
+                )
+
+            print '%s | %s | %s | %s | %s' % (
+                calc.id, len(jobs), status,last_update, calc.description
+            )
 
 
 def list_hazard_outputs(hc_id):
