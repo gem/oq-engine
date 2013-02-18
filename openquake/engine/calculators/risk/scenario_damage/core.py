@@ -36,7 +36,7 @@ from openquake.engine.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def scenario_damage(job_id, assets, hazard,
+def scenario_damage(job_id, hazard,
                     taxonomy, fragility_model, fragility_functions,
                     _output_containers):
     """
@@ -44,14 +44,12 @@ def scenario_damage(job_id, assets, hazard,
 
     :param job_id: the id of the current
     :class:`openquake.engine.db.models.OqJob`
-    :param assets: the list of :class:`openquake.risklib.scientific.Asset`
-    instances considered
     :param dict hazard:
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmfscenario') to a tuple where the first element is a list
-      of list (one for each asset) with the ground motion values used by the
-      calculation, and the second element is the corresponding weight.
+      to 'gmfscenario') to a tuple where the first element is an instance of
+      :class:`..hazard_getters.GroundMotionScenarioGetter2`, and the second
+      element is the corresponding weight.
     :param taxonomy: the taxonomy being considered
     :param fragility_model: a
     :class:`openquake.risklib.models.input.FragilityModel object
@@ -65,7 +63,9 @@ def scenario_damage(job_id, assets, hazard,
     # Scenario Damage works only on one hazard
     hazard_getter = hazard.values()[0][0]
 
-    outputs = calculator(assets, hazard_getter())
+    assets, ground_motion_values, missings = hazard_getter()
+
+    outputs = calculator(assets, ground_motion_values)
     with logs.tracing('save statistics per site'), \
             db.transaction.commit_on_success(using='reslt_writer'):
         rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
@@ -74,7 +74,8 @@ def scenario_damage(job_id, assets, hazard,
 
     # send aggregate fractions to the controller, the hook will collect them
     aggfractions = sum(o.fractions for o in outputs)
-    base.signal_task_complete(job_id=job_id, num_items=len(assets),
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings),
                               fractions=aggfractions, taxonomy=taxonomy)
 
 scenario_damage.ignore_result = False
@@ -184,7 +185,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
-        return (self.hazard_getter(output.id, self.imt, assets), 1)
+        return (self.hazard_getter(
+            output.id, self.imt,
+            assets, self.rc.get_hazard_maximum_distance()), 1)
 
     def worker_args(self, taxonomy):
         """

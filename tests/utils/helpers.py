@@ -1027,7 +1027,6 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     if output_type == "curve":
         params.update(
             dict(hazard_output_id=hazard_output.hazard_curve.output.id))
-
     elif output_type == "gmf_scenario":
         params.update(
             dict(hazard_output_id=hazard_output.output.id))

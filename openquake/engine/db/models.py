@@ -48,6 +48,12 @@ from openquake.engine.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
+#: In risk calculation each asset should be associated with the :
+#: closest hazard value (e.g. an hazard curve) within a user defined
+#: distance. This is the default value if not provided
+DEFAULT_HAZARD_MAXIMUM_DISTANCE = 50000
+
+
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
@@ -1009,6 +1015,10 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
+    # the maximum distance for an hazard value with the corresponding
+    # asset. In meters
+    hazard_maximum_distance = djm.FloatField(
+        null=True, blank=True, default=DEFAULT_HAZARD_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
@@ -1103,6 +1113,12 @@ class RiskCalculation(djm.Model):
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
+
+    def get_hazard_maximum_distance(self):
+        """
+        Convenience function
+        """
+        return self.hazard_maximum_distance or DEFAULT_HAZARD_MAXIMUM_DISTANCE
 
     @property
     def hazard_statistics(self):

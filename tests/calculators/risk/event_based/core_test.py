@@ -44,7 +44,7 @@ class EventBasedRiskCalculatorTestCase(
 
         params = dict(zip(
             ['conditional_loss_poes', 'insured_losses',
-             'imt', 'time_span', 'tses', 'loss_curve_resolution',
+             'time_span', 'tses', 'loss_curve_resolution',
              'asset_correlation'], self.calculator.calculator_parameters))
 
         self.assertEqual(80, params['loss_curve_resolution'])
@@ -52,7 +52,6 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(True, params['insured_losses'])
         self.assertEqual(250, params['tses'])
         self.assertEqual(50, params['time_span'])
-        self.assertEqual('PGA', params['imt'])
         self.assertEqual(0.0, params['asset_correlation'])
 
     def test_hazard_id(self):
@@ -67,11 +66,6 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(1, outputs.count())
 
         self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
-
-        self.assertEqual(
-            1,
-            models.GmfCollection.objects.filter(
-                pk=self.calculator.hazard_output(outputs[0])[0]).count())
 
     def test_imt_validation(self):
         # Test the validation of the imt associated with the

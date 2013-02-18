@@ -191,7 +191,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 logs.LOG.debug("Task with assets %s got args %s",
                                assets, worker_args)
 
-                yield ([self.job.id, assets, hazard] +
+                yield ([self.job.id, hazard] +
                        worker_args +
                        [output_containers] +
                        calculator_parameters)

@@ -392,6 +392,10 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
+    -- the maximum distance for an hazard value with the corresponding
+    -- asset. In meters
+    hazard_maximum_distance FLOAT NULL,
+
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
 
