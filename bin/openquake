@@ -306,10 +306,7 @@ def list_hazard_outputs(hc_id):
         ID of a hazard calculation.
     """
     outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
-    if len(outputs) > 0:
-        print 'ID\tOuput Type\tName'
-        for o in outputs:
-            print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
+    _print_outputs_summary(outputs)
 
 
 def list_risk_outputs(rc_id):
@@ -321,10 +318,17 @@ def list_risk_outputs(rc_id):
         ID of a risk calculation.
     """
     outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+    _print_outputs_summary(outputs)
+
+
+def _print_outputs_summary(outputs):
+    """
+    List of :class:`openquake.engine.db.models.Output` objects.
+    """
     if len(outputs) > 0:
-        print 'ID\tOutput Type\tName'
+        print 'id | output_type | name'
         for o in outputs:
-            print '%s\t%s\t%s' % (o.id, o.output_type, o.display_name)
+            print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
 
 
 def export_hazard(haz_output_id, target_dir):
