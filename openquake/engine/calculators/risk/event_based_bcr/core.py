@@ -50,7 +50,7 @@ def event_based_bcr(job_id, assets, hazard, seed,
     :param dict hazard:
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'hazard_curve') to a tuple where the first element is a list
+      to 'gmf_collection') to a tuple where the first element is a list
       of list (one for each asset) with the ground motion values used by the
       calculation, and the second element is the corresponding weight.
     :param output_containers: A dictionary mapping hazard Output ID to
