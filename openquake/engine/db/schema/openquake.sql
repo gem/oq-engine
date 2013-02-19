@@ -205,13 +205,13 @@ CREATE TABLE uiapi.input (
     digest VARCHAR(32) NOT NULL,
     -- Input file type, one of:
     --      source model file (source)
-    --      source logic tree (lt_source)
-    --      GSIM logic tree (lt_gsim)
+    --      source logic tree (source_model_logic_tree)
+    --      GSIM logic tree (gsim_logic_tree)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
+        CHECK(input_type IN ('unknown', 'source', 'source_model_logic_tree', 'gsim_logic_tree',
                              'exposure', 'fragility', 'rupture_model',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
@@ -1042,14 +1042,14 @@ CREATE TABLE uiapi.input2job (
 ) TABLESPACE uiapi_ts;
 
 
--- Associate an 'lt_source' type input (a logic tree source) with 'source'
+-- Associate an 'source_model_logic_tree' type input (a logic tree source) with 'source'
 -- type inputs (hazard sources referenced by the logic tree source).
 -- This is needed for worker-side logic tree processing.
 CREATE TABLE uiapi.src2ltsrc (
     id SERIAL PRIMARY KEY,
     -- foreign key to the input of type 'source'
     hzrd_src_id INTEGER NOT NULL,
-    -- foreign key to the input of type 'lt_source'
+    -- foreign key to the input of type 'source_model_logic_tree'
     lt_src_id INTEGER NOT NULL,
     -- Due to input file reuse, the original file name may deviate from
     -- the current. We hence need to capture the latter.
