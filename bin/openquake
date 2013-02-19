@@ -55,17 +55,20 @@ import getpass
 import os
 import sys
 
+from os.path import abspath
+from os.path import dirname
 from os.path import expanduser
+from os.path import join
 
 from django.core.exceptions import ObjectDoesNotExist
 
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
 # virtual environment) you must set this environment variable
-if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
+if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
     sys.modules['openquake'].__dict__["__path__"].insert(
-            0, os.path.join(os.path.dirname(
-                            os.path.dirname(__file__)), "openquake"))
+        0, join(dirname(dirname(__file__)), "openquake")
+    )
 
 from openquake.engine.utils import config
 
@@ -83,12 +86,14 @@ except ImportError:
     pass
 
 import openquake.engine
+
 from openquake.engine import __version__
-from openquake.engine import engine2, utils
+from openquake.engine import engine2
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.job.validation import validate
+from openquake.engine.utils import version
 
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -276,7 +281,8 @@ def _print_calcs_summary(calcs):
     if len(calcs) == 0:
         print 'None'
     else:
-        print 'calc_id | num_jobs | latest_job_status | last_update | description'
+        print ('calc_id | num_jobs | latest_job_status | last_update | '
+               'description')
         for calc in calcs:
             jobs = calc.oqjob_set.all()
 
@@ -299,7 +305,7 @@ def _print_calcs_summary(calcs):
                 )
 
             print '%s | %s | %s | %s | %s' % (
-                calc.id, len(jobs), status,last_update, calc.description
+                calc.id, len(jobs), status, last_update, calc.description
             )
 
 
@@ -443,7 +449,7 @@ def _touch_log_file(log_file):
     """If a log file destination is specified, attempt to open the file in
     'append' mode ('a'). If the specified file is not writable, an
     :exc:`IOError` will be raised."""
-    open(os.path.abspath(log_file), 'a').close()
+    open(abspath(log_file), 'a').close()
 
 
 def complain_and_exit(msg, exit_code=0):
@@ -457,7 +463,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(utils.version.info(__version__))
+        complain_and_exit(version.info(__version__))
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
@@ -488,7 +494,8 @@ def main():
     elif args.run_risk is not None:
         if args.hazard_output_id is None and args.hazard_calculation_id is None:
             complain_and_exit(MISSING_HAZARD_MSG)
-        log_file = expanduser(args.log_file) if args.log_file is not None else None
+        log_file = expanduser(args.log_file) \
+            if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,
                  args.force_inputs, args.exports,
                  hazard_output_id=args.hazard_output_id,
