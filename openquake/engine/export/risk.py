@@ -30,6 +30,8 @@ LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 
 
+# for each output_type there must be a function
+# export_<output_type>(output, target_dir)
 def export(output_id, target_dir):
     """
     Export the given risk calculation output from the database to the
