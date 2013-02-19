@@ -2591,10 +2591,8 @@ class ExposureData(djm.Model):
         db_table = 'oqmif\".\"exposure_data'
 
     def __str__(self):
-        return "<ExposureData %s (%s-%s @ %s)>" % (
-            self.id,
-            self.exposure_model_id, self.asset_ref,
-            self.site)
+        return "%s (%s-%s @ %s)" % (
+            self.id, self.exposure_model_id, self.asset_ref, self.site)
 
     @staticmethod
     def per_asset_value(

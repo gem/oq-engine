@@ -992,14 +992,14 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 investigation_time=hc.investigation_time,
                 imt="PGA", imls=[0.1, 0.2, 0.3]),
             poes=[0.1, 0.2, 0.3],
-            location="POINT(1 1)")
+            location="POINT(0 0)")
 
     elif output_type == "gmf_scenario":
         hazard_output = models.GmfScenario.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test Hazard output", "gmf_scenario"),
             imt="PGA",
-            location="POINT(1 1)",
+            location="POINT(15.50 38.10)",
             gmvs=[0.1, 0.2, 0.3],
             result_grp_ordinal=1)
 
@@ -1016,13 +1016,17 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 complete_logic_tree_gmf=False),
             imt="PGA", gmvs=[0.1, 0.2, 0.3],
             result_grp_ordinal=1,
-            location="POINT(1 1)")
+            location="POINT(15.50 38.10)")
 
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine2.prepare_job(username)
     params, files = engine2.parse_config(
         open(risk_cfg, 'r'), force_inputs=True)
+
+    # FIXME(lp). As hazard and risk demo does not match (in terms of
+    # investigated regions), we disable the maximum distance check
+    params['hazard_maximum_distance'] = 500000
 
     if output_type == "curve":
         params.update(

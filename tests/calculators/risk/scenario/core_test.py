@@ -43,10 +43,9 @@ class ScenarioRiskCalculatorTestCase(
         Test that the specific calculation parameters are present
         """
 
-        params = dict(zip(['imt', 'asset_correlation'],
-            self.calculator.calculator_parameters))
+        params = dict(zip(['asset_correlation'],
+                          self.calculator.calculator_parameters))
 
-        self.assertEqual('PGA', params['imt'])
         self.assertEqual(0.0, params['asset_correlation'])
 
     def test_imt_validation(self):
