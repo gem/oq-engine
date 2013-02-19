@@ -198,11 +198,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
 
-    def hazard_output(self, output, assets):
+    def create_getter(self, output, assets):
         """
-        :returns: a tuple with the ID and the weight of the
-        :class:`openquake.engine.db.models.GmfCollection` object that stores
-        the ground motion fields associated with `output`.
+        See :method:`..general.BaseRiskCalculator.create_getter`
         """
         if not output.output_type in ('gmf', 'complete_lt_gmf'):
             raise RuntimeError(

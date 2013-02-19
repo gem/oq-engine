@@ -143,11 +143,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    def hazard_output(self, output, assets):
+    def create_getter(self, output, assets):
         """
-        :returns: a tuple with the ID and the weight associated with the
-        :class:`openquake.engine.db.models.HazardCurve` object that stores
-        the hazard curves associated to `output`
+        See :method:`..general.BaseRiskCalculator.create_getter`
         """
         if not output.is_hazard_curve():
             raise RuntimeError(

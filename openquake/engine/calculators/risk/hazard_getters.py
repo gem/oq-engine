@@ -63,18 +63,11 @@ class HazardGetter(object):
         missing_asset_ids = expected_asset_ids - actual_asset_ids
         extra_asset_ids = actual_asset_ids - expected_asset_ids
 
-        # check that we have not got extra assets
-        if extra_asset_ids and missing_asset_ids:
-            logs.LOG.error("""
-Wrong assets have been computed.
-Expected: %s.
-Extra ids: %s
-Missing: %s""" % (self.assets,
-                  models.ExposureData.objects.filter(
-                      pk__in=extra_asset_ids),
-                  [self.asset_dict[asset_id]
-                   for asset_id in missing_asset_ids]))
-            raise RuntimeError("Extra assets have been computed")
+        # FIXME(lp). Avoid computation of extra assets
+        if extra_asset_ids:
+            logs.LOG.debug("Extra asset have been computed ids: %s" % (
+                models.ExposureData.objects.filter(
+                    pk__in=extra_asset_ids)))
 
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
@@ -84,7 +77,10 @@ Missing: %s""" % (self.assets,
         return ([self.asset_dict[asset_id]
                  for asset_id in data
                  if asset_id in self.asset_dict],
-                data.values(), missing_asset_ids)
+                [data[asset_id]
+                 for asset_id in data
+                 if asset_id in self.asset_dict],
+                missing_asset_ids)
 
     def __getstate__(self):
         return (self.hazard_id, self.imt, self.assets, self.max_distance)
