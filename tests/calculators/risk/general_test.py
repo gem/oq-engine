@@ -52,7 +52,7 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
     def hazard_outputs(self, _hc):
         return mock.Mock()
 
-    def hazard_output(self, output, assets):
+    def create_getter(self, output, assets):
         return mock.Mock()
 
     @property

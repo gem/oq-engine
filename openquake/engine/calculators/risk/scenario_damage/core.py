@@ -172,14 +172,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.get(
                 output_type='gmf_scenario')
 
-    def hazard_output(self, output, assets):
+    def create_getter(self, output, assets):
         """
-        :param output: an instance of
-          :class:`openquake.engine.db.models.Output` having
-          output_type == gmf_scenario
-        :param assets: a list of assets
-        :returns: a tuple with an instance of an hazard getter for the
-        specified hazard output and assets
+        See :method:`..general.BaseRiskCalculator.create_getter`
         """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
