@@ -181,15 +181,12 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                    # worker expects assets ordered by ID
-                    assets = sorted(assets, key=lambda a: a.id)
-
-                hazard = dict((ho.id, self.hazard_output(ho, assets))
+                hazard = dict((ho.id, self.create_getter(ho, assets))
                               for ho in self.considered_hazard_outputs())
                 worker_args = self.worker_args(taxonomy)
 
-                logs.LOG.debug("Task with assets %s got args %s",
-                               assets, worker_args)
+                logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
+                               len(assets), offset, block_size, worker_args)
 
                 yield ([self.job.id, hazard] +
                        worker_args +
@@ -255,17 +252,19 @@ class BaseRiskCalculator(base.CalculatorNext):
         # instead of getting it from self.imt
         raise NotImplementedError
 
-    def hazard_output(self, output, assets):
+    def create_getter(self, output, assets):
         """
-        Calculator must override this to select from the hazard
-        output/calculation the proper hazard output containers.
+        Create an instance of :class:`.hazard_getters.HazardGetter`
+        associated to a weight of an hazard logic tree realization.
 
-        :returns: The ID of the output container of the hazard
-        used for this risk calculation. E.g. an
-        :class:`openquake.engine.db.models.HazardCurve'
+        :returns: a tuple where the first element is the hazard getter
+        and the second is the associated weight.
+
+        Calculator must override this to create the proper hazard getter.
 
         :param hazard_output: the ID of an
-        :class:`openquake.engine.db.models.Output` object
+        :class:`openquake.engine.db.models.Output` produced by an
+        hazard calculation
 
         :raises: `RuntimeError` if the hazard associated with the
         `hazard_output` is not suitable to be used with this
@@ -321,6 +320,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        logs.LOG.debug("Computing risk over %d assets" % total)
         self.progress.update(total=total)
         stats.pk_set(self.job.id, "lvr", 0)
         stats.pk_set(self.job.id, "nrisk_total", total)
