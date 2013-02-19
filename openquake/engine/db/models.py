@@ -51,7 +51,7 @@ DEFAULT_SA_DAMPING = 5.0
 #: In risk calculation each asset should be associated with the :
 #: closest hazard value (e.g. an hazard curve) within a user defined
 #: distance. This is the default value if not provided
-DEFAULT_HAZARD_MAXIMUM_DISTANCE = 50000
+DEFAULT_HAZARD_MAXIMUM_DISTANCE = 10000
 
 
 #: Kind of supported curve statistics
