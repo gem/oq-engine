@@ -219,23 +219,16 @@ class GroundMotionValuesGetter(HazardGetter):
         return cursor.fetchall()
 
 
-class GroundMotionScenarioGetter(HazardGetter):
+class GroundMotionScenarioGetterPerAsset(HazardGetter):
     """
     Hazard getter for loading ground motion values from the table
     gmf_scenario.
-    It caches the ground motion values on a per-location basis.
-
-    :param int hazard_id:
-        Id of the hazard output (`openquake.engine.db.models.Output`) used to
-        look up the ground motion values. This implementation only supports
-        plain `gmf` output types (single logic tree branch or realization).
-    :param str imt:
-        The intensity measure type with which the ground motion
-        values have been computed (long form).
+    It caches the ground motion values on a per-location basis but
+    performs two spatial queries per asset
     """
 
     def setup(self):
-        super(GroundMotionScenarioGetter, self).setup()
+        super(GroundMotionScenarioGetterPerAsset, self).setup()
         self._cache = {}
 
     def get_data(self):
@@ -244,7 +237,7 @@ class GroundMotionScenarioGetter(HazardGetter):
                  for asset in self.assets]
                 if data[1][1] < self.max_distance]
 
-    def get_per_site(self, site):
+    def get_by_site(self, site):
         """
         Return the closest ground motion values to the given location.
 
@@ -294,7 +287,7 @@ class GroundMotionScenarioGetter(HazardGetter):
         return ground_motion_values, min_dist
 
 
-class GroundMotionScenarioGetter2(HazardGetter):
+class GroundMotionScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     It uses the same approach used in GroundMotionValuesGetter

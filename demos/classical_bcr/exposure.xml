@@ -3,11 +3,11 @@
 
 <exposureModel gml:id="ep">
 <exposureList gml:id="QA_test1" assetCategory="single_asset" recoType="aggregated" recoUnit="USD" stcoType="aggregated" stcoUnit="USD">
-<gml:description>Collection of existing building in the region of Messina, Italy</gml:description>
+<gml:description>Sample buildings</gml:description>
 	<assetDefinition gml:id="a1">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>-122.000	38.225</gml:pos>
+			<gml:pos>0.000	0.0</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.1</reco>
@@ -18,7 +18,7 @@
 	<assetDefinition gml:id="a2">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>-120.000	37.225</gml:pos>
+			<gml:pos>-1.000	1.0</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.2</reco>
@@ -29,7 +29,7 @@
 	<assetDefinition gml:id="a3">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>-120.000	37.225</gml:pos>
+			<gml:pos>-1.000	1.0</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.2</reco>

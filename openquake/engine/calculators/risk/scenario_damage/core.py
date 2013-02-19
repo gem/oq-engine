@@ -146,7 +146,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     core_calc_task = scenario_damage
 
-    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter2
+    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)

@@ -76,7 +76,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     Scenario Risk Calculator. Computes a Loss Map,
     for a given set of assets.
     """
-    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter2
+    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
 
@@ -107,7 +107,8 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 % output.output_type)
         return (self.hazard_getter(
             output.id, self.imt, assets,
-            self.rc.get_hazard_maximum_distance()), 1)
+            self.rc.get_hazard_maximum_distance()),
+            1)
 
     @property
     def calculator_parameters(self):
