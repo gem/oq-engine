@@ -31,7 +31,11 @@ from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
-from openquake.engine.utils import monitor
+from openquake.engine.utils import monitor, get_calculator_class
+from openquake.engine.calculators import hazard, risk
+
+
+INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
 
 
 def prepare_job(user_name="openquake", log_level='progress'):
@@ -73,18 +77,6 @@ def prepare_user(user_name):
     return user
 
 
-_FILE_PARAMS_TO_INPUT_TYPE = {
-    'source_model_logic_tree_file': 'lt_source',
-    'gsim_logic_tree_file': 'lt_gsim',
-    'site_model_file': 'site_model',
-    'vulnerability_file': 'vulnerability',
-    'vulnerability_retrofitted_file': 'vulnerability_retrofitted',
-    'exposure_file': 'exposure',
-    'rupture_model_file': 'rupture_model',
-    'fragility_file': 'fragility',
-}
-
-
 def parse_config(source, force_inputs=False):
     """Parse a dictionary of parameters from an INI-style config file.
 
@@ -107,9 +99,12 @@ def parse_config(source, force_inputs=False):
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key in _FILE_PARAMS_TO_INPUT_TYPE:
-                # If this is a file, create (or reuse) an Input for the file.
-                input_type = _FILE_PARAMS_TO_INPUT_TYPE[key]
+            if key.endswith('_file'):
+                input_type = key[:-5]
+                if not input_type in INPUT_TYPES:
+                    raise ValueError(
+                        'The parameter %s in the .ini file does '
+                        'not correspond to a valid input type' % key)
                 path = value
                 # The `path` may be a path relative to the config file, or it
                 # could be an absolute path.
@@ -308,59 +303,8 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
-def run_hazard(job, log_level, log_file, exports):
-    """
-    Run a hazard calculation.
-
-    :param job:
-        :class:`openquake.engine.db.model.OqJob` instance which references a
-        valid :class:`openquake.engine.db.models.HazardCalculation`.
-    :param str log_level:
-        The desired logging level. Valid choices are 'debug', 'info',
-        'progress', 'warn', 'error', and 'critical'.
-    :param str log_file:
-        Complete path (including file name) to file where logs will be written.
-        If `None`, logging will just be printed to standard output.
-    :param list exports:
-        A (potentially empty) list of export targets. Currently only "xml" is
-        supported.
-    """
-    from openquake.engine.calculators.hazard import CALCULATORS_NEXT
-
-    calc_mode = job.hazard_calculation.calculation_mode
-    # - Instantiate the calculator class
-    calc = CALCULATORS_NEXT[calc_mode](job)
-
-    return _run_calc(job, log_level, log_file, exports, calc, 'hazard')
-
-
-def run_risk(job, log_level, log_file, exports):
-    """
-    Run a risk calculation.
-
-    :param job:
-        :class:`openquake.engine.db.model.OqJob` instance which references a
-        valid :class:`openquake.engine.db.models.RiskCalculation`.
-    :param str log_level:
-        The desired logging level. Valid choices are 'debug', 'info',
-        'progress', 'warn', 'error', and 'critical'.
-    :param str log_file:
-        Complete path (including file name) to file where logs will be written.
-        If `None`, logging will just be printed to standard output.
-    :param list exports:
-        A (potentially empty) list of export targets. Currently only "xml" is
-        supported.
-    """
-
-    from openquake.engine.calculators.risk import CALCULATORS
-
-    calc_mode = job.risk_calculation.calculation_mode
-    calc = CALCULATORS[calc_mode](job)
-
-    return _run_calc(job, log_level, log_file, exports, calc, 'risk')
-
-
-def _run_calc(job, log_level, log_file, exports, calc, job_type):
+# used uin bin/openquake
+def run_calc(job, log_level, log_file, exports, job_type):
     """
     Run a calculation.
 
@@ -383,6 +327,8 @@ def _run_calc(job, log_level, log_file, exports, calc, job_type):
     :param str job_type:
         'hazard' or 'risk'
     """
+    calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
+    calc = get_calculator_class(job_type, calc_mode)(job)
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
