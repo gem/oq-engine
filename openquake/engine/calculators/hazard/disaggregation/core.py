@@ -92,8 +92,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     6. Get histogram bin edges.
     7. Prepare calculation args.
     8. Call the hazardlib calculator
-       (see :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
-       info).
+       (see :func:`openquake.hazardlib.calc.disagg.disaggregation`
+       for more info).
 
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
@@ -176,8 +176,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                     'source_site_filter': src_site_filter,
                     'rupture_site_filter': rup_site_filter,
                 }
-                bin_edges, diss_matrix = openquake.hazardlib.calc.disagg.\
-                    disaggregation(**calc_kwargs)
+                bin_edges, diss_matrix = openquake.hazardlib.calc.\
+                    disagg.disaggregation(**calc_kwargs)
 
                 _save_disagg_matrix(
                     job, site, bin_edges, diss_matrix, lt_rlz,
@@ -209,7 +209,8 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
         :class:`openquake.hazardlib.site.Site`, containing the location
         geometry for these results.
     :param bin_edges, diss_matrix
-        The outputs of :func:`openquake.hazardlib.calc.disagg.disaggregation`.
+        The outputs of :func:
+        `openquake.hazardlib.calc.disagg.disaggregation`.
     :param lt_rlz:
         :class:`openquake.engine.db.models.LtRealization` to which these
         results belong.
@@ -281,9 +282,9 @@ def _prepare_sources(hc, lt_rlz_id):
         lt_realization=lt_rlz_id)
     sources = (
         source.nrml_to_hazardlib(x.parsed_source.nrml,
-                             hc.rupture_mesh_spacing,
-                             hc.width_of_mfd_bin,
-                             hc.area_source_discretization)
+                                 hc.rupture_mesh_spacing,
+                                 hc.width_of_mfd_bin,
+                                 hc.area_source_discretization)
         for x in source_progress)
 
     return sources
