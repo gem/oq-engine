@@ -60,19 +60,30 @@ class HazardGetter(object):
 
         actual_asset_ids = set(data.keys())
         expected_asset_ids = set(self.asset_dict.keys())
+        missing_asset_ids = expected_asset_ids - actual_asset_ids
+        extra_asset_ids = actual_asset_ids - expected_asset_ids
 
         # check that we have not got extra assets
-        if actual_asset_ids - expected_asset_ids:
-            logs.LOG.error("Extra assets have been computed")
-
-        missing_asset_ids = expected_asset_ids - actual_asset_ids
+        if extra_asset_ids and missing_asset_ids:
+            logs.LOG.error("""
+Wrong assets have been computed.
+Expected: %s.
+Extra ids: %s
+Missing: %s""" % (self.assets,
+                  models.ExposureData.objects.filter(
+                      pk__in=extra_asset_ids),
+                  [self.asset_dict[asset_id]
+                   for asset_id in missing_asset_ids]))
+            raise RuntimeError("Extra assets have been computed")
 
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
                 "No hazard has been found for the asset %s",
                 self.asset_dict[missing_asset_id].asset_ref)
 
-        return ([self.asset_dict[asset_id] for asset_id in data],
+        return ([self.asset_dict[asset_id]
+                 for asset_id in data
+                 if asset_id in self.asset_dict],
                 data.values(), missing_asset_ids)
 
     def __getstate__(self):
@@ -129,7 +140,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         query = """
         SELECT
             hzrdr.hazard_curve_data.poes,
-            min(ST_Distance_Sphere(location, %s))
+            min(ST_Distance(location, %s, false))
                 AS min_distance
         FROM hzrdr.hazard_curve_data
         WHERE hazard_curve_id = %s
@@ -205,7 +216,7 @@ class GroundMotionValuesGetter(HazardGetter):
   WHERE oqmif.exposure_data.site && %s
   AND taxonomy = %s AND exposure_model_id = %s
   ORDER BY oqmif.exposure_data.id,
-           ST_Distance(oqmif.exposure_data.site, gmf_table.location)
+           ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
@@ -260,7 +271,7 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
             args += (self._sa_period, self._sa_damping)
 
         min_dist_query = """-- find the distance of the closest location
-        SELECT min(ST_Distance(location, %s)) FROM hzrdr.gmf_scenario
+        SELECT min(ST_Distance(location, %s, false)) FROM hzrdr.gmf_scenario
         WHERE imt = %s AND output_id = %s {}""".format(
             spectral_filters)
 
@@ -275,7 +286,7 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf_scenario
-        WHERE %s > ST_Distance(location, %s)
+        WHERE %s > ST_Distance(location, %s, false)
         AND imt = %s AND output_id = %s {}
         ORDER BY result_grp_ordinal
         """.format(spectral_filters)
@@ -312,7 +323,7 @@ class GroundMotionScenarioGetter(HazardGetter):
     AND oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
   ORDER BY oqmif.exposure_data.id,
-           ST_Distance(oqmif.exposure_data.site, hzrdr.gmf_scenario.location)
+    ST_Distance(oqmif.exposure_data.site, hzrdr.gmf_scenario.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
