@@ -214,7 +214,7 @@ class Scenario(object):
 
     def __call__(self, assets, ground_motion_fields):
         if not ground_motion_fields:
-             return []
+            return []
 
         self.vulnerability_function.init_distribution(
             len(assets), len(ground_motion_fields[0]),
