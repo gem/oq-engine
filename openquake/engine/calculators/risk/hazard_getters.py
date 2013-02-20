@@ -128,15 +128,15 @@ class HazardGetter(object):
 
     def __getstate__(self):
         """Implements the pickable protocol"""
-        return (self.hazard_id, self.imt, self.assets, self.max_distance)
+        return dict(hazard_id=self.hazard_id,
+                    imt=self.imt,
+                    assets=self.assets,
+                    max_distance=self.max_distance)
 
     def __setstate__(self, params):
         """Implements the pickable protocol. Calls the ``setup``
         method."""
-        self.hazard_id = params[0]
-        self.imt = params[1]
-        self.assets = params[2]
-        self.max_distance = params[3]
+        self.__dict__.update(params)
         self.setup()
 
 
