@@ -19,6 +19,7 @@ Functions for exporting risk artifacts from the database.
 
 
 import os
+import csv
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -27,6 +28,7 @@ from openquake.nrmllib.risk import writers
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
+AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 
 
@@ -39,9 +41,10 @@ def export(output_id, target_dir):
     details.
     """
     output = models.Output.objects.get(id=output_id)
-    return globals().get("export_%s" % output.output_type,
-                         core._export_fn_not_implemented)(
-                             output, os.path.expanduser(target_dir))
+    return [globals().get(
+        "export_%s" % output.output_type,
+        core._export_fn_not_implemented)(
+            output, os.path.expanduser(target_dir))]
 
 
 def _export_common(output):
@@ -85,7 +88,7 @@ def export_agg_loss_curve(output, target_dir):
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
         output.loss_curve.aggregatelosscurvedata)
-    return [args['path']]
+    return args['path']
 
 
 @core.makedirs
@@ -102,7 +105,7 @@ def export_loss_curve(output, target_dir):
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
 
     writers.LossCurveXMLWriter(**args).serialize(data)
-    return [args['path']]
+    return args['path']
 
 export_ins_loss_curve = export_loss_curve
 
@@ -123,7 +126,7 @@ def export_loss_map(output, target_dir):
             loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
-    return [args['path']]
+    return args['path']
 
 
 @core.makedirs
@@ -145,7 +148,7 @@ def export_bcr_distribution(output, target_dir):
     writers.BCRMapXMLWriter(**args).serialize(
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
-    return [args['path']]
+    return args['path']
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
@@ -174,7 +177,7 @@ def make_dmg_dist_export(damagecls, writercls, filename):
             data = damagecls.objects.filter(
                 dmg_state__risk_calculation__id=rc_id)
         writer.serialize(data.order_by('dmg_state__lsi'))
-        return [file_path]
+        return file_path
 
     return export_dmg_dist
 
@@ -193,3 +196,19 @@ export_dmg_dist_total = make_dmg_dist_export(
 export_collapse_map = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
     "collapse-map-%s.xml")
+
+
+def export_aggregate_loss(output, target_dir):
+    """
+    Export aggregate losses in CSV
+    """
+    filepath = os.path.join(target_dir,
+                            AGGREGATE_LOSS_FILENAME_FMT % output.id)
+
+    with open(filepath, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['Output ID', 'Mean', 'Standard Deviation'])
+        writer.writerow([output.aggregatelossdata.id,
+                        output.aggregatelossdata.mean,
+                        output.aggregatelossdata.std_dev])
+    return filepath
