@@ -17,6 +17,7 @@
 """
 Core functionality for the scenario risk calculator.
 """
+import numpy
 from django import db
 
 import openquake.risklib
@@ -64,11 +65,15 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
         for i, output in enumerate(outputs):
             general.write_loss_map_data(
                 outputs_id, assets[i].asset_ref,
-                value=output.mean, std_dev=output.standard_deviation,
+                value=numpy.mean(output.losses),
+                std_dev=numpy.std(output.losses, ddof=1),
                 location=assets[i].site)
+        aggregate_losses = sum(output.losses for output in outputs)
 
     base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+                              num_items=len(assets) + len(missings),
+                              aggregate_losses=aggregate_losses)
+scenario.ignore_result = False
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
@@ -79,6 +84,25 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
+
+    def __init__(self, job):
+        super(ScenarioRiskCalculator, self).__init__(job)
+        self.aggregate_losses = None
+
+    def task_completed_hook(self, message):
+        aggregate_losses = message['aggregate_losses']
+
+        if self.aggregate_losses is None:
+            self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
+        self.aggregate_losses += aggregate_losses
+
+    def post_process(self):
+        models.AggregateLosses.objects.create(
+            output=models.Output.objects.create_output(
+                self.job, "Aggregate Losses",
+                "aggregate_losses"),
+            mean=numpy.mean(self.aggregate_losses),
+            std_dev=numpy.std(self.aggregate_losses, ddof=1))
 
     def hazard_outputs(self, hazard_calculation):
         """
