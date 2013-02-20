@@ -206,3 +206,59 @@ class EventBasedExportTestcase(BaseExportTestCase):
 
         finally:
             shutil.rmtree(target_dir)
+
+
+class ScenarioExportTestcase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_scenario_risk_export(self):
+        # Tests that outputs of a risk classical calculation are exported
+        target_dir = tempfile.mkdtemp()
+
+        try:
+            # use get_risk_job to create a fake GmfCollection
+            job, _ = helpers.get_risk_job('scenario_risk/job.ini',
+                                          'scenario_hazard/job.ini',
+                                          'gmf_scenario')
+
+            cfg = helpers.demo_file('scenario_risk/job.ini')
+
+            # run the calculation to create something to export
+
+            # at the moment, only gmf for a specific realization are
+            # supported as hazard input
+            retcode = helpers.run_risk_job_sp(
+                cfg, silence=True,
+                hazard_id=job.risk_calculation.hazard_output.id)
+            self.assertEqual(0, retcode)
+
+            job = models.OqJob.objects.latest('id')
+
+            outputs = export_core.get_outputs(job.id)
+            # 1 loss map set + 1 aggregate loss
+            expected_outputs = 2
+            self.assertEqual(expected_outputs, len(outputs))
+
+            # Export the loss map
+            curves = outputs.filter(output_type='loss_map')
+            rc_files = []
+            for curve in curves:
+                rc_files.extend(risk.export(curve.id, target_dir))
+
+            self.assertEqual(1, len(rc_files))
+
+            for f in rc_files:
+                self._test_exported_file(f)
+
+            # and aggregate loss
+            maps = outputs.filter(output_type='aggregate_loss')
+            lm_files = sum(
+                [risk.export(loss_map.id, target_dir)
+                 for loss_map in maps], [])
+
+            self.assertEqual(1, len(lm_files))
+
+            for f in lm_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
