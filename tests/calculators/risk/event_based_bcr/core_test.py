@@ -73,11 +73,6 @@ class EventBasedBCRRiskCalculatorTestCase(
 
         self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
 
-        self.assertEqual(
-            1,
-            models.GmfCollection.objects.filter(
-                pk=self.calculator.hazard_output(outputs[0])[0]).count())
-
     def test_create_outputs(self):
         """
         Test that the proper output containers are created

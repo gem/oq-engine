@@ -41,7 +41,11 @@ CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
 -- gmf
-CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
+CREATE INDEX hzrdr_gmf_result_grp_ordinal_idx on hzrdr.gmf(result_grp_ordinal);
+CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf(imt);
+CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf(sa_period);
+CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf(sa_damping);
+
 
 CREATE INDEX hzrdr_gmf_collection_output_id_idx on hzrdr.gmf_collection(output_id);
 CREATE INDEX hzrdr_gmf_collection_lt_realization_idx on hzrdr.gmf_collection(lt_realization_id);
@@ -60,6 +64,13 @@ CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
 CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
 -- lt_realization
 CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
+
+-- gmf_scenario
+CREATE INDEX hzrdr_gmf_scenario_output_id_idx on hzrdr.gmf_scenario(output_id);
+CREATE INDEX hzrdr_gmf_scenario_imt_idx on hzrdr.gmf_scenario(imt);
+CREATE INDEX hzrdr_gmf_scenario_sa_period_idx on hzrdr.gmf_scenario(sa_period);
+CREATE INDEX hzrdr_gmf_scenario_sa_damping_idx on hzrdr.gmf_scenario(sa_damping);
+
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
@@ -80,6 +91,9 @@ CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
 CREATE INDEX oqmif_exposure_data_taxonomy_idx ON oqmif.exposure_data(taxonomy);
 CREATE INDEX oqmif_exposure_data_exposure_model_id_idx on oqmif.exposure_data(exposure_model_id);
+CREATE INDEX oqmif_exposure_data_site_stx_idx ON oqmif.exposure_data(ST_X(geometry(site)));
+CREATE INDEX oqmif_exposure_data_site_sty_idx ON oqmif.exposure_data(ST_Y(geometry(site)));
+
 
 -- uiapi indexes
 CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
