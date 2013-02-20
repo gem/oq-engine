@@ -49,8 +49,11 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
 
     celery_task = mock.Mock()
 
-    def hazard_output(self, output):
-        return 0, None
+    def hazard_outputs(self, _hc):
+        return mock.Mock()
+
+    def create_getter(self, output, assets):
+        return mock.Mock()
 
     @property
     def hazard_getter(self):

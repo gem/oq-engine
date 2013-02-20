@@ -241,6 +241,9 @@ COMMENT ON FUNCTION uiapi.pcount_cnode_failures() IS
 'Update the failure count for the compute node at hand as needed.';
 
 
+CREATE AGGREGATE array_concat(anyarray)(sfunc=array_cat, stype=anyarray, initcond='{}');
+
+
 CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
