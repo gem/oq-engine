@@ -268,3 +268,74 @@ CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_
 CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+
+CREATE OR REPLACE FUNCTION hzrdr.finalize_hazard_curves(
+    python_sys_path VARCHAR,
+    hazard_calculation_id INTEGER,
+    lt_realization_id INTEGER,
+    hazard_curve_id INTEGER,
+    imt VARCHAR,
+    lons FLOAT[],
+    lats FLOAT[]
+)
+    RETURNS VARCHAR
+AS $$
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+
+    def get_point_wkt(x, y):
+        return 'SRID=4326;POINT(%s %s)' % (x, y)
+
+    query = ("""
+    SELECT site_collection
+    FROM uiapi.hazard_calculation
+    WHERE id = %s
+    """ % hazard_calculation_id)
+    [haz_calc] = plpy.execute(query)
+
+    query = ("""
+    SELECT result_matrix
+    FROM htemp.hazard_curve_progress
+    WHERE lt_realization_id = %s
+    AND imt = '%s'
+    """ % (lt_realization_id, imt))
+    [haz_curve_progress] = plpy.execute(query)
+
+    query = ("""
+    SELECT weight
+    FROM hzrdr.lt_realization
+    WHERE id = %s
+    """ % lt_realization_id)
+    [lt_realization] = plpy.execute(query)
+    weight = lt_realization['weight']
+
+    # a 2d numpy array:
+    result_matrix = pickle.loads(haz_curve_progress['result_matrix'])
+
+    insert_query = """
+    INSERT INTO hzrdr.hazard_curve_data
+    (hazard_curve_id, poes, location, weight)
+    VALUES %s
+    """
+
+    def gen_rows():
+        for i, lon in enumerate(lons):
+            lat = lats[i]
+
+            point_wkt = get_point_wkt(lon, lat)
+            poes = result_matrix[i].tolist()
+            poes = "'{" +  ','.join(str(x) for x in poes) + "}'"
+            row_tuple = (hazard_curve_id, poes, point_wkt, weight)
+            row_values = '(' + ','.join(str(x) for x in row_tuple)  + ')'
+            yield row_values
+
+    insert_values = ','.join(gen_rows())
+
+    insert_query %= insert_values
+    return insert_query
+
+    return "OK"
+$$ LANGUAGE plpythonu;
