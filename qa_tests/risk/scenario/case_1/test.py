@@ -52,7 +52,7 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
             locations = gmfreader.next()
 
             arr = numpy.array([[float(x) for x in row] for row in gmfreader])
-            for i, gmvs in enumerate(arr.transpose()):
+            for i, gmvs in enumerate(arr):
 
                 # In order to test properly the hazard getter we split
                 # the available ground motion values in two result
@@ -80,6 +80,7 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
                 [agg.mean, agg.std_dev]]
 
     def expected_data(self):
-        return [[[440.14707, 182.6159], [180.7175, 92.2122],
-                 [432.2254, 186.8644]],
+        return [[[440.14707, 182.6159],
+                 [432.2254, 186.8644],
+                 [180.7175, 92.2122]],
                 [1053.09, 246.62]]
