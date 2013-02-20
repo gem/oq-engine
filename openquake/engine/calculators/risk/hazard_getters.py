@@ -365,7 +365,7 @@ class GroundMotionScenarioGetter(HazardGetter):
         cursor = connection.cursor()
 
         spectral_filters = ""
-        args = (self.max_distance, self._imt, self.hazard_id)
+        args = (self._imt, self.hazard_id)
 
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
@@ -374,18 +374,24 @@ class GroundMotionScenarioGetter(HazardGetter):
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id, gmvs
-  FROM oqmif.exposure_data JOIN hzrdr.gmf_scenario
-  ON ST_DWithin(oqmif.exposure_data.site, gmf_scenario.location, %s)
-  WHERE hzrdr.gmf_scenario.imt = %s AND hzrdr.gmf_scenario.output_id = %s {}
-    AND hzrdr.gmf_scenario.location && %s
-    AND oqmif.exposure_data.site && %s
+  SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
+         gmf_table.allgmvs
+  FROM oqmif.exposure_data JOIN (
+    SELECT location, array_concat(gmvs ORDER BY result_grp_ordinal) as allgmvs
+           FROM hzrdr.gmf_scenario
+           WHERE hzrdr.gmf_scenario.imt = %s
+           AND hzrdr.gmf_scenario.output_id = %s {}
+           AND hzrdr.gmf_scenario.location && %s
+           GROUP BY location) gmf_table
+  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
+  WHERE oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
   ORDER BY oqmif.exposure_data.id,
-    ST_Distance(oqmif.exposure_data.site, hzrdr.gmf_scenario.location, false)
+    ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
+                 self.max_distance,
                  self._assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
