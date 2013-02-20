@@ -20,7 +20,7 @@ Core functionality for the scenario risk calculator.
 import numpy
 from django import db
 
-import openquake.risklib
+from openquake.risklib import api
 
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
@@ -49,8 +49,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     :param asset_correlation: asset correlation coefficient
     """
 
-    calc = openquake.risklib.api.Scenario(
-        vulnerability_function, seed, asset_correlation)
+    calc = api.Scenario(vulnerability_function, seed, asset_correlation)
 
     hazard_getter = hazard.values()[0][0]
 

@@ -21,7 +21,7 @@ import os
 import random
 
 
-import openquake.risklib
+from openquake.risklib import scientific
 
 from django import db
 
@@ -384,12 +384,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         for record in parsers.VulnerabilityModelParser(path):
             if self.imt is None:
                 self.imt = record['IMT']
-            vfs[record['ID']] = openquake.risklib.scientific.\
-                VulnerabilityFunction(
-                    record['IML'],
-                    record['lossRatio'],
-                    record['coefficientsVariation'],
-                    record['probabilisticDistribution'])
+            vfs[record['ID']] = scientific.VulnerabilityFunction(
+                record['IML'],
+                record['lossRatio'],
+                record['coefficientsVariation'],
+                record['probabilisticDistribution'])
         return vfs
 
     def create_outputs(self, hazard_output):
