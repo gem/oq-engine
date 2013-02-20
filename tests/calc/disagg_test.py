@@ -59,7 +59,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
         def iter_ruptures(self, tom):
-            assert tom is self.tom
+            assert isinstance(tom, type(self.tom))
+            assert tom.time_span == self.tom.time_span
             return iter(self.ruptures)
 
     class FakeGSIM(object):
@@ -101,6 +102,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
             ([0, 0.1, 0.04], self.FakeRupture(8, 0.04, 5, 11, 45)),
             ([0.1, 0.5, 0.1], self.FakeRupture(7, 0.03, 5, 11, 46))
         ]
+        self.time_span = 10
         self.tom = PoissonTOM(time_span=10)
         self.source1 = self.FakeSource(
             [rupture for poes, rupture in self.ruptures_and_poes1],
@@ -281,9 +283,9 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
 class DisaggregateTestCase(_BaseDisaggTestCase):
     def test(self):
         self.gsim.truncation_level = self.truncation_level = 1
-        bin_edges, matrix = disagg.disaggregation(
+        bin_edges, matrix = disagg.disaggregation_poissonian(
             self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.tom, self.truncation_level, n_epsilons=3,
+            self.time_span, self.truncation_level, n_epsilons=3,
             mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
         )
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
@@ -330,9 +332,9 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                 cbd.return_value = fake_bins_data
 
                 self.gsim.truncation_level = self.truncation_level = 1
-                bin_edges, matrix = disagg.disaggregation(
+                bin_edges, matrix = disagg.disaggregation_poissonian(
                     self.sources, self.site, self.imt, self.iml, self.gsims,
-                    self.tom, self.truncation_level, n_epsilons=3,
+                    self.time_span, self.truncation_level, n_epsilons=3,
                     mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4,
                 )
 
