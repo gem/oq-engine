@@ -80,12 +80,18 @@ class ScenarioRiskCalculatorTestCase(
         for the presence of the outputs
         """
         self.calculator.execute()
+        self.calculator.post_process()
+
+        self.assertEqual(
+            2, models.Output.objects.filter(oq_job=self.job).count())
 
         # One Loss map
-        self.assertEqual(1,
-                         models.Output.objects.filter(oq_job=self.job).count())
         self.assertEqual(1, models.LossMap.objects.filter(
-                            output__oq_job=self.job).count())
+                         output__oq_job=self.job).count())
 
-        files = self.calculator.export(exports='xml')
-        self.assertEqual(1, len(files))
+        # One Aggregagte Loss
+        self.assertEqual(1, models.AggregateLossData.objects.filter(
+                         output__oq_job=self.job).count())
+
+        files = self.calculator.export(exports=True)
+        self.assertEqual(2, len(files))
