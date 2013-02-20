@@ -517,11 +517,20 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     )
                     haz_curve.save()
 
+
+                    ##########
+                    lons = "{" + ', '.join(str(v) for v in points.lons) + "}"
+                    lats = "{" + ', '.join(str(v) for v in points.lats) + "}"
+                    ##########
+                    ##########
+                    # move all of this to a stored procedure
+                    # select
                     [hc_progress] = models.HazardCurveProgress.objects.filter(
                         lt_realization=rlz.id, imt=imt)
 
                     hc_data_inserter = writer.BulkInserter(
                         models.HazardCurveData)
+                    # transform
                     for i, location in enumerate(points):
                         poes = hc_progress.result_matrix[i]
                         hc_data_inserter.add_entry(
@@ -531,7 +540,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                             weight=rlz.weight
                         )
 
+                    # insert
                     hc_data_inserter.flush()
+                    ##########
 
     def initialize_sources(self):
         """
