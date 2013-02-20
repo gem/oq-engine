@@ -76,13 +76,13 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                     expected_data[i], actual,
                     rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
-            expected_outputs = self.expected_outputs()
-
-            for i, output in enumerate(models.Output.objects.filter(
-                    oq_job=job).order_by('id')):
-                [exported_file] = export.risk.export(output.id, result_dir)
-                self.assert_xml_equal(
-                    StringIO.StringIO(expected_outputs[i]), exported_file)
+            if hasattr(self, 'expected_outputs'):
+                expected_outputs = self.expected_outputs()
+                for i, output in enumerate(models.Output.objects.filter(
+                                           oq_job=job).order_by('id')):
+                    [exported_file] = export.risk.export(output.id, result_dir)
+                    self.assert_xml_equal(
+                        StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
 
