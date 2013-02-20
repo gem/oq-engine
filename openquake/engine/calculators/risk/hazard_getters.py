@@ -271,6 +271,7 @@ class GroundMotionValuesGetter(HazardGetter):
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
   AND taxonomy = %s AND exposure_model_id = %s
+  AND array_length(gmf_table.allgmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
@@ -386,6 +387,7 @@ class GroundMotionScenarioGetter(HazardGetter):
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
+    AND array_length(gmf_table.allgmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
