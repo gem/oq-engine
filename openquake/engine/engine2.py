@@ -334,7 +334,11 @@ def run_calc(job, log_level, log_file, exports, job_type):
     # unavailable for others.
     close_connection()
 
-    job_pid = os.fork()
+    if not openquake.engine.no_distribute():
+        job_pid = os.fork()
+    else:
+        job_pid = 0
+
     if not job_pid:
         # calculation executor process
         try:
@@ -353,22 +357,23 @@ def run_calc(job, log_level, log_file, exports, job_type):
             job.save()
         return
 
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        logs.set_logger_level(logs.logging.root, log_level)
-        # TODO: deal with KVS garbage collection
-        supervisor.supervise(job_pid, job.id, log_file=log_file)
-        return
+    if not openquake.engine.no_distribute():
+        supervisor_pid = os.fork()
+        if not supervisor_pid:
+            # supervisor process
+            logs.set_logger_level(logs.logging.root, log_level)
+            # TODO: deal with KVS garbage collection
+            supervisor.supervise(job_pid, job.id, log_file=log_file)
+            return
 
-    # parent process
+        # parent process
 
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
+        # ignore Ctrl-C as well as supervisor process does. thus only
+        # job executor terminates on SIGINT
+        supervisor.ignore_sigint()
+        # wait till both child processes are done
+        os.waitpid(job_pid, 0)
+        os.waitpid(supervisor_pid, 0)
 
     # Refresh the job record, since the forked processes are going to modify
     # job state.

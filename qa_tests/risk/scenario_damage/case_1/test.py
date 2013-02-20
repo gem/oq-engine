@@ -154,8 +154,14 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
                 models.GmfScenario.objects.create(
                     output=output,
                     imt="PGA",
-                    gmvs=gmvs,
+                    gmvs=gmvs[0:3],
                     result_grp_ordinal=1,
+                    location="POINT(%s)" % locations[i])
+                models.GmfScenario.objects.create(
+                    output=output,
+                    imt="PGA",
+                    gmvs=gmvs[3:],
+                    result_grp_ordinal=2,
                     location="POINT(%s)" % locations[i])
 
         return output.id
