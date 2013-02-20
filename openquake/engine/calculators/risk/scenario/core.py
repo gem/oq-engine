@@ -97,12 +97,13 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         self.aggregate_losses += aggregate_losses
 
     def post_process(self):
-        models.AggregateLosses.objects.create(
-            output=models.Output.objects.create_output(
-                self.job, "Aggregate Losses",
-                "aggregate_losses"),
-            mean=numpy.mean(self.aggregate_losses),
-            std_dev=numpy.std(self.aggregate_losses, ddof=1))
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            models.AggregateLossData.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "Aggregate Loss",
+                    "aggregate_loss"),
+                mean=numpy.mean(self.aggregate_losses),
+                std_dev=numpy.std(self.aggregate_losses, ddof=1))
 
     def hazard_outputs(self, hazard_calculation):
         """
