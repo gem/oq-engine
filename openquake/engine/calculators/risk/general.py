@@ -21,7 +21,7 @@ import os
 import random
 
 
-import openquake.risklib
+from openquake.risklib import scientific
 
 from django import db
 
@@ -181,18 +181,17 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                hazard = dict((ho.id, self.hazard_output(ho))
+                hazard = dict((ho.id, self.create_getter(ho, assets))
                               for ho in self.considered_hazard_outputs())
+                worker_args = self.worker_args(taxonomy)
 
-                # FIXME(lp). Refactor the following arg list such that
-                # the arguments are grouped into namedtuples
-                yield ([
-                    self.job.id,
-                    assets,
-                    self.hazard_getter, hazard] +
-                    self.worker_args(taxonomy) +
-                    [output_containers] +
-                    calculator_parameters)
+                logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
+                               len(assets), offset, block_size, worker_args)
+
+                yield ([self.job.id, hazard] +
+                       worker_args +
+                       [output_containers] +
+                       calculator_parameters)
 
     def worker_args(self, taxonomy):
         """
@@ -253,17 +252,19 @@ class BaseRiskCalculator(base.CalculatorNext):
         # instead of getting it from self.imt
         raise NotImplementedError
 
-    def hazard_output(self, output):
+    def create_getter(self, output, assets):
         """
-        Calculator must override this to select from the hazard
-        output/calculation the proper hazard output containers.
+        Create an instance of :class:`.hazard_getters.HazardGetter`
+        associated to a weight of an hazard logic tree realization.
 
-        :returns: The ID of the output container of the hazard
-        used for this risk calculation. E.g. an
-        :class:`openquake.engine.db.models.HazardCurve'
+        :returns: a tuple where the first element is the hazard getter
+        and the second is the associated weight.
+
+        Calculator must override this to create the proper hazard getter.
 
         :param hazard_output: the ID of an
-        :class:`openquake.engine.db.models.Output` object
+        :class:`openquake.engine.db.models.Output` produced by an
+        hazard calculation
 
         :raises: `RuntimeError` if the hazard associated with the
         `hazard_output` is not suitable to be used with this
@@ -319,6 +320,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         This is needed for the purpose of providing an indication of progress
         to the end user."""
+        logs.LOG.debug("Computing risk over %d assets" % total)
         self.progress.update(total=total)
         stats.pk_set(self.job.id, "lvr", 0)
         stats.pk_set(self.job.id, "nrisk_total", total)
@@ -386,12 +388,11 @@ class BaseRiskCalculator(base.CalculatorNext):
         for record in parsers.VulnerabilityModelParser(path):
             if self.imt is None:
                 self.imt = record['IMT']
-            vfs[record['ID']] = openquake.risklib.scientific.\
-                VulnerabilityFunction(
-                    record['IML'],
-                    record['lossRatio'],
-                    record['coefficientsVariation'],
-                    record['probabilisticDistribution'])
+            vfs[record['ID']] = scientific.VulnerabilityFunction(
+                record['IML'],
+                record['lossRatio'],
+                record['coefficientsVariation'],
+                record['probabilisticDistribution'])
         return vfs
 
     def create_outputs(self, hazard_output):

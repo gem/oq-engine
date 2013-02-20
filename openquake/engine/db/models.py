@@ -48,6 +48,12 @@ from openquake.engine.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
+#: In risk calculation each asset should be associated with the :
+#: closest hazard value (e.g. an hazard curve) within a user defined
+#: distance. This is the default value if not provided
+DEFAULT_HAZARD_MAXIMUM_DISTANCE = 10000
+
+
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
@@ -1009,6 +1015,10 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
+    # the maximum distance for an hazard value with the corresponding
+    # asset. In meters
+    hazard_maximum_distance = djm.FloatField(
+        null=True, blank=True, default=DEFAULT_HAZARD_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
@@ -1103,6 +1113,12 @@ class RiskCalculation(djm.Model):
         else:
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
+
+    def get_hazard_maximum_distance(self):
+        """
+        Convenience function
+        """
+        return self.hazard_maximum_distance or DEFAULT_HAZARD_MAXIMUM_DISTANCE
 
     @property
     def hazard_statistics(self):
@@ -2504,17 +2520,19 @@ class AssetManager(djm.GeoManager):
     def contained_in(self, exposure_model_id, taxonomy,
                      region_constraint, offset, size):
         """
-        :returns the asset ids (ordered by id) contained in
+        :returns the asset ids (ordered by location) contained in
         `region_constraint` of `taxonomy` associated with an
         `openquake.engine.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
+
         return list(
             self.raw("""
             SELECT * FROM oqmif.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
-            ORDER BY taxonomy, id LIMIT %s OFFSET %s
+            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
+            LIMIT %s OFFSET %s
             """, [exposure_model_id, taxonomy,
                   "SRID=4326; %s" % region_constraint.wkt,
                   size, offset]))
@@ -2571,6 +2589,10 @@ class ExposureData(djm.Model):
 
     class Meta:
         db_table = 'oqmif\".\"exposure_data'
+
+    def __str__(self):
+        return "%s (%s-%s @ %s)" % (
+            self.id, self.exposure_model_id, self.asset_ref, self.site)
 
     @staticmethod
     def per_asset_value(

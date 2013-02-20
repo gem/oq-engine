@@ -24,6 +24,7 @@ from django import db
 
 from openquake.risklib import api, scientific
 
+from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks, stats
@@ -33,11 +34,11 @@ from openquake.engine.calculators import base
 
 @tasks.oqtask
 @stats.count_progress('r')
-def event_based(job_id, assets, hazard_getter_name, hazard,
+def event_based(job_id, hazard,
                 seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
-                imt, time_span, tses,
+                time_span, tses,
                 loss_curve_resolution, asset_correlation,
                 hazard_montecarlo_p):
     """
@@ -45,16 +46,15 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param assets: the list of `:class:openquake.risklib.scientific.Asset`
-    instances considered
-    :param str hazard_getter_name: class name of a class defined in the
-      :mod:`openquake.engine.calculators.risk.hazard_getters` to be
-      instantiated to
-      get the hazard curves
     :param dict hazard:
-      A dictionary mapping hazard Output ID to GmfCollection ID
-    :param seed: the seed used to initialize the rng
-
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'gmf_collection') to a tuple where the first element is an
+      instance of
+      :class:`..hazard_getters.GroundMotionValuesGetter`,
+      and the second element is the corresponding weight.
+    :param seed:
+      the seed used to initialize the rng
     :param dict output_containers: a dictionary mapping hazard Output
       ID to a list (a, b, c, d) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -67,7 +67,6 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     :param bool insured_losses: True if insured losses should be computed
-    :param str imt: the imt used to filter ground motion fields
     :param time_span: the time span considered
     :param tses: time of the stochastic event set
     :param loss_curve_resolution: the curve resolution, i.e. the
@@ -78,16 +77,15 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
 
     asset_outputs = OrderedDict()
     for hazard_output_id, hazard_data in hazard.items():
-        hazard_id, _ = hazard_data
+        hazard_getter, _ = hazard_data
 
         (loss_curve_id, loss_map_ids,
          mean_loss_curve_id, quantile_loss_curve_ids,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
-        hazard_getter = general.hazard_getter(
-            hazard_getter_name, hazard_id, imt)
-
+        # FIXME(lp). We should not pass the exact same seed for
+        # different hazard
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
             curve_resolution=loss_curve_resolution,
@@ -105,13 +103,12 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
             calculator = api.ConditionalLosses(
                 conditional_loss_poes, calculator)
 
-        with logs.tracing('getting hazard'):
-            ground_motion_fields = [hazard_getter(asset.site)
-                                    for asset in assets]
+        with logs.tracing('getting input data from db'):
+            assets, ground_motion_values, missings = hazard_getter()
 
-        with logs.tracing('computing risk over %d assets' % len(assets)):
+        with logs.tracing('computing risk'):
             asset_outputs[hazard_output_id] = calculator(
-                assets, ground_motion_fields)
+                assets, ground_motion_values)
 
         with logs.tracing('writing results'):
             with db.transaction.commit_on_success(using='reslt_writer'):
@@ -149,7 +146,8 @@ def event_based(job_id, assets, hazard_getter_name, hazard,
                         hazard_montecarlo_p,
                         assume_equal="image")
 
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 event_based.ignore_result = False
 
 
@@ -163,7 +161,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     core_calc_task = event_based
 
-    hazard_getter = "GroundMotionValuesGetter"
+    hazard_getter = hazard_getters.GroundMotionValuesGetter
 
     def pre_execute(self):
         """
@@ -200,11 +198,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
 
-    def hazard_output(self, output):
+    def create_getter(self, output, assets):
         """
-        :returns: a tuple with the ID and the weight of the
-        :class:`openquake.engine.db.models.GmfCollection` object that stores
-        the ground motion fields associated with `output`.
+        See :method:`..general.BaseRiskCalculator.create_getter`
         """
         if not output.output_type in ('gmf', 'complete_lt_gmf'):
             raise RuntimeError(
@@ -216,7 +212,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             weight = gmf.lt_realization.weight
         else:
             weight = None
-        return (gmf.id, weight)
+
+        hazard_getter = self.hazard_getter(
+            gmf.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
+        return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):
         """
@@ -261,7 +260,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         return [self.rc.conditional_loss_poes,
                 self.rc.insured_losses,
-                self.imt, time_span, tses,
+                time_span, tses,
                 self.rc.loss_curve_resolution, correlation,
                 self.hc.number_of_logic_tree_samples == 0]
 

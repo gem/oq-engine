@@ -151,11 +151,21 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
 
             arr = numpy.array([[float(x) for x in row] for row in gmfreader])
             for i, gmvs in enumerate(arr.transpose()):
+
+                # In order to test properly the hazard getter we split
+                # the available ground motion values in two result
+                # groups (that we expect to be both considered).
                 models.GmfScenario.objects.create(
                     output=output,
                     imt="PGA",
-                    gmvs=gmvs,
+                    gmvs=gmvs[0:5],
                     result_grp_ordinal=1,
+                    location="POINT(%s)" % locations[i])
+                models.GmfScenario.objects.create(
+                    output=output,
+                    imt="PGA",
+                    gmvs=gmvs[5:],
+                    result_grp_ordinal=2,
                     location="POINT(%s)" % locations[i])
 
         return output.id

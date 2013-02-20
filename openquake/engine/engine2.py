@@ -32,7 +32,6 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
-from openquake.engine.calculators import hazard, risk
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
@@ -336,6 +335,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
     close_connection()
 
     job_pid = os.fork()
+
     if not job_pid:
         # calculation executor process
         try:
