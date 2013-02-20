@@ -22,17 +22,18 @@ import numpy
 import warnings
 
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box
-from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.tom import PoissonTOM
 
 
-def disaggregation(sources, site, imt, iml, gsims, tom,
-                   truncation_level, n_epsilons,
-                   mag_bin_width, dist_bin_width, coord_bin_width,
-                   source_site_filter=filters.source_site_noop_filter,
-                   rupture_site_filter=filters.rupture_site_noop_filter):
+def disaggregation_poissonian(
+        sources, site, imt, iml, gsims, time_span, truncation_level,
+        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -72,10 +73,8 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
         Intensity measure level. A float value in units of ``imt``.
     :param gsims:
         Tectonic region type to GSIM objects mapping.
-    :param tom:
-        Instance of temporal occurrence model object,
-        such as :class:`~openquake.hazardlib.tom.PoissonTOM`. It is used for
-        calculation of rupture occurrence probability.
+    :param time_span:
+        Investigation time span, in years.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -105,6 +104,8 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
+    tom = PoissonTOM(time_span)
+
     bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
@@ -121,6 +122,32 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
                              coord_bin_width, truncation_level, n_epsilons)
     diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
     return bin_edges, diss_matrix
+
+
+# DEPRECATED
+def disaggregation(sources, site, imt, iml, gsims, tom,
+                   truncation_level, n_epsilons,
+                   mag_bin_width, dist_bin_width, coord_bin_width,
+                   source_site_filter=filters.source_site_noop_filter,
+                   rupture_site_filter=filters.rupture_site_noop_filter):
+    """
+    An implementation of the now-deprecated disaggregation calculation
+    interface. Please use :func:`disaggregation_poissonian` instead.
+    """
+    warnings.warn(
+        '`openquake.hazardlib.calc.disagg.disaggregation` is deprecated. '
+        'Please use '
+        '`openquake.hazardlib.calc.disagg.disaggregation_poissonian` instead',
+        RuntimeWarning
+    )
+
+    time_span = tom.time_span
+    return disaggregation_poissonian(
+        sources, site, imt, iml, gsims, time_span, truncation_level,
+        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter
+    )
 
 
 def _collect_bins_data(sources, site, imt, iml, gsims, tom,
