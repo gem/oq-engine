@@ -7,7 +7,7 @@
 	<assetDefinition gml:id="a1">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>-1	1</gml:pos>
+			<gml:pos>-1.1	1.1</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.1</reco>
@@ -18,7 +18,7 @@
 	<assetDefinition gml:id="a2">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>0	1</gml:pos>
+			<gml:pos>0.1	1.1</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.2</reco>
@@ -29,7 +29,7 @@
 	<assetDefinition gml:id="a3">
 		<site>
 			<gml:Point srsName="epsg:4326">
-			<gml:pos>0	0</gml:pos>
+			<gml:pos>0.1	0.1</gml:pos>
 			</gml:Point>
 		</site>
 		<reco>0.2</reco>

@@ -91,7 +91,3 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
         self.assertEqual(
             set(["hazard_curve"]), set([o.output_type for o in outputs]))
-
-        self.assertEqual(
-            1, models.HazardCurve.objects.filter(
-                pk=self.calculator.hazard_output(outputs[0])[0]).count())

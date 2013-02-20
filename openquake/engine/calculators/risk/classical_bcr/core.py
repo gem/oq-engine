@@ -31,8 +31,8 @@ from django.db import transaction
 
 @tasks.oqtask
 @stats.count_progress('r')
-def classical_bcr(job_id, assets, hazard_getter_name, hazard,
-                  vulnerability_function, vulnerability_function_retrofitted,
+def classical_bcr(job_id, hazard, vulnerability_function,
+                  vulnerability_function_retrofitted,
                   output_containers, lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
     """
@@ -44,13 +44,12 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
 
     :param int job_id:
       ID of the currently running job
-    :param assets:
-      list of Assets to take into account
-    :param str hazard_getter_name: class name of a class defined in the
-      :mod:`openquake.engine.calculators.risk.hazard_getters`
-      to be instantiated to get the hazard curves
     :param dict hazard:
-      A dictionary mapping hazard Output ID to HazardCurve ID
+      A dictionary mapping IDs of
+      :class:`openquake.engine.db.models.Output` (with output_type set
+      to 'hazard_curve') to a tuple where the first element is an instance of
+      :class:`..hazard_getters.HazardCurveGetter, and the second element is the
+      corresponding weight.
     :param output_containers: A dictionary mapping hazard Output ID to
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
@@ -69,10 +68,8 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
         vulnerability_function_retrofitted, lrem_steps_per_interval)
 
     for hazard_output_id, hazard_data in hazard.items():
-        hazard_id, _ = hazard_data
+        hazard_getter, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
-
-        hazard_getter = general.hazard_getter(hazard_getter_name, hazard_id)
 
         calculator = api.BCR(
             calc_original,
@@ -81,7 +78,7 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
             asset_life_expectancy)
 
         with logs.tracing('getting hazard'):
-            hazard_curves = [hazard_getter(asset.site) for asset in assets]
+            assets, hazard_curves, missings = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs = calculator(assets, hazard_curves)
@@ -91,7 +88,8 @@ def classical_bcr(job_id, assets, hazard_getter_name, hazard,
                 for i, asset_output in enumerate(asset_outputs):
                     general.write_bcr_distribution(
                         bcr_distribution_id, assets[i], asset_output)
-    base.signal_task_complete(job_id=job_id, num_items=len(assets))
+    base.signal_task_complete(job_id=job_id,
+                              num_items=len(assets) + len(missings))
 classical_bcr.ignore_result = False
 
 
@@ -105,7 +103,6 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     for the retrofitted losses computation
     """
     core_calc_task = classical_bcr
-    hazard_getter = 'HazardCurveGetterPerAsset'
 
     def __init__(self, job):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
