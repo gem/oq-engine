@@ -34,28 +34,29 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
                    source_site_filter=filters.source_site_noop_filter,
                    rupture_site_filter=filters.rupture_site_noop_filter):
     """
-    Compute "Disaggregation" matrix representing conditional probability
-    of an intensity measure type ``imt`` exceeding, at least once, an intensity
+    Compute "Disaggregation" matrix representing conditional probability of an
+    intensity mesaure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
     scenarios (belonging to a Poissonian source model) classified in terms of:
 
     - rupture magnitude
-    - joyner-boore distance from rupture surface to site
-    - longitude and latitude of surface projection of rupture closest point
-      to site
+    - Joyner-Boore distance from rupture surface to site
+    - longitude and latitude of the surface projection of a rupture's point
+      closest to ``site``
     - epsilon: number of standard deviations by which an intensity measure
-      level deviates from the median value predicted by a gsim, given
-      the rupture parameters
+      level deviates from the median value predicted by a GSIM, given the
+      rupture parameters
     - rupture tectonic region type
 
     In other words, the disaggregation matrix allows to compute the probability
-    of each scenario with specified properties (e.g. magnitude, or magnitude
-    and distance) to cause one or more exceedances of a given hazard level.
+    of each scenario with the specified properties (e.g., magnitude, or the
+    magnitude and distance) to cause one or more exceedences of a given hazard
+    level.
 
-    For more detailed information about disaggregation see for instance
-    "Disaggregation of seismic hazard', Paolo Bazzurro, C. Allin Cornell,
-    Bulletin of the Seismological Society of America, Vol.89, pp.501-520,
-    April 1999".
+    For more detailed information about the disaggregation, see for instance
+    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
+    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
+    April 1999.
 
     :param sources:
         Seismic source model, as for
