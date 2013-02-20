@@ -157,6 +157,8 @@ class ProbabilisticEventBased(object):
         self.loss_ratios = None  # set in __call__
 
     def __call__(self, assets, ground_motion_fields):
+        if not ground_motion_fields:
+            return []
         self.vulnerability_function.init_distribution(
             len(assets), len(ground_motion_fields[0]),
             self.seed, self.correlation)
@@ -211,6 +213,9 @@ class Scenario(object):
         self.vulnerability_function = vulnerability_function
 
     def __call__(self, assets, ground_motion_fields):
+        if not ground_motion_fields:
+            return []
+
         self.vulnerability_function.init_distribution(
             len(assets), len(ground_motion_fields[0]),
             self.seed, self.correlation)
