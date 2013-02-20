@@ -442,43 +442,43 @@ class PMFExtractorsTestCase(unittest.TestCase):
 
     def test_mag(self):
         pmf = disagg.mag_pmf(self.matrix)
-        self.aae(pmf, [30.29, 34.57])
+        self.aae(pmf, [1.0, 1.0])
 
     def test_dist(self):
         pmf = disagg.dist_pmf(self.matrix)
-        self.aae(pmf, [29.56, 35.3])
+        self.aae(pmf, [1.0, 1.0])
 
     def test_trt(self):
         pmf = disagg.trt_pmf(self.matrix)
-        self.aae(pmf, [21.25, 21.03, 22.58])
+        self.aae(pmf, [1.0, 1.0, 1.0])
 
     def test_mag_dist(self):
         pmf = disagg.mag_dist_pmf(self.matrix)
-        self.aae(pmf, [[13.27, 17.02],
-                       [16.29, 18.28]])
+        self.aae(pmf, [[0.999999999965, 1.0],
+                       [1.0, 1.0]])
 
     def test_mag_dist_eps(self):
         pmf = disagg.mag_dist_eps_pmf(self.matrix)
-        self.aae(pmf, [[[5.04, 4.49, 3.74],
-                        [5.80, 5.03, 6.19]],
-                       [[6.19, 4.84, 5.26],
-                        [5.65, 6.01, 6.62]]])
+        self.aae(pmf, [[[0.999984831616, 0.997766176716, 0.998979249671],
+                        [0.999997772739, 0.999779959211, 0.999985036077]],
+                       [[0.999994665686, 0.999473519718, 0.999989748277],
+                        [1.0, 0.999987940219, 0.999995956695]]])
 
     def test_lon_Lat(self):
         pmf = disagg.lon_lat_pmf(self.matrix)
-        self.aae(pmf, [[13.97, 17.59],
-                       [17.74, 15.56]])
+        self.aae(pmf, [[1.0, 1.0],
+                       [1.0, 1.0]])
 
     def test_mag_lon_lat(self):
         pmf = disagg.mag_lon_lat_pmf(self.matrix)
-        self.aae(pmf, [[[6.59,  6.59],
-                        [8.47,  8.64]],
-                       [[7.38, 11.],
-                        [9.27,  6.92]]])
+        self.aae(pmf, [[[0.999992269326, 0.999996551231],
+                        [0.999999622937, 0.999999974769]],
+                       [[1.0, 0.999999999765],
+                        [0.999999998279, 0.999993421953]]])
 
     def test_lon_lat_trt(self):
         pmf = disagg.lon_lat_trt_pmf(self.matrix)
-        self.aae(pmf, [[[4.34, 4.86, 4.77],
-                        [6.35, 5.00, 6.24]],
-                       [[4.81, 6.59, 6.34],
-                        [5.75, 4.58, 5.23]]])
+        self.aae(pmf, [[[0.999805340359, 0.999470893656, 1.0],
+                        [0.999998665328, 0.999969082487, 0.999980380612]],
+                       [[0.999447922645, 0.999996344798, 0.999999678475],
+                        [0.999981572755, 0.999464007617, 0.999983196102]]])
