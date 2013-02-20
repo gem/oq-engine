@@ -1023,9 +1023,9 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     params, files = engine2.parse_config(
         open(risk_cfg, 'r'), force_inputs=True)
 
-    # FIXME(lp). As hazard and risk demo does not match (in terms of
-    # investigated regions), we disable the maximum distance check
-    params['hazard_maximum_distance'] = 500000
+    # In order to make hazard and risk demo match (in terms of
+    # investigated regions) we fix quite big maximum distance :-(
+    params['hazard_maximum_distance'] = 200000
 
     if output_type == "curve":
         params.update(
