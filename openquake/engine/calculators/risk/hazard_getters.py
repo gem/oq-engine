@@ -128,15 +128,15 @@ class HazardGetter(object):
 
     def __getstate__(self):
         """Implements the pickable protocol"""
-        return (self.hazard_id, self.imt, self.assets, self.max_distance)
+        return dict(hazard_id=self.hazard_id,
+                    imt=self.imt,
+                    assets=self.assets,
+                    max_distance=self.max_distance)
 
     def __setstate__(self, params):
         """Implements the pickable protocol. Calls the ``setup``
         method."""
-        self.hazard_id = params[0]
-        self.imt = params[1]
-        self.assets = params[2]
-        self.max_distance = params[3]
+        self.__dict__.update(params)
         self.setup()
 
 
@@ -271,7 +271,7 @@ class GroundMotionValuesGetter(HazardGetter):
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
   AND taxonomy = %s AND exposure_model_id = %s
-  AND array_length(gmf_table.allgmvs, 1) > 0
+  AND array_length(gmf_table.allgmvs_arr, 1) > 0
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}

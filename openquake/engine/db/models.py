@@ -2537,7 +2537,7 @@ class AssetManager(djm.GeoManager):
         `openquake.engine.db.models.ExposureModel` with ID equal to
         `exposure_model_id`
         """
-        # FIXME(lp). Add a functional index for st_x(site) st_y(site)
+
         return list(
             self.raw("""
             SELECT * FROM oqmif.exposure_data
