@@ -41,8 +41,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     6) a method expected_outputs to assert against the actual_outputs
     """
 
-    check_exports = True
-
     def run_risk(self, cfg, hazard_id):
         """
         Given the path to job config file, run the job and assert that it was
@@ -78,7 +76,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                     expected_data[i], actual,
                     rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
-            if self.check_exports:
+            if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(models.Output.objects.filter(
                                            oq_job=job).order_by('id')):
