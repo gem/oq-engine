@@ -59,7 +59,6 @@ class DisaggTestCase(unittest.TestCase):
         iml = 0.2
         time_span = 50.0
         truncation_level = 3.0
-        tom = PoissonTOM(time_span)
         n_epsilons = 3
         mag_bin_width = 0.2
         # in km
@@ -68,9 +67,9 @@ class DisaggTestCase(unittest.TestCase):
         coord_bin_width = 0.2
 
         # compute disaggregation
-        bin_edges, diss_matrix = disagg.disaggregation(
-            [src], site, imt, iml, gsims, tom, truncation_level, n_epsilons,
-            mag_bin_width, dist_bin_width, coord_bin_width
+        bin_edges, diss_matrix = disagg.disaggregation_poissonian(
+            [src], site, imt, iml, gsims, time_span, truncation_level,
+            n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width
         )
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         numpy.testing.assert_almost_equal(
