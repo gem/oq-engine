@@ -366,10 +366,9 @@ BaseHazardCalculatorNext.finalize_hazard_curves`
                     )
                     container_ids['q%s' % quantile] = q_hc.id
 
-            all_curves_for_imt = models.HazardCurveData.objects\
-                .all_curves_for_imt(
-                    self.job.id, im_type, sa_period, sa_damping)\
-                .order_by('location')
+            all_curves_for_imt = models.order_by_location(
+                models.HazardCurveData.objects.all_curves_for_imt(
+                    self.job.id, im_type, sa_period, sa_damping))
 
             with transaction.commit_on_success(using='reslt_writer'):
                 inserter = BulkInserter(models.HazardCurveData,
