@@ -292,13 +292,6 @@ AS $$
         return "'SRID=4326;POINT(%s %s)'" % (x, y)
 
     query = ("""
-    SELECT site_collection
-    FROM uiapi.hazard_calculation
-    WHERE id = %s
-    """ % hazard_calculation_id)
-    [haz_calc] = plpy.execute(query)
-
-    query = ("""
     SELECT result_matrix
     FROM htemp.hazard_curve_progress
     WHERE lt_realization_id = %s
