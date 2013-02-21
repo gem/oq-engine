@@ -145,6 +145,10 @@ class Curve(object):
         """
         return self.inverse.ordinate_for(y_value)
 
+    @property
+    def xy(self):
+        return self.abscissae, self.ordinates
+
     def ordinate_out_of_bounds(self, y_value):
         """
         Check if the given value is outside the Y values boundaries.
