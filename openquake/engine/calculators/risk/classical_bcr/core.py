@@ -17,7 +17,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from openquake.risklib import api
+from openquake.risklib import api, scientific
 
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
@@ -71,23 +71,35 @@ def classical_bcr(job_id, hazard, vulnerability_function,
         hazard_getter, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-        calculator = api.BCR(
-            calc_original,
-            calc_retrofitted,
-            interest_rate,
-            asset_life_expectancy)
-
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()
 
-        with logs.tracing('computing risk over %d assets' % len(assets)):
-            asset_outputs = calculator(assets, hazard_curves)
+        with logs.tracing('computing original losses'):
+            original_loss_curves = calc_original(hazard_curves)
+            retrofitted_loss_curves = calc_retrofitted(hazard_curves)
+
+            eal_original = [
+                scientific.mean_loss(*original_loss_curves[i].xy)
+                for i in range(len(assets))]
+
+            eal_retrofitted = [
+                scientific.mean_loss(*retrofitted_loss_curves[i].xy)
+                for i in range(len(assets))]
+
+            bcr_results = [
+                scientific.bcr(
+                    eal_original[i], eal_retrofitted[i],
+                    interest_rate, asset_life_expectancy,
+                    asset.value, asset.retrofitting_cost)
+                for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(asset_outputs):
+                for i, asset in enumerate(assets):
                     general.write_bcr_distribution(
-                        bcr_distribution_id, assets[i], asset_output)
+                        bcr_distribution_id, asset,
+                        eal_original[i], eal_retrofitted[i], bcr_results[i])
+
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings))
 classical_bcr.ignore_result = False
