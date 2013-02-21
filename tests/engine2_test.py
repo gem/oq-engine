@@ -364,3 +364,25 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
             instance=calculation, files=files
         )
         self.assertTrue(form.is_valid())
+
+
+class OpenquakeCliTestCase(unittest.TestCase):
+    """
+    Run "openquake --version" as a separate
+    process using `subprocess`.
+    """
+
+    def test_run_version(self, silence=False):
+        args = [helpers.RUNNER, "--version"]
+
+        devnull = None
+        if silence:
+            devnull = open(os.devnull, 'wb')
+
+        print 'Running:', ' '.join(args)  # this is useful for debugging
+        try:
+            return subprocess.check_call(args, stderr=devnull, stdout=devnull)
+        finally:
+            if devnull is not None:
+                devnull.close()
+
