@@ -66,6 +66,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") != None:
                             os.path.dirname(__file__)), "openquake"))
 
 from openquake.engine.utils import config
+import openquake.engine.utils.version
  
 config.abort_if_no_config_available()
 
@@ -441,7 +442,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(utils.version.info(__version__))
+        complain_and_exit(openquake.engine.utils.version.info(__version__))
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
