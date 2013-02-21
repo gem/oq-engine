@@ -54,17 +54,17 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     assets, ground_motion_values, missings = hazard_getter()
 
-    outputs = calc(assets, ground_motion_values)
+    loss_ratio_matrix = calc(ground_motion_values)
 
     # Risk output container id
     outputs_id = output_containers.values()[0][0]
 
     with db.transaction.commit_on_success(using='reslt_writer'):
-        for i, output in enumerate(outputs):
+        for i, asset in enumerate(assets):
             general.write_loss_map_data(
-                outputs_id, assets[i].asset_ref,
-                value=output.mean, std_dev=output.standard_deviation,
-                location=assets[i].site)
+                outputs_id, asset,
+                loss_ratio_matrix[i].mean(),
+                std_dev=loss_ratio_matrix[i].std(ddof=1))
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings))
