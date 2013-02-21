@@ -107,8 +107,6 @@ def export_loss_curve(output, target_dir):
     writers.LossCurveXMLWriter(**args).serialize(data)
     return args['path']
 
-export_ins_loss_curve = export_loss_curve
-
 
 @core.makedirs
 def export_loss_map(output, target_dir):
