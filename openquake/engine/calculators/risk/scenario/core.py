@@ -67,7 +67,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
                 loss_ratio_matrix[i].mean(),
                 std_dev=loss_ratio_matrix[i].std(ddof=1))
 
-    aggregate_losses = sum(loss_ratio_matrix[i]
+    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
                            for i, asset in enumerate(assets))
 
     base.signal_task_complete(job_id=job_id,
