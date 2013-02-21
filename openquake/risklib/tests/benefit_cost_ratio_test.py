@@ -41,4 +41,6 @@ class RiskCommonTestCase(unittest.TestCase):
                                   (0.12, 0.057), (0.18, 0.04),
                                   (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
-        self.assertAlmostEqual(0.023305, mean_loss(loss_ratio_curve), 3)
+        self.assertAlmostEqual(
+            0.023305, mean_loss(loss_ratio_curve.abscissae,
+                                loss_ratio_curve.ordinates), 3)

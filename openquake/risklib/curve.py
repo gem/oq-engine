@@ -129,16 +129,6 @@ class Curve(object):
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (self.abscissae, self.ordinates)
 
-    def rescale_abscissae(self, value):
-        """
-        Return a new curve with each abscissa value multiplied
-        by the value passed as parameter.
-        """
-        newcurve = Curve(())
-        newcurve.abscissae = self.abscissae * value
-        newcurve.ordinates = self.ordinates
-        return newcurve
-
     def ordinate_diffs(self, xs):
         """
         Returns the differences y_i - y_{i+1} for the given x_i

@@ -36,7 +36,7 @@ class ClassicalTestCase(unittest.TestCase):
         ])
 
         self.assertAlmostEqual(
-            0.0, scientific.conditional_loss(loss_curve, 0.200))
+            0.0, scientific.conditional_loss_ratio(loss_curve, 0.200))
 
     def test_loss_is_max_if_probability_is_too_low(self):
         loss_curve = Curve([
@@ -44,21 +44,22 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertAlmostEqual(0.30,
-                               scientific.conditional_loss(loss_curve, 0.050))
+        self.assertAlmostEqual(
+            0.30,
+            scientific.conditional_loss_ratio(loss_curve, 0.050))
 
     def test_conditional_loss_duplicates(self):
         # we feed compute_conditional_loss with some duplicated data to see if
         # it's handled correctly
 
-        loss1 = scientific.conditional_loss(Curve([
+        loss1 = scientific.conditional_loss_ratio(Curve([
             (0.21, 0.131), (0.24, 0.108),
             (0.27, 0.089), (0.30, 0.066),
         ]), 0.100)
 
         # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
         # should be skipped
-        loss2 = scientific.conditional_loss(Curve([
+        loss2 = scientific.conditional_loss_ratio(Curve([
             (0.19, 0.131), (0.20, 0.131), (0.21, 0.131),
             (0.24, 0.108), (0.27, 0.089), (0.30, 0.066),
         ]), 0.100)
@@ -71,7 +72,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertAlmostEqual(0.2526, scientific.conditional_loss(
+        self.assertAlmostEqual(0.2526, scientific.conditional_loss_ratio(
             loss_curve, 0.100), 4)
 
     def test_compute_lrem_using_beta_distribution(self):
