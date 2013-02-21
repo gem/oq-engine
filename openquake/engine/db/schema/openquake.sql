@@ -980,21 +980,6 @@ CREATE TABLE uiapi.output (
     path VARCHAR UNIQUE,
     -- The GUI display name to be used for this output.
     display_name VARCHAR NOT NULL,
-    -- Output type, one of:
-    --      hazard_curve
-    --      hazard_map
-    --      gmf
-    --      complete_lt_gmf (complete logic tree GMF)
-    --      ses
-    --      complete_lt_ses (complete logic tree SES)
-    --      loss_curve
-    --      loss_map
-    --      bcr_distribution
-    --      agg_loss_curve
-    --      dmg_dist_per_asset
-    --      dmg_dist_per_taxonomy
-    --      dmg_dist_total
-    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
@@ -1011,7 +996,6 @@ CREATE TABLE uiapi.output (
             'gmf_scenario',
             'hazard_curve',
             'hazard_map',
-            'ins_loss_curve',
             'loss_curve',
             'loss_map',
             'ses',

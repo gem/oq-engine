@@ -166,7 +166,7 @@ class EventBasedExportTestcase(BaseExportTestCase):
             for curve in curves:
                 rc_files.extend(risk.export(curve.id, target_dir))
 
-            self.assertEqual(1, len(rc_files))
+            self.assertEqual(2, len(rc_files))
 
             for f in rc_files:
                 self._test_exported_file(f)
@@ -184,17 +184,6 @@ class EventBasedExportTestcase(BaseExportTestCase):
 
             # ... aggregate losses...
             maps = outputs.filter(output_type='agg_loss_curve')
-            lm_files = sum(
-                [risk.export(loss_map.id, target_dir)
-                 for loss_map in maps], [])
-
-            self.assertEqual(1, len(lm_files))
-
-            for f in lm_files:
-                self._test_exported_file(f)
-
-            # and insured losses.
-            maps = outputs.filter(output_type='ins_loss_curve')
             lm_files = sum(
                 [risk.export(loss_map.id, target_dir)
                  for loss_map in maps], [])
