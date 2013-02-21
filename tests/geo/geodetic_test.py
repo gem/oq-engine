@@ -337,3 +337,30 @@ class IntervalsBetweenTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_same_number_of_intervals(self):
+        # these two set of points are separated by a distance of 65 km. By
+        # discretizing the line every 2 km, the number of expected points for
+        # both sets (after rounding) must be 34
+        lons_1, lats_1, depths_1 = geodetic.intervals_between(
+            lon1=132.2272081355264675, lat1=31.0552366690758639,
+            depth1=7.7000000000000002,
+            lon2=131.6030780890111203, lat2=31.1968015468782589,
+            depth2=28.8619300397151832,
+            length=2.0
+        )
+
+        lons_2, lats_2, depths_2 = geodetic.intervals_between(
+            lon1=132.2218096511129488, lat1=31.0378653652772165,
+            depth1=7.7000000000000002,
+            lon2=131.5977943677305859, lat2=31.1794320218608547,
+            depth2=28.8619300397151832,
+            length=2.0
+        )
+
+        self.assertTrue(lons_1.shape[0] == 34)
+        self.assertTrue(lons_2.shape[0] == 34)
+        self.assertTrue(lats_1.shape[0] == 34)
+        self.assertTrue(lats_2.shape[0] == 34)
+        self.assertTrue(depths_1.shape[0] == 34)
+        self.assertTrue(depths_2.shape[0] == 34)

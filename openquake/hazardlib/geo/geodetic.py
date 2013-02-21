@@ -233,7 +233,17 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     assert length > 0
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1
-    total_distance = numpy.sqrt(hdist ** 2 + vdist ** 2)
+    # if this method is called multiple times with coordinates that are
+    # separated by the same distance, because of floating point imprecisions
+    # the total distance may have slightly different values (for instance if
+    # the distance between two set of points is 65 km, total distance can be
+    # 64.9999999999989910 and 65.0000000000020322). These two values bring to
+    # two different values of num_intervals (32 in the first case and 33 in
+    # the second), and this is a problem because for the same distance we
+    # should have the same number of intervals. To reduce potential differences
+    # due to floating point errors, we therefore round total_distance to a
+    # fixed precision (7)
+    total_distance = round(numpy.sqrt(hdist ** 2 + vdist ** 2), 7)
     num_intervals = int(round(total_distance / length))
     if num_intervals == 0:
         return numpy.array([lon1]), numpy.array([lat1]), numpy.array([depth1])
