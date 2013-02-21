@@ -464,7 +464,7 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(loss_curve_id, asset, asset_output):
+def write_loss_curve(loss_curve_id, asset, loss_ratio_curve):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -473,67 +473,18 @@ def write_loss_curve(loss_curve_id, asset, asset_output):
 
     :param int loss_curve_id: the ID of the output container
     :param asset: an instance of
-        :class:`openquake.engine.db.models.ExposureData`
-    :param asset_output: an instance of
-    :class:`openquake.risklib.models.output.ClassicalOutput` or of
-    :class:`openquake.risklib.models.output.ProbabilisticEventBasedOutput`
-    returned by risklib
-    :param bool dont_save_absolute: if True only loss ratio values
-    will be saved
+           :class:`openquake.engine.db.models.ExposureData`
+    :param loss_ratio_curve: an instance of
+           :class:`openquake.risklib.curve.Curve`
     """
 
     return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset.asset_ref,
         location=asset.site,
-        poes=asset_output.loss_ratio_curve.ordinates,
-        loss_ratios=asset_output.loss_ratio_curve.abscissae,
+        poes=loss_ratio_curve.ordinates,
+        loss_ratios=loss_ratio_curve.abscissae,
         asset_value=asset.value)
-
-
-# FIXME
-# Temporary solution, loss map for Scenario Risk
-# is a different concept with respect to a loss map
-# for a different calculator.
-
-def write_loss_map_data(loss_map_id, asset_ref, value, std_dev, location):
-    """
-    Create :class:`openquake.engine.db.models.LossMapData`
-
-    :param asset_ref: asset ref value.
-    :param value: asset loss value.
-    :param std_dev: asset std dev value.
-    :param location: asset location value.
-    """
-
-    models.LossMapData.objects.create(loss_map_id=loss_map_id,
-                                      asset_ref=asset_ref, value=value,
-                                      std_dev=std_dev, location=location)
-
-
-def write_loss_map(loss_map_ids, asset, asset_output):
-    """
-    Create :class:`openquake.engine.db.models.LossMapData` objects where the
-    data are got by `asset_output` and the
-    :class:`openquake.engine.db.models.LossMap` output containers are got by
-    `loss_map_ids`.
-
-    :param dict loss_map_ids: A dictionary storing that links poe to
-    :class:`openquake.engine.db.models.LossMap` output container
-
-    :param asset: an instance of
-        :class:`openquake.engine.db.models.ExposureData`
-
-    :param asset_output: an instance of
-    :class:`openquake.risklib.models.output.ClassicalOutput` or of
-    :class:`openquake.risklib.models.output.ProbabilisticEventBasedOutput`
-    """
-
-    for poe, loss in asset_output.conditional_losses.items():
-        write_loss_map_data(loss_map_ids[poe],
-                            asset_ref=asset.asset_ref,
-                            value=loss, std_dev=None,
-                            location=asset.site)
 
 
 @db.transaction.commit_on_success
@@ -561,7 +512,35 @@ def update_aggregate_losses(curve_id, losses):
     curve_data.save()
 
 
-def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
+# FIXME
+# Temporary solution, loss map for Scenario Risk
+# is a different concept with respect to a loss map
+# for a different calculator.
+
+def write_loss_map_data(loss_map_id, asset, loss_ratio, std_dev=None):
+    """
+    Create :class:`openquake.engine.db.models.LossMapData`
+
+    :param int loss_map_id: the ID of the output container
+    :param asset: an instance of
+           :class:`openquake.engine.db.models.ExposureData`
+    :param float value: loss ratio value
+    :param float std_dev: std dev on loss ratios.
+    """
+
+    if std_dev is not None:
+        std_dev = std_dev * asset.value
+
+    return models.LossMapData.objects.create(
+        loss_map_id=loss_map_id,
+        asset_ref=asset.asset_ref,
+        value=loss_ratio * asset.value,
+        std_dev=std_dev,
+        location=asset.site)
+
+
+def write_bcr_distribution(
+        bcr_distribution_id, asset, eal_original, eal_retrofitted, bcr):
     """
     Create a new :class:`openquake.engine.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -574,16 +553,18 @@ def write_bcr_distribution(bcr_distribution_id, asset, asset_output):
     :param asset: an instance of
         :class:`openquake.engine.db.models.ExposureData`
 
-    :param asset_output: an instance of
-        :class:`openquake.risklib.models.output.BCROutput` that holds BCR
-        data for a specific asset
+    :param float eal_original: expected annual loss in the original model
+    for the asset
+    :param float eal_retrofitted: expected annual loss in the retrofitted model
+    for the asset
+    :param float bcr: Benefit Cost Ratio parameter
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
         asset_ref=asset.asset_ref,
-        average_annual_loss_original=asset_output.eal_original,
-        average_annual_loss_retrofitted=asset_output.eal_retrofitted,
-        bcr=asset_output.bcr,
+        average_annual_loss_original=eal_original * asset.value,
+        average_annual_loss_retrofitted=eal_retrofitted * asset.value,
+        bcr=bcr,
         location=asset.site)
 
 
