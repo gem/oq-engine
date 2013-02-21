@@ -15,6 +15,7 @@
 
 """Custom Django field and formfield types (for models and forms."""
 
+import numpy
 import re
 try:
     import simplejson as json
@@ -246,6 +247,61 @@ class DictField(PickleField):
             value = super(DictField, self).to_python(value)
 
         return value
+
+
+class NumpyListField(PickleField):
+    """
+    Field for storing numpy arrays as pickled blobs. The actual blob stored in
+    the database is simply a pickled `list`. When the field is instantiated,
+    the value is converted back to a numpy array.
+    """
+
+    def to_python(self, value):
+        """
+        Try to reconstruct a `numpy.ndarray` from the given ``value``.
+
+        :param value:
+            The pickled representation of an object which can be reconstituted
+            using `pickle.loads`.
+        """
+        if value is None:
+            return None
+
+        # first, unpickle:
+        value = super(NumpyListField, self).to_python(value)
+        if isinstance(value, (list, tuple, numpy.ndarray)):
+            return numpy.array(value)
+
+        # NOTE: If the value is not a list or tuple, raise an exception.
+        # The reason we do this is because this field type is intended to be
+        # used only for storing list-like data. (Technically any object can be
+        # wrapped in a numpy array, like `numpy.array(object())`, but this is
+        # not our use case.
+        raise ValueError(
+            "Unexpected value of type '%s'. Expected 'list' or 'tuple'."
+            % type(value)
+        )
+
+    def get_prep_value(self, value):
+        """
+        Convert the ``value`` to the pickled representation of a `list`. If
+        ``value`` is a `numpy.ndarray`, it will be converted to a list of the
+        same size and shape before being pickled.
+
+        :param value:
+            A `list`, `tuple`, or `numpy.ndarray`.
+        """
+        #
+        # convert to list first before pickling, if it's a numpy array
+        if isinstance(value, numpy.ndarray):
+            return super(NumpyListField, self).get_prep_value(value.tolist())
+        else:
+            if not instance(value, (list, tuple)):
+                raise ValueError(
+                    "Unexpected value of type '%s'. Expected 'list', 'tuple', "
+                    "or 'numpy.ndarray'"
+                    % type(value)
+                )
 
 
 class OqNullBooleanField(djm.NullBooleanField):
