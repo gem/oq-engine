@@ -488,6 +488,10 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         im = self.hc.intensity_measure_types_and_levels
         points = self.computation_mesh
 
+        # prepare site locations for the stored function call
+        lons = '{%s}' % ', '.join(str(v) for v in points.lons)
+        lats = '{%s}' % ', '.join(str(v) for v in points.lats)
+
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc.id)
 
@@ -519,8 +523,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 with transaction.commit_on_success(using='reslt_writer'):
                     cursor = connections['reslt_writer'].cursor()
 
-                    # prepare site locations for the stored function call
-
                     # TODO(LB): I don't like the fact that we have to pass
                     # potentially huge arguments (100k sites, for example).
                     # I would like to be able to fetch this site data from
@@ -534,9 +536,6 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     # lons and lats. It's duplicated information, but we have a
                     # relatively low number of HazardCalculation records, so it
                     # shouldn't be a big deal.
-                    lons = '{%s}' % ', '.join(str(v) for v in points.lons)
-                    lats = '{%s}' % ', '.join(str(v) for v in points.lats)
-
                     cursor.execute(
                         """
                         SELECT hzrdr.finalize_hazard_curves(
