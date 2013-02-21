@@ -213,7 +213,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         exported_files = []
         with logs.tracing('exports'):
-            if 'exports' in kwargs:
+            if 'exports' in kwargs and kwargs['exports']:
                 exported_files = sum([
                     export.risk.export(output.id, self.rc.export_dir)
                     for output in export.core.get_outputs(self.job.id)], [])
