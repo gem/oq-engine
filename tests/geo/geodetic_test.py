@@ -358,9 +358,9 @@ class IntervalsBetweenTest(unittest.TestCase):
             length=2.0
         )
 
-        self.assertTrue(lons_1.shape[0] == 34)
-        self.assertTrue(lons_2.shape[0] == 34)
-        self.assertTrue(lats_1.shape[0] == 34)
-        self.assertTrue(lats_2.shape[0] == 34)
-        self.assertTrue(depths_1.shape[0] == 34)
-        self.assertTrue(depths_2.shape[0] == 34)
+        self.assertTrue(34, lons_1.shape[0])
+        self.assertTrue(34, lons_2.shape[0])
+        self.assertTrue(34, lats_1.shape[0])
+        self.assertTrue(34, lats_2.shape[0])
+        self.assertTrue(34, depths_1.shape[0])
+        self.assertTrue(34, depths_2.shape[0])
