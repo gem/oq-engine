@@ -516,7 +516,7 @@ def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
 
 
 def bcr(eal_original, eal_retrofitted, interest_rate,
-        asset_life_expectancy, retrofitting_cost):
+        asset_life_expectancy, asset_value, retrofitting_cost):
     """
     Compute the Benefit-Cost Ratio.
 
@@ -531,7 +531,7 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
     * t -- Life expectancy of the asset
     * C -- Retrofitting cost
     """
-    return ((eal_original - eal_retrofitted)
+    return ((eal_original - eal_retrofitted) * asset_value
             * (1 - numpy.exp(- interest_rate * asset_life_expectancy))
             / (interest_rate * retrofitting_cost))
 

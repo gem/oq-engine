@@ -56,10 +56,10 @@ class BCRTestCase(unittest.TestCase):
         [original_loss_ratio_curve] = calculator_rm([hazard])
         [retrofitted_loss_ratio_curve] = calculator_rf([hazard])
 
-        original_losses = original_loss_ratio_curve.abscissae * asset_value
+        original_losses = original_loss_ratio_curve.abscissae
 
         retrofitted_losses = (
-            retrofitted_loss_ratio_curve.abscissae * asset_value)
+            retrofitted_loss_ratio_curve.abscissae)
 
         eal_original = scientific.mean_loss(
             original_losses,
@@ -73,13 +73,16 @@ class BCRTestCase(unittest.TestCase):
             eal_original, eal_retrofitted,
             interest_rate,
             asset_life_expectancy,
+            asset_value,
             retrofitting_cost)
 
         self.assertAlmostEqual(0.009379,
-                               eal_original, delta=0.0009)
+                               eal_original * asset_value,
+                               delta=0.0009)
 
         self.assertAlmostEqual(0.006586,
-                               eal_retrofitted, delta=0.0009)
+                               eal_retrofitted  * asset_value,
+                               delta=0.0009)
 
         self.assertAlmostEqual(0.483091,
                                bcr, delta=0.009)
