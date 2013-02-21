@@ -271,7 +271,6 @@ CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.sur
 
 
 CREATE OR REPLACE FUNCTION hzrdr.finalize_hazard_curves(
-    python_sys_path VARCHAR,
     hazard_calculation_id INTEGER,
     lt_realization_id INTEGER,
     hazard_curve_id INTEGER,
@@ -287,7 +286,7 @@ AS $$
         import pickle
 
     def get_point_wkt(x, y):
-        return 'SRID=4326;POINT(%s %s)' % (x, y)
+        return "'SRID=4326;POINT(%s %s)'" % (x, y)
 
     query = ("""
     SELECT site_collection
@@ -312,7 +311,11 @@ AS $$
     [lt_realization] = plpy.execute(query)
     weight = lt_realization['weight']
 
-    # a 2d numpy array:
+    # the weight is optional, so convert None to NULL
+    if weight is None:
+        weight = 'NULL'
+
+    # a 2d array
     result_matrix = pickle.loads(haz_curve_progress['result_matrix'])
 
     insert_query = """
@@ -326,7 +329,7 @@ AS $$
             lat = lats[i]
 
             point_wkt = get_point_wkt(lon, lat)
-            poes = result_matrix[i].tolist()
+            poes = result_matrix[i]
             poes = "'{" +  ','.join(str(x) for x in poes) + "}'"
             row_tuple = (hazard_curve_id, poes, point_wkt, weight)
             row_values = '(' + ','.join(str(x) for x in row_tuple)  + ')'
@@ -335,7 +338,6 @@ AS $$
     insert_values = ','.join(gen_rows())
 
     insert_query %= insert_values
-    return insert_query
-
+    plpy.execute(insert_query)
     return "OK"
 $$ LANGUAGE plpythonu;
