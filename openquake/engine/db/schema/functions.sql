@@ -285,7 +285,10 @@ AS $$
     except ImportError:
         import pickle
 
-    def get_point_wkt(x, y):
+    def make_point_wkt(x, y):
+        """
+        Util function to convert x/y coordinates to POINT geom WKT
+        """
         return "'SRID=4326;POINT(%s %s)'" % (x, y)
 
     query = ("""
@@ -328,7 +331,7 @@ AS $$
         for i, lon in enumerate(lons):
             lat = lats[i]
 
-            point_wkt = get_point_wkt(lon, lat)
+            point_wkt = make_point_wkt(lon, lat)
             poes = result_matrix[i]
             poes = "'{" +  ','.join(str(x) for x in poes) + "}'"
             row_tuple = (hazard_curve_id, poes, point_wkt, weight)
