@@ -41,23 +41,6 @@ from openquake.engine.job.validation import MAX_SINT_32
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
-def gmf_realiz_per_task(num_realizations, num_concur_task):
-    """
-    Realizations per task return a tuple in the format
-    (spare : bool, realizations : int list) where spare
-    represents if there are spare realizations
-    and realizations the number of realizations for
-    each task.
-    """
-
-    realiz_per_task, spare_realizations = divmod(
-        num_realizations, num_concur_task)
-    result = [realiz_per_task for _ in xrange(num_concur_task)]
-    if spare_realizations:
-        result.append(spare_realizations)
-    return spare_realizations > 0, result
-
-
 @tasks.oqtask
 @stats.count_progress('h')
 def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
@@ -119,7 +102,6 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         rupture_mdl, hc.site_collection, imts, gsim(),
         hc.truncation_level, realizations=realizations,
         correlation_model=correlation_model)
-
     save_gmf(output_id, gmf, hc.site_collection.mesh, task_no)
 
 
@@ -247,15 +229,16 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rupture_ids = [rupture.id for rupture in ruptures]
         num_concurrent_tasks = self.concurrent_tasks()
 
-        spare_realizations, realiz_per_task = gmf_realiz_per_task(
-                self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
-
-        num_tasks = (num_concurrent_tasks + 1 if spare_realizations
-                    else num_concurrent_tasks)
-
-        for task_no in range(num_tasks):
+        # example 1: num_gmf = 100, num_task = 32 -> 3 realiz per task, 4 spare
+        # example 2: num_gmf = 10, num_task = 32 -> 0 realiz per task, 10 spare
+        realiz_per_task, spare = divmod(
+            self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
+        if realiz_per_task:  # example 1
+            for task_no in range(num_concurrent_tasks):
+                task_seed = rnd.randint(0, MAX_SINT_32)
+                yield (self.job.id, rupture_ids,
+                       self.output.id, task_seed, task_no, realiz_per_task)
+        if spare:  # example 1 and 2
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (self.job.id, rupture_ids,
-                         self.output.id, task_seed, task_no,
-                         realiz_per_task[task_no])
-            yield task_args
+            yield (self.job.id, rupture_ids,
+                   self.output.id, task_seed, 0, spare)
