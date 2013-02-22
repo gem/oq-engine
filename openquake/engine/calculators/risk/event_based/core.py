@@ -99,10 +99,10 @@ def event_based(job_id, hazard,
             correlation=asset_correlation)
 
         with logs.tracing('getting input data from db'):
-            assets, hazard_data, missings = hazard_getter()
+            assets, gmvs_ruptures, missings = hazard_getter()
 
-        ground_motion_values = numpy.array(hazard_data)[:, 0]
-        rupture_ids = numpy.array(hazard_data)[0, 1]
+        ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+        rupture_ids = numpy.array(gmvs_ruptures)[0, 1]
 
         with logs.tracing('computing risk'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
