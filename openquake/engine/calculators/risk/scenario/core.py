@@ -131,12 +131,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         """
         super(ScenarioRiskCalculator, self).pre_execute()
 
-        if (self.rc.insured_losses and
-            self.exposure_model.exposuredata_set.filter(
+        if self.rc.insured_losses:
+            queryset = self.exposure_model.exposuredata_set.filter(
                 (db.models.Q(deductible__isnull=True) |
-                 db.models.Q(ins_limit__isnull=True))).exists()):
-            raise RuntimeError(
-                "Deductible or insured limit missing in exposure")
+                 db.models.Q(ins_limit__isnull=True)))
+            if queryset.exists():
+                logs.LOG.error(
+                    "missing insured limits in exposure for assets %s" % (
+                        queryset.all()))
+                raise RuntimeError(
+                    "Deductible or insured limit missing in exposure")
 
     def task_completed_hook(self, message):
         aggregate_losses = message['aggregate_losses']
