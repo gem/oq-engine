@@ -270,6 +270,21 @@ CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.cat
 CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 
+/*
+ * For a given realization and IMT, extract hazard curves from the temporary
+ * location in `htemp.hazard_curve_progress` and save them to
+ * `hzrdr.hazard_curve_data`, using the specified `hazard_curve_id` as a the
+ * "container". This `hzrdr.hazard_curve` record needs to be created
+ * beforehand, obviously.
+ *
+ * `imt` is the text representation of the intensity measure type. For
+ * spectral acceleration (SA), the period is encoded in the name, like so:
+ * "SA(0.025)"
+ *
+ * `lons` and `lats` represent the sites of interest for a given calculation.
+ * The ordering is EXTREMELY important, because the indices of each location
+ * correspond to a position in the `htemp.hazard_curve_progress.result_matrix`.
+ */
 CREATE OR REPLACE FUNCTION hzrdr.finalize_hazard_curves(
     hazard_calculation_id INTEGER,
     lt_realization_id INTEGER,
@@ -337,3 +352,25 @@ AS $$
     plpy.execute(insert_query)
     return "OK"
 $$ LANGUAGE plpythonu;
+
+COMMENT ON FUNCTION hzrdr.finalize_hazard_curves(
+    hazard_calculation_id INTEGER,
+    lt_realization_id INTEGER,
+    hazard_curve_id INTEGER,
+    imt VARCHAR,
+    lons FLOAT[],
+    lats FLOAT[]
+)
+IS 'For a given realization and IMT, extract hazard curves from the temporary
+location in `htemp.hazard_curve_progress` and save them to
+`hzrdr.hazard_curve_data`, using the specified `hazard_curve_id` as a the
+"container". This `hzrdr.hazard_curve` record needs to be created
+beforehand, obviously.
+
+`imt` is the text representation of the intensity measure type. For
+spectral acceleration (SA), the period is encoded in the name, like so:
+"SA(0.025)"
+
+`lons` and `lats` represent the sites of interest for a given calculation.
+The ordering is EXTREMELY important, because the indices of each location
+correspond to a position in the `htemp.hazard_curve_progress.result_matrix`.';
