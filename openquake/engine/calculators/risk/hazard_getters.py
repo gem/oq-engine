@@ -398,6 +398,7 @@ class GroundMotionScenarioGetter(HazardGetter):
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
+        logs.LOG.debug('Running %s' % cursor.mogrify(query, args))
         cursor.execute(query, args)
 
         return cursor.fetchall()
