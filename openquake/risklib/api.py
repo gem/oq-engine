@@ -85,7 +85,7 @@ class ProbabilisticEventBased(object):
         self.curve_resolution = curve_resolution
 
     def __call__(self, ground_motion_fields):
-        if not ground_motion_fields:
+        if not len(ground_motion_fields):
             return []
         self.vulnerability_function.init_distribution(
             len(ground_motion_fields), len(ground_motion_fields[0]),
@@ -110,7 +110,7 @@ class Scenario(object):
         self.vulnerability_function = vulnerability_function
 
     def __call__(self, ground_motion_fields):
-        if not ground_motion_fields:
+        if not len(ground_motion_fields):
             return []
 
         self.vulnerability_function.init_distribution(
