@@ -1497,7 +1497,8 @@ class Output(djm.Model):
         # computed over multiple hazard outputs (related to different
         # logic tree realizations). Then, We do not have to collect
         # metadata regarding statistics or logic tree
-        if not self.is_gmf_scenario() and not rc.hazard_output is None:
+        if (not rc.calculation_model == 'scenario' and
+            not rc.hazard_output is None):
             ho = rc.hazard_output
 
             if ho.is_hazard_curve():
