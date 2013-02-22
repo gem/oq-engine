@@ -291,7 +291,6 @@ class NumpyListField(PickleField):
         :param value:
             A `list`, `tuple`, or `numpy.ndarray`.
         """
-        #
         # convert to list first before pickling, if it's a numpy array
         if isinstance(value, numpy.ndarray):
             return super(NumpyListField, self).get_prep_value(value.tolist())
