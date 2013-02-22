@@ -49,24 +49,22 @@ def _export_common(output):
     Returns a dict containing the output metadata which are serialized
     by nrml writers before actually writing the `output` data.
     """
-    # hazard metadata
-    investigation_time, statistics, quantile, sm_path, gsim_path = (
-        output.hazard_metadata)
-
-    if sm_path is not None:
-        source_model_tree_path = core.LT_PATH_JOIN_TOKEN.join(sm_path)
+    metadata = output.hazard_metadata
+    if metadata.sm_path is not None:
+        source_model_tree_path = core.LT_PATH_JOIN_TOKEN.join(
+            metadata.sm_path)
     else:
         source_model_tree_path = None
-    if gsim_path is not None:
-        gsim_tree_path = core.LT_PATH_JOIN_TOKEN.join(gsim_path)
+    if metadata.gsim_path is not None:
+        gsim_tree_path = core.LT_PATH_JOIN_TOKEN.join(metadata.gsim_path)
     else:
         gsim_tree_path = None
 
     unit = output.oq_job.risk_calculation.exposure_model.stco_unit
 
-    return dict(investigation_time=investigation_time,
-                statistics=statistics,
-                quantile_value=quantile,
+    return dict(investigation_time=metadata.investigation_time,
+                statistics=metadata.statistics,
+                quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
                 unit=unit)
