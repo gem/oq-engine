@@ -83,6 +83,18 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+def order_by_location(queryset):
+    """
+    Utility function to order a queryset by location. This works even if
+    the location is of Geography object (a simple order_by('location') only
+    works for Geometry objects).
+    """
+    return queryset.extra(
+        select={'x': 'ST_X(geometry(location))',
+                'y': 'ST_Y(geometry(location))'},
+        order_by=["x", "y"])
+
+
 def queryset_iter(queryset, chunk_size):
     """
     Given a QuerySet, split it into smaller queries and yield the result of
@@ -1642,6 +1654,8 @@ class HazardCurveDataManager(djm.GeoManager):
         """
         Same as #individual_curves but the results are ordered by location
         """
+        ## TODO: change geometry -> geography in hazard_curve_data
+        ## and then replace order_by('location') -> order_by_location
         return self.individual_curves(job, imt).order_by('location')
 
     def individual_curves_nr(self, job, imt):
@@ -2014,14 +2028,13 @@ class GmfSet(djm.Model):
             for imt, sa_period, sa_damping in imts:
 
                 for result_grp_ordinal in xrange(1, num_tasks + 1):
-                    gmfs = Gmf.objects\
-                        .filter(
+                    gmfs = order_by_location(
+                        Gmf.objects.filter(
                             gmf_set=self.id,
                             imt=imt,
                             sa_period=sa_period,
                             sa_damping=sa_damping,
-                            result_grp_ordinal=result_grp_ordinal)\
-                        .order_by('location')
+                            result_grp_ordinal=result_grp_ordinal))
                     if len(gmfs) == 0:
                         # This task did not contribute to this GmfSet
                         continue
@@ -2132,12 +2145,12 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        gmfs = GmfScenario.objects.filter(
-            output__id=output.id,
-            imt=imt,
-            sa_period=sa_period,
-            sa_damping=sa_damping,
-        ).order_by('location')
+        gmfs = order_by_location(
+            GmfScenario.objects.filter(
+                output__id=output.id,
+                imt=imt,
+                sa_period=sa_period,
+                sa_damping=sa_damping))
         # yield all the nodes associated to a given location
         for loc, rows in itertools.groupby(
                 gmfs, operator.attrgetter('location')):
