@@ -64,6 +64,7 @@ GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.aggregate_loss_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.event_loss_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_state_id_seq to GROUP openquake;
@@ -230,6 +231,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map_data TO oq_reslt_writer;
 -- riskr.aggregate_loss
 GRANT SELECT ON riskr.aggregate_loss TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.aggregate_loss TO oq_reslt_writer;
+
+-- riskr.event_loss
+GRANT SELECT ON riskr.event_loss TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.event_loss TO oq_reslt_writer;
 
 -- riskr.bcr_distribution
 GRANT SELECT ON riskr.bcr_distribution TO GROUP openquake;
