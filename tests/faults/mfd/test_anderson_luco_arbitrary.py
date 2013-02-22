@@ -39,9 +39,9 @@
 # (hazard@globalquakemodel.org). 
 # 
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# for more details.
 # 
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
@@ -51,19 +51,19 @@ Module to test :hmtk.faults.mfd.anderson_luco_arbitrary.AndersonLucoArbitrary
 class
 '''
 
+import os
 import unittest
 import numpy as np
 from math import log
 from openquake.hazardlib.scalerel import WC1994
 from hmtk.faults.mfd.anderson_luco_arbitrary import (Type1RecurrenceModel,
     Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoArbitrary)
-from hmtk.faults.mfd.base import _scale_moment
 
-AL83_FIG2_MODEL = np.genfromtxt(
-    'tests/faults/mfd/data/anderson_luco_arbitrary_results.dat')
-
-AL83_INC_DATA = np.genfromtxt(
-    'tests/faults/mfd/data/anderson_luco_arbitrary_incremental.dat')
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+AL83_FIG2_MODEL = np.genfromtxt(os.path.join(BASE_DATA_PATH,
+        'anderson_luco_arbitrary_results.dat'))
+AL83_INC_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH, 
+        'anderson_luco_arbitrary_incremental.dat'))
 
 class TestType1Recurrence(unittest.TestCase):
     '''

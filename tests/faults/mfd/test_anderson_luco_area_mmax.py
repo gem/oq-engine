@@ -51,22 +51,21 @@ Module to test
 :hmtk.faults.mfd.anderson_luco_area_mmax.AndersonLucoAreaMmax class
 '''
 
+import os
 import unittest
 import numpy as np
 from math import log
 from openquake.hazardlib.scalerel import WC1994
 from hmtk.faults.mfd.anderson_luco_area_mmax import (Type1RecurrenceModel,
     Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoAreaMmax)
-from hmtk.faults.mfd.base import _scale_moment
 
 MAGNITUDES = np.arange(5., 8.1, 0.1)
 
-BUN07_FIG1 = np.genfromtxt(
-    'tests/faults/mfd/data/anderson_luco_area_mmax_results.dat')
-    
-AL83_AREA_MMAX_INC = np.genfromtxt(
-    'tests/faults/mfd/data/anderson_luco_area_mmax_incremental.dat')
-    
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+BUN07_FIG1 = np.genfromtxt(os.path.join(BASE_DATA_PATH,
+        'anderson_luco_area_mmax_results.dat'))
+AL83_AREA_MMAX_INC = np.genfromtxt(os.path.join(BASE_DATA_PATH,
+        'anderson_luco_area_mmax_incremental.dat'))
 
 class TestType1Recurrence(unittest.TestCase):
     '''

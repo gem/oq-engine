@@ -52,6 +52,7 @@ Module to test :class:
 and :class: hmtk.faults.mfd.youngs_coppersmith.YoungsCoppersmithExponential
 '''
 
+import os
 import unittest
 import numpy as np
 from math import log
@@ -60,8 +61,9 @@ from hmtk.faults.mfd.base import _scale_moment
 from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
                                                 YoungsCoppersmithCharacteristic)
 
-YC_EXP_DATA = np.genfromtxt(
-    'tests/faults/mfd/data/yc1985_exponential_BungumFig1.dat')
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+YC_EXP_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
+        'yc1985_exponential_BungumFig1.dat'))
 
 class TestYoungsCoppersmithExponential(unittest.TestCase):
     '''
