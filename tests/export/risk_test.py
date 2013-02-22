@@ -13,196 +13,105 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import shutil
-import tempfile
 import unittest
+import mock
 
-import openquake.nrmllib
-
-from nose.plugins.attrib import attr
-
-from openquake.engine.db import models
-from openquake.engine.export import core as export_core
 from openquake.engine.export import risk
 
 from tests.utils import helpers
 
 
-def _number_of(elem_name, tree):
-    """
-    Given an element name (including the namespaces prefix, if applicable),
-    return the number of occurrences of the element in a given XML document.
-    """
-    expr = '//%s' % elem_name
-    return len(tree.xpath(expr, namespaces=openquake.nrmllib.PARSE_NS_MAP))
-
-
-class BaseExportTestCase(unittest.TestCase):
+class ExportTestCase(unittest.TestCase):
 
     def setUp(self):
-        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
-                                      'simple_fault_demo_hazard/job.ini')
-        self.hazard_id = job.risk_calculation.hazard_output.id
+        self.output_mock = mock.Mock()
+        self.output_patch = helpers.patch(
+            'openquake.engine.db.models.Output.objects.get')
+        m = self.output_patch.start()
+        m.return_value = self.output_mock
+        self.output_mock.hazard_metadata = 30, "mean", None, None, None
+        rc = self.output_mock.oq_job.risk_calculation
+        rc.exposure_model.stco_unit = "bucks"
+        rc.exposure_model.category = "air"
+        rc.interest_rate = 0.3
+        rc.asset_life_expectancy = 10
 
-    def _test_exported_file(self, filename):
-        self.assertTrue(os.path.exists(filename))
-        self.assertTrue(os.path.isabs(filename))
-        self.assertTrue(os.path.getsize(filename) > 0)
+    def tearDown(self):
+        self.output_patch.stop()
 
+    def test_export_agg_loss_curve(self):
+        writer = 'openquake.nrmllib.risk.writers.AggregateLossCurveXMLWriter'
 
-class ClassicalExportTestcase(BaseExportTestCase):
+        self.output_mock.loss_curve.id = 0
+        with mock.patch(writer) as m:
+            ret = risk.export_agg_loss_curve(self.output_mock, "/tmp/")
 
-    @attr('slow')
-    def test_classical_risk_export(self):
-        # Tests that outputs of a risk classical calculation are exported
-        target_dir = tempfile.mkdtemp()
+            self.assertEqual([((),
+                              {'gsim_tree_path': None,
+                               'investigation_time': 30,
+                               'path': '/tmp/loss-curves-0.xml',
+                               'quantile_value': None,
+                               'source_model_tree_path': None,
+                               'statistics': 'mean',
+                               'unit': 'bucks'})], m.call_args_list)
+            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
 
-        try:
-            cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+    def test_export_loss_curve(self):
+        writer = 'openquake.nrmllib.risk.writers.LossCurveXMLWriter'
 
-            # run the calculation to create something to export
-            retcode = helpers.run_risk_job_sp(cfg, self.hazard_id,
-                                              silence=True)
-            self.assertEqual(0, retcode)
+        self.output_mock.loss_curve.id = 0
+        self.output_mock.loss_curve.insured = False
 
-            job = models.OqJob.objects.latest('id')
+        with mock.patch(writer) as m:
+            ret = risk.export_loss_curve(self.output_mock, "/tmp/")
 
-            outputs = export_core.get_outputs(job.id)
-            expected_outputs = 4  # 1 loss curve set + 3 loss curve map set
-            self.assertEqual(expected_outputs, len(outputs))
+            self.assertEqual([((),
+                              {'gsim_tree_path': None,
+                               'investigation_time': 30,
+                               'insured': False,
+                               'path': '/tmp/loss-curves-0.xml',
+                               'quantile_value': None,
+                               'source_model_tree_path': None,
+                               'statistics': 'mean',
+                               'unit': 'bucks'})], m.call_args_list)
+            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
 
-            # Export the loss curves:
-            curves = outputs.filter(output_type='loss_curve')
-            rc_files = []
-            for curve in curves:
-                rc_files.extend(risk.export(curve.id, target_dir))
+    def test_export_loss_map(self):
+        writer = 'openquake.nrmllib.risk.writers.LossMapXMLWriter'
 
-            self.assertEqual(1, len(rc_files))
+        self.output_mock.loss_map.id = 0
+        self.output_mock.loss_map.poe = 0.1
 
-            for f in rc_files:
-                self._test_exported_file(f)
+        with mock.patch(writer) as m:
+            ret = risk.export_loss_map(self.output_mock, "/tmp/")
 
-            # Test loss map export as well.
-            maps = outputs.filter(output_type='loss_map')
-            lm_files = sum(
-                [risk.export(loss_map.id, target_dir)
-                 for loss_map in maps], [])
+            self.assertEqual([((),
+                              {'gsim_tree_path': None,
+                               'investigation_time': 30,
+                               'loss_category': 'air',
+                               'path': '/tmp/loss-maps-0-poe-0.1.xml',
+                               'poe': 0.1,
+                               'quantile_value': None,
+                               'source_model_tree_path': None,
+                               'statistics': 'mean',
+                               'unit': 'bucks'})], m.call_args_list)
+            self.assertEqual(['/tmp/loss-maps-0-poe-0.1.xml'], ret)
 
-            self.assertEqual(3, len(lm_files))
+    def test_export_bcr_distribution(self):
+        writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
 
-            for f in lm_files:
-                self._test_exported_file(f)
-        finally:
-            shutil.rmtree(target_dir)
+        self.output_mock.bcr_distribution.id = 0
 
-    @attr('slow')
-    def test_bcr_risk_export(self):
-        # Tests that outputs of a risk classical calculation are
-        # exported
+        with mock.patch(writer) as m:
+            ret = risk.export_bcr_distribution(self.output_mock, "/tmp/")
 
-        target_dir = tempfile.mkdtemp()
-
-        try:
-            cfg = helpers.demo_file('classical_bcr/job.ini')
-
-            # run the calculation to create something to export
-            retcode = helpers.run_risk_job_sp(cfg, self.hazard_id,
-                                              silence=True)
-            self.assertEqual(0, retcode)
-
-            job = models.OqJob.objects.latest('id')
-
-            outputs = export_core.get_outputs(job.id)
-            expected_outputs = 1  # 1 bcr distribution
-            self.assertEqual(expected_outputs, len(outputs))
-
-            # Export the loss curves:
-            distribution = outputs.filter(output_type='bcr_distribution')[0]
-            rc_files = risk.export(distribution.id, target_dir)
-
-            self.assertEqual(1, len(rc_files))
-
-            for f in rc_files:
-                self._test_exported_file(f)
-        finally:
-            shutil.rmtree(target_dir)
-
-
-class EventBasedExportTestcase(BaseExportTestCase):
-
-    @attr('slow')
-    def test_event_based_risk_export(self):
-        # Tests that outputs of a risk classical calculation are exported
-        target_dir = tempfile.mkdtemp()
-
-        try:
-            # use get_risk_job to create a fake GmfCollection
-            job, _ = helpers.get_risk_job('event_based_risk/job.ini',
-                                          'event_based_hazard/job.ini',
-                                          'gmf')
-
-            cfg = helpers.demo_file('event_based_risk/job.ini')
-
-            # run the calculation to create something to export
-
-            # at the moment, only gmf for a specific realization are
-            # supported as hazard input
-            retcode = helpers.run_risk_job_sp(
-                cfg, silence=True,
-                hazard_id=job.risk_calculation.hazard_output.id)
-            self.assertEqual(0, retcode)
-
-            job = models.OqJob.objects.latest('id')
-
-            outputs = export_core.get_outputs(job.id)
-            # 1 loss curve set + 3 loss curve map set + 1 insured + 1 aggregate
-            expected_outputs = 6
-            self.assertEqual(expected_outputs, len(outputs))
-
-            # Export the loss curves...
-            curves = outputs.filter(output_type='loss_curve')
-            rc_files = []
-            for curve in curves:
-                rc_files.extend(risk.export(curve.id, target_dir))
-
-            self.assertEqual(1, len(rc_files))
-
-            for f in rc_files:
-                self._test_exported_file(f)
-
-            # ... loss map ...
-            maps = outputs.filter(output_type='loss_map')
-            lm_files = sum(
-                [risk.export(loss_map.id, target_dir)
-                 for loss_map in maps], [])
-
-            self.assertEqual(3, len(lm_files))
-
-            for f in lm_files:
-                self._test_exported_file(f)
-
-            # ... aggregate losses...
-            maps = outputs.filter(output_type='agg_loss_curve')
-            lm_files = sum(
-                [risk.export(loss_map.id, target_dir)
-                 for loss_map in maps], [])
-
-            self.assertEqual(1, len(lm_files))
-
-            for f in lm_files:
-                self._test_exported_file(f)
-
-            # and insured losses.
-            maps = outputs.filter(output_type='ins_loss_curve')
-            lm_files = sum(
-                [risk.export(loss_map.id, target_dir)
-                 for loss_map in maps], [])
-
-            self.assertEqual(1, len(lm_files))
-
-            for f in lm_files:
-                self._test_exported_file(f)
-
-        finally:
-            shutil.rmtree(target_dir)
+            self.assertEqual([((),
+                              {'asset_life_expectancy': 10,
+                               'gsim_tree_path': None,
+                               'interest_rate': 0.3,
+                               'path': '/tmp/bcr-distribution-0.xml',
+                               'quantile_value': None,
+                               'source_model_tree_path': None,
+                               'statistics': 'mean',
+                               'unit': 'bucks'})], m.call_args_list)
+            self.assertEqual(['/tmp/bcr-distribution-0.xml'], ret)
