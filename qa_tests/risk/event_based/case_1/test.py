@@ -191,29 +191,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             locations = gmfreader.next()
 
             # generate 1 SES, 200 rupture
-
-            ses = models.SES.objects.create(
-                ses_collection=models.SESCollection.objects.create(
-                    output=models.Output.objects.create_output(
-                        job, "Test SES Collection", "ses"),
-                    lt_realization=lt_realization),
-                investigation_time=hc.investigation_time,
-                ordinal=1,
-                complete_logic_tree_ses=False)
-
-            rupture_ids = [
-                models.SESRupture.objects.create(
-                    ses=ses,
-                    magnitude=i / 20.,
-                    strike=0,
-                    dip=0,
-                    rake=0,
-                    tectonic_region_type="test region type",
-                    is_from_fault_source=False,
-                    lons=[], lats=[], depths=[],
-                    result_grp_ordinal=1,
-                    rupture_ordinal=0).id
-                for i in range(200)]
+            rupture_ids = helpers.get_rupture_ids(job, hc, lt_realization, 200)
 
             for i, gmvs in enumerate(
                     numpy.array([[float(x) for x in row]
