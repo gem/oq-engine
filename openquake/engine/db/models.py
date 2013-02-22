@@ -1467,6 +1467,9 @@ class Output(djm.Model):
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
 
+    def is_gmf_scenario(self):
+        return self.output_type == 'gmf_scenario'
+
     @property
     def hazard_metadata(self):
         """
@@ -1494,17 +1497,22 @@ class Output(djm.Model):
         # computed over multiple hazard outputs (related to different
         # logic tree realizations). Then, We do not have to collect
         # metadata regarding statistics or logic tree
-        if self.calculation_mode != u'scenario' or rc.hazard_output is None:
+        if not self.is_gmf_scenario() and not rc.hazard_output is None:
             ho = rc.hazard_output
 
             if ho.is_hazard_curve():
-                lt = self.hazard_output.hazardcurve.lt_realization
+                lt = rc.hazard_output.hazardcurve.lt_realization
                 statistics = ho.hazardcurve.statistics
                 quantile = ho.hazardcurve.quantile
+                if statistics is None:
+                    source_model_path, gsim_path = (
+                        lt.sm_lt_path, lt.gsim_lt_path)
+                else:
+                    source_model_path, gsim_path = None, None
             else:
                 statistics, quantile = None, None  # no mean/quantile for gmf
                 lt = ho.gmfcollection.lt_realization
-            source_model_path, gsim_path = lt.sm_lt_path, lt.gsim_lt_path
+                source_model_path, gsim_path = lt.sm_lt_path, lt.gsim_lt_path
         else:
             statistics, quantile, source_model_path, gsim_path = (
                 None, None, None, None)
