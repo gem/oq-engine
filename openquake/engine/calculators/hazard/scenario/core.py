@@ -41,23 +41,6 @@ from openquake.engine.job.validation import MAX_SINT_32
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
-def gmf_realiz_per_task(num_realizations, num_concur_task):
-    """
-    Realizations per task return a tuple in the format
-    (spare : bool, realizations : int list) where spare
-    represents if there are spare realizations
-    and realizations the number of realizations for
-    each task.
-    """
-
-    realiz_per_task, spare_realizations = divmod(
-        num_realizations, num_concur_task)
-    result = [realiz_per_task for _ in xrange(num_concur_task)]
-    if spare_realizations:
-        result.append(spare_realizations)
-    return spare_realizations > 0, result
-
-
 @tasks.oqtask
 @stats.count_progress('h')
 def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
@@ -119,7 +102,6 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         rupture_mdl, hc.site_collection, imts, gsim(),
         hc.truncation_level, realizations=realizations,
         correlation_model=correlation_model)
-
     save_gmf(output_id, gmf, hc.site_collection.mesh, task_no)
 
 
@@ -168,6 +150,24 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
             )
 
     inserter.flush()
+
+
+def task_arg_generator(number_of_ground_motion_fields, num_concurrent_tasks):
+    """
+    Yields a sequence of triples (task_seed, task_no, realiz_per_task)
+    for use in task_arg_gen, depending on the number_of_ground_motion_fields
+    and num_concurrent_tasks parameters.
+    """
+    # See the corresponding tests to understand the underlying logic
+    # example 1: num_gmf = 100, num_task = 32 -> 3 realiz per task, 4 spare
+    # example 2: num_gmf = 10, num_task = 32 -> 0 realiz per task, 10 spare
+    realiz_per_task, spare = divmod(
+        number_of_ground_motion_fields, num_concurrent_tasks)
+    if realiz_per_task:  # example 1
+        for task_no in range(num_concurrent_tasks):
+            yield task_no, realiz_per_task
+    if spare:  # example 1 and 2
+        yield 0, spare
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
@@ -232,8 +232,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        Yielded results are quadruples of (job_id, task_no,
-        rupture_id, random_seed). (random_seed will be used to seed
+        Yielded results are 6-uples of the form (job_id, task_no,
+        rupture_id, random_seed, task_no, realiz_per_task)
+       (random_seed will be used to seed
         numpy for temporal occurence sampling.)
 
         :param int block_size:
@@ -245,17 +246,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_ids = [rupture.id for rupture in ruptures]
-        num_concurrent_tasks = self.concurrent_tasks()
 
-        spare_realizations, realiz_per_task = gmf_realiz_per_task(
-                self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
-
-        num_tasks = (num_concurrent_tasks + 1 if spare_realizations
-                    else num_concurrent_tasks)
-
-        for task_no in range(num_tasks):
+        args = task_arg_generator(
+            self.hc.number_of_ground_motion_fields,
+            self.concurrent_tasks())
+        for task_no, realiz_per_task in args:
             task_seed = rnd.randint(0, MAX_SINT_32)
-            task_args = (self.job.id, rupture_ids,
-                         self.output.id, task_seed, task_no,
-                         realiz_per_task[task_no])
-            yield task_args
+            yield (self.job.id, rupture_ids, self.output.id,
+                   task_seed, task_no, realiz_per_task)
