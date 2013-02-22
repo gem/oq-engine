@@ -34,51 +34,51 @@ BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir):
+def export(output_id, target_dir, file_format=None):
     """
     Export the given risk calculation output from the database to the
     specified directory. See `openquake.engine.export.hazard.export` for more
     details.
     """
     output = models.Output.objects.get(id=output_id)
-    return [globals().get(
-        "export_%s" % output.output_type,
-        core._export_fn_not_implemented)(
-            output, os.path.expanduser(target_dir))]
+
+    if file_format is None:
+        fn_name = "export_%s" % output.output_type
+    else:
+        fn_name = "export_%s_%s" % (output.output_type, file_format)
+
+    fn = globals().get(fn_name, core._export_fn_not_implemented)
+    return [fn(output, os.path.expanduser(target_dir))]
 
 
 def _export_common(output):
     """
-    Returns a dict containing the common arguments used by nrml
-    serializers to serialize the risk calculation `output`.
+    Returns a dict containing the output metadata which are serialized
+    by nrml writers before actually writing the `output` data.
     """
-    risk_calculation = output.oq_job.risk_calculation
-    investigation_time = (
-        risk_calculation.get_hazard_calculation().investigation_time)
-    statistics, quantile_value = risk_calculation.hazard_statistics
+    metadata = output.hazard_metadata
+    if metadata.sm_path is not None:
+        source_model_tree_path = core.LT_PATH_JOIN_TOKEN.join(
+            metadata.sm_path)
+    else:
+        source_model_tree_path = None
+    if metadata.gsim_path is not None:
+        gsim_tree_path = core.LT_PATH_JOIN_TOKEN.join(metadata.gsim_path)
+    else:
+        gsim_tree_path = None
 
-    source_model_tree_path, gsim_tree_path = None, None
+    unit = output.oq_job.risk_calculation.exposure_model.stco_unit
 
-    if risk_calculation.calculation_mode != u'scenario':
-        if not statistics:
-            lt_paths = risk_calculation.hazard_logic_tree_paths
-
-            if lt_paths:
-                source_model_tree_path, gsim_tree_path = [
-                    core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
-
-    unit = risk_calculation.exposure_model.stco_unit
-
-    return dict(investigation_time=investigation_time,
-                statistics=statistics,
-                quantile_value=quantile_value,
+    return dict(investigation_time=metadata.investigation_time,
+                statistics=metadata.statistics,
+                quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
                 unit=unit)
 
 
 @core.makedirs
-def export_agg_loss_curve(output, target_dir):
+def export_agg_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
@@ -89,10 +89,11 @@ def export_agg_loss_curve(output, target_dir):
     writers.AggregateLossCurveXMLWriter(**args).serialize(
         output.loss_curve.aggregatelosscurvedata)
     return args['path']
+export_agg_loss_curve = export_agg_loss_curve_xml
 
 
 @core.makedirs
-def export_loss_curve(output, target_dir):
+def export_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
@@ -107,11 +108,14 @@ def export_loss_curve(output, target_dir):
     writers.LossCurveXMLWriter(**args).serialize(data)
     return args['path']
 
+export_loss_curve = export_loss_curve_xml
+
+export_ins_loss_curve_xml = export_loss_curve_xml
 export_ins_loss_curve = export_loss_curve
 
 
 @core.makedirs
-def export_loss_map(output, target_dir):
+def export_loss_map_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss map
     serializer
@@ -128,9 +132,11 @@ def export_loss_map(output, target_dir):
         output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
     return args['path']
 
+export_loss_map = export_loss_map_xml
+
 
 @core.makedirs
-def export_bcr_distribution(output, target_dir):
+def export_bcr_distribution_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml bcr distribution
     serializer
@@ -149,6 +155,8 @@ def export_bcr_distribution(output, target_dir):
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
     return args['path']
+
+export_bcr_distribution = export_bcr_distribution_xml
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
@@ -181,34 +189,47 @@ def make_dmg_dist_export(damagecls, writercls, filename):
 
     return export_dmg_dist
 
-export_dmg_dist_per_asset = make_dmg_dist_export(
+export_dmg_dist_per_asset_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter,
     "dmg-dist-asset-%s.xml")
 
-export_dmg_dist_per_taxonomy = make_dmg_dist_export(
+export_dmg_dist_per_asset = export_dmg_dist_per_asset_xml
+
+
+export_dmg_dist_per_taxonomy_xml = make_dmg_dist_export(
     models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter,
     "dmg-dist-taxonomy-%s.xml")
 
-export_dmg_dist_total = make_dmg_dist_export(
+export_dmg_dist_per_taxonomy = export_dmg_dist_per_taxonomy_xml
+
+
+export_dmg_dist_total_xml = make_dmg_dist_export(
     models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
     "dmg-dist-total-%s.xml")
 
-export_collapse_map = make_dmg_dist_export(
+export_dmg_dist_total = export_dmg_dist_total_xml
+
+
+export_collapse_map_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
     "collapse-map-%s.xml")
 
+export_collapse_map = export_collapse_map_xml
 
-def export_aggregate_loss(output, target_dir):
+
+def export_aggregate_loss_csv(output, target_dir):
     """
     Export aggregate losses in CSV
     """
     filepath = os.path.join(target_dir,
-                            AGGREGATE_LOSS_FILENAME_FMT % output.id)
+                            AGGREGATE_LOSS_FILENAME_FMT % (
+                                output.aggregateloss.id))
 
     with open(filepath, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter='|')
-        writer.writerow(['Output ID', 'Mean', 'Standard Deviation'])
-        writer.writerow([output.aggregatelossdata.id,
-                        output.aggregatelossdata.mean,
-                        output.aggregatelossdata.std_dev])
+        writer.writerow(['Mean', 'Standard Deviation'])
+        writer.writerow([output.aggregateloss.mean,
+                        output.aggregateloss.std_dev])
     return filepath
+
+export_aggregate_loss = export_aggregate_loss_csv
