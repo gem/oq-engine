@@ -1633,7 +1633,9 @@ class HazardCurveDataManager(djm.GeoManager):
         """
         Same as #individual_curves but the results are ordered by location
         """
-        return order_by_location(self.individual_curves(job, imt))
+        ## TODO: change geometry -> geography in hazard_curve_data
+        ## and then replace order_by('location') -> order_by_location
+        return self.individual_curves(job, imt).order_by('location')
 
     def individual_curves_nr(self, job, imt):
         """
