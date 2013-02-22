@@ -155,7 +155,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
     def post_process(self):
         with db.transaction.commit_on_success(using='reslt_writer'):
-            models.AggregateLossData.objects.create(
+            models.AggregateLoss.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "Aggregate Loss",
                     "aggregate_loss"),
