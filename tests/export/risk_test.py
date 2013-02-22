@@ -29,7 +29,12 @@ class ExportTestCase(unittest.TestCase):
             'openquake.engine.db.models.Output.objects.get')
         m = self.output_patch.start()
         m.return_value = self.output_mock
-        self.output_mock.hazard_metadata = 30, "mean", None, None, None
+
+        self.output_mock.hazard_metadata.investigation_time = 30
+        self.output_mock.hazard_metadata.statistics = "mean"
+        self.output_mock.hazard_metadata.quantile = None
+        self.output_mock.hazard_metadata.sm_path = None
+        self.output_mock.hazard_metadata.gsim_path = None
         rc = self.output_mock.oq_job.risk_calculation
         rc.exposure_model.stco_unit = "bucks"
         rc.exposure_model.category = "air"
