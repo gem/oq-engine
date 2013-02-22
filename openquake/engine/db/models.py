@@ -1433,7 +1433,7 @@ class Output(djm.Model):
 
     #: Metadata of hazard outputs used by risk calculation. See
     #: `hazard_metadata` property for more details
-    HAZARD_METADATA = collections.namedtuple(
+    HazardMetadata = collections.namedtuple(
         'hazard_metadata',
         'investigation_time statistics quantile sm_path gsim_path')
 
@@ -1525,9 +1525,9 @@ class Output(djm.Model):
             statistics, quantile, source_model_path, gsim_path = (
                 None, None, None, None)
 
-        return self.HAZARD_METADATA(investigation_time,
-                                    statistics, quantile,
-                                    source_model_path, gsim_path)
+        return self.HazardMetadata(investigation_time,
+                                   statistics, quantile,
+                                   source_model_path, gsim_path)
 
 
 class ErrorMsg(djm.Model):
