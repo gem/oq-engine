@@ -46,29 +46,25 @@ def export(output_id, target_dir):
 
 def _export_common(output):
     """
-    Returns a dict containing the common arguments used by nrml
-    serializers to serialize the risk calculation `output`.
+    Returns a dict containing the output metadata which are serialized
+    by nrml writers before actually writing the `output` data.
     """
-    risk_calculation = output.oq_job.risk_calculation
-    investigation_time = (
-        risk_calculation.get_hazard_calculation().investigation_time)
-    statistics, quantile_value = risk_calculation.hazard_statistics
+    metadata = output.hazard_metadata
+    if metadata.sm_path is not None:
+        source_model_tree_path = core.LT_PATH_JOIN_TOKEN.join(
+            metadata.sm_path)
+    else:
+        source_model_tree_path = None
+    if metadata.gsim_path is not None:
+        gsim_tree_path = core.LT_PATH_JOIN_TOKEN.join(metadata.gsim_path)
+    else:
+        gsim_tree_path = None
 
-    source_model_tree_path, gsim_tree_path = None, None
+    unit = output.oq_job.risk_calculation.exposure_model.stco_unit
 
-    if risk_calculation.calculation_mode != u'scenario':
-        if not statistics:
-            lt_paths = risk_calculation.hazard_logic_tree_paths
-
-            if lt_paths:
-                source_model_tree_path, gsim_tree_path = [
-                    core.LT_PATH_JOIN_TOKEN.join(x) for x in lt_paths]
-
-    unit = risk_calculation.exposure_model.stco_unit
-
-    return dict(investigation_time=investigation_time,
-                statistics=statistics,
-                quantile_value=quantile_value,
+    return dict(investigation_time=metadata.investigation_time,
+                statistics=metadata.statistics,
+                quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
                 unit=unit)
