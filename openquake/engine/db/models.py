@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import collections
 import itertools
 import operator
 import os
@@ -1473,16 +1474,16 @@ class Output(djm.Model):
     @property
     def hazard_metadata(self):
         """
-        Given an Output produced by a risk calculation it returns a
-        tuple with hazard metadata associated with the hazard output
-        used to compute the output ``self``.
+        Given an Output produced by a risk calculation it returns the
+        corresponding hazard metadata.
 
-        :returns: a tuple with:
-           1) the hazard investigation time (float)
-           2) the kind of hazard statistics (None, "mean" or "quantile")
-           3) quantile value (if applicable) associated with the statistics
-           4) a list representing the source model path (if applicable)
-           5) a list representing the gsim path (if applicable)
+        :returns: a namedtuple with the following attributes:
+           investigation_time) the hazard investigation time (float)
+           statistics) the kind of hazard statistics
+                       (None, "mean" or "quantile")
+           quantile) quantile value (when the statistics is "quantile")
+           sm_path) a list representing the source model path
+           gsim_path) a list representing the gsim logic tree path
         """
 
         rc = self.oq_job.risk_calculation
@@ -1497,8 +1498,7 @@ class Output(djm.Model):
         # computed over multiple hazard outputs (related to different
         # logic tree realizations). Then, We do not have to collect
         # metadata regarding statistics or logic tree
-        if (not rc.calculation_model == 'scenario' and
-            not rc.hazard_output is None):
+        if rc.calculation_mode != 'scenario' and rc.hazard_output is not None:
             ho = rc.hazard_output
 
             if ho.is_hazard_curve():
@@ -1518,9 +1518,13 @@ class Output(djm.Model):
             statistics, quantile, source_model_path, gsim_path = (
                 None, None, None, None)
 
-        return (investigation_time,
-                statistics, quantile,
-                source_model_path, gsim_path)
+        hazard_metadata = collections.namedtuple(
+            'hazard_metadata',
+            'investigation_time statistics quantile '
+            'sm_path gsim_path')
+        return hazard_metadata(investigation_time,
+                               statistics, quantile,
+                               source_model_path, gsim_path)
 
 
 class ErrorMsg(djm.Model):
