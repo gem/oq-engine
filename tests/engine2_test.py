@@ -372,17 +372,8 @@ class OpenquakeCliTestCase(unittest.TestCase):
     process using `subprocess`.
     """
 
-    def test_run_version(self, silence=False):
+    def test_run_version(self):
         args = [helpers.RUNNER, "--version"]
 
-        devnull = None
-        if silence:
-            devnull = open(os.devnull, 'wb')
-
         print 'Running:', ' '.join(args)  # this is useful for debugging
-        try:
-            return subprocess.check_call(args, stderr=devnull, stdout=devnull)
-        finally:
-            if devnull is not None:
-                devnull.close()
-
+        return subprocess.check_call(args)
