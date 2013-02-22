@@ -30,6 +30,7 @@ LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
 AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
+EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 
 # for each output_type there must be a function
@@ -230,3 +231,26 @@ def export_aggregate_loss_csv(output, target_dir):
     return filepath
 
 export_aggregate_loss = export_aggregate_loss_csv
+
+
+def export_event_loss_csv(output, target_dir):
+    """
+    Export Event Loss Table in CSV format
+    """
+
+    filepath = os.path.join(target_dir,
+                            EVENT_LOSS_FILENAME_FMT % (
+                                output.id))
+
+    with open(filepath, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
+
+        for event_loss in models.EventLoss.objects.filter(
+                output=output).select_related():
+            writer.writerow(["%7d" % event_loss.rupture.id,
+                             "%.07f" % event_loss.rupture.magnitude,
+                             "%.07f" % event_loss.aggregate_loss])
+    return filepath
+
+export_event_loss = export_event_loss_csv
