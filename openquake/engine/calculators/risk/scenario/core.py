@@ -61,7 +61,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
         loss_ratio_matrix = calc(ground_motion_values)
 
         if insured_losses:
-            insured_loss_ratio_matrix = [
+            insured_loss_matrix = [
                 scientific.insured_losses(
                     loss_ratio_matrix[i], asset.value,
                     asset.deductible, asset.ins_limit)
@@ -86,16 +86,15 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
             if insured_losses:
                 general.write_loss_map_data(
                     insured_loss_map_id, asset,
-                    insured_loss_ratio_matrix[i].mean(),
-                    std_dev=insured_loss_ratio_matrix[i].std(ddof=1))
+                    insured_loss_matrix[i].mean() / asset.value,
+                    std_dev=insured_loss_matrix[i].std(ddof=1) / asset.value)
 
     aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
                            for i, asset in enumerate(assets))
 
     if insured_losses:
-        insured_aggregate_losses = sum(
-            insured_loss_ratio_matrix[i] * asset.value
-            for i, asset in enumerate(assets))
+        insured_aggregate_losses = (
+            numpy.array(insured_loss_matrix).transpose().sum(axis=1))
     else:
         insured_aggregate_losses = "Not computed"
 
@@ -167,10 +166,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 std_dev=numpy.std(self.aggregate_losses, ddof=1))
 
             if self.rc.insured_losses:
-                models.AggregateLossData.objects.create(
+                models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
                         self.job, "Insured Aggregate Loss",
                         "aggregate_loss"),
+                    insured=True,
                     mean=numpy.mean(self.insured_aggregate_losses),
                     std_dev=numpy.std(self.insured_aggregate_losses, ddof=1))
 
@@ -218,7 +218,8 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             insured_loss_map = [models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "Insured Loss Map", "loss_map"),
-                hazard_output=hazard_output).id]
+                hazard_output=hazard_output,
+                insured=True).id]
         else:
             insured_loss_map = []
 
