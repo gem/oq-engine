@@ -25,6 +25,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
+from openquake.engine.performance import EngineMemoryMonitor
 
 
 @tasks.oqtask
@@ -52,7 +53,8 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     hazard_getter = hazard.values()[0][0]
 
-    assets, ground_motion_values, missings = hazard_getter()
+    with EngineMemoryMonitor(job_id, 'hazard_getter', scenario):
+        assets, ground_motion_values, missings = hazard_getter()
 
     outputs = calc(assets, ground_motion_values)
 
@@ -66,8 +68,8 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
                 value=output.mean, std_dev=output.standard_deviation,
                 location=assets[i].site)
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+    base.signal_task_complete(
+        job_id=job_id, num_items=len(assets) + len(missings))
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
@@ -88,8 +90,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         # in scenario hazard calculation we do not have hazard logic
         # tree realizations, and we have only one output
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
-            'last_update').output_set.get(
-                output_type='gmf_scenario')
+            'last_update').output_set.get(output_type='gmf_scenario')
 
     def create_getter(self, output, assets):
         """

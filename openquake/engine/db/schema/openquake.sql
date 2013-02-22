@@ -256,6 +256,20 @@ CREATE TABLE uiapi.oq_job (
 ) TABLESPACE uiapi_ts;
 
 
+-- Tracks task performance
+CREATE TABLE uiapi.performance (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    task_id INTEGER,
+    start_time timestamp without time zone NOT NULL,
+    task VARCHAR NOT NULL,
+    operation VARCHAR NOT NULL,
+    duration FLOAT,
+    pymemory INTEGER,
+    pgmemory INTEGER
+)  TABLESPACE uiapi_ts;
+
+
 -- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
@@ -1717,7 +1731,10 @@ FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELET
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT uiapi_job_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_fk
