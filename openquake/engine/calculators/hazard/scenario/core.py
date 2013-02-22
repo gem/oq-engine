@@ -152,6 +152,24 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
     inserter.flush()
 
 
+def task_arg_generator(number_of_ground_motion_fields, num_concurrent_tasks):
+    """
+    Yields a sequence of triples (task_seed, task_no, realiz_per_task)
+    for use in task_arg_gen, depending on the number_of_ground_motion_fields
+    and num_concurrent_tasks parameters.
+    """
+    # See the corresponding tests to understand the underlying logic
+    # example 1: num_gmf = 100, num_task = 32 -> 3 realiz per task, 4 spare
+    # example 2: num_gmf = 10, num_task = 32 -> 0 realiz per task, 10 spare
+    realiz_per_task, spare = divmod(
+        number_of_ground_motion_fields, num_concurrent_tasks)
+    if realiz_per_task:  # example 1
+        for task_no in range(num_concurrent_tasks):
+            yield task_no, realiz_per_task
+    if spare:  # example 1 and 2
+        yield 0, spare
+
+
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
     """
     Scenario hazard calculator. Computes ground motion fields.
@@ -214,8 +232,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        Yielded results are quadruples of (job_id, task_no,
-        rupture_id, random_seed). (random_seed will be used to seed
+        Yielded results are 6-uples of the form (job_id, task_no,
+        rupture_id, random_seed, task_no, realiz_per_task)
+       (random_seed will be used to seed
         numpy for temporal occurence sampling.)
 
         :param int block_size:
@@ -227,18 +246,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_ids = [rupture.id for rupture in ruptures]
-        num_concurrent_tasks = self.concurrent_tasks()
 
-        # example 1: num_gmf = 100, num_task = 32 -> 3 realiz per task, 4 spare
-        # example 2: num_gmf = 10, num_task = 32 -> 0 realiz per task, 10 spare
-        realiz_per_task, spare = divmod(
-            self.hc.number_of_ground_motion_fields, num_concurrent_tasks)
-        if realiz_per_task:  # example 1
-            for task_no in range(num_concurrent_tasks):
-                task_seed = rnd.randint(0, MAX_SINT_32)
-                yield (self.job.id, rupture_ids,
-                       self.output.id, task_seed, task_no, realiz_per_task)
-        if spare:  # example 1 and 2
+        args = task_arg_generator(
+            self.hc.number_of_ground_motion_fields,
+            self.concurrent_tasks())
+        for task_no, realiz_per_task in args:
             task_seed = rnd.randint(0, MAX_SINT_32)
-            yield (self.job.id, rupture_ids,
-                   self.output.id, task_seed, 0, spare)
+            yield (self.job.id, rupture_ids, self.output.id,
+                   task_seed, task_no, realiz_per_task)
