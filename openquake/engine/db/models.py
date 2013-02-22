@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import collections
 import itertools
 import operator
 import os
@@ -1133,31 +1134,6 @@ class RiskCalculation(djm.Model):
         return self.hazard_maximum_distance or DEFAULT_HAZARD_MAXIMUM_DISTANCE
 
     @property
-    def hazard_statistics(self):
-        """
-        The hazard statistics value (mean/quantile and quantile value
-        if applicable) associated with the hazard output used by this
-        risk calculation
-        """
-        if self.hazard_output.is_hazard_curve():
-            return (self.hazard_output.hazardcurve.statistics,
-                    self.hazard_output.hazardcurve.quantile)
-        else:
-            return None, None  # no mean/quantile for gmf
-
-    @property
-    def hazard_logic_tree_paths(self):
-        """
-        The logic tree paths associated with the hazard output used by
-        this risk calculation
-        """
-        if self.hazard_output.is_hazard_curve():
-            lt = self.hazard_output.hazardcurve.lt_realization
-        else:
-            lt = self.hazard_output.gmfcollection.lt_realization
-        return lt.sm_lt_path, lt.gsim_lt_path
-
-    @property
     def is_bcr(self):
         return self.calculation_mode in ['classical_bcr', 'event_based_bcr']
 
@@ -1454,6 +1430,13 @@ class Output(djm.Model):
     A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
+
+    #: Metadata of hazard outputs used by risk calculation. See
+    #: `hazard_metadata` property for more details
+    HAZARD_METADATA = collections.namedtuple(
+        'hazard_metadata',
+        'investigation_time statistics quantile sm_path gsim_path')
+
     owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')
     display_name = djm.TextField()
@@ -1472,7 +1455,6 @@ class Output(djm.Model):
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
-        (u'ins_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
         # FIXME(lp). We should distinguish between conditional losses
         # and loss map
@@ -1494,6 +1476,60 @@ class Output(djm.Model):
 
     def is_hazard_curve(self):
         return self.output_type == 'hazard_curve'
+
+    def is_gmf_scenario(self):
+        return self.output_type == 'gmf_scenario'
+
+    @property
+    def hazard_metadata(self):
+        """
+        Given an Output produced by a risk calculation it returns the
+        corresponding hazard metadata.
+
+        :returns: a namedtuple with the following attributes:
+           investigation_time) the hazard investigation time (float)
+           statistics) the kind of hazard statistics
+                       (None, "mean" or "quantile")
+           quantile) quantile value (when the statistics is "quantile")
+           sm_path) a list representing the source model path
+           gsim_path) a list representing the gsim logic tree path
+        """
+
+        rc = self.oq_job.risk_calculation
+        hc = rc.get_hazard_calculation()
+
+        investigation_time = hc.investigation_time
+
+        # in scenario calculation we do not have neither statistics
+        # neither logic tree realizations
+
+        # if ``hazard_output`` is None, then the risk output is
+        # computed over multiple hazard outputs (related to different
+        # logic tree realizations). Then, We do not have to collect
+        # metadata regarding statistics or logic tree
+        if rc.calculation_mode != 'scenario' and rc.hazard_output is not None:
+            ho = rc.hazard_output
+
+            if ho.is_hazard_curve():
+                lt = rc.hazard_output.hazardcurve.lt_realization
+                statistics = ho.hazardcurve.statistics
+                quantile = ho.hazardcurve.quantile
+                if statistics is None:
+                    source_model_path, gsim_path = (
+                        lt.sm_lt_path, lt.gsim_lt_path)
+                else:
+                    source_model_path, gsim_path = None, None
+            else:
+                statistics, quantile = None, None  # no mean/quantile for gmf
+                lt = ho.gmfcollection.lt_realization
+                source_model_path, gsim_path = lt.sm_lt_path, lt.gsim_lt_path
+        else:
+            statistics, quantile, source_model_path, gsim_path = (
+                None, None, None, None)
+
+        return self.HAZARD_METADATA(investigation_time,
+                                    statistics, quantile,
+                                    source_model_path, gsim_path)
 
 
 class ErrorMsg(djm.Model):
@@ -1636,7 +1672,9 @@ class HazardCurveDataManager(djm.GeoManager):
         """
         Same as #individual_curves but the results are ordered by location
         """
-        return order_by_location(self.individual_curves(job, imt))
+        ## TODO: change geometry -> geography in hazard_curve_data
+        ## and then replace order_by('location') -> order_by_location
+        return self.individual_curves(job, imt).order_by('location')
 
     def individual_curves_nr(self, job, imt):
         """
@@ -2293,6 +2331,7 @@ class LossMap(djm.Model):
 
     output = djm.OneToOneField("Output", related_name="loss_map")
     hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
+    insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2315,13 +2354,14 @@ class LossMapData(djm.Model):
         db_table = 'riskr\".\"loss_map_data'
 
 
-class AggregateLossData(djm.Model):
+class AggregateLoss(djm.Model):
     output = djm.OneToOneField("Output")
+    insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
 
     class Meta:
-        db_table = 'riskr\".\"aggregate_loss_data'
+        db_table = 'riskr\".\"aggregate_loss'
 
 
 class LossCurve(djm.Model):
