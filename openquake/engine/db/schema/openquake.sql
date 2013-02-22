@@ -1427,7 +1427,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Aggregate Loss.
-CREATE TABLE riskr.aggregate_loss_data (
+CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     mean float NOT NULL,
@@ -1928,8 +1928,8 @@ ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
-ALTER TABLE riskr.aggregate_loss_data
-ADD CONSTRAINT riskr_aggregate_loss_data_output_fk
+ALTER TABLE riskr.aggregate_loss
+ADD CONSTRAINT riskr_aggregate_loss_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
