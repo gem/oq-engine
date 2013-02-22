@@ -169,15 +169,17 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         job.save()
         hc = job.hazard_calculation
 
+        lt_realization = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=1, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+
         gmf_set = models.GmfSet.objects.create(
             gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard output", "gmf"),
-                lt_realization=models.LtRealization.objects.create(
-                    hazard_calculation=job.hazard_calculation,
-                    ordinal=1, seed=1, weight=None,
-                    sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                    is_complete=False, total_items=1, completed_items=1),
+                lt_realization=lt_realization,
                 complete_logic_tree_gmf=False),
             investigation_time=hc.investigation_time,
             ses_ordinal=1,
@@ -188,12 +190,39 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
 
+            # generate 1 SES, 200 rupture
+
+            ses = models.SES.objects.create(
+                ses_collection=models.SESCollection.objects.create(
+                    output=models.Output.objects.create_output(
+                        job, "Test SES Collection", "ses"),
+                    lt_realization=lt_realization),
+                investigation_time=hc.investigation_time,
+                ordinal=1,
+                complete_logic_tree_ses=False)
+
+            rupture_ids = [
+                models.SESRupture.objects.create(
+                    ses=ses,
+                    magnitude=i / 20.,
+                    strike=0,
+                    dip=0,
+                    rake=0,
+                    tectonic_region_type="test region type",
+                    is_from_fault_source=False,
+                    lons=[], lats=[], depths=[],
+                    result_grp_ordinal=1,
+                    rupture_ordinal=0).id
+                for i in range(200)]
+
             for i, gmvs in enumerate(
                     numpy.array([[float(x) for x in row]
                                  for row in gmfreader]).transpose()):
                 models.Gmf.objects.create(
                     gmf_set=gmf_set,
                     imt="PGA", gmvs=gmvs,
+                    rupture_ids=[str(rupture_ids[x % 200])
+                                 for x in range(len(gmvs))],
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 

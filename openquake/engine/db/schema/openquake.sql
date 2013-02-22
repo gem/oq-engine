@@ -985,13 +985,14 @@ CREATE TABLE uiapi.output (
             'agg_loss_curve',
             'aggregate_loss',
             'bcr_distribution',
+            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
-            'collapse_map',
+            'event_loss',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -1418,6 +1419,15 @@ CREATE TABLE riskr.aggregate_loss (
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
+) TABLESPACE riskr_ts;
+
+
+-- Event Loss table.
+CREATE TABLE riskr.event_loss (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to uiapi.output.id
+    rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
+    aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
 
 
@@ -1917,6 +1927,14 @@ FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 ALTER TABLE riskr.aggregate_loss
 ADD CONSTRAINT riskr_aggregate_loss_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_event_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_evet_loss_sesrupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk

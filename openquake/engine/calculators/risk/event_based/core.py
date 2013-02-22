@@ -19,6 +19,8 @@ Core functionality for the classical PSHA risk calculator.
 """
 
 from collections import OrderedDict
+import itertools
+import numpy
 
 from django import db
 
@@ -76,6 +78,8 @@ def event_based(job_id, hazard,
     """
 
     loss_ratio_curves = OrderedDict()
+    event_loss_table = dict()
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
@@ -95,7 +99,10 @@ def event_based(job_id, hazard,
             correlation=asset_correlation)
 
         with logs.tracing('getting input data from db'):
-            assets, ground_motion_values, missings = hazard_getter()
+            assets, hazard_data, missings = hazard_getter()
+
+        ground_motion_values = numpy.array(hazard_data)[:, 0]
+        rupture_ids = numpy.array(hazard_data)[0, 1]
 
         with logs.tracing('computing risk'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
@@ -132,13 +139,18 @@ def event_based(job_id, hazard,
                         general.write_loss_curve(
                             insured_curve_id, asset, insured_loss_curve)
 
-                losses = sum(loss_ratio_matrix[i] * asset.value
-                             for i, asset in enumerate(assets))
+                aggregate_losses = sum(
+                    loss_ratio_matrix[i] * asset.value
+                    for i, asset in enumerate(assets))
+                for rupture_id, aggregate_loss in itertools.izip(
+                        rupture_ids, aggregate_losses):
+                    event_loss_table[rupture_id] = (
+                        event_loss_table.get(rupture_id, 0) + aggregate_loss)
 
                 # FIXME(lp). Use the same approach used in the scenario damage
                 # to compute aggregate losses
                 general.update_aggregate_losses(
-                    aggregate_loss_curve_id, losses)
+                    aggregate_loss_curve_id, aggregate_losses)
 
     if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
         weights = [data[1] for _, data in hazard.items()]
@@ -158,7 +170,8 @@ def event_based(job_id, hazard,
                         assume_equal="image")
 
     base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+                              num_items=len(assets) + len(missings),
+                              event_loss_table=event_loss_table)
 event_based.ignore_result = False
 
 
@@ -173,6 +186,18 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
     core_calc_task = event_based
 
     hazard_getter = hazard_getters.GroundMotionValuesGetter
+
+    def __init__(self, job):
+        super(EventBasedRiskCalculator, self).__init__(job)
+        self.event_loss_table = dict()
+
+    def task_completed_hook(self, message):
+        """
+        Updates the event loss table
+        """
+        for rupture_id, aggregate_loss in message['event_loss_table'].items():
+            self.event_loss_table[rupture_id] = (
+                self.event_loss_table.get(rupture_id, 0) + aggregate_loss)
 
     def pre_execute(self):
         """
@@ -208,6 +233,15 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             curve_data.losses = aggregate_loss_curve.abscissae.tolist()
             curve_data.poes = aggregate_loss_curve.ordinates.tolist()
             curve_data.save()
+
+        event_loss_table_output = models.Output.objects.create_output(
+            self.job, "Event Loss Table", "event_loss")
+
+        for rupture_id, aggregate_loss in self.event_loss_table.items():
+            models.EventLoss.objects.create(
+                output=event_loss_table_output,
+                rupture_id=rupture_id,
+                aggregate_loss=aggregate_loss)
 
     def create_getter(self, output, assets):
         """
