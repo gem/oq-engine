@@ -13,6 +13,8 @@
                     <gml:pos>15.48 38.09</gml:pos>
                     </gml:Point>
                 </site>
+                <deductible>40</deductible>
+                <limit>1250</limit>
                 <number>3000</number>
                 <stco>3000</stco>
                 <taxonomy>RM</taxonomy>
@@ -23,6 +25,8 @@
                         <gml:pos>15.56 38.17</gml:pos>
                     </gml:Point>
                 </site>
+                <deductible>15</deductible>
+                <limit>500</limit>
                 <number>2000</number>
                 <stco>2000</stco>
                 <taxonomy>RC</taxonomy>
@@ -33,6 +37,8 @@
                     <gml:pos>15.48 38.25</gml:pos>
                     </gml:Point>
                 </site>
+                <deductible>13</deductible>
+                <limit>40</limit>
                 <number>1000</number>
                 <stco>1000</stco>
                 <taxonomy>RM</taxonomy>
