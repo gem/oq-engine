@@ -75,7 +75,7 @@ class ScenarioRiskCase2TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(
             loss_map__output__oq_job=job).order_by('asset_ref', 'value')
-        agg = models.AggregateLossData.objects.get(output__oq_job=job)
+        agg = models.AggregateLoss.objects.get(output__oq_job=job)
         return [[[m.value, m.std_dev] for m in maps],
                 [agg.mean, agg.std_dev]]
 

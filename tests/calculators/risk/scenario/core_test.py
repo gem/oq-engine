@@ -90,7 +90,7 @@ class ScenarioRiskCalculatorTestCase(
                          output__oq_job=self.job).count())
 
         # One Aggregagte Loss
-        self.assertEqual(1, models.AggregateLossData.objects.filter(
+        self.assertEqual(1, models.AggregateLoss.objects.filter(
                          output__oq_job=self.job).count())
 
         files = self.calculator.export(exports=True)
