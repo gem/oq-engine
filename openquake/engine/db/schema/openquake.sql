@@ -1392,6 +1392,7 @@ CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     hazard_output_id INTEGER NULL,
+    insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
         CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
@@ -1414,6 +1415,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
 ) TABLESPACE riskr_ts;
