@@ -1430,6 +1430,13 @@ class Output(djm.Model):
     A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
+
+    #: Metadata of hazard outputs used by risk calculation. See
+    #: `hazard_metadata` property for more details
+    HAZARD_METADATA = collections.namedtuple(
+        'hazard_metadata',
+        'investigation_time statistics quantile sm_path gsim_path')
+
     owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')
     display_name = djm.TextField()
@@ -1518,13 +1525,9 @@ class Output(djm.Model):
             statistics, quantile, source_model_path, gsim_path = (
                 None, None, None, None)
 
-        hazard_metadata = collections.namedtuple(
-            'hazard_metadata',
-            'investigation_time statistics quantile '
-            'sm_path gsim_path')
-        return hazard_metadata(investigation_time,
-                               statistics, quantile,
-                               source_model_path, gsim_path)
+        return self.HAZARD_METADATA(investigation_time,
+                                    statistics, quantile,
+                                    source_model_path, gsim_path)
 
 
 class ErrorMsg(djm.Model):
