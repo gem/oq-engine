@@ -190,7 +190,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
         query = """
         SELECT
             hzrdr.hazard_curve_data.poes,
-            min(ST_Distance(location, %s, false))
+            min(ST_Distance(location::geography,
+                            ST_GeographyFromText(%s), false))
                 AS min_distance
         FROM hzrdr.hazard_curve_data
         WHERE hazard_curve_id = %s
@@ -198,7 +199,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         ORDER BY min_distance
         LIMIT 1;"""
 
-        args = ('SRID=4326; %s' % site.wkt, self.hazard_id)
+        args = (site.wkt, self.hazard_id)
 
         cursor.execute(query, args)
         poes, distance = cursor.fetchone()

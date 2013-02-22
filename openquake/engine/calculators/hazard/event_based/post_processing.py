@@ -166,9 +166,8 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
         gmf_set__gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
         sa_period=sa_period,
-        sa_damping=sa_damping,
-        location=point.wkt2d)
-
+        sa_damping=sa_damping).extra(where=[
+            "location::geometry ~= 'SRID=4326;%s'::geometry" % point.wkt2d])
     # Collect all of the ground motion values:
     gmvs = list(itertools.chain(*(g.gmvs for g in gmfs)))
     # Compute the hazard curve PoEs:
