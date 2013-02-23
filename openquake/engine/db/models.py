@@ -1129,9 +1129,22 @@ class RiskCalculation(djm.Model):
 
     def get_hazard_maximum_distance(self):
         """
-        Convenience function
+        Get the hazard maximum distance to be used in hazard getters.
+
+        :returns: the minimum between the maximum distance provided by
+        the user (if not given, `DEFAULT_HAZARD_MAXIMUM_DISTANCE` is
+        used as default) and the step (if exists) used by the hazard
+        calculation.
         """
-        return self.hazard_maximum_distance or DEFAULT_HAZARD_MAXIMUM_DISTANCE
+        dist = self.hazard_maximum_distance
+
+        if dist is None:
+            dist = DEFAULT_HAZARD_MAXIMUM_DISTANCE
+
+        hc = self.get_hazard_calculation()
+        if hc.sites is None:
+            dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2 * 1000)
+        return dist
 
     @property
     def is_bcr(self):
