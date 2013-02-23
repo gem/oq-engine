@@ -92,19 +92,23 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
         job.save()
         hc = job.hazard_calculation
 
+        lt_realization = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=1, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+
         gmf_set = models.GmfSet.objects.create(
             gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard output", "gmf"),
-                lt_realization=models.LtRealization.objects.create(
-                    hazard_calculation=job.hazard_calculation,
-                    ordinal=1, seed=1, weight=None,
-                    sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                    is_complete=False, total_items=1, completed_items=1),
+                lt_realization=lt_realization,
                 complete_logic_tree_gmf=False),
             investigation_time=hc.investigation_time,
             ses_ordinal=1,
             complete_logic_tree_gmf=False)
+
+        rupture_ids = helpers.get_rupture_ids(job, hc, lt_realization, 16)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
@@ -117,6 +121,8 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                 models.Gmf.objects.create(
                     gmf_set=gmf_set,
                     imt="PGA", gmvs=gmvs,
+                    rupture_ids=[str(rupture_ids[x % 16])
+                                 for x in range(len(gmvs))],
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
@@ -137,7 +143,10 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                 for curve in models.AggregateLossCurveData.objects.filter(
                     loss_curve__output__oq_job=job,
                     loss_curve__aggregate=True,
-                    loss_curve__insured=False)])
+                    loss_curve__insured=False)] +
+                [[el.aggregate_loss
+                 for el in models.EventLoss.objects.filter(
+                output__oq_job=job).order_by('aggregate_loss')]])
 
     def expected_data(self):
 
@@ -161,8 +170,24 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                                      287.918423685, 309.623731235,
                                      331.329038786]
 
+        # FIXME(lp). Event Loss Table data do not come from a reliable
+        # implementation. This is just a regression test
+        event_loss_table = [112.11885456, 122.55458718, 137.59505041,
+                            177.2371802, 198.3338841, 234.72273315,
+                            249.9518471, 259.40325419, 318.03021227,
+                            318.95322285, 325.20581137, 351.21449217,
+                            399.71017813, 407.36897638, 467.85006676,
+                            544.42891715]
+
         return [poes, poes, poes, losses_1, losses_2, losses_3,
-                expected_aggregate_losses]
+                expected_aggregate_losses, event_loss_table]
+
+    def actual_xml_outputs(self, job):
+        """
+        Event Loss is in CSV format
+        """
+        return models.Output.objects.filter(oq_job=job).exclude(
+            output_type='event_loss')
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML, self.EXPECTED_AGG_LOSS_CURVE_XML]
