@@ -27,13 +27,13 @@ from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine import logs
 
 
 @tasks.oqtask
-@stats.count_progress('r')
-def classical(job_id, hazard, vulnerability_function, output_containers,
+@general.count_progress_risk('r')
+def classical(job_id, hazard, xovulnerability_function, output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
               hazard_montecarlo_p):
     """

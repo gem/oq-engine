@@ -28,14 +28,14 @@ from openquake.risklib import api, scientific
 from openquake.risklib.models.input import FragilityModel, FragilityFunctionSeq
 
 from openquake.engine.calculators.risk import general
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import logs
 from openquake.engine.calculators import base
 
 
 @tasks.oqtask
-@stats.count_progress('r')
+@general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
                     taxonomy, fragility_model, fragility_functions,
                     _output_containers):
