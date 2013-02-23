@@ -16,27 +16,35 @@
 
 import unittest
 
-from openquake.engine.calculators.hazard.scenario.core import (
-    gmf_realiz_per_task)
+from openquake.engine.calculators.hazard.scenario.core import \
+    task_arg_generator
 
 
 class ScenarioHazardCalculatorTestCase(unittest.TestCase):
     """
-    Tests for the main methods of the scenario hazard calculator.
+    Tests the task_arg_generator utility.
     """
 
-    def test_num_realizations_per_task(self):
-        num_concur_tasks = 32
-        gmf_realizations = 100
-        realiz_per_task = [3 for i in range(num_concur_tasks)]
-        realiz_per_task.append(4)
+    def test_task_arg_generator_few_gmfs(self):
+        args = list(task_arg_generator(
+            number_of_ground_motion_fields=2,
+            num_concurrent_tasks=3))
+        # generate a single task with 2 spare realization
+        self.assertEqual(args, [(0, 2)])
 
-        self.assertEqual(33, len(realiz_per_task))
-        self.assertEqual((True, realiz_per_task), gmf_realiz_per_task(
-            gmf_realizations, num_concur_tasks))
+    def test_task_arg_generator_many_gmfs(self):
+        args = list(task_arg_generator(
+            number_of_ground_motion_fields=7,
+            num_concurrent_tasks=3))
+        # generate 3 tasks with 2 realizations each, plus a task with a spare
+        # realization
+        self.assertEqual(
+            args, [(0, 2), (1, 2), (2, 2),
+                   (0, 1)])
 
-        gmf_realizations = 96
-        realiz_per_task = [3 for i in range(num_concur_tasks)]
-
-        self.assertEqual((False, realiz_per_task), gmf_realiz_per_task(
-            gmf_realizations, num_concur_tasks))
+    def test_task_arg_generator_no_spare(self):
+        args = list(task_arg_generator(
+            number_of_ground_motion_fields=6,
+            num_concurrent_tasks=3))
+        # generate 3 tasks with 2 realizations each
+        self.assertEqual(args, [(0, 2), (1, 2), (2, 2)])
