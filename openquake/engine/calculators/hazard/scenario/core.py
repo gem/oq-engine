@@ -131,19 +131,14 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
         # in the way that we want
         gmfarray = numpy.array(gmfs_)
 
-        sa_period = None
-        sa_damping = None
-        if isinstance(imt, openquake.hazardlib.imt.SA):
-            sa_period = imt.period
-            sa_damping = imt.damping
         imt_name = imt.__class__.__name__
+        if isinstance(imt, openquake.hazardlib.imt.SA):
+            imt_name += '(%s)' % imt.period
 
         for i, location in enumerate(points_to_compute):
             inserter.add_entry(
                 output_id=output_id,
                 imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
                 location=location.wkt2d,
                 gmvs=gmfarray[i].tolist(),
                 result_grp_ordinal=result_grp_ordinal,
