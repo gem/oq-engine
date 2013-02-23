@@ -506,7 +506,7 @@ class Performance(djm.Model):
     launched by a job.
     '''
     oq_job = djm.ForeignKey('OqJob')
-    task_id = djm.IntegerField(null=True)
+    task_id = djm.TextField(null=True)
     task = djm.TextField(null=False)
     operation = djm.TextField(null=False)
     start_time = djm.DateTimeField(editable=False)

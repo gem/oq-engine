@@ -260,7 +260,7 @@ CREATE TABLE uiapi.oq_job (
 CREATE TABLE uiapi.performance (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
-    task_id INTEGER,
+    task_id VARCHAR,
     start_time timestamp without time zone NOT NULL,
     task VARCHAR NOT NULL,
     operation VARCHAR NOT NULL,
