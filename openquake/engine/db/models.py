@@ -1142,7 +1142,7 @@ class RiskCalculation(djm.Model):
             dist = DEFAULT_HAZARD_MAXIMUM_DISTANCE
 
         hc = self.get_hazard_calculation()
-        if hc.sites is None:
+        if hc.sites is None and hc.region_grid_spacing is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2 * 1000)
         return dist
 
