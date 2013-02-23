@@ -343,7 +343,6 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
         SELECT gmvs FROM hzrdr.gmf_scenario
         WHERE %s > ST_Distance(location, %s, false)
         AND imt = %s AND output_id = %s
-        ORDER BY result_grp_ordinal
         """
 
         cursor.execute(gmvs_query, (dilated_dist,) + args)
@@ -371,18 +370,16 @@ class GroundMotionScenarioGetter(HazardGetter):
         # an explanation of the query
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
-         gmf_table.allgmvs
+         gmf_table.gmvs
   FROM oqmif.exposure_data JOIN (
-    SELECT location, array_concat(gmvs) as allgmvs
+    SELECT location, gmvs
            FROM hzrdr.gmf_scenario
            WHERE hzrdr.gmf_scenario.imt = %s
            AND hzrdr.gmf_scenario.output_id = %s
-           AND hzrdr.gmf_scenario.location && %s
-           GROUP BY location) gmf_table
+           AND hzrdr.gmf_scenario.location && %s) gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
-    AND array_length(gmf_table.allgmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """
