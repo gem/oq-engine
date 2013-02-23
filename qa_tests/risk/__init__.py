@@ -78,13 +78,19 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
-                for i, output in enumerate(models.Output.objects.filter(
-                                           oq_job=job).order_by('id')):
+                for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
                     self.assert_xml_equal(
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+    def actual_xml_outputs(self, job):
+        """
+        Returns all the XML outputs produced by `job` that will be
+        checked. Default implementation is to consider all the outputs
+        """
+        return models.Output.objects.filter(oq_job=job).order_by('id')
 
     def actual_data(self, _job):
         """
