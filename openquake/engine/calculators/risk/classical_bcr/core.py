@@ -22,7 +22,6 @@ from openquake.risklib import api, scientific
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.calculators.risk.classical import core as classical
-from openquake.engine.utils import stats
 from openquake.engine.utils import tasks
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -30,7 +29,7 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@stats.count_progress('r')
+@general.count_progress_risk('r')
 def classical_bcr(job_id, hazard, vulnerability_function,
                   vulnerability_function_retrofitted,
                   output_containers, lrem_steps_per_interval,

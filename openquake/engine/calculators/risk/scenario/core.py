@@ -25,12 +25,12 @@ from openquake.risklib import api, scientific
 from openquake.engine import logs
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 
 
 @tasks.oqtask
-@stats.count_progress('r')
+@general.count_progress_risk('r')
 def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
              insured_losses, asset_correlation):
     """
