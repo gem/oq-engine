@@ -25,7 +25,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
-from openquake.engine.performance import EngineMemoryMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
@@ -53,7 +53,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     hazard_getter = hazard.values()[0][0]
 
-    with EngineMemoryMonitor(job_id, 'hazard_getter', scenario):
+    with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
         assets, ground_motion_values, missings = hazard_getter()
 
     outputs = calc(assets, ground_motion_values)
