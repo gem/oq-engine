@@ -43,7 +43,7 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 @tasks.oqtask
 @stats.count_progress('h')
-def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
+def gmfs(job_id, rupture_ids, output_id, task_seed, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
@@ -55,23 +55,15 @@ def gmfs(job_id, rupture_ids, output_id, task_seed, task_no, realizations):
         Number of ground motion field realizations which are
         going to be created by the task.
     """
-
-    logs.LOG.debug('> starting task: job_id=%s, task_no=%s'
-                   % (job_id, task_no))
-
-    numpy.random.seed(task_seed)
-    compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations)
-
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-    base.signal_task_complete(job_id=job_id, num_items=realizations)
+    with logs.tracing('computing gmfs'):
+        numpy.random.seed(task_seed)
+        compute_gmfs(job_id, rupture_ids, output_id, realizations)
+        base.signal_task_complete(job_id=job_id, num_items=realizations)
 
 
 # NB: get_site_collection is called for each task;
 # this could be a performance bottleneck, potentially
-def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
+def compute_gmfs(job_id, rupture_ids, output_id, realizations):
     """
     Compute ground motion fields and store them in the db.
 
@@ -82,10 +74,6 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         ground motion fields.
     :param output_id:
         output_id idenfitifies the reference to the output record.
-    :param task_no:
-        The task_no in which the calculation results will be placed.
-        This ID basically corresponds to the sequence number of the task,
-        in the context of the entire calculation.
     :param realizations:
         Number of realizations which are going to be created.
     """
@@ -102,11 +90,11 @@ def compute_gmfs(job_id, rupture_ids, output_id, task_no, realizations):
         rupture_mdl, hc.site_collection, imts, gsim(),
         hc.truncation_level, realizations=realizations,
         correlation_model=correlation_model)
-    save_gmf(output_id, gmf, hc.site_collection.mesh, task_no)
+    save_gmf(output_id, gmf, hc.site_collection.mesh)
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
+def save_gmf(output_id, gmf_dict, points_to_compute):
     """
     Helper method to save computed GMF data to the database.
 
@@ -117,11 +105,6 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
     :param points_to_compute:
         An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing
         all of the points of interest for a calculation.
-    :param int result_grp_ordinal:
-        The sequence number (1 to N) of the task which computed these results.
-
-        A calculation consists of N tasks, so this tells us which task computed
-        the data.
     """
     inserter = writer.BulkInserter(models.GmfScenario)
 
@@ -140,13 +123,12 @@ def save_gmf(output_id, gmf_dict, points_to_compute, result_grp_ordinal):
                 output_id=output_id,
                 imt=imt_name,
                 location=location.wkt2d,
-                gmvs=gmfarray[i].tolist(),
-                result_grp_ordinal=result_grp_ordinal,
-            )
+                gmvs=gmfarray[i].tolist())
 
     inserter.flush()
 
 
+## XXX: to remove, not used anymore
 def task_arg_generator(number_of_ground_motion_fields, num_concurrent_tasks):
     """
     Yields a sequence of triples (task_seed, task_no, realiz_per_task)
@@ -227,10 +209,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        Yielded results are 6-uples of the form (job_id, task_no,
-        rupture_id, random_seed, task_no, realiz_per_task)
-       (random_seed will be used to seed
-        numpy for temporal occurence sampling.)
+        Yielded results are 5-uples of the form (job_id,
+        rupture_ids, output_id, task_seed, realizations)
+        (task_seed will be used to seed numpy for temporal occurence sampling).
 
         :param int block_size:
             The number of work items for each task. Fixed to 1.
@@ -241,11 +222,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_ids = [rupture.id for rupture in ruptures]
-
-        args = task_arg_generator(
-            self.hc.number_of_ground_motion_fields,
-            self.concurrent_tasks())
-        for task_no, realiz_per_task in args:
-            task_seed = rnd.randint(0, MAX_SINT_32)
-            yield (self.job.id, rupture_ids, self.output.id,
-                   task_seed, task_no, realiz_per_task)
+        task_seed = rnd.randint(0, MAX_SINT_32)
+        yield (self.job.id, rupture_ids, self.output.id,
+               task_seed, self.hc.number_of_ground_motion_fields)

@@ -1278,8 +1278,8 @@ CREATE TABLE hzrdr.gmf_scenario (
     output_id INTEGER NOT NULL,  -- FK to output.id
     imt VARCHAR NOT NULL,
     gmvs float[],
-    result_grp_ordinal INTEGER NOT NULL,
-    location GEOGRAPHY(point) NOT NULL
+    location GEOGRAPHY(point) NOT NULL,
+    UNIQUE (output_id, imt, location)
 ) TABLESPACE hzrdr_ts;
 
 
