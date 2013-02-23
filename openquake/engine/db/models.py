@@ -2128,7 +2128,6 @@ class GmfScenario(djm.Model):
     imt = djm.TextField()
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
 
