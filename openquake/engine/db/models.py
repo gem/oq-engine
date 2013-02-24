@@ -700,10 +700,10 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    truncation_level = djm.FloatField(
+    truncation_level = fields.NullFloatField(
         help_text='Level for ground motion distribution truncation',
         null=True,
-        blank=True
+        blank=True,
     )
     maximum_distance = djm.FloatField(
         help_text=('Maximum distance (in km) of sources to be considered in '
