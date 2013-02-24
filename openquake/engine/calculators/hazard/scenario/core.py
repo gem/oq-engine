@@ -46,18 +46,18 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 @tasks.oqtask
 @stats.count_progress('h')
-def gmfs(job_id, rupture_ids, sites, output_id, task_seed, realizations):
+def gmfs(job_id, sites, rupture_id, output_id, task_seed, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
     with logs.tracing('computing gmfs'):
         numpy.random.seed(task_seed)
-        compute_gmfs(job_id, rupture_ids, sites, output_id, realizations)
+        compute_gmfs(job_id, sites, rupture_id, output_id, realizations)
         base.signal_task_complete(job_id=job_id, num_items=len(sites))
 
 
-def compute_gmfs(job_id, rupture_ids, sites, output_id, realizations):
+def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
     """
     Compute ground motion fields and store them in the db.
 
@@ -65,8 +65,8 @@ def compute_gmfs(job_id, rupture_ids, sites, output_id, realizations):
         ID of the currently running job.
     :param sites:
         The subset of the full SiteCollection scanned by this task
-    :param rupture_ids:
-        List of ids of parsed rupture model from which we will generate
+    :param rupture_id:
+        The parsed rupture model from which we will generate
         ground motion fields.
     :param output_id:
         output_id idenfitifies the reference to the output record.
@@ -76,7 +76,7 @@ def compute_gmfs(job_id, rupture_ids, sites, output_id, realizations):
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rupture_mdl = source.nrml_to_hazardlib(
-        models.ParsedRupture.objects.get(id=rupture_ids[0]).nrml,
+        models.ParsedRupture.objects.get(id=rupture_id).nrml,
         hc.rupture_mesh_spacing, None, None)
     imts = [haz_general.imt_to_hazardlib(x)
             for x in hc.intensity_measure_types]
@@ -187,7 +187,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         task arg tuples. Each tuple of args applies to a single task.
 
         Yielded results are 6-uples of the form (job_id,
-        rupture_ids, sites, output_id, task_seed, realizations)
+        sites, rupture_id, output_id, task_seed, realizations)
         (task_seed will be used to seed numpy for temporal occurence sampling).
 
         :param int block_size:
@@ -198,9 +198,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
-        rupture_ids = [rupture.id for rupture in ruptures]
+        rupture_id = [rupture.id for rupture in ruptures][0]  # only one
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, MAX_SINT_32)
-            yield (self.job.id, rupture_ids, SiteCollection(sites),
-                   self.output.id, task_seed,
+            yield (self.job.id, SiteCollection(sites),
+                   rupture_id, self.output.id, task_seed,
                    self.hc.number_of_ground_motion_fields)
