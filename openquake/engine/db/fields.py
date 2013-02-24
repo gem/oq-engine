@@ -322,3 +322,15 @@ class OqNullBooleanField(djm.NullBooleanField):
         # strange results
         value = super(OqNullBooleanField, self).to_python(value)
         return value
+
+
+class NullFloatField(djm.FloatField):
+    """
+    A nullable float field that handles blank input values properly.
+    """
+
+    def get_prep_value(self, value):
+        if isinstance(value, str):
+            if value.strip() == '':
+                return None
+        return super(NullFloatField, self).get_prep_value(value)
