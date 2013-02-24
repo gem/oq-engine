@@ -2062,6 +2062,9 @@ class GmfSet(djm.Model):
         """
         Iterator for walking through all child :class:`Gmf` objects.
         """
+        return iter_gmfs()
+
+    def iter_gmfs(self, location=None):
         job = self.gmf_collection.output.oq_job
         hc = job.hazard_calculation
         if self.complete_logic_tree_gmf:
@@ -2072,7 +2075,8 @@ class GmfSet(djm.Model):
                     gmf_collection__output__oq_job=job,
                     gmf_collection__lt_realization__isnull=False)\
                 .order_by('id')
-            for gmf in itertools.chain(*lt_gmf_sets):
+            for gmf in itertools.chain(
+                    *lt_gmf_sets.iter_gmfs(location=location)):
                 yield gmf
         else:
             num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
@@ -2089,8 +2093,12 @@ class GmfSet(djm.Model):
                             sa_period=sa_period,
                             sa_damping=sa_damping,
                             result_grp_ordinal=result_grp_ordinal))
+                    if location is not None:
+                        gmfs = gmfs.filter(location=FIXME)
+
                     if len(gmfs) == 0:
-                        # This task did not contribute to this GmfSet
+                        # There are no GMFs in this result group for the given
+                        # search parameters.
                         continue
 
                     # len of each gmfs == number of sites
