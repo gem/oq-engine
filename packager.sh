@@ -64,6 +64,7 @@ _pkgtest_innervm_run () {
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/${GEM_DEB_PACKAGE}
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
     ssh $haddr "sudo apt-get update"
+    ssh $haddr "sudo apt-get -y upgrade"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
