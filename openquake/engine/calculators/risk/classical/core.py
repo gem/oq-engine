@@ -33,7 +33,7 @@ from openquake.engine import logs
 
 @tasks.oqtask
 @general.count_progress_risk('r')
-def classical(job_id, hazard, xovulnerability_function, output_containers,
+def classical(job_id, hazard, vulnerability_function, output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
               hazard_montecarlo_p):
     """
@@ -159,7 +159,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
+            hc.id, self.imt, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 

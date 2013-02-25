@@ -184,8 +184,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
         return (self.hazard_getter(
-            output.id, self.imt,
-            assets, self.rc.get_hazard_maximum_distance()), 1)
+            output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
 
     def worker_args(self, taxonomy):
         """

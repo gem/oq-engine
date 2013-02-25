@@ -1125,17 +1125,18 @@ class RiskCalculation(djm.Model):
             return {self.hazard_output.id:
                     risk_calculator.create_outputs(self.hazard_output)}
 
-    def get_hazard_maximum_distance(self):
+    @property
+    def best_maximum_distance(self):
         """
-        Get the hazard maximum distance (in km) to be used in hazard
-        getters.
+        Get the asset-hazard maximum distance (in km) to be used in
+        hazard getters.
 
         :returns: the minimum between the maximum distance provided by
         the user (if not given, `DEFAULT_MAXIMUM_DISTANCE` is
         used as default) and the step (if exists) used by the hazard
         calculation.
         """
-        dist = self.hazard_maximum_distance
+        dist = self.maximum_distance
 
         if dist is None:
             dist = self.DEFAULT_MAXIMUM_DISTANCE

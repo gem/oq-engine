@@ -259,7 +259,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            gmf.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
+            gmf.id, self.imt, assets, self.rc.best_maximum_distance)
         return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):
