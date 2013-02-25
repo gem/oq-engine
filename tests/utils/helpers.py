@@ -1027,7 +1027,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
 
     # In order to make hazard and risk demo match (in terms of
     # investigated regions) we fix quite big maximum distance :-(
-    params['hazard_maximum_distance'] = 200000
+    params['maximum_distance'] = 200
 
     if output_type == "curve":
         params.update(
