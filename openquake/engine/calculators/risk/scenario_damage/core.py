@@ -65,6 +65,13 @@ def scenario_damage(job_id, hazard,
 
     assets, ground_motion_values, missings = hazard_getter()
 
+    if not len(assets):
+        logs.LOG.info("Exit from task as no asset could be processed")
+        base.signal_task_complete(job_id=job_id,
+                                  fractions=None,
+                                  num_items=len(missings))
+        return
+
     fraction_matrix = calculator(ground_motion_values)
 
     with logs.tracing('save statistics per site'), \
@@ -204,10 +211,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         taxonomy. Fractions and taxonomy are extracted from the message.
         """
         taxonomy = message['taxonomy']
-        fractions = message['fractions']
-        if taxonomy not in self.ddpt:
-            self.ddpt[taxonomy] = numpy.zeros(fractions.shape)
-        self.ddpt[taxonomy] += fractions
+        fractions = message.get('fractions')
+
+        if fractions is not None:
+            if taxonomy not in self.ddpt:
+                self.ddpt[taxonomy] = numpy.zeros(fractions.shape)
+            self.ddpt[taxonomy] += fractions
 
     def post_process(self):
         """

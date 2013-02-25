@@ -103,12 +103,16 @@ def event_based(job_id, hazard,
 
         if len(assets):
             ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
-            rupture_ids = numpy.array(gmvs_ruptures)[:, 1]
+            rupture_id_matrix = numpy.array(gmvs_ruptures)[:, 1]
         else:
+            # we are relying on the fact that if all the hazard_getter
+            # in this task will either return some results or they all
+            # return an empty result set.
+            logs.LOG.info("Exit from task as no asset could be processed")
             base.signal_task_complete(
                 job_id=job_id,
-                num_items=len(assets) + len(missings),
-                event_loss_table=event_loss_table)
+                event_loss_table=dict(),
+                num_items=len(missings))
             return
 
         with logs.tracing('computing risk'):
@@ -121,15 +125,18 @@ def event_based(job_id, hazard,
                         loss_ratio_curves[hazard_output_id]):
                     asset = assets[i]
 
+                    # loss curves
                     general.write_loss_curve(
                         loss_curve_id, asset, loss_ratio_curve)
 
+                    # loss maps
                     for poe in conditional_loss_poes:
                         general.write_loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
                                 loss_ratio_curve, poe))
 
+                    # insured losses
                     if insured_losses:
                         insured_loss_curve = scientific.event_based(
                             scientific.insured_losses(
@@ -146,19 +153,22 @@ def event_based(job_id, hazard,
                         general.write_loss_curve(
                             insured_curve_id, asset, insured_loss_curve)
 
+                # update the event loss table of this task
+                for i, asset in enumerate(assets):
+                    for j, rupture_id in enumerate(rupture_id_matrix[i]):
+                        loss = loss_ratio_matrix[i][j] * asset.value
+                        event_loss_table[rupture_id] = (
+                            event_loss_table.get(rupture_id, 0) + loss)
+
+                # update the aggregate losses
                 aggregate_losses = sum(
                     loss_ratio_matrix[i] * asset.value
                     for i, asset in enumerate(assets))
-                for rupture_id, aggregate_loss in itertools.izip(
-                        rupture_ids, aggregate_losses):
-                    event_loss_table[rupture_id] = (
-                        event_loss_table.get(rupture_id, 0) + aggregate_loss)
-
-                # FIXME(lp). Use the same approach used in the scenario damage
-                # to compute aggregate losses
                 general.update_aggregate_losses(
                     aggregate_loss_curve_id, aggregate_losses)
 
+    # compute mean and quantile loss curves if multiple hazard
+    # realizations are computed
     if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
         weights = [data[1] for _, data in hazard.items()]
 
@@ -166,6 +176,10 @@ def event_based(job_id, hazard,
             with db.transaction.commit_on_success(using='reslt_writer'):
                 loss_ratio_curve_matrix = loss_ratio_curves.values()
 
+                # here we are relying on the fact that assets do not
+                # change across different logic tree realizations (as
+                # the hazard grid does not change, so the hazard
+                # getters always returns the same assets)
                 for i, asset in enumerate(assets):
                     general.curve_statistics(
                         asset,
