@@ -75,7 +75,7 @@ def event_based(job_id, hazard,
     representing the correlation between the generated loss ratios
     """
 
-    asset_outputs = OrderedDict()
+    loss_ratio_curves = OrderedDict()
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
@@ -94,39 +94,49 @@ def event_based(job_id, hazard,
             seed=seed,
             correlation=asset_correlation)
 
-        if insured_losses:
-            calculator = api.InsuredLosses(calculator)
-
-        # if we need to compute the loss maps, we add the proper risk
-        # aggregator
-        if conditional_loss_poes:
-            calculator = api.ConditionalLosses(
-                conditional_loss_poes, calculator)
-
         with logs.tracing('getting input data from db'):
             assets, ground_motion_values, missings = hazard_getter()
 
         with logs.tracing('computing risk'):
-            asset_outputs[hazard_output_id] = calculator(
-                assets, ground_motion_values)
+            loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
+                calculator(ground_motion_values))
 
         with logs.tracing('writing results'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(
-                        asset_outputs[hazard_output_id]):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
+
                     general.write_loss_curve(
-                        loss_curve_id, assets[i], asset_output)
+                        loss_curve_id, asset, loss_ratio_curve)
 
-                    if asset_output.conditional_losses:
-                        general.write_loss_map(
-                            loss_map_ids, assets[i], asset_output)
+                    for poe in conditional_loss_poes:
+                        general.write_loss_map_data(
+                            loss_map_ids[poe], asset,
+                            scientific.conditional_loss_ratio(
+                                loss_ratio_curve, poe))
 
-                    if asset_output.insured_losses:
+                    if insured_losses:
+                        insured_loss_curve = scientific.event_based(
+                            scientific.insured_losses(
+                                loss_ratio_matrix[i],
+                                asset.value,
+                                asset.deductible,
+                                asset.ins_limit),
+                            tses,
+                            time_span,
+                            loss_curve_resolution)
+
+                        insured_loss_curve.abscissae = (
+                            insured_loss_curve.abscissae / asset.value)
                         general.write_loss_curve(
-                            insured_curve_id, assets[i], asset_output)
-                losses = sum(asset_output.losses
-                             for asset_output
-                             in asset_outputs[hazard_output_id])
+                            insured_curve_id, asset, insured_loss_curve)
+
+                losses = sum(loss_ratio_matrix[i] * asset.value
+                             for i, asset in enumerate(assets))
+
+                # FIXME(lp). Use the same approach used in the scenario damage
+                # to compute aggregate losses
                 general.update_aggregate_losses(
                     aggregate_loss_curve_id, losses)
 
@@ -135,11 +145,12 @@ def event_based(job_id, hazard,
 
         with logs.tracing('writing curve statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
+                loss_ratio_curve_matrix = loss_ratio_curves.values()
+
                 for i, asset in enumerate(assets):
                     general.curve_statistics(
                         asset,
-                        [asset_output[i].loss_ratio_curve
-                         for asset_output in asset_outputs.values()],
+                        loss_ratio_curve_matrix[i],
                         weights,
                         mean_loss_curve_id,
                         quantile_loss_curve_ids,
@@ -258,7 +269,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         else:
             correlation = self.rc.asset_correlation
 
-        return [self.rc.conditional_loss_poes,
+        return [self.rc.conditional_loss_poes or [],
                 self.rc.insured_losses,
                 time_span, tses,
                 self.rc.loss_curve_resolution, correlation,
