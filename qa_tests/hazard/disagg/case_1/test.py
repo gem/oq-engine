@@ -19,7 +19,10 @@ import os
 import shutil
 import tempfile
 
+from lxml import etree
 from nose.plugins.attrib import attr
+
+from openquake.nrmllib import PARSE_NS_MAP
 
 from openquake.engine.db import models
 from openquake.engine.export import hazard as haz_export
@@ -27,12 +30,14 @@ from openquake.engine.export import hazard as haz_export
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.disagg.case_1 import _test_data as test_data
 
+aaae = numpy.testing.assert_array_almost_equal
+aae = numpy.testing.assert_almost_equal
+
 
 class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'disagg')
     def test(self):
-        aaae = numpy.testing.assert_array_almost_equal
         # TODO(LB): This is a temporary test case which tests for stability
         # until we can write proper QA tests.
 
@@ -77,7 +82,62 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
             [result_file] = haz_export.export(rlz1.output.id, target_dir)
 
             expected = StringIO.StringIO(test_data.EXPECTED_XML_DISAGG)
-            self.assert_xml_equal(expected, result_file)
+            self.assert_disagg_xml_almost_equal(expected, result_file)
             self.assertTrue(qa_utils.validates_against_xml_schema(result_file))
         finally:
             shutil.rmtree(target_dir)
+
+    def assert_disagg_xml_almost_equal(self, expected, actual):
+        """
+        A special helper function to test that values in the ``expected`` and
+        ``actual`` XML are almost equal to a certain precision.
+
+        :param expected, actual:
+            Paths to XML files, or file-like objects containing the XML
+            contents.
+        """
+        exp_tree = etree.parse(expected)
+        act_tree = etree.parse(actual)
+
+        # First, compare the <disaggMatrices> container element, check attrs,
+        # etc.
+        [exp_dms] = exp_tree.xpath(
+            '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
+        )
+        [act_dms] = act_tree.xpath(
+            '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
+        )
+        self.assertEqual(exp_dms.attrib, act_dms.attrib)
+
+        # Then, loop over each <disaggMatrix>, check attrs, then loop over each
+        # <prob> and compare indices and values.
+        exp_dm = exp_tree.xpath(
+            '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
+        )
+        act_dm = act_tree.xpath(
+            '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
+        )
+        self.assertEqual(len(exp_dm), len(act_dm))
+
+        for i, matrix in enumerate(exp_dm):
+            act_matrix = act_dm[i]
+
+            self.assertEqual(matrix.attrib['type'], act_matrix.attrib['type'])
+            self.assertEqual(matrix.attrib['dims'], act_matrix.attrib['dims'])
+            self.assertEqual(matrix.attrib['poE'], act_matrix.attrib['poE'])
+            aae(float(act_matrix.attrib['iml']), float(matrix.attrib['iml']))
+
+            # compare probabilities
+            exp_probs = matrix.xpath('./nrml:prob', namespaces=PARSE_NS_MAP)
+            act_probs = act_matrix.xpath(
+                './nrml:prob', namespaces=PARSE_NS_MAP
+            )
+            self.assertEqual(len(exp_probs), len(act_probs))
+
+            for j, prob in enumerate(exp_probs):
+                act_prob = act_probs[j]
+
+                self.assertEqual(prob.attrib['index'],
+                                 act_prob.attrib['index'])
+                aae(float(act_prob.attrib['value']),
+                    float(prob.attrib['value']))
