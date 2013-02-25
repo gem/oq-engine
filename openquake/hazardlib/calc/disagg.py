@@ -22,43 +22,42 @@ import numpy
 import warnings
 
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box
-from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.tom import PoissonTOM
 
 
-def disaggregation(sources, site, imt, iml, gsims, tom,
-                   truncation_level, n_epsilons,
-                   mag_bin_width, dist_bin_width, coord_bin_width,
-                   source_site_filter=filters.source_site_noop_filter,
-                   rupture_site_filter=filters.rupture_site_noop_filter):
+def disaggregation_poissonian(
+        sources, site, imt, iml, gsims, time_span, truncation_level,
+        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter):
     """
-    Compute "Disaggregation" matrix representing conditional probability
-    distribution of
+    Compute "Disaggregation" matrix representing conditional probability of an
+    intensity mesaure type ``imt`` exceeding, at least once, an intensity
+    measure level ``iml`` at a geographical location ``site``, given rupture
+    scenarios (belonging to a Poissonian source model) classified in terms of:
 
-    - rupture magnitude,
-    - joyner-boore distance from rupture surface to site,
-    - longitude and latitude of surface projection of rupture closest point
-      to site,
+    - rupture magnitude
+    - Joyner-Boore distance from rupture surface to site
+    - longitude and latitude of the surface projection of a rupture's point
+      closest to ``site``
     - epsilon: number of standard deviations by which an intensity measure
-      level deviates from the median value predicted by a gsim, given
-      the rupture parameters.
-    - rupture tectonic region type,
+      level deviates from the median value predicted by a GSIM, given the
+      rupture parameters
+    - rupture tectonic region type
 
-    given the event that an intensity measure type ``imt`` exceeds an intensity
-    measure level ``iml`` at a geographical location ``site``.
+    In other words, the disaggregation matrix allows to compute the probability
+    of each scenario with the specified properties (e.g., magnitude, or the
+    magnitude and distance) to cause one or more exceedences of a given hazard
+    level.
 
-    In other words, the disaggregation matrix allows to identify the most
-    likely scenarios (classified in terms of the above mentioned parameters)
-    that contribute to a given level of hazard (as specified by an intensity
-    measure level). Note that the disaggregation matrix is computed assuming
-    each rupture to occur only once in the given time span.
-
-    For more detailed information about disaggregation see for instance
-    "Disaggregation of seismic hazard', Paolo Bazzurro, C. Allin Cornell,
-    Bulletin of the Seismological Society of America, Vol.89, pp.501-520,
-    April 1999".
+    For more detailed information about the disaggregation, see for instance
+    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
+    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
+    April 1999.
 
     :param sources:
         Seismic source model, as for
@@ -74,10 +73,8 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
         Intensity measure level. A float value in units of ``imt``.
     :param gsims:
         Tectonic region type to GSIM objects mapping.
-    :param tom:
-        Instance of temporal occurrence model object,
-        such as :class:`~openquake.hazardlib.tom.PoissonTOM`. It is used for
-        calculation of rupture occurrence probability.
+    :param time_span:
+        Investigation time span, in years.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -107,6 +104,8 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
+    tom = PoissonTOM(time_span)
+
     bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
@@ -125,6 +124,32 @@ def disaggregation(sources, site, imt, iml, gsims, tom,
     return bin_edges, diss_matrix
 
 
+# DEPRECATED
+def disaggregation(sources, site, imt, iml, gsims, tom,
+                   truncation_level, n_epsilons,
+                   mag_bin_width, dist_bin_width, coord_bin_width,
+                   source_site_filter=filters.source_site_noop_filter,
+                   rupture_site_filter=filters.rupture_site_noop_filter):
+    """
+    An implementation of the now-deprecated disaggregation calculation
+    interface. Please use :func:`disaggregation_poissonian` instead.
+    """
+    warnings.warn(
+        '`openquake.hazardlib.calc.disagg.disaggregation` is deprecated. '
+        'Please use '
+        '`openquake.hazardlib.calc.disagg.disaggregation_poissonian` instead',
+        RuntimeWarning
+    )
+
+    time_span = tom.time_span
+    return disaggregation_poissonian(
+        sources, site, imt, iml, gsims, time_span, truncation_level,
+        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter
+    )
+
+
 def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
@@ -141,7 +166,9 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = []
     lats = []
     tect_reg_types = []
-    joint_probs = []
+    probs_one_or_more = []
+    probs_exceed_given_rup = []
+    src_idxs = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
@@ -152,7 +179,9 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
     # out and doesn't show up in the filter's output
-    for source, s_sites in source_site_filter(sources_sites):
+    for src_idx, (source, s_sites) in \
+        enumerate(source_site_filter(sources_sites)):
+
         tect_reg = source.tectonic_region_type
         gsim = gsims[tect_reg]
 
@@ -180,27 +209,35 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
             )
-            # compute the probability of the rupture occurring once,
-            # that is ``P(rup)``
-            p_rup = rupture.get_probability_one_occurrence()
 
-            # compute joint probability of rupture occurrence and
-            # iml exceedance for the different epsilon levels
-            joint_probs.append(poes_given_rup_eps * p_rup)
+            # compute probability of one or more rupture occurrences
+            probs_one_or_more.append(
+                rupture.get_probability_one_or_more_occurrences()
+            )
+
+            # collect probability of exceedance given the rupture
+            probs_exceed_given_rup.append(poes_given_rup_eps)
+
+            # keep track of the source index, so that the probabilities can be
+            # associated to each source
+            src_idxs.append(src_idx)
 
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
     tect_reg_types = numpy.array(tect_reg_types, int)
-    joint_probs = numpy.array(joint_probs, float)
+    probs_one_or_more = numpy.array(probs_one_or_more, float)
+    probs_exceed_given_rup = numpy.array(probs_exceed_given_rup, float)
+    src_idxs = numpy.array(src_idxs, int)
 
     trt_bins = [
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
 
-    return mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins
+    return (mags, dists, lons, lats, tect_reg_types, trt_bins,
+            probs_one_or_more, probs_exceed_given_rup, src_idxs)
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -213,7 +250,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, _joint_probs, tect_reg_types, trt_bins = bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins, _, _, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -250,11 +287,14 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    mags, dists, lons, lats, joint_probs, tect_reg_types, trt_bins = bins_data
+    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_one_or_more,
+     probs_exceed_given_rup, src_idxs) = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
     diss_matrix = numpy.zeros(shape)
+
+    src_indices = numpy.unique(src_idxs)
 
     for i_mag in xrange(len(mag_bins) - 1):
         mag_idx = mags <= mag_bins[i_mag + 1]
@@ -283,16 +323,24 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                         for i_trt in xrange(len(trt_bins)):
                             trt_idx = tect_reg_types == i_trt
 
-                            prob_idx = (mag_idx & dist_idx & lon_idx
-                                        & lat_idx & trt_idx)
                             diss_idx = (i_mag, i_dist, i_lon,
                                         i_lat, i_eps, i_trt)
 
-                            diss_matrix[diss_idx] = numpy.sum(
-                                joint_probs[prob_idx, i_eps]
-                            )
+                            # compute probability of exceedance due to the set
+                            # of ruptures in the current disaggregation bin
+                            poe = 1.0
+                            for i_src in src_indices:
+                                src_idx = src_idxs == i_src
+                                prob_idx = (mag_idx & dist_idx & lon_idx
+                                            & lat_idx & trt_idx & src_idx)
 
-    diss_matrix /= numpy.sum(diss_matrix)
+                                poe *= numpy.prod(
+                                    (1 - probs_one_or_more[prob_idx]) **
+                                    probs_exceed_given_rup[prob_idx, i_eps]
+                                )
+                            poe = 1 - poe
+
+                            diss_matrix[diss_idx] = poe
 
     return diss_matrix
 
@@ -307,13 +355,15 @@ def mag_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     mag_pmf = numpy.zeros(nmags)
     for i in xrange(nmags):
-        mag_pmf[i] = sum(matrix[i][j][k][l][m][n]
-                         for j in xrange(ndists)
-                         for k in xrange(nlons)
-                         for l in xrange(nlats)
-                         for m in xrange(neps)
-                         for n in xrange(ntrts))
-    return mag_pmf
+        mag_pmf[i] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for j in xrange(ndists)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)
+             for n in xrange(ntrts)]
+        )
+    return 1 - mag_pmf
 
 
 def dist_pmf(matrix):
@@ -326,13 +376,15 @@ def dist_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     dist_pmf = numpy.zeros(ndists)
     for j in xrange(ndists):
-        dist_pmf[j] = sum(matrix[i][j][k][l][m][n]
-                          for i in xrange(nmags)
-                          for k in xrange(nlons)
-                          for l in xrange(nlats)
-                          for m in xrange(neps)
-                          for n in xrange(ntrts))
-    return dist_pmf
+        dist_pmf[j] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for i in xrange(nmags)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)
+             for n in xrange(ntrts)]
+        )
+    return 1 - dist_pmf
 
 
 def trt_pmf(matrix):
@@ -345,13 +397,15 @@ def trt_pmf(matrix):
     nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
     trt_pmf = numpy.zeros(ntrts)
     for n in xrange(ntrts):
-        trt_pmf[n] = sum(matrix[i][j][k][l][m][n]
-                         for i in xrange(nmags)
-                         for j in xrange(ndists)
-                         for k in xrange(nlons)
-                         for l in xrange(nlats)
-                         for m in xrange(neps))
-    return trt_pmf
+        trt_pmf[n] = numpy.prod(
+            [1 - matrix[i][j][k][l][m][n]
+             for i in xrange(nmags)
+             for j in xrange(ndists)
+             for k in xrange(nlons)
+             for l in xrange(nlats)
+             for m in xrange(neps)]
+        )
+    return 1 - trt_pmf
 
 
 def mag_dist_pmf(matrix):
@@ -366,12 +420,14 @@ def mag_dist_pmf(matrix):
     mag_dist_pmf = numpy.zeros((nmags, ndists))
     for i in xrange(nmags):
         for j in xrange(ndists):
-            mag_dist_pmf[i][j] = sum(matrix[i][j][k][l][m][n]
-                                     for k in xrange(nlons)
-                                     for l in xrange(nlats)
-                                     for m in xrange(neps)
-                                     for n in xrange(ntrts))
-    return mag_dist_pmf
+            mag_dist_pmf[i][j] = numpy.prod(
+                [1 - matrix[i][j][k][l][m][n]
+                 for k in xrange(nlons)
+                 for l in xrange(nlats)
+                 for m in xrange(neps)
+                 for n in xrange(ntrts)]
+            )
+    return 1 - mag_dist_pmf
 
 
 def mag_dist_eps_pmf(matrix):
@@ -388,11 +444,13 @@ def mag_dist_eps_pmf(matrix):
     for i in xrange(nmags):
         for j in xrange(ndists):
             for m in xrange(neps):
-                mag_dist_eps_pmf[i][j][m] = sum(matrix[i][j][k][l][m][n]
-                                                for k in xrange(nlons)
-                                                for l in xrange(nlats)
-                                                for n in xrange(ntrts))
-    return mag_dist_eps_pmf
+                mag_dist_eps_pmf[i][j][m] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for k in xrange(nlons)
+                     for l in xrange(nlats)
+                     for n in xrange(ntrts)]
+                )
+    return 1 - mag_dist_eps_pmf
 
 
 def lon_lat_pmf(matrix):
@@ -407,12 +465,14 @@ def lon_lat_pmf(matrix):
     lon_lat_pmf = numpy.zeros((nlons, nlats))
     for k in xrange(nlons):
         for l in xrange(nlats):
-            lon_lat_pmf[k][l] = sum(matrix[i][j][k][l][m][n]
-                                    for i in xrange(nmags)
-                                    for j in xrange(ndists)
-                                    for m in xrange(neps)
-                                    for n in xrange(ntrts))
-    return lon_lat_pmf
+            lon_lat_pmf[k][l] = numpy.prod(
+                [1 - matrix[i][j][k][l][m][n]
+                 for i in xrange(nmags)
+                 for j in xrange(ndists)
+                 for m in xrange(neps)
+                 for n in xrange(ntrts)]
+            )
+    return 1 - lon_lat_pmf
 
 
 def mag_lon_lat_pmf(matrix):
@@ -429,11 +489,13 @@ def mag_lon_lat_pmf(matrix):
     for i in xrange(nmags):
         for k in xrange(nlons):
             for l in xrange(nlats):
-                mag_lon_lat_pmf[i][k][l] = sum(matrix[i][j][k][l][m][n]
-                                               for j in xrange(ndists)
-                                               for m in xrange(neps)
-                                               for n in xrange(ntrts))
-    return mag_lon_lat_pmf
+                mag_lon_lat_pmf[i][k][l] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for j in xrange(ndists)
+                     for m in xrange(neps)
+                     for n in xrange(ntrts)]
+                )
+    return 1 - mag_lon_lat_pmf
 
 
 def lon_lat_trt_pmf(matrix):
@@ -450,8 +512,10 @@ def lon_lat_trt_pmf(matrix):
     for k in xrange(nlons):
         for l in xrange(nlats):
             for n in xrange(ntrts):
-                lon_lat_trt_pmf[k][l][n] = sum(matrix[i][j][k][l][m][n]
-                                               for i in xrange(nmags)
-                                               for j in xrange(ndists)
-                                               for m in xrange(neps))
-    return lon_lat_trt_pmf
+                lon_lat_trt_pmf[k][l][n] = numpy.prod(
+                    [1 - matrix[i][j][k][l][m][n]
+                     for i in xrange(nmags)
+                     for j in xrange(ndists)
+                     for m in xrange(neps)]
+                )
+    return 1 - lon_lat_trt_pmf
