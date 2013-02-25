@@ -88,7 +88,8 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
         self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
 
 
-class GroundMotionScenarioGetterPerAssetTestCase(HazardCurveGetterPerAssetTestCase):
+class GroundMotionScenarioGetterPerAssetTestCase(
+        HazardCurveGetterPerAssetTestCase):
 
     hazard_demo = 'scenario_hazard/job.ini'
     risk_demo = 'scenario_risk/job.ini'
