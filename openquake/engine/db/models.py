@@ -2766,7 +2766,7 @@ class HazardCurveProgress(djm.Model):
     # array is 2d: sites x IMLs
     # each row indicates a site,
     # each column holds the PoE vaue for the IML at that index
-    result_matrix = fields.PickleField()
+    result_matrix = fields.NumpyListField(default=None)
 
     class Meta:
         db_table = 'htemp\".\"hazard_curve_progress'
