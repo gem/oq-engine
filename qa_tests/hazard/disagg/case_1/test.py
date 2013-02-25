@@ -30,7 +30,7 @@ from qa_tests.hazard.disagg.case_1 import _test_data as test_data
 
 class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'disagg')
+    @attr('qa', 'hazard', 'disagg')
     def test(self):
         aaae = numpy.testing.assert_array_almost_equal
         # TODO(LB): This is a temporary test case which tests for stability
