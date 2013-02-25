@@ -483,10 +483,6 @@ def conditional_loss_ratio(a_curve, probability):
 
     return a_curve.abscissa_for(probability)
 
-###
-### Calculator modifiers
-###
-
 
 ##
 ## Insured Losses
@@ -502,13 +498,10 @@ def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
     """
 
     losses = loss_ratios * asset_value
-    undeductible_losses = losses[losses >= deductible]
-
-    return numpy.concatenate((
-        numpy.zeros(losses[losses < deductible].shape),
-        numpy.min(
-            [undeductible_losses,
-             numpy.ones(undeductible_losses.shape) * insured_limit], 0)))
+    return numpy.where(
+        losses < insured_limit,
+        numpy.where(losses < deductible, numpy.zeros(losses.shape), losses),
+        numpy.ones(losses.shape) * insured_limit)
 
 ##
 ## Benefit Cost Ratio Analysis
