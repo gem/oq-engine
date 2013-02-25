@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`openquake.hazardlib.calc.disagg` contains :func:`disaggregation` as well
-as several aggregation functions for extracting a specific PMF from the result
-of :func:`disaggregation`.
+:mod:`openquake.hazardlib.calc.disagg` contains
+:func:`disaggregation_poissonian` as well as several aggregation functions for
+extracting a specific PMF from the result of :func:`disaggregation_poissonian`.
 """
 import numpy
 import warnings
