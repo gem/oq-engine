@@ -101,8 +101,15 @@ def event_based(job_id, hazard,
         with logs.tracing('getting input data from db'):
             assets, gmvs_ruptures, missings = hazard_getter()
 
-        ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
-        rupture_ids = numpy.array(gmvs_ruptures)[0, 1]
+        if len(assets):
+            ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+            rupture_ids = numpy.array(gmvs_ruptures)[:, 1]
+        else:
+            base.signal_task_complete(
+                job_id=job_id,
+                num_items=len(assets) + len(missings),
+                event_loss_table=event_loss_table)
+            return
 
         with logs.tracing('computing risk'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
