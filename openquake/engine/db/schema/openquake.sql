@@ -980,37 +980,23 @@ CREATE TABLE uiapi.output (
     path VARCHAR UNIQUE,
     -- The GUI display name to be used for this output.
     display_name VARCHAR NOT NULL,
-    -- Output type, one of:
-    --      hazard_curve
-    --      hazard_map
-    --      gmf
-    --      complete_lt_gmf (complete logic tree GMF)
-    --      ses
-    --      complete_lt_ses (complete logic tree SES)
-    --      loss_curve
-    --      loss_map
-    --      bcr_distribution
-    --      agg_loss_curve
-    --      dmg_dist_per_asset
-    --      dmg_dist_per_taxonomy
-    --      dmg_dist_total
-    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
+            'aggregate_loss',
             'bcr_distribution',
+            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
-            'collapse_map',
+            'event_loss',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
             'hazard_map',
-            'ins_loss_curve',
             'loss_curve',
             'loss_map',
             'ses',
@@ -1407,6 +1393,7 @@ CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     hazard_output_id INTEGER NULL,
+    insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
         CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
@@ -1416,12 +1403,32 @@ CREATE TABLE riskr.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
+    -- for scenario calculations value correspond to a mean value
     value float NOT NULL,
     -- for non-scenario calculations std_dev is NULL
     std_dev float NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Aggregate Loss.
+CREATE TABLE riskr.aggregate_loss (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    insured BOOLEAN NOT NULL DEFAULT false,
+    mean float NOT NULL,
+    std_dev float NULL
+) TABLESPACE riskr_ts;
+
+
+-- Event Loss table.
+CREATE TABLE riskr.event_loss (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to uiapi.output.id
+    rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
+    aggregate_loss float NOT NULL
+) TABLESPACE riskr_ts;
 
 
 -- Loss curve.
@@ -1916,6 +1923,18 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.aggregate_loss
+ADD CONSTRAINT riskr_aggregate_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_event_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_evet_loss_sesrupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk

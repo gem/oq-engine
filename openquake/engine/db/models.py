@@ -1129,9 +1129,22 @@ class RiskCalculation(djm.Model):
 
     def get_hazard_maximum_distance(self):
         """
-        Convenience function
+        Get the hazard maximum distance to be used in hazard getters.
+
+        :returns: the minimum between the maximum distance provided by
+        the user (if not given, `DEFAULT_HAZARD_MAXIMUM_DISTANCE` is
+        used as default) and the step (if exists) used by the hazard
+        calculation.
         """
-        return self.hazard_maximum_distance or DEFAULT_HAZARD_MAXIMUM_DISTANCE
+        dist = self.hazard_maximum_distance
+
+        if dist is None:
+            dist = DEFAULT_HAZARD_MAXIMUM_DISTANCE
+
+        hc = self.get_hazard_calculation()
+        if hc.sites is None and hc.region_grid_spacing is not None:
+            dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2 * 1000)
+        return dist
 
     @property
     def is_bcr(self):
@@ -1442,20 +1455,23 @@ class Output(djm.Model):
     display_name = djm.TextField()
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'aggregate_losses', u'Aggregate Losses'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'collapse_map', u'Collapse Map Distribution'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
-        (u'collapse_map', u'Collapse Map Distribution'),
+        (u'event_loss', u'Event Loss Table'),
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
-        (u'ins_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
+        # FIXME(lp). We should distinguish between conditional losses
+        # and loss map
         (u'loss_map', u'Loss Map'),
         (u'ses', u'Stochastic Event Set'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
@@ -2329,6 +2345,7 @@ class LossMap(djm.Model):
 
     output = djm.OneToOneField("Output", related_name="loss_map")
     hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
+    insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2349,6 +2366,16 @@ class LossMapData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_map_data'
+
+
+class AggregateLoss(djm.Model):
+    output = djm.OneToOneField("Output")
+    insured = djm.BooleanField(default=False)
+    mean = djm.FloatField()
+    std_dev = djm.FloatField()
+
+    class Meta:
+        db_table = 'riskr\".\"aggregate_loss'
 
 
 class LossCurve(djm.Model):
@@ -2401,6 +2428,18 @@ class AggregateLossCurveData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
+
+
+class EventLoss(djm.Model):
+    """
+    Holds the aggregate loss we have for each rupture
+    """
+    output = djm.OneToOneField('Output')
+    rupture = djm.ForeignKey('SESRupture')
+    aggregate_loss = djm.FloatField()
+
+    class Meta:
+        db_table = 'riskr\".\"event_loss'
 
 
 class BCRDistribution(djm.Model):

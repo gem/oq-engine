@@ -19,6 +19,7 @@ Functions for exporting risk artifacts from the database.
 
 
 import os
+import csv
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -27,21 +28,28 @@ from openquake.nrmllib.risk import writers
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
 LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
+AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
+EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir):
+def export(output_id, target_dir, file_format=None):
     """
     Export the given risk calculation output from the database to the
     specified directory. See `openquake.engine.export.hazard.export` for more
     details.
     """
     output = models.Output.objects.get(id=output_id)
-    return globals().get("export_%s" % output.output_type,
-                         core._export_fn_not_implemented)(
-                             output, os.path.expanduser(target_dir))
+
+    if file_format is None:
+        fn_name = "export_%s" % output.output_type
+    else:
+        fn_name = "export_%s_%s" % (output.output_type, file_format)
+
+    fn = globals().get(fn_name, core._export_fn_not_implemented)
+    return [fn(output, os.path.expanduser(target_dir))]
 
 
 def _export_common(output):
@@ -71,7 +79,7 @@ def _export_common(output):
 
 
 @core.makedirs
-def export_agg_loss_curve(output, target_dir):
+def export_agg_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
@@ -81,11 +89,12 @@ def export_agg_loss_curve(output, target_dir):
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
         output.loss_curve.aggregatelosscurvedata)
-    return [args['path']]
+    return args['path']
+export_agg_loss_curve = export_agg_loss_curve_xml
 
 
 @core.makedirs
-def export_loss_curve(output, target_dir):
+def export_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
@@ -98,13 +107,13 @@ def export_loss_curve(output, target_dir):
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
 
     writers.LossCurveXMLWriter(**args).serialize(data)
-    return [args['path']]
+    return args['path']
 
-export_ins_loss_curve = export_loss_curve
+export_loss_curve = export_loss_curve_xml
 
 
 @core.makedirs
-def export_loss_map(output, target_dir):
+def export_loss_map_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss map
     serializer
@@ -119,11 +128,13 @@ def export_loss_map(output, target_dir):
             loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
-    return [args['path']]
+    return args['path']
+
+export_loss_map = export_loss_map_xml
 
 
 @core.makedirs
-def export_bcr_distribution(output, target_dir):
+def export_bcr_distribution_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml bcr distribution
     serializer
@@ -141,7 +152,9 @@ def export_bcr_distribution(output, target_dir):
     writers.BCRMapXMLWriter(**args).serialize(
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
-    return [args['path']]
+    return args['path']
+
+export_bcr_distribution = export_bcr_distribution_xml
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
@@ -170,22 +183,74 @@ def make_dmg_dist_export(damagecls, writercls, filename):
             data = damagecls.objects.filter(
                 dmg_state__risk_calculation__id=rc_id)
         writer.serialize(data.order_by('dmg_state__lsi'))
-        return [file_path]
+        return file_path
 
     return export_dmg_dist
 
-export_dmg_dist_per_asset = make_dmg_dist_export(
+export_dmg_dist_per_asset_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter,
     "dmg-dist-asset-%s.xml")
 
-export_dmg_dist_per_taxonomy = make_dmg_dist_export(
+export_dmg_dist_per_asset = export_dmg_dist_per_asset_xml
+
+
+export_dmg_dist_per_taxonomy_xml = make_dmg_dist_export(
     models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter,
     "dmg-dist-taxonomy-%s.xml")
 
-export_dmg_dist_total = make_dmg_dist_export(
+export_dmg_dist_per_taxonomy = export_dmg_dist_per_taxonomy_xml
+
+
+export_dmg_dist_total_xml = make_dmg_dist_export(
     models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
     "dmg-dist-total-%s.xml")
 
-export_collapse_map = make_dmg_dist_export(
+export_dmg_dist_total = export_dmg_dist_total_xml
+
+
+export_collapse_map_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
     "collapse-map-%s.xml")
+
+export_collapse_map = export_collapse_map_xml
+
+
+def export_aggregate_loss_csv(output, target_dir):
+    """
+    Export aggregate losses in CSV
+    """
+    filepath = os.path.join(target_dir,
+                            AGGREGATE_LOSS_FILENAME_FMT % (
+                                output.aggregateloss.id))
+
+    with open(filepath, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['Mean', 'Standard Deviation'])
+        writer.writerow([output.aggregateloss.mean,
+                        output.aggregateloss.std_dev])
+    return filepath
+
+export_aggregate_loss = export_aggregate_loss_csv
+
+
+def export_event_loss_csv(output, target_dir):
+    """
+    Export Event Loss Table in CSV format
+    """
+
+    filepath = os.path.join(target_dir,
+                            EVENT_LOSS_FILENAME_FMT % (
+                                output.id))
+
+    with open(filepath, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter='|')
+        writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
+
+        for event_loss in models.EventLoss.objects.filter(
+                output=output).select_related().order_by('-aggregate_loss'):
+            writer.writerow(["%7d" % event_loss.rupture.id,
+                             "%.07f" % event_loss.rupture.magnitude,
+                             "%.07f" % event_loss.aggregate_loss])
+    return filepath
+
+export_event_loss = export_event_loss_csv

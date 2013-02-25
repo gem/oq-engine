@@ -113,6 +113,7 @@ class CalculatorNext(object):
             self.task_completed_hook(body)
 
             logs.log_percent_complete(job_id, "hazard")
+            logs.log_percent_complete(job_id, "risk")
 
             # Once we receive a completion signal, enqueue the next
             # piece of work (if there's anything left to be done).

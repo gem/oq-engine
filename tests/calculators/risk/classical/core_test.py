@@ -76,7 +76,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
-        files = self.calculator.export(exports='xml')
+        files = self.calculator.export(exports=True)
         self.assertEqual(4, len(files))
 
     def test_hazard_id(self):

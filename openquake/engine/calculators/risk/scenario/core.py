@@ -17,20 +17,22 @@
 """
 Core functionality for the scenario risk calculator.
 """
+import numpy
 from django import db
 
-from openquake.risklib import api
+from openquake.risklib import api, scientific
 
+from openquake.engine import logs
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 
 
 @tasks.oqtask
-@stats.count_progress('r')
+@general.count_progress_risk('r')
 def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
-             asset_correlation):
+             insured_losses, asset_correlation):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -45,6 +47,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     :param seed: the seed used to initialize the rng
     :param output_containers: a dictionary {hazard_id: output_id}
         where output id represents the id of the loss map
+    :param bool insured_losses: True if also insured losses should be computed
     :param asset_correlation: asset correlation coefficient
     """
 
@@ -54,20 +57,53 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     assets, ground_motion_values, missings = hazard_getter()
 
-    outputs = calc(assets, ground_motion_values)
+    with logs.tracing('computing risk'):
+        loss_ratio_matrix = calc(ground_motion_values)
 
-    # Risk output container id
-    outputs_id = output_containers.values()[0][0]
+        if insured_losses:
+            insured_loss_matrix = [
+                scientific.insured_losses(
+                    loss_ratio_matrix[i], asset.value,
+                    asset.deductible, asset.ins_limit)
+                for i, asset in enumerate(assets)]
+
+    # There is only one output container list as there is no support
+    # for hazard logic tree
+    output_containers = output_containers.values()[0]
+
+    loss_map_id = output_containers[0]
+
+    if insured_losses:
+        insured_loss_map_id = output_containers[1]
 
     with db.transaction.commit_on_success(using='reslt_writer'):
-        for i, output in enumerate(outputs):
+        for i, asset in enumerate(assets):
             general.write_loss_map_data(
-                outputs_id, assets[i].asset_ref,
-                value=output.mean, std_dev=output.standard_deviation,
-                location=assets[i].site)
+                loss_map_id, asset,
+                loss_ratio_matrix[i].mean(),
+                std_dev=loss_ratio_matrix[i].std(ddof=1))
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+            if insured_losses:
+                general.write_loss_map_data(
+                    insured_loss_map_id, asset,
+                    insured_loss_matrix[i].mean() / asset.value,
+                    std_dev=insured_loss_matrix[i].std(ddof=1) / asset.value)
+
+    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
+                           for i, asset in enumerate(assets))
+
+    if insured_losses:
+        insured_aggregate_losses = (
+            numpy.array(insured_loss_matrix).transpose().sum(axis=1))
+    else:
+        insured_aggregate_losses = "Not computed"
+
+    base.signal_task_complete(
+        job_id=job_id,
+        num_items=len(assets) + len(missings),
+        aggregate_losses=aggregate_losses,
+        insured_aggregate_losses=insured_aggregate_losses)
+scenario.ignore_result = False
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
@@ -78,6 +114,65 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
+
+    def __init__(self, job):
+        super(ScenarioRiskCalculator, self).__init__(job)
+        self.aggregate_losses = None
+        self.insured_aggregate_losses = None
+
+    def pre_execute(self):
+        """
+        Override the default pre_execute to provide more detailed
+        validation.
+
+        2) If insured losses are required we check for the presence of
+        the deductible and insurance limit
+        """
+        super(ScenarioRiskCalculator, self).pre_execute()
+
+        if self.rc.insured_losses:
+            queryset = self.exposure_model.exposuredata_set.filter(
+                (db.models.Q(deductible__isnull=True) |
+                 db.models.Q(ins_limit__isnull=True)))
+            if queryset.exists():
+                logs.LOG.error(
+                    "missing insured limits in exposure for assets %s" % (
+                        queryset.all()))
+                raise RuntimeError(
+                    "Deductible or insured limit missing in exposure")
+
+    def task_completed_hook(self, message):
+        aggregate_losses = message['aggregate_losses']
+
+        if self.aggregate_losses is None:
+            self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
+        self.aggregate_losses += aggregate_losses
+
+        if self.rc.insured_losses:
+            insured_aggregate_losses = message['insured_aggregate_losses']
+
+            if self.insured_aggregate_losses is None:
+                self.insured_aggregate_losses = numpy.zeros(
+                    insured_aggregate_losses.shape)
+            self.insured_aggregate_losses += insured_aggregate_losses
+
+    def post_process(self):
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            models.AggregateLoss.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "Aggregate Loss",
+                    "aggregate_loss"),
+                mean=numpy.mean(self.aggregate_losses),
+                std_dev=numpy.std(self.aggregate_losses, ddof=1))
+
+            if self.rc.insured_losses:
+                models.AggregateLoss.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, "Insured Aggregate Loss",
+                        "aggregate_loss"),
+                    insured=True,
+                    mean=numpy.mean(self.insured_aggregate_losses),
+                    std_dev=numpy.std(self.insured_aggregate_losses, ddof=1))
 
     def hazard_outputs(self, hazard_calculation):
         """
@@ -107,14 +202,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     @property
     def calculator_parameters(self):
         """
-        Provides calculator specific params
-        in a list format where first value
-        represents the intensity measure
-        type and the second one the asset
-        correlation value.
+        Provides calculator specific params coming from
+        :class:`openquake.engine.db.RiskCalculation`
         """
 
-        return [self.rc.asset_correlation or 0]
+        return [self.rc.insured_losses, self.rc.asset_correlation or 0]
 
     def create_outputs(self, hazard_output):
         """
@@ -122,7 +214,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         which is a LossMap.
         """
 
+        if self.rc.insured_losses:
+            insured_loss_map = [models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "Insured Loss Map", "loss_map"),
+                hazard_output=hazard_output,
+                insured=True).id]
+        else:
+            insured_loss_map = []
+
         return [models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "Loss Map", "loss_map"),
-                hazard_output=hazard_output).id]
+                hazard_output=hazard_output).id] + insured_loss_map
