@@ -372,7 +372,7 @@ class Input(djm.Model):
     A single OpenQuake input file uploaded by the user.
     '''
     owner = djm.ForeignKey('OqUser')
-    model_content = djm.ForeignKey('ModelContent')
+    model_content = djm.ForeignKey('ModelContent', null=True)
     name = djm.TextField(null=True)
     digest = djm.TextField(help_text="32 byte md5sum digest, used to "
                                      "detect identical input model files")
@@ -1028,6 +1028,8 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
+    exposure_input = djm.ForeignKey('Input', null=True, blank=True)
+
     # the maximum distance for an hazard value with the corresponding
     # asset. In meters
     hazard_maximum_distance = djm.FloatField(
@@ -1139,7 +1141,9 @@ class RiskCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        return self.inputs.get(input_type="exposure").exposuremodel
+        exposure_input = self.exposure_input or self.inputs.get(
+            input_type="exposure")
+        return exposure_input.exposuremodel
 
     def will_compute_loss_curve_statistics(self):
         """
