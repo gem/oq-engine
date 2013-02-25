@@ -1012,6 +1012,7 @@ CREATE TABLE uiapi.output (
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
             'agg_loss_curve',
+            'aggregate_loss',
             'bcr_distribution',
             'complete_lt_gmf',
             'complete_lt_ses',
@@ -1430,12 +1431,22 @@ CREATE TABLE riskr.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
+    -- for scenario calculations value correspond to a mean value
     value float NOT NULL,
     -- for non-scenario calculations std_dev is NULL
     std_dev float NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Aggregate Loss.
+CREATE TABLE riskr.aggregate_loss (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    mean float NOT NULL,
+    std_dev float NULL
+) TABLESPACE riskr_ts;
 
 
 -- Loss curve.
@@ -1933,6 +1944,10 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.aggregate_loss
+ADD CONSTRAINT riskr_aggregate_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
