@@ -19,6 +19,8 @@ Core functionality for the classical PSHA risk calculator.
 
 from collections import OrderedDict
 
+from openquake.risklib import api, scientific
+
 from django.db import transaction
 
 from openquake.engine.calculators.risk import hazard_getters
@@ -27,7 +29,6 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks, stats
 from openquake.engine import logs
-from openquake.risklib import api
 
 
 @tasks.oqtask
@@ -78,40 +79,40 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
          mean_loss_curve_id, quantile_loss_curve_ids) = (
              output_containers[hazard_output_id])
 
-        # if we need to compute the loss maps, we add the proper risk
-        # aggregator
-        if conditional_loss_poes:
-            calculator = api.ConditionalLosses(
-                conditional_loss_poes, calculator)
-
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
-            asset_outputs[hazard_output_id] = calculator(assets, hazard_curves)
+            asset_outputs[hazard_output_id] = calculator(hazard_curves)
 
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(
+                for i, loss_ratio_curve in enumerate(
                         asset_outputs[hazard_output_id]):
-                    general.write_loss_curve(
-                        loss_curve_id, assets[i],
-                        asset_output)
 
-                    if asset_output.conditional_losses:
-                        general.write_loss_map(
-                            loss_map_ids, assets[i], asset_output)
+                    asset = assets[i]
+
+                    # Write Loss Curves
+                    general.write_loss_curve(
+                        loss_curve_id, asset, loss_ratio_curve)
+
+                    # Then conditional loss maps
+                    for poe in conditional_loss_poes:
+                        general.write_loss_map_data(
+                            loss_map_ids[poe], asset,
+                            scientific.conditional_loss_ratio(
+                                loss_ratio_curve, poe))
 
     if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
         weights = [data[1] for _, data in hazard.items()]
 
         with logs.tracing('writing curve statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
+                loss_ratio_curve_matrix = asset_outputs.values()
                 for i, asset in enumerate(assets):
                     general.curve_statistics(
                         asset,
-                        [asset_output[i].loss_ratio_curve
-                         for asset_output in asset_outputs.values()],
+                        loss_ratio_curve_matrix[i],
                         weights,
                         mean_loss_curve_id,
                         quantile_loss_curve_ids,
@@ -186,5 +187,5 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
 
         return [self.rc.lrem_steps_per_interval,
-                self.rc.conditional_loss_poes,
+                self.rc.conditional_loss_poes or [],
                 self.hc.number_of_logic_tree_samples == 0]

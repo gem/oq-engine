@@ -1460,6 +1460,7 @@ class Output(djm.Model):
     display_name = djm.TextField()
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'aggregate_losses', u'Aggregate Losses'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
@@ -1474,6 +1475,8 @@ class Output(djm.Model):
         (u'hazard_map', u'Hazard Map'),
         (u'ins_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
+        # FIXME(lp). We should distinguish between conditional losses
+        # and loss map
         (u'loss_map', u'Loss Map'),
         (u'ses', u'Stochastic Event Set'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
@@ -2367,6 +2370,15 @@ class LossMapData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_map_data'
+
+
+class AggregateLoss(djm.Model):
+    output = djm.OneToOneField("Output")
+    mean = djm.FloatField()
+    std_dev = djm.FloatField()
+
+    class Meta:
+        db_table = 'riskr\".\"aggregate_loss'
 
 
 class LossCurve(djm.Model):
