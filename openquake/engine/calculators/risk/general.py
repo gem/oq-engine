@@ -205,19 +205,15 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def export(self, *args, **kwargs):
         """
-        If requested by the user, automatically export all result artifacts to
-        the specified format. (NOTE: The only export format supported at the
-        moment is NRML XML.
+        If requested by the user, automatically export all result artifacts.
 
-        :returns:
-            A list of the export filenames, including the absolute path to each
-            file.
+        :returns: A list of the export filenames, including the
+            absolute path to each file.
         """
 
         exported_files = []
         with logs.tracing('exports'):
-
-            if 'exports' in kwargs and 'xml' in kwargs['exports']:
+            if 'exports' in kwargs and kwargs['exports']:
                 exported_files = sum([
                     export.risk.export(output.id, self.rc.export_dir)
                     for output in export.core.get_outputs(self.job.id)], [])
