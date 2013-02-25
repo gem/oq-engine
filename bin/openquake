@@ -131,6 +131,10 @@ def set_up_arg_parser():
               ' in a single process. This is intended for use in debugging '
               ' and profiling.')
     )
+    general_grp.add_argument(
+        '--list-inputs', '--li',
+        help='List inputs of a specific input type',
+        metavar="LIST_INPUTS")
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -253,6 +257,27 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
     except Exception as e:
         raise
 
+
+def list_inputs(input_type):
+    """
+    Print a list of available input models
+    """
+
+    available_input_types = ["exposure"]
+
+    if input_type not in available_input_types:
+        complain_and_exit("Wrong input type. Available input types: %s" % (
+            ", ".join(available_input_types)))
+    inputs = models.Input.objects.filter(
+        input_type=input_type).order_by('-last_update')
+
+    if not inputs.count():
+        print "None '%s'" % input_type
+        return
+    print ('model id | source path | last update')
+
+    for inp in inputs:
+        print "%9d|%s|%12s" % (inp.id, inp.path, inp.last_update)
 
 def list_hazard_calculations():
     """
@@ -468,8 +493,10 @@ def main():
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
+    if args.list_inputs:
+        list_inputs(args.list_inputs)
     # hazard
-    if args.list_hazard_calculations:
+    elif args.list_hazard_calculations:
         list_hazard_calculations()
     elif args.list_hazard_outputs is not None:
         list_hazard_outputs(args.list_hazard_outputs)
