@@ -139,11 +139,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :method:`HazardGetter.get_data` interface.
         """
+        hazard_assets = [(asset.id, self.get_by_site(asset.site))
+                         for asset in self.assets]
+
         return OrderedDict(
-            [(data[0], data[1][0]) for data in
-                [(asset.id, self.get_by_site(asset.site))
-                 for asset in self.assets]
-                if data[1][1] < self.max_distance * KILOMETERS_TO_METERS])
+            [(asset_id, hazard_curve)
+             for asset_id, (hazard_curve, distance) in hazard_assets
+             if distance < self.max_distance * KILOMETERS_TO_METERS])
 
     def get_by_site(self, site):
         """
