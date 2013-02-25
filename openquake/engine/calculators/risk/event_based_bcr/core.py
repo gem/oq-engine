@@ -91,8 +91,16 @@ def event_based_bcr(job_id, hazard, seed,
 
         with logs.tracing('getting hazard'):
             assets, gmvs_ruptures, missings = hazard_getter()
-
-            ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+            if len(assets):
+                ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+            else:
+                # we are relying on the fact that if all the
+                # hazard_getter in this task will either return some
+                # results or they all return an empty result set.
+                logs.LOG.info("Exit from task as no asset could be processed")
+                base.signal_task_complete(job_id=job_id,
+                                          num_items=len(missings))
+                return
 
         with logs.tracing('computing risk'):
             _, original_loss_curves = calc_original(ground_motion_values)
