@@ -58,29 +58,14 @@ class HazardGetter(object):
         self.imt = imt
         self.assets = assets
         self.max_distance = max_distance
-        self._assets_extent = None  # A polygon that includes all the assets
 
-        # IMT exploded in three variables
-        self._imt = None
-        self._sa_period = None
-        self._sa_damping = None
-
-        # a dictionary mapping ID -> Asset
-        self.asset_dict = None
-
-        self.setup()
-
-    def setup(self):
-        """
-        Initialize private variables of an hazard getter. Called by
-        ``__init__`` and by ``__setstate``.
-        """
-        self._assets_extent = geo.mesh.Mesh.from_points_list([
+        self._assets_mesh = geo.mesh.Mesh.from_points_list([
             geo.point.Point(asset.site.x, asset.site.y)
-            for asset in self.assets]).get_convex_hull()
+            for asset in self.assets])
         self._imt, self._sa_period, self._sa_damping = (
             models.parse_imt(self.imt))
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+        self._cache = {}
 
     def get_data(self):
         """
@@ -130,19 +115,6 @@ class HazardGetter(object):
                  if asset_id in self.asset_dict],
                 missing_asset_ids)
 
-    def __getstate__(self):
-        """Implements the pickable protocol"""
-        return dict(hazard_id=self.hazard_id,
-                    imt=self.imt,
-                    assets=self.assets,
-                    max_distance=self.max_distance)
-
-    def __setstate__(self, params):
-        """Implements the pickable protocol. Calls the ``setup``
-        method."""
-        self.__dict__.update(params)
-        self.setup()
-
 
 class HazardCurveGetterPerAsset(HazardGetter):
     """
@@ -150,7 +122,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
     asset.
 
     :attr imls: the intensity measure levels of the curves we are
-    going to get. We just fetch it in the ``setup`` phase.
+    going to get.
 
     :attr dict _cache: a cache of the computed hazard curve object on
     a per-location basis.
@@ -159,16 +131,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
     def __init__(self, hazard_id, imt, assets, max_distance):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard_id, imt, assets, max_distance)
-
-        self.imls = None
-        self._cache = {}
-        self.setup()
-
-    def setup(self):
-        super(HazardCurveGetterPerAsset, self).setup()
         self.imls = models.HazardCurve.objects.get(
             pk=self.hazard_id).imls
-        self._cache = {}
 
     def get_data(self):
         """
@@ -285,9 +249,10 @@ class GroundMotionValuesGetter(HazardGetter):
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance).wkt,
+        assets_extent = self._assets_mesh.get_convex_hull()
+        args += (assets_extent.dilate(self.max_distance).wkt,
                  self.max_distance * KILOMETERS_TO_METERS,
-                 self._assets_extent.wkt,
+                 assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
@@ -296,76 +261,6 @@ class GroundMotionValuesGetter(HazardGetter):
         data = cursor.fetchall()
 
         return OrderedDict((row[0], [row[1], row[2]]) for row in data)
-
-
-class GroundMotionScenarioGetterPerAsset(HazardGetter):
-    """
-    Hazard getter for loading ground motion values from the table
-    gmf_scenario. It performs two spatial queries per asset.
-
-    :attr _cache: a cache of the ground motion values on a
-    per-location basis
-    """
-
-    def setup(self):
-        super(GroundMotionScenarioGetterPerAsset, self).setup()
-        self._cache = {}
-
-    def get_data(self):
-        max_distance = self.max_distance * KILOMETERS_TO_METERS
-        return OrderedDict([(data[0], data[1][0]) for data in
-                            [(asset.id, self.get_by_site(asset.site))
-                             for asset in self.assets]
-                            if data[1][1] < max_distance])
-
-    def get_by_site(self, site):
-        """
-        Return the closest ground motion values to the given location.
-
-        :param site:
-            The reference location. The closest ground motion values
-            to this location are returned.
-        :type site: `django.contrib.gis.geos.point.Point` object
-        """
-
-        if site.wkt in self._cache:
-            return self._cache[site.wkt]
-
-        cursor = connection.cursor()
-
-        spectral_filters = ""
-        args = ("SRID=4326; %s" % site.wkt, self._imt, self.hazard_id)
-
-        if self._imt == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            args += (self._sa_period, self._sa_damping)
-
-        min_dist_query = """-- find the distance of the closest location
-        SELECT min(ST_Distance(location, %s, false)) FROM hzrdr.gmf_scenario
-        WHERE imt = %s AND output_id = %s {}""".format(
-            spectral_filters)
-
-        cursor.execute(min_dist_query, args)
-        min_dist = cursor.fetchall()[0][0]  # returns only one row
-        if min_dist is None:
-            raise RuntimeError(
-                'Could not find any gmf with IMT=%s '
-                'and output_id=%s' % (self._imt, self._hazard_output_id))
-
-        dilated_dist = min_dist + 0.1  # 0.1 meters = 10 cm
-
-        gmvs_query = """-- return all the gmvs inside the min_dist radius
-        SELECT gmvs FROM hzrdr.gmf_scenario
-        WHERE %s > ST_Distance(location, %s, false)
-        AND imt = %s AND output_id = %s {}
-        ORDER BY result_grp_ordinal
-        """.format(spectral_filters)
-
-        cursor.execute(gmvs_query, (dilated_dist,) + args)
-
-        ground_motion_values = sum([row[0] for row in cursor], [])
-        self._cache[site.wkt] = ground_motion_values
-        return ground_motion_values, min_dist
 
 
 class GroundMotionScenarioGetter(HazardGetter):
@@ -404,9 +299,10 @@ class GroundMotionScenarioGetter(HazardGetter):
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance).wkt,
+        assets_extent = self._assets_mesh.get_convex_hull()
+        args += (assets_extent.dilate(self.max_distance).wkt,
                  self.max_distance * KILOMETERS_TO_METERS,
-                 self._assets_extent.wkt,
+                 assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
