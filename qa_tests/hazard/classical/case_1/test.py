@@ -27,7 +27,7 @@ from qa_tests import _utils as qa_utils
 
 class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
 
-    EXPECTED_XML = """<?xml version='1.0' encoding='UTF-8'?>
+    EXPECTED_PGA_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6</IMLs>
@@ -41,27 +41,59 @@ class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
+    EXPECTED_SA_XML = """<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="SA" investigationTime="1.0" saPeriod="0.1" saDamping="5.0">
+    <IMLs>0.1 0.4 0.6</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <poEs>0.608674764713 0.330830463746 0.201471216873</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+"""
+
     @attr('qa', 'classical')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
         try:
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-            expected_curve_poes = [0.4570, 0.0587, 0.0069]
+            expected_curve_pga = [0.4570, 0.0587, 0.0069]
+            expected_curve_sa = [
+                0.608675003748, 0.330831513139, 0.201472214825
+            ]
 
             job = self.run_hazard(cfg)
 
             # Test the poe values of the single curve:
-            [actual_curve] = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id)
+            curves = models.HazardCurveData.objects.filter(
+                hazard_curve__output__oq_job=job.id
+            )
 
+            [pga_curve] = curves.filter(hazard_curve__imt='PGA')
             numpy.testing.assert_array_almost_equal(
-                expected_curve_poes, actual_curve.poes, decimal=4)
+                expected_curve_pga, pga_curve.poes, decimal=4
+            )
 
-            # Test the export as well:
+            [sa_curve] = curves.filter(
+                hazard_curve__imt='SA', hazard_curve__sa_period=0.1
+            )
+            numpy.testing.assert_array_almost_equal(
+                expected_curve_sa, sa_curve.poes, decimal=4
+            )
+
+            # Test the exports as well:
             [exported_file] = hazard_export.export(
-                actual_curve.hazard_curve.output.id, result_dir)
+                pga_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
-                StringIO.StringIO(self.EXPECTED_XML), exported_file)
+                StringIO.StringIO(self.EXPECTED_PGA_XML), exported_file)
+
+            [exported_file] = hazard_export.export(
+                sa_curve.hazard_curve.output.id, result_dir)
+            self.assert_xml_equal(
+                StringIO.StringIO(self.EXPECTED_SA_XML), exported_file)
         finally:
             shutil.rmtree(result_dir)
