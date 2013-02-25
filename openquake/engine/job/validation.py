@@ -444,7 +444,7 @@ class ClassicalRiskForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
             'mean_loss_curves',
@@ -460,7 +460,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
@@ -475,7 +475,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
             'loss_curve_resolution',
             'master_seed',
             'asset_correlation',
@@ -492,7 +492,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
             'loss_curve_resolution',
             'insured_losses',
             'master_seed',
@@ -509,7 +509,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
         fields = (
             'description',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
         )
 
 
@@ -521,7 +521,7 @@ class ScenarioRiskForm(BaseOQModelForm):
             'description',
             'no_progress_timeout',
             'region_constraint',
-            'hazard_maximum_distance',
+            'maximum_distance',
             'master_seed',
             'asset_correlation',
             'insured_losses'
@@ -775,13 +775,6 @@ def truncation_level_is_valid(mdl):
             if mdl.truncation_level < 0:
                 return False, ['Truncation level must be >= 0']
 
-    return True, []
-
-
-def hazard_maximum_distance_is_valid(mdl):
-    if mdl.hazard_maximum_distance is not None:
-       if not mdl.hazard_maximum_distance > 0:
-        return False, ['Hazard maximum distance must be > 0']
     return True, []
 
 

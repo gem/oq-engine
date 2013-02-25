@@ -44,7 +44,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
                 'asset_ref')
 
         self.getter = self.getter_class(
-            self.ho().id, "PGA", self.assets(), 500000)
+            self.ho().id, "PGA", self.assets(), 500)
 
     def ho(self):
         return self.job.risk_calculation.hazard_output.hazardcurve
@@ -62,7 +62,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         return self._assets.filter(taxonomy=self.taxonomy)
 
     def test_filter(self):
-        self.getter.max_distance = 1.
+        self.getter.max_distance = 0.001
         assets, values, missing = self.getter()
 
         self.assertEqual([], assets)

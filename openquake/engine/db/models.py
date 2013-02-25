@@ -49,12 +49,6 @@ from openquake.engine.db import fields
 DEFAULT_SA_DAMPING = 5.0
 
 
-#: In risk calculation each asset should be associated with the :
-#: closest hazard value (e.g. an hazard curve) within a user defined
-#: distance. This is the default value if not provided
-DEFAULT_HAZARD_MAXIMUM_DISTANCE = 10000
-
-
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
@@ -995,6 +989,10 @@ class RiskCalculation(djm.Model):
     '''
     Parameters needed to run a Risk job.
     '''
+
+    #: Default maximum asset-hazard distance in km
+    DEFAULT_MAXIMUM_DISTANCE = 5
+
     owner = djm.ForeignKey('OqUser')
     # Contains the absolute path to the directory containing the job config
     # file.
@@ -1029,9 +1027,9 @@ class RiskCalculation(djm.Model):
         srid=DEFAULT_SRID, null=True, blank=True)
 
     # the maximum distance for an hazard value with the corresponding
-    # asset. In meters
-    hazard_maximum_distance = djm.FloatField(
-        null=True, blank=True, default=DEFAULT_HAZARD_MAXIMUM_DISTANCE)
+    # asset. Expressed in kilometers
+    maximum_distance = djm.FloatField(
+        null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
     # GmfSet) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
@@ -1129,21 +1127,22 @@ class RiskCalculation(djm.Model):
 
     def get_hazard_maximum_distance(self):
         """
-        Get the hazard maximum distance to be used in hazard getters.
+        Get the hazard maximum distance (in km) to be used in hazard
+        getters.
 
         :returns: the minimum between the maximum distance provided by
-        the user (if not given, `DEFAULT_HAZARD_MAXIMUM_DISTANCE` is
+        the user (if not given, `DEFAULT_MAXIMUM_DISTANCE` is
         used as default) and the step (if exists) used by the hazard
         calculation.
         """
         dist = self.hazard_maximum_distance
 
         if dist is None:
-            dist = DEFAULT_HAZARD_MAXIMUM_DISTANCE
+            dist = self.DEFAULT_MAXIMUM_DISTANCE
 
         hc = self.get_hazard_calculation()
         if hc.sites is None and hc.region_grid_spacing is not None:
-            dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2 * 1000)
+            dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
         return dist
 
     @property

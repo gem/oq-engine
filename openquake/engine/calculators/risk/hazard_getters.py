@@ -29,6 +29,11 @@ from openquake.engine.db import models
 from django.db import connection
 
 
+#: Scaling constant do adapt to the postgis functions (that work with
+#: meters)
+KILOMETERS_TO_METERS = 1000
+
+
 class HazardGetter(object):
     """
     Base abstract class of an Hazard Getter.
@@ -46,7 +51,7 @@ class HazardGetter(object):
 
     :attr assets: the assets for which we wants to compute
 
-    :attr max_distance: the maximum distance, in meters, to use
+    :attr max_distance: the maximum distance, in kilometers, to use
     """
     def __init__(self, hazard_id, imt, assets, max_distance):
         self.hazard_id = hazard_id
@@ -174,7 +179,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
             [(data[0], data[1][0]) for data in
                 [(asset.id, self.get_by_site(asset.site))
                  for asset in self.assets]
-                if data[1][1] < self.max_distance])
+                if data[1][1] < self.max_distance * KILOMETERS_TO_METERS])
 
     def get_by_site(self, site):
         """
@@ -280,8 +285,8 @@ class GroundMotionValuesGetter(HazardGetter):
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
-                 self.max_distance,
+        args += (self._assets_extent.dilate(self.max_distance).wkt,
+                 self.max_distance * KILOMETERS_TO_METERS,
                  self._assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
@@ -307,10 +312,11 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
         self._cache = {}
 
     def get_data(self):
+        max_distance = self.max_distance * KILOMETERS_TO_METERS
         return OrderedDict([(data[0], data[1][0]) for data in
                             [(asset.id, self.get_by_site(asset.site))
                              for asset in self.assets]
-                            if data[1][1] < self.max_distance])
+                            if data[1][1] < max_distance])
 
     def get_by_site(self, site):
         """
@@ -398,8 +404,8 @@ class GroundMotionScenarioGetter(HazardGetter):
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
-                 self.max_distance,
+        args += (self._assets_extent.dilate(self.max_distance).wkt,
+                 self.max_distance * KILOMETERS_TO_METERS,
                  self._assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
