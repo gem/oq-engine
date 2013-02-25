@@ -17,6 +17,7 @@
 """
 Core functionality for the scenario risk calculator.
 """
+import numpy
 from django import db
 
 from openquake.risklib import api
@@ -56,20 +57,25 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
         assets, ground_motion_values, missings = hazard_getter()
 
-    outputs = calc(assets, ground_motion_values)
+    loss_ratio_matrix = calc(ground_motion_values)
 
     # Risk output container id
     outputs_id = output_containers.values()[0][0]
 
     with db.transaction.commit_on_success(using='reslt_writer'):
-        for i, output in enumerate(outputs):
+        for i, asset in enumerate(assets):
             general.write_loss_map_data(
-                outputs_id, assets[i].asset_ref,
-                value=output.mean, std_dev=output.standard_deviation,
-                location=assets[i].site)
+                outputs_id, asset,
+                loss_ratio_matrix[i].mean(),
+                std_dev=loss_ratio_matrix[i].std(ddof=1))
+
+    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
+                           for i, asset in enumerate(assets))
 
     base.signal_task_complete(
-        job_id=job_id, num_items=len(assets) + len(missings))
+                              num_items=len(assets) + len(missings),
+                              aggregate_losses=aggregate_losses)
+scenario.ignore_result = False
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
@@ -80,6 +86,26 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
+
+    def __init__(self, job):
+        super(ScenarioRiskCalculator, self).__init__(job)
+        self.aggregate_losses = None
+
+    def task_completed_hook(self, message):
+        aggregate_losses = message['aggregate_losses']
+
+        if self.aggregate_losses is None:
+            self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
+        self.aggregate_losses += aggregate_losses
+
+    def post_process(self):
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            models.AggregateLoss.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "Aggregate Loss",
+                    "aggregate_loss"),
+                mean=numpy.mean(self.aggregate_losses),
+                std_dev=numpy.std(self.aggregate_losses, ddof=1))
 
     def hazard_outputs(self, hazard_calculation):
         """
