@@ -34,13 +34,13 @@ class BCRTestCase(unittest.TestCase):
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
 
-        asset = scientific.Asset(2, None, retrofitting_cost=0.1)
-
         calculator_rm = api.Classical(vulnerability_function_rm, steps=5)
         calculator_rf = api.Classical(vulnerability_function_rf, steps=5)
 
-        calculator_bcr = api.BCR(calculator_rm, calculator_rf,
-                                 interest_rate=0.05, asset_life_expectancy=40)
+        asset_value = 2.
+        retrofitting_cost = .1
+        interest_rate = 0.05
+        asset_life_expectancy = 40
 
         hazard = [
             (0.001, 0.0398612669790014), (0.01, 0.0398612669790014),
@@ -53,13 +53,36 @@ class BCRTestCase(unittest.TestCase):
             (0.7, 0.000272824002045979), (0.8, 0.0),
             (0.9, 0.0), (1.0, 0.0)]
 
-        [asset_output] = calculator_bcr([asset], [hazard])
+        [original_loss_ratio_curve] = calculator_rm([hazard])
+        [retrofitted_loss_ratio_curve] = calculator_rf([hazard])
+
+        original_losses = original_loss_ratio_curve.abscissae
+
+        retrofitted_losses = (
+            retrofitted_loss_ratio_curve.abscissae)
+
+        eal_original = scientific.mean_loss(
+            original_losses,
+            original_loss_ratio_curve.ordinates)
+
+        eal_retrofitted = scientific.mean_loss(
+            retrofitted_losses,
+            retrofitted_loss_ratio_curve.ordinates)
+
+        bcr = scientific.bcr(
+            eal_original, eal_retrofitted,
+            interest_rate,
+            asset_life_expectancy,
+            asset_value,
+            retrofitting_cost)
 
         self.assertAlmostEqual(0.009379,
-                               asset_output.eal_original, delta=0.0009)
+                               eal_original * asset_value,
+                               delta=0.0009)
 
         self.assertAlmostEqual(0.006586,
-                               asset_output.eal_retrofitted, delta=0.0009)
+                               eal_retrofitted  * asset_value,
+                               delta=0.0009)
 
         self.assertAlmostEqual(0.483091,
-                               asset_output.bcr, delta=0.009)
+                               bcr, delta=0.009)

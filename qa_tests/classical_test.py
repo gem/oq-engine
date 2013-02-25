@@ -15,7 +15,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import numpy
 import unittest
 
 from openquake.risklib import api
@@ -44,13 +43,14 @@ class ClassicalTestCase(unittest.TestCase):
         0.92, 0.96, 1.00]
 
     def test_lognormal_distribution(self):
-        calculator = api.ConditionalLosses([0.01, 0.02, 0.05],
-            api.Classical(scientific.VulnerabilityFunction(
+        calculator = api.Classical(
+            scientific.VulnerabilityFunction(
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5))
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5)
 
-        [asset_output] = calculator(
-            [scientific.Asset(2, None)], [self.hazard_curve])
+        # api.ConditionalLosses(,
+        # asset_value = 2
+        [loss_ratio_curve] = calculator([self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -70,36 +70,27 @@ class ClassicalTestCase(unittest.TestCase):
             5.72790058705e-05, 2.35807221322e-05,
             8.66392324535e-06]
 
-        self.assertEqual(curve.Curve(
-            zip(self.loss_ratios, poes)),
-            asset_output.loss_ratio_curve)
+        self.assertEqual(
+            curve.Curve(zip(self.loss_ratios, poes)), loss_ratio_curve)
 
-        # loss curve y-values are same as loss ratio curve
-        # loss curve x-values are the ones from loss ratio curve * asset value
-        self.assertEqual(curve.Curve(zip(
-            numpy.array(self.loss_ratios) * 2, poes)),
-            asset_output.loss_curve)
+        asset_value = 2.
 
-        self.assertAlmostEqual(0.264586283238,
-                               asset_output.conditional_losses[0.01])
+        conditional_losses = dict([
+            (poe, scientific.conditional_loss_ratio(
+                loss_ratio_curve, poe) * asset_value)
+            for poe in [0.01, 0.02, 0.05]])
 
-        self.assertAlmostEqual(0.141989823521,
-                               asset_output.conditional_losses[0.02])
-
-        self.assertAlmostEqual(0.0,
-                               asset_output.conditional_losses[0.05])
+        self.assertAlmostEqual(0.264586283238, conditional_losses[0.01])
+        self.assertAlmostEqual(0.141989823521, conditional_losses[0.02])
+        self.assertAlmostEqual(0.0, conditional_losses[0.05])
 
     def test_beta_distribution(self):
-        calculator = api.ConditionalLosses([0.01],
-            api.Classical(
-                scientific.VulnerabilityFunction(
-                    [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-                    [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5))
+        calculator = api.Classical(
+            scientific.VulnerabilityFunction(
+                [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
+                [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5)
 
-        value = 2  # the asset value
-
-        [asset_output] = calculator(
-            [scientific.Asset(value)], [self.hazard_curve])
+        [loss_ratio_curve] = calculator([self.hazard_curve])
 
         poes = [
             0.039334753367700, 0.039125428171600,
@@ -118,14 +109,11 @@ class ClassicalTestCase(unittest.TestCase):
             0.000266286103069, 0.000124036890130,
             3.28497166702e-05, 2.178664466e-06, 0.0]
 
-        self.assertEqual(curve.Curve(
-            zip(self.loss_ratios, poes)), asset_output.loss_ratio_curve)
-
-        # loss curve y-values are same as loss ratio curve
-        # loss curve x-values are the ones from loss ratio curve * asset value
         self.assertEqual(
-            curve.Curve(zip(numpy.array(self.loss_ratios) * value, poes)),
-            asset_output.loss_curve)
+            curve.Curve(zip(self.loss_ratios, poes)), loss_ratio_curve)
 
-        self.assertAlmostEqual(0.264870863283,
-                               asset_output.conditional_losses[0.01])
+        asset_value = 2.
+        self.assertAlmostEqual(
+            0.264870863283,
+            scientific.conditional_loss_ratio(
+                loss_ratio_curve, 0.01) * asset_value)
