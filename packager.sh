@@ -79,6 +79,7 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-risklib ./\""
 
     ssh $haddr "sudo apt-get update"
+    ssh $haddr "sudo apt-get -y upgrade"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
