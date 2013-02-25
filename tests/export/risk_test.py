@@ -59,7 +59,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
+            self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_curve(self):
         writer = 'openquake.nrmllib.risk.writers.LossCurveXMLWriter'
@@ -79,7 +79,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
+            self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_map(self):
         writer = 'openquake.nrmllib.risk.writers.LossMapXMLWriter'
@@ -100,7 +100,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual(['/tmp/loss-maps-0-poe-0.1.xml'], ret)
+            self.assertEqual('/tmp/loss-maps-0-poe-0.1.xml', ret)
 
     def test_export_bcr_distribution(self):
         writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
@@ -119,4 +119,17 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual(['/tmp/bcr-distribution-0.xml'], ret)
+            self.assertEqual('/tmp/bcr-distribution-0.xml', ret)
+
+    def test_export_aggregate_loss(self):
+        writer = 'csv.writer'
+
+        self.output_mock.aggregatelossdata.id = 0
+        self.output_mock.aggregatelossdata.mean = 1
+        self.output_mock.aggregatelossdata.std_dev = 2
+
+        with mock.patch(writer) as m:
+            ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
+
+            self.assertEqual([], m.writerow.call_args_list)
+            self.assertEqual("/tmp/aggregate-loss-0.csv", ret)

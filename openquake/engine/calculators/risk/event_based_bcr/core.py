@@ -17,7 +17,7 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
-from openquake.risklib import api
+from openquake.risklib import api, scientific
 
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
@@ -77,31 +77,45 @@ def event_based_bcr(job_id, hazard, seed,
 
         # FIXME(lp). We should not pass the exact same seed for
         # different hazard
-        calculator = api.ProbabilisticEventBased(
+        calc_original = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
             seed=seed, correlation=asset_correlation)
 
-        calculator_retrofitted = api.ProbabilisticEventBased(
+        calc_retrofitted = api.ProbabilisticEventBased(
             vulnerability_function_retrofitted,
             curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
             seed=seed, correlation=asset_correlation)
 
-        bcr_calculator = api.BCR(calculator, calculator_retrofitted,
-                                 interest_rate, asset_life_expectancy)
-
         with logs.tracing('getting hazard'):
             assets, ground_motion_fields, missings = hazard_getter()
 
-        with logs.tracing('computing risk over %d assets' % len(assets)):
-            asset_outputs = bcr_calculator(assets, ground_motion_fields)
+        with logs.tracing('computing risk'):
+            _, original_loss_curves = calc_original(ground_motion_fields)
+            _, retrofitted_loss_curves = calc_retrofitted(ground_motion_fields)
+
+            eal_original = [
+                scientific.mean_loss(*original_loss_curves[i].xy)
+                for i in range(len(assets))]
+
+            eal_retrofitted = [
+                scientific.mean_loss(*retrofitted_loss_curves[i].xy)
+                for i in range(len(assets))]
+
+            bcr_results = [
+                scientific.bcr(
+                    eal_original[i], eal_retrofitted[i],
+                    interest_rate, asset_life_expectancy,
+                    asset.value, asset.retrofitting_cost)
+                for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
-                for i, asset_output in enumerate(asset_outputs):
+                for i, asset in enumerate(assets):
                     general.write_bcr_distribution(
-                        bcr_distribution_id, assets[i], asset_output)
+                        bcr_distribution_id, asset,
+                        eal_original[i], eal_retrofitted[i], bcr_results[i])
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings))

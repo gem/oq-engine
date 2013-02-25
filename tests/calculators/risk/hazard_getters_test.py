@@ -16,6 +16,7 @@
 
 from tests.utils import helpers
 import unittest
+import cPickle as pickle
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk import hazard_getters
@@ -44,6 +45,9 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
         self.getter = self.getter_class(
             self.ho().id, "PGA", self.assets(), 500000)
+
+    def test_is_pickleable(self):
+        pickle.dumps(self.getter)  # raises an error if not
 
     def ho(self):
         return self.job.risk_calculation.hazard_output.hazardcurve
@@ -88,7 +92,8 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
         self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
 
 
-class GroundMotionScenarioGetterPerAssetTestCase(HazardCurveGetterPerAssetTestCase):
+class GroundMotionScenarioGetterPerAssetTestCase(
+        HazardCurveGetterPerAssetTestCase):
 
     hazard_demo = 'scenario_hazard/job.ini'
     risk_demo = 'scenario_risk/job.ini'
