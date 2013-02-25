@@ -143,5 +143,5 @@ update_aggregate_losses']]
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
-        files = self.calculator.export(exports='xml')
+        files = self.calculator.export(exports=True)
         self.assertEqual(6, len(files))
