@@ -1427,7 +1427,10 @@ CREATE TABLE riskr.aggregate_loss (
 -- Event Loss table.
 CREATE TABLE riskr.event_loss (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL, -- FK to uiapi.output.id
+
+    -- FK to uiapi.output.id. The corresponding row must have
+    -- output_type == event_loss
+    output_id INTEGER NOT NULL,
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
