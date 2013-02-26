@@ -98,8 +98,14 @@ class PerformanceMonitor(object):
             proc.rss_measures = []
         while self._running:
             for proc in self._procs:
-                rss = proc.get_memory_info().rss // 1024 // 1024
-                proc.rss_measures.append(rss)  # in mbytes
+                try:
+                    rss = proc.get_memory_info().rss // 1024 // 1024
+                except psutil.AccessDenied:
+                    # no access to information about this process
+                    # don't not try to check it anymore
+                    self._procs.remove(proc)
+                else:
+                    proc.rss_measures.append(rss)  # in mbytes
             self.on_running()
             time.sleep(self.tic)
 
