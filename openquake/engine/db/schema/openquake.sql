@@ -10,6 +10,8 @@
 
 */
 
+-- Disable unnecessarily verbose output
+SET client_min_messages TO WARNING;
 
 ------------------------------------------------------------------------
 -- Name space definitions go here
@@ -1458,7 +1460,7 @@ CREATE TABLE riskr.loss_curve_data (
 
     asset_ref VARCHAR NOT NULL,
     -- needed to compute absolute losses in the export phase
-    asset_value float NOT NULL, 
+    asset_value float NOT NULL,
     loss_ratios float[] NOT NULL CONSTRAINT check_loss_ratios
         CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Probabilities of exceedence
