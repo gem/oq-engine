@@ -16,6 +16,7 @@ The command line arguments are as follows:
     --no-tab-spaces     Don't check/create table spaces and their paths
     --schema-path=path  Absolute path to directory with the schema files.
     --tab-spaces-only   Check/create table spaces and their paths and exit
+    --verbose           Enable verbose output
     --yes               Don't pause for user input, assume yes on all questions
 HSD
 exit 0
@@ -42,6 +43,7 @@ db_name=""
 user_interaction="on"
 check_table_spaces="on"
 table_spaces_only="off"
+verbose="off"
 
 db_admin_user="postgres"
 
@@ -96,6 +98,9 @@ do
     --tab-spaces-only)
         table_spaces_only="on"
         ;;
+    -v|--verbose)
+        verbose="on"
+        ;;
     -y|--yes)
         user_interaction="off"
         ;;
@@ -110,6 +115,11 @@ do
 done
 
 schema_file="$schema_path/openquake.sql"
+
+# if --verbose is off, set "quiet" mode for psql
+if [ "$verbose" = "off" ]; then
+    psql_batch_options="$psql_batch_options -q"
+fi
 
 if [ -z "$db_name" ]; then
     echo "!! Please specify a database name."
@@ -142,13 +152,13 @@ if [ "$table_spaces_only" == "off" ]; then
 
     # Drop database
     echo ".. Dropping database $db_name .."
-    psql -p $db_port -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
+    psql -p $db_port -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name" $psql_batch_options
     # Drop table spaces..
     if [ "$check_table_spaces" == "on" ]; then
         for tspace in $tspace_list; do
             full_ts_name="${tspace}_ts"
             echo ".. Dropping table space $full_ts_name .."
-            psql -p $db_port -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
+            psql -p $db_port -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name" $psql_batch_options
         done
     fi
 else
@@ -156,7 +166,7 @@ else
 fi
 
 echo -n ".. Current table spaces: "
-echo `psql -p $db_port -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
+echo `psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
 if [ "$check_table_spaces" == "on" ]; then
     # Create table spaces if needed.
@@ -177,12 +187,12 @@ if [ "$check_table_spaces" == "on" ]; then
         fi
 
         # Create the actual table space.
-        ts_found=`psql -p $db_port -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
+        ts_found=`psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
-            psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
+            psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
             if [ "$table_spaces_only" == "on" ]; then
-                psql -p $db_port -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
-                psql -p $db_port -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
+                psql -p $db_port -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'" $psql_batch_options
+                psql -p $db_port -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)" $psql_batch_options
             fi
         fi
     done
@@ -198,7 +208,7 @@ set -e
 
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
-psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name"
+psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name" $psql_batch_options
 createlang -p $db_port -d $db_name -U $db_admin_user plpythonu
 
 postgis="/usr/share/postgresql/9.1/contrib/postgis-1.5"
@@ -210,7 +220,11 @@ psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/s
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
 
 echo ".. Running schema definition file: $schema_file .."
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
+if [ "$verbose" = "off" ]; then
+    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file >> /dev/null
+else
+    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
+fi
 
 # Apply database function definitions if present.
 functions_file="$schema_path/functions.sql"
@@ -241,9 +255,9 @@ fi
 
 # Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
-    role_present=`psql -p $db_port -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
+    role_present=`psql -p $db_port -U $db_admin_user -c '\dg' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
     if [ $role_present -eq 0 ]; then
-        psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
+        psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake" $psql_batch_options
     fi
 done
 
@@ -260,3 +274,5 @@ if [ -r $indexes_file ]; then
     echo ".. Applying index definitions: $indexes_file .."
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
 fi
+
+echo ".. Done .."
