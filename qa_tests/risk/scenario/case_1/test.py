@@ -74,13 +74,28 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(
-            loss_map__output__oq_job=job).order_by('asset_ref', 'value')
-        agg = models.AggregateLoss.objects.get(output__oq_job=job)
+            loss_map__output__oq_job=job,
+            loss_map__insured=False).order_by('asset_ref', 'value')
+        agg = models.AggregateLoss.objects.get(output__oq_job=job,
+                                               insured=False)
+        insured_maps = models.LossMapData.objects.filter(
+            loss_map__output__oq_job=job,
+            loss_map__insured=True).order_by('asset_ref', 'value')
+        insured_agg = models.AggregateLoss.objects.get(
+            output__oq_job=job,
+            insured=True)
+
         return [[[m.value, m.std_dev] for m in maps],
-                [agg.mean, agg.std_dev]]
+                [agg.mean, agg.std_dev],
+                [[m.value, m.std_dev] for m in insured_maps],
+                [insured_agg.mean, insured_agg.std_dev]]
 
     def expected_data(self):
         return [[[440.14707, 182.6159],
                  [432.2254, 186.8644],
                  [180.7175, 92.2122]],
-                [1053.09, 246.62]]
+                [1053.09, 246.62],
+                [[327.492087529, 288.47906994],
+                 [314.859579324, 293.976254984],
+                 [156.750910806, 100.422061776]],
+                [799.102578, 382.148808]]
