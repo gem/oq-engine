@@ -302,7 +302,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                     output=models.Output.objects.create_output(
                         self.job,
                         "Insured Loss Curve Set for hazard %s" % hazard_output,
-                        "ins_loss_curve")
+                        "loss_curve")
                 ).id)
         else:
             insured_curve_id = None
