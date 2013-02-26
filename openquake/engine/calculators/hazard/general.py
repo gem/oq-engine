@@ -485,53 +485,64 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
         is need to export the full hazard curve results).
         """
-        with transaction.commit_on_success(using='reslt_writer'):
-            im = self.hc.intensity_measure_types_and_levels
-            points = self.computation_mesh
+        im = self.hc.intensity_measure_types_and_levels
+        points = self.computation_mesh
 
-            realizations = models.LtRealization.objects.filter(
-                hazard_calculation=self.hc.id)
+        # prepare site locations for the stored function call
+        lons = '{%s}' % ', '.join(str(v) for v in points.lons)
+        lats = '{%s}' % ', '.join(str(v) for v in points.lats)
 
-            for rlz in realizations:
-                # create a new `HazardCurve` 'container' record for each
-                # realization for each intensity measure type
-                for imt, imls in im.items():
-                    hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc.id)
 
-                    hco = models.Output(
-                        owner=self.hc.owner,
-                        oq_job=self.job,
-                        display_name="hc-rlz-%s" % rlz.id,
-                        output_type='hazard_curve',
+        for rlz in realizations:
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, imls in im.items():
+                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+                hco = models.Output(
+                    owner=self.hc.owner,
+                    oq_job=self.job,
+                    display_name="hc-rlz-%s" % rlz.id,
+                    output_type='hazard_curve',
+                )
+                hco.save()
+
+                haz_curve = models.HazardCurve(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+                haz_curve.save()
+
+                with transaction.commit_on_success(using='reslt_writer'):
+                    cursor = connections['reslt_writer'].cursor()
+
+                    # TODO(LB): I don't like the fact that we have to pass
+                    # potentially huge arguments (100k sites, for example).
+                    # I would like to be able to fetch this site data from
+                    # the stored function, but at the moment, the only form
+                    # available is a pickled `SiteCollection` object, and I've
+                    # experienced problems trying to import third-party libs
+                    # in a DB function context and could not get it to reliably
+                    # work.
+                    # As a fix, in addition to caching the pickled
+                    # SiteCollection in the DB, we could store also arrays for
+                    # lons and lats. It's duplicated information, but we have a
+                    # relatively low number of HazardCalculation records, so it
+                    # shouldn't be a big deal.
+                    cursor.execute(
+                        """
+                        SELECT hzrdr.finalize_hazard_curves(
+                            %s, %s, %s, %s, %s, %s)
+                        """,
+                        [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
-                    hco.save()
-
-                    haz_curve = models.HazardCurve(
-                        output=hco,
-                        lt_realization=rlz,
-                        investigation_time=self.hc.investigation_time,
-                        imt=hc_im_type,
-                        imls=imls,
-                        sa_period=sa_period,
-                        sa_damping=sa_damping,
-                    )
-                    haz_curve.save()
-
-                    [hc_progress] = models.HazardCurveProgress.objects.filter(
-                        lt_realization=rlz.id, imt=imt)
-
-                    hc_data_inserter = writer.BulkInserter(
-                        models.HazardCurveData)
-                    for i, location in enumerate(points):
-                        poes = hc_progress.result_matrix[i]
-                        hc_data_inserter.add_entry(
-                            hazard_curve_id=haz_curve.id,
-                            poes=poes.tolist(),
-                            location=location.wkt2d,
-                            weight=rlz.weight
-                        )
-
-                    hc_data_inserter.flush()
 
     def initialize_sources(self):
         """

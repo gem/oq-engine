@@ -53,29 +53,14 @@ class HazardGetter(object):
         self.imt = imt
         self.assets = assets
         self.max_distance = max_distance
-        self._assets_extent = None  # A polygon that includes all the assets
 
-        # IMT exploded in three variables
-        self._imt = None
-        self._sa_period = None
-        self._sa_damping = None
-
-        # a dictionary mapping ID -> Asset
-        self.asset_dict = None
-
-        self.setup()
-
-    def setup(self):
-        """
-        Initialize private variables of an hazard getter. Called by
-        ``__init__`` and by ``__setstate``.
-        """
-        self._assets_extent = geo.mesh.Mesh.from_points_list([
+        self._assets_mesh = geo.mesh.Mesh.from_points_list([
             geo.point.Point(asset.site.x, asset.site.y)
-            for asset in self.assets]).get_convex_hull()
+            for asset in self.assets])
         self._imt, self._sa_period, self._sa_damping = (
             models.parse_imt(self.imt))
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+        self._cache = {}
 
     def get_data(self):
         """
@@ -126,19 +111,6 @@ class HazardGetter(object):
                  if asset_id in self.asset_dict],
                 missing_asset_ids)
 
-    def __getstate__(self):
-        """Implements the pickable protocol"""
-        return dict(hazard_id=self.hazard_id,
-                    imt=self.imt,
-                    assets=self.assets,
-                    max_distance=self.max_distance)
-
-    def __setstate__(self, params):
-        """Implements the pickable protocol. Calls the ``setup``
-        method."""
-        self.__dict__.update(params)
-        self.setup()
-
 
 class HazardCurveGetterPerAsset(HazardGetter):
     """
@@ -146,7 +118,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
     asset.
 
     :attr imls: the intensity measure levels of the curves we are
-    going to get. We just fetch it in the ``setup`` phase.
+    going to get.
 
     :attr dict _cache: a cache of the computed hazard curve object on
     a per-location basis.
@@ -155,16 +127,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
     def __init__(self, hazard_id, imt, assets, max_distance):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard_id, imt, assets, max_distance)
-
-        self.imls = None
-        self._cache = {}
-        self.setup()
-
-    def setup(self):
-        super(HazardCurveGetterPerAsset, self).setup()
         self.imls = models.HazardCurve.objects.get(
             pk=self.hazard_id).imls
-        self._cache = {}
 
     def get_data(self):
         """
@@ -277,9 +241,10 @@ class GroundMotionValuesGetter(HazardGetter):
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
+        assets_extent = self._assets_mesh.get_convex_hull()
+        args += (assets_extent.dilate(self.max_distance / 1000).wkt,
                  self.max_distance,
-                 self._assets_extent.wkt,
+                 assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
@@ -296,10 +261,6 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
     :attr _cache: a cache of the ground motion values on a
     per-location basis
     """
-
-    def setup(self):
-        super(GroundMotionScenarioGetterPerAsset, self).setup()
-        self._cache = {}
 
     def get_data(self):
         return [(data[0], data[1][0]) for data in
@@ -393,9 +354,10 @@ class GroundMotionScenarioGetter(HazardGetter):
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
-        args += (self._assets_extent.dilate(self.max_distance / 1000).wkt,
+        assets_extent = self._assets_mesh.get_convex_hull()
+        args += (assets_extent.dilate(self.max_distance / 1000).wkt,
                  self.max_distance,
-                 self._assets_extent.wkt,
+                 assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
