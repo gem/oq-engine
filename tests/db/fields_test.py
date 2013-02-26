@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import numpy
 import pickle
 import unittest
 
@@ -107,6 +108,44 @@ class PickleFieldTestCase(unittest.TestCase):
         field = fields.PickleField()
         data = {'foo': None, (1, False): 'baz'}
         self.assertEqual(pickle.loads(field.get_prep_value(data)), data)
+
+
+class NumpyListFieldTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.field = fields.NumpyListField()
+
+    def test_to_python(self):
+        value = pickle.dumps(
+            [[1, 2, 3], [4, 5, 6]], protocol=pickle.HIGHEST_PROTOCOL
+        )
+        pvalue = self.field.to_python(value)
+
+        self.assertTrue(isinstance(pvalue, numpy.ndarray))
+        numpy.testing.assert_array_equal(
+            pvalue, numpy.array([[1, 2, 3], [4, 5, 6]])
+        )
+
+    def test_to_python_raises(self):
+        # A ValueError is raised when value to be converted is not a list or
+        # tuple.
+        value = pickle.dumps(
+            'not a list or tuple', protocol=pickle.HIGHEST_PROTOCOL
+        )
+        self.assertRaises(ValueError, self.field.to_python, value)
+
+    def test_to_python_none(self):
+        self.assertIsNone(self.field.to_python(None))
+
+    def test_get_prep_value(self):
+        value = numpy.array([[0.1, 0.2, 0.3], [6.2, 6.3, 6.7]])
+        expected = bytearray(
+            pickle.dumps(value.tolist(), protocol=pickle.HIGHEST_PROTOCOL)
+        )
+
+        actual = self.field.get_prep_value(value)
+
+        self.assertEqual(pickle.loads(expected), pickle.loads(actual))
 
 
 class OqNullBooleanFieldTestCase(unittest.TestCase):
