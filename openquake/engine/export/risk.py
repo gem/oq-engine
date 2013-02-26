@@ -110,9 +110,6 @@ def export_loss_curve_xml(output, target_dir):
 
 export_loss_curve = export_loss_curve_xml
 
-export_ins_loss_curve_xml = export_loss_curve_xml
-export_ins_loss_curve = export_loss_curve
-
 
 @core.makedirs
 def export_loss_map_xml(output, target_dir):
