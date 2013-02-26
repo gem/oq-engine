@@ -1048,6 +1048,20 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
 
 
 def get_rupture_ids(job, hc, lt_realization, num):
+    """
+    :returns: a list of IDs of newly created ruptures associated with
+    `job` and an instance of
+    :class:`openquake.engine.db.models.HazardCalculation`. It also
+    creates a father :class:`openquake.engine.db.models.SES`. Each
+    rupture has a magnitude ranging from 0 to 10, no geographic
+    information and result_grp_ordinal set to 1.
+
+    :param lt_realization: an instance of
+    :class:`openquake.engine.db.models.LtRealization` to be associated
+    with the newly created SES object
+
+    :param int num: the number of ruptures to create
+    """
     ses = models.SES.objects.create(
         ses_collection=models.SESCollection.objects.create(
             output=models.Output.objects.create_output(

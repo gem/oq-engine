@@ -2421,6 +2421,9 @@ class EventLoss(djm.Model):
     """
     Holds the aggregate loss we have for each rupture
     """
+
+    #: Foreign key to an :class:`openquake.engine.db.models.Output`
+    #: object with output_type == event_loss
     output = djm.OneToOneField('Output')
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
