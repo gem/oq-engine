@@ -524,6 +524,7 @@ class ScenarioRiskForm(BaseOQModelForm):
             'hazard_maximum_distance',
             'master_seed',
             'asset_correlation',
+            'insured_losses'
         )
 
 
