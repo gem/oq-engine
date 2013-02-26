@@ -1459,7 +1459,6 @@ class Output(djm.Model):
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_map', u'Hazard Map'),
-        (u'ins_loss_curve', u'Insured Loss Curve'),
         (u'loss_curve', u'Loss Curve'),
         # FIXME(lp). We should distinguish between conditional losses
         # and loss map
@@ -2336,6 +2335,7 @@ class LossMap(djm.Model):
 
     output = djm.OneToOneField("Output", related_name="loss_map")
     hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
+    insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
 
     class Meta:
@@ -2360,6 +2360,7 @@ class LossMapData(djm.Model):
 
 class AggregateLoss(djm.Model):
     output = djm.OneToOneField("Output")
+    insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
 
