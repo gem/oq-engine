@@ -66,12 +66,12 @@ class MultiSurface(BaseSurface):
         # an arbitrary shape. By flattening we obtain a ``distances`` matrix
         # for which the first dimension represents the different surfaces
         # and the second dimension the mesh points.
-        distances = numpy.array(
+        dists = numpy.array(
             [surf.get_min_distance(mesh).flatten() for surf in self.surfaces]
         )
 
         # find for each point in mesh the index of closest surface
-        idx = distances == numpy.min(distances, axis=0)
+        idx = dists == numpy.min(dists, axis=0)
 
         # loop again over surfaces. For each surface compute the closest
         # points, and associate them to the mesh points for which the surface
@@ -124,12 +124,12 @@ class MultiSurface(BaseSurface):
         # an arbitrary shape. By flattening we obtain a ``distances`` matrix
         # for which the first dimension represents the different surfaces
         # and the second dimension the mesh points.
-        min_dists = numpy.array(
+        dists = numpy.array(
             [surf.get_min_distance(mesh).flatten() for surf in self.surfaces]
         )
 
         # find for each point in mesh the index of closest surface
-        idx = min_dists == numpy.min(min_dists, axis=0)
+        idx = dists == numpy.min(dists, axis=0)
 
         # for each surface elements compute rx distances, and associate
         # them to the mesh points for which the surface is the closest
