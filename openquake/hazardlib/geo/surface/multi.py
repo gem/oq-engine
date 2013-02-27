@@ -31,9 +31,6 @@ class MultiSurface(BaseSurface):
         List of instances of subclasses of
         :class:`~openquake.hazardlib.geo.surface.BaseSurface`
         each representing a surface geometry element.
-
-    Another way to construct the surface object is to call
-    :meth:`from_simple_fault_data`.
     """
     def __init__(self, surfaces):
         self.surfaces = surfaces
