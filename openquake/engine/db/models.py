@@ -507,7 +507,7 @@ class Performance(djm.Model):
     '''
     oq_job = djm.ForeignKey('OqJob')
     task_id = djm.TextField(null=True)
-    task = djm.TextField(null=False)
+    task = djm.TextField(null=True)
     operation = djm.TextField(null=False)
     start_time = djm.DateTimeField(editable=False)
     duration = djm.FloatField(null=True)

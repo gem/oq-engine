@@ -9,8 +9,8 @@ from openquake.engine.db import models
 from django.db import connection
 
 
-# I did not make any attempt to make this class thread-safe
-# it is intended to be used in single-threaded programs, as
+# I did not make any attempt to make this class thread-safe,
+# since it is intended to be used in single-threaded programs, as
 # in the engine
 class PerformanceMonitor(object):
     """
@@ -37,26 +37,26 @@ class PerformanceMonitor(object):
     The on_exit() method is called at end and it is used to display
     or store the results of the analysis; the on_running() method is
     called while the analysis is running and can be used to display
-    or store the partial results. It is also possible to override the .tic
+    or store the partial results. It is also possible to specify the .tic
     attribute (the interval of time between measures, 1 second by default)
     to perform a finer grained analysis.
     """
 
-    tic = 1.0  # measure the memory each second
-
-    def __init__(self, pids):
+    def __init__(self, pids, tic=1.0):
         self._procs = [psutil.Process(pid) for pid in pids]
+        self.tic = tic  # measure the memory at every tic
         self._monitor = None  # monitor thread polling for memory occupation
         self._running = False  # associated to the monitor thread
         self._start_time = None  # seconds from the epoch
         self.start_time = None  # datetime object
         self.duration = None  # seconds
         self.exc = None  # exception
+        self.rss_measures = {}  # {proc : list of measurements}
 
     @property
     def mem(self):
         "A tuple of memory measurements, a list of integers (MB) for process"
-        return tuple(proc.rss_measures for proc in self._procs)
+        return tuple(self.rss_measures[proc] for proc in self._procs)
 
     @property
     def mem_peaks(self):
@@ -91,13 +91,12 @@ class PerformanceMonitor(object):
 
     def _run(self):
         """
-        Pool the /proc/<pid> file every .tic seconds and stores
+        Poll the /proc/<pid> file every .tic seconds and stores
         the memory information in proc.rss_measures for each process
         """
-        for proc in self._procs:
-            proc.rss_measures = []
+        self.rss_measures = dict((p, [None]) for p in self._procs)
         while self._running:
-            for proc in self._procs:
+            for proc in list(self._procs):
                 try:
                     rss = proc.get_memory_info().rss // 1024 // 1024
                 except psutil.AccessDenied:
@@ -105,7 +104,7 @@ class PerformanceMonitor(object):
                     # don't not try to check it anymore
                     self._procs.remove(proc)
                 else:
-                    proc.rss_measures.append(rss)  # in mbytes
+                    self.rss_measures[proc].append(rss)  # in mbytes
             self.on_running()
             time.sleep(self.tic)
 
@@ -127,10 +126,14 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     string, a job_id, and a celery task; the on_exit method
     saves in the uiapi.performance table the relevant info.
     """
-    def __init__(self, operation, job_id, task):
+    def __init__(self, operation, job_id, task=None):
         self.job_id = job_id
-        self.task = task.__name__
-        self.task_id = task.request.id
+        if task:
+            self.task = task.__name__
+            self.task_id = task.request.id
+        else:
+            self.task = None
+            self.task_id = None
         self.operation = operation
         py_pid = os.getpid()
         pg_pid = connection.cursor().connection.get_backend_pid()
@@ -153,9 +156,9 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         is None.
         """
         if len(self._procs) == 1:  # pg progress not available
-            return (self._procs[0].rss_measures, [None])
+            return (self.rss_measures[self._procs[0]], [None])
         else:
-            return (proc.rss_measures for proc in self._procs)
+            return super(EnginePerformanceMonitor, self).mem
 
     def on_exit(self):
         """
