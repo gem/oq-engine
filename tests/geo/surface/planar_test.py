@@ -344,6 +344,16 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
         ]
         self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.05))
 
+    def test_distance_to_2d_mesh(self):
+        corners = [Point(0.0, 1.0), Point(1.0, 1.0),
+                   Point(1.0, 0.114341), Point(0.0, 0.114341)]
+        surface = PlanarSurface(1, 90.0, 10.0, *corners)
+        sites = Mesh(numpy.array([[0.25, 0.75], [0.25, 0.75]]),
+                     numpy.array([[0.75, 0.75], [0.25, 0.25]]),
+                     None)
+        dists = surface.get_joyner_boore_distance(sites)
+        numpy.testing.assert_equal(dists, numpy.zeros((2, 2)))
+
 
 class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
     corners = [Point(-0.1, -0.1, 0), Point(0.1, -0.1, 0),

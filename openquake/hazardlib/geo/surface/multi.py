@@ -79,17 +79,20 @@ class MultiSurface(BaseSurface):
         # the mesh points then the calculation is skipped
         lons = numpy.empty_like(mesh.lons.flatten())
         lats = numpy.empty_like(mesh.lats.flatten())
-        depths = numpy.empty_like(mesh.depths.flatten())
+        depths = None if mesh.depths is None else \
+            numpy.empty_like(mesh.depths.flatten())
         for i, surf in enumerate(self.surfaces):
             if not idx[i, :].any():
                 continue
             cps = surf.get_closest_points(mesh)
             lons[idx[i, :]] = cps.lons.flatten()[idx[i, :]]
             lats[idx[i, :]] = cps.lats.flatten()[idx[i, :]]
-            depths[idx[i, :]] = cps.depths.flatten()[idx[i, :]]
+            if depths is not None:
+                depths[idx[i, :]] = cps.depths.flatten()[idx[i, :]]
         lons = lons.reshape(mesh.lons.shape)
         lats = lats.reshape(mesh.lats.shape)
-        depths = depths.reshape(mesh.depths.shape)
+        if depths is not None:
+            depths = depths.reshape(mesh.depths.shape)
 
         return Mesh(lons, lats, depths)
 

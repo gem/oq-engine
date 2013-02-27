@@ -456,7 +456,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
         dists_to_corners = geodetic.min_geodetic_distance(
-            self.corner_lons, self.corner_lats, mesh.lons, mesh.lats
+            self.corner_lons, self.corner_lats,
+            mesh.lons.flatten(), mesh.lats.flatten()
         )
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
@@ -466,7 +467,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
         ds1, ds2, ds3, ds4 = numpy.sign(dists_to_arcs).transpose()
         dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
 
-        return numpy.select(
+        jb_dists = numpy.select(
             # consider four possible relative positions of point and arcs:
             condlist=[
                 # signs of distances to both parallel arcs are the same
@@ -495,6 +496,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
             # default -- case "IV"
             default=0
         )
+
+        return jb_dists.reshape(mesh.lons.shape)
 
     def get_width(self):
         """
