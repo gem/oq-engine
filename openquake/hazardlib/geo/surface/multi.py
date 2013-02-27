@@ -54,8 +54,8 @@ class MultiSurface(BaseSurface):
 
     def get_closest_points(self, mesh):
         """
-        For each point in ``mesh`` find closest point to each surface element,
-        and return the one corresponding to the smallest minimum distance.
+        For each point in ``mesh`` find the closest surface element, and return
+        the corresponding closest point.
 
         See :meth:`superclass method
         <.base.BaseSurface.get_closest_points>`
@@ -112,24 +112,37 @@ class MultiSurface(BaseSurface):
 
     def get_rx_distance(self, mesh):
         """
-        For each point in mesh compute the Rx distance to all the surface
-        elements and return the smallest value (in absolute value - because
-        rx can be also negative).
+        For each point in mesh find the closest surface element, and return
+        the corresponding rx distance.
 
         See :meth:`superclass method
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
         """
-        dists = numpy.array(
-            [surf.get_rx_distance(mesh) for surf in self.surfaces]
+        # For each point in mesh compute minimum distance to all surface
+        # elements. The distance matrix is flattend, because mesh can be of
+        # an arbitrary shape. By flattening we obtain a ``distances`` matrix
+        # for which the first dimension represents the different surfaces
+        # and the second dimension the mesh points.
+        min_dists = numpy.array(
+            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces]
         )
 
-        min_abs_dist = numpy.min(numpy.abs(dists), axis=0)
-        min_dist = numpy.min(dists, axis=0)
-        idx = min_dist != min_abs_dist
-        min_abs_dist[idx] = - min_abs_dist[idx]
+        # find for each point in mesh the index of closest surface
+        idx = min_dists == numpy.min(min_dists, axis=0)
 
-        return min_abs_dist
+        # for each surface elements compute rx distances, and associate
+        # them to the mesh points for which the surface is the closest
+        rx_dists = numpy.empty_like(mesh.lons.flatten())
+        for i, surf in enumerate(self.surfaces):
+            if not idx[i, :].any():
+                continue
+            rx = surf.get_rx_distance(mesh)
+            rx_dists[idx[i, :]] = rx.flatten()[idx[i, :]]
+
+        rx_dists = rx_dists.reshape(mesh.lons.shape)
+
+        return rx_dists
 
     def get_top_edge_depth(self):
         """

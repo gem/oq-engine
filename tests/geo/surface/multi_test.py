@@ -108,7 +108,7 @@ class DistancesTestCase(_BaseMultiTestCase):
     def test_rx_distance(self):
         surf = MultiSurface(self.surfaces)
         numpy.testing.assert_equal(surf.get_rx_distance(self.mesh),
-                                  numpy.array([[-0.5, 2., 2.], [4., 4., 5.]]))
+                                  numpy.array([[-1., 2., 2.], [4., 4., 5.]]))
 
 class SurfacePropertiesTestCase(_BaseMultiTestCase):
     def test_top_edge_depth(self):
