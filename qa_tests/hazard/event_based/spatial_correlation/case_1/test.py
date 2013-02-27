@@ -29,5 +29,22 @@ class EBHazardSpatialCorrelCase1TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
         job = self.run_hazard(cfg)
+        hc = job.hazard_calculation
 
-        import nose; nose.tools.set_trace()
+        site_1 = 'POINT(0.0 0.0)'
+        site_2 = 'POINT(0.008993 0.0)'
+
+        gmvs_site_1 = sc_utils.get_gmvs_for_location(site_1, job.id)
+        gmvs_site_2 = sc_utils.get_gmvs_for_location(site_2, job.id)
+
+        joint_prob_0_5 = sc_utils.joint_prob_of_occurrence(
+            gmvs_site_1, gmvs_site_2, 0.5, hc.investigation_time,
+            hc.ses_per_logic_tree_path
+        )
+        joint_prob_1_0 = sc_utils.joint_prob_of_occurrence(
+            gmvs_site_1, gmvs_site_2, 1.0, hc.investigation_time,
+            hc.ses_per_logic_tree_path
+        )
+
+        numpy.testing.assert_almost_equal(joint_prob_0_5, 0.99, decimal=1)
+        numpy.testing.assert_almost_equal(joint_prob_1_0, 0.41, decimal=1)
