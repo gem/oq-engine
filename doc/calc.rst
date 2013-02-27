@@ -42,6 +42,7 @@ Disaggregation
 
 .. automodule:: openquake.hazardlib.calc.disagg
 
+.. autofunction:: disaggregation_poissonian
 .. autofunction:: disaggregation
 
 

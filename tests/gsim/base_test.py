@@ -288,7 +288,7 @@ class DisaggregatePoETestCase(_FakeGSIMTestCase):
                                       n_epsilons=5, truncation_level=3)
         self.assertIsInstance(poes, numpy.ndarray)
         self.assertEqual(poes.shape, (4, 5))
-        epoes = [[0., 0., 0., 0., 0.],
+        epoes = [[0., 0., 0., 0., 0.00939958],
                  [0., 0., 0.07051552, 0.23896796, 0.03467403],
                  [0., 0., 0., 0.23896796, 0.03467403],
                  [0.03467403, 0.23896796, 0.45271601, 0.23896796, 0.03467403]]

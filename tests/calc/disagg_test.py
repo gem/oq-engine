@@ -50,6 +50,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.surface = _BaseDisaggTestCase.FakeSurface(distance, lon, lat)
         def get_probability_one_occurrence(self):
             return self.probability
+        def get_probability_one_or_more_occurrences(self):
+            return self.probability
 
     class FakeSource(object):
         def __init__(self, ruptures, tom, tectonic_region_type):
@@ -57,7 +59,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
         def iter_ruptures(self, tom):
-            assert tom is self.tom
+            assert isinstance(tom, type(self.tom))
+            assert tom.time_span == self.tom.time_span
             return iter(self.ruptures)
 
     class FakeGSIM(object):
@@ -99,6 +102,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
             ([0, 0.1, 0.04], self.FakeRupture(8, 0.04, 5, 11, 45)),
             ([0.1, 0.5, 0.1], self.FakeRupture(7, 0.03, 5, 11, 46))
         ]
+        self.time_span = 10
         self.tom = PoissonTOM(time_span=10)
         self.source1 = self.FakeSource(
             [rupture for poes, rupture in self.ruptures_and_poes1],
@@ -127,8 +131,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
 
 class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
-        mags, dists, lons, \
-        lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
+        (mags, dists, lons, lats, trts, trt_bins, probs_one_or_more,
+         probs_exceed_given_rup, src_idxs) = disagg._collect_bins_data(
             self.sources, self.site, self.imt, self.iml, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=filters.source_site_noop_filter,
@@ -142,20 +146,26 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae(dists, [3, 11, 12, 13, 14, 11, 11, 10, 12, 12, 11, 5, 5])
         aae(lons, [22, 22, 22, 22, 21, 21, 21, 21, 22, 21, 22, 11, 11])
         aae(lats, [44, 44, 45, 45, 44, 44, 45, 45, 44, 44, 45, 45, 46])
-        aaae(joint_probs, [[0., 0., 0.],
-                           [0.02, 0.04, 0.02],
-                           [0., 0., 0.003],
-                           [0., 0.0165, 0.00033],
-                           [0., 0., 0.],
-                           [0., 0., 0.001],
-                           [0.0212, 0.053, 0.0212],
-                           [0.0132, 0.0198, 0.0132],
-                           [0.03, 0.04, 0.03],
-                           [0., 0., 0.01],
-                           [0., 0., 0.],
-                           [0., 0.004, 0.0016],
-                           [0.003, 0.015, 0.003]])
         aae(trts, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1])
+
+        exp_pegr = [
+            [0, 0, 0],
+            [0.1, 0.2, 0.1],
+            [0, 0, 0.3],
+            [0, 0.05, 0.001],
+            [0, 0, 0],
+            [0, 0, 0.02],
+            [0.04, 0.1, 0.04],
+            [0.2, 0.3, 0.2],
+            [0.3, 0.4, 0.3],
+            [0, 0, 0.1],
+            [0, 0, 0],
+            [0, 0.1, 0.04],
+            [0.1, 0.5, 0.1],
+        ]
+        aae(probs_exceed_given_rup, exp_pegr)
+        aae(probs_one_or_more, [0.1, 0.2, 0.01, 0.33, 0.4, 0.05, 0.53, 0.066,
+                                0.1, 0.1, 0.1, 0.04, 0.03])
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
 
     def test_filters(self):
@@ -170,8 +180,8 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                     continue
                 yield rupture, sites
 
-        mags, dists, lons, \
-        lats, joint_probs, trts, trt_bins = disagg._collect_bins_data(
+        (mags, dists, lons, lats, trts, trt_bins, probs_one_or_more,
+         probs_exceed_given_rup, src_idxs) = disagg._collect_bins_data(
             self.sources, self.site, self.imt, self.iml, self.gsims,
             self.tom, self.truncation_level, n_epsilons=3,
             source_site_filter=source_site_filter,
@@ -185,11 +195,15 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae(dists, [14, 12, 12, 11])
         aae(lons, [21, 22, 21, 22])
         aae(lats, [44, 44, 44, 45])
-        aaae(joint_probs, [[0., 0., 0.],
-                           [0.03, 0.04, 0.03],
-                           [0., 0., 0.01],
-                           [0., 0., 0.]])
         aae(trts, [0, 0, 0, 0])
+        exp_pegr = [
+            [0, 0, 0],
+            [0.3, 0.4, 0.3],
+            [0, 0, 0.1],
+            [0, 0, 0],
+        ]
+        aae(probs_exceed_given_rup, exp_pegr)
+        aae(probs_one_or_more, [0.4, 0.1, 0.1, 0.1])
         self.assertEqual(trt_bins, ['trt1'])
 
 
@@ -199,11 +213,17 @@ class DefineBinsTestCase(unittest.TestCase):
         dists = numpy.array([4, 1.2, 3.5, 52.1, 17])
         lats = numpy.array([-25, -10, 0.6, -20, -15])
         lons = numpy.array([179, -179, 176.4, -179.55, 180])
-        joint_probs = None
         trts = [0, 1, 2, 2, 1]
         trt_bins = ['foo', 'bar', 'baz']
 
-        bins_data = mags, dists, lons, lats, joint_probs, trts, trt_bins
+        # These 3 are ignored by _define_bins, but they are returned by
+        # _collect_bins_data so we need to maintain that contract
+        probs_one_or_more = None
+        probs_exceed_given_rup = None
+        src_idxs = None
+
+        bins_data = (mags, dists, lons, lats, trts, trt_bins,
+                     probs_one_or_more, probs_exceed_given_rup, src_idxs)
 
         mag_bins, dist_bins, lon_bins, lat_bins, \
         eps_bins, trt_bins_ = disagg._define_bins(
@@ -226,65 +246,34 @@ class DefineBinsTestCase(unittest.TestCase):
 
 class ArangeDataInBinsTestCase(unittest.TestCase):
     def test(self):
-        mags = numpy.array([5, 9, 5, 5, 9, 7, 5, 5, 6, 6, 9.2, 8, 7], float)
-        dists = numpy.array([3, 1, 5, 13, 14, 6, 12, 10, 7, 4, 11, 13.4, 5],
-                            float)
-        lons = numpy.array([22, 21, 20, 21, 21, 22, 21, 21,
-                            20.3, 21, 20.5, 21.5, 22], float)
-        lats = numpy.array([44, 44, 45, 45, 44, 44, 45, 45,
-                            44, 44, 45, 45, 43.3], float)
-        joint_probs = numpy.array([[0., 0., 0.],
-                                   [0.02, 0.04, 0.02],
-                                   [0., 0., 0.003],
-                                   [0., 0.0165, 0.00033],
-                                   [0., 0., 0.],
-                                   [0., 0., 0.001],
-                                   [0.0212, 0.053, 0.0212],
-                                   [0.0132, 0.0198, 0.0132],
-                                   [0.03, 0.04, 0.03],
-                                   [0., 0., 0.01],
-                                   [0., 0., 0.],
-                                   [0., 0.004, 0.0016],
-                                   [0.003, 0.015, 0.003]])
-        trts = numpy.array([0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1], int)
+        mags = numpy.array([5, 5], float)
+        dists = numpy.array([6, 6], float)
+        lons = numpy.array([19, 19], float)
+        lats = numpy.array([41.5, 41.5], float)
+        trts = numpy.array([0, 0], int)
         trt_bins = ['trt1', 'trt2']
 
-        bins_data = mags, dists, lons, lats, joint_probs, trts, trt_bins
+        probs_one_or_more = numpy.array([0.1] * len(mags))
+        probs_exceed_given_rup = numpy.ones((len(mags), 3)) * 0.1
+        src_idxs = numpy.ones(mags.shape, dtype=int)
 
-        mag_bins = numpy.array([4, 6, 8, 10], float)
-        dist_bins = numpy.array([0, 4, 8, 12, 16], float)
-        lon_bins = numpy.array([19.2, 21, 22.8], float)
-        lat_bins = numpy.array([43.2, 44.4, 45.6], float)
-        eps_bins = numpy.array([-1.2, -0.4, 0.4, 1.2], float)
+        bins_data = (mags, dists, lons, lats, trts, trt_bins,
+                     probs_one_or_more, probs_exceed_given_rup, src_idxs)
+
+        mag_bins = numpy.array([4, 6, 7], float)
+        dist_bins = numpy.array([0, 4, 8], float)
+        lon_bins = numpy.array([18, 20, 21], float)
+        lat_bins = numpy.array([40, 41, 42], float)
+        eps_bins = numpy.array([-2, 0, 2], float)
 
         bin_edges = mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
 
         diss_matrix = disagg._arrange_data_in_bins(bins_data, bin_edges)
 
-        self.assertEqual(diss_matrix.shape, (3, 4, 2, 2, 3, 2))
-        self.assertAlmostEqual(diss_matrix.sum(), 1)
+        self.assertEqual(diss_matrix.shape, (2, 2, 2, 2, 2, 2))
 
-        for idx, value in [((0, 0, 0, 0, 2, 0), 0.0263831),
-                           ((0, 1, 0, 0, 0, 0), 0.0791494),
-                           ((0, 1, 0, 0, 1, 0), 0.1055325),
-                           ((0, 1, 0, 0, 2, 0), 0.0791494),
-                           ((0, 1, 0, 1, 2, 1), 0.0079149),
-                           ((0, 2, 0, 1, 0, 0), 0.0559322),
-                           ((0, 2, 0, 1, 0, 1), 0.0348257),
-                           ((0, 2, 0, 1, 1, 0), 0.1398306),
-                           ((0, 2, 0, 1, 1, 1), 0.0522386),
-                           ((0, 2, 0, 1, 2, 0), 0.0559322),
-                           ((0, 2, 0, 1, 2, 1), 0.0348257),
-                           ((0, 3, 0, 1, 1, 1), 0.0435322),
-                           ((0, 3, 0, 1, 2, 1), 0.0008706),
-                           ((1, 1, 1, 0, 0, 1), 0.0079149),
-                           ((1, 1, 1, 0, 1, 1), 0.0395747),
-                           ((1, 1, 1, 0, 2, 1), 0.0105533),
-                           ((1, 3, 1, 1, 1, 1), 0.0105533),
-                           ((1, 3, 1, 1, 2, 1), 0.0042213),
-                           ((2, 0, 0, 0, 0, 0), 0.0527663),
-                           ((2, 0, 0, 0, 1, 0), 0.1055325),
-                           ((2, 0, 0, 0, 2, 0), 0.0527663)]:
+        for idx, value in [((0, 1, 0, 1, 0, 0), 0.02085163763902309),
+                           ((0, 1, 0, 1, 1, 0), 0.02085163763902309)]:
             self.assertAlmostEqual(diss_matrix[idx], value)
             diss_matrix[idx] = 0
 
@@ -294,9 +283,9 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
 class DisaggregateTestCase(_BaseDisaggTestCase):
     def test(self):
         self.gsim.truncation_level = self.truncation_level = 1
-        bin_edges, matrix = disagg.disaggregation(
+        bin_edges, matrix = disagg.disaggregation_poissonian(
             self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.tom, self.truncation_level, n_epsilons=3,
+            self.time_span, self.truncation_level, n_epsilons=3,
             mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
         )
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
@@ -307,19 +296,19 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
         aaae(lat_bins, [43.2, 45.6, 48.])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
-        for idx, value in [((0, 2, 4, 0, 0, 0), 0.0907580),
-                           ((0, 2, 4, 0, 1, 0), 0.1920692),
-                           ((0, 2, 4, 0, 2, 0), 0.1197794),
-                           ((0, 2, 5, 0, 0, 0), 0.1319157),
-                           ((0, 2, 5, 0, 1, 0), 0.2110651),
-                           ((0, 2, 5, 0, 2, 0), 0.1398306),
-                           ((0, 3, 5, 0, 1, 0), 0.0435322),
-                           ((0, 3, 5, 0, 2, 0), 0.0008706),
-                           ((1, 1, 0, 0, 1, 1), 0.0105533),
-                           ((1, 1, 0, 0, 2, 1), 0.0042213),
-                           ((1, 1, 0, 1, 0, 1), 0.0079149),
-                           ((1, 1, 0, 1, 1, 1), 0.0395747),
-                           ((1, 1, 0, 1, 2, 1), 0.0079149)]:
+        for idx, value in [((0, 2, 4, 0, 0, 0), 0.0429088739427),
+                           ((0, 2, 4, 0, 1, 0), 0.0915231841771),
+                           ((0, 2, 4, 0, 2, 0), 0.0539109573863),
+                           ((0, 2, 5, 0, 0, 0), 0.0524944739774),
+                           ((0, 2, 5, 0, 1, 0), 0.0831147185105),
+                           ((0, 2, 5, 0, 2, 0), 0.0553469961235),
+                           ((0, 3, 5, 0, 1, 0), 0.0198247319211),
+                           ((0, 3, 5, 0, 2, 0), 0.00040039738616),
+                           ((1, 1, 0, 0, 1, 1), 0.00407387860215),
+                           ((1, 1, 0, 0, 2, 1), 0.00163154735795),
+                           ((1, 1, 0, 1, 0, 1), 0.00304128663811),
+                           ((1, 1, 0, 1, 1, 1), 0.0151142198204),
+                           ((1, 1, 0, 1, 2, 1), 0.00304128663811)]:
             self.assertAlmostEqual(matrix[idx], value)
             matrix[idx] = 0
 
@@ -343,9 +332,9 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                 cbd.return_value = fake_bins_data
 
                 self.gsim.truncation_level = self.truncation_level = 1
-                bin_edges, matrix = disagg.disaggregation(
+                bin_edges, matrix = disagg.disaggregation_poissonian(
                     self.sources, self.site, self.imt, self.iml, self.gsims,
-                    self.tom, self.truncation_level, n_epsilons=3,
+                    self.time_span, self.truncation_level, n_epsilons=3,
                     mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4,
                 )
 
@@ -455,43 +444,43 @@ class PMFExtractorsTestCase(unittest.TestCase):
 
     def test_mag(self):
         pmf = disagg.mag_pmf(self.matrix)
-        self.aae(pmf, [30.29, 34.57])
+        self.aae(pmf, [1.0, 1.0])
 
     def test_dist(self):
         pmf = disagg.dist_pmf(self.matrix)
-        self.aae(pmf, [29.56, 35.3])
+        self.aae(pmf, [1.0, 1.0])
 
     def test_trt(self):
         pmf = disagg.trt_pmf(self.matrix)
-        self.aae(pmf, [21.25, 21.03, 22.58])
+        self.aae(pmf, [1.0, 1.0, 1.0])
 
     def test_mag_dist(self):
         pmf = disagg.mag_dist_pmf(self.matrix)
-        self.aae(pmf, [[13.27, 17.02],
-                       [16.29, 18.28]])
+        self.aae(pmf, [[0.999999999965, 1.0],
+                       [1.0, 1.0]])
 
     def test_mag_dist_eps(self):
         pmf = disagg.mag_dist_eps_pmf(self.matrix)
-        self.aae(pmf, [[[5.04, 4.49, 3.74],
-                        [5.80, 5.03, 6.19]],
-                       [[6.19, 4.84, 5.26],
-                        [5.65, 6.01, 6.62]]])
+        self.aae(pmf, [[[0.999984831616, 0.997766176716, 0.998979249671],
+                        [0.999997772739, 0.999779959211, 0.999985036077]],
+                       [[0.999994665686, 0.999473519718, 0.999989748277],
+                        [1.0, 0.999987940219, 0.999995956695]]])
 
     def test_lon_Lat(self):
         pmf = disagg.lon_lat_pmf(self.matrix)
-        self.aae(pmf, [[13.97, 17.59],
-                       [17.74, 15.56]])
+        self.aae(pmf, [[1.0, 1.0],
+                       [1.0, 1.0]])
 
     def test_mag_lon_lat(self):
         pmf = disagg.mag_lon_lat_pmf(self.matrix)
-        self.aae(pmf, [[[6.59,  6.59],
-                        [8.47,  8.64]],
-                       [[7.38, 11.],
-                        [9.27,  6.92]]])
+        self.aae(pmf, [[[0.999992269326, 0.999996551231],
+                        [0.999999622937, 0.999999974769]],
+                       [[1.0, 0.999999999765],
+                        [0.999999998279, 0.999993421953]]])
 
     def test_lon_lat_trt(self):
         pmf = disagg.lon_lat_trt_pmf(self.matrix)
-        self.aae(pmf, [[[4.34, 4.86, 4.77],
-                        [6.35, 5.00, 6.24]],
-                       [[4.81, 6.59, 6.34],
-                        [5.75, 4.58, 5.23]]])
+        self.aae(pmf, [[[0.999805340359, 0.999470893656, 1.0],
+                        [0.999998665328, 0.999969082487, 0.999980380612]],
+                       [[0.999447922645, 0.999996344798, 0.999999678475],
+                        [0.999981572755, 0.999464007617, 0.999983196102]]])

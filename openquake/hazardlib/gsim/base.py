@@ -297,11 +297,11 @@ class GroundShakingIntensityModel(object):
             # take full disaggregated distribution for the case of
             # ``iml <= mean - truncation_level * stddev``
             contribution_by_bands
-            if idx <= 0 else
+            if idx == 0 else
 
             # take zeros if ``iml >= mean + truncation_level * stddev``
             numpy.zeros(n_epsilons)
-            if idx >= n_epsilons else
+            if idx >= n_epsilons + 1 else
 
             # for other cases (when ``iml`` falls somewhere in the
             # histogram):
