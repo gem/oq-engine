@@ -166,7 +166,7 @@ class Mesh(object):
         Point's depth is ignored.
 
         See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
+        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`
         for definition of this distance.
 
         :returns:

@@ -493,3 +493,10 @@ class PlanarSurfaceGetWidthTestCase(unittest.TestCase):
                    Point(0.00317958, -0.00449661, 5.35355339)]
         surface = PlanarSurface(1, 0.0, 45.0, *corners)
         self.assertAlmostEqual(surface.get_width(), 1.0, places=3)
+
+class PlanarSurfaceGetAreaTestCase(unittest.TestCase):
+    def test(self):
+        corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
+                   Point(0.0, 0.089932, 10.0), Point(0.0, 0.0, 10.0)]
+        surface = PlanarSurface(1, 45, 90, *corners)
+        self.assertAlmostEqual(surface.get_area(), 100.0, places=0)

@@ -19,12 +19,12 @@ import numpy
 
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 
 from tests.geo.surface import _planar_test_data as test_data
 
 
-class DummySurface(BaseSurface):
+class DummySurface(BaseQuadrilateralSurface):
     def __init__(self, coordinates_list):
         self.coordinates_list = coordinates_list
         super(DummySurface, self).__init__()
@@ -194,3 +194,10 @@ class GetTopEdgeDepthTestCase(unittest.TestCase):
         corners = [[(-0.5, -0.5), (0.5, 0.5)]]
         surface = DummySurface(corners)
         self.assertAlmostEqual(surface.get_top_edge_depth(), 0)
+
+class GetAreaTestCase(unittest.TestCase):
+    def test_get_area(self):
+        corners = [[(0.0, 0.0, 0.0), (0.0, 0.089932, 0.0)],
+                   [(0.0, 0.0, 10.0), (0.0, 0.089932, 10.0)]]
+        surface = DummySurface(corners)
+        self.assertAlmostEqual(100.0, surface.get_area(), places=0)

@@ -21,14 +21,14 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 import numpy
 
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 
 
-class PlanarSurface(BaseSurface):
+class PlanarSurface(BaseQuadrilateralSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
 
@@ -162,8 +162,8 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        # but do call BaseSurface's one
-        BaseSurface.__init__(nsurf)
+        # but do call BaseQuadrilateralSurface's one
+        BaseQuadrilateralSurface.__init__(nsurf)
         nsurf.mesh_spacing = self.mesh_spacing
         nsurf.dip = self.dip
         nsurf.strike = self.strike
@@ -199,7 +199,7 @@ class PlanarSurface(BaseSurface):
     def _create_mesh(self):
         """
         See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseSurface._create_mesh`.
+        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface._create_mesh`.
         """
         llons, llats, ldepths = geodetic.intervals_between(
             self.top_left.longitude, self.top_left.latitude,
@@ -284,7 +284,7 @@ class PlanarSurface(BaseSurface):
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`.
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -369,7 +369,7 @@ class PlanarSurface(BaseSurface):
     def get_closest_points(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_closest_points>`.
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_closest_points>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -384,7 +384,7 @@ class PlanarSurface(BaseSurface):
     def _get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface._get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
@@ -396,7 +396,7 @@ class PlanarSurface(BaseSurface):
     def get_top_edge_depth(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth>`
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_top_edge_depth>`
         in order to avoid creating a mesh.
         """
         return self.corner_depths[0]
@@ -404,7 +404,7 @@ class PlanarSurface(BaseSurface):
     def get_joyner_boore_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`.
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -502,3 +502,11 @@ class PlanarSurface(BaseSurface):
         (that is mean value of left and right surface sides).
         """
         return self.width
+
+    def get_area(self):
+        """
+        Return surface's area value (in squared km) obtained as the product
+        of surface lenght and width.
+        """
+        return self.width * self.length
+

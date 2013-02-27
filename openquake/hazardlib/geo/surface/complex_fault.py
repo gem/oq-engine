@@ -20,11 +20,11 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 
 from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 
 
-class ComplexFaultSurface(BaseSurface):
+class ComplexFaultSurface(BaseQuadrilateralSurface):
     """
     Represent a complex fault surface as 3D mesh of points (not necessarily
     uniformly spaced across the surface area).
