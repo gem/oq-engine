@@ -264,7 +264,7 @@ CREATE TABLE uiapi.performance (
     oq_job_id INTEGER NOT NULL,
     task_id VARCHAR,
     start_time timestamp without time zone NOT NULL,
-    task VARCHAR NOT NULL,
+    task VARCHAR,
     operation VARCHAR NOT NULL,
     duration FLOAT,
     pymemory INTEGER,
