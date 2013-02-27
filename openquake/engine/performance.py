@@ -8,6 +8,8 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from django.db import connection
 
+MB = 1024 * 1024  # 1 megabyte
+
 
 # I did not make any attempt to make this class thread-safe,
 # since it is intended to be used in single-threaded programs, as
@@ -51,7 +53,8 @@ class PerformanceMonitor(object):
         self.start_time = None  # datetime object
         self.duration = None  # seconds
         self.exc = None  # exception
-        self.rss_measures = {}  # {proc : list of measurements}
+        self.rss_measures = dict((proc, []) for proc in self._procs)
+        self.poll_memory()
 
     @property
     def mem(self):
@@ -92,21 +95,27 @@ class PerformanceMonitor(object):
     def _run(self):
         """
         Poll the /proc/<pid> file every .tic seconds and stores
-        the memory information in proc.rss_measures for each process
+        the memory information in self.rss_measures for each process
         """
-        self.rss_measures = dict((p, [None]) for p in self._procs)
         while self._running:
-            for proc in list(self._procs):
-                try:
-                    rss = proc.get_memory_info().rss // 1024 // 1024
-                except psutil.AccessDenied:
-                    # no access to information about this process
-                    # don't not try to check it anymore
-                    self._procs.remove(proc)
-                else:
-                    self.rss_measures[proc].append(rss)  # in mbytes
+            self.poll_memory()
             self.on_running()
             time.sleep(self.tic)
+
+    def poll_memory(self):
+        """
+        Poll the memory occupation for each process and update
+        the dictionary self.rss_measures
+        """
+        for proc in list(self._procs):
+            try:
+                rss = proc.get_memory_info().rss // MB
+            except psutil.AccessDenied:
+                # no access to information about this process
+                # don't not try to check it anymore
+                self._procs.remove(proc)
+            else:
+                self.rss_measures[proc].append(rss)  # in mbytes
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
@@ -126,7 +135,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     string, a job_id, and a celery task; the on_exit method
     saves in the uiapi.performance table the relevant info.
     """
-    def __init__(self, operation, job_id, task=None):
+    def __init__(self, operation, job_id, task=None, tic=0.1):
         self.job_id = job_id
         if task:
             self.task = task.__name__
@@ -143,7 +152,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             pids = [py_pid]
         else:
             pids = [py_pid, pg_pid]
-        super(EnginePerformanceMonitor, self).__init__(pids)
+        super(EnginePerformanceMonitor, self).__init__(pids, tic)
 
     @property
     def mem(self):

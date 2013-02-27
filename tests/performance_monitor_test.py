@@ -16,6 +16,7 @@ class TestCase(unittest.TestCase):
         # are populated
         self.assert_(pmon.start_time < datetime.now())
         self.assert_(pmon.duration > 0)
+        self.assert_(pmon.mem_peaks[0] > 0)
         self.assertEqual(len(pmon.mem_peaks), nproc)
 
     def testPerformanceMonitor(self):
