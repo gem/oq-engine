@@ -42,7 +42,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
       to 'gmfscenario') to a tuple where the first element is an instance of
-      :class:`..hazard_getters.GroundMotionScenarioGetter2`, and the second
+      :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
       element is the corresponding weight.
     :param seed: the seed used to initialize the rng
     :param output_containers: a dictionary {hazard_id: output_id}
