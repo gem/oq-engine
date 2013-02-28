@@ -2128,13 +2128,9 @@ class GmfScenario(djm.Model):
     respective geographical locations.
     """
     output = djm.ForeignKey('Output')
-    imt = djm.TextField(choices=IMT_CHOICES)
-    # Spectral acceleration
-    sa_period = djm.FloatField(null=True)
-    sa_damping = djm.FloatField(null=True)
+    imt = djm.TextField()
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
 
@@ -2164,12 +2160,10 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
+        if imt == 'SA':
+            imt = 'SA(%s)' % sa_period
         gmfs = order_by_location(
-            GmfScenario.objects.filter(
-                output__id=output.id,
-                imt=imt,
-                sa_period=sa_period,
-                sa_damping=sa_damping))
+            GmfScenario.objects.filter(output__id=output.id, imt=imt))
         # yield all the nodes associated to a given location
         for loc, rows in itertools.groupby(
                 gmfs, operator.attrgetter('location')):
