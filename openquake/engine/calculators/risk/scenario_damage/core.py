@@ -48,7 +48,7 @@ def scenario_damage(job_id, hazard,
       A dictionary mapping IDs of
       :class:`openquake.engine.db.models.Output` (with output_type set
       to 'gmfscenario') to a tuple where the first element is an instance of
-      :class:`..hazard_getters.GroundMotionScenarioGetter2`, and the second
+      :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
       element is the corresponding weight.
     :param taxonomy: the taxonomy being considered
     :param fragility_model: a
