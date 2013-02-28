@@ -27,6 +27,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
@@ -55,7 +56,8 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     hazard_getter = hazard.values()[0][0]
 
-    assets, ground_motion_values, missings = hazard_getter()
+    with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
+        assets, ground_motion_values, missings = hazard_getter()
 
     with logs.tracing('computing risk'):
         loss_ratio_matrix = calc(ground_motion_values)
@@ -183,8 +185,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         # in scenario hazard calculation we do not have hazard logic
         # tree realizations, and we have only one output
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
-            'last_update').output_set.get(
-                output_type='gmf_scenario')
+            'last_update').output_set.get(output_type='gmf_scenario')
 
     def create_getter(self, output, assets):
         """
