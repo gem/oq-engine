@@ -500,6 +500,24 @@ class OqJob(djm.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
+class Performance(djm.Model):
+    '''
+    Contains performance information about the operations performed by a task
+    launched by a job.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    task_id = djm.TextField(null=True)
+    task = djm.TextField(null=True)
+    operation = djm.TextField(null=False)
+    start_time = djm.DateTimeField(editable=False)
+    duration = djm.FloatField(null=True)
+    pymemory = djm.IntegerField(null=True)
+    pgmemory = djm.IntegerField(null=True)
+
+    class Meta:
+        db_table = 'uiapi\".\"performance'
+
+
 class JobStats(djm.Model):
     '''
     Capture various statistics about a job.
@@ -2128,13 +2146,9 @@ class GmfScenario(djm.Model):
     respective geographical locations.
     """
     output = djm.ForeignKey('Output')
-    imt = djm.TextField(choices=IMT_CHOICES)
-    # Spectral acceleration
-    sa_period = djm.FloatField(null=True)
-    sa_damping = djm.FloatField(null=True)
+    imt = djm.TextField()
     location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    result_grp_ordinal = djm.IntegerField()
 
     objects = djm.GeoManager()
 
@@ -2164,12 +2178,10 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
+        if imt == 'SA':
+            imt = 'SA(%s)' % sa_period
         gmfs = order_by_location(
-            GmfScenario.objects.filter(
-                output__id=output.id,
-                imt=imt,
-                sa_period=sa_period,
-                sa_damping=sa_damping))
+            GmfScenario.objects.filter(output__id=output.id, imt=imt))
         # yield all the nodes associated to a given location
         for loc, rows in itertools.groupby(
                 gmfs, operator.attrgetter('location')):
@@ -2421,6 +2433,9 @@ class EventLoss(djm.Model):
     """
     Holds the aggregate loss we have for each rupture
     """
+
+    #: Foreign key to an :class:`openquake.engine.db.models.Output`
+    #: object with output_type == event_loss
     output = djm.OneToOneField('Output')
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
