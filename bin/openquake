@@ -134,7 +134,7 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--list-inputs', '--li',
         help='List inputs of a specific input type',
-        metavar="LIST_INPUTS")
+        metavar="INPUT_TYPE")
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -272,7 +272,7 @@ def list_inputs(input_type):
         input_type=input_type).order_by('-last_update')
 
     if not inputs.count():
-        print "None '%s'" % input_type
+        print "No inputs found of type %s" % input_type
         return
     print ('model id | source path | last update')
 
