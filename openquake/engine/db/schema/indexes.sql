@@ -68,9 +68,6 @@ CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realizat
 -- gmf_scenario
 CREATE INDEX hzrdr_gmf_scenario_output_id_idx on hzrdr.gmf_scenario(output_id);
 CREATE INDEX hzrdr_gmf_scenario_imt_idx on hzrdr.gmf_scenario(imt);
-CREATE INDEX hzrdr_gmf_scenario_sa_period_idx on hzrdr.gmf_scenario(sa_period);
-CREATE INDEX hzrdr_gmf_scenario_sa_damping_idx on hzrdr.gmf_scenario(sa_damping);
-
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
