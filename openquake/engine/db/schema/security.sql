@@ -143,3 +143,4 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.cnode_stats        TO oq_job_superv;
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile     TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON uiapi.error_msg          TO oq_job_superv;
+GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;
