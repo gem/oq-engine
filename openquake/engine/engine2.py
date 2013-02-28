@@ -35,6 +35,8 @@ from openquake.engine.utils import monitor, get_calculator_class
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
+UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
+UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 
 def prepare_job(user_name="openquake", log_level='progress'):
@@ -448,3 +450,72 @@ def _do_run_calc(job, exports, calc, job_type):
     logs.LOG.debug("*> complete")
 
     return job
+
+
+def del_haz_calc(hc_id):
+    """
+    Delete a hazard calculation and all associated outputs.
+
+    :param hc_id:
+        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
+    """
+    try:
+        hc = models.HazardCalculation.objects.get(id=hc_id)
+    except exceptions.ObjectDoesNotExist:
+        raise RuntimeError('Unable to delete hazard calculation: '
+                           'ID=%s does not exist' % rc_id)
+
+    user = get_current_user()
+    if hc.owner == user:
+        # we are allowed to delete this
+
+        # but first, check if any risk calculations are referencing any of our
+        # outputs, or the hazard calculation itself
+        msg = UNABLE_TO_DEL_HC_FMT % (
+            'The following risk calculations are referencing this hazard'
+            ' calculation: %s'
+        )
+
+        assoc_outputs = models.RiskCalculation.objects.filter(
+            hazard_output__oq_job__hazard_calculation=hc_id
+        )
+        if assoc_outputs.count() > 0:
+            raise RuntimeError(msg % ', '.join([str(x.id)
+                                                for x in assoc_outputs]))
+
+        assoc_calcs = models.RiskCalculation.objects.filter(
+            hazard_calculation=hc_id
+        )
+        if assoc_calcs.count() > 0:
+            raise RuntimeError(msg % ', '.join([str(x.id)
+                                                for x in assoc_calcs]))
+
+        # No risk calculation are referencing what we want to delete.
+        # Carry on with the deletion.
+        hc.delete(using='admin')
+    else:
+        # this doesn't belong to the current user
+        raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
+
+
+def del_risk_calc(rc_id):
+    """
+    Delete a risk calculation and all associated outputs.
+
+    :param hc_id:
+        ID of a :class:`~openquake.engine.db.models.RiskCalculation`.
+    """
+    try:
+        rc = models.RiskCalculation.objects.get(id=rc_id)
+    except exceptions.ObjectDoesNotExist:
+        raise RuntimeError('Unable to delete risk calculation: '
+                           'ID=%s does not exist' % rc_id)
+
+    user = get_current_user()
+    if rc.owner == user:
+        # we are allowed to delete this
+        rc.delete(using='admin')
+    else:
+        # this doesn't belong to the current user
+        raise RuntimeError('Unable to delete risk calculation: '
+                           'Access denied')
