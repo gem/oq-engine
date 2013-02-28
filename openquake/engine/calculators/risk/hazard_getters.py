@@ -64,7 +64,7 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an dictionary mapping ID of
+        :returns: an OrderedDict mapping ID of
         :class:`openquake.engine.db.models.ExposureData` objects to
         hazard_data (e.g. an array with the poes, or an array with the
         ground motion values). Mind that the returned data could lack
@@ -254,6 +254,10 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor.execute(query, args)
 
         data = cursor.fetchall()
+
+        # The OrderedDict is needed by __call__ in order to scan
+        # multiple times the data and still get corresponding values.
+        # See the return statement of the __call__ method.
 
         return OrderedDict((row[0], [row[1], row[2]]) for row in data)
 
