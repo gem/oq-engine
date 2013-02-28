@@ -131,6 +131,10 @@ def set_up_arg_parser():
               ' in a single process. This is intended for use in debugging '
               ' and profiling.')
     )
+    general_grp.add_argument(
+        '--yes', '-y', action='store_true',
+        help='Automatically answer "yes" when asked to confirmation an action'
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -153,6 +157,11 @@ def set_up_arg_parser():
         '--eh',
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    hazard_grp.add_argument(
+        '--delete-hazard-calculation',
+        '--dhc',
+        help='Delete a hazard calculation and all associated outputs',
+        metavar='HAZARD_CALCULATION_ID')
 
     risk_grp = parser.add_argument_group('Risk')
     risk_grp.add_argument(
@@ -186,6 +195,11 @@ def set_up_arg_parser():
         help='Export the desired risk output to the specified directory',
         nargs=2,
         metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    risk_grp.add_argument(
+        '--delete-risk-calculation',
+        '--drc',
+        help='Delete a risk calculation and all associated outputs',
+        metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
