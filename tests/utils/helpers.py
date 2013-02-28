@@ -999,8 +999,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 hazard_job, "Test Hazard output", "gmf_scenario"),
             imt="PGA",
             location="POINT(15.50 38.10)",
-            gmvs=[0.1, 0.2, 0.3],
-            result_grp_ordinal=1)
+            gmvs=[0.1, 0.2, 0.3])
 
     else:
         rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
