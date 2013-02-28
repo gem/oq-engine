@@ -394,7 +394,7 @@ CREATE TABLE uiapi.risk_calculation (
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
-    exposure_model_id INTEGER,
+    exposure_input_id INTEGER,
 
     -- the maximum distance for an hazard value with the corresponding
     -- asset. In meters
