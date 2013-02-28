@@ -64,7 +64,7 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an dictionary mapping ID of
+        :returns: an OrderedDict mapping ID of
         :class:`openquake.engine.db.models.ExposureData` objects to
         hazard_data (e.g. an array with the poes, or an array with the
         ground motion values). Mind that the returned data could lack
@@ -255,6 +255,10 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
+        # The OrderedDict is needed by __call__ in order to scan
+        # multiple times the data and still get corresponding values.
+        # See the return statement of the __call__ method.
+
         return OrderedDict((row[0], [row[1], row[2]]) for row in data)
 
 
@@ -288,33 +292,26 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
 
         cursor = connection.cursor()
 
-        spectral_filters = ""
         args = ("SRID=4326; %s" % site.wkt, self._imt, self.hazard_id)
-
-        if self._imt == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            args += (self._sa_period, self._sa_damping)
 
         min_dist_query = """-- find the distance of the closest location
         SELECT min(ST_Distance(location, %s, false)) FROM hzrdr.gmf_scenario
-        WHERE imt = %s AND output_id = %s {}""".format(
-            spectral_filters)
+        WHERE imt = %s AND output_id = %s"""
 
         cursor.execute(min_dist_query, args)
         min_dist = cursor.fetchall()[0][0]  # returns only one row
         if min_dist is None:
             raise RuntimeError(
                 'Could not find any gmf with IMT=%s '
-                'and output_id=%s' % (self._imt, self._hazard_output_id))
+                'and output_id=%s' % (self._imt, self.hazard_id))
 
         dilated_dist = min_dist + 0.1  # 0.1 meters = 10 cm
 
         gmvs_query = """-- return all the gmvs inside the min_dist radius
         SELECT gmvs FROM hzrdr.gmf_scenario
         WHERE %s > ST_Distance(location, %s, false)
-        AND imt = %s AND output_id = %s {}
-        ORDER BY result_grp_ordinal
-        """.format(spectral_filters)
+        AND imt = %s AND output_id = %s
+        """
 
         cursor.execute(gmvs_query, (dilated_dist,) + args)
 
@@ -329,42 +326,39 @@ class GroundMotionScenarioGetter(HazardGetter):
     approach used in :class:`GroundMotionValuesGetter`.
     """
 
+    def setup(self):
+        super(GroundMotionScenarioGetter, self).setup()
+        if self._sa_period:
+            self._imt = '%s(%s)' % (self._imt, self._sa_period)
+
     def get_data(self):
         cursor = connection.cursor()
-
-        spectral_filters = ""
-        args = (self._imt, self.hazard_id)
-
-        if self._imt == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            args += (self._sa_period, self._sa_damping)
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
-         gmf_table.allgmvs
+         gmf_table.gmvs
   FROM oqmif.exposure_data JOIN (
-    SELECT location, array_concat(gmvs ORDER BY result_grp_ordinal) as allgmvs
+    SELECT location, gmvs
            FROM hzrdr.gmf_scenario
            WHERE hzrdr.gmf_scenario.imt = %s
-           AND hzrdr.gmf_scenario.output_id = %s {}
-           AND hzrdr.gmf_scenario.location && %s
-           GROUP BY location) gmf_table
+           AND hzrdr.gmf_scenario.output_id = %s
+           AND hzrdr.gmf_scenario.location && %s) gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
-    AND array_length(gmf_table.allgmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
-           """.format(spectral_filters)  # this will fill in the {}
+           """
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance / 1000).wkt,
-                 self.max_distance,
-                 assets_extent.wkt,
-                 self.assets[0].taxonomy,
-                 self.assets[0].exposure_model_id)
+        args = (self._imt, self.hazard_id,
+                assets_extent.dilate(self.max_distance / 1000).wkt,
+                self.max_distance,
+                assets_extent.wkt,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id)
 
         cursor.execute(query, args)
 
