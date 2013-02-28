@@ -22,6 +22,7 @@ An HazardGetter is responsible to get hazard outputs needed by a risk
 calculation.
 """
 
+from collections import OrderedDict
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
@@ -63,7 +64,7 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an dict mapping ID of
+        :returns: an OrderedDict mapping ID of
         :class:`openquake.engine.db.models.ExposureData` objects to
         hazard_data (e.g. an array with the poes, or an array with the
         ground motion values). Mind that the returned data could lack
@@ -79,28 +80,33 @@ class HazardGetter(object):
         :returns: a tuple with three elements. The first is an array
         of instances of
         :class:`openquake.engine.db.models.ExposureData`, the second
-        one is an array with the corresponding hazard data, the third
-        one is an array with the IDs of assets that has been filtered
-        out as for the ``maximum_distance`` criteria.
+        is an array with the corresponding hazard data, the third is
+        the array of IDs of assets that has been filtered out by the
+        getter by the ``maximum_distance`` criteria.
         """
         data = self.get_data()
 
-        filtered_asset_ids = data.keys()
-        missing_asset_ids = set(self.asset_dict) - set(filtered_asset_ids)
+        filtered_asset_ids = set(data.keys())
+        all_asset_ids = set(self.asset_dict.keys())
+        missing_asset_ids = all_asset_ids - filtered_asset_ids
+        extra_asset_ids = filtered_asset_ids - all_asset_ids
 
-        # FIXME(lp). It might happen that the convex hull contains
+        # FIXME(lp). It might happens that the convex hull contains
         # more assets than the requested ones. At this moment, we just
-        # ignore them. We instead log the missing assets, that is the
-        # assets that have been filtered out by the maximum distance
-        # criteria.
+        # ignore them.
+        if extra_asset_ids:
+            logs.LOG.debug("Extra asset have been computed ids: %s" % (
+                models.ExposureData.objects.filter(
+                    pk__in=extra_asset_ids)))
+
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
                 "No hazard has been found for the asset %s",
                 self.asset_dict[missing_asset_id].asset_ref)
 
-        return ([self.asset_dict[asset_id] for asset_id in filtered_asset_ids
+        return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
-                [data[asset_id] for asset_id in filtered_asset_ids
+                [data[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
                 missing_asset_ids)
 
@@ -128,7 +134,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :method:`HazardGetter.get_data` interface.
         """
-        return dict(
+        return OrderedDict(
             [(data[0], data[1][0]) for data in
                 [(asset.id, self.get_by_site(asset.site))
                  for asset in self.assets]
@@ -249,11 +255,11 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # The dict is needed by __call__ in order to scan
+        # The OrderedDict is needed by __call__ in order to scan
         # multiple times the data and still get corresponding values.
         # See the return statement of the __call__ method.
 
-        return dict((row[0], [row[1], row[2]]) for row in data)
+        return OrderedDict((row[0], [row[1], row[2]]) for row in data)
 
 
 class GroundMotionScenarioGetterPerAsset(HazardGetter):
@@ -266,7 +272,7 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
     """
 
     def get_data(self):
-        return dict([(data[0], data[1][0]) for data in
+        return OrderedDict([(data[0], data[1][0]) for data in
                             [(asset.id, self.get_by_site(asset.site))
                              for asset in self.assets]
                             if data[1][1] < self.max_distance])
@@ -356,4 +362,4 @@ class GroundMotionScenarioGetter(HazardGetter):
 
         cursor.execute(query, args)
 
-        return dict(cursor.fetchall())
+        return OrderedDict(cursor.fetchall())
