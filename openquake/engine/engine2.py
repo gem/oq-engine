@@ -76,6 +76,15 @@ def prepare_user(user_name):
     return user
 
 
+def get_current_user():
+    """
+    Utilty function for getting the :class:`openquake.engine.db.models.OqUser`
+    for the the current user. If the user record doesn't exist, it will be
+    created.
+    """
+    return prepare_user(getpass.getuser())
+
+
 def parse_config(source, force_inputs=False):
     """Parse a dictionary of parameters from an INI-style config file.
 
