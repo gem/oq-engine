@@ -69,7 +69,7 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an dictionary mapping ID of
+        :returns: an OrderedDict mapping ID of
         :class:`openquake.engine.db.models.ExposureData` objects to
         hazard_data (e.g. an array with the poes, or an array with the
         ground motion values). Mind that the returned data could lack
@@ -262,6 +262,10 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
+        # The OrderedDict is needed by __call__ in order to scan
+        # multiple times the data and still get corresponding values.
+        # See the return statement of the __call__ method.
+
         return OrderedDict((row[0], [row[1], row[2]]) for row in data)
 
 
@@ -271,42 +275,39 @@ class GroundMotionScenarioGetter(HazardGetter):
     approach used in :class:`GroundMotionValuesGetter`.
     """
 
+    def setup(self):
+        super(GroundMotionScenarioGetter, self).setup()
+        if self._sa_period:
+            self._imt = '%s(%s)' % (self._imt, self._sa_period)
+
     def get_data(self):
         cursor = connection.cursor()
-
-        spectral_filters = ""
-        args = (self._imt, self.hazard_id)
-
-        if self._imt == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            args += (self._sa_period, self._sa_damping)
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
-         gmf_table.allgmvs
+         gmf_table.gmvs
   FROM oqmif.exposure_data JOIN (
-    SELECT location, array_concat(gmvs ORDER BY result_grp_ordinal) as allgmvs
+    SELECT location, gmvs
            FROM hzrdr.gmf_scenario
            WHERE hzrdr.gmf_scenario.imt = %s
-           AND hzrdr.gmf_scenario.output_id = %s {}
-           AND hzrdr.gmf_scenario.location && %s
-           GROUP BY location) gmf_table
+           AND hzrdr.gmf_scenario.output_id = %s
+           AND hzrdr.gmf_scenario.location && %s) gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
     AND taxonomy = %s AND exposure_model_id = %s
-    AND array_length(gmf_table.allgmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
-           """.format(spectral_filters)  # this will fill in the {}
+           """
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance).wkt,
-                 self.max_distance * KILOMETERS_TO_METERS,
-                 assets_extent.wkt,
-                 self.assets[0].taxonomy,
-                 self.assets[0].exposure_model_id)
+        args = (self._imt, self.hazard_id,
+                assets_extent.dilate(self.max_distance).wkt,
+                self.max_distance,
+                assets_extent.wkt,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id)
 
         cursor.execute(query, args)
 
