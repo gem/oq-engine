@@ -119,14 +119,12 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
         with open(CSVFILE, 'rb') as csvfile:
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
-
             arr = numpy.array([[float(x) for x in row] for row in gmfreader])
             for i, gmvs in enumerate(arr.transpose()):
                 models.GmfScenario.objects.create(
                     output=output,
                     imt="PGA",
                     gmvs=gmvs,
-                    result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
         return output.id
