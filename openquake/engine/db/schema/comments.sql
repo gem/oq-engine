@@ -240,6 +240,11 @@ COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the su
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
+COMMENT ON TABLE uiapi.performance IS 'Tracks task performance';
+COMMENT ON COLUMN uiapi.performance.duration IS 'Duration of the operation in seconds';
+COMMENT ON COLUMN uiapi.performance.pymemory IS 'Memory occupation in Python (Mbytes)';
+COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (Mbytes)';
+
 
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
 COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
