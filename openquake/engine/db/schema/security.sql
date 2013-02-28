@@ -76,6 +76,7 @@ GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.model_content_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_phase_stats_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.performance_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.cnode_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_calculation_id_seq to GROUP openquake;
@@ -288,6 +289,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_job_init;
 -- how long are the various job phases taking?
 GRANT SELECT ON uiapi.job_phase_stats TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_phase_stats to oq_job_init;
+
+-- uiapi.performance
+GRANT SELECT ON uiapi.performance TO GROUP openquake;
+GRANT SELECT, INSERT, UPDATE, DELETE ON uiapi.performance TO oq_job_init;
 
 -- uiapi.job_stats
 GRANT SELECT ON uiapi.job_stats TO GROUP openquake;
