@@ -377,3 +377,26 @@ class OpenquakeCliTestCase(unittest.TestCase):
 
         print 'Running:', ' '.join(args)  # this is useful for debugging
         return subprocess.check_call(args)
+
+
+class DeleteHazCalcTestCase(unittest.TestCase):
+
+    def setUp(self):
+        hazard_cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        risk_cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+
+        self.risk_job, _ = helpers.get_risk_job(
+            risk_cfg, hazard_cfg,
+            output_type='curves', username=getpass.getuser()
+        )
+        self.hazard_job = self.risk_job.risk_calculation.hazard_output.oq_job
+
+    def test_del_haz_calc(self):
+        pass
+        import nose; nose.tools.set_trace()
+
+    def test_del_haz_calc_referenced_by_risk_calc(self):
+        pass
+
+    def test_del_haz_calc_output_referenced_by_risk_calc(self):
+        pass
