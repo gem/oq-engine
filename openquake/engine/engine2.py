@@ -476,6 +476,7 @@ def del_haz_calc(hc_id):
             ' calculation: %s'
         )
 
+        # check for a reference to hazard outputs
         assoc_outputs = models.RiskCalculation.objects.filter(
             hazard_output__oq_job__hazard_calculation=hc_id
         )
@@ -483,6 +484,7 @@ def del_haz_calc(hc_id):
             raise RuntimeError(msg % ', '.join([str(x.id)
                                                 for x in assoc_outputs]))
 
+        # check for a reference to the hazard calculation itself
         assoc_calcs = models.RiskCalculation.objects.filter(
             hazard_calculation=hc_id
         )
