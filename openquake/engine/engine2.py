@@ -463,7 +463,7 @@ def del_haz_calc(hc_id):
         hc = models.HazardCalculation.objects.get(id=hc_id)
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
-                           'ID=%s does not exist' % rc_id)
+                           'ID=%s does not exist' % hc_id)
 
     user = get_current_user()
     if hc.owner == user:
