@@ -151,9 +151,11 @@ class BaseQuadrilateralSurface(BaseSurface):
     """
     Base class for a quadrilateral surface in 3D-space.
 
-    Subclasses must implement :meth:`_create_mesh`, :meth:`get_strike`,
-    :meth:`get_dip` and meth:`get_width`, and can override any others just for
-    the sake of performance
+    Subclasses must implement :meth:`_create_mesh`, and superclass methods
+    :meth:`get_strike() <.base.BaseSurface.get_strike>`,
+    :meth:`get_dip() <.base.BaseSurface.get_dip>` and
+    :meth:`get_width() <.base.BaseSurface.get_width>`,
+    and can override any others just for the sake of performance
     """
     __metaclass__ = abc.ABCMeta
 
