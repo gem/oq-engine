@@ -15,6 +15,7 @@
 
 from tests.calculators.risk import general_test
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.event_based_bcr import core
@@ -28,8 +29,8 @@ class EventBasedBCRRiskCalculatorTestCase(
 
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
-            'event_based_bcr/job.ini',
-            'event_based_hazard/job.ini', output_type="gmf")
+            demo_file('event_based_bcr/job.ini'),
+            demo_file('event_based_hazard/job.ini'), output_type="gmf")
 
         self.calculator = core.EventBasedBCRRiskCalculator(self.job)
 

@@ -33,6 +33,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators.risk import general as general_risk
 
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 
 
 class TestCaseWithAJob(unittest.TestCase):
@@ -187,8 +188,8 @@ class HazardCurveDataManagerTestCase(TestCaseWithAJob):
 class ExposureContainedInTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
-            'classical_psha_based_risk/job.ini',
-            'simple_fault_demo_hazard/job.ini')
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini'))
         calculator = general_risk.BaseRiskCalculator(self.job)
         calculator.pre_execute()
         self.model = self.job.risk_calculation.exposure_model

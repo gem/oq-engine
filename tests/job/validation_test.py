@@ -22,6 +22,7 @@ from openquake.engine.db import models
 from openquake.engine.job import validation
 
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 
 
 VALID_IML_IMT = {
@@ -1013,8 +1014,10 @@ openquake.hazardlib.gsim"],
 
 class ClassicalRiskFormTestCase(unittest.TestCase):
     def setUp(self):
-        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
-                                      'simple_fault_demo_hazard/job.ini')
+        job, _ = helpers.get_risk_job(
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini')
+        )
         self.compulsory_arguments = dict(
             calculation_mode="classical",
             lrem_steps_per_interval=5)
@@ -1057,8 +1060,10 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
 
 class ClassicalBCRRiskFormTestCase(unittest.TestCase):
     def setUp(self):
-        job, _ = helpers.get_risk_job('classical_psha_based_risk/job.ini',
-                                      'simple_fault_demo_hazard/job.ini')
+        job, _ = helpers.get_risk_job(
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini')
+        )
         self.compulsory_arguments = dict(
             calculation_mode="classical_bcr",
             lrem_steps_per_interval=5,
@@ -1104,8 +1109,10 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
 class EventBasedBCRRiskForm(unittest.TestCase):
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job('event_based_bcr/job.ini',
-                                           'event_based_hazard/job.ini')
+        self.job, _ = helpers.get_risk_job(
+            demo_file('event_based_bcr/job.ini'),
+            demo_file('event_based_hazard/job.ini')
+        )
 
     def test_valid_form(self):
         region_constraint = (
@@ -1148,8 +1155,10 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 
 class EventBasedValidationTestCase(unittest.TestCase):
     def setUp(self):
-        self.job, _ = helpers.get_risk_job('event_based_risk/job.ini',
-                                           'event_based_hazard/job.ini')
+        self.job, _ = helpers.get_risk_job(
+            demo_file('event_based_risk/job.ini'),
+            demo_file('event_based_hazard/job.ini')
+        )
 
     def test_valid_form_with_default_resolution(self):
         rc = models.RiskCalculation(
