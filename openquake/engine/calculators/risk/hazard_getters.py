@@ -107,7 +107,7 @@ class HazardGetter(object):
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
                 "No hazard has been found for the asset %s",
-                self.asset_dict[missing_asset_id].asset_ref)
+                self.asset_dict[missing_asset_id])
 
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],

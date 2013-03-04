@@ -994,12 +994,15 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        hazard_output = models.GmfScenario.objects.create(
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "gmf_scenario"),
-            imt="PGA",
-            location="POINT(15.50 38.10)",
-            gmvs=[0.1, 0.2, 0.3])
+        output = models.Output.objects.create_output(
+            hazard_job, "Test Hazard output", "gmf_scenario")
+        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
+                      "POINT(15.481 38.25)"]:
+            hazard_output = models.GmfScenario.objects.create(
+                output=output,
+                imt="PGA",
+                location=point,
+                gmvs=[0.1, 0.2, 0.3])
 
     else:
         rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
