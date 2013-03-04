@@ -1701,11 +1701,11 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_risk_calculation
 FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1714,7 +1714,7 @@ ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
-FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE RESTRICT;
+FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1769,7 +1769,7 @@ ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
 FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1790,7 +1790,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_output_fk
@@ -1799,7 +1799,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
@@ -1818,7 +1818,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf_collection
 ADD CONSTRAINT hzrdr_gmf_collection_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 -- gmf_set -> gmf_collection FK
 ALTER TABLE hzrdr.gmf_set
@@ -1848,7 +1848,7 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.disagg_result
 ADD CONSTRAINT hzrdr_disagg_result_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 
 -- UHS:
@@ -1886,7 +1886,7 @@ ALTER TABLE hzrdr.ses_collection
 ADD CONSTRAINT hzrdr_ses_collection_lt_realization_fk
 FOREIGN KEY (lt_realization_id)
 REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 -- hzrdr.ses to hzrdr.ses_collection FK
 ALTER TABLE hzrdr.ses
