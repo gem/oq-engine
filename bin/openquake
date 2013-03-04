@@ -131,6 +131,10 @@ def set_up_arg_parser():
               ' in a single process. This is intended for use in debugging '
               ' and profiling.')
     )
+    general_grp.add_argument(
+        '--yes', '-y', action='store_true',
+        help='Automatically answer "yes" when asked to confirmation an action'
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -153,6 +157,11 @@ def set_up_arg_parser():
         '--eh',
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    hazard_grp.add_argument(
+        '--delete-hazard-calculation',
+        '--dhc',
+        help='Delete a hazard calculation and all associated outputs',
+        metavar='HAZARD_CALCULATION_ID')
 
     risk_grp = parser.add_argument_group('Risk')
     risk_grp.add_argument(
@@ -186,6 +195,11 @@ def set_up_arg_parser():
         help='Export the desired risk output to the specified directory',
         nargs=2,
         metavar=('OUTPUT_ID', 'TARGET_DIR'))
+    risk_grp.add_argument(
+        '--delete-risk-calculation',
+        '--drc',
+        help='Delete a risk calculation and all associated outputs',
+        metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
@@ -457,6 +471,51 @@ def complain_and_exit(msg, exit_code=0):
     sys.exit(exit_code)
 
 
+def del_haz_calc(hc_id, confirmed=False):
+    """
+    Delete a hazard calculation and all associated outputs.
+    """
+    if confirmed or confirm(
+            'Are you sure you want to delete this hazard calculation and all '
+            'associated outputs?\nThis action cannot be undone. (y/n): '):
+        try:
+            engine2.del_haz_calc(hc_id)
+        except RuntimeError, err:
+            print err.message
+
+
+def del_risk_calc(rc_id, confirmed=False):
+    """
+    Delete a risk calculation and all associated outputs.
+    """
+    if confirmed or confirm(
+            'Are you sure you want to delete this risk calculation and all '
+            'associated outputs?\nThis action cannot be undone. (y/n): '):
+        try:
+            engine2.del_risk_calc(rc_id)
+        except RuntimeError, err:
+            print err.message
+
+
+def confirm(prompt):
+    """
+    Ask for confirmation, given a ``prompt`` and return a boolean value.
+    """
+    while True:
+        try:
+            answer = raw_input(prompt)
+        except KeyboardInterrupt:
+            # the user presses ctrl+c, just say 'no'
+            return False
+
+        answer = answer.strip().lower()
+
+        if answer not in ('y', 'n'):
+            print 'Please enter y or n'
+            continue
+        return answer == 'y'
+
+
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -483,6 +542,8 @@ def main():
             if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
                    args.force_inputs, args.exports)
+    elif args.delete_hazard_calculation is not None:
+        del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         list_risk_calculations()
@@ -500,6 +561,8 @@ def main():
                  args.force_inputs, args.exports,
                  hazard_output_id=args.hazard_output_id,
                  hazard_calculation_id=args.hazard_calculation_id)
+    elif args.delete_risk_calculation is not None:
+        del_risk_calc(args.delete_risk_calculation, args.yes)
     else:
         arg_parser.print_usage()
 
