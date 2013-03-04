@@ -231,7 +231,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         super(EventBasedRiskCalculator, self).pre_execute()
 
         if (self.rc.insured_losses and
-            self.exposure_model.exposuredata_set.filter(
+            self.rc.exposure_model.exposuredata_set.filter(
                 (db.models.Q(deductible__isnull=True) |
                  db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(

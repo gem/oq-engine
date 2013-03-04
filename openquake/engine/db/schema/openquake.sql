@@ -199,7 +199,7 @@ CREATE TABLE hzrdi.parsed_rupture_model (
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    model_content_id INTEGER,  -- TODO(larsbutler), May 11th 2012: Eventually make this is a required FK (NOT NULL).
+    model_content_id INTEGER,
     -- Optional name for the input.
     name VARCHAR,
     -- The full path of the input file on the server
@@ -408,6 +408,8 @@ CREATE TABLE uiapi.risk_calculation (
     calculation_mode VARCHAR NOT NULL,
 
     maximum_distance FLOAT NULL,
+
+    exposure_input_id INTEGER,
 
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
@@ -1719,8 +1721,11 @@ FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON D
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_curve_fk
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_output_fk
 FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_input_fk
+FOREIGN KEY (exposure_input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
