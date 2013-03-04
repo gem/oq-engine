@@ -258,6 +258,20 @@ CREATE TABLE uiapi.oq_job (
 ) TABLESPACE uiapi_ts;
 
 
+-- Tracks task performance
+CREATE TABLE uiapi.performance (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    task_id VARCHAR,
+    start_time timestamp without time zone NOT NULL,
+    task VARCHAR,
+    operation VARCHAR NOT NULL,
+    duration FLOAT,
+    pymemory INTEGER,
+    pgmemory INTEGER
+)  TABLESPACE uiapi_ts;
+
+
 -- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
@@ -989,13 +1003,14 @@ CREATE TABLE uiapi.output (
             'agg_loss_curve',
             'aggregate_loss',
             'bcr_distribution',
+            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
-            'collapse_map',
+            'event_loss',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -1416,6 +1431,18 @@ CREATE TABLE riskr.aggregate_loss (
 ) TABLESPACE riskr_ts;
 
 
+-- Event Loss table.
+CREATE TABLE riskr.event_loss (
+    id SERIAL PRIMARY KEY,
+
+    -- FK to uiapi.output.id. The corresponding row must have
+    -- output_type == event_loss
+    output_id INTEGER NOT NULL,
+    rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
+    aggregate_loss float NOT NULL
+) TABLESPACE riskr_ts;
+
+
 -- Loss curve.
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
@@ -1679,11 +1706,11 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_risk_calculation
 FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1692,7 +1719,7 @@ ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
-FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE RESTRICT;
+FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1712,7 +1739,10 @@ FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELET
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT uiapi_job_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_fk
@@ -1747,7 +1777,7 @@ ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
 FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1768,7 +1798,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_output_fk
@@ -1777,7 +1807,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
@@ -1796,7 +1826,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf_collection
 ADD CONSTRAINT hzrdr_gmf_collection_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 -- gmf_set -> gmf_collection FK
 ALTER TABLE hzrdr.gmf_set
@@ -1826,7 +1856,7 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.disagg_result
 ADD CONSTRAINT hzrdr_disagg_result_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 
 -- UHS:
@@ -1864,7 +1894,7 @@ ALTER TABLE hzrdr.ses_collection
 ADD CONSTRAINT hzrdr_ses_collection_lt_realization_fk
 FOREIGN KEY (lt_realization_id)
 REFERENCES hzrdr.lt_realization(id)
-ON DELETE RESTRICT;
+ON DELETE CASCADE;
 
 -- hzrdr.ses to hzrdr.ses_collection FK
 ALTER TABLE hzrdr.ses
@@ -1915,6 +1945,14 @@ FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 ALTER TABLE riskr.aggregate_loss
 ADD CONSTRAINT riskr_aggregate_loss_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_event_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_evet_loss_sesrupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk

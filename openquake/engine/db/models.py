@@ -500,6 +500,24 @@ class OqJob(djm.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
+class Performance(djm.Model):
+    '''
+    Contains performance information about the operations performed by a task
+    launched by a job.
+    '''
+    oq_job = djm.ForeignKey('OqJob')
+    task_id = djm.TextField(null=True)
+    task = djm.TextField(null=True)
+    operation = djm.TextField(null=False)
+    start_time = djm.DateTimeField(editable=False)
+    duration = djm.FloatField(null=True)
+    pymemory = djm.IntegerField(null=True)
+    pgmemory = djm.IntegerField(null=True)
+
+    class Meta:
+        db_table = 'uiapi\".\"performance'
+
+
 class JobStats(djm.Model):
     '''
     Capture various statistics about a job.
@@ -1448,13 +1466,14 @@ class Output(djm.Model):
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
         (u'aggregate_losses', u'Aggregate Losses'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'collapse_map', u'Collapse Map Distribution'),
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
-        (u'collapse_map', u'Collapse Map Distribution'),
+        (u'event_loss', u'Event Loss Table'),
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
@@ -2412,6 +2431,21 @@ class AggregateLossCurveData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
+
+
+class EventLoss(djm.Model):
+    """
+    Holds the aggregate loss we have for each rupture
+    """
+
+    #: Foreign key to an :class:`openquake.engine.db.models.Output`
+    #: object with output_type == event_loss
+    output = djm.OneToOneField('Output')
+    rupture = djm.ForeignKey('SESRupture')
+    aggregate_loss = djm.FloatField()
+
+    class Meta:
+        db_table = 'riskr\".\"event_loss'
 
 
 class BCRDistribution(djm.Model):
