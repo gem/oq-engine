@@ -6,8 +6,8 @@
 <gml:description>Sample buildings</gml:description>
 	<assetDefinition gml:id="a1">
 		<site>
-                  <gml:Point srsName="epsg:4326">
-			<gml:pos>0.000	0.0</gml:pos>
+      <gml:Point srsName="epsg:4326">
+			  <gml:pos>0.000	0.0</gml:pos>
 		  </gml:Point>
 		</site>
 		<reco>0.1</reco>
@@ -17,8 +17,8 @@
 
 	<assetDefinition gml:id="a2">
 		<site>
-                  <gml:Point srsName="epsg:4326">
-			<gml:pos>-1.000	1.0</gml:pos>
+      <gml:Point srsName="epsg:4326">
+	  		<gml:pos>-1.000	1.0</gml:pos>
 		  </gml:Point>
 		</site>
 		<reco>0.2</reco>
@@ -28,8 +28,8 @@
 
 	<assetDefinition gml:id="a3">
 		<site>
-                  <gml:Point srsName="epsg:4326">
-                        <gml:pos>-1.000	1.0</gml:pos>
+      <gml:Point srsName="epsg:4326">
+        <gml:pos>-1.000	1.0</gml:pos>
 		  </gml:Point>
 		</site>
 		<reco>0.2</reco>
