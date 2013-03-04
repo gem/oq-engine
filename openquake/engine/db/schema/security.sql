@@ -64,6 +64,7 @@ GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.aggregate_loss_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.event_loss_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_state_id_seq to GROUP openquake;
@@ -75,6 +76,7 @@ GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.model_content_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_phase_stats_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.performance_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.cnode_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_calculation_id_seq to GROUP openquake;
@@ -231,6 +233,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map_data TO oq_reslt_writer;
 GRANT SELECT ON riskr.aggregate_loss TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.aggregate_loss TO oq_reslt_writer;
 
+-- riskr.event_loss
+GRANT SELECT ON riskr.event_loss TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.event_loss TO oq_reslt_writer;
+
 -- riskr.bcr_distribution
 GRANT SELECT ON riskr.bcr_distribution TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution TO oq_reslt_writer;
@@ -283,6 +289,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_job_init;
 -- how long are the various job phases taking?
 GRANT SELECT ON uiapi.job_phase_stats TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_phase_stats to oq_job_init;
+
+-- uiapi.performance
+GRANT SELECT ON uiapi.performance TO GROUP openquake;
+GRANT SELECT, INSERT, UPDATE, DELETE ON uiapi.performance TO oq_job_init;
 
 -- uiapi.job_stats
 GRANT SELECT ON uiapi.job_stats TO GROUP openquake;
