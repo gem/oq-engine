@@ -103,7 +103,7 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         """
         # In order for the tests in this class to work we need to disable any
         # other model inputs that might still be in the database.
-        models.Input2job.objects.all().delete()
+        models.Input2job.objects.using('admin').all().delete()
 
         mdl = models.Input(input_type=input_type, size=size, path=path,
                            owner=jobs[0].owner, digest=digest)
