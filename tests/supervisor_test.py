@@ -39,7 +39,7 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
 
     def tearDown(self):
         if self.job:
-            ErrorMsg.objects.using('job_superv')\
+            ErrorMsg.objects.using('admin')\
                             .filter(oq_job=self.job.id).delete()
             self.teardown_job(self.job, filesystem_only=True)
 
