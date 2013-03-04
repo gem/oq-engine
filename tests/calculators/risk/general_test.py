@@ -76,11 +76,11 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator = FakeRiskCalculator(self.job)
 
     def test_store_exposure(self):
-        """
-        Test that exposure data and models are properly stored and
-        associated with the calculator
-        """
-        self.calculator._store_exposure()
+        # Test that exposure data and models are properly stored and
+        # associated with the calculator
+
+        self.calculator._store_exposure(
+            self.calculator.rc.inputs.get(input_type='exposure'))
 
         actual_model_queryset = models.ExposureModel.objects.filter(
             input__input2rcalc__risk_calculation=self.job.risk_calculation,
@@ -102,18 +102,15 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
     def test_set_risk_models(self):
-        """
-        Test that Vulnerability model and functions are properly
-        stored and associated with the calculator
-        """
+        # Test that Vulnerability model and functions are properly
+        # stored and associated with the calculator
+
         self.calculator.taxonomies = {'VF': 10}
         self.calculator.set_risk_models()
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
 
     def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
+        # Test that the proper output containers are created
 
         for hazard_output in self.hazard_outputs:
             [loss_curve_id, loss_map_ids,
@@ -132,36 +129,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
                 self.assertTrue(models.LossMap.objects.filter(
                     pk=map_id).exists())
 
-    def test_pre_execute(self):
-        # Most of the pre-execute functionality is implement in other methods.
-        # For this test, just make sure each method gets called.
-        path = ('openquake.engine.calculators.risk.general.BaseRiskCalculator')
-        patches = (
-            helpers.patch(
-                '%s.%s' % (path, '_store_exposure')),
-            helpers.patch(
-                '%s.%s' % (path, 'set_risk_models')),
-            helpers.patch(
-                '%s.%s' % (path, '_initialize_progress')))
-
-        mocks = [p.start() for p in patches]
-
-        mocks[0].return_value = mock.Mock()
-        mocks[0].return_value.taxonomies_in.return_value = {'RC': 10}
-
-        self.calculator.imt = 'PGA'
-        self.calculator.pre_execute()
-
-        for i, m in enumerate(mocks):
-            self.assertEqual(1, m.call_count,
-                             "mock %d has not been called" % (i + 1))
-            m.stop()
-            patches[i].stop()
-
     def test_initialize_progress(self):
-        """
-        Tests that the progress counter has been initialized properly
-        """
+        # Tests that the progress counter has been initialized
+        # properly
 
         self.calculator.pre_execute()
 
