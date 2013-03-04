@@ -956,26 +956,22 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
+def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
     """
-    Takes in input the paths (relative to the demos directory) to a
-    risk and hazard demo file config, respectively.
+    Takes in input the paths to a risk job config file and a hazard job config
+    file.
 
-    Creates the hazard outputs suitable to be used by a risk
+    Creates fake hazard outputs suitable to be used by a risk
     calculation and then creates a :class:`openquake.engine.db.models.OqJob`
     object for a risk calculation. It also returns the input files
     referenced by the risk config file.
 
-    :param output_type: gmf or curve
+    :param output_type: gmf, gmf_scenario, or curve
     """
     username = username if username is not None else default_user().user_name
 
-    hazard_cfg = demo_file(hazard_demo)
-
     hazard_job = get_hazard_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
-
-    risk_cfg = demo_file(risk_demo)
 
     rlz = models.LtRealization.objects.create(
         hazard_calculation=hazard_job.hazard_calculation,
@@ -1002,6 +998,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
             gmvs=[0.1, 0.2, 0.3])
 
     else:
+        rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
         hazard_output = models.Gmf.objects.create(
             gmf_set=models.GmfSet.objects.create(
                 gmf_collection=models.GmfCollection.objects.create(
@@ -1013,6 +1010,7 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
                 ses_ordinal=1,
                 complete_logic_tree_gmf=False),
             imt="PGA", gmvs=[0.1, 0.2, 0.3],
+            rupture_ids=rupture_ids,
             result_grp_ordinal=1,
             location="POINT(15.50 38.10)")
 
@@ -1042,6 +1040,45 @@ def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
     job.risk_calculation = risk_calc
     job.save()
     return job, files
+
+
+def get_rupture_ids(job, hc, lt_realization, num):
+    """
+    :returns: a list of IDs of newly created ruptures associated with
+    `job` and an instance of
+    :class:`openquake.engine.db.models.HazardCalculation`. It also
+    creates a father :class:`openquake.engine.db.models.SES`. Each
+    rupture has a magnitude ranging from 0 to 10, no geographic
+    information and result_grp_ordinal set to 1.
+
+    :param lt_realization: an instance of
+    :class:`openquake.engine.db.models.LtRealization` to be associated
+    with the newly created SES object
+
+    :param int num: the number of ruptures to create
+    """
+    ses = models.SES.objects.create(
+        ses_collection=models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection", "ses"),
+            lt_realization=lt_realization),
+        investigation_time=hc.investigation_time,
+        ordinal=1,
+        complete_logic_tree_ses=False)
+
+    return [
+        models.SESRupture.objects.create(
+            ses=ses,
+            magnitude=i * 10. / float(num),
+            strike=0,
+            dip=0,
+            rake=0,
+            tectonic_region_type="test region type",
+            is_from_fault_source=False,
+            lons=[], lats=[], depths=[],
+            result_grp_ordinal=1,
+            rupture_ordinal=0).id
+        for i in range(num)]
 
 
 def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
