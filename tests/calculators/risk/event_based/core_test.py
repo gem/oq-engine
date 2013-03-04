@@ -72,13 +72,17 @@ class EventBasedRiskCalculatorTestCase(
         # Test the validation of the imt associated with the
         # vulnerability model that must match the one of the hazard
         # output
-        patch = helpers.patch(
-            'openquake.engine.calculators.risk.general'
-            '.BaseRiskCalculator.set_risk_models')
-        patch.start()
+
+        base_path = ('openquake.engine.calculators.risk.general.'
+                     'BaseRiskCalculator.')
+        patches = [helpers.patch(base_path + 'set_risk_models'),
+                   helpers.patch(base_path + '_store_exposure')]
+        for patch in patches:
+            patch.start()
         self.calculator.imt = 'fake'
         self.assertRaises(RuntimeError, self.calculator.pre_execute)
-        patch.stop()
+        for patch in patches:
+            patch.stop()
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
