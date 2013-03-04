@@ -378,6 +378,19 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
         self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
 
+    def test_distance_to_2d_mesh(self):
+        lons = numpy.array([[0., 1.], [0., 1.]])
+        lats = numpy.array([[1., 1.], [0., 0.]])
+        depths = numpy.array([[0., 0.,], [0., 0.]])
+        mesh = Mesh(lons, lats, depths)
+        target_lons = numpy.array([[0.25, 0.75], [0.25, 0.75]])
+        target_lats = numpy.array([[0.75, 0.75], [0.25, 0.25]])
+        target_depths = numpy.array([[0., 0.], [0., 0.]])
+        target_mesh = Mesh(target_lons, target_lats, target_depths)
+        dists = mesh.get_joyner_boore_distance(target_mesh)
+        expected_dists = numpy.zeros((2, 2))
+        numpy.testing.assert_equal(dists, expected_dists)
+
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()
         lons = lons.transpose()

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.geo.surface.base` implements
-:class:`BaseSurface`.
+:class:`BaseSurface` and :class:`BaseQuadrilateralSurface`.
 """
 import abc
 
@@ -26,17 +26,11 @@ from openquake.hazardlib.geo import geodetic
 
 class BaseSurface(object):
     """
-    Base class for surface in 3D-space.
-
-    Subclasses must implement :meth:`_create_mesh`, :meth:`get_strike`
-    and :meth:`get_dip`, and can override any others just for the sake
-    of performance.
+    Base class for a surface in 3D-space.
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self):
-        self._mesh = None
-
+    @abc.abstractmethod
     def get_min_distance(self, mesh):
         """
         Compute and return the minimum distance from the surface to each point
@@ -47,17 +41,9 @@ class BaseSurface(object):
             minimum distance to.
         :returns:
             A numpy array of distances in km.
-
-        Base class implementation calls the :meth:`corresponding
-        <openquake.hazardlib.geo.mesh.Mesh.get_min_distance>` method of the
-        surface's :meth:`mesh <get_mesh>`.
-
-        Subclasses may override this method in order to make use
-        of knowledge of a specific surface shape and thus perform
-        better.
         """
-        return self.get_mesh().get_min_distance(mesh)
 
+    @abc.abstractmethod
     def get_closest_points(self, mesh):
         """
         For each point from ``mesh`` find a closest point belonging to surface.
@@ -68,13 +54,9 @@ class BaseSurface(object):
         :returns:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
             ``mesh`` with closest surface's points on respective indices.
-
-        Base class implementation calls the :meth:`corresponding
-        <openquake.hazardlib.geo.mesh.Mesh.get_closest_points>` method of the
-        surface's :meth:`mesh <get_mesh>`.
         """
-        return self.get_mesh().get_closest_points(mesh)
 
+    @abc.abstractmethod
     def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore (also known as ``Rjb``) distance
@@ -86,12 +68,9 @@ class BaseSurface(object):
         :returns:
             Numpy array of closest distances between the projections of surface
             and each point of the ``mesh`` to the earth surface.
-
-        Base class calls surface mesh's method
-        :meth:`~openquake.hazardlib.geo.mesh.Mesh.get_joyner_boore_distance`.
         """
-        return self.get_mesh().get_joyner_boore_distance(mesh)
 
+    @abc.abstractmethod
     def get_rx_distance(self, mesh):
         """
         Compute distance between each point of mesh and surface's great circle
@@ -106,14 +85,130 @@ class BaseSurface(object):
         measured perpendicular to the strike. Values on the hanging wall
         are positive, values on the footwall are negative.
 
-        Base class calls
-        :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
-
         :param mesh:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
             Rx-distance to.
         :returns:
             Numpy array of distances in km.
+        """
+
+    @abc.abstractmethod
+    def get_top_edge_depth(self):
+        """
+        Compute minimum depth of surface's top edge.
+
+        :returns:
+            Float value, the vertical distance between the earth surface
+            and the shallowest point in surface's top edge in km.
+        """
+
+    @abc.abstractmethod
+    def get_strike(self):
+        """
+        Compute surface's strike as decimal degrees in a range ``[0, 360)``.
+
+        The actual definition of the strike might depend on surface geometry.
+
+        :returns:
+            Float value, the azimuth (in degrees) of the surface top edge
+        """
+
+    @abc.abstractmethod
+    def get_dip(self):
+        """
+        Compute surface's dip as decimal degrees in a range ``(0, 90]``.
+
+        The actual definition of the dip might depend on surface geometry.
+
+        :returns:
+            Float value, the inclination (in degrees) of the surface with
+            respect to the Earth surface
+        """
+
+    @abc.abstractmethod
+    def get_width(self):
+        """
+        Compute surface's width (that is surface extension along the
+        dip direction) in km.
+
+        The actual definition depends on the type of surface geometry.
+
+        :returns:
+            Float value, the surface width
+        """
+
+    @abc.abstractmethod
+    def get_area(self):
+        """
+        Compute surface's area in squared km.
+
+        :returns:
+            Float value, the surface area
+        """
+
+
+class BaseQuadrilateralSurface(BaseSurface):
+    """
+    Base class for a quadrilateral surface in 3D-space.
+
+    Subclasses must implement :meth:`_create_mesh`, and superclass methods
+    :meth:`get_strike() <.base.BaseSurface.get_strike>`,
+    :meth:`get_dip() <.base.BaseSurface.get_dip>` and
+    :meth:`get_width() <.base.BaseSurface.get_width>`,
+    and can override any others just for the sake of performance
+    """
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self):
+        self._mesh = None
+
+    def get_min_distance(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseSurface.get_min_distance>`
+        for spec of input and result values.
+
+        Base class implementation calls the :meth:`corresponding
+        <openquake.hazardlib.geo.mesh.Mesh.get_min_distance>` method of the
+        surface's :meth:`mesh <get_mesh>`.
+
+        Subclasses may override this method in order to make use
+        of knowledge of a specific surface shape and thus perform
+        better.
+        """
+        return self.get_mesh().get_min_distance(mesh)
+
+    def get_closest_points(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseSurface.get_closest_points>`
+        for spec of input and result values.
+
+        Base class implementation calls the :meth:`corresponding
+        <openquake.hazardlib.geo.mesh.Mesh.get_closest_points>` method of the
+        surface's :meth:`mesh <get_mesh>`.
+        """
+        return self.get_mesh().get_closest_points(mesh)
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseSurface.get_joyner_boore_distance>`
+        for spec of input and result values.
+
+        Base class calls surface mesh's method
+        :meth:`~openquake.hazardlib.geo.mesh.Mesh.get_joyner_boore_distance`.
+        """
+        return self.get_mesh().get_joyner_boore_distance(mesh)
+
+    def get_rx_distance(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseSurface.get_rx_distance>`
+        for spec of input and result values.
+
+        Base class calls
+        :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
         """
         top_edge_centroid = self._get_top_edge_centroid()
         return geodetic.distance_to_arc(
@@ -161,6 +256,15 @@ class BaseSurface(object):
                    "the first row of points in the mesh must be the shallowest"
         return self._mesh
 
+    def get_area(self):
+        """
+        Return surface area (in squared km).
+        """
+        mesh = self.get_mesh()
+        _, _, _, area = mesh.get_cell_dimensions()
+
+        return numpy.sum(area)
+
     @abc.abstractmethod
     def _create_mesh(self):
         """
@@ -169,29 +273,4 @@ class BaseSurface(object):
         :returns:
             An instance of
             :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
-        """
-
-    @abc.abstractmethod
-    def get_strike(self):
-        """
-        Return surface's strike as decimal degrees in a range ``[0, 360)``.
-
-        The actual definition of the strike might depend on surface geometry.
-        """
-
-    @abc.abstractmethod
-    def get_dip(self):
-        """
-        Return surface's dip as decimal degrees in a range ``(0, 90]``.
-
-        The actual definition of the dip might depend on surface geometry.
-        """
-
-    @abc.abstractmethod
-    def get_width(self):
-        """
-        Return surface's width (that is surface extension along the
-        dip direction) in km.
-
-        The actual definition depends on the type of surface geometry.
         """

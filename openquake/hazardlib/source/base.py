@@ -39,7 +39,7 @@ class SeismicSource(object):
         The desired distance between two adjacent points in source's
         ruptures' mesh, in km. Mainly this parameter allows to balance
         the trade-off between time needed to compute the :meth:`distance
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`
         between the rupture surface and a site and the precision of that
         computation.
     :param magnitude_scaling_relationship:
@@ -182,10 +182,10 @@ class SeismicSource(object):
         should not be filtered out if it is not further than the integration
         distance from the rupture's surface projection along the great
         circle arc (this is known as :meth:`Joyner-Boore distance
-        <openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`).
+        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance>`).
 
         Base class implementation performs Joyner-Boore distance calculation
-        (:meth:`openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`)
+        (:meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`)
         and filters out sites that are farther than ``integration_distance``.
         """
         jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)

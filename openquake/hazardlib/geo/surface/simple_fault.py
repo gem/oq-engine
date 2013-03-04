@@ -21,12 +21,12 @@ import math
 
 import numpy
 
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 
 
-class SimpleFaultSurface(BaseSurface):
+class SimpleFaultSurface(BaseQuadrilateralSurface):
     """
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
 

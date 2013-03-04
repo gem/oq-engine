@@ -20,3 +20,4 @@ implementations of earthquake rupture surfaces.
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface

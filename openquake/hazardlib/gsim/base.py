@@ -91,7 +91,7 @@ class GroundShakingIntensityModel(object):
     #:     for more detailed description of dip and rake.
     #: ``ztor``
     #:     Depth of rupture's top edge in km. See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_top_edge_depth`.
     #:
     #: These parameters are available from the :class:`RuptureContext` object
     #: attributes with same names.
@@ -102,13 +102,13 @@ class GroundShakingIntensityModel(object):
     #:
     #: ``rrup``
     #:     Closest distance to rupture surface.  See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance`.
     #: ``rjb``
     #:     Distance to rupture's surface projection. See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`.
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
-    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_rx_distance`.
+    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_rx_distance`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.

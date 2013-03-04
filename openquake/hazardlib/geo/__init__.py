@@ -29,5 +29,6 @@ from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface import ComplexFaultSurface
+from openquake.hazardlib.geo.surface import MultiSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import surface

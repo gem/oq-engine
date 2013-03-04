@@ -166,7 +166,7 @@ class Mesh(object):
         Point's depth is ignored.
 
         See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
+        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`
         for definition of this distance.
 
         :returns:
@@ -183,7 +183,8 @@ class Mesh(object):
         # depends on mesh spacing. but the difference can be neglected
         # if calculated geodetic distance is over some threshold.
         distances = geodetic.min_geodetic_distance(self.lons, self.lats,
-                                                   mesh.lons, mesh.lats)
+                                                   mesh.lons.flatten(),
+                                                   mesh.lats.flatten())
 
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
@@ -238,7 +239,7 @@ class Mesh(object):
         # by more accurate point-to-polygon distance values.
         distances.put(idxs, distances_2d)
 
-        return distances
+        return distances.reshape(mesh.shape)
 
     def get_closest_points(self, mesh):
         """
