@@ -610,3 +610,17 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             loss_ratios=loss_ratios,
             asset_value=asset.value,
             location=asset.site.wkt)
+
+
+class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
+    """
+    Extend :class:`openquake.engine.utils.stats.count_progress` to
+    work with celery task where the number of items (i.e. assets) are
+    embedded in hazard getters
+    """
+    def get_task_data(self, job_id, hazard_data, *args):
+
+        first_hazard_data = hazard_data.values()[0]
+
+        getter, _weight = first_hazard_data
+        return job_id, len(getter.assets)
