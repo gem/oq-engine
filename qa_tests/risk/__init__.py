@@ -78,13 +78,24 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
-                for i, output in enumerate(models.Output.objects.filter(
-                                           oq_job=job).order_by('id')):
+                for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
                     self.assert_xml_equal(
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+    def actual_xml_outputs(self, job):
+        """
+        Returns all the outputs produced by `job` that will be checked
+        against expected data by `assert_xml_equal`. Default
+        implementation is to consider all the outputs (it expects that
+        all the outputs will and can be exported in XML).
+
+        QA test may override this if they want to check outputs in
+        format different than XML (like CSV).
+        """
+        return models.Output.objects.filter(oq_job=job).order_by('id')
 
     def actual_data(self, _job):
         """

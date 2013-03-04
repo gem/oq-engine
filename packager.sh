@@ -53,6 +53,8 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $haddr "sudo apt-get update"
+    ssh $haddr "sudo apt-get -y upgrade"
     gpg -a --export | ssh $haddr "sudo apt-key add -"
     # install package to manage repository properly
     ssh $haddr "sudo apt-get install -y python-software-properties"
@@ -79,7 +81,6 @@ _pkgtest_innervm_run () {
     ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-risklib ./\""
 
     ssh $haddr "sudo apt-get update"
-    ssh $haddr "sudo apt-get -y upgrade"
 
     # packaging related tests (install, remove, purge, install, reinstall)
     ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
