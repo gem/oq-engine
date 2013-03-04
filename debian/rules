@@ -18,7 +18,7 @@ bd=openquake/bin
 
 
 %:
-	dh $@ --with quilt
+	dh --with python2 --with quilt --buildsystem=python_distutils $@
 
 override_dh_quilt_patch:
 	dh_quilt_patch

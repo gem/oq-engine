@@ -29,6 +29,7 @@ from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
 
 
@@ -162,7 +163,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         expected_ids = [x.id for x in files.values()
                         if x.input_type == 'source_model_logic_tree']
 
-        inputs = models.inputs4hcalc(hc.id, input_type='source_model_logic_tree')
+        inputs = models.inputs4hcalc(
+            hc.id, input_type='source_model_logic_tree'
+        )
 
         actual_ids = sorted([x.id for x in inputs])
 
@@ -176,8 +179,8 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         job, files = helpers.get_risk_job(
-            'classical_psha_based_risk/job.ini',
-            'simple_fault_demo_hazard/job.ini')
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
         expected_ids = sorted([x.id for x in files.values()])
@@ -190,8 +193,8 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         job, files = helpers.get_risk_job(
-            'classical_psha_based_risk/job.ini',
-            'simple_fault_demo_hazard/job.ini')
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
         # It should only be 1 id, actually.

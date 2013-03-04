@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import numpy
 from tests.utils import helpers
 import unittest
 import cPickle as pickle
@@ -22,11 +23,13 @@ from openquake.engine.db import models
 from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk.general import BaseRiskCalculator
 
+from tests.utils.helpers import demo_file
+
 
 class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
-    hazard_demo = 'simple_fault_demo_hazard/job.ini'
-    risk_demo = 'classical_psha_based_risk/job.ini'
+    hazard_demo = demo_file('simple_fault_demo_hazard/job.ini')
+    risk_demo = demo_file('classical_psha_based_risk/job.ini')
     hazard_output_type = 'curve'
     getter_class = hazard_getters.HazardCurveGetterPerAsset
     taxonomy = 'VF'
@@ -75,8 +78,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
-    hazard_demo = 'event_based_hazard/job.ini'
-    risk_demo = 'event_based_risk/job.ini'
+    hazard_demo = demo_file('event_based_hazard/job.ini')
+    risk_demo = demo_file('event_based_risk/job.ini')
     hazard_output_type = 'gmf'
     getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
@@ -87,16 +90,18 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     def test_call(self):
         assets, values, missing = self.getter()
 
+        gmvs = numpy.array(values)[:, 0]
+
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         self.assertEqual(set(), missing)
-        self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
+        self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], gmvs.tolist())
 
 
 class GroundMotionScenarioGetterPerAssetTestCase(
         HazardCurveGetterPerAssetTestCase):
 
-    hazard_demo = 'scenario_hazard/job.ini'
-    risk_demo = 'scenario_risk/job.ini'
+    hazard_demo = demo_file('scenario_hazard/job.ini')
+    risk_demo = demo_file('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
     getter_class = hazard_getters.GroundMotionScenarioGetterPerAsset
     taxonomy = 'RM'
@@ -114,8 +119,8 @@ class GroundMotionScenarioGetterPerAssetTestCase(
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
-    hazard_demo = 'scenario_hazard/job.ini'
-    risk_demo = 'scenario_risk/job.ini'
+    hazard_demo = demo_file('scenario_hazard/job.ini')
+    risk_demo = demo_file('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
     getter_class = hazard_getters.GroundMotionScenarioGetter
     taxonomy = 'RM'
