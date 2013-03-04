@@ -17,6 +17,7 @@ import unittest
 import mock
 
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 from openquake.engine.calculators.risk import general as risk
 from openquake.engine.db import models
 from openquake.engine.utils import stats
@@ -28,8 +29,8 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
-            'classical_psha_based_risk/job.ini',
-            'simple_fault_demo_hazard/job.ini')
+            demo_file('classical_psha_based_risk/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini'))
 
     @property
     def hazard_calculation(self):

@@ -15,6 +15,7 @@
 
 from tests.calculators.risk import general_test
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.classical_bcr import (
@@ -29,8 +30,8 @@ class ClassicalBCRRiskCalculatorTestCase(
 
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
-            'classical_bcr/job.ini',
-            'simple_fault_demo_hazard/job.ini')
+            demo_file('classical_bcr/job.ini'),
+            demo_file('simple_fault_demo_hazard/job.ini'))
 
         self.calculator = classical_bcr.ClassicalBCRRiskCalculator(self.job)
 
