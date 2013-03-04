@@ -956,26 +956,22 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_demo, hazard_demo, output_type="curve", username=None):
+def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
     """
-    Takes in input the paths (relative to the demos directory) to a
-    risk and hazard demo file config, respectively.
+    Takes in input the paths to a risk job config file and a hazard job config
+    file.
 
-    Creates the hazard outputs suitable to be used by a risk
+    Creates fake hazard outputs suitable to be used by a risk
     calculation and then creates a :class:`openquake.engine.db.models.OqJob`
     object for a risk calculation. It also returns the input files
     referenced by the risk config file.
 
-    :param output_type: gmf or curve
+    :param output_type: gmf, gmf_scenario, or curve
     """
     username = username if username is not None else default_user().user_name
 
-    hazard_cfg = demo_file(hazard_demo)
-
     hazard_job = get_hazard_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
-
-    risk_cfg = demo_file(risk_demo)
 
     rlz = models.LtRealization.objects.create(
         hazard_calculation=hazard_job.hazard_calculation,
