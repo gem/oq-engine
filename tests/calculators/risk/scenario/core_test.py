@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from tests.utils import helpers
+from tests.utils.helpers import demo_file
 from tests.calculators.risk import general_test
 
 from openquake.engine.db import models
@@ -28,8 +29,8 @@ class ScenarioRiskCalculatorTestCase(
 
     def setUp(self):
         self.job, _ = helpers.get_risk_job(
-            'scenario_risk/job.ini',
-            'scenario_hazard/job.ini', output_type="gmf_scenario")
+            demo_file('scenario_risk/job.ini'),
+            demo_file('scenario_hazard/job.ini'), output_type="gmf_scenario")
 
         self.calculator = scenario.ScenarioRiskCalculator(self.job)
         self.calculator.pre_execute()

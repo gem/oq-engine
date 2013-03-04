@@ -49,18 +49,18 @@ GRANT SELECT ON geography_columns          TO GROUP openquake;
 GRANT SELECT ON geometry_columns           TO GROUP openquake;
 GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
 
--- `oq_admin` can delete anything
+-- `oq_admin` has full SELECT/INSERT/UPDATE/DELETE access to all tables.
 -- In fact, `oq_admin` is the only user that can delete records,
 -- with the exception the `htemp` schema space. See below.
-GRANT DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA eqcat TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA oqmif TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
-GRANT DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA eqcat TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA oqmif TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 
 ----------------------------------------------
 -- Specific permissions for individual tables:
