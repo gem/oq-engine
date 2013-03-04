@@ -64,13 +64,12 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an array of the form ``[[asset_id, hazard_data],
-        [asset_id, hazard_data], ...]``, where each element is an
-        array with the first element being the asset_id and the second
-        element the hazard data (e.g. an array with the poes, or an
-        array with the ground motion values). Mind that the returned
-        data could lack some assets being filtered out by the
-        ``maximum_distance`` criteria.
+        :returns: an OrderedDict mapping ID of
+        :class:`openquake.engine.db.models.ExposureData` objects to
+        hazard_data (e.g. an array with the poes, or an array with the
+        ground motion values). Mind that the returned data could lack
+        some assets being filtered out by the ``maximum_distance``
+        criteria.
 
         Subclasses must implement this.
         """
@@ -85,7 +84,7 @@ class HazardGetter(object):
         the array of IDs of assets that has been filtered out by the
         getter by the ``maximum_distance`` criteria.
         """
-        data = OrderedDict(self.get_data())
+        data = self.get_data()
 
         filtered_asset_ids = set(data.keys())
         all_asset_ids = set(self.asset_dict.keys())
@@ -135,10 +134,11 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :method:`HazardGetter.get_data` interface.
         """
-        return [(data[0], data[1][0]) for data in
+        return OrderedDict(
+            [(data[0], data[1][0]) for data in
                 [(asset.id, self.get_by_site(asset.site))
                  for asset in self.assets]
-                if data[1][1] < self.max_distance]
+                if data[1][1] < self.max_distance])
 
     def get_by_site(self, site):
         """
@@ -225,11 +225,14 @@ class GroundMotionValuesGetter(HazardGetter):
         # gmvs
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id)
-  oqmif.exposure_data.id, gmf_table.allgmvs_arr
+  oqmif.exposure_data.id, gmf_table.allgmvs_arr, gmf_table.allrupture_ids
   FROM oqmif.exposure_data JOIN
     (SELECT location,
             array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal)
-     AS allgmvs_arr FROM hzrdr.gmf
+            AS allgmvs_arr,
+            array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
+            AS allrupture_ids
+     FROM hzrdr.gmf
      WHERE imt = %s AND gmf_set_id IN %s {}
      AND location && %s
      GROUP BY location) AS gmf_table
@@ -250,7 +253,13 @@ class GroundMotionValuesGetter(HazardGetter):
 
         cursor.execute(query, args)
 
-        return cursor.fetchall()
+        data = cursor.fetchall()
+
+        # The OrderedDict is needed by __call__ in order to scan
+        # multiple times the data and still get corresponding values.
+        # See the return statement of the __call__ method.
+
+        return OrderedDict((row[0], [row[1], row[2]]) for row in data)
 
 
 class GroundMotionScenarioGetterPerAsset(HazardGetter):
@@ -263,10 +272,10 @@ class GroundMotionScenarioGetterPerAsset(HazardGetter):
     """
 
     def get_data(self):
-        return [(data[0], data[1][0]) for data in
-                [(asset.id, self.get_by_site(asset.site))
-                 for asset in self.assets]
-                if data[1][1] < self.max_distance]
+        return OrderedDict([(data[0], data[1][0]) for data in
+                            [(asset.id, self.get_by_site(asset.site))
+                             for asset in self.assets]
+                            if data[1][1] < self.max_distance])
 
     def get_by_site(self, site):
         """
@@ -353,4 +362,4 @@ class GroundMotionScenarioGetter(HazardGetter):
 
         cursor.execute(query, args)
 
-        return cursor.fetchall()
+        return OrderedDict(cursor.fetchall())
