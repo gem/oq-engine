@@ -258,6 +258,20 @@ CREATE TABLE uiapi.oq_job (
 ) TABLESPACE uiapi_ts;
 
 
+-- Tracks task performance
+CREATE TABLE uiapi.performance (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    task_id VARCHAR,
+    start_time timestamp without time zone NOT NULL,
+    task VARCHAR,
+    operation VARCHAR NOT NULL,
+    duration FLOAT,
+    pymemory INTEGER,
+    pgmemory INTEGER
+)  TABLESPACE uiapi_ts;
+
+
 -- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
@@ -987,13 +1001,14 @@ CREATE TABLE uiapi.output (
             'agg_loss_curve',
             'aggregate_loss',
             'bcr_distribution',
+            'collapse_map',
             'complete_lt_gmf',
             'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
-            'collapse_map',
+            'event_loss',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -1263,19 +1278,10 @@ CREATE TABLE hzrdr.gmf (
 CREATE TABLE hzrdr.gmf_scenario (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
-    imt VARCHAR NOT NULL CONSTRAINT scenario_imt
-        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
-    sa_period float CONSTRAINT gmf_sa_period
-        CHECK(
-            ((imt = 'SA') AND (sa_period IS NOT NULL))
-            OR ((imt != 'SA') AND (sa_period IS NULL))),
-    sa_damping float CONSTRAINT gmf_sa_damping
-        CHECK(
-            ((imt = 'SA') AND (sa_damping IS NOT NULL))
-            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    imt VARCHAR NOT NULL,
     gmvs float[],
-    result_grp_ordinal INTEGER NOT NULL,
-    location GEOGRAPHY(point) NOT NULL
+    location GEOGRAPHY(point) NOT NULL,
+    UNIQUE (output_id, imt, location)
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1420,6 +1426,18 @@ CREATE TABLE riskr.aggregate_loss (
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
+) TABLESPACE riskr_ts;
+
+
+-- Event Loss table.
+CREATE TABLE riskr.event_loss (
+    id SERIAL PRIMARY KEY,
+
+    -- FK to uiapi.output.id. The corresponding row must have
+    -- output_type == event_loss
+    output_id INTEGER NOT NULL,
+    rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
+    aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
 
 
@@ -1716,7 +1734,10 @@ FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELET
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT uiapi_job_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_fk
@@ -1919,6 +1940,14 @@ FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 ALTER TABLE riskr.aggregate_loss
 ADD CONSTRAINT riskr_aggregate_loss_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_event_loss_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss
+ADD CONSTRAINT riskr_evet_loss_sesrupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
