@@ -21,6 +21,7 @@ import numpy
 
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo import utils
 
 
 class MultiSurface(BaseSurface):
@@ -203,6 +204,53 @@ class MultiSurface(BaseSurface):
         Return sum of surface elements areas (in squared km).
         """
         return numpy.sum(self._get_areas())
+
+    def get_bounding_box(self):
+        """
+        Compute bounding boxes for each surface element, and then return
+        the bounding box of all bounding boxes.
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+        lons = []
+        lats = []
+        for surf in self.surfaces:
+            west, east, north, south = surf.get_bounding_box()
+            lons.extend([west, east])
+            lats.extend([north, south])
+
+        return utils.get_spherical_bounding_box(lons, lats)
+
+    def get_middle_point(self):
+        """
+        If :class:`MultiSurface` is defined by a single surface, simply
+        returns surface's middle point, otherwise compute surface middle point
+        as the surface's closest point to the surface's bounding box middle
+        point.
+
+        In other words, the middle point is defined as the surface point that
+        is closest to the centroid of the surface bounding box.
+        """
+        if len(self.surfaces) == 1:
+            return self.surface[0].get_middle_point()
+
+        west, east, north, south = self.get_bounding_box()
+        middle_point = utils.get_middle_point(west, north, east, south)
+
+        # it is important to specify the zero depth of the bounding box
+        # middle point, because in this way the method returns also the depth
+        # of the closest point
+        closest_point = self.get_closest_points(
+            Mesh(numpy.array([middle_point.longitude]),
+                 numpy.array([middle_point.latitude]),
+                 numpy.array([0.0]))
+        )
+
+        return Point(closest_point.lons[0], closest_point.lats[0],
+                     closest_point.depth[0])
 
     def _get_areas(self):
         """

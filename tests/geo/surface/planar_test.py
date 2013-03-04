@@ -504,9 +504,34 @@ class PlanarSurfaceGetWidthTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 0.0, 45.0, *corners)
         self.assertAlmostEqual(surface.get_width(), 1.0, places=3)
 
+
 class PlanarSurfaceGetAreaTestCase(unittest.TestCase):
     def test(self):
         corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
                    Point(0.0, 0.089932, 10.0), Point(0.0, 0.0, 10.0)]
         surface = PlanarSurface(1, 45, 90, *corners)
         self.assertAlmostEqual(surface.get_area(), 100.0, places=0)
+
+
+class PlanarSurfaceGetBoundingBoxTestCase(unittest.TestCase):
+    def test(self):
+        corners = [Point(-0.00317958, -0.00449661, 4.64644661),
+                   Point(-0.00317958, 0.00449661, 4.64644661),
+                   Point(0.00317958, 0.00449661, 5.35355339),
+                   Point(0.00317958, -0.00449661, 5.35355339)]
+        surface = PlanarSurface(1, 0.0, 45.0, *corners)
+        west, east, north, south = surface.get_bounding_box()
+        self.assertEqual(-0.00317958, west)
+        self.assertEqual(0.00317958, east)
+        self.assertEqual(0.00449661, north)
+        self.assertEqual(-0.00449661, south)
+
+
+class PlanarSurfaceGetMiddlePointTestCase(unittest.TestCase):
+    def test(self):
+        corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
+                   Point(0.0, 0.089932, 10.0), Point(0.0, 0.0, 10.0)]
+        surface = PlanarSurface(1, 45, 90, *corners)
+        self.assertTrue(
+            Point(0.0, 0.044966, 5.0) == surface.get_middle_point()
+        )

@@ -65,6 +65,10 @@ class _BaseMultiTestCase(unittest.TestCase):
         def get_area(self):
             return self.area
 
+        def get_bounding_box(self):
+            return numpy.min(self.lons), numpy.max(self.lons), \
+                   numpy.max(self.lats), numpy.min(self.lats)
+
     def setUp(self):
         self.surfaces_mesh2D = [
             self.FakeSurface(numpy.array([[-1., 2., 3.], [4., 5., 6.]]),
@@ -195,3 +199,11 @@ class SurfacePropertiesTestCase(_BaseMultiTestCase):
     def test_area(self):
         surf = MultiSurface(self.surfaces_mesh2D)
         self.assertAlmostEqual(90.0, surf.get_area())
+
+    def test_bounding_box(self):
+        surf = MultiSurface(self.surfaces_mesh2D)
+        west, east, north, south = surf.get_bounding_box()
+        self.assertEqual(0.1, west)
+        self.assertEqual(4.6, east)
+        self.assertEqual(5.6, north)
+        self.assertEqual(1.1, south)

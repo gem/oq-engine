@@ -21,7 +21,7 @@ import abc
 
 import numpy
 
-from openquake.hazardlib.geo import geodetic
+from openquake.hazardlib.geo import geodetic, utils
 
 
 class BaseSurface(object):
@@ -146,6 +146,27 @@ class BaseSurface(object):
             Float value, the surface area
         """
 
+    @abc.abstractmethod
+    def get_bounding_box(self):
+        """
+        Compute surface bounding box.
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+
+    @abc.abstractmethod
+    def get_middle_point(self):
+        """
+        Compute coordinates of surface middle point.
+
+        :return:
+            instance of :class:`openquake.hazardlib.geo.point.Point`
+            representing surface middle point.
+        """
+
 
 class BaseQuadrilateralSurface(BaseSurface):
     """
@@ -256,12 +277,34 @@ class BaseQuadrilateralSurface(BaseSurface):
 
     def get_area(self):
         """
-        Return surface area (in squared km).
+        Compute area as the sum of the mesh cells area values.
         """
         mesh = self.get_mesh()
         _, _, _, area = mesh.get_cell_dimensions()
 
         return numpy.sum(area)
+
+    def get_bounding_box(self):
+        """
+        Compute surface bounding box from surface mesh representation.
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+        mesh = self.get_mesh()
+
+        return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
+
+    def get_middle_point(self):
+        """
+        Compute middle point from surface mesh representation. Calls
+        :meth:`openquake.hazardlib.geo.RectangularMesh.get_middle_point`
+        """
+        mesh = self.get_mesh()
+
+        return mesh.get_middle_point()
 
     @abc.abstractmethod
     def _create_mesh(self):

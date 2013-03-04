@@ -195,9 +195,32 @@ class GetTopEdgeDepthTestCase(unittest.TestCase):
         surface = DummySurface(corners)
         self.assertAlmostEqual(surface.get_top_edge_depth(), 0)
 
+
 class GetAreaTestCase(unittest.TestCase):
     def test_get_area(self):
         corners = [[(0.0, 0.0, 0.0), (0.0, 0.089932, 0.0)],
                    [(0.0, 0.0, 10.0), (0.0, 0.089932, 10.0)]]
         surface = DummySurface(corners)
         self.assertAlmostEqual(100.0, surface.get_area(), places=0)
+
+
+class GetBoundingBoxTestCase(unittest.TestCase):
+    def test_get_bounding_box(self):
+        corners = [[(0.0, 0.0, 0.0), (0.1, 0.2, 0.0)],
+                   [(0.05, -0.3, 10.0), (0.3, 0.05, 10.0)]]
+        surface = DummySurface(corners)
+        west, east, north, south = surface.get_bounding_box()
+        self.assertEqual(0.0, west)
+        self.assertEqual(0.3, east)
+        self.assertEqual(0.2, north)
+        self.assertEqual(-0.3, south)
+
+
+class GetMiddlePointTestCase(unittest.TestCase):
+    def test_get_middle_point(self):
+        corners = [[(0.0, 0.0, 0.0), (0.0, 0.089932, 0.0)],
+                   [(0.0, 0.0, 10.0), (0.0, 0.089932, 10.0)]]
+        surface = DummySurface(corners)
+        self.assertTrue(
+            Point(0.0, 0.044966, 5.0) == surface.get_middle_point()
+        )
