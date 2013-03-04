@@ -35,55 +35,6 @@ from openquake.engine.utils import stats
 from tests.utils import helpers
 
 
-class ProgressIndicatorTestCase(helpers.RedisTestCase, unittest.TestCase):
-    """Tests the behaviour of utils.stats.progress_indicator()."""
-
-    def test_success_stats(self):
-        """
-        The success counter is incremented when the wrapped function
-        terminates without raising an exception.
-        """
-        area = "aaa"
-
-        @stats.progress_indicator(area)
-        def no_exception(job_id):
-            return 999
-
-        kvs = self.connect()
-        key = stats.key_name(11, area, no_exception.__name__, "i")
-        previous_value = kvs.get(key)
-        previous_value = int(previous_value) if previous_value else 0
-
-        # Call the wrapped function.
-        self.assertEqual(999, no_exception(11))
-
-        value = int(kvs.get(key))
-        self.assertEqual(1, (value - previous_value))
-
-    def test_failure_stats(self):
-        """
-        The failure counter is incremented when the wrapped function
-        terminates raises an exception.
-        """
-        area = "bbb"
-
-        @stats.progress_indicator(area)
-        def raise_exception(job_id):
-            raise NotImplementedError
-
-        kvs = self.connect()
-        key = stats.key_name(
-            22, area, raise_exception.__name__ + ":failed", "i")
-        previous_value = kvs.get(key)
-        previous_value = int(previous_value) if previous_value else 0
-
-        # Call the wrapped function.
-        self.assertRaises(NotImplementedError, raise_exception, 22)
-
-        value = int(kvs.get(key))
-        self.assertEqual(1, (value - previous_value))
-
-
 class SetTotalTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.set_total()."""
 

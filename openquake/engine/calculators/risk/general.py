@@ -618,5 +618,9 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
     work with celery task where the number of items (i.e. assets) are
     embedded in hazard getters
     """
-    def get_task_data(self, *args):
-        return args[0], len(args[1].values()[0][0].assets)
+    def get_task_data(self, job_id, hazard_data, *args):
+
+        first_hazard_data = hazard_data.values()[0]
+
+        getter, _weight = first_hazard_data
+        return job_id, len(getter.assets)
