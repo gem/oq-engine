@@ -159,7 +159,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, self.imt, assets, self.rc.get_hazard_maximum_distance())
+            hc.id, self.imt, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 
