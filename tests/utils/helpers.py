@@ -979,40 +979,54 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
     if output_type == "curve":
-        hazard_output = models.HazardCurveData.objects.create(
-            hazard_curve=models.HazardCurve.objects.create(
-                lt_realization=rlz,
-                output=models.Output.objects.create_output(
-                    hazard_job, "Test Hazard output", "hazard_curve"),
-                investigation_time=hc.investigation_time,
-                imt="PGA", imls=[0.1, 0.2, 0.3]),
-            poes=[0.1, 0.2, 0.3],
-            location="POINT(0 0)")
+        hazard_output = models.HazardCurve.objects.create(
+            lt_realization=rlz,
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve"),
+            investigation_time=hc.investigation_time,
+            imt="PGA", imls=[0.1, 0.2, 0.3])
+
+        for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
+                      "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
+            models.HazardCurveData.objects.create(
+                hazard_curve=hazard_output,
+                poes=[0.1, 0.2, 0.3],
+                location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        hazard_output = models.GmfScenario.objects.create(
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "gmf_scenario"),
-            imt="PGA",
-            location="POINT(15.50 38.10)",
-            gmvs=[0.1, 0.2, 0.3])
+        output = models.Output.objects.create_output(
+            hazard_job, "Test Hazard output", "gmf_scenario")
+        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
+                      "POINT(15.481 38.25)"]:
+            hazard_output = models.GmfScenario.objects.create(
+                output=output,
+                imt="PGA",
+                location=point,
+                gmvs=[0.1, 0.2, 0.3])
 
     else:
         rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
-        hazard_output = models.Gmf.objects.create(
-            gmf_set=models.GmfSet.objects.create(
-                gmf_collection=models.GmfCollection.objects.create(
-                    output=models.Output.objects.create_output(
-                        hazard_job, "Test Hazard output", "gmf"),
-                    lt_realization=rlz,
-                    complete_logic_tree_gmf=False),
-                investigation_time=hc.investigation_time,
-                ses_ordinal=1,
-                complete_logic_tree_gmf=False),
-            imt="PGA", gmvs=[0.1, 0.2, 0.3],
-            rupture_ids=rupture_ids,
-            result_grp_ordinal=1,
-            location="POINT(15.50 38.10)")
+        hazard_output = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "gmf"),
+            lt_realization=rlz,
+            complete_logic_tree_gmf=False)
+
+        gmf_set = models.GmfSet.objects.create(
+            gmf_collection=hazard_output,
+            investigation_time=hc.investigation_time,
+            ses_ordinal=1,
+            complete_logic_tree_gmf=False)
+
+        for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
+                      "POINT(15.48 38.091)", "POINT(15.565 38.17)",
+                      "POINT(15.481 38.25)"]:
+            models.Gmf.objects.create(
+                gmf_set=gmf_set,
+                imt="PGA", gmvs=[0.1, 0.2, 0.3],
+                rupture_ids=rupture_ids,
+                result_grp_ordinal=1,
+                location=point)
 
     hazard_job.status = "complete"
     hazard_job.save()
@@ -1020,19 +1034,7 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
     params, files = engine2.parse_config(
         open(risk_cfg, 'r'), force_inputs=True)
 
-    # In order to make hazard and risk demo match (in terms of
-    # investigated regions) we fix quite big maximum distance :-(
-    params['hazard_maximum_distance'] = 200000
-
-    if output_type == "curve":
-        params.update(
-            dict(hazard_output_id=hazard_output.hazard_curve.output.id))
-    elif output_type == "gmf_scenario":
-        params.update(
-            dict(hazard_output_id=hazard_output.output.id))
-    else:
-        output = hazard_output.gmf_set.gmf_collection.output
-        params.update(dict(hazard_output_id=output.id))
+    params.update(dict(hazard_output_id=hazard_output.output.id))
 
     risk_calc = engine2.create_risk_calculation(
         job.owner, params, files.values())
