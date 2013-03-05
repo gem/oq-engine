@@ -377,7 +377,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         )
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_apply_to_nonexistent_branch(self):
         lt = _make_nrml("""\
@@ -905,7 +905,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'only uncertainties of type "gmpeModel" are allowed ' \
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 5)
 
     def test_two_branchsets_in_one_level(self):
@@ -917,7 +917,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -927,7 +927,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Subduction IntraSlab">
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -942,79 +942,8 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'only one branchset on each branching level is allowed ' \
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 15)
-
-    def test_unavailable_gmpe_not_fully_qualified_import_path(self):
-        gmpe = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1"
-                                    applyToTectonicRegionType="Volcanic">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>no_such_gmpe</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
-                                            set(['Volcanic']),
-                                            logictree.ValidationError)
-        self.assertEqual(exc.message,
-                         "gmpe name must be fully-qualified import path",
                          "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 7)
-
-    def test_unavailable_gmpe_module_not_importable(self):
-        gmpe = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1"
-                                    applyToTectonicRegionType="Volcanic">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>gmpe_mod.gmpe_cls</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
-                                            set(['Volcanic']),
-                                            logictree.ValidationError)
-        error = "could not import module 'gmpe_mod': No module named gmpe_mod"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 7)
-
-    def test_unavailable_gmpe_module_doesnt_export_class(self):
-        gmpe = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1"
-                                    applyToTectonicRegionType="Volcanic">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>openquake.hazardlib.gsim.FakeGMPE\
-</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
-                                            set(['Volcanic']),
-                                            logictree.ValidationError)
-        error = "module 'openquake.hazardlib.gsim' does not contain name\
- 'FakeGMPE'"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 7)
+        self.assertEqual(exc.lineno, 15)
 
     def test_unavailable_gmpe_not_subclass_of_base_class(self):
         gmpe = _make_nrml("""\
@@ -1024,8 +953,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>openquake.hazardlib.site.Site\
-</uncertaintyModel>
+                        <uncertaintyModel>Site</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1035,9 +963,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "<class 'openquake.hazardlib.site.Site'> is not a gmpe class"
+        error = "unknown class 'Site'"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
 
     def test_wrong_filters(self):
@@ -1089,7 +1017,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         error = "source models don't define sources of tectonic region " \
                 "type 'Subduction Interface'"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 5)
 
     def test_tectonic_region_type_used_twice(self):
@@ -1101,7 +1029,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1113,8 +1041,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.chiou_youngs_2008.\
-ChiouYoungs2008
+                            ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1128,7 +1055,7 @@ ChiouYoungs2008
         error = "gmpe uncertainty for tectonic region type " \
                 "'Subduction Interface' has already been defined"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 17)
 
     def test_missing_tectonic_region_type(self):
@@ -1140,7 +1067,7 @@ ChiouYoungs2008
                             applyToTectonicRegionType="Subduction Interface">
                   <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
-                        openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                      SadighEtAl1997
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
@@ -1157,7 +1084,7 @@ ChiouYoungs2008
                 "in source model logic tree but not in gmpe logic tree: " \
                 "['Active Shallow Crust', 'Volcanic']"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 1)
 
 
@@ -1417,14 +1344,13 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>0.7</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.chiou_youngs_2008.\
-ChiouYoungs2008
+                            ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>0.3</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1436,7 +1362,7 @@ ChiouYoungs2008
                             applyToTectonicRegionType="Active Shallow Crust">
                     <logicTreeBranch branchID="b3">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1448,14 +1374,13 @@ ChiouYoungs2008
                             applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b4">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.chiou_youngs_2008.\
-ChiouYoungs2008
+                            ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>0.1</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b5">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>0.9</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1502,7 +1427,7 @@ class ReadLogicTreesTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Active Shallow Crust">
                     <logicTreeBranch branchID="b3">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
@@ -1514,14 +1439,13 @@ class ReadLogicTreesTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b4">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.chiou_youngs_2008.\
-ChiouYoungs2008
+                            ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>0.4</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b5">
                         <uncertaintyModel>
-                            openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997
+                            SadighEtAl1997
                         </uncertaintyModel>
                         <uncertaintyWeight>0.6</uncertaintyWeight>
                     </logicTreeBranch>
