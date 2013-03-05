@@ -401,18 +401,15 @@ CREATE TABLE uiapi.risk_calculation (
     export_dir VARCHAR,
     force_inputs BOOLEAN NOT NULL,
     -- general parameters:
-    -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
     -- what time period w/o any progress is acceptable for calculations?
     -- The timeout is stored in seconds and is 1 hour by default.
     no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
     calculation_mode VARCHAR NOT NULL,
 
-    exposure_input_id INTEGER,
+    maximum_distance FLOAT NULL,
 
-    -- the maximum distance for an hazard value with the corresponding
-    -- asset. In meters
-    hazard_maximum_distance FLOAT NULL,
+    exposure_input_id INTEGER,
 
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
