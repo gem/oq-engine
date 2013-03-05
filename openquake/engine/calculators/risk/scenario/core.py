@@ -133,7 +133,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         super(ScenarioRiskCalculator, self).pre_execute()
 
         if self.rc.insured_losses:
-            queryset = self.exposure_model.exposuredata_set.filter(
+            queryset = self.rc.exposure_model.exposuredata_set.filter(
                 (db.models.Q(deductible__isnull=True) |
                  db.models.Q(ins_limit__isnull=True)))
             if queryset.exists():
