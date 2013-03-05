@@ -59,6 +59,14 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
         assets, ground_motion_values, missings = hazard_getter()
 
+    if not len(assets):
+        logs.LOG.info("Exit from task as no asset could be processed")
+        base.signal_task_complete(job_id=job_id,
+                                  aggregate_losses=None,
+                                  insured_aggregate_losses=None,
+                                  num_items=len(missings))
+        return
+
     with logs.tracing('computing risk'):
         loss_ratio_matrix = calc(ground_motion_values)
 
@@ -144,30 +152,35 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                     "Deductible or insured limit missing in exposure")
 
     def task_completed_hook(self, message):
-        aggregate_losses = message['aggregate_losses']
+        aggregate_losses = message.get('aggregate_losses')
 
-        if self.aggregate_losses is None:
-            self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
-        self.aggregate_losses += aggregate_losses
+        if aggregate_losses is not None:
+            if self.aggregate_losses is None:
+                self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
+            self.aggregate_losses += aggregate_losses
 
         if self.rc.insured_losses:
-            insured_aggregate_losses = message['insured_aggregate_losses']
+            insured_aggregate_losses = message.get('insured_aggregate_losses')
 
-            if self.insured_aggregate_losses is None:
-                self.insured_aggregate_losses = numpy.zeros(
-                    insured_aggregate_losses.shape)
-            self.insured_aggregate_losses += insured_aggregate_losses
+            if insured_aggregate_losses is not None:
+                if self.insured_aggregate_losses is None:
+                    self.insured_aggregate_losses = numpy.zeros(
+                        insured_aggregate_losses.shape)
+                self.insured_aggregate_losses += insured_aggregate_losses
 
     def post_process(self):
         with db.transaction.commit_on_success(using='reslt_writer'):
-            models.AggregateLoss.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "Aggregate Loss",
-                    "aggregate_loss"),
-                mean=numpy.mean(self.aggregate_losses),
-                std_dev=numpy.std(self.aggregate_losses, ddof=1))
 
-            if self.rc.insured_losses:
+            if self.aggregate_losses is not None:
+                models.AggregateLoss.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, "Aggregate Loss",
+                        "aggregate_loss"),
+                    mean=numpy.mean(self.aggregate_losses),
+                    std_dev=numpy.std(self.aggregate_losses, ddof=1))
+
+            if (self.rc.insured_losses and
+                self.insured_aggregate_losses is not None):
                 models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
                         self.job, "Insured Aggregate Loss",
@@ -196,9 +209,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
         return (self.hazard_getter(
-            output.id, self.imt, assets,
-            self.rc.get_hazard_maximum_distance()),
-            1)
+            output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
 
     @property
     def calculator_parameters(self):
