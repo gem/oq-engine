@@ -69,7 +69,7 @@ class ClassicalHazardCase8TestCase(qa_utils.BaseQATestCase):
 </nrml>
 """
 
-    @attr('qa', 'classical')
+    @attr('qa', 'hazard', 'classical')
     def test(self):
         result_dir = tempfile.mkdtemp()
 
