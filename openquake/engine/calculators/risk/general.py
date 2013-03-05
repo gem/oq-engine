@@ -54,9 +54,6 @@ class BaseRiskCalculator(base.CalculatorNext):
       input and filtered according with the RiskCalculation
       region_constraint
 
-    :attribute exposure_model:
-      The exposure model used by the calculation
-
     :attribute asset_offsets:
       A generator of asset offsets used by each celery task. Assets are
       ordered by their id. An asset offset is an int that identify the
@@ -80,7 +77,6 @@ class BaseRiskCalculator(base.CalculatorNext):
         super(BaseRiskCalculator, self).__init__(job)
 
         self.taxonomies = None
-        self.exposure_model = None
         self.rnd = None
         self.vulnerability_functions = None
         self.imt = None
@@ -108,9 +104,15 @@ class BaseRiskCalculator(base.CalculatorNext):
             pk=self.rc.pk)
 
         with logs.tracing('store exposure'):
-            self.exposure_model = self._store_exposure()
+            if self.rc.exposure_input is None:
+                queryset = self.rc.inputs.filter(input_type='exposure')
 
-            self.taxonomies = self.exposure_model.taxonomies_in(
+                if queryset.exists():
+                    self._store_exposure(queryset.all()[0])
+                else:
+                    raise RuntimeError("No exposure model given in input")
+
+            self.taxonomies = self.rc.exposure_model.taxonomies_in(
                 self.rc.region_constraint)
 
             if not sum(self.taxonomies.values()):
@@ -177,7 +179,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
             for offset in asset_offsets:
                 with logs.tracing("getting assets"):
-                    assets = self.exposure_model.get_asset_chunk(
+                    assets = self.rc.exposure_model.get_asset_chunk(
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
@@ -293,10 +295,14 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         return []
 
-    def _store_exposure(self):
-        """Load exposure assets and write them to database."""
-        [exposure_model_input] = models.inputs4rcalc(
-            self.rc, input_type='exposure')
+    def _store_exposure(self, exposure_model_input):
+        """
+        Load exposure assets and write them to database.
+
+        :param exposure_model_input: a
+        :class:`openquake.engine.db.models.Input` object with input
+        type `exposure`
+        """
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
@@ -610,3 +616,17 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             loss_ratios=loss_ratios,
             asset_value=asset.value,
             location=asset.site.wkt)
+
+
+class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
+    """
+    Extend :class:`openquake.engine.utils.stats.count_progress` to
+    work with celery task where the number of items (i.e. assets) are
+    embedded in hazard getters
+    """
+    def get_task_data(self, job_id, hazard_data, *args):
+
+        first_hazard_data = hazard_data.values()[0]
+
+        getter, _weight = first_hazard_data
+        return job_id, len(getter.assets)

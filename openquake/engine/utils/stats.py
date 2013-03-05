@@ -209,49 +209,6 @@ def key_name(job_id, area, key_fragment, counter_type):
     return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
-# al-maisan, Mon, 20 Aug 2012 15:43:11 +0200
-# PLEASE NOTE: the decorator below is deprecated and should not be used for
-# new code in the hazardlib-integration branch. Please use the 'count_progress'
-# decorator instead.
-class progress_indicator(object):   # pylint: disable=C0103
-    """Count successful/failed invocations of the wrapped function."""
-
-    def __init__(self, area):
-        """Captures the computation area parameter."""
-        self.area = area
-        self.__name__ = "progress_indicator"
-
-    @staticmethod
-    def find_job_id(*args, **kwargs):
-        """Find and return the job_id."""
-        if len(args) > 0:
-            return args[0]
-        else:
-            return kwargs.get("job_id", -1)
-
-    def __call__(self, func):
-        """The actual decorator."""
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            """The actual decorator."""
-            # The first argument is always the job_id
-            job_id = self.find_job_id(*args, **kwargs)
-            conn = _redis()
-            try:
-                result = func(*args, **kwargs)
-                key = key_name(job_id, self.area, func.__name__, "i")
-                conn.incr(key)
-                return result
-            except:
-                # Count failure
-                key = key_name(
-                    job_id, self.area, func.__name__ + ":failed", "i")
-                conn.incr(key)
-                raise
-
-        return wrapper
-
-
 class count_progress(object):   # pylint: disable=C0103
     """Count successful/failed invocations of wrapped celery task functions.
 
