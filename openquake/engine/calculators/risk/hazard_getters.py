@@ -29,6 +29,11 @@ from openquake.engine.db import models
 from django.db import connection
 
 
+#: Scaling constant do adapt to the postgis functions (that work with
+#: meters)
+KILOMETERS_TO_METERS = 1000
+
+
 class HazardGetter(object):
     """
     Base abstract class of an Hazard Getter.
@@ -46,7 +51,7 @@ class HazardGetter(object):
 
     :attr assets: the assets for which we wants to compute
 
-    :attr max_distance: the maximum distance, in meters, to use
+    :attr max_distance: the maximum distance, in kilometers, to use
     """
     def __init__(self, hazard_id, imt, assets, max_distance):
         self.hazard_id = hazard_id
@@ -102,7 +107,7 @@ class HazardGetter(object):
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
                 "No hazard has been found for the asset %s",
-                self.asset_dict[missing_asset_id].asset_ref)
+                self.asset_dict[missing_asset_id])
 
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
@@ -134,11 +139,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :method:`HazardGetter.get_data` interface.
         """
+        hazard_assets = [(asset.id, self.get_by_site(asset.site))
+                         for asset in self.assets]
+
         return OrderedDict(
-            [(data[0], data[1][0]) for data in
-                [(asset.id, self.get_by_site(asset.site))
-                 for asset in self.assets]
-                if data[1][1] < self.max_distance])
+            [(asset_id, hazard_curve)
+             for asset_id, (hazard_curve, distance) in hazard_assets
+             if distance < self.max_distance * KILOMETERS_TO_METERS])
 
     def get_by_site(self, site):
         """
@@ -245,8 +252,8 @@ class GroundMotionValuesGetter(HazardGetter):
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance / 1000).wkt,
-                 self.max_distance,
+        args += (assets_extent.dilate(self.max_distance).wkt,
+                 self.max_distance * KILOMETERS_TO_METERS,
                  assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
@@ -260,64 +267,6 @@ class GroundMotionValuesGetter(HazardGetter):
         # See the return statement of the __call__ method.
 
         return OrderedDict((row[0], [row[1], row[2]]) for row in data)
-
-
-class GroundMotionScenarioGetterPerAsset(HazardGetter):
-    """
-    Hazard getter for loading ground motion values from the table
-    gmf_scenario. It performs two spatial queries per asset.
-
-    :attr _cache: a cache of the ground motion values on a
-    per-location basis
-    """
-
-    def get_data(self):
-        return OrderedDict([(data[0], data[1][0]) for data in
-                            [(asset.id, self.get_by_site(asset.site))
-                             for asset in self.assets]
-                            if data[1][1] < self.max_distance])
-
-    def get_by_site(self, site):
-        """
-        Return the closest ground motion values to the given location.
-
-        :param site:
-            The reference location. The closest ground motion values
-            to this location are returned.
-        :type site: `django.contrib.gis.geos.point.Point` object
-        """
-
-        if site.wkt in self._cache:
-            return self._cache[site.wkt]
-
-        cursor = connection.cursor()
-
-        args = ("SRID=4326; %s" % site.wkt, self._imt, self.hazard_id)
-
-        min_dist_query = """-- find the distance of the closest location
-        SELECT min(ST_Distance(location, %s, false)) FROM hzrdr.gmf_scenario
-        WHERE imt = %s AND output_id = %s"""
-
-        cursor.execute(min_dist_query, args)
-        min_dist = cursor.fetchall()[0][0]  # returns only one row
-        if min_dist is None:
-            raise RuntimeError(
-                'Could not find any gmf with IMT=%s '
-                'and output_id=%s' % (self._imt, self.hazard_id))
-
-        dilated_dist = min_dist + 0.1  # 0.1 meters = 10 cm
-
-        gmvs_query = """-- return all the gmvs inside the min_dist radius
-        SELECT gmvs FROM hzrdr.gmf_scenario
-        WHERE %s > ST_Distance(location, %s, false)
-        AND imt = %s AND output_id = %s
-        """
-
-        cursor.execute(gmvs_query, (dilated_dist,) + args)
-
-        ground_motion_values = sum([row[0] for row in cursor], [])
-        self._cache[site.wkt] = ground_motion_values
-        return ground_motion_values, min_dist
 
 
 class GroundMotionScenarioGetter(HazardGetter):
@@ -354,7 +303,7 @@ class GroundMotionScenarioGetter(HazardGetter):
 
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self._imt, self.hazard_id,
-                assets_extent.dilate(self.max_distance / 1000).wkt,
+                assets_extent.dilate(self.max_distance).wkt,
                 self.max_distance,
                 assets_extent.wkt,
                 self.assets[0].taxonomy,
