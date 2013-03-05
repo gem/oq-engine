@@ -29,13 +29,13 @@ from openquake.risklib import api, scientific
 from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine import logs
 from openquake.engine.calculators import base
 
 
 @tasks.oqtask
-@stats.count_progress('r')
+@general.count_progress_risk('r')
 def event_based(job_id, hazard,
                 seed, vulnerability_function,
                 output_containers,
@@ -210,7 +210,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         super(EventBasedRiskCalculator, self).pre_execute()
 
         if (self.rc.insured_losses and
-            self.exposure_model.exposuredata_set.filter(
+            self.rc.exposure_model.exposuredata_set.filter(
                 (db.models.Q(deductible__isnull=True) |
                  db.models.Q(ins_limit__isnull=True))).exists()):
             raise RuntimeError(
