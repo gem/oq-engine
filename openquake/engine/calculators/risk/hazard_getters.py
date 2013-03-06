@@ -106,8 +106,8 @@ class HazardGetter(object):
 
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
-                "No hazard has been found for the asset %s",
-                self.asset_dict[missing_asset_id])
+                "No hazard has been found for the asset %s within %s km" % (
+                    self.asset_dict[missing_asset_id], self.max_distance))
 
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
@@ -210,8 +210,9 @@ class GroundMotionValuesGetter(HazardGetter):
             args += (self._sa_period, self._sa_damping)
 
         # Query explanation. We need to get for each asset the closest
-        # ground motion values for a given logic tree realization and
-        # a given imt.
+        # ground motion values (and the corresponding rupture ids from
+        # which they have been generated) for a given logic tree
+        # realization and a given imt.
 
         # We first concatenate ground motion values grouped by
         # location (so for each location we have all the ground motion
@@ -266,7 +267,35 @@ class GroundMotionValuesGetter(HazardGetter):
         # multiple times the data and still get corresponding values.
         # See the return statement of the __call__ method.
 
-        return OrderedDict((row[0], [row[1], row[2]]) for row in data)
+        ret = OrderedDict()
+
+        # We expect that different location might have a different
+        # number of gmvs (because a different number of ruptures could
+        # have given a non-zero contribute).
+        ruptures = []
+
+        for row in data:
+            ret[row[0]] = dict(zip(row[2], row[1]))
+            ruptures.extend(row[2])
+        ruptures = set(ruptures)
+
+        for asset_id, asset_data in ret.items():
+            missing_ruptures = set(asset_data.keys()) - ruptures
+            for rupture_id in missing_ruptures:
+                asset_data[rupture_id] = 0
+
+        # now, each element of `ret` is associated to a dictionary
+        # with the same keys (all the rupture ids). We want to return
+        # for each element of ret a list of all the ruptures and all
+        # the gmvs associated to them
+        for asset_id, asset_data in ret.items():
+            ret[asset_id] = zip(*sorted(
+                zip(asset_data.values(), asset_data.keys()),
+                key=lambda x: x[1]))
+            assert len(ret[asset_id][1]) == len(ruptures)
+            assert len(ret[asset_id][0]) == len(ruptures)
+
+        return ret
 
 
 class GroundMotionScenarioGetter(HazardGetter):
