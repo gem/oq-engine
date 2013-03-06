@@ -84,9 +84,6 @@ class ProbabilisticEventBased(object):
         self.tses = tses
         self.curve_resolution = curve_resolution
 
-        # needed in external calculator.
-        self.loss_ratios = None  # set in __call__
-
     def __call__(self, ground_motion_fields):
         if not len(ground_motion_fields):
             return numpy.array([[]]), []
