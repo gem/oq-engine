@@ -34,6 +34,8 @@ from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 from openquake.engine.db import models
 
+GSIM = openquake.hazardlib.gsim.get_available_gsims()
+
 
 class LogicTreeError(Exception):
     """
@@ -909,41 +911,26 @@ class GMPELogicTree(BaseLogicTree):
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
-    def parse_uncertainty_value(self, node, branchset, value):
+    def parse_uncertainty_value(self, node, branchset, classname):
         """
         See superclass' method for description and signature specification.
 
         Convert gmpe import path to a gmpe object.
         """
-        module, classname = value.rsplit('.', 1)
-        module = __import__(module, fromlist=[classname])
-        gmpe_class = getattr(module, classname)
-        return gmpe_class()
+        return GSIM[classname]()
 
     def validate_uncertainty_value(self, node, branchset, value):
         """
         See superclass' method for description and signature specification.
 
-        Checks that the value is the import name of the class that extends
+        Checks that the value is the name of a class that extends the
         :attr:`BASE_GMPE` abstract base class.
         """
-        if not '.' in value:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'gmpe name must be fully-qualified import path'
-            )
-        module, classname = value.rsplit('.', 1)
         try:
-            module = __import__(module, fromlist=[classname])
-        except ImportError as exc:
+            gmpe_class = GSIM[value]
+        except KeyError:
             raise ValidationError(node, self.filename, self.basepath,
-                                  'could not import module %r: %s'
-                                  % (module, exc))
-        if not hasattr(module, classname):
-            raise ValidationError(node, self.filename, self.basepath,
-                                  'module %r does not contain name %r'
-                                  % (module.__name__, classname))
-        gmpe_class = getattr(module, classname)
+                                  'unknown class %r' % value)
         if not issubclass(gmpe_class, self.BASE_GMPE):
             raise ValidationError(node, self.filename, self.basepath,
                                   '%r is not a gmpe class' % gmpe_class)
