@@ -190,16 +190,17 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
 
-            rupture_ids = helpers.get_rupture_ids(job, hc, lt_realization, 16)
+            gmv_matrix = numpy.array([[float(x) for x in row]
+                                      for row in gmfreader]).transpose()
 
-            for i, gmvs in enumerate(
-                    numpy.array([[float(x) for x in row]
-                                 for row in gmfreader]).transpose()):
+            rupture_ids = helpers.get_rupture_ids(
+                job, hc, lt_realization, len(gmv_matrix[0]))
+
+            for i, gmvs in enumerate(gmv_matrix):
                 models.Gmf.objects.create(
                     gmf_set=gmf_set,
                     imt="PGA", gmvs=gmvs,
-                    rupture_ids=[str(rupture_ids[x % 16])
-                                 for x in range(len(gmvs))],
+                    rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
@@ -232,7 +233,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     'asset_ref', 'loss_map__poe')]] +
                 [[el.aggregate_loss
                  for el in models.EventLoss.objects.filter(
-                output__oq_job=job).order_by('aggregate_loss')]])
+                output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
 
     def expected_data(self):
         poes = [0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
@@ -367,12 +368,10 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
 
         # FIXME(lp). Event Loss Table data do not come from a reliable
         # implementation. This is just a regression test
-        event_loss_table = [113.83208047, 122.04747601, 136.99205447,
-                            175.69196436, 199.56486367, 234.96655391,
-                            249.33042463, 258.89196708, 316.42547281,
-                            320.13467284, 324.49324388, 349.92945409,
-                            400.15703377, 404.84239408, 466.72244344,
-                            544.78032008]
+        expected_event_loss_table = [330.0596974, 222.4581073, 162.7511019,
+                                     115.9594444, 115.8300568, 107.8437644,
+                                     105.7095923, 105.0259645, 96.6493404,
+                                     93.7629886]
 
         return [
             poes, poes, poes,
@@ -381,7 +380,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             expected_aggregate_losses,
             [246.04152426, 227.8571829, 209.67284154, 31.0017742,
              30.96278052, 30.92378683, 48.58749892, 47.56302559, 46.53855225],
-            event_loss_table]
+            expected_event_loss_table]
 
     def actual_xml_outputs(self, job):
         """
