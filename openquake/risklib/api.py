@@ -156,9 +156,10 @@ class ProbabilisticEventBased(object):
         # needed in external calculator.
         self.loss_ratios = None  # set in __call__
 
-    def __call__(self, assets, ground_motion_fields):
-        if not ground_motion_fields:
-            return []
+    def __call__(self, ground_motion_fields):
+        if not len(ground_motion_fields):
+            return numpy.array([[]]), []
+
         self.vulnerability_function.init_distribution(
             len(assets), len(ground_motion_fields[0]),
             self.seed, self.correlation)
@@ -212,17 +213,14 @@ class Scenario(object):
         self.correlation = correlation
         self.vulnerability_function = vulnerability_function
 
-    def __call__(self, assets, ground_motion_fields):
-        if not ground_motion_fields:
-            return []
+    def __call__(self, ground_motion_fields):
+        if not len(ground_motion_fields):
+            return numpy.array([[]])
 
         self.vulnerability_function.init_distribution(
-            len(assets), len(ground_motion_fields[0]),
+            len(ground_motion_fields), len(ground_motion_fields[0]),
             self.seed, self.correlation)
 
         return [
-            scientific.ScenarioRiskOutput(
-                asset,
-                (self.vulnerability_function(ground_motion_fields[i]) *
-                 asset.value))
-            for i, asset in enumerate(assets)]
+                self.vulnerability_function(ground_motion_field)
+                for ground_motion_field in ground_motion_fields]

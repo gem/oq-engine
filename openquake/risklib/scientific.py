@@ -21,7 +21,6 @@
 This module includes the scientific API of the oq-risklib
 """
 
-import collections
 import itertools
 
 import numpy
@@ -359,6 +358,7 @@ class LogNormalDistribution(Distribution):
             numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
         self.epsilons = numpy.random.multivariate_normal(
             means_vector, covariance_matrix, samples).transpose()
+        self.epsilon_idx = 0
 
     def sample(self, means, covs, _):
         if self.epsilons is None:
