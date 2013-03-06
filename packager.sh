@@ -53,6 +53,8 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $haddr "sudo apt-get update"
+    ssh $haddr "sudo apt-get -y upgrade"
     gpg -a --export | ssh $haddr "sudo apt-key add -"
     # install package to manage repository properly
     ssh $haddr "sudo apt-get install -y python-software-properties"

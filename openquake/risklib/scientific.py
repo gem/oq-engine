@@ -39,18 +39,6 @@ DEFAULT_CURVE_RESOLUTION = 50
 ## Input models
 ##
 
-class Asset(object):
-    # FIXME (lp). Provide description
-    def __init__(self, value,
-                 number_of_units=1,
-                 ins_limit=None, deductible=None,
-                 retrofitting_cost=None):
-        self.value = value
-        self.ins_limit = ins_limit
-        self.deductible = deductible
-        self.number_of_units = number_of_units
-        self.retrofitting_cost = retrofitting_cost
-
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
@@ -210,57 +198,6 @@ VulnerabilityFunction`
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
-
-
-##
-## Output models
-##
-
-
-ClassicalOutput = collections.namedtuple(
-    "ClassicalOutput",
-    ["asset", "loss_ratio_curve", "conditional_losses"])
-
-ClassicalOutput.loss_curve = property(
-    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
-
-ScenarioDamageOutput = collections.namedtuple(
-    "ScenarioDamageOutput", ["asset", "fractions"])
-
-ScenarioDamageOutput.damage_distribution_asset = property(
-    lambda self: mean_std(self.fractions))
-
-
-def collapse_map(self):
-    mean, std = self.damage_distribution_asset
-    return mean[-1], std[-1]  # last column of the damage distribution
-ScenarioDamageOutput.collapse_map = property(collapse_map)
-
-
-BCROutput = collections.namedtuple(
-    "BCROutput", ["asset", "bcr", "eal_original", "eal_retrofitted"])
-
-
-ProbabilisticEventBasedOutput = collections.namedtuple(
-    "ProbabilisticEventBasedOutput",
-    ["asset", "losses", "loss_ratio_curve", "insured_loss_ratio_curve",
-     "insured_losses", "conditional_losses"])
-
-ProbabilisticEventBasedOutput.loss_curve = property(
-    lambda self: self.loss_ratio_curve.rescale_abscissae(self.asset.value))
-
-ProbabilisticEventBasedOutput.insured_loss_curve = property(
-    lambda self: self.insured_loss_ratio_curve.rescale_abscissae(
-        self.asset.value))
-
-ScenarioRiskOutput = collections.namedtuple(
-    "ScenarioRiskOutput", ["asset", "losses"])
-
-ScenarioRiskOutput.mean = property(
-    lambda self: numpy.mean(self.losses))
-
-ScenarioRiskOutput.standard_deviation = property(
-    lambda self: numpy.std(self.losses, ddof=1))
 
 
 ##
@@ -526,16 +463,16 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps, first=(), last=()):
     return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
-def conditional_loss(a_curve, probability):
+def conditional_loss_ratio(a_curve, probability):
     """
-    Return the loss (or loss ratio) corresponding to the given
-    PoE (Probability of Exceendance).
+    Return the loss ratio corresponding to the given PoE (Probability
+    of Exceendance).
 
-    Return the max loss (or loss ratio) if the given PoE is smaller
-    than the lowest PoE defined.
+    Return the max loss ratio if the given PoE is smaller than the
+    lowest PoE defined.
 
-    Return zero if the given PoE is greater than the
-    highest PoE defined.
+    Return zero if the given PoE is greater than the highest PoE
+    defined.
     """
     # the loss curve is always decreasing
     if a_curve.ordinate_out_of_bounds(probability):
@@ -546,36 +483,25 @@ def conditional_loss(a_curve, probability):
 
     return a_curve.abscissa_for(probability)
 
-###
-### Calculator modifiers
-###
-
 
 ##
 ## Insured Losses
 ##
 
 
-def insured_losses(asset, losses, tses, timespan, curve_resolution):
+def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
     """
-    Compute insured losses for the given asset using the related set of ground
-    motion values and vulnerability function.
+    Compute insured losses for the given asset and losses
 
-    :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: an :py:class:`openquake.db.model.ExposureData` instance.
-    :param losses: an array of loss values multiplied by the asset value.
-    :type losses: a 1-dimensional :py:class:`numpy.ndarray` instance.
+    :param asset: an :class:`openquake.risklib.scientific.Asset` instance
+    :param array loss_ratios: an array of loss ratios
     """
 
-    undeductible_losses = losses[losses >= asset.deductible]
-
-    losses = numpy.concatenate((
-        numpy.zeros(losses[losses < asset.deductible].shape),
-        numpy.min(
-            [undeductible_losses,
-             numpy.ones(undeductible_losses.shape) * asset.ins_limit], 0)))
-
-    return event_based(losses, tses, timespan, curve_resolution)
+    losses = loss_ratios * asset_value
+    return numpy.where(
+        losses < insured_limit,
+        numpy.where(losses < deductible, numpy.zeros(losses.shape), losses),
+        numpy.ones(losses.shape) * insured_limit)
 
 ##
 ## Benefit Cost Ratio Analysis
@@ -583,7 +509,7 @@ def insured_losses(asset, losses, tses, timespan, curve_resolution):
 
 
 def bcr(eal_original, eal_retrofitted, interest_rate,
-        asset_life_expectancy, retrofitting_cost):
+        asset_life_expectancy, asset_value, retrofitting_cost):
     """
     Compute the Benefit-Cost Ratio.
 
@@ -598,12 +524,12 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
     * t -- Life expectancy of the asset
     * C -- Retrofitting cost
     """
-    return ((eal_original - eal_retrofitted)
+    return ((eal_original - eal_retrofitted) * asset_value
             * (1 - numpy.exp(- interest_rate * asset_life_expectancy))
             / (interest_rate * retrofitting_cost))
 
 
-def mean_loss(a_curve):
+def mean_loss(losses, poes):
     """
     Compute the mean loss (or loss ratio) for the given curve.
     For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
@@ -614,10 +540,8 @@ def mean_loss(a_curve):
            4              4               2        4
     """
     # FIXME. Needs more documentation.
-    mean_ratios = pairwise_mean(
-        pairwise_mean(a_curve.abscissae))
-    mean_pes = pairwise_diff(
-        pairwise_mean(a_curve.ordinates))
+    mean_ratios = pairwise_mean(pairwise_mean(losses))
+    mean_pes = pairwise_diff(pairwise_mean(poes))
     return numpy.dot(mean_ratios, mean_pes)
 
 
