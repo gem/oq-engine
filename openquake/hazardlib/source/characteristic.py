@@ -24,6 +24,7 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
 
+
 class CharacteristicSource(SeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
@@ -41,8 +42,8 @@ class CharacteristicSource(SeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
-    for description of other parameters.
+    See also :class:`openquake.hazardlib.source.base.SeismicSource` for
+    description of other parameters.
 
     Note that a ``CharacteristicSource`` does not need any mesh spacing,
     magnitude scaling relationship, and aspect ratio, therefore the constructor
@@ -95,6 +96,6 @@ class CharacteristicSource(SeismicSource):
         for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
             yield ProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
-                self.surface, type(self),
-                occurrence_rate, temporal_occurrence_model
+                self.surface, type(self), occurrence_rate,
+                temporal_occurrence_model
             )

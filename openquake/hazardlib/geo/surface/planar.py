@@ -540,4 +540,3 @@ class PlanarSurface(BaseQuadrilateralSurface):
         depth = (self.corner_depths[0] + self.corner_depths[3]) / 2.
 
         return Point(lon, lat, depth)
-
