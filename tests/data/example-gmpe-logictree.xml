@@ -6,12 +6,12 @@
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust" branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>openquake.hazardlib.gsim.chiou_youngs_2008.ChiouYoungs2008</uncertaintyModel>
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
@@ -20,7 +20,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface" branchSetID="bs2">
                 <logicTreeBranch branchID="b3">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>

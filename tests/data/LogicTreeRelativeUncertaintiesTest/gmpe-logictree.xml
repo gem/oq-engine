@@ -6,7 +6,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Stable Shallow Crust" branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
@@ -15,7 +15,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction IntraSlab" branchSetID="bs2">
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
@@ -24,7 +24,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface" branchSetID="bs3">
                 <logicTreeBranch branchID="b3">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
@@ -33,7 +33,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl4">
             <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust" branchSetID="bs4">
                 <logicTreeBranch branchID="b4">
-                    <uncertaintyModel>openquake.hazardlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
