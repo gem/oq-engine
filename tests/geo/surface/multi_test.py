@@ -17,7 +17,7 @@ import unittest
 import numpy
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo import Mesh
+from openquake.hazardlib.geo import Mesh, Point, PlanarSurface
 
 
 class _BaseMultiTestCase(unittest.TestCase):
@@ -68,6 +68,10 @@ class _BaseMultiTestCase(unittest.TestCase):
         def get_bounding_box(self):
             return numpy.min(self.lons), numpy.max(self.lons), \
                    numpy.max(self.lats), numpy.min(self.lats)
+
+        def get_middle_point(self):
+            return Point(self.lons.flatten()[0], self.lats.flatten()[0],
+                         self.depths.flatten()[0])
 
     def setUp(self):
         self.surfaces_mesh2D = [
@@ -207,3 +211,22 @@ class SurfacePropertiesTestCase(_BaseMultiTestCase):
         self.assertEqual(4.6, east)
         self.assertEqual(5.6, north)
         self.assertEqual(1.1, south)
+
+    def test_middle_point_single_surface(self):
+        surf = MultiSurface([self.surfaces_mesh2D[0]])
+        middle_point = surf.get_middle_point()
+        self.assertTrue(Point(0.1, 1.1, 1.1) == middle_point)
+
+    def test_middle_point_multi_surfaces(self):
+        surf = MultiSurface([PlanarSurface(1.0, 0.0, 90.0,
+                                           Point(0.0, -1.0, 0.0),
+                                           Point(0.0, 1.0, 0.0),
+                                           Point(0.0, 1.0, 10.0),
+                                           Point(0.0, -1.0, 10.0)),
+                             PlanarSurface(1.0, 135.0, 90.0,
+                                           Point(0.0, -1.0, 0.0),
+                                           Point(1.0, 1.0, 0.0),
+                                           Point(1.0, 1.0, 10.0),
+                                           Point(0.0, -1.0, 10.0))])
+        middle_point = surf.get_middle_point()
+        self.assertTrue(Point(0.5, 0.0, 5.0) == middle_point)

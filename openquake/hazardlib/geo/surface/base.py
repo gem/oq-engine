@@ -149,7 +149,7 @@ class BaseSurface(object):
     @abc.abstractmethod
     def get_bounding_box(self):
         """
-        Compute surface bounding box.
+        Compute surface geographical bounding box.
 
         :return:
             A tuple of four items. These items represent western, eastern,
@@ -161,6 +161,9 @@ class BaseSurface(object):
     def get_middle_point(self):
         """
         Compute coordinates of surface middle point.
+
+        The actual definition of ``middle point`` depends on the type of
+        surface geometry.
 
         :return:
             instance of :class:`openquake.hazardlib.geo.point.Point`
@@ -288,7 +291,9 @@ class BaseQuadrilateralSurface(BaseSurface):
 
     def get_bounding_box(self):
         """
-        Compute surface bounding box from surface mesh representation.
+        Compute surface bounding box from surface mesh representation. That is
+        extract longitudes and latitudes of mesh points and calls:
+        :meth:`openquake.hazardlib.geo.utils.get_spherical_bounding_box`
 
         :return:
             A tuple of four items. These items represent western, eastern,

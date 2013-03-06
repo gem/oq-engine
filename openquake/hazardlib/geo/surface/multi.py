@@ -21,7 +21,7 @@ import numpy
 
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo import utils, Point
 
 
 class MultiSurface(BaseSurface):
@@ -207,8 +207,8 @@ class MultiSurface(BaseSurface):
 
     def get_bounding_box(self):
         """
-        Compute bounding boxes for each surface element, and then return
-        the bounding box of all bounding boxes.
+        Compute bounding box for each surface element, and then return
+        the bounding box of all surface elements' bounding boxes.
 
         :return:
             A tuple of four items. These items represent western, eastern,
@@ -227,30 +227,27 @@ class MultiSurface(BaseSurface):
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
-        returns surface's middle point, otherwise compute surface middle point
-        as the surface's closest point to the surface's bounding box middle
-        point.
-
-        In other words, the middle point is defined as the surface point that
-        is closest to the centroid of the surface bounding box.
+        returns surface's middle point, otherwise find surface element closest
+        to the surface's bounding box middle point and return corresponding
+        middle point.
         """
         if len(self.surfaces) == 1:
-            return self.surface[0].get_middle_point()
+            return self.surfaces[0].get_middle_point()
 
         west, east, north, south = self.get_bounding_box()
-        middle_point = utils.get_middle_point(west, north, east, south)
+        longitude, latitude = utils.get_middle_point(west, north, east, south)
 
-        # it is important to specify the zero depth of the bounding box
-        # middle point, because in this way the method returns also the depth
-        # of the closest point
-        closest_point = self.get_closest_points(
-            Mesh(numpy.array([middle_point.longitude]),
-                 numpy.array([middle_point.latitude]),
-                 numpy.array([0.0]))
-        )
+        dists = []
+        for surf in self.surfaces:
+            dists.append(
+                surf.get_min_distance(Mesh(numpy.array([longitude]),
+                                           numpy.array([latitude]),
+                                           None))
+            )
+        dists = numpy.array(dists).flatten()
 
-        return Point(closest_point.lons[0], closest_point.lats[0],
-                     closest_point.depth[0])
+        idx = dists == numpy.min(dists)
+        return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
     def _get_areas(self):
         """

@@ -17,8 +17,12 @@
 Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicSource`.
 """
+import numpy
+
 from openquake.hazardlib.source.base import SeismicSource
-from openquake.hazardlib.geo.mesh.RectangularMesh
+from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.source.rupture import ProbabilisticRupture
 
 class CharacteristicSource(SeismicSource):
     """
@@ -30,7 +34,7 @@ class CharacteristicSource(SeismicSource):
     or fault segments that tend to produce essentialy same size earthquakes
     (see for instance: Schwartz, D. P., K. J. Coppersmith, Fault behavior and
     characteristic earthquakes: Examples from the Wasatch and San Andreas fault
-    zones, J. Geophys. Res., 89, 5681–5698, 1984.)
+    zones, J. Geophys. Res., 89, 5681-5698, 1984)
 
     :param surface:
         Fault surface, see :mod:`openquake.hazardlib.geo.surface`.
@@ -39,14 +43,15 @@ class CharacteristicSource(SeismicSource):
 
     See also :class:`openquake.hazardlib.source.base.SeismicSource`
     for description of other parameters.
+
+    Note that a ``CharacteristicSource`` does not need any mesh spacing,
+    magnitude scaling relationship, and aspect ratio, therefore the constructor
+    set these parameters to ``None``.
     """
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing, surface, rake):
-        # a characteristic source does not need any magnitude scaling
-        # relationship and aspect ratio, therefore they are set to None
+                 mfd, surface, rake):
         super(CharacteristicSource, self).__init__(
-            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            None, None
+            source_id, name, tectonic_region_type, mfd, None, None, None
         )
         NodalPlane.check_rake(rake)
         self.surface = surface
@@ -72,7 +77,8 @@ class CharacteristicSource(SeismicSource):
         """
         west, east, north, south = self.surface.get_bounding_box()
         mesh = RectangularMesh(numpy.array([[west, east], [west, east]]),
-                               numpy.array([[north, north], [south, south]]))
+                               numpy.array([[north, north], [south, south]]),
+                               None)
         poly = mesh.get_convex_hull()
 
         return poly.dilate(dilation)
@@ -85,8 +91,8 @@ class CharacteristicSource(SeismicSource):
         For each magnitude value in the given MFD, return an earthquake
         rupture with a surface always equal to the given surface.
         """
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            hypocenter = self.surface.get_middle_point()
+        hypocenter = self.surface.get_middle_point()
+        for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
             yield ProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self),
