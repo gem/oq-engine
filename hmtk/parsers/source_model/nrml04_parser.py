@@ -203,9 +203,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         [mfd_elem] = _xpath(src_elem, ('.//nrml:truncGutenbergRichterMFD | '
                                        './/nrml:incrementalMFD'))
         
-        if len(mfd_elem) == 0:
-            return None
-        
         value_set = False
         if mfd_elem.tag == '{%s}truncGutenbergRichterMFD' % (nrml.NAMESPACE):
             mfd = models.TGRMFD()
