@@ -17,6 +17,7 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
+import random
 import numpy
 
 from openquake.risklib import api, scientific
@@ -32,7 +33,7 @@ from django.db import transaction
 
 @tasks.oqtask
 @general.count_progress_risk('r')
-def event_based_bcr(job_id, hazard, seed,
+def event_based_bcr(job_id, hazard, task_seed,
                     vulnerability_function, vulnerability_function_retrofitted,
                     output_containers, time_span, tses,
                     loss_curve_resolution, asset_correlation,
@@ -62,7 +63,7 @@ def event_based_bcr(job_id, hazard, seed,
         Time of the Stochastic Event Set.
     :param int loss_curve_resolution:
         Resolution of the computed loss curves (number of points).
-    :param int seed:
+    :param int task_seed:
         Seed used to generate random values.
     :param float asset_correlation:
         asset correlation (0 uncorrelated, 1 perfectly correlated).
@@ -72,17 +73,20 @@ def event_based_bcr(job_id, hazard, seed,
         The life expectancy used for every asset.
     """
 
+    rnd = random.Random()
+    rnd.seed(task_seed)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-        # FIXME(lp). We should not pass the exact same seed for
-        # different hazard
+        seed = rnd.randint(0, (2 ** 31) - 1)
         calc_original = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
             seed=seed, correlation=asset_correlation)
 
+        seed = rnd.randint(0, (2 ** 31) - 1)
         calc_retrofitted = api.ProbabilisticEventBased(
             vulnerability_function_retrofitted,
             curve_resolution=loss_curve_resolution,
