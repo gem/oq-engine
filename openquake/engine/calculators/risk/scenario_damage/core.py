@@ -25,7 +25,7 @@ from django import db
 
 from openquake.nrmllib.risk import parsers
 from openquake.risklib import api, scientific
-from openquake.risklib.models.input import FragilityModel, FragilityFunctionSeq
+from openquake.risklib.models.input import FragilityModel
 
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks
@@ -37,7 +37,7 @@ from openquake.engine.calculators import base
 @tasks.oqtask
 @general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
-                    taxonomy, fragility_model, fragility_functions,
+                    taxonomy, fragility_functions,
                     _output_containers):
     """
     Celery task for the scenario damage risk calculator.
@@ -51,14 +51,12 @@ def scenario_damage(job_id, hazard,
       :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
       element is the corresponding weight.
     :param taxonomy: the taxonomy being considered
-    :param fragility_model: a
-    :class:`openquake.risklib.models.input.FragilityModel object
     :param fragility_functions: a
-    :class:`openquake.risklib.models.input.FragilityFunctionSeq object
+    :class:`openquake.risklib.models.input.FragilityFunctionSequence object
     :param _output_containers: a dictionary {hazard_id: output_id}
     of output_type "dmg_dist_per_asset"
     """
-    calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+    calculator = api.ScenarioDamage(fragility_functions)
 
     # Scenario Damage works only on one hazard
     hazard_getter = hazard.values()[0][0]
@@ -199,8 +197,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         to pass to a worker. In this case taxonomy, fragility_model and
         fragility_functions for the given taxonomy.
         """
-        return [taxonomy, self.fragility_model,
-                self.fragility_functions[taxonomy]]
+        return [taxonomy, self.fragility_model[taxonomy]]
 
     def task_completed_hook(self, message):
         """
@@ -268,22 +265,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        self.fragility_model, self.fragility_functions, self.damage_states = \
-            self.parse_fragility_model()
-        self.check_taxonomies(self.fragility_functions)
+        self.fragility_model = fm = self.parse_fragility_model()
+        self.damage_states = ['no_damage'] + fm.limit_states
+        self.imt = fm.imt
+        self.check_taxonomies(fm)
 
     def parse_fragility_model(self):
         """
         Parse the fragility XML file and return fragility_model,
         fragility_functions, and damage_states for usage in set_risk_models.
         """
-        path = self.rc.inputs.get(input_type='fragility').path  # will be used
+        path = self.rc.inputs.get(input_type='fragility').path
         iterparse = iter(parsers.FragilityModelParser(path))
         fmt, iml, limit_states = iterparse.next()
-        self.imt = iml['IMT']
-        damage_states = ['no_damage'] + limit_states
-        fm = FragilityModel(fmt, iml['imls'], limit_states)
-        ffs = {}
-        for taxonomy, values, no_damage_limit in iterparse:
-            ffs[taxonomy] = FragilityFunctionSeq(fm, values, no_damage_limit)
-        return fm, ffs, damage_states
+        fm = FragilityModel(
+            fmt, iml['IMT'], iml['imls'], limit_states, *iterparse)
+        return fm
