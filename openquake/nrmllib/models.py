@@ -396,3 +396,70 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
      :param geometry:
          :class:`ComplexFaultGeometry` object.
     """
+
+
+class CharacteristicSource(object):
+    """
+    Basic object representation of a characteristic fault source.
+
+    :param str id:
+        Source identifier, unique within a given model.
+    :param str name:
+        Human-readable name for the source.
+    :param str trt:
+        Tectonic Region Type.
+    :param mfd:
+        Magnitude Frequency Distribution. An instance of
+        :class:`IncrementalMFD` or :class:`TGRMFD`.
+    :param float rake:
+        Rake angle.
+    :param surface:
+        A :class:`SimpleFaultGeometry`, :class:`ComplexFaultGeometry`, or a
+        list of :class:`PlanarSurface` objects.
+    """
+    def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
+                 surface=None):
+        self.id = id
+        self.name = name
+        self.trt = trt
+        self.mfd = mfd
+        self.rake = rake
+        self.surface = surface
+
+
+class PlanarSurface(object):
+    """
+    :param strike:
+        Strike angle.
+    :param dip:
+        Dip angle.
+    :param top_left,top_right,bottom_left,bottom_right:
+        Corner points of the planar surface, represented by :class:`Point`
+        objects.
+    """
+    def __init__(self, strike=None, dip=None, top_left=None, top_right=None,
+                 bottom_left=None, bottom_right=None):
+        self.strike = strike
+        self.dip = dip
+        self.top_left = top_left
+        self.top_right = top_right
+        self.bottom_left = bottom_left
+        self.bottom_right = bottom_right
+
+
+class Point(object):
+    """
+    A simple representation of longitude, latitude, and depth.
+
+    :param lon:
+        Longitude
+    :param lat:
+        Latitude
+    :param depth:
+        Depth
+    """
+
+    def __init__(self, lon=None, lat=None, depth=None):
+        self.lon = lon
+        self.lat = lat
+        self.depth = depth
