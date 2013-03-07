@@ -1472,6 +1472,9 @@ CREATE TABLE riskr.loss_curve_data (
         CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
+
+    -- Average Loss ratio
+    average_loss_ratio FLOAT NOT NULL,
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
@@ -1488,6 +1491,9 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
         CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
+
+    -- Absolute Loss
+    average_loss FLOAT NOT NULL,
 ) TABLESPACE riskr_ts;
 
 -- Benefit-cost ratio distribution
