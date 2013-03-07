@@ -3,7 +3,7 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <sourceModel name="Some Source Model">
-        <characteristicSource id="5" name="characteristic source A" tectonicRegion="Volcanic">
+        <characteristicSource id="5" name="characteristic source, simple fault" tectonicRegion="Volcanic">
             <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
             <rake>30.0</rake>
             <surface>
@@ -22,7 +22,7 @@
                 </simpleFaultGeometry>
             </surface>
         </characteristicSource>
-        <characteristicSource id="6" name="characteristic source B" tectonicRegion="Volcanic">
+        <characteristicSource id="6" name="characteristic source, complex fault" tectonicRegion="Volcanic">
             <incrementalMFD minMag="5.0" binWidth="0.1">
                 <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
             </incrementalMFD>
@@ -72,7 +72,7 @@
                 </complexFaultGeometry>
             </surface>
         </characteristicSource>
-        <characteristicSource id="7" name="characteristic source C" tectonicRegion="Volcanic">
+        <characteristicSource id="7" name="characteristic source, multi surface" tectonicRegion="Volcanic">
             <truncGutenbergRichterMFD aValue="-3.6" bValue="1.0" minMag="5.2" maxMag="6.4" />
             <rake>90.0</rake>
             <surface>
