@@ -208,7 +208,7 @@ m?ml version='1.0' encoding='utf-8'?>
         exp_src_model = self._expected_source_model()
         src_model = parser.parse()
 
-        self.assertTrue(_utils.deep_eq(exp_src_model, src_model))
+        self.assertTrue(*_utils.deep_eq(exp_src_model, src_model))
 
     def test_probs_sum_to_1(self):
         # We want to test that distribution probabilities sum to 1.
@@ -341,7 +341,7 @@ class SiteModelParserTestCase(unittest.TestCase):
         parser = parsers.SiteModelParser(self.SAMPLE_FILE)
         actual = [x for x in parser.parse()]
 
-        self.assertTrue(_utils.deep_eq(expected, actual))
+        self.assertTrue(*_utils.deep_eq(expected, actual))
 
 
 class RuptureModelParserTestCase(unittest.TestCase):
@@ -429,7 +429,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
                     self.SAMPLE_FILES, self.EXPECTED_MODELS):
             parser = parsers.RuptureModelParser(fname)
             model = parser.parse()
-            _utils._deep_eq(model, expected_model)
+            self.assertTrue(*_utils.deep_eq(model, expected_model))
 
     def test_invalid(self):
         inv1 = StringIO.StringIO(self.INVALID_1)
