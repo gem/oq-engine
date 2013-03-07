@@ -2212,8 +2212,7 @@ def get_gmfs_scenario(output, imt=None):
         if imt == 'SA':
             imt = 'SA(%s)' % sa_period
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in order_by_location(
-                GmfScenario.objects.filter(output__id=output.id, imt=imt)):
+        for gmf in GmfScenario.objects.filter(output__id=output.id, imt=imt):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
                 nodes[i].append(
                     _GroundMotionFieldNode(gmv=gmv, location=gmf.location))
