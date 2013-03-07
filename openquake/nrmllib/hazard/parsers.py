@@ -102,6 +102,52 @@ class FaultGeometryParserMixin(object):
 
         return complex_geom
 
+    @classmethod
+    def _parse_planar_surface(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a
+            <planarSurface>.
+        :returns:
+            Fully populated
+            :class:`openquake.nrmllib.models.PlanarSurface` object.
+        """
+        surface = models.PlanarSurface()
+        surface.strike = float(src_elem.get('strike'))
+        surface.dip = float(src_elem.get('dip'))
+        surface.top_left = cls._parse_point_geom(
+            _xpath(src_elem, './nrml:topLeft')[0]
+        )
+        surface.top_right = cls._parse_point_geom(
+            _xpath(src_elem, './nrml:topRight')[0]
+        )
+        surface.bottom_left = cls._parse_point_geom(
+            _xpath(src_elem, './nrml:bottomLeft')[0]
+        )
+        surface.bottom_right = cls._parse_point_geom(
+            _xpath(src_elem, './nrml:bottomRight')[0]
+        )
+        return surface
+
+    @classmethod
+    def _parse_point_geom(cls, elem):
+        """
+        :param elem:
+            :class:`lxml.etree._Element` instance representing an element
+            with the following attributes:
+                * `lon`
+                * `lat`
+                * `depth`
+        :returns:
+            A fully populated :class:`openquake.nrmllib.models.Point` object.
+        """
+        pt = models.Point()
+        pt.lon = float(elem.get('lon'))
+        pt.lat = float(elem.get('lat'))
+        pt.depth = float(elem.get('depth'))
+
+        return pt
+
 
 class SourceModelParser(FaultGeometryParserMixin):
     """NRML source model parser. Reads point sources, area sources, simple
@@ -116,6 +162,7 @@ class SourceModelParser(FaultGeometryParserMixin):
     _AREA_TAG = '{%s}areaSource' % openquake.nrmllib.NAMESPACE
     _SIMPLE_TAG = '{%s}simpleFaultSource' % openquake.nrmllib.NAMESPACE
     _COMPLEX_TAG = '{%s}complexFaultSource' % openquake.nrmllib.NAMESPACE
+    _CHAR_TAG = '{%s}characteristicSource' % openquake.nrmllib.NAMESPACE
 
     def __init__(self, source):
         self.source = source
@@ -124,6 +171,7 @@ class SourceModelParser(FaultGeometryParserMixin):
             self._AREA_TAG: self._parse_area,
             self._SIMPLE_TAG: self._parse_simple,
             self._COMPLEX_TAG: self._parse_complex,
+            self._CHAR_TAG: self._parse_characteristic,
         }
 
     def _source_gen(self, tree):
@@ -333,6 +381,41 @@ class SourceModelParser(FaultGeometryParserMixin):
         complx.rake = float(
             _xpath(src_elem, './/nrml:rake')[0].text)
         return complx
+
+    @classmethod
+    def _parse_characteristic(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            Fully populated
+            :class:`openquake.nrmllib.models.CharacteristicSource` object.
+        """
+        char = models.CharacteristicSource()
+        char.id = src_elem.get('id')
+        char.name = src_elem.get('name')
+        char.trt = src_elem.get('tectonicRegion')
+        char.rake = float(_xpath(src_elem, './nrml:rake')[0].text)
+        char.mfd = cls._parse_mfd(src_elem)
+
+        # The `surface` can be either a simple fault surface, complex fault
+        # surface, or a multi surface (consisting of 1 or more planar surfaces)
+        surface_elem = _xpath(src_elem, './nrml:surface')[0]
+        simple_surface = _xpath(surface_elem, './nrml:simpleFaultGeometry')
+        complex_surface = _xpath(surface_elem, './nrml:complexFaultGeometry')
+        multi_surface = _xpath(surface_elem, './nrml:planarSurface')
+
+        if simple_surface:
+            [simple_surface] = simple_surface
+            char.surface = cls._parse_simple_geometry(simple_surface)
+        elif complex_surface:
+            [complex_surface] = complex_surface
+            char.surface = cls._parse_complex_geometry(complex_surface)
+        elif multi_surface:
+            char.surface = [cls._parse_planar_surface(surf)
+                            for surf in multi_surface]
+
+        return char
 
     def parse(self):
         """Parse the source XML content and generate a source model in object
