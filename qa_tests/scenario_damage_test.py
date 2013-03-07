@@ -53,20 +53,14 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                      (expected_means, expected_stdevs))
 
     def test_continuous_ff(self):
-        fragility_model_continuous = input.FragilityModel(
-            "continuous", None, ["LS1", "LS2"])
+        fragility_model = input.FragilityModel(
+            "continuous", 'PGA', None, ["LS1", "LS2"],
+            ('RC', [(0.2, 0.05), (0.35, 0.10)], None),
+            ('RM', [(0.25, 0.08), (0.40, 0.12)], None))
 
-        fragility_functions_rc = input.FragilityFunctionSeq(
-            fragility_model_continuous, [(0.2, 0.05), (0.35, 0.10)])
+        calculator_rm = api.ScenarioDamage(fragility_model['RM'])
 
-        fragility_functions_rm = input.FragilityFunctionSeq(
-            fragility_model_continuous, [(0.25, 0.08), (0.40, 0.12)])
-
-        calculator_rm = api.ScenarioDamage(
-            fragility_model_continuous, fragility_functions_rm)
-
-        calculator_rc = api.ScenarioDamage(
-            fragility_model_continuous, fragility_functions_rc)
+        calculator_rc = api.ScenarioDamage(fragility_model['RC'])
 
         [asset_output_a1] = calculator_rm([self.hazard['a1']])
 
@@ -101,19 +95,14 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             [117.7802813522, 485.2023172324, 575.8724057319])
 
     def test_discrete_ff(self):
-        fragility_model_discrete = input.FragilityModel(
-            "discrete", [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"])
+        fragility_model = input.FragilityModel(
+            "discrete", 'PGA', [0.1, 0.2, 0.3, 0.5], ["LS1", "LS2"],
+            ('RC', [[0.0073, 0.35, 0.74, 0.99], [0.001, 0.02, 0.25, 0.72]],
+             None),
+            ('RM', [[0.01, 0.64, 0.95, 1.0], [0.0003, 0.05, 0.40, 0.86]],
+             None))
 
-        fragility_functions_rc = input.FragilityFunctionSeq(
-            fragility_model_discrete,
-            [[0.0073, 0.35, 0.74, 0.99], [0.001, 0.02, 0.25, 0.72]])
-
-        fragility_functions_rm = input.FragilityFunctionSeq(
-            fragility_model_discrete,
-            [[0.01, 0.64, 0.95, 1.0], [0.0003, 0.05, 0.40, 0.86]])
-
-        calculator_rm = api.ScenarioDamage(
-            fragility_model_discrete, fragility_functions_rm)
+        calculator_rm = api.ScenarioDamage(fragility_model['RM'])
 
         [asset_output_a1] = calculator_rm([self.hazard['a1']])
 
@@ -129,8 +118,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         rm = asset_output_a1 * 3000 + asset_output_a3 * 1000
 
-        calculator_rc = api.ScenarioDamage(
-            fragility_model_discrete, fragility_functions_rc)
+        calculator_rc = api.ScenarioDamage(fragility_model['RC'])
         [asset_output_a2] = calculator_rc([self.hazard['a2']])
 
         expected_means = [344.90849228, 747.62412976, 907.46737796]
