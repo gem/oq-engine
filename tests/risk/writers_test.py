@@ -31,10 +31,10 @@ BCR_NODE = collections.namedtuple(
     "average_annual_loss_retrofitted")
 
 LOSS_CURVE = collections.namedtuple(
-    "LossCurve", "poes losses location asset_ref loss_ratios")
+    "LossCurve", "poes losses location asset_ref loss_ratios average_loss")
 
 AGGREGATE_LOSS_CURVE = collections.namedtuple(
-    "AggregateLossCurve", "poes losses")
+    "AggregateLossCurve", "poes losses average_loss")
 
 ExposureData = collections.namedtuple(
     "ExposureData", 'asset_ref site')
@@ -98,14 +98,18 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossCurves investigationTime="10.0"
+              sourceModelTreePath="b1_b2_b3"
+              gsimTreePath="b1_b2" unit="USD">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
       </gml:Point>
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
+      <averageLoss>5.0000e+00</averageLoss>
     </lossCurve>
     <lossCurve assetRef="asset_2">
       <gml:Point>
@@ -113,6 +117,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       </gml:Point>
       <poEs>1.0 0.3 0.2</poEs>
       <losses>20.0 30.0 40.0</losses>
+      <averageLoss>3.0000e+00</averageLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -127,12 +132,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             LOSS_CURVE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
-                loss_ratios=None),
+                loss_ratios=None, average_loss=5.),
 
             LOSS_CURVE(
                 asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
-                loss_ratios=None),
+                loss_ratios=None, average_loss=3.),
         ]
 
         writer.serialize(data)
@@ -151,6 +156,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       </gml:Point>
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
+      <averageLoss>1.0000e+00</averageLoss>
     </lossCurve>
     <lossCurve assetRef="asset_2">
       <gml:Point>
@@ -158,6 +164,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       </gml:Point>
       <poEs>1.0 0.3 0.2</poEs>
       <losses>20.0 30.0 40.0</losses>
+      <averageLoss>2.0000e+00</averageLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -172,12 +179,12 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
             LOSS_CURVE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
-                loss_ratios=None),
+                loss_ratios=None, average_loss=1.),
 
             LOSS_CURVE(
                 asset_ref="asset_2", location=Point(2.0, 2.5),
                 poes=[1.0, 0.3, 0.2], losses=[20.0, 30.0, 40.0],
-                loss_ratios=None),
+                loss_ratios=None, average_loss=2.),
         ]
 
         writer.serialize(data)
@@ -197,6 +204,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
       <lossRatios>0.4 0.6 0.8</lossRatios>
+      <averageLoss>0.0000e+00</averageLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -210,7 +218,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         data = [LOSS_CURVE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
-                loss_ratios=[0.4, 0.6, 0.8])]
+                loss_ratios=[0.4, 0.6, 0.8], average_loss=0.)]
 
         writer.serialize(data)
 
@@ -243,6 +251,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     unit="USD">
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
+    <averageLoss>3.0000e+00</averageLoss>
   </aggregateLossCurve>
 </nrml>
 """)
@@ -253,7 +262,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
             gsim_tree_path="b1_b2", unit="USD")
 
         data = AGGREGATE_LOSS_CURVE(
-            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0])
+            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0], average_loss=3.)
 
         writer.serialize(data)
 
@@ -272,6 +281,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     quantileValue="0.5">
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
+    <averageLoss>2.0000e+00</averageLoss>
   </aggregateLossCurve>
 </nrml>
 """)
@@ -282,7 +292,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
             quantile_value=0.50)
 
         data = AGGREGATE_LOSS_CURVE(
-            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0])
+            poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0], average_loss=2.)
 
         writer.serialize(data)
 
