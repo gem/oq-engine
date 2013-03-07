@@ -228,8 +228,17 @@ class MultiSurface(BaseSurface):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
         returns surface's middle point, otherwise find surface element closest
-        to the surface's bounding box middle point and return corresponding
+        to the surface's bounding box centroid and return corresponding
         middle point.
+
+        Note that the concept of middle point for a multi surface is ambiguous
+        and alternative definitions may be possible. However, this method is
+        mostly used to define the hypocenter location for ruptures described
+        by a multi surface
+        (see :meth:`openquake.hazardlib.source.CharacteristicSource.iter_ruptures`).
+        This is needed because when creating fault based sources, the rupture's
+        hypocenter locations are not explicitly defined, and therefore an
+        automated way to define them is required.
         """
         if len(self.surfaces) == 1:
             return self.surfaces[0].get_middle_point()

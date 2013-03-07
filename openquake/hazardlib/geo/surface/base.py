@@ -307,7 +307,7 @@ class BaseQuadrilateralSurface(BaseSurface):
     def get_middle_point(self):
         """
         Compute middle point from surface mesh representation. Calls
-        :meth:`openquake.hazardlib.geo.RectangularMesh.get_middle_point`
+        :meth:`openquake.hazardlib.geo.mesh.RectangularMesh.get_middle_point`
         """
         mesh = self.get_mesh()
 
