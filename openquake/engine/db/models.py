@@ -2424,6 +2424,7 @@ class LossCurveData(djm.Model):
     loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    average_loss_ratio = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -2431,6 +2432,10 @@ class LossCurveData(djm.Model):
     @property
     def losses(self):
         return numpy.array(self.loss_ratios) * self.asset_value
+
+    @property
+    def average_loss(self):
+        return self.average_loss_ratio * self.asset_value
 
 
 class AggregateLossCurveData(djm.Model):
@@ -2441,6 +2446,7 @@ class AggregateLossCurveData(djm.Model):
     loss_curve = djm.OneToOneField("LossCurve")
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
+    average_loss = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'

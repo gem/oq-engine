@@ -42,6 +42,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
       <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
       <losses>34.3158848505 85.399369608 117.245425501 149.043885673 172.193230479 195.342575285 218.49192009 241.641264896 264.790609701</losses>
       <lossRatios>0.0114386282835 0.028466456536 0.0390818085005 0.0496812952244 0.057397743493 0.0651141917615 0.07283064003 0.0805470882986 0.0882635365671</lossRatios>
+      <averageLoss>1.4655e+02</averageLoss>
     </lossCurve>
     <lossCurve assetRef="a2">
       <gml:Point>
@@ -50,6 +51,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
       <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
       <losses>8.76706068558 30.247789599 30.8360122116 31.1984360596 31.2782554554 31.3580748512 31.437894247 31.5177136426 31.5975330384</losses>
       <lossRatios>0.00438353034279 0.0151238947995 0.0154180061058 0.0155992180298 0.0156391277277 0.0156790374256 0.0157189471235 0.0157588568213 0.0157987665192</lossRatios>
+      <averageLoss>2.6565e+01</averageLoss>
     </lossCurve>
     <lossCurve assetRef="a3">
       <gml:Point>
@@ -58,6 +60,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
       <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
       <losses>11.5144783375 34.5514270991 39.0887926791 43.4302192561 44.7861535336 46.1420878111 47.4980220885 48.853956366 50.2098906434</losses>
       <lossRatios>0.0115144783375 0.0345514270991 0.0390887926791 0.0434302192561 0.0447861535336 0.0461420878111 0.0474980220885 0.048853956366 0.0502098906434</lossRatios>
+      <averageLoss>3.7366e+01</averageLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -68,6 +71,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
   <aggregateLossCurve investigationTime="50.0" sourceModelTreePath="test_sm" gsimTreePath="test_gsim" unit="USD">
     <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
     <losses>55.0411 157.5215 191.8946 222.8025 244.5078 266.2131 287.9184 309.6237 331.3290</losses>
+    <averageLoss>2.0754e+02</averageLoss>
   </aggregateLossCurve>
 </nrml>
 """
