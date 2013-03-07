@@ -17,8 +17,7 @@
 import unittest
 
 from openquake.risklib.curve import Curve
-from openquake.risklib.scientific import (
-    bcr, mean_loss)
+from openquake.risklib import scientific
 
 
 class RiskCommonTestCase(unittest.TestCase):
@@ -32,8 +31,9 @@ class RiskCommonTestCase(unittest.TestCase):
         life_expectancy = 40
         expected_result = 0.43405
 
-        result = bcr(eal_orig, eal_retrofitted, interest,
-                     life_expectancy, 1, retrofitting_cost)
+        result = scientific.bcr(
+            eal_orig, eal_retrofitted, interest,
+            life_expectancy, 1, retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=2e-5)
 
     def test_mean_curve_computation(self):
@@ -42,5 +42,7 @@ class RiskCommonTestCase(unittest.TestCase):
                                   (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
         self.assertAlmostEqual(
-            0.023305, mean_loss(loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates), 3)
+            0.023305,
+            scientific.average_loss(
+                loss_ratio_curve.abscissae,
+                loss_ratio_curve.ordinates), 3)

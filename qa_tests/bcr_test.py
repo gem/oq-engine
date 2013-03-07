@@ -61,11 +61,11 @@ class BCRTestCase(unittest.TestCase):
         retrofitted_losses = (
             retrofitted_loss_ratio_curve.abscissae)
 
-        eal_original = scientific.mean_loss(
+        eal_original = scientific.average_loss(
             original_losses,
             original_loss_ratio_curve.ordinates)
 
-        eal_retrofitted = scientific.mean_loss(
+        eal_retrofitted = scientific.average_loss(
             retrofitted_losses,
             retrofitted_loss_ratio_curve.ordinates)
 
