@@ -126,7 +126,12 @@ def event_based(job_id, hazard,
 
                     # loss curves
                     general.write_loss_curve(
-                        loss_curve_id, asset, loss_ratio_curve)
+                        loss_curve_id, asset,
+                        loss_ratio_curve.ordinates,
+                        loss_ratio_curve.abscissae,
+                        scientific.average_loss(
+                            loss_ratio_curve.abscissae,
+                            loss_ratio_curve.ordinates))
 
                     # loss maps
                     for poe in conditional_loss_poes:
@@ -149,8 +154,14 @@ def event_based(job_id, hazard,
 
                         insured_loss_curve.abscissae = (
                             insured_loss_curve.abscissae / asset.value)
+
                         general.write_loss_curve(
-                            insured_curve_id, asset, insured_loss_curve)
+                            insured_curve_id, asset,
+                            insured_loss_curve.ordinates,
+                            insured_loss_curve.abscissae,
+                            scientific.average_loss(
+                                insured_loss_curve.abscissae,
+                                insured_loss_curve.ordinates))
 
                 # update the event loss table of this task
                 for i, asset in enumerate(assets):
@@ -246,13 +257,19 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
             tses, time_span = self.hazard_times()
 
-            aggregate_loss_curve = scientific.event_based(
-                curve_data.losses, tses, time_span,
-                curve_resolution=self.rc.loss_curve_resolution)
+            # Finalize the aggregate losses by running the event based
+            # algorithm on it and by computing the average loss
 
-            curve_data.losses = aggregate_loss_curve.abscissae.tolist()
-            curve_data.poes = aggregate_loss_curve.ordinates.tolist()
-            curve_data.save()
+            if len(curve_data.losses):
+                aggregate_loss_curve = scientific.event_based(
+                    curve_data.losses, tses, time_span,
+                    curve_resolution=self.rc.loss_curve_resolution)
+
+                curve_data.losses = aggregate_loss_curve.abscissae.tolist()
+                curve_data.poes = aggregate_loss_curve.ordinates.tolist()
+                curve_data.average_loss = scientific.average_loss(
+                    curve_data.losses, curve_data.poes)
+                curve_data.save()
 
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
@@ -346,7 +363,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
         models.AggregateLossCurveData.objects.create(
-            loss_curve=aggregate_loss_curve)
+            loss_curve=aggregate_loss_curve,
+            average_loss=0)
 
         if self.rc.insured_losses:
             insured_curve_id = (

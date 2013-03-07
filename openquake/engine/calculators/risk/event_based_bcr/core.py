@@ -107,11 +107,11 @@ def event_based_bcr(job_id, hazard, seed,
             _, retrofitted_loss_curves = calc_retrofitted(ground_motion_values)
 
             eal_original = [
-                scientific.mean_loss(*original_loss_curves[i].xy)
+                scientific.average_loss(*original_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             eal_retrofitted = [
-                scientific.mean_loss(*retrofitted_loss_curves[i].xy)
+                scientific.average_loss(*retrofitted_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             bcr_results = [
