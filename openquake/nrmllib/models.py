@@ -104,9 +104,9 @@ class AreaSource(PointSource):
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
-   :param geometry:
+    :param geometry:
         :class:`AreaGeometry` instance.
     :param str mag_scale_rel:
         Magnitude Scaling Relationship.
@@ -139,13 +139,13 @@ class AreaGeometry(PointGeometry):
 class SimpleFaultSource(object):
     """Basic object representation of a Simple Fault Source.
 
-   :param str id:
+    :param str id:
         Source identifier, unique within a given model.
-   :param str name:
+    :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
-   :param geometry:
+    :param geometry:
         :class:`SimpleFaultGeometry` object.
     :param str mag_scale_rel:
         Magnitude Scaling Relationship.
@@ -175,7 +175,7 @@ class SimpleFaultGeometry(object):
     """Basic object representation of a geometry for a
     :class:`SimpleFaultSource`.
 
-   :param str wkt:
+    :param str wkt:
         WKT representing the fault trace of a simple fault (a LINESTRING).
     :param float upper_seismo_depth:
         Upper seismogenic depth.
@@ -207,7 +207,7 @@ class ComplexFaultSource(SimpleFaultSource):
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
     :param geometry:
         :class:`ComplexFaultGeometry` object.
