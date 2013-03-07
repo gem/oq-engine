@@ -274,9 +274,9 @@ class GroundMotionValuesGetter(HazardGetter):
         # have given a non-zero contribute).
         ruptures = []
 
-        for row in data:
-            ret[row[0]] = dict(zip(row[2], row[1]))
-            ruptures.extend(row[2])
+        for asset_id, gmvs, rupture_ids in data:
+            ret[asset_id] = dict(zip(rupture_ids, gmvs))
+            ruptures.extend(rupture_ids)
         ruptures = set(ruptures)
 
         for asset_id, asset_data in ret.items():
