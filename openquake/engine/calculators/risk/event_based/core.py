@@ -18,6 +18,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import random
 from collections import OrderedDict
 import numpy
 
@@ -36,7 +37,7 @@ from openquake.engine.calculators import base
 @tasks.oqtask
 @general.count_progress_risk('r')
 def event_based(job_id, hazard,
-                seed, vulnerability_function,
+                task_seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
                 time_span, tses,
@@ -54,7 +55,7 @@ def event_based(job_id, hazard,
       instance of
       :class:`..hazard_getters.GroundMotionValuesGetter`,
       and the second element is the corresponding weight.
-    :param seed:
+    :param task_seed:
       the seed used to initialize the rng
     :param dict output_containers: a dictionary mapping hazard Output
       ID to a list (a, b, c, d) where a is the ID of the
@@ -79,6 +80,9 @@ def event_based(job_id, hazard,
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
 
+    rnd = random.Random()
+    rnd.seed(task_seed)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
@@ -87,8 +91,10 @@ def event_based(job_id, hazard,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
-        # FIXME(lp). We should not pass the exact same seed for
-        # different hazard
+        seed = rnd.randint(0, (2 ** 31) - 1)
+        logs.LOG.info("Using seed %s with hazard output %s" % (
+            seed, hazard_output_id))
+
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
             curve_resolution=loss_curve_resolution,
