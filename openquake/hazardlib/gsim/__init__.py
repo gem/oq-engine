@@ -22,12 +22,14 @@ import os
 import inspect
 import importlib
 from collections import OrderedDict
-from openquake.hazardlib.gsim.base import GMPE, IPE, CoeffsTable
+from openquake.hazardlib.gsim.base import (
+    GMPE, IPE, GroundShakingIntensityModel)
 
 
 def get_available_gsims():
     '''
-    Return an ordered list with the names of the available GSIM classes.
+    Return an ordered dictionary with the available GSIM classes, keyed
+    by class name.
     '''
     gsims = {}
     for fname in os.listdir(os.path.dirname(__file__)):
@@ -36,7 +38,8 @@ def get_available_gsims():
             mod = importlib.import_module(
                 'openquake.hazardlib.gsim.' + modname)
             for cls in mod.__dict__.itervalues():
-                if inspect.isclass(cls) and issubclass(cls, GMPE) \
-                        and cls is not GMPE:
+                if inspect.isclass(cls) and issubclass(
+                    cls, GroundShakingIntensityModel) and cls not in (
+                        GroundShakingIntensityModel, GMPE, IPE):
                     gsims[cls.__name__] = cls
     return OrderedDict((k, gsims[k]) for k in sorted(gsims))
