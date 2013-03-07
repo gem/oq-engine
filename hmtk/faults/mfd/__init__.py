@@ -47,5 +47,6 @@
 
 from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
 from hmtk.faults.mfd.anderson_luco_arbitrary import AndersonLucoArbitrary
-#from hmtk.faults.mfd.youngs_coppersmith import YoungsCoppersmith
+from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
+    YoungsCoppersmithCharacteristic)
 from hmtk.faults.mfd.characteristic import Characteristic
