@@ -21,6 +21,7 @@ import numpy
 
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo import utils, Point
 
 
 class MultiSurface(BaseSurface):
@@ -203,6 +204,59 @@ class MultiSurface(BaseSurface):
         Return sum of surface elements areas (in squared km).
         """
         return numpy.sum(self._get_areas())
+
+    def get_bounding_box(self):
+        """
+        Compute bounding box for each surface element, and then return
+        the bounding box of all surface elements' bounding boxes.
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+        lons = []
+        lats = []
+        for surf in self.surfaces:
+            west, east, north, south = surf.get_bounding_box()
+            lons.extend([west, east])
+            lats.extend([north, south])
+
+        return utils.get_spherical_bounding_box(lons, lats)
+
+    def get_middle_point(self):
+        """
+        If :class:`MultiSurface` is defined by a single surface, simply
+        returns surface's middle point, otherwise find surface element closest
+        to the surface's bounding box centroid and return corresponding
+        middle point.
+
+        Note that the concept of middle point for a multi surface is ambiguous
+        and alternative definitions may be possible. However, this method is
+        mostly used to define the hypocenter location for ruptures described
+        by a multi surface
+        (see :meth:`openquake.hazardlib.source.CharacteristicSource.iter_ruptures`).
+        This is needed because when creating fault based sources, the rupture's
+        hypocenter locations are not explicitly defined, and therefore an
+        automated way to define them is required.
+        """
+        if len(self.surfaces) == 1:
+            return self.surfaces[0].get_middle_point()
+
+        west, east, north, south = self.get_bounding_box()
+        longitude, latitude = utils.get_middle_point(west, north, east, south)
+
+        dists = []
+        for surf in self.surfaces:
+            dists.append(
+                surf.get_min_distance(Mesh(numpy.array([longitude]),
+                                           numpy.array([latitude]),
+                                           None))
+            )
+        dists = numpy.array(dists).flatten()
+
+        idx = dists == numpy.min(dists)
+        return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
     def _get_areas(self):
         """

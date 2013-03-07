@@ -53,8 +53,8 @@ class SeismicSource(object):
         and vice versa.
 
     :raises ValueError:
-        If tectonic region type is wrong/unknown, if either rupture aspect
-        ratio or rupture mesh spacing is not positive.
+        If either rupture aspect ratio or rupture mesh spacing is not positive
+        (if not None).
     """
     __metaclass__ = abc.ABCMeta
 
@@ -62,10 +62,10 @@ class SeismicSource(object):
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio):
 
-        if not rupture_mesh_spacing > 0:
+        if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
 
-        if not rupture_aspect_ratio > 0:
+        if rupture_aspect_ratio is not None and not rupture_aspect_ratio > 0:
             raise ValueError('rupture aspect ratio must be positive')
 
         self.source_id = source_id

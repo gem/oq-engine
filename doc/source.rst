@@ -46,6 +46,15 @@ Complex fault
     :private-members:
 
 
+---------------------
+Characteristic source
+---------------------
+
+.. automodule:: openquake.hazardlib.source.characteristic
+    :members:
+    :private-members:
+
+
 ----------------------------
 Abstract base seismic source
 ----------------------------

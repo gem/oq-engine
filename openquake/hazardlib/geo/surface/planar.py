@@ -513,3 +513,30 @@ class PlanarSurface(BaseQuadrilateralSurface):
         """
         return self.width * self.length
 
+    def get_bounding_box(self):
+        """
+        Compute surface bounding box from plane's corners coordinates. Calls
+        :meth:`openquake.hazardlib.geo.utils.get_spherical_bounding_box`
+
+        :return:
+            A tuple of four items. These items represent western, eastern,
+            northern and southern borders of the bounding box respectively.
+            Values are floats in decimal degrees.
+        """
+
+        return geo_utils.get_spherical_bounding_box(self.corner_lons,
+                                                    self.corner_lats)
+
+    def get_middle_point(self):
+        """
+        Compute middle point from surface's corners coordinates. Calls
+        :meth:`openquake.hazardlib.geo.utils.get_middle_point`
+        """
+        # compute middle point between upper left and bottom right corners
+        lon, lat = geo_utils.get_middle_point(self.corner_lons[0],
+                                              self.corner_lats[0],
+                                              self.corner_lons[3],
+                                              self.corner_lats[3])
+        depth = (self.corner_depths[0] + self.corner_depths[3]) / 2.
+
+        return Point(lon, lat, depth)
