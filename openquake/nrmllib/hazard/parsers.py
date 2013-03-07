@@ -120,7 +120,7 @@ class SourceModelParser(FaultGeometryParserMixin):
     def __init__(self, source):
         self.source = source
         self._parse_fn_map = {
-            self._PT_TAG: self._parse_point,
+            self._PT_TAG: self._parse_point_source,
             self._AREA_TAG: self._parse_area,
             self._SIMPLE_TAG: self._parse_simple,
             self._COMPLEX_TAG: self._parse_complex,
@@ -235,7 +235,7 @@ class SourceModelParser(FaultGeometryParserMixin):
         return hdd
 
     @classmethod
-    def _parse_point(cls, src_elem):
+    def _parse_point_source(cls, src_elem):
         """
         :param src_elem:
             :class:`lxml.etree._Element` instance representing a source.
