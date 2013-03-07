@@ -69,6 +69,17 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         self.assertEqual(1, len(loss_ratio_curves))
         self.assertEqual(1, len(loss_ratios))
 
+    def test_event_based_trivial_case(self):
+        function = scientific.VulnerabilityFunction(
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+
+        loss_ratios, loss_ratio_curves = api.ProbabilisticEventBased(
+            function, tses=20, time_span=30)([])
+        self.assertEqual(1, len(loss_ratios))
+        self.assertEqual(0, len(loss_ratio_curves))
+
+        self.assertEqual(0, len(loss_ratios[0]))
+
 
 class ScenarioCalculatorTestCase(unittest.TestCase):
 
@@ -81,3 +92,13 @@ class ScenarioCalculatorTestCase(unittest.TestCase):
         # here we just verify the outputs are stored,
         # because the scientific logic is tested elsewhere
         self.assertEqual(1, len(api.Scenario(function, 37, 1)([hazard])))
+
+    def test_scenario_risk_calculator_trivial_case(self):
+        hazard = []
+
+        function = scientific.VulnerabilityFunction(
+            [0.1, 0.2], [1.0, 0.5], [0.0, 0.0], "LN")
+
+        ret = api.Scenario(function, 37, 1)([hazard])
+        self.assertEqual(1, len(ret))
+        self.assertEqual(0, len(ret[0]))
