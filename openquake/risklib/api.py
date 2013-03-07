@@ -86,7 +86,8 @@ class ProbabilisticEventBased(object):
 
     def __call__(self, ground_motion_fields):
         if not len(ground_motion_fields):
-            return []
+            return numpy.array([[]]), []
+
         self.vulnerability_function.init_distribution(
             len(ground_motion_fields), len(ground_motion_fields[0]),
             self.seed, self.correlation)
@@ -111,7 +112,7 @@ class Scenario(object):
 
     def __call__(self, ground_motion_fields):
         if not len(ground_motion_fields):
-            return []
+            return numpy.array([[]])
 
         self.vulnerability_function.init_distribution(
             len(ground_motion_fields), len(ground_motion_fields[0]),
