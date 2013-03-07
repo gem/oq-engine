@@ -1,0 +1,126 @@
+#*******************************************
+#Fault file in yaml format
+#*******************************************
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+tectonic_regionalisation: 
+    - Name: Active Shallow Crust
+      Code: 001
+      Magnitude_Scaling_Relation: {
+          Model: [WC1994], 
+          Weight: [1.0]}
+      # Shear Modulus (in gigapascals, GPa)
+      Shear_Modulus: {
+          Model: [30.0], 
+          Weight: [1.0]}
+      # Fault displacement to length ratio
+      Displacement_Length_Ratio: {
+          Model: [1.25E-5],
+          Weight: [1.0]}
+
+    - Name: Stable Continental
+      Code: 002
+      Magnitude_Scaling_Relation: {
+          Model: [WC1994],
+          Weight: [1.0]}
+      Shear_Modulus: {
+          Model: [29.0],
+          Weight: [1.0]}
+      Displacement_Length_Ratio: {
+          Model: [1.E-4],
+          Weight: [1.0]}
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+Fault_Model:
+    - ID: 001
+      tectonic_region: Active Shallow Crust
+      Fault_Name: Sumani
+      Fault_Geometry: {
+          Fault_Typology: Simple,
+          # For simple typology, defines the trace in terms of Long., Lat.
+          Fault_Trace: [  100.443843,    -0.502895,  100.459768,    -0.508962,  100.479484,    
+                                  -0.524886,  100.479484,    -0.535503,  100.477209,    -0.546878,  
+                                  100.478726,    -0.574936,  100.493892,    -0.606027,  100.539392,    
+                                  -0.665177,  100.588683,    -0.713710,  100.630391,    -0.781201,  
+                                  100.639491,    -0.800159,  100.675132,    -0.885092,  100.722907,    
+                                  -0.951066,  100.749449,    -1.007182],
+          # Length, width and area (in km, km and km ** 2.) - may be overwritten in calculators
+          length: ,
+          width: ,
+          area: ,
+          # Upper Seismogenic Depth (km)
+          Upper_Depth:      0.0,
+          # Lower Seismogenic Depth (km)
+          Lower_Depth:     25.0,
+          strike:      328.8,
+          # Dip (degrees)
+          dip:     90.0}
+      rake: 0.0
+      slip_type: Strike-Slip
+      slip_completeness_factor: 1
+      #slip [pref, min, max, quality]
+      slip:    23.0
+      #Aseismic Slip Factor [pref, quality]
+      aseismic: 0.0
+      MFD_Model: 
+          # Example of constructor for characteristic earthquake
+        - Model_Name: Characteristic
+          # Spacing (magnitude units) of the magnitude frequency distribution
+          MFD_spacing: 0.1
+          # Weight of the model
+          Model_Weight: 0.4
+          # Magnitude of the Characteristic Earthquake
+          Maximum_Magnitude:   7.0
+          # Uncertainty on Characteristic Magnitude (in magnitude units)
+          Sigma: 0.1
+          # Lower bound truncation (in number of standard deviations)
+          Lower_Bound: -2.0
+          # Upper bound truncation (in number of standard deviations)
+          Upper_Bound: 2.0
+          ####################################################
+        - Model_Name: AndersonLucoArbitrary
+          # Example constructor of the Anderson & Luco (1983) - Arbitrary Exponential 
+          # Type - chooses between type 1 ('First'), type 2 ('Second') or type 3 ('Third')
+          Type: First
+          MFD_spacing: 0.1
+          Model_Weight: 0.1
+          # Maximum Magnitude of the exponential distribution
+          Maximum_Magnitude: 7.0
+          Minimum_Magnitude: 4.5
+          # b-value of the exponential distribution as [expected, uncertainty]
+          b_value: [0.8, 0.05]
+          ####################################################
+        - Model_Name: AndersonLucoAreaMmax
+          # Example constructor of the Anderson & Luco (1983) - Area-Mmax Exponential 
+          # Type - chooses between type 1 ('First'), type 2 ('Second') or type 3 ('Third')        
+          Model_Type: Second
+          MFD_spacing: 0.1
+          Model_Weight: 0.1
+          Maximum_Magnitude: 7.0
+          Minimum_Magnitude: 4.5
+          b_value: [0.8, 0.05]
+          ####################################################
+        - Model_Name: YoungsCoppersmithExp
+          # Example constructor of the Youngs & Coppersmith (1985) Exponential model      
+          MFD_spacing: 0.1
+          Model_Weight: 0.3
+          Maximum_Magnitude: 
+          Maximum_Magnitude_Uncertainty: 
+          Minimum_Magnitude: 5.0
+          b_value: [0.8, 0.05]
+          ####################################################
+          # Example constructor of the Youngs & Coppersmith (1985) Characteristic model        
+        - Model_Name: YoungsCoppersmithChar
+          Model_Weight: 0.3
+          Maximum_Magnitude: 
+          Maximum_Magnitude_Uncertainty: 
+          Minimum_Magnitude: 5.0
+          MFD_spacing: 0.1
+          b_value: [0.8, None]
+      Megazone: 
+      Shear_Modulus: 30.000
+      MagnitudeScalingRelation: WC1994
+      AspectRatio: 
+      DisplacementLengthRatio: 
+ #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+ #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
