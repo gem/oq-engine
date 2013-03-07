@@ -330,5 +330,5 @@ class NullFloatField(djm.FloatField):
     """
 
     def get_prep_value(self, value):
-        if isinstance(value, basestring) and not value.strip():
+        if isinstance(value, basestring) and value.strip():
             return super(NullFloatField, self).get_prep_value(value)
