@@ -176,11 +176,54 @@ m?ml version='1.0' encoding='utf-8'?>
             rupt_aspect_ratio=2.0, mfd=complex_mfd, rake=30.0,
         )
 
+        # 3 Characteristic Sources:
+        char_src_simple = models.CharacteristicSource(
+            id='5', name='characteristic source, simple fault', trt='Volcanic',
+            mfd=models.TGRMFD(a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5),
+            rake=30.0,
+            surface=simple_geom
+        )
+
+        char_src_complex = models.CharacteristicSource(
+            id='6', name='characteristic source, complex fault',
+            trt='Volcanic',
+            mfd=models.IncrementalMFD(
+                min_mag=5.0, bin_width=0.1,
+                occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4,
+                             6.108288E-4, 5.080653E-4],
+            ),
+            rake=60.0,
+            surface=complex_geom
+        )
+
+        char_src_multi = models.CharacteristicSource(
+            id='7', name='characteristic source, multi surface',
+            trt='Volcanic',
+            mfd=models.TGRMFD(a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4),
+            rake=90.0
+        )
+        psurface_1 = models.PlanarSurface(
+            strike=0.0, dip=90.0,
+            top_left=models.Point(lon=-1.0, lat=1.0, depth=20.0),
+            top_right=models.Point(lon=1.0, lat=1.0, depth=21.0),
+            bottom_left=models.Point(lon=-1.0, lat=-1.0, depth=60.0),
+            bottom_right=models.Point(lon=1.0, lat=-1.0, depth=59.0),
+        )
+        psurface_2 = models.PlanarSurface(
+            strike=20.0, dip=45.0,
+            top_left=models.Point(lon=1.0, lat=1.0, depth=20.0),
+            top_right=models.Point(lon=3.0, lat=1.0, depth=21.0),
+            bottom_left=models.Point(lon=1.0, lat=-1.0, depth=80.0),
+            bottom_right=models.Point(lon=3.0, lat=-1.0, depth=80.0),
+        )
+        char_src_multi.surface = [psurface_1, psurface_2]
+
         source_model = models.SourceModel()
         source_model.name = 'Some Source Model'
         # Generator:
         source_model.sources = (
-            x for x in [area_src, point_src, simple_src, complex_src]
+            x for x in [area_src, point_src, simple_src, complex_src,
+                        char_src_simple, char_src_complex, char_src_multi]
         )
         return source_model
 
