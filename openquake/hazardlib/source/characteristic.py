@@ -60,7 +60,8 @@ class CharacteristicFaultSource(SeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
-        Uses :meth:`openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
+        Uses :meth:
+        `openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
         and from bounding box coordinates create
         :class:`openquake.hazardlib.geo.mesh.RectangularMesh` and then calls
         :meth:`openquake.hazardlib.geo.mesh.Mesh.get_convex_hull()` to get a
