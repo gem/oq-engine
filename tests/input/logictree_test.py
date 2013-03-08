@@ -945,7 +945,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                          "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 15)
 
-    def test_unavailable_gmpe_not_subclass_of_base_class(self):
+    def test_unavailable_gsim(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -963,9 +963,10 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "unknown class 'Site'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
+        error = "unknown class 'Site'; available classes are: ["
+        if not exc.message.startswith(error):
+            raise RuntimeError("%s, expected something starting with %r" %
+                               (exc.message, error))
         self.assertEqual(exc.lineno, 7)
 
     def test_wrong_filters(self):
@@ -1668,8 +1669,9 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         mfd = Mock()
         bs = logictree.BranchSet('maxMagGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, 32.1)
-        self.assertEqual(mfd.method_calls,
-                    [('modify', ('increment_max_mag', {'value': 32.1}), {})])
+        self.assertEqual(
+            mfd.method_calls,
+            [('modify', ('increment_max_mag', {'value': 32.1}), {})])
 
     def test_apply_uncertainty_mmax_absolute(self):
         mfd = Mock()
@@ -1688,8 +1690,8 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
     def setUp(self):
         self.point_source = openquake.hazardlib.source.PointSource(
             source_id='point', name='point',
-            tectonic_region_type=openquake.hazardlib.const.TRT.\
-ACTIVE_SHALLOW_CRUST,
+            tectonic_region_type=
+            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
             mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                max_mag=6.5, bin_width=0.1),
             nodal_plane_distribution=PMF(
@@ -1697,8 +1699,8 @@ ACTIVE_SHALLOW_CRUST,
             ),
             hypocenter_distribution=PMF([(1, 10)]),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=openquake.hazardlib.scalerel.\
-PeerMSR(),
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
             rupture_mesh_spacing=1.0
@@ -1745,8 +1747,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
         self.point = openquake.hazardlib.source.PointSource(
             source_id='point', name='point',
-            tectonic_region_type=openquake.hazardlib.const.TRT.\
-ACTIVE_SHALLOW_CRUST,
+            tectonic_region_type=
+            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
             mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                max_mag=6.5, bin_width=0.1),
             nodal_plane_distribution=PMF(
@@ -1754,16 +1756,16 @@ ACTIVE_SHALLOW_CRUST,
             ),
             hypocenter_distribution=PMF([(1, 10)]),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=openquake.hazardlib.scalerel.\
-PeerMSR(),
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
             rupture_mesh_spacing=1.0
         )
         self.area = openquake.hazardlib.source.AreaSource(
             source_id='area', name='area',
-            tectonic_region_type=openquake.hazardlib.const.TRT.\
-ACTIVE_SHALLOW_CRUST,
+            tectonic_region_type=
+            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
             mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                max_mag=6.5, bin_width=0.1),
             nodal_plane_distribution=PMF(
@@ -1771,8 +1773,8 @@ ACTIVE_SHALLOW_CRUST,
             ),
             hypocenter_distribution=PMF([(1, 10)]),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=openquake.hazardlib.scalerel.\
-PeerMSR(),
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1,
             polygon=openquake.hazardlib.geo.Polygon(
                 [openquake.hazardlib.geo.Point(0, 0),
@@ -1786,8 +1788,8 @@ PeerMSR(),
             mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                max_mag=6.5, bin_width=0.1),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=openquake.hazardlib.scalerel.\
-                PeerMSR(),
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, rupture_mesh_spacing=2.0,
             fault_trace=openquake.hazardlib.geo.Line(
                 [openquake.hazardlib.geo.Point(0, 0),
@@ -1799,13 +1801,13 @@ PeerMSR(),
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
             mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                max_mag=6.5, bin_width=0.1),
-            magnitude_scaling_relationship=openquake.hazardlib.scalerel.\
-                PeerMSR(),
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, rupture_mesh_spacing=2.0, rake=0,
             edges=[openquake.hazardlib.geo.Line(
-                    [openquake.hazardlib.geo.Point(0, 0, 1),
-                     openquake.hazardlib.geo.Point(1, 1, 1)]),
-                   openquake.hazardlib.geo.Line(
+                [openquake.hazardlib.geo.Point(0, 0, 1),
+                 openquake.hazardlib.geo.Point(1, 1, 1)]),
+                openquake.hazardlib.geo.Line(
                     [openquake.hazardlib.geo.Point(0, 0, 2),
                      openquake.hazardlib.geo.Point(1, 1, 2)])]
         )
