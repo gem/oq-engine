@@ -281,26 +281,3 @@ class SourceDBWriterTestCase(unittest.TestCase):
         # database (by unpickling them first, of course):
         for i, ns in enumerate(nrml_sources):
             self.assertTrue(*helpers.deep_eq(ns, parsed_sources[i].nrml))
-
-        # now check that the ParsedSource geometry is correct
-        # it should be the same as the 'rupture-enclosing' geometry for the
-        # hazardlib representation of each source
-        for i, (ns, ps) in enumerate(zip(nrml_sources, parsed_sources)):
-            hazardlib_src = source_input.nrml_to_hazardlib(
-                ns, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-            )
-
-            hazardlib_poly = hazardlib_src.get_rupture_enclosing_polygon()
-            # hazardlib tests the generation of wkt from a polygon, so we can
-            # trust that it is well-formed.
-
-            # Since we save the rupture enclosing polygon as geometry (not wkt)
-            # in the database, the WKT we get back from the DB might have
-            # slightly different coordinate values (a difference in precision).
-            # shapely can help us compare two polygons (generated from wkt)
-            # at a specific level of precision (default=6 digits after the
-            # decimal point).
-            expected_poly = wkt.loads(ps.polygon.wkt)
-            actual_poly = wkt.loads(hazardlib_poly.wkt)
-
-            self.assertTrue(expected_poly.almost_equals(actual_poly))
