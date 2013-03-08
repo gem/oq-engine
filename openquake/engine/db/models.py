@@ -700,10 +700,10 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    truncation_level = djm.FloatField(
+    truncation_level = fields.NullFloatField(
         help_text='Level for ground motion distribution truncation',
         null=True,
-        blank=True
+        blank=True,
     )
     maximum_distance = djm.FloatField(
         help_text=('Maximum distance (in km) of sources to be considered in '
@@ -2062,6 +2062,19 @@ class GmfSet(djm.Model):
         """
         Iterator for walking through all child :class:`Gmf` objects.
         """
+        return self.iter_gmfs()
+
+    def iter_gmfs(self, location=None):
+        """
+        Queries for and iterates over child :class:`Gmf` records, with the
+        option of specifying a ``location``.
+
+        :param location:
+            An (optional) parameter for filtering :class:`GMFs <Gmf>`.
+            ``location`` is expected to be a point represented as WKT.
+
+            Example: `POINT(21.1 45.8)`
+        """
         job = self.gmf_collection.output.oq_job
         hc = job.hazard_calculation
         if self.complete_logic_tree_gmf:
@@ -2072,7 +2085,9 @@ class GmfSet(djm.Model):
                     gmf_collection__output__oq_job=job,
                     gmf_collection__lt_realization__isnull=False)\
                 .order_by('id')
-            for gmf in itertools.chain(*lt_gmf_sets):
+            for gmf in itertools.chain(
+                    *(each_set.iter_gmfs(location=location)
+                      for each_set in lt_gmf_sets)):
                 yield gmf
         else:
             num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
@@ -2089,8 +2104,17 @@ class GmfSet(djm.Model):
                             sa_period=sa_period,
                             sa_damping=sa_damping,
                             result_grp_ordinal=result_grp_ordinal))
+                    if location is not None:
+                        gmfs = gmfs.extra(
+                            # The `location` field is a GEOGRAPHY type, so an
+                            # explicit cast is needed to compare geometry:
+                            where=["location::geometry ~= "
+                                   "'SRID=4326;%s'::geometry" % location]
+                        )
+
                     if len(gmfs) == 0:
-                        # This task did not contribute to this GmfSet
+                        # There are no GMFs in this result group for the given
+                        # search parameters.
                         continue
 
                     # len of each gmfs == number of sites

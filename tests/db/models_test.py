@@ -453,7 +453,8 @@ class FakeGmfSet(object):
 
 class GmfSetIterTestCase(unittest.TestCase):
     """
-    Tests for the `__iter__` of :class:`openquake.engine.db.models.GmfSet`.
+    Tests for the `__iter__` and `iter_gmfs` of
+    :class:`openquake.engine.db.models.GmfSet`.
     """
 
     @classmethod
@@ -463,6 +464,32 @@ class GmfSetIterTestCase(unittest.TestCase):
         # tree iter).
         cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
         helpers.run_hazard_job_sp(cfg, silence=True)
+
+    def _expected_gmf_sets(self):
+        td = gmf_set_iter_test_data
+
+        exp_gmf_sets = [
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_0),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_1),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_2),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_3),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_4),
+            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+                       investigation_time=10.0,
+                       gmfs=td.GMFS_GMF_SET_5),
+        ]
+        return exp_gmf_sets
+
 
     @attr('slow')
     def test_complete_logic_tree_gmf_iter(self):
@@ -500,29 +527,7 @@ class GmfSetIterTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_iter(self):
-        # Test data
-        td = gmf_set_iter_test_data
-
-        exp_gmf_sets = [
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_0),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_1),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_2),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_3),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_4),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_5),
-        ]
+        exp_gmf_sets = self._expected_gmf_sets()
 
         job = models.OqJob.objects.latest('id')
 
@@ -545,6 +550,45 @@ class GmfSetIterTestCase(unittest.TestCase):
                 equal, error = helpers.deep_eq(
                     exp_gmf, act_gmf, exclude=["rupture_id"])
                 self.assertTrue(equal, error)
+
+    @attr('slow')
+    def test_iter_gmfs_by_location(self):
+        search_loc = 'POINT(0.0 0.5)'
+        exp_gmf_sets = self._expected_gmf_sets()
+
+        job = models.OqJob.objects.latest('id')
+
+        gmf_sets = models.GmfSet.objects\
+            .filter(gmf_collection__output__oq_job=job.id,
+                    gmf_collection__lt_realization__isnull=False)\
+            .order_by('gmf_collection', 'ses_ordinal')
+
+        for i, exp_gmf_set in enumerate(exp_gmf_sets):
+            act_gmf_set = gmf_sets[i]
+            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
+                             act_gmf_set.complete_logic_tree_gmf)
+            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
+            self.assertEqual(exp_gmf_set.investigation_time,
+                             act_gmf_set.investigation_time)
+
+            for j, exp_gmf in enumerate(exp_gmf_set):
+                act_gmf = list(act_gmf_set.iter_gmfs(location=search_loc))[j]
+                act_gmf = list(act_gmf)
+
+                # filter the expected data set by location
+                # and compare to actuals
+                filtered_gmf = [node for node in exp_gmf
+                                if node.location.y == 0.5]
+
+                # Check that they have the same number of nodes. If not, the
+                # location filtering didn't work:
+                self.assertEqual(len(filtered_gmf), len(act_gmf))
+
+                for k, exp_node in enumerate(filtered_gmf):
+                    act_node = act_gmf[k]
+
+                    equal, error = helpers.deep_eq(exp_node, act_node)
+                    self.assertTrue(equal, error)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
