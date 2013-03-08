@@ -162,7 +162,7 @@ class SourceModelParser(FaultGeometryParserMixin):
     _AREA_TAG = '{%s}areaSource' % openquake.nrmllib.NAMESPACE
     _SIMPLE_TAG = '{%s}simpleFaultSource' % openquake.nrmllib.NAMESPACE
     _COMPLEX_TAG = '{%s}complexFaultSource' % openquake.nrmllib.NAMESPACE
-    _CHAR_TAG = '{%s}characteristicSource' % openquake.nrmllib.NAMESPACE
+    _CHAR_TAG = '{%s}characteristicFaultSource' % openquake.nrmllib.NAMESPACE
 
     def __init__(self, source):
         self.source = source
