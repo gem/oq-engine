@@ -53,7 +53,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
         return source
 
-class CharacteristicFaultSourceGetRuptureEnclosingPolygon(_BaseFaultSourceTestCase):
+class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
+        _BaseFaultSourceTestCase):
 
     def test(self):
         # relies on mesh.get_convex_hull() and polygon.dilate
