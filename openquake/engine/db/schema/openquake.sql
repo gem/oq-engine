@@ -174,12 +174,6 @@ CREATE TABLE hzrdi.parsed_source (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE hzrdi_ts;
--- The surface projection (2D) of the "rupture enclosing" polygon for each source.
--- This is relevant to all source types, including point sources.
--- When considering a parsed_source record given a minimum integration distance,
--- use this polygon in distance calculations.
-SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2);
-ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
 -- Parsed Rupture models
