@@ -306,14 +306,6 @@ class ParsedSource(djm.Model):
     )
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
     nrml = fields.PickleField(help_text="NRML object representing the source")
-    polygon = djm.PolygonField(
-        srid=DEFAULT_SRID, dim=2,
-        help_text=('The surface projection (2D) of the "rupture enclosing" '
-                   'polygon for each source. This is relevant to all source '
-                   'types, including point sources. When considering a '
-                   'parsed_source record given a minimum integration distance,'
-                   ' use this polygon in distance calculations.')
-    )
 
     class Meta:
         db_table = 'hzrdi\".\"parsed_source'
