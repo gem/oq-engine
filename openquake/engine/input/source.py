@@ -370,10 +370,6 @@ class SourceDBWriter(object):
     `hzrdi.parsed_source` table in the database.
 
     The source object data will be stored in the database in pickled blob form.
-    The `hzrdi.parsed_source.polygon` field will contain the "rupture
-    enclosing" polygon. We use HazardLib to generate this polygon. (See
-    :meth:`openquake.hazardlib.source.base.SeismicSource.\
-get_rupture_enclosing_polygon`.)
 
     :param inp:
         :class:`~openquake.engine.db.models.Input` object, the top-level
@@ -418,14 +414,8 @@ get_rupture_enclosing_polygon`.)
         self.inp.save()
 
         for src in self.source_model:
-            hazardlib_src = nrml_to_hazardlib(
-                src, self.mesh_spacing, self.bin_width, self.area_src_disc
-            )
-            geom = hazardlib_src.get_rupture_enclosing_polygon()
-
             ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), nrml=src,
-                polygon=geom.wkt
+                input=self.inp, source_type=_source_type(src), nrml=src
             )
             ps.save()
 
