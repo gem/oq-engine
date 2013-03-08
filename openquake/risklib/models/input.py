@@ -15,7 +15,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 import math
-from collections import Sequence, namedtuple
+from collections import Sequence, Mapping
 from scipy.stats import lognorm
 from scipy.interpolate import interp1d
 import numpy
@@ -82,17 +82,17 @@ class FragilityFunctionDiscrete(object):
         return not self == other
 
 
-class FragilityFunctionSeq(Sequence):
+class FragilityFunctionSequence(Sequence):
     """
     An ordered sequence of fragility functions, one for each limit state
     except the "no_damage" state.
     """
-    def __init__(self, fragility_model, args, no_damage_limit=None):
+    def __init__(self, fragility_model, values, no_damage_limit=None):
         self.fragility_model = fragility_model
         self.fftype = (FragilityFunctionDiscrete
                        if fragility_model.format == 'discrete'
                        else FragilityFunctionContinuous)
-        self.fflist = [self.fftype(self, arg) for arg in args]
+        self.fflist = [self.fftype(self, arg) for arg in values]
         self.no_damage_limit = no_damage_limit
 
     def __getitem__(self, i):
@@ -108,15 +108,8 @@ class FragilityFunctionSeq(Sequence):
         defines the Intensity Measure Level (IML) used to
         interpolate the Fragility Function.
 
-        :param self
-          The fragility model
         :param gmv: ground motion value.
         :type gmv: float
-        :param self: list of fragility functions describing
-            the distribution for each limit state. The functions
-            must be in order from the one with the lowest
-            limit state to the one with the highest limit state.
-        :type self: :py:class:`FragilityFunctionSeq` instance
         :returns: the fraction of buildings of each damage state
             computed for the given ground motion value.
         :rtype: 1d `numpy.array`. Each value represents
@@ -158,4 +151,26 @@ class FragilityFunctionSeq(Sequence):
         return damage_state_values
 
 
-FragilityModel = namedtuple('FragilityModel', 'format imls limit_states')
+class FragilityModel(Mapping):
+    """
+    A mapping taxonomy -> FragilityFunctionSequence.
+    """
+
+    def __init__(self, format, imt, imls, limit_states, *ffs_args):
+        self.format = format
+        self.imt = imt
+        self.imls = imls
+        self.limit_states = limit_states
+        self._dic = {}
+        for taxonomy, values, no_damage_limit in ffs_args:
+            self._dic[taxonomy] = FragilityFunctionSequence(
+                self, values, no_damage_limit)
+
+    def __getitem__(self, taxonomy):
+        return self._dic[taxonomy]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dic)

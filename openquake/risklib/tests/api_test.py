@@ -17,7 +17,7 @@
 
 import unittest
 
-from openquake.risklib.models.input import FragilityModel, FragilityFunctionSeq
+from openquake.risklib.models.input import FragilityModel
 from openquake.risklib import scientific
 from openquake.risklib import api
 
@@ -40,12 +40,10 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
 
     def test_scenario_damage_calculator(self):
         fragility_model = FragilityModel(
-            "discrete", [0.1, 0.2], ["LS1", "LS2"])
+            "discrete", 'PGA', [0.1, 0.2], ["LS1", "LS2"],
+            ('RC', [[0.8, 0.7], [0.8, 0.7]], None))
 
-        fragility_functions = FragilityFunctionSeq(
-            fragility_model, [[0.8, 0.7], [0.8, 0.7]])
-
-        calculator = api.ScenarioDamage(fragility_model, fragility_functions)
+        calculator = api.ScenarioDamage(fragility_model['RC'])
 
         # here we just verify the outputs are stored,
         # because the scientific logic is tested elsewhere
