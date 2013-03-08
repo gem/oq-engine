@@ -10,7 +10,7 @@
 
     <xs:include schemaLocation="./general.xsd" />
 
-    <xs:element name="characteristicSource" type="CharacteristicSource" substitutionGroup="_abstractSource" />
+    <xs:element name="characteristicFaultSource" type="CharacteristicSource" substitutionGroup="_abstractSource" />
     <xs:complexType name="CharacteristicSource">
         <xs:complexContent>
             <xs:extension base="AbstractSeismicSource">
