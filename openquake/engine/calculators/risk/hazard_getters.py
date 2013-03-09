@@ -304,7 +304,7 @@ class GroundMotionScenarioGetter(HazardGetter):
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self._imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
-                self.max_distance,
+                self.max_distance * KILOMETERS_TO_METERS,
                 assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
