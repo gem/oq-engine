@@ -66,10 +66,10 @@ def scenario_damage(job_id, hazard,
     assets, ground_motion_values, missings = hazard_getter()
 
     if not len(assets):
-        logs.LOG.info("Exit from task as no asset could be processed")
-        base.signal_task_complete(job_id=job_id,
-                                  fractions=None,
-                                  num_items=len(missings))
+        logs.LOG.warn("Exit from task as no asset could be processed")
+        base.signal_task_complete(
+            job_id=job_id, fractions=None,
+            num_items=len(missings), taxonomy=taxonomy)
         return
 
     fraction_matrix = calculator(ground_motion_values)
