@@ -72,6 +72,8 @@ def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
         return _complex_to_hazardlib(src, mesh_spacing, bin_width)
     elif isinstance(src, nrml_models.SimpleFaultSource):
         return _simple_to_hazardlib(src, mesh_spacing, bin_width)
+    elif isinstance(src, nrml_models.CharacteristicSource):
+        return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
     elif isinstance(src, nrml_models.ComplexFaultRuptureModel):
         return _complex_rupture_to_hazardlib(src, mesh_spacing)
     elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
@@ -259,6 +261,76 @@ def _complex_to_hazardlib(src, mesh_spacing, bin_width):
     )
 
     return cmplx
+
+
+def _characteristic_to_hazardlib(src, mesh_spacing, bin_width):
+    """
+    Convert a NRML characteristic fault source to the HazardLib equivalent.
+
+    The surface of a characteristic fault source can be one of the following:
+        * simple fault
+        * complex fault
+        * one or more planar surfaces
+
+    See :mod:`openquake.nrmllib.models` and :mod:`openquake.hazardlib.source`.
+
+    :param src:
+        :class:`openquake.nrmllib.models.CharacteristicSource` instance.
+    :param float mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param float bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :returns:
+        The HazardLib representation of the input source.
+    """
+    mf_dist = _mfd_to_hazardlib(src.mfd, bin_width)
+
+    if isinstance(src.surface, nrml_models.SimpleFaultGeometry):
+        shapely_line = wkt.loads(src.surface.wkt)
+        fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+
+        surface = geo.SimpleFaultSurface.from_fault_data(
+            fault_trace,
+            src.surface.upper_seismo_depth,
+            src.surface.lower_seismo_depth,
+            src.surface.dip,
+            mesh_spacing
+        )
+    elif isinstance(src.surface, nrml_models.ComplexFaultGeometry):
+        edges_wkt = []
+        edges_wkt.append(src.surface.top_edge_wkt)
+        edges_wkt.extend(src.surface.int_edges)
+        edges_wkt.append(src.surface.bottom_edge_wkt)
+
+        edges = []
+
+        for edge in edges_wkt:
+            shapely_line = wkt.loads(edge)
+            line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+            edges.append(line)
+
+        surface = geo.ComplexFaultSurface.from_fault_data(edges, mesh_spacing)
+    else:
+        # A collection of planar surfaces
+        planar_surfaces = []
+        for planar_surface in src.surface:
+            kwargs = planar_surface.__dict__
+            kwargs.update(dict(mesh_spacing=mesh_spacing))
+
+            planar_surfaces.append(geo.PlanarSurface(**kwargs))
+
+        surface = geo.MultiSurface(planar_surfaces)
+
+    char = source.CharacteristicFaultSource(
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        surface=surface,
+        rake=src.rake
+    )
+    return char
 
 
 def _simple_rupture_to_hazardlib(src, mesh_spacing):
