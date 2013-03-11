@@ -2197,7 +2197,7 @@ class GmfScenario(djm.Model):
         db_table = 'hzrdr\".\"gmf_scenario'
 
 
-def get_gmvs_per_site(output, imt=None):
+def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
     Iterator for walking through all :class:`GmfScenario` objects associated
     to a given output. Notice that values for the same site are
@@ -2209,7 +2209,9 @@ def get_gmvs_per_site(output, imt=None):
     :param string imt: a string with the IMT to extract; the default
                        is None, all the IMT in the job.ini file are extracted
 
-    :returns: a sorted list of ground motion values per each site
+    :param sort: callable used for sorting the list of ground motion values.
+
+    :returns: a list of ground motion values per each site
     """
     job = output.oq_job
     hc = job.hazard_calculation
@@ -2217,12 +2219,12 @@ def get_gmvs_per_site(output, imt=None):
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
-    for imt, sa_period, sa_damping in imts:
+    for imt, sa_period, _ in imts:
         if imt == 'SA':
             imt = 'SA(%s)' % sa_period
         for gmf in order_by_location(
                 GmfScenario.objects.filter(output__id=output.id, imt=imt)):
-            yield sorted(gmf.gmvs)
+            yield sort(gmf.gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
