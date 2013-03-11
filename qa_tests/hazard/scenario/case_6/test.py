@@ -36,6 +36,6 @@ class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
         gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
 
         self.assertAlmostEqual(gmfs_within_range_fst / realizations,
-                               0.055, places=2)
+                               0.05, places=2)
         self.assertAlmostEqual(gmfs_within_range_snd / realizations,
-                               0.0068, places=2)
+                               0.007, places=3)
