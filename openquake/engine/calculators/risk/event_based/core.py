@@ -19,7 +19,6 @@ Core functionality for the classical PSHA risk calculator.
 """
 
 from collections import OrderedDict
-import itertools
 import numpy
 
 from django import db
