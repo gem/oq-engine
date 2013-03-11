@@ -142,8 +142,8 @@ class FaultGeometryParserMixin(object):
             A fully populated :class:`openquake.nrmllib.models.Point` object.
         """
         pt = models.Point()
-        pt.lon = float(elem.get('lon'))
-        pt.lat = float(elem.get('lat'))
+        pt.longitude = float(elem.get('lon'))
+        pt.latitude = float(elem.get('lat'))
         pt.depth = float(elem.get('depth'))
 
         return pt
