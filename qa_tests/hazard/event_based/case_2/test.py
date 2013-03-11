@@ -25,7 +25,7 @@ from qa_tests import _utils as qa_utils
 
 class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'event_based')
+    @attr('qa', 'hazard', 'event_based')
     def test(self):
         result_dir = tempfile.mkdtemp()
 

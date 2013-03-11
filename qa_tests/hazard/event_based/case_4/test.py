@@ -23,7 +23,7 @@ from qa_tests import _utils as qa_utils
 
 class EventBasedHazardCase4TestCase(qa_utils.BaseQATestCase):
 
-    @attr('qa', 'event_based')
+    @attr('qa', 'hazard', 'event_based')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         expected_curve_poes = [0.63212, 0.61186, 0.25110]
