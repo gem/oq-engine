@@ -49,7 +49,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     def setUpClass(cls):
         parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
 
-        cls.area, cls.point, cls.simple, cls.cmplx = list(parser.parse())
+        (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
+         cls.char_complex, cls.char_multi) = list(parser.parse())
 
     @property
     def _expected_point(self):
@@ -197,6 +198,41 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         return cmplx
 
+    @property
+    def _expected_char_simple(self):
+        tgr_mfd = mfd.TruncatedGRMFD(
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
+        )
+
+        fault_trace = geo.Line([geo.Point(-121.82290, 37.73010),
+                                geo.Point(-122.03880, 37.87710)])
+
+        surface = geo.SimpleFaultSurface.from_fault_data(
+            fault_trace=fault_trace,
+            upper_seismogenic_depth=10.0,
+            lower_seismogenic_depth=20.0,
+            dip=45.0,
+            mesh_spacing=MESH_SPACING
+        )
+
+        char = source.CharacteristicFaultSource(
+            source_id="5",
+            name="characteristic source, simple fault",
+            tectonic_region_type="Volcanic",
+            mfd=tgr_mfd,
+            surface=surface,
+            rake=30.0
+        )
+        return char
+
+    @property
+    def _expected_char_complex(self):
+        return None
+
+    @property
+    def _expected_char_multi(self):
+        return None
+
     def test_point_to_hazardlib(self):
         exp = self._expected_point
         actual = source_input.nrml_to_hazardlib(
@@ -236,6 +272,38 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         eq, msg = helpers.deep_eq(exp, actual)
 
         self.assertTrue(eq, msg)
+
+    def test_characteristic_simple(self):
+        exp = self._expected_char_simple
+        actual = source_input.nrml_to_hazardlib(
+            self.char_simple, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
+
+        self.assertTrue(eq, msg)
+
+    def test_characteristic_complex(self):
+        exp = self._expected_char_complex
+        actual = source_input.nrml_to_hazardlib(
+            self.char_complex, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
+
+        self.assertTrue(eq, msg)
+
+    def test_characteristic_multi(self):
+        exp = self._expected_char_multi
+        actual = source_input.nrml_to_hazardlib(
+            self.char_multi, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
+
+        self.assertTrue(eq, msg)
+
+
 
 
 class SourceDBWriterTestCase(unittest.TestCase):
