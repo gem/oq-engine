@@ -434,6 +434,8 @@ class ParseRiskModelsTestCase(unittest.TestCase):
                           for point in haz_calc.points_to_compute()])
         self.assertEqual(['PGA'], haz_calc.get_imts())
 
+        self.assertEqual(3, haz_calc.exposure_model.exposuredata_set.count())
+
         for i, m in enumerate(mocks):
             m.stop()
             patches[i].stop()

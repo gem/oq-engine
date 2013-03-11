@@ -80,7 +80,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         self.taxonomies = None
         self.rnd = None
         self.vulnerability_functions = None
-        self.taxonomies_imts = None
+        self.taxonomies_imts = dict()
 
     def pre_execute(self):
         """
@@ -321,6 +321,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         # the DB.
         if not self.rc.force_inputs and models.ExposureModel.objects.filter(
                 input=exposure_model_input).exists():
+            logs.LOG.debug("skipping storing exposure as an input model "
+                           "was already present")
             return exposure_model_input.exposuremodel
 
         with logs.tracing('storing exposure'):
