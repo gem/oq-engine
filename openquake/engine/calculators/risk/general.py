@@ -360,7 +360,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             if self.rc.taxonomies_from_model:
                 # only consider the taxonomies in the fragility model
                 self.taxonomies = dict((t, self.taxonomies[t])
-                                       for t in self.fragility_functions
+                                       for t in self.fragility_model
                                        if t in self.taxonomies)
                 logs.LOG.warn(msg)
             else:
