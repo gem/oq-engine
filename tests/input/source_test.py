@@ -273,7 +273,41 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @property
     def _expected_char_multi(self):
-        return None
+        tgr_mfd = mfd.TruncatedGRMFD(
+            a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0
+        )
+
+        surfaces = [
+            geo.PlanarSurface(
+                mesh_spacing=MESH_SPACING,
+                strike=0.0,
+                dip=90.0,
+                top_left=geo.Point(-1, 1, 21),
+                top_right=geo.Point(1, 1, 21),
+                bottom_left=geo.Point(-1, -1, 59),
+                bottom_right=geo.Point(1, -1, 59)
+            ),
+            geo.PlanarSurface(
+                mesh_spacing=MESH_SPACING,
+                strike=20.0,
+                dip=45.0,
+                top_left=geo.Point(1, 1, 20),
+                top_right=geo.Point(3, 1, 20),
+                bottom_left=geo.Point(1, -1, 80),
+                bottom_right=geo.Point(3, -1, 80)
+            )
+        ]
+        multi_surface = geo.MultiSurface(surfaces)
+
+        char = source.CharacteristicFaultSource(
+            source_id="7",
+            name="characteristic source, multi surface",
+            tectonic_region_type="Volcanic",
+            mfd=tgr_mfd,
+            surface=multi_surface,
+            rake=90.0
+        )
+        return char
 
     def test_point_to_hazardlib(self):
         exp = self._expected_point
