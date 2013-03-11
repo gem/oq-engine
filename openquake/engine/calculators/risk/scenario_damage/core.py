@@ -195,6 +195,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
+
+        # at this moment, scenario damage does not support structure
+        # dependent imts, so all the hazard getters will be created
+        # with the same imt got from the fragility model.
         return (self.hazard_getter(
             output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
 
