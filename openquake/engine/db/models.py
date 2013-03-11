@@ -2117,25 +2117,25 @@ class GmfSet(djm.Model):
                         # search parameters.
                         continue
 
-                    # len of each gmfs == number of sites
-                    # need to walk through each columns of gmvs, slicing
-                    # vertically to extract individual ground motion fields
-                    first = gmfs[0]
-                    num_ruptures = len(first.gmvs)
+                    # collect gmf nodes for each event
+                    gmf_nodes = collections.OrderedDict()
+                    for gmf in gmfs:
+                        for i, rupture_id in enumerate(gmf.rupture_ids):
+                            if not rupture_id in gmf_nodes:
+                                gmf_nodes[rupture_id] = []
+                            gmf_nodes[rupture_id].append(
+                                _GroundMotionFieldNode(
+                                    gmv=gmf.gmvs[i],
+                                    location=gmf.location))
 
-                    for i in xrange(num_ruptures):
-                        gmf_nodes = []
-                        for gmf in gmfs:
-                            assert len(gmf.gmvs) == num_ruptures
-                            gmf_nodes.append(_GroundMotionFieldNode(
-                                gmv=gmf.gmvs[i],
-                                location=gmf.location))
+                    # then yield ground motion fields for each rupture
+                    first = gmfs[0]
+                    for rupture_id in gmf_nodes:
                         yield _GroundMotionField(
                             imt=first.imt, sa_period=first.sa_period,
                             sa_damping=first.sa_damping,
-                            rupture_id=first.rupture_ids[i],
-                            gmf_nodes=gmf_nodes)
-                        del gmf_nodes
+                            rupture_id=rupture_id,
+                            gmf_nodes=gmf_nodes[rupture_id])
 
 
 class _GroundMotionField(object):
