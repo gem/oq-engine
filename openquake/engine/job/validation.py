@@ -713,7 +713,7 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     errors = []
 
     # if a vulnerability file is supplied this parameter is optional
-    if mdl.inputs.filter('vulnerability').exists():
+    if mdl.inputs.filter(input_type='vulnerability').exists():
         return True, []
 
     if mdl.calculation_mode == 'event_based' and im is None:
