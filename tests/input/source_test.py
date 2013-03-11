@@ -227,7 +227,49 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @property
     def _expected_char_complex(self):
-        return None
+        incr_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=5.0, bin_width=0.1,
+            occurrence_rates=[
+                0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                5.080653E-4,
+            ]
+        )
+
+        edges = [
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5493260E+01),
+                geo.Point(-124.977, 41.214, 0.4988560E+01),
+                geo.Point(-125.140, 42.096, 0.4897340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5593260E+01),
+                geo.Point(-124.977, 41.214, 0.5088560E+01),
+                geo.Point(-125.140, 42.096, 0.4997340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5693260E+01),
+                geo.Point(-124.977, 41.214, 0.5188560E+01),
+                geo.Point(-125.140, 42.096, 0.5097340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-123.829, 40.347, 0.2038490E+02),
+                geo.Point(-124.137, 41.218, 0.1741390E+02),
+                geo.Point(-124.252, 42.115, 0.1752740E+02),
+            ]),
+        ]
+        complex_surface = geo.ComplexFaultSurface.from_fault_data(
+            edges, MESH_SPACING
+        )
+
+        char = source.CharacteristicFaultSource(
+            source_id="6",
+            name="characteristic source, complex fault",
+            tectonic_region_type="Volcanic",
+            mfd=incr_mfd,
+            surface=complex_surface,
+            rake=60.0
+        )
+        return char
 
     @property
     def _expected_char_multi(self):
