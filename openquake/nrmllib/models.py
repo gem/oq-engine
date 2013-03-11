@@ -451,15 +451,15 @@ class Point(object):
     """
     A simple representation of longitude, latitude, and depth.
 
-    :param lon:
+    :param longitude:
         Longitude
-    :param lat:
+    :param latitude:
         Latitude
     :param depth:
         Depth
     """
 
-    def __init__(self, lon=None, lat=None, depth=None):
-        self.lon = lon
-        self.lat = lat
+    def __init__(self, longitude=None, latitude=None, depth=None):
+        self.longitude = longitude
+        self.latitude = latitude
         self.depth = depth
