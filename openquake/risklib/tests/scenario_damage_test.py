@@ -98,7 +98,7 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         ffd = input.FragilityFunctionDiscrete(None, [0.05, 0.20, 0.50, 1.00])
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
 
-    def test_is_sequence_like(self):
+    def test_is_dict_like(self):
         fm = input.FragilityModel(
             "discrete", 'PGA', [0.1, 0.3, 0.5, 0.7], LIMIT_STATES,
             ('RC', [[0.05, 0.20, 0.50, 1.00], [0.00, 0.05, 0.20, 0.50]], 0.05),
