@@ -162,3 +162,12 @@ class OqNullBooleanFieldTestCase(unittest.TestCase):
 
         for fc in false_cases:
             self.assertEqual(False, field.to_python(fc))
+
+
+class NullFloatFieldTestCase(unittest.TestCase):
+
+    def test_get_prep_value_empty_str(self):
+        field = fields.NullFloatField()
+        self.assertIsNone(field.get_prep_value(''))
+        self.assertIsNone(field.get_prep_value('  '))
+        self.assertIsNone(field.get_prep_value('\t'))
