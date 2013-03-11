@@ -91,7 +91,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         # Finally, check the Src2ltsrc linkage:
         [smlt] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='source_model_logic_tree')
+            self.job.hazard_calculation.id,
+            input_type='source_model_logic_tree')
         [src2ltsrc] = models.Src2ltsrc.objects.filter(
             hzrd_src=source, lt_src=smlt)
         # Make sure the `filename` is exactly as it apprears in the logic tree.
