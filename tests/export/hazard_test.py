@@ -283,7 +283,6 @@ class ScenarioExportTestCase(BaseExportTestCase):
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(f)
             self.assertEqual(10, number_of('nrml:gmf', tree))
-            # 3 because there are 3 sites in the job.ini file
         finally:
             shutil.rmtree(target_dir)
 
