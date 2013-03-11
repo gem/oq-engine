@@ -53,7 +53,7 @@ class FakeRiskCalculator(risk.BaseRiskCalculator):
     def hazard_outputs(self, _hc):
         return mock.Mock()
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         return mock.Mock()
 
     @property
@@ -108,6 +108,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator.taxonomies = {'VF': 10}
         self.calculator.set_risk_models()
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
+        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomies_imts)
 
     def test_create_outputs(self):
         # Test that the proper output containers are created
