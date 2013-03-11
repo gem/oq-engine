@@ -153,6 +153,10 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not an hazard curve")
 
         hc = output.hazardcurve
+
+        # The hazard curve either could be associated with a logic
+        # tree realization, either is a statistics curve (e.g. a mean
+        # curve). In that case, we just set up the weight to None
         if hc.lt_realization:
             weight = hc.lt_realization.weight
         else:
