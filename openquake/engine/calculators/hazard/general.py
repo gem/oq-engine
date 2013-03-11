@@ -46,8 +46,6 @@ from openquake.engine.calculators import base
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.input import source
-from openquake.engine.job.validation import MAX_SINT_32
-from openquake.engine.job.validation import MIN_SINT_32
 from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.engine.utils import stats
@@ -753,11 +751,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
             sm_name, sm_lt_path = ltp.sample_source_model_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
             lt_rlz = models.LtRealization(
                 hazard_calculation=self.hc,
@@ -790,7 +788,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     cb(lt_rlz)
 
             # update the seed for the next realization
-            seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
+            seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
     @staticmethod

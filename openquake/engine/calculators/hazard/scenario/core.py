@@ -36,7 +36,6 @@ from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.job.validation import MAX_SINT_32
 from openquake.engine.utils.general import block_splitter
 
 BLOCK_SIZE = 1000  # TODO: decide where to put this parameter
@@ -200,7 +199,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_id = [rupture.id for rupture in ruptures][0]  # only one
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
-            task_seed = rnd.randint(0, MAX_SINT_32)
+            task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, SiteCollection(sites),
                    rupture_id, self.output.id, task_seed,
                    self.hc.number_of_ground_motion_fields)
