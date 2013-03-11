@@ -68,9 +68,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         return self._assets.filter(taxonomy=self.taxonomy)
 
     def test_filter(self):
-        self.getter.max_distance = 0.001
+        self.getter.max_distance = 0.00001  # 1 cm
         assets, values, missing = self.getter()
-
         self.assertEqual([], assets)
         self.assertEqual(set([a.id for a in self.assets()]), missing)
         self.assertEqual([], values)

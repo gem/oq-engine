@@ -263,39 +263,42 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # The OrderedDict is needed by __call__ in order to scan
-        # multiple times the data and still get corresponding values.
-        # See the return statement of the __call__ method.
+        # nested dicts with structure: asset_id -> (rupture_id -> gmv)
+        assets_ruptures_gmvs = OrderedDict()
 
-        ret = OrderedDict()
-
-        # We expect that different location might have a different
-        # number of gmvs (because a different number of ruptures could
-        # have given a non-zero contribute).
+        # store all the ruptures returned by the query
         ruptures = []
 
-        for row in data:
-            ret[row[0]] = dict(zip(row[2], row[1]))
-            ruptures.extend(row[2])
+        for asset_id, gmvs, rupture_ids in data:
+            assets_ruptures_gmvs[asset_id] = dict(zip(rupture_ids, gmvs))
+            ruptures.extend(rupture_ids)
         ruptures = set(ruptures)
 
-        for asset_id, asset_data in ret.items():
-            missing_ruptures = set(asset_data.keys()) - ruptures
+        # We expect that the query may return a different number of
+        # gmvs and ruptures for each asset (because only the ruptures
+        # that gives a positive ground shaking are stored). Here on,
+        # we finalize `assets_ruptures_gmvs` by filling in with zero
+        # values for each rupture that has not given a contribute.
+
+        # for each asset, we look for missing ruptures
+        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.items():
+
+            # all the ruptures producing a positive ground shaking for
+            # `asset`
+            asset_ruptures = set(ruptures_gmvs_dict)
+
+            missing_ruptures = ruptures - asset_ruptures
+
+            # we finalize the asset data with 0
             for rupture_id in missing_ruptures:
-                asset_data[rupture_id] = 0
+                ruptures_gmvs_dict[rupture_id] = 0.
 
-        # now, each element of `ret` is associated to a dictionary
-        # with the same keys (all the rupture ids). We want to return
-        # for each element of ret a list of all the ruptures and all
-        # the gmvs associated to them
-        for asset_id, asset_data in ret.items():
-            ret[asset_id] = zip(*sorted(
-                zip(asset_data.values(), asset_data.keys()),
-                key=lambda x: x[1]))
-            assert len(ret[asset_id][1]) == len(ruptures)
-            assert len(ret[asset_id][0]) == len(ruptures)
-
-        return ret
+        # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
+        return OrderedDict([
+            (asset_id, zip(
+                *sorted(zip(asset_data.values(), asset_data.keys()),
+                        key=lambda x: x[1])))
+            for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
 class GroundMotionScenarioGetter(HazardGetter):
@@ -333,7 +336,7 @@ class GroundMotionScenarioGetter(HazardGetter):
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self._imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
-                self.max_distance,
+                self.max_distance * KILOMETERS_TO_METERS,
                 assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
