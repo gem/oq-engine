@@ -207,17 +207,20 @@ m?ml version='1.0' encoding='utf-8'?>
         )
         psurface_1 = models.PlanarSurface(
             strike=0.0, dip=90.0,
-            top_left=models.Point(lon=-1.0, lat=1.0, depth=20.0),
-            top_right=models.Point(lon=1.0, lat=1.0, depth=21.0),
-            bottom_left=models.Point(lon=-1.0, lat=-1.0, depth=60.0),
-            bottom_right=models.Point(lon=1.0, lat=-1.0, depth=59.0),
+            top_left=models.Point(longitude=-1.0, latitude=1.0, depth=21.0),
+            top_right=models.Point(longitude=1.0, latitude=1.0, depth=21.0),
+            bottom_left=models.Point(longitude=-1.0, latitude=-1.0,
+                                     depth=59.0),
+            bottom_right=models.Point(longitude=1.0, latitude=-1.0,
+                                      depth=59.0),
         )
         psurface_2 = models.PlanarSurface(
             strike=20.0, dip=45.0,
-            top_left=models.Point(lon=1.0, lat=1.0, depth=20.0),
-            top_right=models.Point(lon=3.0, lat=1.0, depth=21.0),
-            bottom_left=models.Point(lon=1.0, lat=-1.0, depth=80.0),
-            bottom_right=models.Point(lon=3.0, lat=-1.0, depth=80.0),
+            top_left=models.Point(longitude=1.0, latitude=1.0, depth=20.0),
+            top_right=models.Point(longitude=3.0, latitude=1.0, depth=20.0),
+            bottom_left=models.Point(longitude=1.0, latitude=-1.0, depth=80.0),
+            bottom_right=models.Point(longitude=3.0, latitude=-1.0,
+                                      depth=80.0),
         )
         char_src_multi.surface = [psurface_1, psurface_2]
 
