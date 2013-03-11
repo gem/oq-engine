@@ -18,8 +18,8 @@ import shutil
 import tempfile
 
 from nose.plugins.attrib import attr
-from openquake.db import models
-from openquake.export import hazard as hazard_export
+from openquake.engine.db import models
+from openquake.engine.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
