@@ -263,9 +263,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # The OrderedDict is needed by __call__ in order to scan
-        # multiple times the data and still get corresponding values.
-        # See the return statement of the __call__ method.
+        # nested dicts with structure: asset_id -> (rupture_id -> gmv)
         assets_ruptures_gmvs = OrderedDict()
 
         # store all the ruptures returned by the query
@@ -283,32 +281,29 @@ class GroundMotionValuesGetter(HazardGetter):
         # values for each rupture that has not given a contribute.
 
         # for each asset, we look for missing ruptures
-        for asset_id, ruptures_gmvs in assets_ruptures_gmvs.items():
+        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.items():
 
             # all the ruptures producing a positive ground shaking for
             # `asset`
-            asset_ruptures = set(ruptures_gmvs.keys())
+            asset_ruptures = set(ruptures_gmvs_dict)
 
             missing_ruptures = ruptures - asset_ruptures
 
             # we finalize the asset data with 0
             for rupture_id in missing_ruptures:
-                ruptures_gmvs[rupture_id] = 0.
+                ruptures_gmvs_dict[rupture_id] = 0.
 
-        # Further processing needed to return a 2-tuple with all the
-        # ruptures and all the gmvs associated with each asset
-        for asset_id, asset_data in assets_ruptures_gmvs.items():
-            asset_ruptures = asset_data.keys()
-            asset_gmvs = asset_data.values()
 
-            # sorting is needed in order to enforce the relationship
-            # between gmv with the same index across different assets
-            assets_ruptures_gmvs[asset_id] = zip(
-                *sorted(zip(asset_gmvs, asset_ruptures), key=lambda x: x[1]))
-            assert len(asset_ruptures) == len(ruptures)
-            assert len(asset_gmvs) == len(ruptures)
+        # The OrderedDict is needed by __call__ in order to scan
+        # multiple times the data and still get corresponding values.
+        # See the return statement of the __call__ method.
 
-        return assets_ruptures_gmvs
+        # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
+        return OrderedDict([
+            (asset_id, zip(
+                *sorted(zip(asset_data.values(), asset_data.keys()),
+                        key=lambda x: x[1])))
+            for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
 class GroundMotionScenarioGetter(HazardGetter):
