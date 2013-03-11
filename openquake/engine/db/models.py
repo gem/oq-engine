@@ -303,6 +303,7 @@ class ParsedSource(djm.Model):
         (u'point', u'Point'),
         (u'complex', u'Complex'),
         (u'simple', u'Simple'),
+        (u'characteristic', u'Characteristic'),
     )
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
     nrml = fields.PickleField(help_text="NRML object representing the source")
