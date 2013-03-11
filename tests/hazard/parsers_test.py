@@ -27,7 +27,10 @@ from openquake.nrmllib.hazard import parsers
 
 
 class SourceModelParserTestCase(unittest.TestCase):
-    """Tests for the :class:`openquake.nrmllib.parsers.SourceModelParser` parser."""
+    """
+    Tests for the :class:`openquake.nrmllib.parsers.SourceModelParser`
+    parser.
+    """
 
     SAMPLE_FILE = 'examples/source_model/mixed.xml'
     BAD_NAMESPACE = '''\
