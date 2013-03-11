@@ -108,21 +108,22 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
             ses_ordinal=1,
             complete_logic_tree_gmf=False)
 
-        rupture_ids = helpers.get_rupture_ids(job, hc, lt_realization, 16)
-
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
 
-            for i, gmvs in enumerate(
-                    numpy.array([[float(x) for x in row]
-                                 for row in gmfreader]).transpose()):
+            gmv_matrix = numpy.array([[float(x) for x in row]
+                                      for row in gmfreader]).transpose()
+
+            rupture_ids = helpers.get_rupture_ids(
+                job, hc, lt_realization, len(gmv_matrix[0]))
+
+            for i, gmvs in enumerate(gmv_matrix):
                 models.Gmf.objects.create(
                     gmf_set=gmf_set,
                     imt="PGA", gmvs=gmvs,
-                    rupture_ids=[str(rupture_ids[x % 16])
-                                 for x in range(len(gmvs))],
+                    rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
@@ -146,7 +147,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     loss_curve__insured=False)] +
                 [[el.aggregate_loss
                  for el in models.EventLoss.objects.filter(
-                output__oq_job=job).order_by('aggregate_loss')]])
+                output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
 
     def expected_data(self):
 
@@ -172,15 +173,13 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
 
         # FIXME(lp). Event Loss Table data do not come from a reliable
         # implementation. This is just a regression test
-        event_loss_table = [112.11885456, 122.55458718, 137.59505041,
-                            177.2371802, 198.3338841, 234.72273315,
-                            249.9518471, 259.40325419, 318.03021227,
-                            318.95322285, 325.20581137, 351.21449217,
-                            399.71017813, 407.36897638, 467.85006676,
-                            544.42891715]
+        expected_event_loss_table = [331.3290388, 221.5660697, 163.0322347,
+                                     117.4178793, 115.8360745, 108.2221509,
+                                     106.1758451, 105.3585400, 97.0575466,
+                                     94.8992232]
 
         return [poes, poes, poes, losses_1, losses_2, losses_3,
-                expected_aggregate_losses, event_loss_table]
+                expected_aggregate_losses, expected_event_loss_table]
 
     def actual_xml_outputs(self, job):
         """
