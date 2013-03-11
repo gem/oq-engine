@@ -2212,12 +2212,39 @@ class GmfScenario(djm.Model):
         db_table = 'hzrdr\".\"gmf_scenario'
 
 
-def get_gmfs_scenario(output, imt=None):
+def get_gmvs_per_site(output, imt=None):
     """
     Iterator for walking through all :class:`GmfScenario` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
+
+    :param output: instance of :class:`openquake.engine.db.models.Output`
+
+    :param string imt: a string with the IMT to extract; the default
+                       is None, all the IMT in the job.ini file are extracted
+
+    :returns: a sorted list of ground motion values per each site
+    """
+    job = output.oq_job
+    hc = job.hazard_calculation
+    if imt is None:
+        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+    else:
+        imts = [parse_imt(imt)]
+    for imt, sa_period, sa_damping in imts:
+        if imt == 'SA':
+            imt = 'SA(%s)' % sa_period
+        for gmf in order_by_location(
+                GmfScenario.objects.filter(output__id=output.id, imt=imt)):
+            yield sorted(gmf.gmvs)
+
+
+def get_gmfs_scenario(output, imt=None):
+    """
+    Iterator for walking through all :class:`GmfScenario` objects associated
+    to a given output. Notice that the fields are ordered according to the
+    location, so it is possible to get reproducible outputs in the test cases.
 
     :param output: instance of :class:`openquake.engine.db.models.Output`
 
@@ -2236,16 +2263,12 @@ def get_gmfs_scenario(output, imt=None):
     for imt, sa_period, sa_damping in imts:
         if imt == 'SA':
             imt = 'SA(%s)' % sa_period
-        gmfs = order_by_location(
-            GmfScenario.objects.filter(output__id=output.id, imt=imt))
-        # yield all the nodes associated to a given location
-        for loc, rows in itertools.groupby(
-                gmfs, operator.attrgetter('location')):
-            gmf_nodes = []
-            for gmf in rows:
-                for gmv in gmf.gmvs:
-                    gmf_nodes.append(
-                        _GroundMotionFieldNode(gmv=gmv, location=loc))
+        nodes = collections.defaultdict(list)  # realization -> gmf_nodes
+        for gmf in GmfScenario.objects.filter(output__id=output.id, imt=imt):
+            for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
+                nodes[i].append(
+                    _GroundMotionFieldNode(gmv=gmv, location=gmf.location))
+        for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
                 sa_period=sa_period,
