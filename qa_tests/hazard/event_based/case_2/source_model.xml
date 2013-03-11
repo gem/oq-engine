@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
-    <sourceModel name="Classical Hazard QA Test, Case 2 source model">
+    <sourceModel name="Event-Based Hazard QA Test, Case 2 source model">
         <pointSource id="1" name="point source" tectonicRegion="active shallow crust">
             <pointGeometry>
                 <gml:Point>
