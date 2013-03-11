@@ -106,8 +106,8 @@ class HazardGetter(object):
 
         for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
-                "No hazard has been found for the asset %s",
-                self.asset_dict[missing_asset_id])
+                "No hazard has been found for the asset %s within %s km" % (
+                    self.asset_dict[missing_asset_id], self.max_distance))
 
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
@@ -210,8 +210,9 @@ class GroundMotionValuesGetter(HazardGetter):
             args += (self._sa_period, self._sa_damping)
 
         # Query explanation. We need to get for each asset the closest
-        # ground motion values for a given logic tree realization and
-        # a given imt.
+        # ground motion values (and the corresponding rupture ids from
+        # which they have been generated) for a given logic tree
+        # realization and a given imt.
 
         # We first concatenate ground motion values grouped by
         # location (so for each location we have all the ground motion
@@ -262,11 +263,42 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # The OrderedDict is needed by __call__ in order to scan
-        # multiple times the data and still get corresponding values.
-        # See the return statement of the __call__ method.
+        # nested dicts with structure: asset_id -> (rupture_id -> gmv)
+        assets_ruptures_gmvs = OrderedDict()
 
-        return OrderedDict((row[0], [row[1], row[2]]) for row in data)
+        # store all the ruptures returned by the query
+        ruptures = []
+
+        for asset_id, gmvs, rupture_ids in data:
+            assets_ruptures_gmvs[asset_id] = dict(zip(rupture_ids, gmvs))
+            ruptures.extend(rupture_ids)
+        ruptures = set(ruptures)
+
+        # We expect that the query may return a different number of
+        # gmvs and ruptures for each asset (because only the ruptures
+        # that gives a positive ground shaking are stored). Here on,
+        # we finalize `assets_ruptures_gmvs` by filling in with zero
+        # values for each rupture that has not given a contribute.
+
+        # for each asset, we look for missing ruptures
+        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.items():
+
+            # all the ruptures producing a positive ground shaking for
+            # `asset`
+            asset_ruptures = set(ruptures_gmvs_dict)
+
+            missing_ruptures = ruptures - asset_ruptures
+
+            # we finalize the asset data with 0
+            for rupture_id in missing_ruptures:
+                ruptures_gmvs_dict[rupture_id] = 0.
+
+        # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
+        return OrderedDict([
+            (asset_id, zip(
+                *sorted(zip(asset_data.values(), asset_data.keys()),
+                        key=lambda x: x[1])))
+            for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
 class GroundMotionScenarioGetter(HazardGetter):
