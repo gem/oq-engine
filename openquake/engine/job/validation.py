@@ -145,6 +145,11 @@ class BaseOQModelForm(ModelForm):
         :returns:
             If valid return `True`, else `False`.
         """
+
+        # FIXME(lp). Django allows custom validation by overriding the
+        # `clean` method and `clean_<field>` methods. We should go for
+        # the standard approach
+
         super_valid = super(BaseOQModelForm, self).is_valid()
         all_valid = super_valid
 
@@ -249,6 +254,15 @@ class BaseHazardModelForm(BaseOQModelForm):
                 all_valid &= valid
                 self._add_error(field, errs)
 
+        if 'vulnerability_file' not in self.files:
+            for field in (
+                    'intensity_measure_types_and_levels',
+                    'intensity_measure_types'
+            ):
+                valid, errs = eval('%s_is_valid' % field)(hc)
+                all_valid &= valid
+                self._add_error(field, errs)
+
         return all_valid
 
 
@@ -274,7 +288,6 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'reference_depth_to_2pt5km_per_sec',
             'reference_depth_to_1pt0km_per_sec',
             'investigation_time',
-            'intensity_measure_types_and_levels',
             'truncation_level',
             'maximum_distance',
             'mean_hazard_curves',
@@ -308,8 +321,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'investigation_time',
             'truncation_level',
             'maximum_distance',
-            'intensity_measure_types',
-            'intensity_measure_types_and_levels',
             'ses_per_logic_tree_path',
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
@@ -353,7 +364,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
 
                 self._add_error('intensity_measure_types_and_levels', msg)
                 all_valid = False
-            else:
+            elif 'vulnerability_file' not in self.files:
                 # Defined, but is it valid?
                 valid, errs = intensity_measure_types_and_levels_is_valid(hc)
                 all_valid &= valid
@@ -397,7 +408,6 @@ class DisaggHazardForm(BaseHazardModelForm):
             'reference_depth_to_2pt5km_per_sec',
             'reference_depth_to_1pt0km_per_sec',
             'investigation_time',
-            'intensity_measure_types_and_levels',
             'truncation_level',
             'maximum_distance',
             'mag_bin_width',
@@ -426,7 +436,6 @@ class ScenarioHazardForm(BaseHazardModelForm):
             'reference_vs30_type',
             'reference_depth_to_2pt5km_per_sec',
             'reference_depth_to_1pt0km_per_sec',
-            'intensity_measure_types',
             'truncation_level',
             'maximum_distance',
             'number_of_ground_motion_fields',
@@ -712,12 +721,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     valid = True
     errors = []
 
-    # if a vulnerability file is supplied this parameter is optional
-    if mdl.inputs.filter(input_type='vulnerability').exists():
-        return True, []
-
-    if mdl.calculation_mode == 'event_based' and im is None:
-        # For event-based hazard calculations, this parameter is optional
+    if mdl.calculation_mode in ['event_based', 'scenario'] and im is None:
+        # For event-based and scenario hazard calculations, this
+        # parameter is optional
         return valid, errors
 
     for im_type, imls in im.iteritems():
@@ -748,12 +754,13 @@ def intensity_measure_types_and_levels_is_valid(mdl):
 def intensity_measure_types_is_valid(mdl):
     imts = mdl.intensity_measure_types
 
+    if mdl.calculation_mode not in ['event_based', 'scenario']:
+        # For non event-based hazard calculations, this parameter is
+        # optional
+        return True, []
+
     valid = True
     errors = []
-
-    # if a vulnerability file is supplied this parameter is optional
-    if mdl.inputs.filter(input_type='vulnerability').exists():
-        return True, []
 
     for imt in imts:
         valid_imt, imt_errors = _validate_imt(imt)
