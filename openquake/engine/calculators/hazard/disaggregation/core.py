@@ -317,6 +317,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         is one), and generating logic tree realizations. (The latter piece
         basically defines the work to be done in the `execute` phase.)
         """
+
+        # Parse risk models.
+        self.parse_risk_models()
+
         # Parse logic trees and create source Inputs.
         self.initialize_sources()
 

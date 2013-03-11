@@ -160,6 +160,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         basically defines the work to be done in the `execute` phase.)
         """
 
+        # Parse risk models.
+        self.parse_risk_models()
+
         # Create source Inputs.
         self.initialize_sources()
 
