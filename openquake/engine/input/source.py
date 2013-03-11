@@ -363,6 +363,8 @@ def _source_type(src_model):
         return 'complex'
     elif isinstance(src_model, nrml_models.SimpleFaultSource):
         return 'simple'
+    elif isinstance(src_model, nrml_models.CharacteristicSource):
+        return 'characteristic'
 
 
 class SourceDBWriter(object):
