@@ -264,7 +264,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 rupture_id=rupture_id,
                 aggregate_loss=aggregate_loss)
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -280,7 +280,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            gmf.id, self.imt, assets, self.rc.best_maximum_distance)
+            gmf.id, imt, assets, self.rc.best_maximum_distance)
         return (hazard_getter, weight)
 
     def hazard_outputs(self, hazard_calculation):
