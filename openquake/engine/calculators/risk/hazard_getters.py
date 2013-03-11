@@ -293,11 +293,6 @@ class GroundMotionValuesGetter(HazardGetter):
             for rupture_id in missing_ruptures:
                 ruptures_gmvs_dict[rupture_id] = 0.
 
-
-        # The OrderedDict is needed by __call__ in order to scan
-        # multiple times the data and still get corresponding values.
-        # See the return statement of the __call__ method.
-
         # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
         return OrderedDict([
             (asset_id, zip(
