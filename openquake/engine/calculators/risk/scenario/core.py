@@ -209,6 +209,8 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
 
+        # As in scenario calculation we are considering only a single
+        # realization with fix the weight to 1
         return (self.hazard_getter(
             output.id, imt, assets, self.rc.best_maximum_distance), 1)
 

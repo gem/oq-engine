@@ -128,6 +128,8 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         imts = self.hc.get_imts()
 
+        # check that the hazard calculation has all the imts needed by
+        # the risk calculation
         for imt in set(self.taxonomies_imts.values()):
             if not imt in imts:
                 raise RuntimeError(
@@ -185,9 +187,13 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
+                # Get the imt depending on the taxonomy of the assets
+                # (SD-IMT) and create the needed hazard getters for
+                # all the hazard output
                 imt = self.taxonomies_imts[taxonomy]
                 hazard = dict((ho.id, self.create_getter(ho, imt, assets))
                               for ho in self.considered_hazard_outputs())
+
                 worker_args = self.worker_args(taxonomy)
 
                 logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
@@ -254,19 +260,22 @@ class BaseRiskCalculator(base.CalculatorNext):
     def create_getter(self, output, imt, assets):
         """
         Create an instance of :class:`.hazard_getters.HazardGetter`
-        associated to a weight of an hazard logic tree realization.
+        associated to an hazard output.
 
         :returns: a tuple where the first element is the hazard getter
-        and the second is the associated weight.
+        and the second is the associated weight (if `output` is
+        associated with a logic tree realization).
 
-        Calculator must override this to create the proper hazard getter.
+        Calculator must override this to create the proper hazard
+        getter.
 
         :param hazard_output: the ID of an
         :class:`openquake.engine.db.models.Output` produced by an
         hazard calculation
 
         :param str imt: the imt used by the hazard getter to filter
-        the hazard
+        the hazard (an hazard output may contain values computed in
+        multiple imt).
 
         :raises: `RuntimeError` if the hazard associated with the
         `hazard_output` is not suitable to be used with this
@@ -389,7 +398,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             registered_imt = self.taxonomies_imts.get(taxonomy, imt)
 
             if imt != registered_imt:
-                raise RuntimeError("The same taxonomy is associated to "
+                raise RuntimeError("The same taxonomy is associated with "
                                    "different imts %s and %s" % (
                                        imt, registered_imt))
             else:

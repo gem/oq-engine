@@ -38,7 +38,6 @@ from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.writer import BulkInserter
 
-
 #: Maximum number of hazard curves to cache, for selects or inserts
 _CURVE_CACHE_SIZE = 100000
 
