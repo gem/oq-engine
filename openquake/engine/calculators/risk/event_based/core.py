@@ -91,7 +91,7 @@ def event_based(job_id, hazard,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
-        seed = rnd.randint(0, (2 ** 31) - 1)
+        seed = rnd.randint(0, models.MAX_SINT_32)
         logs.LOG.info("Using seed %s with hazard output %s" % (
             seed, hazard_output_id))
 

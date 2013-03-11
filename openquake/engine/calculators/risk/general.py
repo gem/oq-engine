@@ -202,7 +202,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         master seed and the vulnerability function associated with the
         assets taxonomy. May be overriden.
         """
-        return [self.rnd.randint(0, (2 ** 31) - 1),
+        return [self.rnd.randint(0, models.MAX_SINT_32),
                 self.vulnerability_functions[taxonomy]]
 
     def export(self, *args, **kwargs):
