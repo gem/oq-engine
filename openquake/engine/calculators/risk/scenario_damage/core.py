@@ -170,6 +170,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.fragility_functions = None  # will be set in #set_risk_models
         self.damage_states = None  # will be set in #set_risk_models
 
+        # TODO(lp). At this moment, fragility model with structure
+        # dependent intensity measure types are not supported. So the
+        # calculation is run on only one intensity measure type
+        self.imt = None  # set in #parse_fragility_model
+
     def hazard_outputs(self, hazard_calculation):
         """
         :returns: the single hazard output associated to
@@ -182,7 +187,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.get(
                 output_type='gmf_scenario')
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, _imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """

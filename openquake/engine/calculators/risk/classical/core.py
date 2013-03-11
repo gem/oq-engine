@@ -144,7 +144,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -159,7 +159,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, self.imt, assets, self.rc.best_maximum_distance)
+            hc.id, imt, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 
@@ -170,13 +170,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         `hazard_calculation` that are associated with a realization
         """
 
-        imt, sa_period, sa_damping = models.parse_imt(self.imt)
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='hazard_curve',
-                hazardcurve__imt=imt,
-                hazardcurve__sa_period=sa_period,
-                hazardcurve__sa_damping=sa_damping,
                 hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property

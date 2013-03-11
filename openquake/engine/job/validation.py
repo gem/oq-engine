@@ -207,9 +207,11 @@ class BaseHazardModelForm(BaseOQModelForm):
             err = 'Cannot specify `region` and `sites`. Choose one.'
             self._add_error('region', err)
         # At least one must be specified (region OR sites)
-        elif not (hc.region is not None or hc.sites is not None):
+        elif not (hc.region is not None or
+                  hc.sites is not None or
+                  self.files.get('exposure_file') is not None):
             all_valid = False
-            err = 'Must specify either `region` or `sites`.'
+            err = 'Must specify either `region`, `sites` or `exposure_file`.'
             self._add_error('region', err)
             self._add_error('sites', err)
         # Only region is specified
@@ -229,7 +231,7 @@ class BaseHazardModelForm(BaseOQModelForm):
             all_valid &= valid
             self._add_error('region', errs)
         # Only sites was specified
-        else:
+        elif hc.sites:
             valid, errs = sites_is_valid(hc)
             all_valid &= valid
             self._add_error('sites', errs)
@@ -710,6 +712,10 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     valid = True
     errors = []
 
+    # if a vulnerability file is supplied this parameter is optional
+    if mdl.inputs.filter('vulnerability').exists():
+        return True, []
+
     if mdl.calculation_mode == 'event_based' and im is None:
         # For event-based hazard calculations, this parameter is optional
         return valid, errors
@@ -744,6 +750,10 @@ def intensity_measure_types_is_valid(mdl):
 
     valid = True
     errors = []
+
+    # if a vulnerability file is supplied this parameter is optional
+    if mdl.inputs.filter(input_type='vulnerability').exists():
+        return True, []
 
     for imt in imts:
         valid_imt, imt_errors = _validate_imt(imt)
