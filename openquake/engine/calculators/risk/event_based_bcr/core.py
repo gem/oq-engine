@@ -80,13 +80,13 @@ def event_based_bcr(job_id, hazard, task_seed,
         hazard_getter, _ = hazard_data
         (bcr_distribution_id,) = output_containers[hazard_output_id]
 
-        seed = rnd.randint(0, (2 ** 31) - 1)
+        seed = rnd.randint(0, models.MAX_SINT_32)
         calc_original = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
             seed=seed, correlation=asset_correlation)
 
-        seed = rnd.randint(0, (2 ** 31) - 1)
+        seed = rnd.randint(0, models.MAX_SINT_32)
         calc_retrofitted = api.ProbabilisticEventBased(
             vulnerability_function_retrofitted,
             curve_resolution=loss_curve_resolution,
