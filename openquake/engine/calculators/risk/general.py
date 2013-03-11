@@ -67,8 +67,9 @@ class BaseRiskCalculator(base.CalculatorNext):
       The random number generator (initialized with a master seed) used
       for sampling
 
-    :attribute str imt:
-      The intensity measure type considered
+    :attribute dict taxonomies_imts:
+      A dictionary mapping taxonomies to intensity measure type, to
+      support structure dependent intensity measure types
     """
 
     hazard_getter = None  # the name of the hazard getter class; to override
@@ -79,7 +80,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         self.taxonomies = None
         self.rnd = None
         self.vulnerability_functions = None
-        self.imt = None
+        self.taxonomies_imts = None
 
     def pre_execute(self):
         """
@@ -127,10 +128,11 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         imts = self.hc.get_imts()
 
-        if not self.imt in imts:
-            raise RuntimeError(
-                "There is no hazard output for the intensity measure %s; "
-                "the available IMTs are %s" % (self.imt, imts))
+        for imt in set(self.taxonomies_imts.values()):
+            if not imt in imts:
+                raise RuntimeError(
+                    "There is no hazard output for the intensity measure %s; "
+                    "the available IMTs are %s" % (imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -183,7 +185,8 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                hazard = dict((ho.id, self.create_getter(ho, assets))
+                imt = self.taxonomies_imts[taxonomy]
+                hazard = dict((ho.id, self.create_getter(ho, imt, assets))
                               for ho in self.considered_hazard_outputs())
                 worker_args = self.worker_args(taxonomy)
 
@@ -246,11 +249,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         Result objects should be ordered (e.g. by id) and be
         associated to an hazard logic tree realization
         """
-        # FIXME(lp). It should accept an imt as a second parameter
-        # instead of getting it from self.imt
         raise NotImplementedError
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         Create an instance of :class:`.hazard_getters.HazardGetter`
         associated to a weight of an hazard logic tree realization.
@@ -263,6 +264,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         :param hazard_output: the ID of an
         :class:`openquake.engine.db.models.Output` produced by an
         hazard calculation
+
+        :param str imt: the imt used by the hazard getter to filter
+        the hazard
 
         :raises: `RuntimeError` if the hazard associated with the
         `hazard_output` is not suitable to be used with this
@@ -359,8 +363,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         Parse vulnerability model input associated with this
         calculation.
 
-        As a side effect, it also stores the first IMT (that may be
-        needed for further hazard filtering) in the attribute `imt`.
+        As a side effect, it also stores the mapping between
+        taxonomies and IMT (that is needed for further hazard
+        filtering) in the attribute `taxonomies_imts`.
 
         :param bool retrofitted: true if the retrofitted model is
         going to be parsed
@@ -378,19 +383,19 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         vfs = dict()
 
-        # CAVEATS
-        # 1) We use the first imt returned by the parser 2) Use the
-        # last vf for a taxonomy returned by the parser (if multiple
-        # vf for the same taxonomy are given).
-
-        # We basically assume that the user will provide a
-        # vulnerability model where for each taxonomy there is only
-        # one vf for a taxonomy and an imt matching the ones in the
-        # hazard output
         for record in parsers.VulnerabilityModelParser(path):
-            if self.imt is None:
-                self.imt = record['IMT']
-            vfs[record['ID']] = scientific.VulnerabilityFunction(
+            taxonomy = record['ID']
+            imt = record['IMT']
+            registered_imt = self.taxonomies_imts.get(taxonomy, imt)
+
+            if imt != registered_imt:
+                raise RuntimeError("The same taxonomy is associated to "
+                                   "different imts %s and %s" % (
+                                       imt, registered_imt))
+            else:
+                self.taxonomies_imts[taxonomy] = imt
+
+            vfs[taxonomy] = scientific.VulnerabilityFunction(
                 record['IML'],
                 record['lossRatio'],
                 record['coefficientsVariation'],

@@ -386,7 +386,8 @@ class Input(djm.Model):
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
-                                              through='Input2hcalc')
+                                              through='Input2hcalc',
+                                              related_name="inputs")
     risk_calculations = djm.ManyToManyField(
         'RiskCalculation', through='Input2rcalc', related_name="inputs")
 
@@ -940,7 +941,16 @@ class HazardCalculation(djm.Model):
             again.
         """
         if self._points_to_compute is None:
-            if self.region and self.region_grid_spacing:
+            if self.inputs.filter(input_type='exposure').exists():
+                lons, lats = zip(
+                    *list(set([(asset.site.x, asset.site.y)
+                      for asset
+                      in self.exposure_model.exposuredata_set.all()])))
+                # Cache the mesh:
+                self._points_to_compute = hazardlib_geo.Mesh(
+                    numpy.array(lons), numpy.array(lats), depths=None
+                )
+            elif self.region and self.region_grid_spacing:
                 # assume that the polygon is a single linear ring
                 coords = self.region.coords[0]
                 points = [hazardlib_geo.Point(*x) for x in coords]
@@ -956,6 +966,11 @@ class HazardCalculation(djm.Model):
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
         return self._points_to_compute
+
+    @property
+    def exposure_model(self):
+        if self.inputs.filter(input_type='exposure').exists():
+            return self.inputs.get(input_type='exposure').exposuremodel
 
     def get_imts(self):
         """
