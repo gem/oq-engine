@@ -170,7 +170,7 @@ class FragilityModel(Mapping):
         return self._dic[taxonomy]
 
     def __iter__(self):
-        return iter(self._dict)
+        return iter(self._dic)
 
     def __len__(self):
         return len(self._dic)
