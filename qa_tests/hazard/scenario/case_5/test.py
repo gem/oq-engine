@@ -25,13 +25,12 @@ from qa_tests import _utils as qa_utils
 
 class ScenarioHazardCase5TestCase(qa_utils.BaseQATestCase):
 
-    @skip
     @attr('qa', 'hazard', 'scenario')
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id)
-        gmfs = list(qa_utils.get_gmfs_per_site(output, 'PGA'))
+        gmfs = list(models.get_gmvs_per_site(output, 'PGA'))
         realizations = 1e5 
         first_value = 0.5
         second_value = 1.0
