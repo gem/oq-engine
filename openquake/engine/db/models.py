@@ -813,6 +813,17 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    hazard_maps = fields.OqNullBooleanField(
+        help_text='Compute hazard maps',
+        null=True,
+        blank=True,
+    )
+    uniform_hazard_spectra = fields.OqNullBooleanField(
+        help_text=('Compute uniform hazard spectra; if true, hazard maps will'
+                   ' be computed as well'),
+        null=True,
+        blank=True,
+    )
     # Event-Based params:
     #####################
     complete_logic_tree_ses = fields.OqNullBooleanField(
