@@ -269,16 +269,10 @@ def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
     if params is not None:
         args.extend(params)
 
-    devnull = None
-    if silence:
-        devnull = open(os.devnull, 'wb')
-
     print 'Running:', ' '.join(args)  # this is useful for debugging
-    try:
-        return subprocess.check_call(args, stderr=devnull, stdout=devnull)
-    finally:
-        if devnull is not None:
-            devnull.close()
+    return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
+                                 if silence else None)
+    # NB: stderr is never captured, so that errors are never silenced
 
 
 def store_hazard_logic_trees(a_job):
