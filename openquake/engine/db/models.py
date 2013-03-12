@@ -78,6 +78,12 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+#: Minimum value for a seed number
+MIN_SINT_32 = -(2 ** 31)
+#: Maximum value for a seed number
+MAX_SINT_32 = (2 ** 31) - 1
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
