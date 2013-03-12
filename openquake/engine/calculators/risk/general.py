@@ -202,7 +202,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         master seed and the vulnerability function associated with the
         assets taxonomy. May be overriden.
         """
-        return [self.rnd.randint(0, (2 ** 31) - 1),
+        return [self.rnd.randint(0, models.MAX_SINT_32),
                 self.vulnerability_functions[taxonomy]]
 
     def export(self, *args, **kwargs):
@@ -347,7 +347,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             if self.rc.taxonomies_from_model:
                 # only consider the taxonomies in the fragility model
                 self.taxonomies = dict((t, self.taxonomies[t])
-                                       for t in self.fragility_functions
+                                       for t in self.fragility_model
                                        if t in self.taxonomies)
                 logs.LOG.warn(msg)
             else:
