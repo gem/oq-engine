@@ -281,7 +281,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'maximum_distance',
             'mean_hazard_curves',
             'quantile_hazard_curves',
-            'poes_hazard_maps',
+            'poes',
             'export_dir',
         )
 
@@ -332,7 +332,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'hazard_curves_from_gmfs',
             'mean_hazard_curves',
             'quantile_hazard_curves',
-            'poes_hazard_maps',
+            'poes',
             'export_dir',
         )
 
@@ -858,8 +858,8 @@ def quantile_loss_curves_is_valid(mdl):
     return True, []
 
 
-def poes_hazard_maps_is_valid(mdl):
-    phm = mdl.poes_hazard_maps
+def poes_is_valid(mdl):
+    phm = mdl.poes
     error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
     return _validate_poe_list(phm, error_msg)
 
