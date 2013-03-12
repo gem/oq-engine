@@ -25,10 +25,6 @@ import openquake.hazardlib
 from openquake.engine.db import models
 from openquake.engine.utils import get_calculator_class
 
-#: Minimum value for a signed 32-bit int
-MIN_SINT_32 = -(2 ** 31)
-#: Maximum value for a signed 32-bit int
-MAX_SINT_32 = (2 ** 31) - 1
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
 
@@ -598,9 +594,9 @@ def sites_is_valid(mdl):
 
 
 def random_seed_is_valid(mdl):
-    if not MIN_SINT_32 <= mdl.random_seed <= MAX_SINT_32:
+    if not models.MIN_SINT_32 <= mdl.random_seed <= models.MAX_SINT_32:
         return False, [('Random seed must be a value from %s to %s (inclusive)'
-                       % (MIN_SINT_32, MAX_SINT_32))]
+                       % (models.MIN_SINT_32, models.MAX_SINT_32))]
     return True, []
 
 
