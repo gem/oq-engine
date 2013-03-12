@@ -807,10 +807,9 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    poes_hazard_maps = fields.FloatArrayField(
+    poes = fields.FloatArrayField(
         help_text=('PoEs (probabilities of exceedence) to be used for '
-                   'computing hazard maps (from individual curves, mean and '
-                   'quantile curves if calculated)'),
+                   'computing hazard maps and uniform hazard spectra'),
         null=True,
         blank=True,
     )
