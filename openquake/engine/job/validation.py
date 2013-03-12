@@ -250,7 +250,7 @@ class BaseHazardModelForm(BaseOQModelForm):
                 'reference_depth_to_2pt5km_per_sec',
                 'reference_depth_to_1pt0km_per_sec',
             ):
-                valid, errs = eval('%s_is_valid' % field)(hc)
+                valid, errs = globals().get('%s_is_valid' % field)(hc)
                 all_valid &= valid
                 self._add_error(field, errs)
 
@@ -259,7 +259,7 @@ class BaseHazardModelForm(BaseOQModelForm):
                     'intensity_measure_types_and_levels',
                     'intensity_measure_types'
             ):
-                valid, errs = eval('%s_is_valid' % field)(hc)
+                valid, errs = globals().get('%s_is_valid' % field)(hc)
                 all_valid &= valid
                 self._add_error(field, errs)
 
