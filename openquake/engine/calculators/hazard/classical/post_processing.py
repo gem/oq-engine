@@ -181,7 +181,7 @@ def do_hazard_map_post_process(job):
     logs.LOG.debug('> Post-processing - Hazard Maps')
     block_size = int(config.get('hazard', 'concurrent_tasks'))
 
-    poes = job.hazard_calculation.poes_hazard_maps
+    poes = job.hazard_calculation.poes
 
     # Stats for debug logging:
     hazard_curve_ids = models.HazardCurve.objects.filter(
