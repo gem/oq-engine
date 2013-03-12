@@ -198,6 +198,7 @@ def run_hazard_job(cfg, exports=None):
     return completed_job
 
 
+# XXX: should we unify run_hazard_job_sp and run_risk_job_sp?
 def run_hazard_job_sp(config_file, params=None, check_output=False,
                       silence=False, force_inputs=True):
     """
@@ -212,7 +213,7 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         If `True`, use :func:`subprocess.check_output` instead of
         :func:`subprocess.check_call`.
     :param bool silence:
-        If `True`, silence all stdout and stderr messages.
+        If `True`, silence all stdout messages.
     :param bool force_inputs:
         Defaults to `True`. If `True`, run openquake with the `--force-inputs`
         option.
@@ -235,19 +236,12 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
     if params is not None:
         args.extend(params)
 
-    devnull = None
-    if silence:
-        devnull = open(os.devnull, 'wb')
-
-    try:
-        if check_output:
-            return subprocess.check_output(args, stdout=devnull,
-                                           stderr=devnull)
-        else:
-            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
-    finally:
-        if devnull is not None:
-            devnull.close()
+    if check_output:
+        return subprocess.check_output(args, stdout=open(os.devnull, 'wb')
+                                       if silence else None)
+    else:
+        return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
+                                     if silence else None)
 
 
 def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
