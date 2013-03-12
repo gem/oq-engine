@@ -34,29 +34,10 @@ class Classical(object):
 
     def __call__(self, hazard_curves):
         return [scientific.classical(
-            self.vulnerability_function,
-            self.loss_ratio_exceedance_matrix,
-            hazard_curve,
-            self.steps)
-            for hazard_curve in hazard_curves]
-
-
-class ScenarioDamage(object):
-    """
-    Scenario damage calculator producing a damage distribution for each asset,
-    i.e. a matrix NxM where N is the number of realizations of the ground
-    motion field and M is the numbers of damage states. Take in input a
-    FragilityFunctionSequence object.
-    """
-    def __init__(self, ffs):
-        self.ffs = ffs
-
-    def __call__(self, ground_motion_fields):
-        return [
-            numpy.array([
-                self.ffs.ground_motion_value_fractions(gmv)
-                for gmv in ground_motion_field])
-            for ground_motion_field in ground_motion_fields]
+                self.vulnerability_function,
+                self.loss_ratio_exceedance_matrix,
+                hazard_curve,
+                self.steps) for hazard_curve in hazard_curves]
 
 
 class ProbabilisticEventBased(object):
@@ -117,5 +98,22 @@ class Scenario(object):
             len(ground_motion_fields), len(ground_motion_fields[0]),
             self.seed, self.correlation)
 
-        return [self.vulnerability_function(ground_motion_values)
-                for ground_motion_values in ground_motion_fields]
+        return map(self.vulnerability_function, ground_motion_fields)
+
+
+class ScenarioDamage(object):
+    """
+    Scenario damage calculator producing a damage distribution for each asset,
+    i.e. a matrix NxM where N is the number of realizations of the ground
+    motion field and M is the numbers of damage states. Take in input a
+    FragilityFunctionSequence object.
+    """
+    def __init__(self, ffs):
+        self.ffs = ffs
+
+    def __call__(self, ground_motion_fields):
+        """
+        The ground motion field is a list of ground motion values
+        (one array for each site). Returns a list of arrays (one per site).
+        """
+        return map(self.ffs.ground_motion_fractions, ground_motion_fields)
