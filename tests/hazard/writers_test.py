@@ -1079,3 +1079,67 @@ class ScenarioGMFXMLWriterTestCase(unittest.TestCase):
             self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
             os.unlink(path)
+
+
+class UHSXMLWriterTestCase(unittest.TestCase):
+
+    TIME = 50.0
+    POE = 0.1
+    FAKE_PATH = 'fake'
+
+    def setUp(self):
+        self.metadata = dict(
+            investigation_time=self.TIME,
+            poe=0.1,
+            smlt_path='foo',
+            gsimlt_path='bar',
+        )
+
+    def test_constructor_poe_is_none_or_missing(self):
+        self.metadata['poe'] = None
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+        del self.metadata['poe']
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_is_none_or_missing(self):
+        self.metadata['periods'] = None
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+        del self.metadata['periods']
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_is_empty_list(self):
+        self.metadata['periods'] = []
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_not_sorted(self):
+        self.metadata['periods'] = [0.025, 0.0, 0.1, 0.2]
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_serialize(self):
+        pass
+
+    def test_serializ_mean(self):
+        pass
+
+    def test_serialize_quantile(self):
+        pass
