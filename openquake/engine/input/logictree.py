@@ -80,7 +80,7 @@ class ValidationError(LogicTreeError):
 
     def __str__(self):
         return 'basepath %r, filename %r, line %r: %s' % (
-                self.basepath, self.filename, self.lineno, self.message)
+            self.basepath, self.filename, self.lineno, self.message)
 
 
 class Branch(object):
@@ -238,10 +238,9 @@ class BranchSet(object):
                 elif value == 'point':
                     # area source extends point source
                     if (not isinstance(
-                            source, openquake.hazardlib.source.PointSource) \
-                            or isinstance(
-                                    source,
-                                    openquake.hazardlib.source.AreaSource)):
+                            source, openquake.hazardlib.source.PointSource)
+                        or isinstance(
+                            source, openquake.hazardlib.source.AreaSource)):
                         return False
                 elif value == 'simpleFault':
                     if not isinstance(
@@ -442,7 +441,7 @@ class BaseLogicTree(object):
         """
         new_open_ends = set()
         branchsets = branchinglevel_node.findall('{%s}logicTreeBranchSet' %
-                                                self.NRML)
+                                                 self.NRML)
         for number, branchset_node in enumerate(branchsets):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
@@ -513,7 +512,7 @@ class BaseLogicTree(object):
                 self.validate_uncertainty_value(value_node, branchset,
                                                 value_node.text.strip())
             value = self.parse_uncertainty_value(value_node, branchset,
-                                                value_node.text.strip())
+                                                 value_node.text.strip())
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
@@ -749,7 +748,7 @@ class SourceModelLogicTree(BaseLogicTree):
                     in self.tectonic_region_types:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    "source models don't define sources of tectonic region " \
+                    "source models don't define sources of tectonic region "
                     "type %r" % filters['applyToTectonicRegionType']
                 )
         if 'applyToSourceType' in filters:
@@ -774,7 +773,7 @@ class SourceModelLogicTree(BaseLogicTree):
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    "uncertainty of type %r must define 'applyToSources' " \
+                    "uncertainty of type %r must define 'applyToSources' "
                     "with only one source id" % uncertainty_type
                 )
 
@@ -923,17 +922,16 @@ class GMPELogicTree(BaseLogicTree):
         """
         See superclass' method for description and signature specification.
 
-        Checks that the value is the name of a class that extends the
-        :attr:`BASE_GMPE` abstract base class.
+        Checks that the value is a class name in the dictionary reported
+        by get_available_gsims, i.e. a GSIM class.
         """
         try:
-            gmpe_class = GSIM[value]
+            GSIM[value]
         except KeyError:
-            raise ValidationError(node, self.filename, self.basepath,
-                                  'unknown class %r' % value)
-        if not issubclass(gmpe_class, self.BASE_GMPE):
-            raise ValidationError(node, self.filename, self.basepath,
-                                  '%r is not a gmpe class' % gmpe_class)
+            raise ValidationError(
+                node, self.filename, self.basepath,
+                'unknown class %r; available classes are: %s' % (
+                    value, list(GSIM)))
 
     def parse_filters(self, node, uncertainty_type, filters):
         """
@@ -982,7 +980,7 @@ class GMPELogicTree(BaseLogicTree):
         models there is a branchset defined.
         """
         missing_trts = self.tectonic_region_types \
-                       - self.defined_tectonic_region_types
+            - self.defined_tectonic_region_types
         if missing_trts:
             raise ValidationError(
                 tree_node, self.filename, self.basepath,
@@ -1047,10 +1045,12 @@ class LogicTreeProcessor(object):
         ID of a :class:`openquake.engine.db.models.HazardCalculation`.
     """
     def __init__(self, calc_id):
-        [smlt_input] = models.inputs4hcalc(calc_id, input_type='source_model_logic_tree')
+        [smlt_input] = models.inputs4hcalc(
+            calc_id, input_type='source_model_logic_tree')
         smlt_content = smlt_input.model_content.raw_content_ascii
 
-        [gmpelt_input] = models.inputs4hcalc(calc_id, input_type='gsim_logic_tree')
+        [gmpelt_input] = models.inputs4hcalc(
+            calc_id, input_type='gsim_logic_tree')
         gmpelt_content = gmpelt_input.model_content.raw_content_ascii
 
         self.source_model_lt = SourceModelLogicTree(

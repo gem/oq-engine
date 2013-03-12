@@ -14,10 +14,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy
 from nose.plugins.attrib import attr
 from numpy.testing import assert_almost_equal
 
 from openquake.engine import export
+from openquake.engine.db import models
 from qa_tests import _utils as qa_utils
 
 
@@ -28,7 +30,6 @@ class ScenarioHazardCase4TestCase(qa_utils.BaseQATestCase):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id)
-        actual = list(qa_utils.get_medians(output, 'PGA'))
+        actual = map(numpy.median, models.get_gmvs_per_site(output, 'PGA'))
         expected_medians = [0.41615372, 0.22797466, 0.1936226]
-
         assert_almost_equal(actual, expected_medians, decimal=2)
