@@ -200,7 +200,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.get(output_type='gmf_scenario')
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -208,8 +208,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
+
+        # As in scenario calculation we are considering only a single
+        # realization with fix the weight to 1
         return (self.hazard_getter(
-            output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
+            output.id, imt, assets, self.rc.best_maximum_distance), 1)
 
     @property
     def calculator_parameters(self):
