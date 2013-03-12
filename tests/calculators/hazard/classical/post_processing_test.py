@@ -243,7 +243,7 @@ class Bug1086719TestCase(unittest.TestCase):
         # * number_of_logic_tree_samples = 1
         # * mean_hazard_curves = false
         # * quantile_hazard_curves =
-        # * poes_hazard_maps = at least one PoE
+        # * poes = at least one PoE
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
         )
