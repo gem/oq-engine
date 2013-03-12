@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2010-2013, GEM foundation
+#  Copyright (c) 2013, GEM foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Routines for the I/O of the risklib calculators
+Routines for reading csv files for the risklib calculators
 """
 
 import os
@@ -27,10 +27,11 @@ import gzip
 import zipfile
 import ConfigParser
 import collections
+
 import numpy
+
 from openquake.risklib.models.input import FragilityModel
 from openquake.risklib.scientific import VulnerabilityFunction
-
 from openquake.risklib.utils import Register
 
 
@@ -51,7 +52,8 @@ def may_be_gz(name, fileobj):
 
 class Archive(object):
     """
-    Can be a directory or a zipfile, can contain .gz files
+    A class to read/write files from a directory or a zipfile
+    archive. The directory/zipfile can contain .gz files.
     """
     def __init__(self, path):
         self.path = path
@@ -74,6 +76,9 @@ Asset = collections.namedtuple(
 
 @read.add('fragility')
 def read_fragility(rows):
+    """
+    Given a list of string lists returns a FragilityModel
+    """
     irows = iter(rows)
     fmt, iml, limit_states = map(ast.literal_eval, irows.next())
     args = [map(ast.literal_eval, row) for row in irows]
@@ -82,6 +87,9 @@ def read_fragility(rows):
 
 @read.add('vulnerability')
 def read_vulnerability(rows):
+    """
+    Given a list of string lists returns a dictionary of VulnerabilityFunctions
+    """
     d = {}
     for row in rows:
         id_, imt, iml, loss_ratio, coefficients, distribution = map(
@@ -94,7 +102,7 @@ def read_vulnerability(rows):
 @read.add('exposure')
 def read_exposure(rows):
     """
-    Returns a list of assets ordered by taxonomy
+    Given a list of string lists returns a list of assets ordered by taxonomy.
     """
     assetlist = []
     by_taxonomy = sorted(rows, key=lambda row: row[-1])
@@ -106,6 +114,12 @@ def read_exposure(rows):
 
 @read.add('gmf')
 def read_gmf(rows):
+    """
+    Given a list of string lists of the form
+      [(lon, lat, gmv1, ... , gmvN), ...]
+    returns a list of the form
+      [(lon, lat, gmvs), ...]
+    """
     out = []
     for row in rows:
         row = map(float, row)
@@ -113,14 +127,15 @@ def read_gmf(rows):
     return out
 
 
-def write_dmg_dist(rows):
-    pass
-
-
 def read_calculator_input(path, config='job.ini', delimiter='\t'):
     """
     Read a .ini configuration file from a directory or a zip archive
     and then extract the inner files. Keep everything in memory.
+
+    :param path: a filename
+    :param config: a .ini file name (non-absolute)
+    :param delimiter: the separator of the csv files in the archive
+                      (default tab)
     """
     archive = Archive(path)
     conf = archive.open(config)
