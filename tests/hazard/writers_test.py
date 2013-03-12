@@ -29,6 +29,7 @@ from openquake.nrmllib.hazard import writers
 from tests import _utils as utils
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
+UHSData = namedtuple('UHSData', 'location, imls')
 Location = namedtuple('Location', 'x, y')
 GmfNode = namedtuple('GmfNode', 'gmv, location')
 
