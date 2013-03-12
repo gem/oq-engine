@@ -690,3 +690,37 @@ class ScenarioGMFXMLWriter(object):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class UHSXMLWriter(BaseCurveXMLWriter):
+    """
+    UHS curve XML writer. See :class:`BaseCurveXMLWriter` for a list of general
+    constructor inputs.
+
+    The following additional metadata params are required:
+        * poe: Probability of exceedance for which a given set of UHS have been
+               computed
+        * periods: A list of SA (Spectral Acceleration) period values, sorted
+                   ascending order
+    """
+
+    def __init__(self, path, **metadata):
+        super(UHSXMLWriter, self).__init__(path, **metadata)
+
+        if self.metadata.get('poe') is None:
+            raise ValueError('`poe` keyword arg is required')
+
+        periods = self.metadata.get('periods')
+        if periods is None:
+            raise ValueError('`periods` keyword arg is required')
+
+        if len(periods) == 0:
+            raise ValueError('`periods` must contain at least one value')
+
+        if not sorted(periods) == periods:
+            raise ValueError(
+                '`periods` values must be sorted in ascending order'
+            )
+
+    def serialize(self, data):
+        pass
