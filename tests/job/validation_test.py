@@ -83,7 +83,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=None
@@ -112,7 +112,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=None
@@ -147,7 +147,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=dict(site_model_file=object())
@@ -175,7 +175,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves='true',
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=None
@@ -203,7 +203,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=None
@@ -237,7 +237,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardForm(
             instance=hc, files=None
@@ -261,7 +261,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             'number_of_logic_tree_samples': [
                 'Number of logic tree samples must be >= 0',
             ],
-            'poes_hazard_maps': [
+            'poes': [
                 'PoEs for hazard maps must be in the range [0, 1]',
             ],
             'quantile_hazard_curves': [
@@ -323,7 +323,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             truncation_level=-0.1,
             maximum_distance=0,
             quantile_hazard_curves=[0.0, -0.1, 1.1],
-            poes_hazard_maps=[1.00001, -0.5, 0.0],
+            poes=[1.00001, -0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -373,7 +373,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             truncation_level=0,
             maximum_distance=1,
             quantile_hazard_curves=[0.0, 0.1, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -412,7 +412,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -456,7 +456,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             truncation_level=0,
             maximum_distance=1,
             quantile_hazard_curves=[0.0, 0.1, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -500,7 +500,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -537,7 +537,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            poes=[1.0, 0.5, 0.0],
         )
 
         form = validation.ClassicalHazardForm(
@@ -623,7 +623,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             hazard_curves_from_gmfs=True,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.5, 0.95],
-            poes_hazard_maps=[0.1, 0.2],
+            poes=[0.1, 0.2],
         )
         form = validation.EventBasedHazardForm(
             instance=hc, files=None
