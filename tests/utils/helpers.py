@@ -198,15 +198,19 @@ def run_hazard_job(cfg, exports=None):
     return completed_job
 
 
-# XXX: should we unify run_hazard_job_sp and run_risk_job_sp?
-def run_hazard_job_sp(config_file, params=None, check_output=False,
-                      silence=False, force_inputs=True):
+def run_job_sp(job_type, config_file, hazard_id=None, params=None,
+               silence=False, force_inputs=True):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
 
+    :param str job_type:
+        'risk' or 'hazard'
     :param str config_file:
-        Path to the calculation config file.
+        Path to the calculation config file
+    :param hazard_id:
+      ID of the hazard output used by the risk calculation; None when
+      performing a hazard computation
     :param list params:
         List of additional command line params to bin/openquake. Optional.
     :param bool check_output:
@@ -229,44 +233,18 @@ def run_hazard_job_sp(config_file, params=None, check_output=False,
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = [RUNNER, "--run-hazard=%s" % config_file]
+    args = [RUNNER, "--run-%s=%s" % (job_type, config_file)]
+    if hazard_id:
+        args.append("--hazard-output-id=%d" % hazard_id)
     if force_inputs:
         args.append('--force-inputs')
-
-    if params is not None:
+    if params:
         args.extend(params)
 
-    if check_output:
-        return subprocess.check_output(args, stdout=open(os.devnull, 'wb')
-                                       if silence else None)
-    else:
-        return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
-                                     if silence else None)
-
-
-def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
-                    force_inputs=True):
-    """
-    Given a path to a config file, run an openquake risk job as a separate
-    process using `subprocess`. See `run_hazard_job_sp` for the signature
-
-    :param hazard_id:
-      ID of the hazard output used by the risk calculation
-    """
-
-    args = [RUNNER, "--run-risk=%s" % config_file,
-            "--log-level=debug",
-            "--hazard-output-id=%d" % hazard_id]
-    if force_inputs:
-        args.append('--force-inputs')
-
-    if params is not None:
-        args.extend(params)
-
+    # NB: stderr is never captured, so that errors are never silenced
     print 'Running:', ' '.join(args)  # this is useful for debugging
     return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
                                  if silence else None)
-    # NB: stderr is never captured, so that errors are never silenced
 
 
 def store_hazard_logic_trees(a_job):

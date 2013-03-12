@@ -615,7 +615,7 @@ class Bug1086719TestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
         )
-        retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
         self.assertEqual(0, retcode)
 
 
