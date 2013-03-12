@@ -24,7 +24,6 @@ from openquake.risklib import api, scientific
 from django.db import transaction
 
 from openquake.engine.calculators.risk import hazard_getters
-from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks
