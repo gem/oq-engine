@@ -1290,16 +1290,21 @@ ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 -- composed of a set of 2D matrices, 1 matrix per site/point of interest.
 -- Each 2D matrix has a number of rows equal to `realizations` and a number of
 -- columns equal to the number of `periods`.
-CREATE TABLE hzrdr.uh_spectra (
+CREATE TABLE hzrdr.uhs (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    timespan float NOT NULL CONSTRAINT valid_uhs_timespan
-        CHECK (timespan > 0.0),
-    realizations INTEGER NOT NULL CONSTRAINT uh_spectra_realizations_is_set
-        CHECK (realizations >= 1),
-    -- There should be at least 1 period value defined.
-    periods float[] NOT NULL CONSTRAINT uh_spectra_periods_is_set
-        CHECK ((periods <> '{}'))
+    lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
+    investigation_time float NOT NULL,
+    poe float NOT NULL,
+    periods float[] NOT NULL,
+    statistics VARCHAR CONSTRAINT uhs_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT uhs_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1307,28 +1312,13 @@ CREATE TABLE hzrdr.uh_spectra (
 --
 -- * "Uniform" meaning "the same PoE"
 -- * "Spectrum" because it covers a range/band of periods/frequencies
-CREATE TABLE hzrdr.uh_spectrum (
+CREATE TABLE hzrdr.uhs_data (
     id SERIAL PRIMARY KEY,
-    uh_spectra_id INTEGER NOT NULL,
-    poe float NOT NULL CONSTRAINT uh_spectrum_poe_is_set
-        CHECK ((poe >= 0.0) AND (poe <= 1.0))
+    uhs_id INTEGER NOT NULL,
+    imls float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
-
-
--- Uniform Hazard Spectrum Data
---
--- A single "row" of data in a UHS matrix for a specific site/point of interest.
-CREATE TABLE hzrdr.uh_spectrum_data (
-    id SERIAL PRIMARY KEY,
-    uh_spectrum_id INTEGER NOT NULL, -- Unique -> (uh_spectrum_id, realization, location)
-    -- logic tree sample number for this calculation result,
-    -- from 0 to N
-    realization INTEGER NOT NULL,
-    sa_values float[] NOT NULL CONSTRAINT sa_values_is_set
-        CHECK ((sa_values <> '{}'))
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('hzrdr', 'uhs_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.uhs_data ALTER COLUMN location SET NOT NULL;
 
 
 -- keep track of logic tree realization progress for a given calculation
@@ -1821,20 +1811,21 @@ ON DELETE CASCADE;
 
 
 -- UHS:
--- uh_spectra -> output FK
-ALTER TABLE hzrdr.uh_spectra
-ADD CONSTRAINT hzrdr_uh_spectra_output_fk
+-- uhs -> output FK
+ALTER TABLE hzrdr.uhs
+ADD CONSTRAINT hzrdr_uhs_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
--- uh_spectrum -> uh_spectra FK
-ALTER TABLE hzrdr.uh_spectrum
-ADD CONSTRAINT hzrdr_uh_spectrum_uh_spectra_fk
-FOREIGN KEY (uh_spectra_id) REFERENCES hzrdr.uh_spectra(id) ON DELETE CASCADE;
+-- uhs -> hzrdr.lt_realization FK
+ALTER TABLE hzrdr.uhs
+ADD CONSTRAINT hzrdr_uhs_lt_realization_fk
+FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
+ON DELETE CASCADE;
 
--- uh_spectrum_data -> uh_spectrum FK
-ALTER TABLE hzrdr.uh_spectrum_data
-ADD CONSTRAINT hzrdr_uh_spectrum_data_uh_spectrum_fk
-FOREIGN KEY (uh_spectrum_id) REFERENCES hzrdr.uh_spectrum(id) ON DELETE CASCADE;
+-- uhs_data -> uhs FK
+ALTER TABLE hzrdr.uhs_data
+ADD CONSTRAINT hzrdr_uhs_data_uhs_fk
+FOREIGN KEY (uhs_id) REFERENCES hzrdr.uhs(id) ON DELETE CASCADE;
 
 -- hzrdr.lt_realization -> uiapi.hazard_calculation FK
 ALTER TABLE hzrdr.lt_realization
