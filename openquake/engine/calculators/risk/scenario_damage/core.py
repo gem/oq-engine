@@ -168,11 +168,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.fragility_functions = None  # will be set in #set_risk_models
         self.damage_states = None  # will be set in #set_risk_models
 
-        # TODO(lp). At this moment, fragility model with structure
-        # dependent intensity measure types are not supported. So the
-        # calculation is run on only one intensity measure type
-        self.imt = None  # set in #parse_fragility_model
-
     def hazard_outputs(self, hazard_calculation):
         """
         :returns: the single hazard output associated to
@@ -185,7 +180,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.get(
                 output_type='gmf_scenario')
 
-    def create_getter(self, output, _imt, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -194,11 +189,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
 
-        # at this moment, scenario damage does not support structure
-        # dependent imts, so all the hazard getters will be created
-        # with the same imt got from the fragility model.
         return (self.hazard_getter(
-            output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
+            output.id, imt, assets, self.rc.best_maximum_distance), 1)
 
     def worker_args(self, taxonomy):
         """
@@ -276,7 +268,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         self.fragility_model = fm = self.parse_fragility_model()
         self.damage_states = ['no_damage'] + fm.limit_states
-        self.imt = fm.imt
+        for taxonomy in self.taxonomies:
+            self.taxonomies_imts[taxonomy] = fm.imt
         self.check_taxonomies(fm)
 
     def parse_fragility_model(self):
