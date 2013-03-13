@@ -150,6 +150,14 @@ class FragilityFunctionSequence(Sequence):
         damage_state_values[n_limit_states] = self[n_limit_states - 1].poe(gmv)
         return damage_state_values
 
+    def ground_motion_fractions(self, gmvs):
+        """
+        Compute the damage state fractions for the given array of ground
+        motion values. Returns an NxM matrix where N is the number of
+        realizations and M is the numbers of damage states.
+        """
+        return numpy.array(map(self.ground_motion_value_fractions, gmvs))
+
 
 class FragilityModel(Mapping):
     """
