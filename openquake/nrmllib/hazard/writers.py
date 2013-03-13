@@ -152,8 +152,8 @@ class BaseCurveXMLWriter(object):
 
 class HazardCurveXMLWriter(BaseCurveXMLWriter):
     """
-    Hazard Curve XML writer. See :class:`BaseCurveXMLWriter` for expected
-    constructor inputs.
+    Hazard Curve XML writer. See :class:`BaseCurveXMLWriter` for a list of
+    general constructor inputs.
 
     The following additional metadata params are required:
         * imt: Intensity measure type used to compute these hazard curves.
