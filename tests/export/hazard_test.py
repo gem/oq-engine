@@ -128,7 +128,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -178,7 +178,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('event_based_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -260,7 +260,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('scenario_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
@@ -296,7 +296,7 @@ class DisaggExportTestCase(BaseExportTestCase):
         try:
             cfg = helpers.demo_file('disaggregation/job.ini')
 
-            retcode = helpers.run_hazard_job_sp(cfg, silence=True)
+            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
             self.assertEqual(0, retcode)
 
             job = models.OqJob.objects.latest('id')
