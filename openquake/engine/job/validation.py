@@ -191,6 +191,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         'reference_vs30_type',
         'reference_depth_to_2pt5km_per_sec',
         'reference_depth_to_1pt0km_per_sec',
+        'intensity_measure_types',
         'export_dir',
     )
 
@@ -250,15 +251,6 @@ class BaseHazardModelForm(BaseOQModelForm):
                 all_valid &= valid
                 self._add_error(field, errs)
 
-        if 'vulnerability_file' not in self.files:
-            for field in (
-                    'intensity_measure_types_and_levels',
-                    'intensity_measure_types'
-            ):
-                valid, errs = globals().get('%s_is_valid' % field)(hc)
-                all_valid &= valid
-                self._add_error(field, errs)
-
         return all_valid
 
 
@@ -275,6 +267,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
+            'intensity_measure_types',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
@@ -292,6 +285,18 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'export_dir',
         )
 
+    def is_valid(self):
+        super_valid = super(ClassicalHazardForm, self).is_valid()
+        all_valid = super_valid
+
+        if 'vulnerability_file' not in self.files:
+            valid, errs = intensity_measure_types_and_levels_is_valid(
+                self.instance)
+            all_valid &= valid
+            self._add_error('intensity_measure_types_and_levels', errs)
+
+        return all_valid
+
 
 class EventBasedHazardForm(BaseHazardModelForm):
 
@@ -305,6 +310,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'region',
             'region_grid_spacing',
             'sites',
+            'intensity_measure_types',
             'random_seed',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
@@ -369,6 +375,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
                 # 2) The IMT keys in `intensity_measure_types_and_levels` need
                 #    to be a subset of `intensity_measure_types`.
                 imts = set(hc.intensity_measure_types_and_levels.keys())
+
                 all_imts = set(hc.intensity_measure_types)
 
                 if not imts.issubset(all_imts):
@@ -378,6 +385,11 @@ class EventBasedHazardForm(BaseHazardModelForm):
 
                     self._add_error('intensity_measure_types_and_levels', msg)
                     all_valid = False
+        elif 'vulnerability_file' not in self.files:
+            valid, errs = intensity_measure_types_is_valid(
+                self.instance)
+            all_valid &= valid
+            self._add_error('intensity_measure_types', errs)
 
         return all_valid
 
@@ -395,6 +407,7 @@ class DisaggHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
+            'intensity_measure_types',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
@@ -414,6 +427,18 @@ class DisaggHazardForm(BaseHazardModelForm):
             'export_dir',
         )
 
+    def is_valid(self):
+        super_valid = super(DisaggHazardForm, self).is_valid()
+        all_valid = super_valid
+
+        if 'vulnerability_file' not in self.files:
+            valid, errs = intensity_measure_types_and_levels_is_valid(
+                self.instance)
+            all_valid &= valid
+            self._add_error('intensity_measure_types_and_levels', errs)
+
+        return all_valid
+
 
 class ScenarioHazardForm(BaseHazardModelForm):
 
@@ -427,6 +452,7 @@ class ScenarioHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
+            'intensity_measure_types',
             'rupture_mesh_spacing',
             'reference_vs30_value',
             'reference_vs30_type',
@@ -440,6 +466,18 @@ class ScenarioHazardForm(BaseHazardModelForm):
             'ground_motion_correlation_params',
             'export_dir',
         )
+
+    def is_valid(self):
+        super_valid = super(ScenarioHazardForm, self).is_valid()
+        all_valid = super_valid
+
+        if 'vulnerability_file' not in self.files:
+            valid, errs = intensity_measure_types_is_valid(
+                self.instance)
+            all_valid &= valid
+            self._add_error('intensity_measure_types', errs)
+
+        return all_valid
 
 
 class ClassicalRiskForm(BaseOQModelForm):
@@ -717,11 +755,6 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     valid = True
     errors = []
 
-    if mdl.calculation_mode in ['event_based', 'scenario'] and im is None:
-        # For event-based and scenario hazard calculations, this
-        # parameter is optional
-        return valid, errors
-
     for im_type, imls in im.iteritems():
         # validate IMT:
         valid_imt, imt_errors = _validate_imt(im_type)
@@ -750,10 +783,8 @@ def intensity_measure_types_and_levels_is_valid(mdl):
 def intensity_measure_types_is_valid(mdl):
     imts = mdl.intensity_measure_types
 
-    if mdl.calculation_mode not in ['event_based', 'scenario']:
-        # For non event-based hazard calculations, this parameter is
-        # optional
-        return True, []
+    if isinstance(imts, str):
+        imts = [imts]
 
     valid = True
     errors = []
