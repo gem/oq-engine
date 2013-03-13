@@ -29,7 +29,6 @@ supervise() will:
 
 import logging
 import os
-import sys
 import signal
 
 import openquake.engine
@@ -161,7 +160,7 @@ class SupervisorLogStreamHandler(logging.StreamHandler):
     """
 
     def __init__(self, job_id):
-        super(SupervisorLogStreamHandler, self).__init__(sys.stdout)
+        super(SupervisorLogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.job_id = job_id
 
