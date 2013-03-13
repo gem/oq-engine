@@ -46,6 +46,8 @@ from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard import general as haz_general
+from openquake.engine.calculators.hazard.classical import (
+    post_processing as cls_post_proc)
 from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
@@ -641,5 +643,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
                 self.do_aggregate_post_proc()
+
+            if self.hc.hazard_maps:
+                cls_post_proc.do_hazard_map_post_process(self.job)
 
         logs.LOG.debug('< done with post processing')
