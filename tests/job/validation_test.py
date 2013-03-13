@@ -262,7 +262,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
                 'Number of logic tree samples must be >= 0',
             ],
             'poes': [
-                'PoEs for hazard maps must be in the range [0, 1]',
+                '`poes` values must be in the range [0, 1]',
             ],
             'quantile_hazard_curves': [
                 'Quantile hazard curve values must in the range [0, 1]'
