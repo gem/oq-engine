@@ -723,4 +723,40 @@ class UHSXMLWriter(BaseCurveXMLWriter):
             )
 
     def serialize(self, data):
-        pass
+        """
+        Write a sequence of uniform hazard spectra to the specified file.
+
+        :param data:
+            Iterable of UHS data. Each datum must be an object with the
+            following attributes:
+
+            * imls: A sequence of Itensity Measure Levels
+            * location: An object representing the location of the curve; must
+              have `x` and `y` to represent lon and lat, respectively.
+        """
+        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+
+        with open(self.path, 'w') as fh:
+            root = etree.Element(
+                'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
+            )
+
+            uh_spectra = etree.SubElement(root, 'uniformHazardSpectra')
+
+            _set_metadata(uh_spectra, self.metadata, _ATTR_MAP)
+
+            periods_elem = etree.SubElement(uh_spectra, 'periods')
+            periods_elem.text = ' '.join([str(x)
+                                          for x in self.metadata['periods']])
+
+            for uhs in data:
+                uhs_elem = etree.SubElement(uh_spectra, 'uhs')
+                gml_point = etree.SubElement(uhs_elem, '{%s}Point' % gml_ns)
+                gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+                gml_pos.text = '%s %s' % (uhs.location.x, uhs.location.y)
+                imls_elem = etree.SubElement(uhs_elem, 'IMLs')
+                imls_elem.text = ' '.join([str(x) for x in uhs.imls])
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
