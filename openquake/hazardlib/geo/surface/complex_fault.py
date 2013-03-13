@@ -44,7 +44,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         self.strike = self.dip = None
 
         # A common user error is to create a ComplexFaultSourceSurface
-        # from invalid fault data (e.g. inverting the order of
+        # from invalid fault data (e.g. mixing the order of
         # vertexes for top and bottom edges). Therefore, we want to
         # restrict every complex source to have a projected enclosing
         # polygon that is not a multipolygon.
