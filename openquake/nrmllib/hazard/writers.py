@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2012-2013, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -115,8 +115,10 @@ def _set_metadata(element, metadata, attr_map, transform=str):
             element.set(attr, transform(value))
 
 
-class HazardCurveXMLWriter(object):
+class BaseCurveXMLWriter(object):
     """
+    Base class for curve writers.
+
     :param path:
         File path (including filename) for XML results to be saved to.
     :param metadata:
@@ -124,9 +126,6 @@ class HazardCurveXMLWriter(object):
 
         * investigation_time: Investigation time (in years) defined in the
           calculation which produced these results.
-        * imt: Intensity measure type used to compute these hazard curves.
-        * imls: Intensity measure levels, which represent the x-axis values of
-          each curve.
 
         The following are more or less optional (combinational rules noted
         below where applicable):
@@ -137,14 +136,34 @@ class HazardCurveXMLWriter(object):
           these curves. Only required for non-statistical curves.
         * gsimlt_path: String represeting the GSIM logic tree path which
           produced these curves. Only required for non-statisical curves.
-        * sa_period: Only used with imt = 'SA'.
-        * sa_damping: Only used with imt = 'SA'.
     """
 
     def __init__(self, path, **metadata):
         self.path = path
         self.metadata = metadata
         _validate_hazard_metadata(metadata)
+
+    def serialize(self, _data):
+        """
+        Implement in subclasses.
+        """
+        raise NotImplementedError
+
+
+class HazardCurveXMLWriter(BaseCurveXMLWriter):
+    """
+    Hazard Curve XML writer. See :class:`BaseCurveXMLWriter` for a list of
+    general constructor inputs.
+
+    The following additional metadata params are required:
+        * imt: Intensity measure type used to compute these hazard curves.
+        * imls: Intensity measure levels, which represent the x-axis values of
+          each curve.
+
+    The following parameters are optional:
+        * sa_period: Only used with imt = 'SA'.
+        * sa_damping: Only used with imt = 'SA'.
+    """
 
     def serialize(self, data):
         """
@@ -667,6 +686,76 @@ class ScenarioGMFXMLWriter(object):
                     node_elem.set('gmv', str(gmf_node.gmv))
                     node_elem.set('lon', str(gmf_node.location.x))
                     node_elem.set('lat', str(gmf_node.location.y))
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
+
+
+class UHSXMLWriter(BaseCurveXMLWriter):
+    """
+    UHS curve XML writer. See :class:`BaseCurveXMLWriter` for a list of general
+    constructor inputs.
+
+    The following additional metadata params are required:
+        * poe: Probability of exceedance for which a given set of UHS have been
+               computed
+        * periods: A list of SA (Spectral Acceleration) period values, sorted
+                   ascending order
+    """
+
+    def __init__(self, path, **metadata):
+        super(UHSXMLWriter, self).__init__(path, **metadata)
+
+        if self.metadata.get('poe') is None:
+            raise ValueError('`poe` keyword arg is required')
+
+        periods = self.metadata.get('periods')
+        if periods is None:
+            raise ValueError('`periods` keyword arg is required')
+
+        if len(periods) == 0:
+            raise ValueError('`periods` must contain at least one value')
+
+        if not sorted(periods) == periods:
+            raise ValueError(
+                '`periods` values must be sorted in ascending order'
+            )
+
+    def serialize(self, data):
+        """
+        Write a sequence of uniform hazard spectra to the specified file.
+
+        :param data:
+            Iterable of UHS data. Each datum must be an object with the
+            following attributes:
+
+            * imls: A sequence of Itensity Measure Levels
+            * location: An object representing the location of the curve; must
+              have `x` and `y` to represent lon and lat, respectively.
+        """
+        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+
+        with open(self.path, 'w') as fh:
+            root = etree.Element(
+                'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
+            )
+
+            uh_spectra = etree.SubElement(root, 'uniformHazardSpectra')
+
+            _set_metadata(uh_spectra, self.metadata, _ATTR_MAP)
+
+            periods_elem = etree.SubElement(uh_spectra, 'periods')
+            periods_elem.text = ' '.join([str(x)
+                                          for x in self.metadata['periods']])
+
+            for uhs in data:
+                uhs_elem = etree.SubElement(uh_spectra, 'uhs')
+                gml_point = etree.SubElement(uhs_elem, '{%s}Point' % gml_ns)
+                gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+                gml_pos.text = '%s %s' % (uhs.location.x, uhs.location.y)
+                imls_elem = etree.SubElement(uhs_elem, 'IMLs')
+                imls_elem.text = ' '.join([str(x) for x in uhs.imls])
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,

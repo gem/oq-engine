@@ -8,18 +8,27 @@
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
-    <!-- UHS Result Set: the top-level element for UHS results -->
-    <xs:element name="uhsResultSet" type="UHSResultSetType"/>
-    <xs:complexType name="UHSResultSetType">
+    <xs:element name="uniformHazardSpectra" type="UniformHazardSpectra"/>
+    <xs:complexType name="UniformHazardSpectra">
         <xs:sequence>
-            <xs:element ref="uhsPeriods" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="timeSpan" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="uhsResult" minOccurs="1" maxOccurs="unbounded"/>
+            <xs:element ref="periods" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="uhs" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
+
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="poE" type="NormalizedDoubleType" use="required" />
+
+        <xs:attribute name="statistics" type="HazardCurveStats" use="optional" />
+        <!-- quantileValue is only used when statistics == 'quantile' -->
+        <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
+
+        <!-- Both tree paths are only used for representing curves for a single realization.
+             In other words, the paths are not relevent for statistical results (mean or quantile). -->
+        <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
+        <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
     </xs:complexType>
 
-    <!-- List of UHS periods for a uhsResultSet (float values) -->
-    <xs:element name="uhsPeriods">
+    <xs:element name="periods">
         <xs:simpleType>
             <xs:restriction base="gml:doubleList">
                 <xs:minLength value="1"/>
@@ -27,13 +36,13 @@
         </xs:simpleType>
     </xs:element>
 
-    <xs:element name="timeSpan" type="PositiveDoubleType"/>
-
     <!-- UHS result node -->
-    <xs:element name="uhsResult">
+    <xs:element name="uhs">
         <xs:complexType>
-            <xs:attribute name="poE" type="PositiveDoubleType" use="required"/>
-            <xs:attribute name="path" type="xs:string" use="required"/>
+            <xs:sequence>
+                <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
+                <xs:element name="IMLs" type="gml:doubleList" minOccurs="1" maxOccurs="1" />
+            </xs:sequence>
         </xs:complexType>
     </xs:element>
 

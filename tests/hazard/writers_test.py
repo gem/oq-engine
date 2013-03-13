@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2012-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,7 @@ from openquake.nrmllib.hazard import writers
 from tests import _utils as utils
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
+UHSData = namedtuple('UHSData', 'location, imls')
 Location = namedtuple('Location', 'x, y')
 GmfNode = namedtuple('GmfNode', 'gmv, location')
 
@@ -1077,5 +1078,172 @@ class ScenarioGMFXMLWriterTestCase(unittest.TestCase):
             writer.serialize(gmfs)
             utils.assert_xml_equal(expected, path)
             self.assertTrue(utils.validates_against_xml_schema(path))
+        finally:
+            os.unlink(path)
+
+
+class UHSXMLWriterTestCase(unittest.TestCase):
+
+    TIME = 50.0
+    POE = 0.1
+    FAKE_PATH = 'fake'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.expected_xml = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <uniformHazardSpectra sourceModelTreePath="foo" gsimTreePath="bar" investigationTime="50.0" poE="0.1">
+    <periods>0.0 0.025 0.1 0.2</periods>
+    <uhs>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+    </uhs>
+    <uhs>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+    </uhs>
+  </uniformHazardSpectra>
+</nrml>
+""")
+        cls.expected_mean_xml = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <uniformHazardSpectra statistics="mean" investigationTime="50.0" poE="0.1">
+    <periods>0.0 0.025 0.1 0.2</periods>
+    <uhs>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+    </uhs>
+    <uhs>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+    </uhs>
+  </uniformHazardSpectra>
+</nrml>
+""")
+        cls.expected_quantile_xml = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <uniformHazardSpectra statistics="quantile" quantileValue="0.95" investigationTime="50.0" poE="0.1">
+    <periods>0.0 0.025 0.1 0.2</periods>
+    <uhs>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+    </uhs>
+    <uhs>
+      <gml:Point>
+        <gml:pos>1.0 1.0</gml:pos>
+      </gml:Point>
+      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+    </uhs>
+  </uniformHazardSpectra>
+</nrml>
+""")
+        cls.data = [
+            UHSData(Location(0.0, 0.0), [0.3, 0.5, 0.2, 0.1]),
+            UHSData(Location(1.0, 1.0), [0.4, 0.6, 0.3, 0.05]),
+        ]
+
+
+    def setUp(self):
+        self.metadata = dict(
+            investigation_time=self.TIME,
+            poe=0.1,
+            smlt_path='foo',
+            gsimlt_path='bar',
+            periods=[0.0, 0.025, 0.1, 0.2],
+        )
+
+    def test_constructor_poe_is_none_or_missing(self):
+        self.metadata['poe'] = None
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+        del self.metadata['poe']
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_is_none_or_missing(self):
+        self.metadata['periods'] = None
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+        del self.metadata['periods']
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_is_empty_list(self):
+        self.metadata['periods'] = []
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_constructor_periods_not_sorted(self):
+        self.metadata['periods'] = [0.025, 0.0, 0.1, 0.2]
+        self.assertRaises(
+            ValueError, writers.UHSXMLWriter,
+            self.FAKE_PATH, **self.metadata
+        )
+
+    def test_serialize(self):
+        try:
+            _, path = tempfile.mkstemp()
+            writer = writers.UHSXMLWriter(path, **self.metadata)
+
+            writer.serialize(self.data)
+
+            utils.assert_xml_equal(self.expected_xml, path)
+        finally:
+            os.unlink(path)
+
+    def test_serialize_mean(self):
+        del self.metadata['smlt_path']
+        del self.metadata['gsimlt_path']
+        self.metadata['statistics'] = 'mean'
+
+        try:
+            _, path = tempfile.mkstemp()
+            writer = writers.UHSXMLWriter(path, **self.metadata)
+
+            writer.serialize(self.data)
+
+            utils.assert_xml_equal(self.expected_mean_xml, path)
+        finally:
+            os.unlink(path)
+
+
+    def test_serialize_quantile(self):
+        del self.metadata['smlt_path']
+        del self.metadata['gsimlt_path']
+        self.metadata['statistics'] = 'quantile'
+        self.metadata['quantile_value'] = 0.95
+
+        try:
+            _, path = tempfile.mkstemp()
+            writer = writers.UHSXMLWriter(path, **self.metadata)
+
+            writer.serialize(self.data)
+
+            utils.assert_xml_equal(self.expected_quantile_xml, path)
         finally:
             os.unlink(path)
