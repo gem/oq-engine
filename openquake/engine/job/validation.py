@@ -336,6 +336,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'quantile_hazard_curves',
             'poes',
             'export_dir',
+            'hazard_maps',
         )
 
     def is_valid(self):
