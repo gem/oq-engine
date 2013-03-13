@@ -370,8 +370,8 @@ class Bug1098154TestCase(unittest.TestCase):
     def test(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
-        retcode = helpers.run_hazard_job_sp(
-            cfg, silence=True, force_inputs=False
+        retcode = helpers.run_job_sp(
+            'hazard', cfg, silence=True, force_inputs=False
         )
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
@@ -380,8 +380,8 @@ class Bug1098154TestCase(unittest.TestCase):
 
         # As the bug description explains, run the same job a second time and
         # check the task count. It should not grow.
-        retcode = helpers.run_hazard_job_sp(
-            cfg, silence=True, force_inputs=False
+        retcode = helpers.run_job_sp(
+            'hazard', cfg, silence=True, force_inputs=False
         )
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
