@@ -92,6 +92,8 @@ class LossCurveXMLWriter(object):
               describing the losses.
             * define an attribute `loss_ratios`, which is a list of floats
               describing the loss ratios.
+            * define an attribute `average_loss`, which is a float
+              describing the average loss associated to the loss curve
 
             All attributes must be defined, except for `loss_ratios` that
             can be `None` since it is optional in the schema.
@@ -128,6 +130,9 @@ class LossCurveXMLWriter(object):
 
                     loss_ratios.text = " ".join(
                         [str(p) for p in curve.loss_ratios])
+
+                losses = etree.SubElement(loss_curve, "averageLoss")
+                losses.text = "%.4e" % curve.average_loss
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
@@ -217,6 +222,8 @@ class AggregateLossCurveXMLWriter(object):
               describing the probabilities of exceedance.
             * define an attribute `losses`, which is a list of floats
               describing the losses.
+            * define an attribute `average_loss`, which is a float
+              describing the average loss associated to the loss curve
 
             Also, `poes`, `losses` values must be indexed coherently,
             i.e.: the loss at index zero is related to the probability
@@ -258,6 +265,9 @@ class AggregateLossCurveXMLWriter(object):
 
             losses = etree.SubElement(aggregate_loss_curve, "losses")
             losses.text = " ".join(["%.4f" % p for p in data.losses])
+
+            losses = etree.SubElement(aggregate_loss_curve, "averageLoss")
+            losses.text = "%.4e" % data.average_loss
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
