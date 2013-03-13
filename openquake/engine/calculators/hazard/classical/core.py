@@ -306,7 +306,7 @@ BaseHazardCalculatorNext.finalize_hazard_curves`
             self.do_aggregate_post_proc()
 
         # hazard maps:
-        if len(self.hc.poes) > 0:
+        if self.hc.hazard_maps:
             post_proc.do_hazard_map_post_process(self.job)
 
         logs.LOG.debug('< done with post processing')
