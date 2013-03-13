@@ -180,7 +180,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.get(
                 output_type='gmf_scenario')
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -188,8 +188,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a ground motion field: %s"
                 % output.output_type)
+
         return (self.hazard_getter(
-            output.id, self.imt, assets, self.rc.best_maximum_distance), 1)
+            output.id, imt, assets, self.rc.best_maximum_distance), 1)
 
     def worker_args(self, taxonomy):
         """
@@ -267,7 +268,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         self.fragility_model = fm = self.parse_fragility_model()
         self.damage_states = ['no_damage'] + fm.limit_states
-        self.imt = fm.imt
+        for taxonomy in self.taxonomies:
+            self.taxonomies_imts[taxonomy] = fm.imt
         self.check_taxonomies(fm)
 
     def parse_fragility_model(self):

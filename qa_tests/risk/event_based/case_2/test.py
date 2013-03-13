@@ -32,46 +32,6 @@ from openquake.engine.db import models
 class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
     cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
-    EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="50.0" sourceModelTreePath="test_sm" gsimTreePath="test_gsim" unit="USD">
-    <lossCurve assetRef="a1">
-      <gml:Point>
-        <gml:pos>15.48 38.09</gml:pos>
-      </gml:Point>
-      <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
-      <losses>34.3158848505 85.399369608 117.245425501 149.043885673 172.193230479 195.342575285 218.49192009 241.641264896 264.790609701</losses>
-      <lossRatios>0.0114386282835 0.028466456536 0.0390818085005 0.0496812952244 0.057397743493 0.0651141917615 0.07283064003 0.0805470882986 0.0882635365671</lossRatios>
-    </lossCurve>
-    <lossCurve assetRef="a2">
-      <gml:Point>
-        <gml:pos>15.56 38.17</gml:pos>
-      </gml:Point>
-      <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
-      <losses>8.76706068558 30.247789599 30.8360122116 31.1984360596 31.2782554554 31.3580748512 31.437894247 31.5177136426 31.5975330384</losses>
-      <lossRatios>0.00438353034279 0.0151238947995 0.0154180061058 0.0155992180298 0.0156391277277 0.0156790374256 0.0157189471235 0.0157588568213 0.0157987665192</lossRatios>
-    </lossCurve>
-    <lossCurve assetRef="a3">
-      <gml:Point>
-        <gml:pos>15.48 38.25</gml:pos>
-      </gml:Point>
-      <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
-      <losses>11.5144783375 34.5514270991 39.0887926791 43.4302192561 44.7861535336 46.1420878111 47.4980220885 48.853956366 50.2098906434</losses>
-      <lossRatios>0.0115144783375 0.0345514270991 0.0390887926791 0.0434302192561 0.0447861535336 0.0461420878111 0.0474980220885 0.048853956366 0.0502098906434</lossRatios>
-    </lossCurve>
-  </lossCurves>
-</nrml>
-"""
-
-    EXPECTED_AGG_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
-    <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <aggregateLossCurve investigationTime="50.0" sourceModelTreePath="test_sm" gsimTreePath="test_gsim" unit="USD">
-    <poEs>1.0 0.875 0.75 0.625 0.5 0.375 0.25 0.125 0.0</poEs>
-    <losses>55.0411 157.5215 191.8946 222.8025 244.5078 266.2131 287.9184 309.6237 331.3290</losses>
-  </aggregateLossCurve>
-</nrml>
-"""
-
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
@@ -153,40 +113,35 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
 
         poes = [1., 0.875, 0.75, 0.625, 0.5, 0.375, 0.25, 0.125, 0.]
 
-        losses_1 = [34.3158848505, 85.3993696079, 117.245425502,
-                    149.043885673, 172.193230479, 195.342575284, 218.49192009,
-                    241.641264896, 264.790609701]
+        losses_1 = [34.15579868, 84.82030582, 119.13233149, 153.38822684,
+                    174.68457983, 195.98093282, 217.27728581, 238.57363879,
+                    259.86999178]
 
-        losses_2 = [8.76706068558, 30.247789599, 30.8360122117,
-                    31.1984360597, 31.2782554554, 31.3580748512, 31.4378942469,
-                    31.5177136427, 31.5975330384]
+        losses_2 = [8.78869703, 30.33486712, 30.75305391, 30.79763445,
+                    30.86036245, 30.92309045, 30.98581845, 31.04854645,
+                    31.11127446]
 
-        losses_3 = [11.5144783375, 34.5514270991, 39.0887926791,
-                    43.4302192561, 44.7861535336, 46.1420878111,
-                    47.4980220885, 48.853956366, 50.2098906434]
+        losses_3 = [11.40181027, 34.87185495, 39.18729942, 43.28641858,
+                    44.56166139, 45.83690419, 47.11214699, 48.3873898,
+                    49.6626326]
 
-        expected_aggregate_losses = [55.0410853535, 157.521455945,
-                                     191.894562028, 222.802501033,
-                                     244.507808584, 266.213116134,
-                                     287.918423685, 309.623731235,
-                                     331.329038786]
+        expected_aggregate_losses = [55.31456352, 155.69843608, 193.2769676,
+                                     227.22660211, 246.96821847, 266.70983484,
+                                     286.4514512, 306.19306757, 325.93468394]
 
-        # FIXME(lp). Event Loss Table data do not come from a reliable
-        # implementation. This is just a regression test
-        expected_event_loss_table = [331.3290388, 221.5660697, 163.0322347,
-                                     117.4178793, 115.8360745, 108.2221509,
-                                     106.1758451, 105.3585400, 97.0575466,
-                                     94.8992232]
+        expected_event_loss_table = [325.93468394, 226.10203138, 161.34708564,
+                                     114.59153235, 114.5070817, 107.55192352,
+                                     107.16635393, 104.94262851, 94.90879987,
+                                     93.52459622]
 
         return [poes, poes, poes, losses_1, losses_2, losses_3,
                 expected_aggregate_losses, expected_event_loss_table]
 
     def actual_xml_outputs(self, job):
         """
-        Event Loss is in CSV format
+        do not check file outputs
         """
-        return models.Output.objects.filter(oq_job=job).exclude(
-            output_type='event_loss')
+        return []
 
     def expected_outputs(self):
-        return [self.EXPECTED_LOSS_CURVE_XML, self.EXPECTED_AGG_LOSS_CURVE_XML]
+        return []

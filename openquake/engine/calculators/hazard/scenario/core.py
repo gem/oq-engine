@@ -36,7 +36,6 @@ from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.job.validation import MAX_SINT_32
 from openquake.engine.utils.general import block_splitter
 
 BLOCK_SIZE = 1000  # TODO: decide where to put this parameter
@@ -154,11 +153,16 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def pre_execute(self):
         """
-        Do pre-execution work. At the moment, this work entails: parsing and
-        initializing sources, parsing and initializing the site model (if there
-        is one), and generating logic tree realizations. (The latter piece
-        basically defines the work to be done in the `execute` phase.)
+        Do pre-execution work. At the moment, this work entails:
+        parsing and initializing sources, parsing and initializing the
+        site model (if there is one), parsing vulnerability and
+        exposure files, and generating logic tree realizations. (The
+        latter piece basically defines the work to be done in the
+        `execute` phase.)
         """
+
+        # Parse risk models.
+        self.parse_risk_models()
 
         # Create source Inputs.
         self.initialize_sources()
@@ -200,7 +204,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_id = [rupture.id for rupture in ruptures][0]  # only one
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
-            task_seed = rnd.randint(0, MAX_SINT_32)
+            task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, SiteCollection(sites),
                    rupture_id, self.output.id, task_seed,
                    self.hc.number_of_ground_motion_fields)
