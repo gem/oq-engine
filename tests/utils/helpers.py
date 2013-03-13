@@ -233,7 +233,8 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = [RUNNER, "--run-%s=%s" % (job_type, config_file)]
+    args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
+            "--log-level=error"]
     if hazard_id:
         args.append("--hazard-output-id=%d" % hazard_id)
     if force_inputs:
