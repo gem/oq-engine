@@ -486,29 +486,6 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
 
 
-def write_loss_curve(loss_curve_id, asset, loss_ratio_curve):
-    """
-    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
-    where the data are got by `asset_output` and the
-    :class:`openquake.engine.db.models.LossCurve` output container is
-    identified by `loss_curve_id`.
-
-    :param int loss_curve_id: the ID of the output container
-    :param asset: an instance of
-           :class:`openquake.engine.db.models.ExposureData`
-    :param loss_ratio_curve: an instance of
-           :class:`openquake.risklib.curve.Curve`
-    """
-
-    return models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset.asset_ref,
-        location=asset.site,
-        poes=loss_ratio_curve.ordinates,
-        loss_ratios=loss_ratio_curve.abscissae,
-        asset_value=asset.value)
-
-
 @db.transaction.commit_on_success
 def update_aggregate_losses(curve_id, losses):
     """
@@ -590,6 +567,32 @@ def write_bcr_distribution(
         location=asset.site)
 
 
+def write_loss_curve(
+        loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
+    """
+    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
+    where the data are got by `asset_output` and the
+    :class:`openquake.engine.db.models.LossCurve` output container is
+    identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+    :param asset: an instance of
+           :class:`openquake.engine.db.models.ExposureData`
+    :param loss_ratios: a list of loss ratios
+    :param poes: a list of poes associated to `loss_ratios`
+    :param float average_loss_ratio: the average loss ratio of the curve
+    """
+
+    return models.LossCurveData.objects.create(
+        loss_curve_id=loss_curve_id,
+        asset_ref=asset.asset_ref,
+        location=asset.site,
+        poes=poes,
+        loss_ratios=loss_ratios,
+        asset_value=asset.value,
+        average_loss_ratio=average_loss_ratio)
+
+
 def curve_statistics(asset, loss_ratio_curves, curves_weights,
                      mean_loss_curve_id, quantile_loss_curve_ids,
                      explicit_quantiles, assume_equal):
@@ -612,26 +615,24 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             q_curve = post_processing.quantile_curve(
                 curves_poes, quantile)
 
-        models.LossCurveData.objects.create(
-            loss_curve_id=quantile_loss_curve_id,
-            asset_ref=asset.asset_ref,
-            poes=q_curve.tolist(),
-            loss_ratios=loss_ratios,
-            asset_value=asset.value,
-            location=asset.site.wkt)
+        write_loss_curve(
+            quantile_loss_curve_id,
+            asset,
+            q_curve.tolist(),
+            loss_ratios,
+            scientific.average_loss(loss_ratios, q_curve.tolist()))
 
     # then means
     if mean_loss_curve_id:
         mean_curve = post_processing.mean_curve(
             curves_poes, weights=curves_weights)
 
-        models.LossCurveData.objects.create(
-            loss_curve_id=mean_loss_curve_id,
-            asset_ref=asset.asset_ref,
-            poes=mean_curve.tolist(),
-            loss_ratios=loss_ratios,
-            asset_value=asset.value,
-            location=asset.site.wkt)
+        write_loss_curve(
+            mean_loss_curve_id,
+            asset,
+            mean_curve.tolist(),
+            loss_ratios,
+            scientific.average_loss(loss_ratios, mean_curve.tolist()))
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
