@@ -93,7 +93,12 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
 
                     # Write Loss Curves
                     general.write_loss_curve(
-                        loss_curve_id, asset, loss_ratio_curve)
+                        loss_curve_id, asset,
+                        loss_ratio_curve.ordinates,
+                        loss_ratio_curve.abscissae,
+                        scientific.average_loss(
+                            loss_ratio_curve.abscissae,
+                            loss_ratio_curve.ordinates))
 
                     # Then conditional loss maps
                     for poe in conditional_loss_poes:
