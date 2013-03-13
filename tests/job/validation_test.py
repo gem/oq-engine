@@ -545,6 +545,48 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         )
         self.assertTrue(form.is_valid())
 
+    def test_classical_hc_hazard_maps_uhs_no_poes(self):
+        # Test that errors are reported if `hazard_maps` and
+        # `uniform_hazard_spectra` are `true` but no `poes` are
+        # specified.
+        expected_errors = {
+            'hazard_maps': ['`poes` are required to compute hazard maps'],
+            'uniform_hazard_spectra': ['`poes` are required to compute UHS'],
+        }
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            hazard_maps=True,
+            uniform_hazard_spectra=True,
+        )
+
+        form = validation.ClassicalHazardForm(
+            instance=hc, files=None
+        )
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
+
 
 class EventBasedHazardFormTestCase(unittest.TestCase):
 
