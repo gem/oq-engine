@@ -77,37 +77,39 @@ class EventBasedRiskCalculatorTestCase(
                      'BaseRiskCalculator.')
         patches = [helpers.patch(base_path + 'set_risk_models'),
                    helpers.patch(base_path + '_store_exposure')]
-        for patch in patches:
-            patch.start()
-        self.calculator.imt = 'fake'
-        self.assertRaises(RuntimeError, self.calculator.pre_execute)
-        for patch in patches:
-            patch.stop()
+
+        try:
+            for patch in patches:
+                patch.start()
+            self.calculator.taxonomies_imts = {'foo': 'bar'}
+            self.assertRaises(RuntimeError, self.calculator.pre_execute)
+        finally:
+            for patch in patches:
+                patch.stop()
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
         # specific method to write loss curves
 
-        patches = [helpers.patch(x) for x in [
-            'openquake.engine.calculators.risk.general.write_loss_curve',
-            'openquake.engine.calculators.risk.general.\
-update_aggregate_losses']]
+        base_path = 'openquake.engine.calculators.risk.general'
+        patches = [helpers.patch(x)
+                   for x in ['%s.write_loss_curve' % base_path,
+                             '%s.update_aggregate_losses' % base_path]]
 
         mocked_loss_writer = patches[0].start()
         mocked_agg_loss_writer = patches[1].start()
 
         event_based.event_based(
-            *self.calculator.task_arg_gen(self.calculator.block_size()).next())
-
-        patches[0].stop()
-        patches[1].stop()
+            *self.calculator.task_arg_gen(
+                self.calculator.block_size()).next())
 
         # we expect 1 asset being filtered out by the region
         # constraint, so there are only four loss curves (2 of them
         # are insured) to be written
         self.assertEqual(2, mocked_loss_writer.call_count)
-
         self.assertEqual(1, mocked_agg_loss_writer.call_count)
+        patches[0].stop()
+        patches[1].stop()
 
     def test_complete_workflow(self):
         """
