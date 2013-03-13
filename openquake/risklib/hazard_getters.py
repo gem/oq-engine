@@ -19,7 +19,10 @@
 
 class HazardGetter(object):
     """
-    Hazard getter working on a set of rows
+    Hazard getter working on a list of rows of the form[(lon, lat, gmvs), ...]
+	The implementation here is simple but slow, since it computes the distances
+    from every site in the grid for each point. It is useful for small dataset
+    and for comparison purposes, to check with alternative algorithms.
     """
     def __init__(self, gmf):
         self.gmf = gmf

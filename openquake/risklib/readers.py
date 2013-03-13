@@ -58,7 +58,9 @@ class Archive(object):
     def __init__(self, path):
         self.path = path
         self.zfile = None
-        if not os.path.isdir(path):
+        if not os.path.exists(path):
+            raise IOError('No such file or directory: %r' % path)
+        elif not os.path.isdir(path):
             assert zipfile.is_zipfile(path), '%r is not a zipfile' % path
             self.zfile = zipfile.ZipFile(path)
 
