@@ -16,7 +16,7 @@
 import unittest
 import numpy
 
-from openquake.hazardlib.source.characteristic import CharacteristicSource
+from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.geo import Point, Polygon, Mesh
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -41,7 +41,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     def _make_source(self):
         points = [Point(lon, lat, depth) for lon, lat, depth in
             zip(self.CORNER_LONS, self.CORNER_LATS, self.CORNER_DEPTHS)]
-        source = CharacteristicSource(
+        source = CharacteristicFaultSource(
             source_id=self.SOURCE_ID,
             name=self.NAME,
             tectonic_region_type=self.TRT,
@@ -53,7 +53,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
         return source
 
-class CharacteristicSourceGetRuptureEnclosingPolygon(_BaseFaultSourceTestCase):
+class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
+        _BaseFaultSourceTestCase):
 
     def test(self):
         # relies on mesh.get_convex_hull() and polygon.dilate
@@ -71,7 +72,7 @@ class CharacteristicSourceGetRuptureEnclosingPolygon(_BaseFaultSourceTestCase):
             poly.lats, mesh.get_convex_hull().dilate(5.0).lats
         )
 
-class CharacteristicSourceIterRuptures(_BaseFaultSourceTestCase):
+class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
 
     def test(self):
         source = self._make_source()
@@ -93,7 +94,7 @@ class CharacteristicSourceIterRuptures(_BaseFaultSourceTestCase):
             self.assertTrue(ruptures[i].surface.strike == self.STRIKE)
             self.assertTrue(ruptures[i].surface.dip == self.DIP)
             self.assertTrue(
-                ruptures[i].source_typology == CharacteristicSource
+                ruptures[i].source_typology == CharacteristicFaultSource
             )
             numpy.testing.assert_equal(ruptures[i].surface.corner_lons,
                                        self.CORNER_LONS)
