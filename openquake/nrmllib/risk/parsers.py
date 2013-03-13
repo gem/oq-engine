@@ -333,7 +333,7 @@ class FragilityModelParser(object):
                     self._check_limit_state(lsi, ffd.attrib['ls'])
                     all_poes.append(
                         map(float, findone('poEs', ffd).text.split()))
-                yield taxonomy, all_poes, no_damage_limit
+                yield taxonomy, iml, all_poes, no_damage_limit
             else:  # continuous
                 all_params = []
                 for lsi, ffc in enumerate(find('ffc', ffs)):
