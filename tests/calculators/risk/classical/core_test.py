@@ -37,12 +37,14 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
         patch = helpers.patch(
             'openquake.engine.calculators.risk.general.write_loss_curve')
-        mocked_writer = patch.start()
 
-        classical.classical(*self.calculator.task_arg_gen(
-            self.calculator.block_size()).next())
+        try:
+            mocked_writer = patch.start()
 
-        patch.stop()
+            classical.classical(*self.calculator.task_arg_gen(
+                self.calculator.block_size()).next())
+        finally:
+            patch.stop()
 
         # we expect 1 asset being filtered out by the region
         # constraint, so there are only two loss curves to be written

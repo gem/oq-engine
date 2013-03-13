@@ -204,7 +204,10 @@ def get_input(path, input_type, owner, force_input, name=None):
         # create the new input.
         model_content = models.ModelContent()
         with open(path, 'rb') as fh:
-            model_content.raw_content = fh.read()
+            if not input_type == 'exposure':
+                model_content.raw_content = fh.read()
+            else:
+                model_content.raw_content = 'exposure file content not stored'
         # Try to guess the content type:
         model_content.content_type = _get_content_type(path)
         model_content.save()
