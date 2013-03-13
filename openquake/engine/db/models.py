@@ -78,6 +78,12 @@ IMT_CHOICES = (
 DEFAULT_LOSS_CURVE_RESOLUTION = 50
 
 
+#: Minimum value for a seed number
+MIN_SINT_32 = -(2 ** 31)
+#: Maximum value for a seed number
+MAX_SINT_32 = (2 ** 31) - 1
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
@@ -386,7 +392,8 @@ class Input(djm.Model):
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
-                                              through='Input2hcalc')
+                                              through='Input2hcalc',
+                                              related_name="inputs")
     risk_calculations = djm.ManyToManyField(
         'RiskCalculation', through='Input2rcalc', related_name="inputs")
 
@@ -940,7 +947,17 @@ class HazardCalculation(djm.Model):
             again.
         """
         if self._points_to_compute is None:
-            if self.region and self.region_grid_spacing:
+            if self.pk and self.inputs.filter(input_type='exposure').exists():
+                lons, lats = zip(
+                    *list(
+                        set([(asset.site.x, asset.site.y)
+                             for asset
+                             in self.exposure_model.exposuredata_set.all()])))
+                # Cache the mesh:
+                self._points_to_compute = hazardlib_geo.Mesh(
+                    numpy.array(lons), numpy.array(lats), depths=None
+                )
+            elif self.region and self.region_grid_spacing:
                 # assume that the polygon is a single linear ring
                 coords = self.region.coords[0]
                 points = [hazardlib_geo.Point(*x) for x in coords]
@@ -956,6 +973,11 @@ class HazardCalculation(djm.Model):
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
         return self._points_to_compute
+
+    @property
+    def exposure_model(self):
+        if self.inputs.filter(input_type='exposure').exists():
+            return self.inputs.get(input_type='exposure').exposuremodel
 
     def get_imts(self):
         """
@@ -2473,6 +2495,7 @@ class LossCurveData(djm.Model):
     loss_ratios = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
+    average_loss_ratio = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -2480,6 +2503,10 @@ class LossCurveData(djm.Model):
     @property
     def losses(self):
         return numpy.array(self.loss_ratios) * self.asset_value
+
+    @property
+    def average_loss(self):
+        return self.average_loss_ratio * self.asset_value
 
 
 class AggregateLossCurveData(djm.Model):
@@ -2490,6 +2517,7 @@ class AggregateLossCurveData(djm.Model):
     loss_curve = djm.OneToOneField("LossCurve")
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
+    average_loss = djm.FloatField()
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'

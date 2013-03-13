@@ -67,8 +67,9 @@ class BaseRiskCalculator(base.CalculatorNext):
       The random number generator (initialized with a master seed) used
       for sampling
 
-    :attribute str imt:
-      The intensity measure type considered
+    :attribute dict taxonomies_imts:
+      A dictionary mapping taxonomies to intensity measure type, to
+      support structure dependent intensity measure types
     """
 
     hazard_getter = None  # the name of the hazard getter class; to override
@@ -79,7 +80,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         self.taxonomies = None
         self.rnd = None
         self.vulnerability_functions = None
-        self.imt = None
+        self.taxonomies_imts = dict()
 
     def pre_execute(self):
         """
@@ -127,10 +128,13 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         imts = self.hc.get_imts()
 
-        if not self.imt in imts:
-            raise RuntimeError(
-                "There is no hazard output for the intensity measure %s; "
-                "the available IMTs are %s" % (self.imt, imts))
+        # check that the hazard calculation has all the imts needed by
+        # the risk calculation
+        for imt in set(self.taxonomies_imts.values()):
+            if not imt in imts:
+                raise RuntimeError(
+                    "There is no hazard output for the intensity measure %s; "
+                    "the available IMTs are %s" % (imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -183,8 +187,13 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                hazard = dict((ho.id, self.create_getter(ho, assets))
+                # Get the imt depending on the taxonomy of the assets
+                # (SD-IMT) and create the needed hazard getters for
+                # all the hazard output
+                imt = self.taxonomies_imts[taxonomy]
+                hazard = dict((ho.id, self.create_getter(ho, imt, assets))
                               for ho in self.considered_hazard_outputs())
+
                 worker_args = self.worker_args(taxonomy)
 
                 logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
@@ -202,7 +211,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         master seed and the vulnerability function associated with the
         assets taxonomy. May be overriden.
         """
-        return [self.rnd.randint(0, (2 ** 31) - 1),
+        return [self.rnd.randint(0, models.MAX_SINT_32),
                 self.vulnerability_functions[taxonomy]]
 
     def export(self, *args, **kwargs):
@@ -246,23 +255,27 @@ class BaseRiskCalculator(base.CalculatorNext):
         Result objects should be ordered (e.g. by id) and be
         associated to an hazard logic tree realization
         """
-        # FIXME(lp). It should accept an imt as a second parameter
-        # instead of getting it from self.imt
         raise NotImplementedError
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         Create an instance of :class:`.hazard_getters.HazardGetter`
-        associated to a weight of an hazard logic tree realization.
+        associated to an hazard output.
 
         :returns: a tuple where the first element is the hazard getter
-        and the second is the associated weight.
+        and the second is the associated weight (if `output` is
+        associated with a logic tree realization).
 
-        Calculator must override this to create the proper hazard getter.
+        Calculator must override this to create the proper hazard
+        getter.
 
         :param hazard_output: the ID of an
         :class:`openquake.engine.db.models.Output` produced by an
         hazard calculation
+
+        :param str imt: the imt used by the hazard getter to filter
+        the hazard (an hazard output may contain values computed in
+        multiple imt).
 
         :raises: `RuntimeError` if the hazard associated with the
         `hazard_output` is not suitable to be used with this
@@ -308,6 +321,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         # the DB.
         if not self.rc.force_inputs and models.ExposureModel.objects.filter(
                 input=exposure_model_input).exists():
+            logs.LOG.debug("skipping storing exposure as an input model "
+                           "was already present")
             return exposure_model_input.exposuremodel
 
         with logs.tracing('storing exposure'):
@@ -359,8 +374,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         Parse vulnerability model input associated with this
         calculation.
 
-        As a side effect, it also stores the first IMT (that may be
-        needed for further hazard filtering) in the attribute `imt`.
+        As a side effect, it also stores the mapping between
+        taxonomies and IMT (that is needed for further hazard
+        filtering) in the attribute `taxonomies_imts`.
 
         :param bool retrofitted: true if the retrofitted model is
         going to be parsed
@@ -378,19 +394,19 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         vfs = dict()
 
-        # CAVEATS
-        # 1) We use the first imt returned by the parser 2) Use the
-        # last vf for a taxonomy returned by the parser (if multiple
-        # vf for the same taxonomy are given).
-
-        # We basically assume that the user will provide a
-        # vulnerability model where for each taxonomy there is only
-        # one vf for a taxonomy and an imt matching the ones in the
-        # hazard output
         for record in parsers.VulnerabilityModelParser(path):
-            if self.imt is None:
-                self.imt = record['IMT']
-            vfs[record['ID']] = scientific.VulnerabilityFunction(
+            taxonomy = record['ID']
+            imt = record['IMT']
+            registered_imt = self.taxonomies_imts.get(taxonomy, imt)
+
+            if imt != registered_imt:
+                raise RuntimeError("The same taxonomy is associated with "
+                                   "different imts %s and %s" % (
+                                       imt, registered_imt))
+            else:
+                self.taxonomies_imts[taxonomy] = imt
+
+            vfs[taxonomy] = scientific.VulnerabilityFunction(
                 record['IML'],
                 record['lossRatio'],
                 record['coefficientsVariation'],
@@ -468,29 +484,6 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
     Initializes and returns an hazard getter
     """
     return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
-
-
-def write_loss_curve(loss_curve_id, asset, loss_ratio_curve):
-    """
-    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
-    where the data are got by `asset_output` and the
-    :class:`openquake.engine.db.models.LossCurve` output container is
-    identified by `loss_curve_id`.
-
-    :param int loss_curve_id: the ID of the output container
-    :param asset: an instance of
-           :class:`openquake.engine.db.models.ExposureData`
-    :param loss_ratio_curve: an instance of
-           :class:`openquake.risklib.curve.Curve`
-    """
-
-    return models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset.asset_ref,
-        location=asset.site,
-        poes=loss_ratio_curve.ordinates,
-        loss_ratios=loss_ratio_curve.abscissae,
-        asset_value=asset.value)
 
 
 @db.transaction.commit_on_success
@@ -574,6 +567,32 @@ def write_bcr_distribution(
         location=asset.site)
 
 
+def write_loss_curve(
+        loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
+    """
+    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
+    where the data are got by `asset_output` and the
+    :class:`openquake.engine.db.models.LossCurve` output container is
+    identified by `loss_curve_id`.
+
+    :param int loss_curve_id: the ID of the output container
+    :param asset: an instance of
+           :class:`openquake.engine.db.models.ExposureData`
+    :param loss_ratios: a list of loss ratios
+    :param poes: a list of poes associated to `loss_ratios`
+    :param float average_loss_ratio: the average loss ratio of the curve
+    """
+
+    return models.LossCurveData.objects.create(
+        loss_curve_id=loss_curve_id,
+        asset_ref=asset.asset_ref,
+        location=asset.site,
+        poes=poes,
+        loss_ratios=loss_ratios,
+        asset_value=asset.value,
+        average_loss_ratio=average_loss_ratio)
+
+
 def curve_statistics(asset, loss_ratio_curves, curves_weights,
                      mean_loss_curve_id, quantile_loss_curve_ids,
                      explicit_quantiles, assume_equal):
@@ -596,26 +615,24 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             q_curve = post_processing.quantile_curve(
                 curves_poes, quantile)
 
-        models.LossCurveData.objects.create(
-            loss_curve_id=quantile_loss_curve_id,
-            asset_ref=asset.asset_ref,
-            poes=q_curve.tolist(),
-            loss_ratios=loss_ratios,
-            asset_value=asset.value,
-            location=asset.site.wkt)
+        write_loss_curve(
+            quantile_loss_curve_id,
+            asset,
+            q_curve.tolist(),
+            loss_ratios,
+            scientific.average_loss(loss_ratios, q_curve.tolist()))
 
     # then means
     if mean_loss_curve_id:
         mean_curve = post_processing.mean_curve(
             curves_poes, weights=curves_weights)
 
-        models.LossCurveData.objects.create(
-            loss_curve_id=mean_loss_curve_id,
-            asset_ref=asset.asset_ref,
-            poes=mean_curve.tolist(),
-            loss_ratios=loss_ratios,
-            asset_value=asset.value,
-            location=asset.site.wkt)
+        write_loss_curve(
+            mean_loss_curve_id,
+            asset,
+            mean_curve.tolist(),
+            loss_ratios,
+            scientific.average_loss(loss_ratios, mean_curve.tolist()))
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
