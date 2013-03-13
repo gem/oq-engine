@@ -35,8 +35,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import correlation
 from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib.risk import parsers
 from shapely import geometry
 
+
+from openquake.engine.input import exposure
 from openquake.engine import engine2
 from openquake.engine import kvs
 from openquake.engine import writer
@@ -474,6 +477,17 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        Subclasses must implement this.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
+        """
+        raise NotImplementedError
+
     def finalize_hazard_curves(self):
         """
         Create the final output records for hazard curves. This is done by
@@ -592,6 +606,35 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 )
                 src_db_writer.serialize()
 
+    def parse_risk_models(self):
+        """
+        If any risk model is given in the hazard calculation, the
+        computation will be driven by risk data. In this case the
+        locations will be extracted from the exposure file (if there
+        is one) and the imt (and levels) will be extracted from the
+        vulnerability model (if there is one)
+        """
+
+        if self.hc.inputs.filter(input_type='vulnerability').exists():
+            path = self.hc.inputs.get(input_type='vulnerability').path
+            hc = self.hc
+            hc.intensity_measure_types_and_levels = dict([
+                (record['IMT'], record['IML'])
+                for record in parsers.VulnerabilityModelParser(path)])
+            hc.intensity_measure_types = list(set([
+                record['IMT']
+                for record in parsers.VulnerabilityModelParser(path)]))
+            hc.save()
+
+        if self.hc.inputs.filter(input_type='exposure').exists():
+            exposure_model_input = self.hc.inputs.get(input_type='exposure')
+            with logs.tracing('storing exposure'):
+                exposure.ExposureDBWriter(
+                    exposure_model_input).serialize(
+                        parsers.ExposureModelParser(
+                            os.path.join(
+                                self.hc.base_path, exposure_model_input.path)))
+
     def initialize_site_model(self):
         """
         If a site model is specified in the calculation configuration, parse
@@ -691,7 +734,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id, input_type='source_model_logic_tree')
+        [smlt] = models.inputs4hcalc(hc.id,
+                                     input_type='source_model_logic_tree')
         ltp = logictree.LogicTreeProcessor(hc.id)
         hzrd_src_cache = {}
 
@@ -741,7 +785,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(self.hc.id, input_type='source_model_logic_tree')
+        [smlt] = models.inputs4hcalc(self.hc.id,
+                                     input_type='source_model_logic_tree')
 
         ltp = logictree.LogicTreeProcessor(self.hc.id)
 

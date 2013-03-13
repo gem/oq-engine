@@ -24,7 +24,6 @@ from openquake.risklib import api, scientific
 from django.db import transaction
 
 from openquake.engine.calculators.risk import hazard_getters
-from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks
@@ -149,7 +148,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -158,13 +157,17 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                 "The provided hazard output is not an hazard curve")
 
         hc = output.hazardcurve
+
+        # The hazard curve either could be associated with a logic
+        # tree realization, either is a statistics curve (e.g. a mean
+        # curve). In that case, we just set up the weight to None
         if hc.lt_realization:
             weight = hc.lt_realization.weight
         else:
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, self.imt, assets, self.rc.best_maximum_distance)
+            hc.id, imt, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 
@@ -175,13 +178,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         `hazard_calculation` that are associated with a realization
         """
 
-        imt, sa_period, sa_damping = models.parse_imt(self.imt)
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='hazard_curve',
-                hazardcurve__imt=imt,
-                hazardcurve__sa_period=sa_period,
-                hazardcurve__sa_damping=sa_damping,
                 hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property

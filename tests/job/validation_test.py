@@ -212,8 +212,10 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
 
     def test_hazard_calculation_is_not_valid_missing_geom(self):
         expected_errors = {
-            'region': ['Must specify either `region` or `sites`.'],
-            'sites': ['Must specify either `region` or `sites`.'],
+            'region': [
+                'Must specify either `region`, `sites` or `exposure_file`.'],
+            'sites': [
+                'Must specify either `region`, `sites` or `exposure_file`.'],
         }
 
         hc = models.HazardCalculation(
