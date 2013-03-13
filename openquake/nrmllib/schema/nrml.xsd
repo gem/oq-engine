@@ -24,6 +24,7 @@
     <xs:include schemaLocation="./hazard/site_model.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/general.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/area_source.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/characteristic_source.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/complex_fault.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/point_source.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/simple_fault.xsd"/>

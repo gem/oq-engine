@@ -24,13 +24,14 @@ def deep_eq(a, b):
     """Deep compare two objects for equality by traversing __dict__s.
 
     :returns:
-        True if the two objects are deeply equal, otherwise false.
+        Returns a tuple of (True/False, and an error message if an assertion
+        fails). True if the two objects are deeply equal, otherwise false.
     """
     try:
         _deep_eq(a, b)
-    except AssertionError:
-        return False
-    return True
+    except AssertionError, err:
+        return False, err.message
+    return True, ''
 
 
 def _deep_eq(a, b):
@@ -42,7 +43,9 @@ def _deep_eq(a, b):
     elif isinstance(a, dict):
         _test_dict(a, b)
     elif hasattr(a, '__dict__'):
-        assert a.__class__ == b.__class__
+        assert a.__class__ == b.__class__, (
+            'Class mismatch. Expected %s, got %s' % (a.__class__, b.__class__)
+        )
         _test_dict(a.__dict__, b.__dict__)
     elif isinstance(a, collections.Iterable) and not isinstance(a, str):
         # If there's a generator or another type of iterable, treat it as a
@@ -50,7 +53,7 @@ def _deep_eq(a, b):
         _test_seq(list(a), list(b))
     else:
         # must be a 'primitive'
-        assert a == b
+        assert a == b, 'Expected %s, got %s' % (a, b)
 
 
 def _test_dict(a, b):
@@ -63,7 +66,9 @@ def _test_dict(a, b):
 
 def _test_seq(a, b):
     """Compare `list` or `tuple` types recursively."""
-    assert len(a) == len(b)
+    assert len(a) == len(b), ('Sequence length mismatch. Expected %s, got %s'
+        % (len(a), len(b))
+    )
 
     for i, item in enumerate(a):
         _deep_eq(item, b[i])
