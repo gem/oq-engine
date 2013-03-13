@@ -24,6 +24,7 @@
     <xs:include schemaLocation="./hazard/site_model.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/general.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/area_source.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model/characteristic_source.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/complex_fault.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/point_source.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/simple_fault.xsd"/>
@@ -50,37 +51,36 @@
     <xs:element name="nrml" type="NRML" />
     <xs:complexType name="NRML">
         <xs:choice minOccurs="1" maxOccurs="1">
-            <xs:element ref="hazardResult" />
-            <xs:element ref="sourceModel" />
-            <xs:element ref="rupture" />
-            <xs:element ref="riskResult" />
-            <xs:element ref="exposureModel" />
-            <xs:element ref="fragilityModel" />
-            <xs:element ref="vulnerabilityModel" />
-            <xs:element ref="logicTree" />
+            <xs:element ref="aggregateLossCurve" />
+            <xs:element ref="bcrMap" />
+            <xs:element ref="collapseMap" />
             <xs:element ref="disaggMatrices" />
-            <xs:element ref="uhsResultSet" />
-            <xs:element ref="rawSourceModel" />
             <xs:element ref="dmgDistPerAsset" />
             <xs:element ref="dmgDistPerTaxonomy" />
-            <xs:element ref="totalDmgDist" />
-            <xs:element ref="collapseMap" />
-            <xs:element ref="siteModel" />
-            <xs:element ref="hazardCurves" />
-            <xs:element ref="lossCurves" />
-            <xs:element ref="aggregateLossCurve" />
-            <xs:element ref="lossMap" />
-            <xs:element ref="bcrMap" />
+            <xs:element ref="exposureModel" />
+            <xs:element ref="fragilityModel" />
             <!-- For Event-Based GMFs, applies to a specific logic tree branch -->
             <xs:element ref="gmfCollection" />
             <!-- For Scenario GMFs, or 'complete logic tree' GMF sets for Event-Based calculations -->
             <!-- In the case of Scenario results, the `investigationTime` is omitted -->
             <xs:element name="gmfSet" type="GMFSet" />
-            <!-- For Event-Based calculations, applies to a specific logic tree branch -->
-            <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
+            <xs:element ref="hazardCurves" />
+            <xs:element ref="hazardMap" />
+            <xs:element ref="logicTree" />
+            <xs:element ref="lossCurves" />
+            <xs:element ref="lossMap" />
+            <xs:element ref="rawSourceModel" />
+            <xs:element ref="riskResult" />
+            <xs:element ref="rupture" />
+            <xs:element ref="siteModel" />
+            <xs:element ref="sourceModel" />
             <!-- For the case of a 'complete logic tree' SES; there is just a single SES in the entire file. -->
             <xs:element name="stochasticEventSet" type="StochasticEventSet" />
-            <xs:element ref="hazardMap" />
+            <!-- For Event-Based calculations, applies to a specific logic tree branch -->
+            <xs:element name="stochasticEventSetCollection" type="StochasticEventSetCollection" />
+            <xs:element ref="totalDmgDist" />
+            <xs:element ref="uniformHazardSpectra" />
+            <xs:element ref="vulnerabilityModel" />
         </xs:choice>
     </xs:complexType>
 </xs:schema>

@@ -104,9 +104,9 @@ class AreaSource(PointSource):
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
-   :param geometry:
+    :param geometry:
         :class:`AreaGeometry` instance.
     :param str mag_scale_rel:
         Magnitude Scaling Relationship.
@@ -139,13 +139,13 @@ class AreaGeometry(PointGeometry):
 class SimpleFaultSource(object):
     """Basic object representation of a Simple Fault Source.
 
-   :param str id:
+    :param str id:
         Source identifier, unique within a given model.
-   :param str name:
+    :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
-   :param geometry:
+    :param geometry:
         :class:`SimpleFaultGeometry` object.
     :param str mag_scale_rel:
         Magnitude Scaling Relationship.
@@ -175,7 +175,7 @@ class SimpleFaultGeometry(object):
     """Basic object representation of a geometry for a
     :class:`SimpleFaultSource`.
 
-   :param str wkt:
+    :param str wkt:
         WKT representing the fault trace of a simple fault (a LINESTRING).
     :param float upper_seismo_depth:
         Upper seismogenic depth.
@@ -207,7 +207,7 @@ class ComplexFaultSource(SimpleFaultSource):
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
-   :param str trt:
+    :param str trt:
         Tectonic Region Type.
     :param geometry:
         :class:`ComplexFaultGeometry` object.
@@ -396,3 +396,70 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
      :param geometry:
          :class:`ComplexFaultGeometry` object.
     """
+
+
+class CharacteristicSource(object):
+    """
+    Basic object representation of a characteristic fault source.
+
+    :param str id:
+        Source identifier, unique within a given model.
+    :param str name:
+        Human-readable name for the source.
+    :param str trt:
+        Tectonic Region Type.
+    :param mfd:
+        Magnitude Frequency Distribution. An instance of
+        :class:`IncrementalMFD` or :class:`TGRMFD`.
+    :param float rake:
+        Rake angle.
+    :param surface:
+        A :class:`SimpleFaultGeometry`, :class:`ComplexFaultGeometry`, or a
+        list of :class:`PlanarSurface` objects.
+    """
+    def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
+                 surface=None):
+        self.id = id
+        self.name = name
+        self.trt = trt
+        self.mfd = mfd
+        self.rake = rake
+        self.surface = surface
+
+
+class PlanarSurface(object):
+    """
+    :param strike:
+        Strike angle.
+    :param dip:
+        Dip angle.
+    :param top_left,top_right,bottom_left,bottom_right:
+        Corner points of the planar surface, represented by :class:`Point`
+        objects.
+    """
+    def __init__(self, strike=None, dip=None, top_left=None, top_right=None,
+                 bottom_left=None, bottom_right=None):
+        self.strike = strike
+        self.dip = dip
+        self.top_left = top_left
+        self.top_right = top_right
+        self.bottom_left = bottom_left
+        self.bottom_right = bottom_right
+
+
+class Point(object):
+    """
+    A simple representation of longitude, latitude, and depth.
+
+    :param longitude:
+        Longitude
+    :param latitude:
+        Latitude
+    :param depth:
+        Depth
+    """
+
+    def __init__(self, longitude=None, latitude=None, depth=None):
+        self.longitude = longitude
+        self.latitude = latitude
+        self.depth = depth
