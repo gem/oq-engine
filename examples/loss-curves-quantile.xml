@@ -16,6 +16,8 @@
 
             <!-- loss ratios are optional. -->
             <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+
+            <averageLoss>1E+0</averageLoss>
         </lossCurve>
 
         <lossCurve assetRef="asset_2">
@@ -28,6 +30,8 @@
 
             <!-- loss ratios are optional. -->
             <lossRatios>0.1298 0.97123 0.32456</lossRatios>
+
+            <averageLoss>1E+0</averageLoss>
         </lossCurve>
     </lossCurves>
 </nrml>
