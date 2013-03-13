@@ -283,6 +283,8 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'quantile_hazard_curves',
             'poes',
             'export_dir',
+            'hazard_maps',
+            'uniform_hazard_spectra',
         )
 
     def is_valid(self):
@@ -860,7 +862,7 @@ def quantile_loss_curves_is_valid(mdl):
 
 def poes_is_valid(mdl):
     phm = mdl.poes
-    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+    error_msg = '`poes` values must be in the range [0, 1]'
     return _validate_poe_list(phm, error_msg)
 
 
@@ -1038,3 +1040,15 @@ def poes_disagg_is_valid(mdl):
         return False, ['`poes_disagg` must contain at least 1 value']
     error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
     return _validate_poe_list(poesd, error_msg)
+
+
+def hazard_maps_is_valid(mdl):
+    if mdl.hazard_maps and mdl.poes is None:
+        return False, ['`poes` are required to compute hazard maps']
+    return True, []
+
+
+def uniform_hazard_spectra_is_valid(mdl):
+    if mdl.uniform_hazard_spectra and mdl.poes is None:
+        return False, ['`poes` are required to compute UHS']
+    return True, []
