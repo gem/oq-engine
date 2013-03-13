@@ -122,7 +122,7 @@ def set_up_arg_parser():
         required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
-        help='Defaults to "warn"', required=False,
+        help='Defaults to "progress"', required=False,
         choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
         default='progress')
     general_grp.add_argument(

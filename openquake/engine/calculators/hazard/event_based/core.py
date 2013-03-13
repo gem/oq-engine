@@ -53,7 +53,6 @@ from openquake.engine.db import models
 from openquake.engine.db.aggregate_result_writer import MeanCurveWriter
 from openquake.engine.db.aggregate_result_writer import QuantileCurveWriter
 from openquake.engine.input import logictree
-from openquake.engine.job.validation import MAX_SINT_32
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
 
@@ -429,12 +428,12 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rnd.seed(self.hc.random_seed)
 
         realizations = models.LtRealization.objects.filter(
-                hazard_calculation=self.hc, is_complete=False).order_by('id')
+            hazard_calculation=self.hc, is_complete=False).order_by('id')
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
             source_progress = models.SourceProgress.objects.filter(
-                    is_complete=False, lt_realization=lt_rlz).order_by('id')
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
 
@@ -442,7 +441,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 # Since this seed will used for numpy random seeding, it needs
                 # to be positive (since numpy will convert it to a unsigned
                 # long).
-                task_seed = rnd.randint(0, MAX_SINT_32)
+                task_seed = rnd.randint(0, models.MAX_SINT_32)
                 task_args = (
                     self.job.id,
                     source_ids[offset:offset + block_size],
@@ -587,11 +586,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def pre_execute(self):
         """
-        Do pre-execution work. At the moment, this work entails: parsing and
-        initializing sources, parsing and initializing the site model (if there
-        is one), and generating logic tree realizations. (The latter piece
-        basically defines the work to be done in the `execute` phase.)
+        Do pre-execution work. At the moment, this work entails:
+        parsing and initializing sources, parsing and initializing the
+        site model (if there is one), parsing vulnerability and
+        exposure files, and generating logic tree realizations. (The
+        latter piece basically defines the work to be done in the
+        `execute` phase.)
         """
+
+        # Parse risk models.
+        self.parse_risk_models()
 
         # Parse logic trees and create source Inputs.
         self.initialize_sources()

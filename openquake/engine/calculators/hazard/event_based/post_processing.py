@@ -40,8 +40,8 @@ This could be the target for future optimizations.
 
 import itertools
 import math
-
 import numpy
+import openquake
 
 from celery.task.sets import TaskSet
 
@@ -205,14 +205,17 @@ def do_post_process(job):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        # Run the tasks in blocks, to avoid overqueueing:
-        tasks = []
-        for the_args in block:
-            tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
-        results = TaskSet(tasks=tasks).apply_async()
+        if openquake.engine.no_distribute():
+            for the_args in block:
+                gmf_to_hazard_curve_task(*the_args)
+        else:
+            tasks = []
+            for the_args in block:
+                tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
+            results = TaskSet(tasks=tasks).apply_async()
 
-        # Check for Exceptions in the results and raise
-        utils_tasks._check_exception(results)
+            # Check for Exceptions in the results and raise
+            utils_tasks._check_exception(results)
 
         logs.LOG.debug('< Done GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))

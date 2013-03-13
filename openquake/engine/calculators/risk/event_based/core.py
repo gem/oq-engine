@@ -18,6 +18,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import random
 from collections import OrderedDict
 import numpy
 
@@ -36,7 +37,7 @@ from openquake.engine.calculators import base
 @tasks.oqtask
 @general.count_progress_risk('r')
 def event_based(job_id, hazard,
-                seed, vulnerability_function,
+                task_seed, vulnerability_function,
                 output_containers,
                 conditional_loss_poes, insured_losses,
                 time_span, tses,
@@ -54,7 +55,7 @@ def event_based(job_id, hazard,
       instance of
       :class:`..hazard_getters.GroundMotionValuesGetter`,
       and the second element is the corresponding weight.
-    :param seed:
+    :param task_seed:
       the seed used to initialize the rng
     :param dict output_containers: a dictionary mapping hazard Output
       ID to a list (a, b, c, d) where a is the ID of the
@@ -79,6 +80,9 @@ def event_based(job_id, hazard,
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
 
+    rnd = random.Random()
+    rnd.seed(task_seed)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
@@ -87,8 +91,10 @@ def event_based(job_id, hazard,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
-        # FIXME(lp). We should not pass the exact same seed for
-        # different hazard
+        seed = rnd.randint(0, models.MAX_SINT_32)
+        logs.LOG.info("Using seed %s with hazard output %s" % (
+            seed, hazard_output_id))
+
         calculator = api.ProbabilisticEventBased(
             vulnerability_function,
             curve_resolution=loss_curve_resolution,
@@ -126,7 +132,12 @@ def event_based(job_id, hazard,
 
                     # loss curves
                     general.write_loss_curve(
-                        loss_curve_id, asset, loss_ratio_curve)
+                        loss_curve_id, asset,
+                        loss_ratio_curve.ordinates,
+                        loss_ratio_curve.abscissae,
+                        scientific.average_loss(
+                            loss_ratio_curve.abscissae,
+                            loss_ratio_curve.ordinates))
 
                     # loss maps
                     for poe in conditional_loss_poes:
@@ -149,8 +160,14 @@ def event_based(job_id, hazard,
 
                         insured_loss_curve.abscissae = (
                             insured_loss_curve.abscissae / asset.value)
+
                         general.write_loss_curve(
-                            insured_curve_id, asset, insured_loss_curve)
+                            insured_curve_id, asset,
+                            insured_loss_curve.ordinates,
+                            insured_loss_curve.abscissae,
+                            scientific.average_loss(
+                                insured_loss_curve.abscissae,
+                                insured_loss_curve.ordinates))
 
                 # update the event loss table of this task
                 for i, asset in enumerate(assets):
@@ -246,13 +263,19 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
             tses, time_span = self.hazard_times()
 
-            aggregate_loss_curve = scientific.event_based(
-                curve_data.losses, tses, time_span,
-                curve_resolution=self.rc.loss_curve_resolution)
+            # Finalize the aggregate losses by running the event based
+            # algorithm on it and by computing the average loss
 
-            curve_data.losses = aggregate_loss_curve.abscissae.tolist()
-            curve_data.poes = aggregate_loss_curve.ordinates.tolist()
-            curve_data.save()
+            if len(curve_data.losses):
+                aggregate_loss_curve = scientific.event_based(
+                    curve_data.losses, tses, time_span,
+                    curve_resolution=self.rc.loss_curve_resolution)
+
+                curve_data.losses = aggregate_loss_curve.abscissae.tolist()
+                curve_data.poes = aggregate_loss_curve.ordinates.tolist()
+                curve_data.average_loss = scientific.average_loss(
+                    curve_data.losses, curve_data.poes)
+                curve_data.save()
 
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
@@ -263,7 +286,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 rupture_id=rupture_id,
                 aggregate_loss=aggregate_loss)
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
         See :method:`..general.BaseRiskCalculator.create_getter`
         """
@@ -273,14 +296,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
         gmf = output.gmfcollection
 
-        if gmf.lt_realization:
-            weight = gmf.lt_realization.weight
-        else:
-            weight = None
-
         hazard_getter = self.hazard_getter(
-            gmf.id, self.imt, assets, self.rc.best_maximum_distance)
-        return (hazard_getter, weight)
+            gmf.id, imt, assets, self.rc.best_maximum_distance)
+        return (hazard_getter, gmf.lt_realization.weight)
 
     def hazard_outputs(self, hazard_calculation):
         """
@@ -346,7 +364,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         # for aggregate loss curve, we need to create also the
         # aggregate loss individual curve object
         models.AggregateLossCurveData.objects.create(
-            loss_curve=aggregate_loss_curve)
+            loss_curve=aggregate_loss_curve,
+            average_loss=0)
 
         if self.rc.insured_losses:
             insured_curve_id = (

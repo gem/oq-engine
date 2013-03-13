@@ -239,11 +239,16 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def pre_execute(self):
         """
-        Do pre-execution work. At the moment, this work entails: parsing and
-        initializing sources, parsing and initializing the site model (if there
-        is one), and generating logic tree realizations. (The latter piece
-        basically defines the work to be done in the `execute` phase.)
+        Do pre-execution work. At the moment, this work entails:
+        parsing and initializing sources, parsing and initializing the
+        site model (if there is one), parsing vulnerability and
+        exposure files and generating logic tree realizations. (The
+        latter piece basically defines the work to be done in the
+        `execute` phase.).
         """
+
+        # Parse vulnerability and exposure model
+        self.parse_risk_models()
 
         # Parse logic trees and create source Inputs.
         self.initialize_sources()
