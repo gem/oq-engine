@@ -529,17 +529,12 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def mean_loss(losses, poes):
+def average_loss(losses, poes):
     """
-    Compute the mean loss (or loss ratio) for the given curve.
-    For instance, for a curve with four values [(x1, y1), (x2, y2), (x3, y3),
-    (x4, y4)], returns
+    Given a loss curve with `poes` over `losses` defined on a given
+    time span it computes the average loss on this period of time
+    """
 
-     x1 + 2x2 + x3  x2 + 2x3 + x4     y1 - y3  y2 - y4
-    (-------------, -------------) . (-------, -------)
-           4              4               2        4
-    """
-    # FIXME. Needs more documentation.
     mean_ratios = pairwise_mean(pairwise_mean(losses))
     mean_pes = pairwise_diff(pairwise_mean(poes))
     return numpy.dot(mean_ratios, mean_pes)
