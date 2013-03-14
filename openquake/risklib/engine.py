@@ -74,7 +74,7 @@ class FakeFuture(object):
         self.thunk = thunk
 
     def result(self):
-        return self.thunk
+        return self.thunk()
 
 
 class BaseRunner(object):
@@ -83,22 +83,14 @@ class BaseRunner(object):
     runs everything in the current process; should be used to debug
     issues in the parallel runner.
     """
-    def __init__(self, chunksize=None,
-                 agg=lambda acc, res: acc + res, seed=None,
-                 logger=None, executor=None):
+    def __init__(self, executor=None, chunksize=None,
+                 agg=lambda acc, res: acc + res, seed=None, logger=None):
         self.chunksize = chunksize
         self.agg = agg
         self.seed = [] if seed is None else seed
         self.log = logger or logging.getLogger(__name__)
-        self.cpu_count = cc = multiprocessing.cpu_count()
-        self.executor = executor or futures.ThreadPoolExecutor(cc)
-
-    def __enter__(self):
-        self.executor.__enter__()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.executor.__exit__(etype, exc, tb)
+        self.executor = executor
+        self.cpu_count = multiprocessing.cpu_count()
 
     def todo(self, func, chunks, args, kw):
         "Returns the operations to perform (iterator over futures)"
@@ -156,7 +148,7 @@ class Runner(BaseRunner):
             yield fut
 
 
-def run_calc(path, config='job.ini'):
+def run_calc(path, runner, config='job.ini'):
     """
     Reads the input in path (which can be a directory or a zip archive)
     and performs the risk calculation. The calculation is inferred from
@@ -164,10 +156,5 @@ def run_calc(path, config='job.ini'):
     be present in the input directory/archive.
     """
     inp = readers.read_calculator_input(path, config)
-    calculator = calculators.registry[inp['calculation_mode']]
-    with Runner(executor=futures.ProcessPoolExecutor()) as runner:
-        calculator(inp, runner)
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    run_calc(*sys.argv[1:])
+    inp['calculator'] = calculators.registry[inp['calculation_mode']]
+    inp['calculator'](inp, runner)
