@@ -81,7 +81,7 @@ class BaseRunner(object):
     """
     Implements the basic functionality of the parallel runner, but
     runs everything in the current process; should be used to debug
-    issues in the parallel runner.
+    issues in the parallel runner (the advantage is that the pdb works).
     """
     def __init__(self, executor=None, chunksize=None,
                  agg=lambda acc, res: acc + res, seed=None, logger=None):
@@ -102,6 +102,10 @@ class BaseRunner(object):
             yield ff
 
     def run(self, func, sequence, *args, **kw):
+        """
+        Apply ``func`` to the arguments (the first beeing a sequence)
+        and collect the results. See the documentation in doc/risklite.rst
+        """
         chunksize = self.chunksize or (len(sequence) // self.cpu_count + 1)
         acc = self.seed
         t0 = time.time()
@@ -158,3 +162,4 @@ def run_calc(path, runner, config='job.ini'):
     inp = readers.read_calculator_input(path, config)
     inp['calculator'] = calculators.registry[inp['calculation_mode']]
     inp['calculator'](inp, runner)
+    return inp

@@ -2,7 +2,6 @@ import os
 import itertools
 import operator
 import logging
-
 import numpy
 
 from openquake.risklib import api, utils, scientific
@@ -17,14 +16,14 @@ log = logging.getLogger()
 
 
 @registry.add('classical')
-def classical(input):
+def classical(ctxt, runner):
     raise NotImplementedError
 
 ######################### probabilistic_event_based #########################
 
 
 @registry.add('probabilistic_event_based')
-def probabilistic_event_based(input):
+def probabilistic_event_based(ctxt, runner):
     raise NotImplementedError
 
 ########################### scenario_damage ###########################
@@ -76,9 +75,9 @@ def get_hazard(assets, hazard_getter):
 
 
 @registry.add('scenario_damage')
-def scenario_damage(input, runner):
-    fm = input['fragility']
-    outdir = input['export_dir']
+def scenario_damage(ctxt, runner):
+    fm = ctxt['fragility']
+    outdir = ctxt['export_dir']
     by_asset_csv = os.path.join(outdir, 'dmg_dist_by_asset.csv')
     by_taxonomy_csv = os.path.join(outdir, 'dmg_dist_by_taxonomy.csv')
     total_csv = os.path.join(outdir, 'dmg_dist_total.csv')
@@ -86,8 +85,8 @@ def scenario_damage(input, runner):
     by_asset = writers.ScenarioDamageWriter(by_asset_csv, damage_states)
     by_taxonomy = writers.ScenarioDamageWriter(by_taxonomy_csv, damage_states)
     total = writers.ScenarioDamageWriter(total_csv, damage_states)
-    exposure = input['exposure']
-    gmf = input['gmf']
+    exposure = ctxt['exposure']
+    gmf = ctxt['gmf']
     hazard_getter = HG(gmf)
     ddpt = {}
     for taxonomy, assets in itertools.groupby(
@@ -110,11 +109,11 @@ def scenario_damage(input, runner):
 
 
 @registry.add('scenario')
-def scenario(input, runner):
-    outdir = input['export_dir']
-    vm = input['vulnerability']
-    exposure = input['exposure']
-    gmf = input['gmf']
+def scenario(ctxt, runner):
+    outdir = ctxt['export_dir']
+    vm = ctxt['vulnerability']
+    exposure = ctxt['exposure']
+    gmf = ctxt['gmf']
     loss_map_csv = os.path.join(outdir, 'loss_map.csv')
     loss_map = writers.ScenarioWriter(loss_map_csv)
     hazard_getter = HG(gmf)
