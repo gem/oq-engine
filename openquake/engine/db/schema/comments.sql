@@ -67,11 +67,6 @@ COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model source
 COMMENT ON COLUMN hzrdi.parsed_source.nrml IS 'NRML object representing the source';
 COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-COMMENT ON COLUMN hzrdi.parsed_source.polygon IS 'The surface projection (2D)
-of the "rupture enclosing" polygon for each source.
-This is relevant to all source types, including point sources.
-When considering a parsed_source record given a minimum integration distance,
-use this polygon in distance calculations.';
 
 
 COMMENT ON TABLE hzrdi.parsed_rupture_model IS 'Stores parsed hazard rupture model in serialized python object tree format';
