@@ -1,6 +1,8 @@
 import os
 import itertools
 import operator
+import logging
+
 import numpy
 
 from openquake.risklib import api, utils, scientific, hazard_getters, writers
@@ -8,6 +10,7 @@ from openquake.risklib import api, utils, scientific, hazard_getters, writers
 registry = utils.Register()
 
 HG = hazard_getters.HazardGetter
+log = logging.getLogger()
 
 ########################### classical ################################
 
@@ -89,12 +92,13 @@ def scenario_damage(input, runner):
     for taxonomy, assets in itertools.groupby(
             exposure, operator.attrgetter("taxonomy")):
         alist, hlist, missing = get_hazard(assets, hazard_getter)
+        log.info('Taxonomy %s, %d assets, %d missing', taxonomy,
+                 len(alist), len(missing))
         calc = api.ScenarioDamage(fm[taxonomy])
         fractions = [frac * asset.number_of_units for frac, asset in
                      zip(runner.run(calc, hlist), alist)]
         for asset, frac in zip(alist, fractions):
             write(by_asset, asset.asset_id, frac)
-        print taxonomy, len(hlist)
         ddpt[taxonomy] = array_sum(fractions)
     for taxonomy, fractions in ddpt.iteritems():
         write(by_taxonomy, taxonomy, fractions)
@@ -117,6 +121,8 @@ def scenario(input, runner):
             exposure, operator.attrgetter("taxonomy")):
         calc = api.Scenario(vm[taxonomy])
         alist, hlist, missing = get_hazard(assets, hazard_getter)
-        loss_ratio_list = runner.run(calc, hlist)
-        for asset, loss_ratio in zip(alist, loss_ratio_list):
+        log.info('Taxonomy %s, %d assets, %d missing', taxonomy,
+                 len(alist), len(missing))
+        loss_ratios = runner.run(calc, hlist)
+        for asset, loss_ratio in zip(alist, loss_ratios):
             write(loss_map, asset.asset_id, loss_ratio)
