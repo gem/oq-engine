@@ -20,7 +20,6 @@
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
                 </xs:sequence>
                 <xs:attribute name="format" type="Fmformat" use="required"/>
-                <xs:attribute name="imlUnit" type="xs:string" use="optional"/>
     </xs:complexType>
 
     <xs:simpleType name="LimitStates">

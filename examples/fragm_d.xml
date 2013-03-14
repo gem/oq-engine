@@ -2,7 +2,7 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <!-- The fragility function format applies to the entire fragility model -->
-    <fragilityModel format="discrete" imlUnit="g">
+    <fragilityModel format="discrete">
         <description>Fragility model for Pavia (discrete)</description>
 
         <!-- limit states apply to the entire fragility model -->
@@ -16,7 +16,7 @@
         <!-- fragility function set, each with its own, distinct taxonomy -->
         <ffs noDamageLimit="5">
             <taxonomy>RC/DMRF-D/LR</taxonomy>
-            <IML IMT="MMI">7 8 9 10 11</IML>
+            <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
@@ -36,7 +36,7 @@
         <!-- fragility function set, with different IMLs -->
         <ffs>
             <taxonomy>RC/DMRF-D/HR</taxonomy>
-            <IML IMT="MMI">7 8 9 10 11</IML>
+            <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
