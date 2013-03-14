@@ -146,8 +146,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
-            fault_trace=geo.Line([geo.Point(-121.82290, 37.73010),
-                                  geo.Point(-122.03880, 37.87710)]
+            fault_trace=geo.Line(
+                [geo.Point(-121.82290, 37.73010),
+                 geo.Point(-122.03880, 37.87710)]
             ),
             dip=45.0,
             rake=30.0
@@ -378,8 +379,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         eq, msg = helpers.deep_eq(exp, actual)
 
         self.assertTrue(eq, msg)
-
-
 
 
 class SourceDBWriterTestCase(unittest.TestCase):
