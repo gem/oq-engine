@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.source.characteristic` defines
-:class:`CharacteristicSource`.
+:class:`CharacteristicFaultSource`.
 """
 import numpy
 
@@ -25,7 +25,7 @@ from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
 
 
-class CharacteristicSource(SeismicSource):
+class CharacteristicFaultSource(SeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
     fault surface with seismic events rupturing the entire fault surface
@@ -45,13 +45,13 @@ class CharacteristicSource(SeismicSource):
     See also :class:`openquake.hazardlib.source.base.SeismicSource` for
     description of other parameters.
 
-    Note that a ``CharacteristicSource`` does not need any mesh spacing,
+    Note that a ``CharacteristicFaultSource`` does not need any mesh spacing,
     magnitude scaling relationship, and aspect ratio, therefore the constructor
     set these parameters to ``None``.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, surface, rake):
-        super(CharacteristicSource, self).__init__(
+        super(CharacteristicFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, None, None, None
         )
         NodalPlane.check_rake(rake)
@@ -60,7 +60,8 @@ class CharacteristicSource(SeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
-        Uses :meth:`openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
+        Uses :meth:
+        `openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
         and from bounding box coordinates create
         :class:`openquake.hazardlib.geo.mesh.RectangularMesh` and then calls
         :meth:`openquake.hazardlib.geo.mesh.Mesh.get_convex_hull()` to get a
