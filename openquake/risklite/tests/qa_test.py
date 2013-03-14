@@ -1,11 +1,14 @@
 import os
 import unittest
 from concurrent.futures import ProcessPoolExecutor
-from openquake.risklib.engine import run_calc, Runner, BaseRunner
+from openquake.risklite.parallel import run_calc, Runner, BaseRunner
+
+from nose.plugins.attrib import attr
 
 DATADIR = os.path.join(os.path.dirname(__file__),  'data')
 
 
+@attr('slow')
 class EngineTest(unittest.TestCase):
 
     @classmethod

@@ -3,7 +3,7 @@ import unittest
 import tempfile
 import shutil
 import zipfile
-from openquake.risklib.readers import read_calculator_input, Archive
+from openquake.risklite.readers import read_calculator_input, Archive
 
 
 TEST_FRAGILITY = '''\

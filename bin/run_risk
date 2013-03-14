@@ -3,7 +3,7 @@
 import sys
 import argparse
 from concurrent.futures import ProcessPoolExecutor
-from openquake.risklib.engine import run_calc, Runner
+from openquake.risklite.parallel import run_calc, Runner
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

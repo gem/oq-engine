@@ -5,7 +5,8 @@ import logging
 
 import numpy
 
-from openquake.risklib import api, utils, scientific, hazard_getters, writers
+from openquake.risklib import api, utils, scientific
+from openquake.risklite import hazard_getters, writers
 
 registry = utils.Register()
 

@@ -26,7 +26,7 @@ import logging
 import time
 import multiprocessing
 from concurrent import futures
-from openquake.risklib import calculators, readers
+from openquake.risklite import calculators, readers
 
 
 def chop(sequence, chunksize):
