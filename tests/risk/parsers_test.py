@@ -259,17 +259,13 @@ class FragilityModelParserTestCase(unittest.TestCase):
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
                           {'IMT': "PGA", 'imls': None},
-                          {'complete': (108.9, 123.7),
-                           'extensive': (48.05, 42.49),
-                           'moderate': (27.98, 20.677),
-                           'slight': (11.19, 8.27)}, 0.05))
+                          [(11.19, 8.27), (27.98, 20.677),
+                           (48.05, 42.49), (108.9, 123.7)], 0.05))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
                           {'IMT': "PGA", 'imls': None},
-                          {'complete': (108.8, 123.6),
-                           'extensive': (48.06, 42.48),
-                           'moderate': (27.99, 20.667),
-                           'slight': (11.18, 8.28)}, None))
+                          [(11.18, 8.28), (27.99, 20.667),
+                           (48.06, 42.48), (108.8, 123.6)], None))
 
     def test_parse_discrete(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_d.xml')))
@@ -283,14 +279,14 @@ class FragilityModelParserTestCase(unittest.TestCase):
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
                           {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
-                          {'collapse': [0.0, 0.0, 0.0, 0.03, 0.63],
-                           'minor': [0.0, 0.09, 0.56, 0.91, 0.98],
-                           'moderate': [0.0, 0.0, 0.04, 0.78, 0.96],
-                           'severe': [0.0, 0.0, 0.0, 0.29, 0.88]}, 5.0))
+                          [[0.0, 0.09, 0.56, 0.91, 0.98],
+                           [0.0, 0.0, 0.04, 0.78, 0.96],
+                           [0.0, 0.0, 0.0, 0.29, 0.88],
+                           [0.0, 0.0, 0.0, 0.03, 0.63]], 5.0))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
                           {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
-                          {'collapse': [0.0, 0.0, 0.0, 0.04, 0.64],
-                           'minor': [0.0, 0.09, 0.56, 0.92, 0.99],
-                           'moderate': [0.0, 0.0, 0.04, 0.79, 0.97],
-                           'severe': [0.0, 0.0, 0.0, 0.3, 0.89]}, None))
+                          [[0.0, 0.09, 0.56, 0.92, 0.99],
+                           [0.0, 0.0, 0.04, 0.79, 0.97],
+                           [0.0, 0.0, 0.0, 0.3, 0.89],
+                           [0.0, 0.0, 0.0, 0.04, 0.64]], None))
