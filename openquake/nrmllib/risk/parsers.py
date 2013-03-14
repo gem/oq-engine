@@ -328,20 +328,17 @@ class FragilityModelParser(object):
             if no_damage_limit:
                 no_damage_limit = float(no_damage_limit)
             if fmt == 'discrete':
-                all_poes = []
-                for lsi, ffd in enumerate(find('ffd', ffs)):
-                    self._check_limit_state(lsi, ffd.attrib['ls'])
-                    all_poes.append(
-                        map(float, findone('poEs', ffd).text.split()))
-                yield taxonomy, iml, all_poes, no_damage_limit
+                all_params = dict(
+                    [(ffd.attrib['ls'],
+                      map(float, findone('poEs', ffd).text.split()))
+                     for ffd in find('ffd', ffs)])
             else:  # continuous
-                all_params = []
-                for lsi, ffc in enumerate(find('ffc', ffs)):
-                    self._check_limit_state(lsi, ffc.attrib['ls'])
-                    params = findone('params', ffc).attrib
-                    all_params.append(
-                        (float(params['mean']), float(params['stddev'])))
-                yield taxonomy, iml, all_params, no_damage_limit
+                all_params = dict(
+                    [(ffc.attrib['ls'],
+                      (float(findone('params', ffc).attrib['mean']),
+                       float(findone('params', ffc).attrib['stddev'])))
+                     for ffc in find('ffc', ffs)])
+            yield taxonomy, iml, all_params, no_damage_limit
 
     def _check_limit_state(self, lsi, ls):
         if ls != self.limit_states[lsi]:

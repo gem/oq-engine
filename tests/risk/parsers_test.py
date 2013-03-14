@@ -247,47 +247,6 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
 
 class FragilityModelParserTestCase(unittest.TestCase):
 
-    def test_damage_states_bad_ordering(self):
-        fm_file = StringIO.StringIO('''<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <fragilityModel format="continuous" imlUnit="m">
-        <description>Fragility model for Pavia (continuous)</description>
-        <!-- limit states apply to the entire fragility model -->
-        <limitStates>
-            slight
-            moderate
-            extensive
-            complete
-        </limitStates>
-
-        <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs noDamageLimit="0.05" type="lognormal">
-            <taxonomy>RC/DMRF-D/LR</taxonomy>
-            <IML IMT="PGA" minIML="0.1" maxIML="9.9"/>
-            <!-- fragility function in continuous format, 1 per limit state -->
-            <ffc ls="slight">
-                <params mean="11.19" stddev="8.27" />
-            </ffc>
-
-            <ffc ls="extensive">
-                <params mean="48.05" stddev="42.49" />
-            </ffc>
-
-            <ffc ls="moderate">
-                <params mean="27.98" stddev="20.677" />
-            </ffc>
-
-            <ffc ls="complete">
-                <params mean="108.9" stddev="123.7" />
-            </ffc>
-        </ffs>
- </fragilityModel>
-</nrml>
-''')
-        self.assertRaises(ValueError, list,
-                          parsers.FragilityModelParser(fm_file))
-
     def test_parse_continuous(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_c.xml')))
 
@@ -300,17 +259,17 @@ class FragilityModelParserTestCase(unittest.TestCase):
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
                           {'IMT': "PGA", 'imls': None},
-                          [(11.19, 8.27),
-                           (27.98, 20.677),
-                           (48.05, 42.49),
-                           (108.9, 123.7)], 0.05))
+                          {'complete': (108.9, 123.7),
+                           'extensive': (48.05, 42.49),
+                           'moderate': (27.98, 20.677),
+                           'slight': (11.19, 8.27)}, 0.05))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
                           {'IMT': "PGA", 'imls': None},
-                          [(11.18, 8.28),
-                           (27.99, 20.667),
-                           (48.06, 42.48),
-                           (108.8, 123.6)], None))
+                          {'complete': (108.8, 123.6),
+                           'extensive': (48.06, 42.48),
+                           'moderate': (27.99, 20.667),
+                           'slight': (11.18, 8.28)}, None))
 
     def test_parse_discrete(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_d.xml')))
@@ -324,14 +283,14 @@ class FragilityModelParserTestCase(unittest.TestCase):
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
                           {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
-                          [[0.0, 0.09, 0.56, 0.91, 0.98],
-                           [0.0, 0.0, 0.04, 0.78, 0.96],
-                           [0.0, 0.0, 0.0, 0.29, 0.88],
-                           [0.0, 0.0, 0.0, 0.03, 0.63]], 5.0))
+                          {'collapse': [0.0, 0.0, 0.0, 0.03, 0.63],
+                           'minor': [0.0, 0.09, 0.56, 0.91, 0.98],
+                           'moderate': [0.0, 0.0, 0.04, 0.78, 0.96],
+                           'severe': [0.0, 0.0, 0.0, 0.29, 0.88]}, 5.0))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
                           {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
-                          [[0.0, 0.09, 0.56, 0.92, 0.99],
-                           [0.0, 0.0, 0.04, 0.79, 0.97],
-                           [0.0, 0.0, 0.0, 0.3, 0.89],
-                           [0.0, 0.0, 0.0, 0.04, 0.64]], None))
+                          {'collapse': [0.0, 0.0, 0.0, 0.04, 0.64],
+                           'minor': [0.0, 0.09, 0.56, 0.92, 0.99],
+                           'moderate': [0.0, 0.0, 0.04, 0.79, 0.97],
+                           'severe': [0.0, 0.0, 0.0, 0.3, 0.89]}, None))
