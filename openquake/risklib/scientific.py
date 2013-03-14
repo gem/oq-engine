@@ -200,6 +200,66 @@ VulnerabilityFunction`
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
+class FragilityFunctionContinuous(object):
+    # FIXME (lp). Should be re-factored with LogNormalDistribution
+    def __init__(self, mean, stddev):
+        self.mean = mean
+        self.stddev = stddev
+
+    def __call__(self, iml):
+        """
+        Compute the Probability of Exceedance (PoE) for the given
+        Intensity Measure Level (IML).
+        """
+        variance = self.stddev ** 2.0
+        sigma = numpy.sqrt(numpy.log(
+            (variance / self.mean ** 2.0) + 1.0))
+
+        mu = self.mean ** 2.0 / numpy.sqrt(
+            variance + self.mean ** 2.0)
+
+        return stats.lognorm.cdf(iml, sigma, scale=mu)
+
+    def __getstate__(self):
+        return dict(mean=self.mean, stddev=self.stddev)
+
+
+class FragilityFunctionDiscrete(object):
+
+    def __init__(self, imls, poes):
+        self.poes = poes
+        self._interp = None
+        self.imls = imls
+        self.no_damage_limit = None
+
+    @property
+    def interp(self):
+        if self._interp is not None:
+            return self._interp
+        self._interp = interpolate.interp1d(self.imls, self.poes)
+        return self._interp
+
+    def __call__(self, iml):
+        """
+        Compute the Probability of Exceedance (PoE) for the given
+        Intensity Measure Level (IML).
+        """
+        highest_iml = self.imls[-1]
+        # when the intensity measure level is above
+        # the range, we use the highest one
+        return self.interp(highest_iml if iml > highest_iml else iml)
+
+    # so that the curve is pickeable
+    def __getstate__(self):
+        return dict(poes=self.poes, imls=self.imls, _interp=None)
+
+    def __eq__(self, other):
+        return (self.poes == other.poes and self.imls == other.imls)
+
+    def __ne__(self, other):
+        return not self == other
+
+
 ##
 ## Distribution & Sampling
 ##
@@ -388,6 +448,52 @@ def event_based(loss_values, tses, time_span,
 
 
 ##
+## Scenario Damage
+##
+
+def damage_state_fractions(fragility_functions, gmv, no_damage_limit=None):
+    """
+    Compute the fractions of each damage state for the ground motion
+    value given.
+
+    :param float gmv: ground motion value.
+    :returns: the fraction of buildings of each damage state
+        computed for the given ground motion value.
+    :rtype: 1d `numpy.array`. Each value represents
+        the fraction of a damage state (in order from the lowest
+        to the highest)
+    """
+    damage_state_values = numpy.zeros(len(fragility_functions) + 1)
+
+    if no_damage_limit is not None and gmv <= no_damage_limit:
+        damage_state_values[0] = 1.0
+        return numpy.array(damage_state_values)
+
+    last_poe = 1
+    for i, fragility_function in enumerate(fragility_functions):
+        a_poe = fragility_function(gmv)
+        damage_state_values[i] = last_poe - a_poe
+        last_poe = a_poe
+
+    # last damage state is equal to the probability
+    # of exceedance of the last limit state
+    damage_state_values[-1] = fragility_functions[-1](gmv)
+    return damage_state_values
+
+
+def scenario_damage(fragility_functions, gmvs, no_damage_limit):
+    """
+    Compute the damage state fractions for the given array of ground
+    motion values. Returns an NxM matrix where N is the number of
+    realizations and M is the numbers of damage states.
+    """
+    return numpy.array([
+        damage_state_fractions(
+            fragility_functions, gmv, no_damage_limit)
+        for gmv in gmvs])
+
+
+##
 ## Classical
 ##
 
@@ -487,7 +593,6 @@ def conditional_loss_ratio(a_curve, probability):
 ##
 ## Insured Losses
 ##
-
 
 def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
     """

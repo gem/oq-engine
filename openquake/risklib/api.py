@@ -108,12 +108,16 @@ class ScenarioDamage(object):
     motion field and M is the numbers of damage states. Take in input a
     FragilityFunctionSequence object.
     """
-    def __init__(self, ffs):
+    def __init__(self, ffs, no_damage_limit=None):
         self.ffs = ffs
+        self.no_damage_limit = no_damage_limit
 
     def __call__(self, ground_motion_fields):
         """
         The ground motion field is a list of ground motion values
         (one array for each site). Returns a list of arrays (one per site).
         """
-        return map(self.ffs.ground_motion_fractions, ground_motion_fields)
+        return [
+            scientific.scenario_damage(
+                self.ffs, asset_gmvs, self.no_damage_limit)
+            for asset_gmvs in ground_motion_fields]

@@ -30,7 +30,6 @@ import collections
 
 import numpy
 
-from openquake.risklib.models.input import FragilityModel
 from openquake.risklib.scientific import VulnerabilityFunction
 from openquake.risklib.utils import Register
 
@@ -82,7 +81,7 @@ def read_fragility(rows):
     irows = iter(rows)
     fmt, iml, limit_states = map(ast.literal_eval, irows.next())
     args = [map(ast.literal_eval, row) for row in irows]
-    return FragilityModel(fmt, iml['IMT'], iml['imls'], limit_states, *args)
+    return [fmt, iml['IMT'], iml['imls'], limit_states] + args
 
 
 @read.add('vulnerability')
