@@ -586,8 +586,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
-            inp = engine2.get_input(
-                full_path, 'source', self.hc.owner, self.hc.force_inputs)
+            inp = engine2.get_input(full_path, 'source', self.hc.owner)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
