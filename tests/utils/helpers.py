@@ -286,27 +286,6 @@ def timeit(method):
     return _timed
 
 
-def skipit(method):
-    """Decorator for skipping tests"""
-    try:
-        import nose
-        from nose.plugins.skip import SkipTest
-    except ImportError:
-
-        def skip_me(*_args, **_kw):
-            """The skipped method"""
-            print "Can't raise nose SkipTest error, silently skipping %r" % (
-                method.__name__)
-        return skip_me
-
-    def skipme(*_args, **_kw):
-        """The skipped method"""
-        print "Raising a nose SkipTest error"
-        raise SkipTest("skipping method %r" % method.__name__)
-
-    return nose.tools.make_decorator(method)(skipme)
-
-
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     """
     Assert that two complex structures have almost equal contents.
