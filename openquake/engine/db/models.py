@@ -2271,6 +2271,12 @@ class UHS(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"uhs'
 
+    def __iter__(self):
+        """
+        Iterate over the :class:`UHSData` which belong this object.
+        """
+        return self.uhsdata_set.iterator()
+
 
 class UHSData(djm.Model):
     """
