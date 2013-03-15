@@ -401,6 +401,8 @@ class QuantileCurveTestCase(unittest.TestCase):
         # This doesn't appear to be a problem when there is only a single end
         # branch in the logic tree (and so the single weight is
         # decimal.Decimal(1.0)).
+        # This test ensures that `weighted_quantile_curve` works when weights
+        # are passed as `Decimal` types.
         expected_curve = numpy.array([0.89556, 0.83045, 0.73646])
 
         quantile = 0.3
@@ -410,7 +412,7 @@ class QuantileCurveTestCase(unittest.TestCase):
             [8.9556e-01, 8.3045e-01, 7.3646e-01],
             [9.1873e-01, 8.6697e-01, 7.8992e-01],
         ]
-        weights = [decimal.Decimal(x) for x in (0.2, 0.3, 0.5)]
+        weights = [decimal.Decimal(x) for x in ('0.2', '0.3', '0.5')]
 
         actual_curve = post_processing.weighted_quantile_curve(
             curves, weights, quantile)
