@@ -223,6 +223,47 @@ def do_hazard_map_post_process(job):
     logs.LOG.debug('< Done post-processing - Hazard Maps')
 
 
+def do_uhs_post_proc(job):
+    """
+    Compute and save (to the DB) Uniform Hazard Spectra for all hazard maps for
+    the given ``job``.
+
+    :param job:
+        Instance of :class:`openquake.engine.db.models.OqJob`.
+    """
+    hc = job.hazard_calculation
+
+    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+
+    for poe in hc.poes:
+        maps_for_poe = models.HazardMap.objects.filter(
+            output__oq_job=job, poe=poe
+        )
+
+        # mean (if defined)
+        mean_maps = maps_for_poe.filter(statistics='mean')
+        if mean_maps.count() > 0:
+            mean_uhs = make_uhs(mean_maps)
+            _save_uhs(job, mean_uhs, poe, statistics='mean')
+
+        # quantiles (if defined)
+        for quantile in hc.quantile_hazard_curves:
+            quantile_maps = maps_for_poe.filter(
+                statistics='quantile', quantile=quantile
+            )
+            quantile_uhs = make_uhs(quantile_maps)
+            _save_uhs(job, quantile_uhs, poe, statistics='quantile',
+                      quantile=quantile)
+
+        # for each logic tree branch:
+        for rlz in rlzs:
+            rlz_maps = maps_for_poe.filter(
+                statistics=None, lt_realization=rlz
+            )
+            rlz_uhs = make_uhs(rlz_maps)
+            _save_uhs(job, rlz_uhs, poe, rlz=rlz)
+
+
 def make_uhs(maps):
     """
     Make Uniform Hazard Spectra curves for each location.
