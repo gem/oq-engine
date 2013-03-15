@@ -455,26 +455,6 @@ def event_based(loss_values, tses, time_span,
 ## Scenario Damage
 ##
 
-def damage_state_fractions(fragility_functions, gmv):
-    """
-    Compute the fractions of each damage state for the ground motion
-    value given.
-
-    :param float gmv: ground motion value.
-    :returns: the fraction of buildings of each damage state
-        computed for the given ground motion value.
-    :rtype: 1d `numpy.array`. Each value represents
-        the fraction of a damage state (in order from the lowest
-        to the highest)
-    """
-    return -numpy.array(
-        list(reversed(
-            pairwise_diff(
-                [0] + [
-                    fragility_function(gmv)
-                    for fragility_function in reversed(fragility_functions)] +
-                [1]))))
-
 
 def scenario_damage(fragility_functions, gmvs):
     """
@@ -483,7 +463,12 @@ def scenario_damage(fragility_functions, gmvs):
     realizations and M is the numbers of damage states.
     """
     return numpy.array([
-        damage_state_fractions(fragility_functions, gmv)
+        -numpy.array(
+            list(reversed(
+                pairwise_diff(
+                    [0] +
+                    [ff(gmv) for ff in reversed(fragility_functions)] +
+                    [1]))))
         for gmv in gmvs])
 
 
