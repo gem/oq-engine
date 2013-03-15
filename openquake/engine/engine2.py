@@ -25,7 +25,7 @@ import sys
 import openquake.engine
 
 from django.core import exceptions
-from django.db import close_connection, models as djm
+from django.db import close_connection
 
 from openquake.engine import kvs
 from openquake.engine import logs
@@ -192,10 +192,7 @@ def get_input(path, input_type, owner, name=None):
 
     model_content = models.ModelContent()
     with open(path, 'rb') as fh:
-        if not input_type == 'exposure':
-            model_content.raw_content = fh.read()
-        else:
-            model_content.raw_content = 'exposure file content not stored'
+        model_content.raw_content = fh.read()
     # Try to guess the content type:
     model_content.content_type = _get_content_type(path)
     model_content.save()
