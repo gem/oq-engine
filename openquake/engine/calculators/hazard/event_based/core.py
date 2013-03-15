@@ -46,12 +46,8 @@ from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.calculators.hazard.classical import (
-    post_processing as cls_post_processing)
 from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
-from openquake.engine.db.aggregate_result_writer import MeanCurveWriter
-from openquake.engine.db.aggregate_result_writer import QuantileCurveWriter
 from openquake.engine.input import logictree
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
@@ -646,15 +642,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             # has some value (not an empty list), do this additional
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                tasks = cls_post_processing.setup_tasks(
-                    self.job, self.job.hazard_calculation,
-                    curve_finder=models.HazardCurveData.objects,
-                    writers=dict(mean_curves=MeanCurveWriter,
-                                 quantile_curves=QuantileCurveWriter))
-
-                utils_tasks.distribute(
-                    cls_post_processing.do_post_process,
-                    ("post_processing_task", tasks),
-                    tf_args=dict(job_id=self.job.id))
+                self.do_aggregate_post_proc()
 
         logs.LOG.debug('< done with post processing')
