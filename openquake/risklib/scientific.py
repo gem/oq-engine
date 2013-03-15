@@ -462,8 +462,8 @@ def scenario_damage(fragility_functions, gmvs):
     motion values. Returns an NxM matrix where N is the number of
     realizations and M is the numbers of damage states.
     """
-    return numpy.array([
-        -numpy.array(
+    return -numpy.array([
+        numpy.array(
             list(reversed(
                 pairwise_diff(
                     [0] +
