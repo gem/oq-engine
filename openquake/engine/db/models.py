@@ -1627,6 +1627,15 @@ class HazardMap(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
 
+    def __str__(self):
+        return (
+            'HazardMap(poe=%(poe)s, imt=%(imt)s, sa_period=%(sa_period)s, '
+            'statistics=%(statistics)s, quantile=%(quantile)s)'
+        ) % self.__dict__
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def parse_imt(imt):
     """
