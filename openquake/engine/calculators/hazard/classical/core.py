@@ -306,8 +306,14 @@ BaseHazardCalculatorNext.finalize_hazard_curves`
             self.do_aggregate_post_proc()
 
         # hazard maps:
-        if self.hc.hazard_maps:
+        # required for computing UHS
+        # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
+        # just don't export the maps
+        if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
             post_proc.do_hazard_map_post_process(self.job)
+
+        if self.hc.uniform_hazard_spectra:
+            post_proc.do_uhs_post_proc(self.job)
 
         logs.LOG.debug('< done with post processing')
 
