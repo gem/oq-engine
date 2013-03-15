@@ -109,7 +109,12 @@ class ComplexFaultSource(SeismicSource):
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
                 hypocenter = mesh.get_middle_point()
-                surface = ComplexFaultSurface(mesh)
+
+                try:
+                    surface = ComplexFaultSurface(mesh)
+                except ValueError as e:
+                    raise ValueError("Invalid source with id=%s. %s" % (
+                        self.source_id, str(e)))
                 yield ProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),

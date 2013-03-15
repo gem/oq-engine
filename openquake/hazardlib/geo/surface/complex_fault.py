@@ -52,7 +52,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
             self.get_mesh()._get_proj_enclosing_polygon()[1],
             shapely.geometry.multipolygon.MultiPolygon), """Invalid surface.
 The projected enclosing polygon must be a simple polygon.
-Check the definition (mesh or edges) of the surface"""
+Check the geometry definition of the fault source"""
 
     def _create_mesh(self):
         """
