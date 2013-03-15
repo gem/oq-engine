@@ -249,7 +249,6 @@ COMMENT ON COLUMN uiapi.job_stats.num_realizations IS 'The number of logic tree 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
 COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
 COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
-COMMENT ON COLUMN uiapi.oq_job_profile.force_inputs IS 'If true: parse model inputs and write them to the database no matter what';
 COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - peak ground acceleration (pga)
