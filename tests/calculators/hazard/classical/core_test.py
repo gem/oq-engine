@@ -296,6 +296,32 @@ store_site_model'
                 hazard_curve=sa_curves.id)
             self.assertEqual(120, len(sa_curve_data))
 
+        # test post processing
+        self.job.status = 'post_processing'
+        self.job.save()
+        self.calc.post_process()
+
+        # Test for the correct number of maps.
+        # The expected count is:
+        # (num_poes * num_imts * num_rlzs)
+        # +
+        # (num_poes * num_imts * (1 mean + num_quantiles))
+        # Thus:
+        # (2 * 2 * 2) + (2 * 2 * (1 + 2)) = 20
+        hazard_maps = models.HazardMap.objects.filter(output__oq_job=self.job)
+        self.assertEqual(20, hazard_maps.count())
+
+        # test for the correct number of UH Spectra:
+        # The expected count is:
+        # (num_hazard_maps_PGA_or_SA / num_poes)
+        # (20 / 2) = 10
+        uhs = models.UHS.objects.filter(output__oq_job=self.job)
+        self.assertEqual(10, uhs.count())
+        # Now test the number of curves in each UH Spectra
+        # It should be equal to the number of sites (120)
+        for u in uhs:
+            self.assertEqual(120, u.uhsdata_set.count())
+
         self.job.status = 'clean_up'
         self.job.save()
         self.calc.clean_up()
