@@ -319,7 +319,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         # If this was an existing model, it was already parsed and should be in
         # the DB.
-        if not self.rc.force_inputs and models.ExposureModel.objects.filter(
+        if models.ExposureModel.objects.filter(
                 input=exposure_model_input).exists():
             logs.LOG.debug("skipping storing exposure as an input model "
                            "was already present")
