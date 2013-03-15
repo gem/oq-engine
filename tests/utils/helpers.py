@@ -199,7 +199,7 @@ def run_hazard_job(cfg, exports=None):
 
 
 def run_job_sp(job_type, config_file, hazard_id=None, params=None,
-               silence=False, force_inputs=True):
+               silence=False):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
@@ -215,9 +215,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         List of additional command line params to bin/openquake. Optional.
     :param bool silence:
         If `True`, silence all stdout messages.
-    :param bool force_inputs:
-        Defaults to `True`. If `True`, run openquake with the `--force-inputs`
-        option.
 
     :returns:
         With the default input, return the return code of the subprocess.
@@ -230,8 +227,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
             "--log-level=error"]
     if hazard_id:
         args.append("--hazard-output-id=%d" % hazard_id)
-    if force_inputs:
-        args.append('--force-inputs')
     if params:
         args.extend(params)
 
@@ -550,14 +545,11 @@ class DbTestCase(object):
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job, force_inputs, save2db=True):
+    def setup_job_profile(cls, job, save2db=True):
         """Create a profile for the given job.
 
         :param job: The :class:`openquake.engine.db.models.OqJob`
             instance to use.
-        :param bool force_inputs: If `True` the model input files will be
-            parsed and the resulting content written to the database no matter
-            what.
         :param bool save2db: If `False` the job profile instance will be
             returned but not saved to the database. Otherwise it is saved to
             the database and returned then.
@@ -565,7 +557,6 @@ class DbTestCase(object):
         """
         oqjp = models.OqJobProfile()
         oqjp.owner = job.owner
-        oqjp.force_inputs = force_inputs
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
         oqjp.region_grid_spacing = 0.01
@@ -623,24 +614,20 @@ class DbTestCase(object):
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, inputs=None,
-                          force_inputs=False, omit_profile=False,
-                          user_name="openquake"):
+                          omit_profile=False, user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
-        :param bool force_inputs: If `True` the model input files will be
-            parsed and the resulting content written to the database no matter
-            what.
         :param bool omit_profile: If `True` no job profile will be created.
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         job = engine.prepare_job(user_name)
         if not omit_profile:
-            oqjp = cls.setup_job_profile(job, force_inputs)
+            oqjp = cls.setup_job_profile(job)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
 
         # Insert input model files
@@ -886,7 +873,7 @@ def get_hazard_job(cfg, username=None):
     username = username if username is not None else default_user().user_name
 
     job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+    params, files = engine2.parse_config(open(cfg, 'r'))
     haz_calc = engine2.create_hazard_calculation(
         job.owner, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
@@ -970,8 +957,7 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(
-        open(risk_cfg, 'r'), force_inputs=True)
+    params, files = engine2.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
