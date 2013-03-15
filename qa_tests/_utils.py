@@ -13,10 +13,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import openquake.nrmllib
+import numpy
 import unittest
 
 import openquake.engine
+import openquake.nrmllib
 
 from lxml import etree
 from mock import patch
@@ -68,6 +69,21 @@ class BaseQATestCase(unittest.TestCase):
         contents_b = etree.tostring(etree.parse(b), pretty_print=True)
 
         self.assertEqual(contents_a, contents_b)
+
+    def assert_equals_var_tolerance(self, expected, actual):
+        """
+        Assert (almost) equal with a variable tolerance. For extremely low
+        values (< 0.0005), tolerance is 3 digits. For everything >= 0.0005,
+        tolerance is 2 digits.
+        """
+        for i, exp in enumerate(expected):
+            act = actual[i]
+
+            if exp < 0.0005:
+                tolerance = 3
+            else:
+                tolerance = 2
+            numpy.testing.assert_almost_equal(act, exp, decimal=tolerance)
 
 
 def validates_against_xml_schema(
