@@ -370,9 +370,7 @@ class Bug1098154TestCase(unittest.TestCase):
     def test(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
-        retcode = helpers.run_job_sp(
-            'hazard', cfg, silence=True, force_inputs=False
-        )
+        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
         job_stats = models.JobStats.objects.get(oq_job=job)
@@ -380,9 +378,7 @@ class Bug1098154TestCase(unittest.TestCase):
 
         # As the bug description explains, run the same job a second time and
         # check the task count. It should not grow.
-        retcode = helpers.run_job_sp(
-            'hazard', cfg, silence=True, force_inputs=False
-        )
+        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
         job_stats = models.JobStats.objects.get(oq_job=job)
@@ -399,7 +395,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job = engine2.prepare_job(username)
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        params, files = engine2.parse_config(open(cfg, 'r'))
 
         haz_calc = engine2.create_hazard_calculation(
             job.owner, params, files.values())
