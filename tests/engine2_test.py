@@ -115,7 +115,6 @@ bar = baz
 
         expected_params = {
             'base_path': exp_base_path,
-            'force_inputs': False,
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'bar': 'baz',
@@ -125,50 +124,7 @@ bar = baz
 
         self.assertEqual(expected_params, params)
 
-    def test_parse_config_with_files_force_inputs(self):
-        site_model_input = helpers.touch(content="site model")
-        sm_lt_input = helpers.touch(content="source model logic tree")
-        gsim_lt_input = helpers.touch(content="gsim logic tree")
-
-        source = StringIO.StringIO("""
-[hazard_or_whatever]
-calculation_mode = classical
-gsim_logic_tree_file = %s
-source_model_logic_tree_file = %s
-site_model_file = %s
-not_a_valid_xml = foo.xml
-""" % (gsim_lt_input, sm_lt_input, site_model_input))
-
-        # Add a 'name' to make this look like a real file:
-        source.name = 'path/to/some/job.ini'
-        exp_base_path = os.path.dirname(
-            os.path.join(os.path.abspath('.'), source.name))
-
-        expected_params = {
-            'base_path': exp_base_path,
-            'force_inputs': True,
-            'calculation_mode': 'classical',
-            'not_a_valid_xml': 'foo.xml',
-        }
-
-        params, files = engine2.parse_config(source, force_inputs=True)
-
-        expected_files = {
-            'site_model_file': models.Input.objects.filter(
-                input_type='site_model').latest('id'),
-            'source_model_logic_tree_file': models.Input.objects.filter(
-                input_type='source_model_logic_tree').latest('id'),
-            'gsim_logic_tree_file': models.Input.objects.filter(
-                input_type='gsim_logic_tree').latest('id'),
-        }
-
-        self.assertEqual(expected_params, params)
-
-        self.assertEqual(len(expected_files), len(files))
-        for key in expected_files:
-            self.assertEqual(expected_files[key].id, files[key].id)
-
-    def test_parse_config_with_files_no_force_inputs(self):
+    def test_parse_config_with_files(self):
         site_model_input = helpers.touch(content="foo")
 
         source = StringIO.StringIO("""
@@ -188,16 +144,13 @@ random_seed=0
 
         expected_params = {
             'base_path': exp_base_path,
-            'force_inputs': False,
             'calculation_mode': 'classical',
             'truncation_level': '0',
             'random_seed': '0',
             'maximum_distance': '0'
         }
 
-        # Run first with force_inputs=True to create the new Input.
-        params, expected_files = engine2.parse_config(
-            source, force_inputs=True)
+        params, expected_files = engine2.parse_config(source)
 
         # In order for us to reuse the existing input, we need to associate
         # each input with a successful job.
@@ -208,25 +161,13 @@ random_seed=0
         job.status = 'complete'
         job.save()
 
-        # Now run twice with force_inputs=False (the default).
         source.seek(0)
-        params1, files1 = engine2.parse_config(source)
-        source.seek(0)
-        params2, files2 = engine2.parse_config(source)
+        params, files = engine2.parse_config(source)
 
-        # Check the params just for sanity.
-        self.assertEqual(expected_params, params1)
-        self.assertEqual(expected_params, params2)
-
-        # Finally, check that the Input returned by the latest 2 calls matches
-        # the input we created above.
-        self.assertEqual(len(expected_files), len(files1))
-        self.assertEqual(len(expected_files), len(files2))
-
-        self.assertEqual(
-            expected_files['site_model_file'].id, files1['site_model_file'].id)
-        self.assertEqual(
-            expected_files['site_model_file'].id, files2['site_model_file'].id)
+        self.assertEqual(expected_params, params)
+        self.assertEqual(['site_model_file'], files.keys())
+        self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
+                         files['site_model_file'].digest)
 
 
 class FileDigestTestCase(unittest.TestCase):
