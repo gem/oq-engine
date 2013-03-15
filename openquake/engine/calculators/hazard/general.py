@@ -622,25 +622,28 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         vulnerability model (if there is one)
         """
 
-        if self.hc.inputs.filter(input_type='vulnerability').exists():
-            path = self.hc.inputs.get(input_type='vulnerability').path
+        queryset = self.hc.inputs.filter(input_type='vulnerability')
+        if queryset.exists():
+            content = StringIO.StringIO(
+                queryset.all()[0].model_content.raw_content_ascii)
             hc = self.hc
             hc.intensity_measure_types_and_levels = dict([
                 (record['IMT'], record['IML'])
-                for record in parsers.VulnerabilityModelParser(path)])
+                for record in parsers.VulnerabilityModelParser(content)])
             hc.intensity_measure_types = list(set([
                 record['IMT']
-                for record in parsers.VulnerabilityModelParser(path)]))
+                for record in parsers.VulnerabilityModelParser(content)]))
             hc.save()
 
-        if self.hc.inputs.filter(input_type='exposure').exists():
-            exposure_model_input = self.hc.inputs.get(input_type='exposure')
+        queryset = self.hc.inputs.filter(input_type='exposure')
+        if queryset.exists():
+            exposure_model_input = queryset.all()[0]
+            content = StringIO.StringIO(
+                exposure_model_input.model_content.raw_content_ascii)
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     exposure_model_input).serialize(
-                        parsers.ExposureModelParser(
-                            os.path.join(
-                                self.hc.base_path, exposure_model_input.path)))
+                        parsers.ExposureModelParser(content))
 
     def initialize_site_model(self):
         """
