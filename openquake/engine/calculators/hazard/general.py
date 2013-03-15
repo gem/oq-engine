@@ -635,6 +635,19 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 for record in parsers.VulnerabilityModelParser(content)]))
             hc.save()
 
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            content = StringIO.StringIO(
+                queryset.all()[0].model_content.raw_content_ascii)
+            hc = self.hc
+            hc.intensity_measure_types_and_levels = dict([
+                (record['IMT'], record['IML'])
+                for record in parsers.FragilityModelParser(content)])
+            hc.intensity_measure_types = list(set([
+                record['IMT']
+                for record in parsers.VulnerabilityModelParser(content)]))
+            hc.save()
+
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
             exposure_model_input = queryset.all()[0]
