@@ -180,7 +180,12 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 self._test_exported_file(f)
 
             # Test UHS export:
-            # TODO
+            uhs_files = []
+            for u in uhs:
+                uhs_files.extend(hazard.export(u.id, target_dir))
+
+            for f in uhs_files:
+                self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
 
