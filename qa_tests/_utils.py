@@ -20,11 +20,8 @@ import openquake.engine
 import openquake.nrmllib
 
 from lxml import etree
-from mock import patch
-from numpy import median
 
 from tests.utils import helpers
-from openquake.engine.db import models
 
 
 class BaseQATestCase(unittest.TestCase):
@@ -47,13 +44,8 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        # Set OQ_NO_DISTRIBUTE to true, so we can benefit from including these
-        # tests in our code coverage
-        with patch.dict('os.environ',
-                        {openquake.engine.NO_DISTRIBUTE_VAR: '1'}):
-            completed_job = helpers.run_hazard_job(cfg, exports=exports)
-
-            self.assertEqual('complete', completed_job.status)
+        completed_job = helpers.run_hazard_job(cfg, exports=exports)
+        self.assertEqual('complete', completed_job.status)
 
         return completed_job
 
@@ -105,12 +97,12 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
     attached Scenario Hazard script.
     """
 
-    count = 0
+    i = 0
     lower_bound = gmf_value - delta_prob / div_factor
     upper_bound = gmf_value + delta_prob / div_factor
 
     for v1, v2 in zip(gmfs_site_one, gmfs_site_two):
         if ((lower_bound <= v1 <= upper_bound) and
                 (lower_bound <= v2 <= upper_bound)):
-            count += 1
+            i += 1
     return count
