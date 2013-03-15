@@ -441,3 +441,45 @@ def export_disagg_matrix(output, target_dir):
     writer.serialize(data)
 
     return [path]
+
+
+@core.makedirs
+def export_uh_spectra(output, target_dir):
+    """
+    Export the specified UHS ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.engine.db.models.Output` with an `output_type` of
+        `uh_spectra`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list containing the exported file name.
+    """
+    uhs = models.UHS.objects.get(output=output)
+
+    filename = '%s.xml' % output.display_name
+    path = os.path.abspath(os.path.join(target_dir, filename))
+
+    if uhs.lt_realization is not None:
+        lt_rlz = uhs.lt_realization
+        smlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+        gsimlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    else:
+        smlt_path = None
+        gsimlt_path = None
+
+    metadata = {
+        'quantile_value': uhs.quantile,
+        'statistics': uhs.statistics,
+        'smlt_path': smlt_path,
+        'gsimlt_path': gsimlt_path,
+        'poe': uhs.poe,
+        'periods': uhs.periods,
+    }
+
+    writer = nrml_writers.UHSXMLWriter(path, **metadata)
+    writer.serialize(uhs)
+
+    return [path]
