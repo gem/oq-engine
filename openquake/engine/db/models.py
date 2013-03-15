@@ -1701,74 +1701,6 @@ class HazardCurveDataManager(djm.GeoManager):
     Manager class to filter and create HazardCurveData objects
     """
 
-    def individual_curves(self, job, imt):
-        """
-        Returns all the individual hazard curve data objects. If `imt`
-        is given the results are filtered by intensity measure type.
-        Here imt is given in the long format.
-        """
-        hc_im_type, sa_period, sa_damping = parse_imt(imt)
-
-        query_args = {'hazard_curve__statistics__isnull': True,
-                      'hazard_curve__output__oq_job': job,
-                      'hazard_curve__output__output_type': "hazard_curve",
-                      'hazard_curve__imt': hc_im_type,
-                      'hazard_curve__sa_period': sa_period,
-                      'hazard_curve__sa_damping': sa_damping}
-
-        queryset = self.filter(**query_args)
-        return queryset
-
-    def individual_curves_ordered(self, job, imt):
-        """
-        Same as #individual_curves but the results are ordered by location
-        """
-        ## TODO: change geometry -> geography in hazard_curve_data
-        ## and then replace order_by('location') -> order_by_location
-        return self.individual_curves(job, imt).order_by('location')
-
-    def individual_curves_nr(self, job, imt):
-        """
-        Returns the number of individual curves. If `imt` is given, it
-        returns the number of individual curves with intensity measure
-        type `imt`
-        """
-        return self.individual_curves(job, imt).count()
-
-    def individual_curves_chunk(self, job, imt, offset, block_size):
-        """
-        Get a chunk of individual curves related to `job` with `imt`
-        at offset `offset`. The size of the returned chunk is
-        `block_size`. The results are augmented with the wkb
-        representation of the location and the weight of the
-        individual curve
-        """
-        base_queryset = self.individual_curves_ordered(job, imt)
-        base_queryset = base_queryset.extra({
-            'wkb': 'asBinary(location)',
-        })
-        values = base_queryset.values(
-            'poes', 'wkb', 'hazard_curve__lt_realization__weight')
-
-        return values[offset: block_size + offset]
-
-    def individual_curves_chunks(self, job, imt, location_block_size=1):
-        """
-        Return a list of chunk of individual curves. A chunk is a
-        tuple with all the ingredients needed to get a chunk of
-        individual curves, i.e. a curve finder, the current job, the
-        imt of the curves, a block size and an offset
-        """
-        curve_nr = self.individual_curves_nr(job, imt)
-        calc = job.hazard_calculation
-        curves_per_location = calc.individual_curves_per_location()
-        block_size = location_block_size * curves_per_location
-        ranges = xrange(0, curve_nr, block_size)
-
-        return [IndividualHazardCurveChunk(
-                job, imt, curves_per_location, offset, block_size)
-                for offset in ranges]
-
     def all_curves_for_imt(self, job, imt, sa_period, sa_damping):
         """
         Helper function for creating a :class:`django.db.models.query.QuerySet`
@@ -1818,41 +1750,6 @@ class HazardCurveDataManager(djm.GeoManager):
             .extra(select={'x': 'ST_X(location)', 'y': 'ST_Y(location)'})\
             .values_list('x', 'y', 'poes')\
             .iterator()
-
-
-class IndividualHazardCurveChunk(object):
-    """
-    A class that model a chunk of individual curves that might cover
-    different locations
-    """
-
-    def __init__(self, job, imt, curves_per_location, offset, block_size):
-        self.job = job
-        self.imt = imt
-        self.offset = offset
-        self.curves_per_location = curves_per_location
-        self.block_size = block_size
-        self._raw_data = None
-
-    @property
-    def raw_data(self):
-        return HazardCurveData.objects.individual_curves_chunk(
-            self.job, self.imt, self.offset, self.block_size)
-
-    @property
-    def poes(self):
-        return [r['poes'] for r in self.raw_data]
-
-    @property
-    def weights(self):
-        weights = [r['hazard_curve__lt_realization__weight']
-                   for r in self.raw_data]
-        return weights[0:self.curves_per_location]
-
-    @property
-    def locations(self):
-        locations = [r['wkb'] for r in self.raw_data]
-        return locations[0::self.curves_per_location]
 
 
 class HazardCurveData(djm.Model):
