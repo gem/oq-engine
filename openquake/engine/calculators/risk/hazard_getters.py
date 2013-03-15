@@ -65,7 +65,12 @@ class HazardGetter(object):
         self._imt, self._sa_period, self._sa_damping = (
             models.parse_imt(self.imt))
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+
         self._cache = {}
+
+    def __repr__(self):
+        return """HazardGetter imt=%s max_distance=%s assets=%s""" % (
+            self.imt, self.max_distance, self.assets)
 
     def get_data(self):
         """
@@ -109,6 +114,7 @@ class HazardGetter(object):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
+        logs.LOG.warning(data)
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
                 [data[asset_id] for asset_id in data
@@ -307,11 +313,6 @@ class GroundMotionScenarioGetter(HazardGetter):
     approach used in :class:`GroundMotionValuesGetter`.
     """
 
-    def setup(self):
-        super(GroundMotionScenarioGetter, self).setup()
-        if self._sa_period:
-            self._imt = '%s(%s)' % (self._imt, self._sa_period)
-
     def get_data(self):
         cursor = connection.cursor()
 
@@ -333,14 +334,17 @@ class GroundMotionScenarioGetter(HazardGetter):
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """
 
+        imt = self._imt
+        if self._sa_period is not None:
+            imt = '%s(%s)' % (imt, self._sa_period)
+
         assets_extent = self._assets_mesh.get_convex_hull()
-        args = (self._imt, self.hazard_id,
+        args = (imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
                 self.max_distance * KILOMETERS_TO_METERS,
                 assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
-
         cursor.execute(query, args)
 
         return OrderedDict(cursor.fetchall())
