@@ -113,9 +113,6 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--version', action='store_true', help='Display version information')
     general_grp.add_argument(
-        '--force-inputs', action='store_true',
-        help='Parse model inputs and write them to the DB no matter what')
-    general_grp.add_argument(
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
               ' will be printed to the console'),
@@ -214,7 +211,7 @@ def set_up_arg_parser():
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
+def run_hazard(cfg_file, log_level, log_file, exports):
     """
     Run a hazard calculation using the specified config file and other options.
 
@@ -224,9 +221,6 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param bool force_inputs:
-        If `True`, don't attempt to reuse existing identical inputs; instead,
-        import fresh copies.
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
@@ -241,8 +235,7 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
 
         job = engine2.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(
-            open(cfg_file, 'r'), force_inputs=force_inputs)
+        params, files = engine2.parse_config(open(cfg_file, 'r'))
         calculation = engine2.create_hazard_calculation(job.owner, params,
                                                         files.values())
         job.hazard_calculation = calculation
@@ -413,8 +406,7 @@ def export(fn, output_id, target_dir):
 
 def run_risk(
         cfg_file, log_level, log_file,
-        force_inputs, exports,
-        hazard_output_id=None, hazard_calculation_id=None):
+        exports, hazard_output_id=None, hazard_calculation_id=None):
     """
     Run a risk calculation using the specified config file and other options.
     One of hazard_output_id or hazard_calculation_id must be specified.
@@ -425,9 +417,6 @@ def run_risk(
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param bool force_inputs:
-        If `True`, don't attempt to reuse existing identical inputs; instead,
-        import fresh copies.
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
@@ -447,8 +436,7 @@ def run_risk(
 
         job = engine2.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(
-            open(cfg_file, 'r'), force_inputs=force_inputs)
+        params, files = engine2.parse_config(open(cfg_file, 'r'))
 
         # Add the hazard output id to the risk calculation constructor
         # args
@@ -569,7 +557,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
-                   args.force_inputs, args.exports)
+                   args.exports)
     elif args.delete_hazard_calculation is not None:
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -586,8 +574,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,
-                 args.force_inputs, args.exports,
-                 hazard_output_id=args.hazard_output_id,
+                 args.exports, hazard_output_id=args.hazard_output_id,
                  hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
