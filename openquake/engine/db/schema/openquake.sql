@@ -306,7 +306,6 @@ CREATE TABLE uiapi.hazard_calculation (
     -- file
     base_path VARCHAR NOT NULL,
     export_dir VARCHAR,
-    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
@@ -393,7 +392,6 @@ CREATE TABLE uiapi.risk_calculation (
     -- file
     base_path VARCHAR NOT NULL,
     export_dir VARCHAR,
-    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     description VARCHAR NOT NULL DEFAULT '',
     -- what time period w/o any progress is acceptable for calculations?
@@ -454,7 +452,6 @@ CREATE TABLE uiapi.cnode_stats (
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    force_inputs boolean NOT NULL DEFAULT false,
     description VARCHAR NOT NULL DEFAULT '',
     -- One of:
     --      classical (Classical PSHA)
