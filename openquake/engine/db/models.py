@@ -590,7 +590,6 @@ class HazardCalculation(djm.Model):
     # file.
     base_path = djm.TextField()
     export_dir = djm.TextField(null=True, blank=True)
-    force_inputs = djm.BooleanField()
 
     #####################
     # General parameters:
@@ -1031,7 +1030,6 @@ class RiskCalculation(djm.Model):
     # file.
     base_path = djm.TextField()
     export_dir = djm.TextField(null=True, blank=True)
-    force_inputs = djm.BooleanField()
 
     #####################
     # General parameters:
@@ -1285,9 +1283,6 @@ class OqJobProfile(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     description = djm.TextField(default='')
-    force_inputs = djm.BooleanField(
-        default=False, help_text="whether the model inputs should be parsed "
-        "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
