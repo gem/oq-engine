@@ -208,8 +208,13 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
-            # and 4 hazard curve collections
-            self.assertEqual(18, len(outputs))
+            # ((2 imts * 2 realizations) + (2 imts * (1 mean + 3 quantiles))
+            # hazard curves,
+            # (2 poes * 2 imts * 2 realizations)
+            # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
+            # Total: 42
+            self.assertEqual(42, len(outputs))
+
 
             #######
             # SESs:
@@ -265,10 +270,18 @@ class EventBasedExportTestCase(BaseExportTestCase):
             ################
             # Hazard curves:
             haz_curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(12, haz_curves.count())
             for curve in haz_curves:
                 [exported_file] = hazard.export(curve.id, target_dir)
                 self._test_exported_file(exported_file)
 
+            ##############
+            # Hazard maps:
+            haz_maps = outputs.filter(output_type='hazard_map')
+            self.assertEqual(24, haz_maps.count())
+            for hmap in haz_maps:
+                [exported_file] = hazard.export(hmap.id, target_dir)
+                self._test_exported_file(exported_file)
         finally:
             shutil.rmtree(target_dir)
 
