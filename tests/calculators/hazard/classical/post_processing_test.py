@@ -418,3 +418,69 @@ class QuantileCurveTestCase(unittest.TestCase):
             curves, weights, quantile)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
+
+
+class UHSTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.lons = [0.0, 1.0, 2.0]
+        self.lats = [6.0, 7.0, 8.0]
+        map1_imls = [0.01, 0.02, 0.03]
+        map2_imls = [0.05, 0.10, 0.15]
+        map3_imls = [1.25, 2.17828, 3.14]
+
+        self.map1 = models.HazardMap(
+            imt='PGA',
+            poe=0.1,
+            lons=list(self.lons),
+            lats=list(self.lats),
+            imls=map1_imls,
+        )
+
+        self.map2 = models.HazardMap(
+            imt='SA',
+            sa_period=0.025,
+            poe=0.1,
+            lons=list(self.lons),
+            lats=list(self.lats),
+            imls=map2_imls,
+        )
+
+        self.map3 = models.HazardMap(
+            imt='SA',
+            sa_period=0.1,
+            poe=0.1,
+            lons=list(self.lons),
+            lats=list(self.lats),
+            imls=map3_imls,
+        )
+
+        # an invalid map type for calculating UHS
+        self.map_pgv = models.HazardMap(
+            imt='PGV',
+            poe=0.1,
+            lons=list(self.lons),
+            lats=list(self.lats),
+            imls=[0.0, 0.0, 0.0],
+        )
+
+    def test_make_uhs(self):
+        # intentionally out of order to set sorting
+        # the PGV map will get filtered out/ignored
+        maps = [self.map2, self.map_pgv, self.map3, self.map1]
+
+        # they need to be sorted in ascending order by SA period
+        # PGA is considered to be SA period = 0.0
+        expected = {
+            'periods': [0.0, 0.025, 0.1],  # again, 0.0 is PGA
+            'uh_spectra': [
+                # triples of (lon, lat, [imls])
+                (0.0, 6.0, (0.01, 0.05, 1.25)),
+                (1.0, 7.0, (0.02, 0.10, 2.17828)),
+                (2.0, 8.0, (0.030, 0.15, 3.14)),
+            ]
+        }
+
+        actual = post_proc.make_uhs(maps)
+
+        self.assertEqual(expected, actual)
