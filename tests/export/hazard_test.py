@@ -134,30 +134,53 @@ class ClassicalExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            expected_outputs = 18  # 6 hazard curves + 12 hazard maps
-            self.assertEqual(expected_outputs, len(outputs))
 
-            # Export the hazard curves:
+            expected_outputs = 40  # 10 hazard curves, 20 maps, 10 uhs
+            self.assertEqual(expected_outputs, outputs.count())
+
+            # Number of curves:
+            # (2 imts * 2 realizations)
+            # + (2 imts * (1 mean + 2 quantiles)
+            # = 10
             curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(10, curves.count())
+
+            # Number of maps:
+            # (2 poes * 2 imts * 2 realizations)
+            # + (2 poes * 2 imts * (1 mean + 2 quantiles))
+            # = 20
+            # Number of UHS:
+            maps = outputs.filter(output_type='hazard_map')
+            self.assertEqual(20, maps.count())
+
+            # Number of UHS:
+            # (20 maps_PGA_SA / 2 poes)
+            # = 10
+            uhs = outputs.filter(output_type='uh_spectra')
+            self.assertEqual(10, uhs.count())
+
+            # Test hazard curve export:
             hc_files = []
             for curve in curves:
                 hc_files.extend(hazard.export(curve.id, target_dir))
 
-            self.assertEqual(6, len(hc_files))
+            self.assertEqual(10, len(hc_files))
 
             for f in hc_files:
                 self._test_exported_file(f)
 
-            # Test hazard map export as well.
-            maps = outputs.filter(output_type='hazard_map')
+            # Test hazard map export:
             hm_files = []
             for haz_map in maps:
                 hm_files.extend(hazard.export(haz_map.id, target_dir))
 
-            self.assertEqual(12, len(hm_files))
+            self.assertEqual(20, len(hm_files))
 
             for f in hm_files:
                 self._test_exported_file(f)
+
+            # Test UHS export:
+            # TODO
         finally:
             shutil.rmtree(target_dir)
 
