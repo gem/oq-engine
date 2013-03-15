@@ -21,16 +21,12 @@
 import hashlib
 import json
 import math
-import numpy
 
-from itertools import izip
 from numpy import zeros
 
-from numpy import allclose
 from numpy import sin, cos, arctan2, sqrt, radians
 
 from shapely import geometry
-from scipy.interpolate import interp1d
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.engine.utils import round_float
