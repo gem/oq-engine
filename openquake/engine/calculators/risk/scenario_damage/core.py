@@ -40,7 +40,6 @@ from openquake.engine.calculators import base
 @general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
                     taxonomy, fragility_functions,
-                    no_damage_limit,
                     _output_containers):
     """
     Celery task for the scenario damage risk calculator.
@@ -59,7 +58,7 @@ def scenario_damage(job_id, hazard,
     :param _output_containers: a dictionary {hazard_id: output_id}
     of output_type "dmg_dist_per_asset"
     """
-    calculator = api.ScenarioDamage(fragility_functions, no_damage_limit)
+    calculator = api.ScenarioDamage(fragility_functions)
 
     # Scenario Damage works only on one hazard
     hazard_getter = hazard.values()[0][0]
@@ -174,7 +173,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.ddpt_output = None  # will be set in #create_outputs
         self.ddt_output = None  # will be set in #create_outputs
         self.fragility_functions = None  # will be set in #set_risk_models
-        self.no_damage_limits = dict()  # will be set in #set_risk_models
         self.damage_states = None  # will be set in #set_risk_models
 
     def hazard_outputs(self, hazard_calculation):
@@ -208,8 +206,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         fragility_functions for the given taxonomy.
         """
         return [taxonomy,
-                self.fragility_functions[taxonomy],
-                self.no_damage_limits[taxonomy]]
+                self.fragility_functions[taxonomy]]
 
     def task_completed_hook(self, message):
         """
@@ -295,18 +292,18 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         for taxonomy, iml, params, no_damage_limit in iterparse:
             self.taxonomies_imts[taxonomy] = iml['IMT']
-            self.no_damage_limits[taxonomy] = no_damage_limit
 
             if fmt == "discrete":
                 if no_damage_limit is None:
-                    self.no_damage_limits[taxonomy] = iml['imls'][0]
                     self.fragility_functions[taxonomy] = [
-                        scientific.FragilityFunctionDiscrete(iml['imls'], poes)
+                        scientific.FragilityFunctionDiscrete(
+                            iml['imls'], poes, iml['imls'][0])
                         for poes in params]
                 else:
                     self.fragility_functions[taxonomy] = [
                         scientific.FragilityFunctionDiscrete(
-                            [no_damage_limit] + iml['imls'], [0.0] + poes)
+                            [no_damage_limit] + iml['imls'], [0.0] + poes,
+                            no_damage_limit)
                         for poes in params]
 
             else:
