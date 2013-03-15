@@ -48,11 +48,14 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         # vertexes for top and bottom edges). Therefore, we want to
         # restrict every complex source to have a projected enclosing
         # polygon that is not a multipolygon.
-        assert not isinstance(
-            self.get_mesh()._get_proj_enclosing_polygon()[1],
-            shapely.geometry.multipolygon.MultiPolygon), """Invalid surface.
-The projected enclosing polygon must be a simple polygon.
-Check the geometry definition of the fault source"""
+        if isinstance(
+                self.get_mesh()._get_proj_enclosing_polygon()[1],
+                shapely.geometry.multipolygon.MultiPolygon):
+            raise ValueError("Invalid surface. "
+                             "The projected enclosing polygon "
+                             "must be a simple polygon. "
+                             "Check the geometry definition of the "
+                             "fault source")
 
     def _create_mesh(self):
         """
