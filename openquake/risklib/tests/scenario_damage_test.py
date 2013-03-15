@@ -48,9 +48,9 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
         # remaining limit states defined in the model.
 
         ffns = [scientific.FragilityFunctionDiscrete(
-            [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00])] * 2
+            [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00], 0.5)] * 2
         self._close_to([1.0, 0.0, 0.0],
-                       scientific.damage_state_fractions(ffns, 0.02, 0.05))
+                       scientific.damage_state_fractions(ffns, 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -64,12 +64,12 @@ class ScenarioDamageFunctionsTestCase(unittest.TestCase):
 
         ffs = [
             scientific.FragilityFunctionDiscrete(
-                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00]),
+                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00], 0.05),
             scientific.FragilityFunctionDiscrete(
-                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.00, 0.05, 0.20, 0.50])]
+                [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
 
         self._close_to([0.975, 0.025, 0.],
-                       scientific.damage_state_fractions(ffs, 0.075, 0.05))
+                       scientific.damage_state_fractions(ffs, 0.075))
 
     def _close_to(self, expected, actual):
         numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)

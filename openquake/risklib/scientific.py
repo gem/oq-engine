@@ -226,11 +226,11 @@ class FragilityFunctionContinuous(object):
 
 class FragilityFunctionDiscrete(object):
 
-    def __init__(self, imls, poes):
+    def __init__(self, imls, poes, no_damage_limit=None):
         self.poes = poes
         self._interp = None
         self.imls = imls
-        self.no_damage_limit = None
+        self.no_damage_limit = no_damage_limit
 
     @property
     def interp(self):
@@ -245,13 +245,17 @@ class FragilityFunctionDiscrete(object):
         Intensity Measure Level (IML).
         """
         highest_iml = self.imls[-1]
+
+        if self.no_damage_limit is not None and iml < self.no_damage_limit:
+            return 0.
         # when the intensity measure level is above
         # the range, we use the highest one
         return self.interp(highest_iml if iml > highest_iml else iml)
 
     # so that the curve is pickeable
     def __getstate__(self):
-        return dict(poes=self.poes, imls=self.imls, _interp=None)
+        return dict(poes=self.poes, imls=self.imls, _interp=None,
+                    no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
         return (self.poes == other.poes and self.imls == other.imls)
@@ -451,7 +455,7 @@ def event_based(loss_values, tses, time_span,
 ## Scenario Damage
 ##
 
-def damage_state_fractions(fragility_functions, gmv, no_damage_limit=None):
+def damage_state_fractions(fragility_functions, gmv):
     """
     Compute the fractions of each damage state for the ground motion
     value given.
@@ -463,33 +467,23 @@ def damage_state_fractions(fragility_functions, gmv, no_damage_limit=None):
         the fraction of a damage state (in order from the lowest
         to the highest)
     """
-    damage_state_values = numpy.zeros(len(fragility_functions) + 1)
-
-    if no_damage_limit is not None and gmv <= no_damage_limit:
-        damage_state_values[0] = 1.0
-        return numpy.array(damage_state_values)
-
-    last_poe = 1
-    for i, fragility_function in enumerate(fragility_functions):
-        a_poe = fragility_function(gmv)
-        damage_state_values[i] = last_poe - a_poe
-        last_poe = a_poe
-
-    # last damage state is equal to the probability
-    # of exceedance of the last limit state
-    damage_state_values[-1] = fragility_functions[-1](gmv)
-    return damage_state_values
+    return -numpy.array(
+        list(reversed(
+            pairwise_diff(
+                [0] + [
+                    fragility_function(gmv)
+                    for fragility_function in reversed(fragility_functions)] +
+                [1]))))
 
 
-def scenario_damage(fragility_functions, gmvs, no_damage_limit):
+def scenario_damage(fragility_functions, gmvs):
     """
     Compute the damage state fractions for the given array of ground
     motion values. Returns an NxM matrix where N is the number of
     realizations and M is the numbers of damage states.
     """
     return numpy.array([
-        damage_state_fractions(
-            fragility_functions, gmv, no_damage_limit)
+        damage_state_fractions(fragility_functions, gmv)
         for gmv in gmvs])
 
 

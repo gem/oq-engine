@@ -68,6 +68,8 @@ class ProbabilisticEventBased(object):
         if not len(ground_motion_fields):
             return numpy.array([[]]), []
 
+        # this call prevents vulnerability functions to be simple
+        # callables
         self.vulnerability_function.init_distribution(
             len(ground_motion_fields), len(ground_motion_fields[0]),
             self.seed, self.correlation)
@@ -108,9 +110,8 @@ class ScenarioDamage(object):
     motion field and M is the numbers of damage states. Take in input a
     FragilityFunctionSequence object.
     """
-    def __init__(self, ffs, no_damage_limit=None):
+    def __init__(self, ffs):
         self.ffs = ffs
-        self.no_damage_limit = no_damage_limit
 
     def __call__(self, ground_motion_fields):
         """
@@ -118,6 +119,5 @@ class ScenarioDamage(object):
         (one array for each site). Returns a list of arrays (one per site).
         """
         return [
-            scientific.scenario_damage(
-                self.ffs, asset_gmvs, self.no_damage_limit)
+            scientific.scenario_damage(self.ffs, asset_gmvs)
             for asset_gmvs in ground_motion_fields]

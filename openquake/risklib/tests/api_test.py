@@ -40,7 +40,7 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
     def test_scenario_damage_calculator(self):
         fragility_functions = [id, id]
 
-        calculator = api.ScenarioDamage(fragility_functions, 0)
+        calculator = api.ScenarioDamage(fragility_functions)
 
         # here we just verify the outputs are stored,
         # because the scientific logic is tested elsewhere
