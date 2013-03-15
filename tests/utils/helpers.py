@@ -213,9 +213,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
       performing a hazard computation
     :param list params:
         List of additional command line params to bin/openquake. Optional.
-    :param bool check_output:
-        If `True`, use :func:`subprocess.check_output` instead of
-        :func:`subprocess.check_call`.
     :param bool silence:
         If `True`, silence all stdout messages.
     :param bool force_inputs:
@@ -224,10 +221,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
 
     :returns:
         With the default input, return the return code of the subprocess.
-
-        If ``check_output`` is set to True, return the output of the subprocess
-        call to bin/openquake as a `str`. See
-        http://docs.python.org/library/subprocess.html#subprocess.check_output
         for more details.
     :raises:
         If the return code of the subprocess call is not 0, a
