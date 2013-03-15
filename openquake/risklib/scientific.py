@@ -462,13 +462,12 @@ def scenario_damage(fragility_functions, gmvs):
     motion values. Returns an NxM matrix where N is the number of
     realizations and M is the numbers of damage states.
     """
-    return -numpy.array([
+    return numpy.array([
         numpy.array(
-            list(reversed(
-                pairwise_diff(
-                    [0] +
-                    [ff(gmv) for ff in reversed(fragility_functions)] +
-                    [1]))))
+            list(pairwise_diff_reversed(
+                [1] +
+                [ff(gmv) for ff in fragility_functions] +
+                [0])))
         for gmv in gmvs])
 
 
@@ -632,6 +631,15 @@ def pairwise_mean(values):
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
     return [x - y for x, y in utils.pairwise(values)]
+
+
+def pairwise_diff_reversed(values):
+    """
+    Differences between a value and the next value in a sequence, i.e.
+
+    x(n) - x(n-1), x(n-1) - x(n-2), ..., x(2) - x(1)
+    """
+    return reversed([x - y for x, y in reversed(list(utils.pairwise(values)))])
 
 
 def mean_std(fractions):
