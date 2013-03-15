@@ -77,32 +77,51 @@ assets, ordered by taxonomy.
 How the parallelization works
 ----------------------------------------------
 
-The ``Runner`` class in ``risklite.parallel`` provides a simple way
-to parallelize computations, which is suitable for risk calculations.
-It is however possible to implement different strategies. The only
-requirements on runner objects are the following:
+The ``Runner`` class in ``risklite.parallel`` provides a simple way to
+parallelize computations, which is suitable for risk calculations.  It
+is possible to implement different strategies by subclassing or by not
+subclassing. The only requirements are:
 
-- the runner object must have a ``.run`` method which must be called
-  with a callable, a sequence and possibly other optional arguments;
-- the callable must accept a sequence as first argument.
+1. the runner object must have a ``.run`` method to be called
+   with a callable, a sequence and possibly other optional arguments;
+2. the callable must accept a sequence as first argument.
 
 ``runner.run(func, sequence)`` takes the sequence and splits it in
 chunks of a given chunksize, then it applies ``func`` to each chunk
 and collects the results. In risk computations the sequence is
 a list of hazard values and ``func`` is a risklib calculator;
-the output is a list of numpy arrays.
-The regular ``Runner`` class uses the executor to submit the computation
-to a pool of workers (processes if using
-:class:concurrent.futures.ProcessPoolExecutor, threads if using
-:class:concurrent.futures.ThreadPoolExecutor); it is responsibility
-of the client code to shutdown the pool at the end of the
-computation. Since it is pretty difficult to debug error in
+the output is a list of numpy arrays. It is possible to use
+the runner in different circumstances and to provide custom
+aggregation functions; see `openquake.risklite.tests.runner_test`
+for examples.
+
+The ``Runner`` class uses the executor to submit the computation
+to a pool of workers. The workers can be processes (when using
+`:class:concurrent.futures.ProcessPoolExecutor`) or threads (when using
+`:class:concurrent.futures.ThreadPoolExecutor`); it is a responsibility
+of the client to shutdown the pool at the end of the computation. 
+The order of execution of the chunks is not specified, however
+the order of the results is guaranteed to be the same of the
+inputs, i.e. the list in output matches the list in input.
+Using ``runner.run(func, inputlist)`` is similar but not identical
+to calling ``executor.map(func, inputlist)``: the latter schedules
+all the tasks at once and then starts running them; the former instead
+takes in account the size of the pool, and schedule only enough tasks
+to fill the pool; when they are done, it schedules other tasks to fill
+the pool again and it continues until all the tasks are finished.
+This approach works because all the chunks have the same size and
+are expected to take more or less the same time. It is better than
+``executor.map`` in terms of memory consumption, since the number of
+scheduled tasks is limited by the pool size. In case of memory
+problems you can reduce it, by trading memory for speed.
+
+Since it is pretty difficult to debug error in
 parallel code, ``risklite.parallel`` provides a ``BaseRunner`` class too:
 it has the same interface of the ``Runner`` class, but it actually
 runs the operations sequentially in the same process, so that the
 Python debugger works, the traceback is not lost and the programmer
 experience is generally nicer, apart from the fact that only a single
-core is used, i.e. the computation is expected to be slower.
+core is used, i.e. the computation is slower.
 
 
 Defining new calculators
