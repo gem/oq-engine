@@ -107,7 +107,7 @@ def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
     parser = argparse.ArgumentParser(
-        description='OpenQuake - Seismic Hazard and Risk Analysis Engine')
+        description='OpenQuake Seismic Hazard and Risk Analysis Engine')
 
     general_grp = parser.add_argument_group('General')
     general_grp.add_argument(
@@ -115,7 +115,7 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
-              ' will be printed to the console'),
+              ' will be printed to the console (to stderr)'),
         required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
@@ -135,7 +135,7 @@ def set_up_arg_parser():
 
     general_grp.add_argument(
         '--yes', '-y', action='store_true',
-        help='Automatically answer "yes" when asked to confirmation an action'
+        help='Automatically answer "yes" when asked to confirm an action'
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -206,7 +206,9 @@ def set_up_arg_parser():
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
         '--exports', choices=['xml'],  default=[], action="append",
-        help='Post-calculation exports, if any. Only "xml" is supported')
+        help=('Automatically export all calculation results to the specified'
+              'format. Only "xml" is supported currently.')
+    )
 
     return parser
 
