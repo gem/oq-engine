@@ -2,7 +2,6 @@ import os
 import itertools
 import operator
 import logging
-import numpy
 
 from openquake.risklib import api, utils, scientific
 from openquake.risklite import hazard_getters, writers
@@ -38,18 +37,6 @@ def write(writer, tag, values):
     writer.write(tag, mean, std)
 
 
-def array_sum(arraylist):
-    try:
-        shape = arraylist[0].shape
-    except (IndexError, AttributeError):
-        return
-    result = numpy.zeros(shape)
-    for a in arraylist:
-        if a is not None:
-            result += a
-    return result
-
-
 def get_hazard(assets, hazard_getter):
     """
     :param assets:
@@ -66,7 +53,7 @@ def get_hazard(assets, hazard_getter):
     for asset in assets:
         try:
             hazard = hazard_getter(asset.site)
-        except KeyError:
+        except hazard_getters.MissingHazard:
             missing.append(asset)
             continue
         alist.append(asset)
@@ -88,7 +75,7 @@ def scenario_damage(ctxt, runner):
     exposure = ctxt['exposure']
     gmf = ctxt['gmf']
     hazard_getter = HG(gmf)
-    ddpt = {}
+    ddpt = {}  # damage distribution per taxonomy dictionary
     for taxonomy, assets in itertools.groupby(
             exposure, operator.attrgetter("taxonomy")):
         alist, hlist, missing = get_hazard(assets, hazard_getter)
@@ -99,10 +86,12 @@ def scenario_damage(ctxt, runner):
                      zip(runner.run(calc, hlist), alist)]
         for asset, frac in zip(alist, fractions):
             write(by_asset, asset.asset_id, frac)
-        ddpt[taxonomy] = array_sum(fractions)
+        if fractions:
+            ddpt[taxonomy] = sum(fractions)
     for taxonomy, fractions in ddpt.iteritems():
         write(by_taxonomy, taxonomy, fractions)
-    write(total, 'total', array_sum(ddpt.values()))
+    if ddpt:
+        write(total, 'total', sum(ddpt.values()))
 
 
 ############################## scenario ################################

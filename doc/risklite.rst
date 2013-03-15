@@ -29,9 +29,10 @@ For instance for a scenario computation the needed files are:
   ``lon lat gmv1 ... gmvN`` where ``N`` is the number of realizations
   of the ground motion field; the file must be tab separated
 - the exposure file, exposure.csv, in the format
-  ``xx```
-- the vulnerability functions, vulnerability.csv
-  
+  ``lon lat asset_ref number_of_units taxonomy```
+- the vulnerability functions, vulnerability.csv, in the format
+  ``taxonomy IMT [iml...] [loss_ratio...] [cov...] distribution``
+
 A valid configuration file could be the following::
 
   $ cat job.ini
@@ -46,7 +47,7 @@ A valid configuration file could be the following::
   
   export_dir = /tmp
   
-Notice the parameter ``export_dir``, which used as the directory where
+Notice the parameter ``export_dir``, which is used as the directory where
 to write the results.
 
 `risklite` can be used as a library too. There is a helper function

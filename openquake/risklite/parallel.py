@@ -23,10 +23,10 @@ from __future__ import print_function
 import sys
 import traceback
 import logging
-import time
-import multiprocessing
 from concurrent import futures
 from openquake.risklite import calculators, readers
+
+log = logging.getLogger(__name__)
 
 
 def chop(sequence, chunksize):
@@ -34,6 +34,7 @@ def chop(sequence, chunksize):
     assert chunksize > 0, chunksize
     totalsize = len(sequence)
     nchunks, rest = divmod(totalsize, chunksize)
+    i = -1
     for i in xrange(nchunks):
         yield sequence[i * chunksize: (i + 1) * chunksize]
     if rest:
@@ -41,7 +42,7 @@ def chop(sequence, chunksize):
 
 
 # not a method, so it can be easily pickled
-def runsafe(traceback_on, func, *args, **kw):
+def runsafe(traceback_off, func, *args, **kw):
     """
     Run a function and returns a triplet (result, exc, traceback).
     If there is an exception the result is the exception type, otherwise
@@ -52,7 +53,7 @@ def runsafe(traceback_on, func, *args, **kw):
         res = func(*args, **kw)
     except Exception:
         etype, exc, tb = sys.exc_info()
-        if not traceback_on:
+        if traceback_off:
             traceback.print_tb(tb)
             tb = None
         return etype, exc, tb
@@ -77,56 +78,61 @@ class FakeFuture(object):
         return self.thunk()
 
 
+class FakeExecutor(object):
+    def __init__(self):
+        self._max_workers = 1
+
+
 class BaseRunner(object):
     """
     Implements the basic functionality of the parallel runner, but
     runs everything in the current process; should be used to debug
     issues in the parallel runner (the advantage is that the pdb works).
     """
-    def __init__(self, executor=None, chunksize=None,
-                 agg=lambda acc, res: acc + res, seed=None, logger=None):
+    def __init__(self, executor=FakeExecutor(), chunksize=None,
+                 agg=lambda acc, res: acc + res, seed=None):
+        self.executor = executor
         self.chunksize = chunksize
+        self.poolsize = executor._max_workers
         self.agg = agg
         self.seed = [] if seed is None else seed
-        self.log = logger or logging.getLogger(__name__)
-        self.executor = executor
-        self.cpu_count = multiprocessing.cpu_count()
 
-    def todo(self, func, chunks, args, kw):
+    def futures(self, func, chunks, args, kw):
         "Returns the operations to perform (iterator over futures)"
-        traceback_on = True
+        traceback_off = False
         for chunkno, chunk in enumerate(chunks):
             ff = FakeFuture(
-                lambda: runsafe(traceback_on, func, chunk, *args, **kw))
+                lambda: runsafe(traceback_off, func, chunk, *args, **kw))
             ff.chunkno = chunkno
             yield ff
+
+    def processed_future(self, fut, progress):
+        "Hook invoked every time a future has been processed"
+        log.info('Processed chunk %d, progress=%0.3f>', fut.chunkno, progress)
 
     def run(self, func, sequence, *args, **kw):
         """
         Apply ``func`` to the arguments (the first beeing a sequence)
         and collect the results. See the documentation in doc/risklite.rst
         """
-        chunksize = self.chunksize or (len(sequence) // self.cpu_count + 1)
-        acc = self.seed
-        t0 = time.time()
+        nelements = len(sequence)
+        chunksize = self.chunksize or (nelements // self.poolsize + 1)
         chunks = list(chop(sequence, chunksize))
         nchunks = len(chunks)
-        self.log.info(
-            'Started %s with %s, processing %d elements in %d chunks of '
-            'a most %d elements', getname(func), self.__class__.__name__,
-            len(sequence), nchunks, chunksize)
-        todo = self.todo(func, chunks, args, kw)
-        for i, fut in enumerate(todo):
+        acc = [None] * nchunks  # chunk accumulator
+        for i, fut in enumerate(self.futures(func, chunks, args, kw)):
             res, exc, tb = fut.result()
             if exc is not None:
                 err = 'in chunk %s: %s' % (fut.chunkno, exc)
                 raise res, err, tb
-            acc = self.agg(acc, res)
-            self.log.info('Processed chunk %d, progress=%0.3f>',
-                          fut.chunkno, float(i + 1) / nchunks)
-        self.log.info('Finished %s in %f seconds',
-                      getname(func), time.time() - t0)
-        return acc
+            acc[fut.chunkno] = res
+            self.processed_future(fut, progress=float(i + 1) / nchunks)
+        return reduce(self.agg, acc, self.seed)
+
+    def __repr__(self):
+        return '<%s(%s(%d))>' % (
+            self.__class__.__name__, self.executor.__class__.__name__,
+            self.poolsize)
 
 
 class Runner(BaseRunner):
@@ -139,17 +145,22 @@ class Runner(BaseRunner):
     by summing the chunks result. It is possible however to pass a different
     aggregation function and a different seed.
     """
-    def todo(self, func, chunks, args, kw):
+    def futures(self, func, chunks, args, kw):
         "Returns the operations to perform (iterator over futures)"
-        traceback_on = isinstance(self.executor, futures.ThreadPoolExecutor)
-        futs = []
-        for chunkno, chunk in enumerate(chunks):
-            fut = self.executor.submit(
-                runsafe, traceback_on, func, chunk, *args, **kw)
-            fut.chunkno = chunkno
-            futs.append(fut)
-        for fut in futures.as_completed(futs):
-            yield fut
+        traceback_off = isinstance(self.executor, futures.ProcessPoolExecutor)
+        chunkno = 0
+        for chunkset in chop(chunks, self.poolsize):
+            # fill the pool with a set of chunks
+            futs = []
+            for chunk in chunkset:
+                fut = self.executor.submit(
+                    runsafe, traceback_off, func, chunk, *args, **kw)
+                fut.chunkno = chunkno
+                futs.append(fut)
+                chunkno += 1
+            # perform the computation of the chunkset
+            for fut in futures.as_completed(futs):
+                yield fut
 
 
 def run_calc(path, runner, config='job.ini'):
