@@ -150,20 +150,7 @@ random_seed=0
             'maximum_distance': '0'
         }
 
-        params, expected_files = engine2.parse_config(source)
-
-        # In order for us to reuse the existing input, we need to associate
-        # each input with a successful job.
-        job = engine2.prepare_job(getpass.getuser())
-
-        job.hazard_calculation = engine2.create_hazard_calculation(
-            job.owner, params, expected_files.values())
-        job.status = 'complete'
-        job.save()
-
-        source.seek(0)
         params, files = engine2.parse_config(source)
-
         self.assertEqual(expected_params, params)
         self.assertEqual(['site_model_file'], files.keys())
         self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
