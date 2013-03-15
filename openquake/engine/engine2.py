@@ -87,7 +87,7 @@ def get_current_user():
     return prepare_user(getpass.getuser())
 
 
-def parse_config(source, force_inputs=False):
+def parse_config(source):
     """Parse a dictionary of parameters from an INI-style config file.
 
     :param source:
@@ -104,7 +104,7 @@ def parse_config(source, force_inputs=False):
 
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
-    params = dict(base_path=base_path, force_inputs=force_inputs)
+    params = dict(base_path=base_path)
     files = dict()
 
     for sect in cp.sections():
@@ -127,8 +127,7 @@ def parse_config(source, force_inputs=False):
                         path = os.path.join(base_path, path)
 
                 files[key] = get_input(
-                    path, input_type, prepare_user(getpass.getuser()),
-                    force_inputs
+                    path, input_type, prepare_user(getpass.getuser())
                 )
             else:
                 params[key] = value
@@ -163,13 +162,10 @@ def _get_content_type(path):
         return ext[1:]
 
 
-def get_input(path, input_type, owner, force_input, name=None):
+def get_input(path, input_type, owner, name=None):
     """
     Get an :class:`~openquake.engine.db.models.Input` object for the given
     file (``path``).
-
-    If ``force_input`` is `False` or there are no existing copies of the input
-    available to ``owner``, create a fresh `Input` record.
 
     :param str path:
         Path to the input file.
@@ -181,9 +177,6 @@ def get_input(path, input_type, owner, force_input, name=None):
         if a fresh input record is being created. If the record is being
         reused, we will only reuse records which belong to this user (if any
         exist).
-    :param bool force_input:
-        If `True` do not reuse existing inputs that match the file at ``path``
-        and always create a new input.
     :param str name:
         Optional name to help idenfity this input.
     :returns:
@@ -197,59 +190,24 @@ def get_input(path, input_type, owner, force_input, name=None):
 
     digest = _file_digest(path)
 
-    existing_input = _identical_input(input_type, digest, owner)
+    model_content = models.ModelContent()
+    with open(path, 'rb') as fh:
+        if not input_type == 'exposure':
+            model_content.raw_content = fh.read()
+        else:
+            model_content.raw_content = 'exposure file content not stored'
+    # Try to guess the content type:
+    model_content.content_type = _get_content_type(path)
+    model_content.save()
 
-    if force_input or existing_input is None:
-        # If we chose to force inputs, or there are simply none to reuse,
-        # create the new input.
-        model_content = models.ModelContent()
-        with open(path, 'rb') as fh:
-            if not input_type == 'exposure':
-                model_content.raw_content = fh.read()
-            else:
-                model_content.raw_content = 'exposure file content not stored'
-        # Try to guess the content type:
-        model_content.content_type = _get_content_type(path)
-        model_content.save()
-
-        inp = models.Input(
-            path=path, input_type=input_type, owner=owner,
-            size=os.path.getsize(path), digest=digest,
-            model_content=model_content, name=name
-        )
-        inp.save()
-    else:
-        # Reuse the existing copy.
-        inp = existing_input
+    inp = models.Input(
+        path=path, input_type=input_type, owner=owner,
+        size=os.path.getsize(path), digest=digest,
+        model_content=model_content, name=name
+    )
+    inp.save()
 
     return inp
-
-
-def _identical_input(input_type, digest, owner):
-    """Get an identical input with the same type or `None`.
-
-    Identical inputs are found by comparing md5sum digests. In order to avoid
-    reusing corrupted/broken input models we ignore all the inputs that are
-    associated with a first job that failed.
-    Also, we only want inputs owned by the user who is running the current job
-    and if there is more than one input we want the most recent one.
-
-    :param str input_type:
-        input model type
-    :param str digest:
-        md5sum digest
-    :param owner:
-        the `:class:openquake.engine.db.models.OqUser` instance of the owner
-    :returns:
-        an `:class:openquake.engine.db.models.Input` instance or `None`
-    """
-    queryset = models.Input.objects.filter(
-        digest=digest, owner=owner, input_type=input_type).filter(
-            djm.Q(hazard_calculations__oqjob__status="complete") |
-            djm.Q(risk_calculations__oqjob__status="complete"))
-
-    if queryset.exists():
-        return queryset.latest('last_update')
 
 
 def create_hazard_calculation(owner, params, files):
