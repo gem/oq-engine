@@ -24,16 +24,19 @@ E.g. mean and quantile curves.
 import math
 import numpy
 
-import openquake.engine
-
 from celery.task.sets import TaskSet
+from django.db import transaction
 from itertools import izip
 
+import openquake.engine
+
 from openquake.engine import logs
+from openquake.engine.calculators.hazard.general import _CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
+from openquake.engine.writer import BulkInserter
 
 
 # Number of locations considered by each task
@@ -88,6 +91,10 @@ _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
     'hazard-map(%(poe)s)-%(imt)s-quantile(%(quantile)s)')
 # Hazard maps for a specific end branch
 _HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
+
+_UHS_DISP_NAME_MEAN_FMT = 'uhs-(%(poe)s)-mean'
+_UHS_DISP_NAME_QUANTILE_FMT = 'uhs-(%(poe)s)-quantile(%(quantile)s)'
+_UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
 
 
 # Silencing 'Too many local variables'
@@ -261,3 +268,66 @@ def make_uhs(maps):
         result['uh_spectra'].append((lon, lat, imls))
 
     return result
+
+
+def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
+    """
+    Save computed UHS data to the DB.
+
+    UHS results can be either for an end branch or for mean or quantile
+    statistics.
+
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance to be associated
+        with the results.
+    :param uhs_results:
+        UHS computation results structured like the output of :func:`make_uhs`.
+    :param float poe:
+        Probability of exceedance of the hazard maps from which these UH
+        Spectra were produced.
+    :param rlz:
+        :class:`openquake.engine.db.models.LtRealization`. Specify only if
+        these results are for an end branch.
+    :param statistics:
+        'mean' or 'quantile'. Specify only if these are statistical results.
+    :param float quantile:
+        Specify only if ``statistics`` == 'quantile'.
+    """
+    output = models.Output(
+        oq_job=job,
+        owner=job.owner,
+        output_type='uh_spectra'
+    )
+    uhs = models.UHS(
+        poe=poe,
+        investigation_time=job.hazard_calculation.investigation_time,
+        periods=uhs_results['periods'],
+    )
+    if rlz is not None:
+        uhs.lt_realization = rlz
+        output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
+    elif statistics is not None:
+        uhs.statistics = statistics
+        if statistics == 'quantile':
+            uhs.quantile = quantile
+            output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
+                                % dict(poe=poe, quantile=quantile))
+        else:
+            # mean
+            output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
+    output.save()
+    uhs.output = output
+    # This should fail if neither `lt_realization` nor `statistics` is defined:
+    uhs.save()
+
+    with transaction.commit_on_success(using='reslt_writer'):
+        inserter = BulkInserter(models.UHSData,
+                                max_cache_size=_CURVE_CACHE_SIZE)
+
+        for lon, lat, imls in uhs_results['uh_spectra']:
+            inserter.add_entry(
+                uhs_id=uhs.id,
+                imls='{%s}' % ','.join(str(x) for x in imls),
+                location='POINT(%s %s)' % (lon, lat)
+            )
+        inserter.flush()
