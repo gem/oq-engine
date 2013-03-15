@@ -27,6 +27,7 @@ import numpy
 import openquake.engine
 
 from celery.task.sets import TaskSet
+from itertools import izip
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -213,3 +214,50 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))
     logs.LOG.debug('< Done post-processing - Hazard Maps')
+
+
+def make_uhs(maps):
+    """
+    Make Uniform Hazard Spectra curves for each location.
+
+    It is assumed that the `lons` and `lats` for each of the ``maps`` are
+    uniform.
+
+    :param maps:
+        A sequence of :class:`openquake.engine.db.models.HazardMap` objects, or
+        equivalent objects with the same fields attributes.
+    :returns:
+        A `dict` with two values:
+        * 'periods': a list of the SA periods from all of the ``maps``, sorted
+          ascendingly
+        * 'uh_spectra': a list of triples (lon, lat, imls), where `imls` is a
+          `tuple` of the IMLs from all maps for each of the `periods`
+    """
+    result = dict()
+    result['periods'] = []
+
+    # filter out non-PGA -SA maps
+    maps = [x for x in maps if x.imt in ('PGA', 'SA')]
+
+    # give PGA maps an sa_period of 0.0
+    # this is slightly hackish, but makes the sorting simple
+    for each_map in maps:
+        if each_map.imt == 'PGA':
+            each_map.sa_period = 0.0
+
+    # sort the maps by period:
+    sorted_maps = sorted(maps, key=lambda m: m.sa_period)
+
+    # start constructing the results:
+    result['periods'] = [x.sa_period for x in sorted_maps]
+
+    # assume the `lons` and `lats` are uniform for all maps
+    lons = sorted_maps[0].lons
+    lats = sorted_maps[0].lats
+
+    result['uh_spectra'] = []
+    imls_list = izip(*(x.imls for x in sorted_maps))
+    for i, (lon, lat, imls) in enumerate(izip(lons, lats, imls_list)):
+        result['uh_spectra'].append((lon, lat, imls))
+
+    return result
