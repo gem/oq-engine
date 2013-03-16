@@ -1,36 +1,40 @@
-?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-	  xmlns="http://openquake.org/xmlns/nrml/0.4"
-	  gml:id="n1">
-	<fragilityModel>
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<fragilityModel format="continuous">
 		<description>Fragility model for buildings</description>
 		<limitStates>
 			LS1
 			LS2
 		</limitStates>
-		<ffs ffsID="fs1" format="continuous" IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5" taxonomy = "RM">
-			<ffd ls="LS1">
+		<ffs type="lognormal">
+      <taxonomy>RM</taxonomy>
+      <IML IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5"/>
+			<ffc ls="LS1">
 				<params mean="0.15" stddev="0.10" />
-			</ffd>
-			<ffd ls="LS2">
+			</ffc>
+			<ffc ls="LS2">
 				<params mean="0.30" stddev="0.16" />
-			</ffd>
+			</ffc>
 		</ffs>
-		<ffs ffsID="fs2" format="continuous" IMT="SA(0.2)" imlUnit="g" minIML="0.20" maxIML="1.5" taxonomy = "RC">
-			<ffd ls="LS1">
+		<ffs type="lognormal">
+      <taxonomy>RC</taxonomy>
+      <IML IMT="SA(0.2)" imlUnit="g" minIML="0.02" maxIML="1.5"/>
+			<ffc ls="LS1">
 				<params mean="0.25" stddev="0.08" />
-			</ffd>
-			<ffd ls="LS2">
+			</ffc>
+			<ffc ls="LS2">
 				<params mean="0.55" stddev="0.16" />
-			</ffd>
+			</ffc>
 		</ffs>
-		<ffs ffsID="fs3" format="continuous" IMT="SA(0.5)" imlUnit="g" minIML="0.15" maxIML="1.5" taxonomy = "W">
-			<ffd ls="LS1">
+		<ffs type="lognormal">
+      <taxonomy>W</taxonomy>
+      <IML IMT="SA(0.5)" imlUnit="g" minIML="0.02" maxIML="1.5"/>
+			<ffc ls="LS1">
 				<params mean="0.35" stddev="0.12" />
-			</ffd>
-			<ffd ls="LS2">
+			</ffc>
+			<ffc ls="LS2">
 				<params mean="0.70" stddev="0.20" />
-			</ffd>
+			</ffc>
 		</ffs>
 	</fragilityModel>
 </nrml>
