@@ -988,8 +988,7 @@ def get_rupture_ids(job, hc, lt_realization, num):
                 job, "Test SES Collection", "ses"),
             lt_realization=lt_realization),
         investigation_time=hc.investigation_time,
-        ordinal=1,
-        complete_logic_tree_ses=False)
+        ordinal=1)
 
     return [
         models.SESRupture.objects.create(
