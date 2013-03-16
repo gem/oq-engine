@@ -517,14 +517,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             output_type='complete_lt_gmf')
 
         gmf_coll = models.GmfCollection.objects.create(
-            output=clt_gmf_output, complete_logic_tree_gmf=True)
+            output=clt_gmf_output)
 
         investigation_time = self._compute_investigation_time(self.hc)
 
         models.GmfSet.objects.create(
             gmf_collection=gmf_coll,
-            investigation_time=investigation_time,
-            complete_logic_tree_gmf=True)
+            investigation_time=investigation_time)
 
     @staticmethod
     def _compute_investigation_time(haz_calc):
