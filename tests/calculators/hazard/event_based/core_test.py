@@ -271,7 +271,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # The correct number is (num_realizations * ses_per_logic_tree_path).
         gmf_sets = models.GmfSet.objects.filter(
             gmf_collection__output__oq_job=self.job.id,
-            complete_logic_tree_gmf=False)
+            gmf_collection__lt_realization__isnull=False)
         # 2 realizations, 5 ses_per_logic_tree_path
         self.assertEqual(10, gmf_sets.count())
 
