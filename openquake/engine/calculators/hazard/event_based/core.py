@@ -105,7 +105,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     if hc.complete_logic_tree_ses:
         cmplt_lt_ses = models.SES.objects.get(
             ses_collection__output__oq_job=job_id,
-            complete_logic_tree_ses=True)
+            ordinal=None)
 
     if hc.ground_motion_fields:
         # For ground motion field calculation, we need the points of interest
@@ -491,14 +491,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
             output_type='complete_lt_ses')
 
         clt_ses_coll = models.SESCollection.objects.create(
-            output=clt_ses_output, complete_logic_tree_ses=True)
+            output=clt_ses_output)
 
         investigation_time = self._compute_investigation_time(self.hc)
 
         models.SES.objects.create(
             ses_collection=clt_ses_coll,
-            investigation_time=investigation_time,
-            complete_logic_tree_ses=True)
+            investigation_time=investigation_time)
 
     def initialize_complete_lt_gmf_db_records(self):
         """
