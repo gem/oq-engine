@@ -190,7 +190,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         complete_lt_ses = models.SES.objects.get(
             ses_collection__output__oq_job=self.job.id,
             ses_collection__output__output_type='complete_lt_ses',
-            complete_logic_tree_ses=True)
+            ordinal=None)
 
         self.assertEqual(250.0, complete_lt_ses.investigation_time)
         self.assertIsNone(complete_lt_ses.ordinal)
@@ -309,7 +309,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         complete_lt_ses = models.SES.objects.get(
             ses_collection__output__oq_job=self.job.id,
             ses_collection__output__output_type='complete_lt_ses',
-            complete_logic_tree_ses=True)
+            ordinal=None)
 
         clt_ses_ruptures = models.SESRupture.objects.filter(
             ses=complete_lt_ses.id)
