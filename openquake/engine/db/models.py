@@ -1779,9 +1779,6 @@ class SESCollection(djm.Model):
     # event set containing all of the ruptures from the entire
     # calculation.
     lt_realization = djm.ForeignKey('LtRealization', null=True)
-    # A flag to indicate that this is a `complete logic
-    # tree` SES collection.
-    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
@@ -1806,9 +1803,6 @@ class SES(djm.Model):
     # (for a given logic tree realization).
     # For `complete logic tree` SESs, this should be None/NULL.
     ordinal = djm.IntegerField(null=True)
-    # A flag to indicate that this is a `complete logic
-    # tree` SES.
-    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
