@@ -39,7 +39,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine import writer
@@ -586,7 +586,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
-            inp = engine2.get_input(full_path, 'source', self.hc.owner)
+            inp = engine.get_input(full_path, 'source', self.hc.owner)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:

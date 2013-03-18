@@ -43,7 +43,7 @@ from django.core import exceptions
 from openquake.engine.calculators.hazard.general import store_gmpe_map
 from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.input.logictree import LogicTreeProcessor
 from openquake.engine.utils import config, get_calculator_class
@@ -168,7 +168,7 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
+    completed_job = engine._do_run_calc(job, exports, calc, 'hazard')
     job.is_running = False
     job.save()
 
@@ -602,7 +602,7 @@ class DbTestCase(object):
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        job = engine2.prepare_job(user_name)
+        job = engine.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
@@ -849,9 +849,9 @@ def get_hazard_job(cfg, username=None):
     """
     username = username if username is not None else default_user().user_name
 
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(cfg, 'r'))
-    haz_calc = engine2.create_hazard_calculation(
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+    haz_calc = engine.create_hazard_calculation(
         job.owner, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
@@ -931,12 +931,12 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
 
     hazard_job.status = "complete"
     hazard_job.save()
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(risk_cfg, 'r'))
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
-    risk_calc = engine2.create_risk_calculation(
+    risk_calc = engine.create_risk_calculation(
         job.owner, params, files.values())
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
