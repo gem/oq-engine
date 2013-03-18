@@ -43,7 +43,7 @@ from openquake.engine.input.source import nrml_to_hazardlib
 from tests.utils import helpers
 
 
-class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
+class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files, basepath, validate=True):
         self.files = files
         if not validate:
@@ -52,7 +52,7 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         content = files[filename]
-        super(_TesteableSourceModelLogicTree, self).__init__(
+        super(_TestableSourceModelLogicTree, self).__init__(
             content, basepath, filename, validate
         )
 
@@ -61,13 +61,13 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
     def _open_file(self, filename):
         if not filename in self.files:
-            return super(_TesteableSourceModelLogicTree, self)._open_file(
+            return super(_TestableSourceModelLogicTree, self)._open_file(
                 filename
             )
         return StringIO(self.files[filename])
 
 
-class _TesteableGMPELogicTree(logictree.GMPELogicTree):
+class _TestableGMPELogicTree(logictree.GMPELogicTree):
     def __init__(self, filename, content, basepath, tectonic_region_types,
                  validate=True):
         if not validate:
@@ -75,7 +75,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
-        super(_TesteableGMPELogicTree, self).__init__(
+        super(_TestableGMPELogicTree, self).__init__(
             tectonic_region_types, content, basepath, filename, validate
         )
 
@@ -186,7 +186,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
         with self.assertRaises(exc_class) as arc:
-            _TesteableSourceModelLogicTree(filename, files, basepath)
+            _TestableSourceModelLogicTree(filename, files, basepath)
         exc = arc.exception
         self.assertEqual(exc.filename, exc_filename or filename)
         self.assertEqual(exc.basepath, basepath)
@@ -864,7 +864,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                  tectonic_region_types,
                                  exc_class=logictree.LogicTreeError):
         with self.assertRaises(exc_class) as arc:
-            _TesteableGMPELogicTree(filename, content, basepath,
+            _TestableGMPELogicTree(filename, content, basepath,
                                     tectonic_region_types)
         exc = arc.exception
         self.assertEqual(exc.filename, filename)
@@ -1131,7 +1131,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree(
+        lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm}, 'basepath',
             validate=False
         )
@@ -1167,7 +1167,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1207,7 +1207,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1260,7 +1260,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree(
+        lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
             validate=False
         )
@@ -1309,7 +1309,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         <!-- comment -->
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1391,7 +1391,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
-        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts,
+        gmpe_lt = _TestableGMPELogicTree('gmpe', gmpe, '/base', trts,
                                           validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
