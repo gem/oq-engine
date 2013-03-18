@@ -44,7 +44,6 @@ from openquake.engine.calculators.hazard.general import store_gmpe_map
 from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
 from openquake.engine.engine import JobContext
-from openquake.engine import engine
 from openquake.engine import engine2
 from openquake.engine import logs
 from openquake.engine.input.logictree import LogicTreeProcessor
@@ -145,21 +144,6 @@ def testdata_path(file_name):
     """
     return os.path.normpath(os.path.join(
         os.path.dirname(__file__), "../data/demos", file_name))
-
-
-def job_from_file(config_file_path):
-    """
-    Create a JobContext instance from the given configuration file.
-
-    The results are configured to go to XML files.  *No* database record will
-    be stored for the job.  This allows running test on jobs without requiring
-    a database.
-    """
-
-    job = engine._job_from_file(config_file_path, 'xml')
-    cleanup_loggers()
-
-    return job
 
 
 def create_job(params, **kwargs):
@@ -625,7 +609,7 @@ class DbTestCase(object):
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        job = engine.prepare_job(user_name)
+        job = engine2.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
