@@ -332,7 +332,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         edata.save()
 
     def test_exposure_data_with_no_stco_and_category_not_population(self):
@@ -343,7 +343,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site=site.point.o_wkt())
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -364,7 +364,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(),
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -385,7 +385,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=11.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -407,7 +407,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=12.0, reco=13.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -429,7 +429,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=14.0, coco=15.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -455,7 +455,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=16.0, coco=17.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -477,7 +477,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=18.0, number_of_units=22,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -499,7 +499,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=19.0, number_of_units=23,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -520,7 +520,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=24,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -543,7 +543,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=20.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -566,7 +566,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=21.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
@@ -589,7 +589,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=22.0,
-            site=site.point.wkt2d)
+            site=site.wkt2d)
         try:
             edata.save()
         except DatabaseError, de:
