@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 :class:`ComplexFaultSurface`.
 """
 import numpy
+import shapely
 
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
@@ -41,6 +42,20 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         self.mesh = mesh
         assert not 1 in self.mesh.shape
         self.strike = self.dip = None
+
+        # A common user error is to create a ComplexFaultSourceSurface
+        # from invalid fault data (e.g. mixing the order of
+        # vertexes for top and bottom edges). Therefore, we want to
+        # restrict every complex source to have a projected enclosing
+        # polygon that is not a multipolygon.
+        if isinstance(
+                self.get_mesh()._get_proj_enclosing_polygon()[1],
+                shapely.geometry.multipolygon.MultiPolygon):
+            raise ValueError("Invalid surface. "
+                             "The projected enclosing polygon "
+                             "must be a simple polygon. "
+                             "Check the geometry definition of the "
+                             "fault source")
 
     def _create_mesh(self):
         """
