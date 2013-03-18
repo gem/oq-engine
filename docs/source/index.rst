@@ -22,7 +22,6 @@ Contents:
     input
     risk
     schema
-    shapes
     utils
     writer
 
