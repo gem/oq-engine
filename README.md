@@ -1,4 +1,4 @@
 oq-commons
 ==========
 
-Commons library for OpenQuake libraries and application
+Library containing common code for OpenQuake libraries and applications
