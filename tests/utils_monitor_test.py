@@ -26,7 +26,7 @@ import unittest
 
 from django.test import TestCase as DjangoTestCase
 
-from openquake.engine import engine
+from openquake.engine import engine2
 from openquake.engine.db import models
 from openquake.engine.utils import monitor
 
@@ -37,7 +37,7 @@ class DbCnodeStatusTestCase(unittest.TestCase):
     """Tests the behaviour of utils.monitor._db_cnode_status()."""
 
     def test__db_cnode_status(self):
-        job = engine.prepare_job()
+        job = engine2.prepare_job()
         expected = {}
         for node, status in [("N1", "up"), ("N2", "down"), ("N3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
@@ -47,7 +47,7 @@ class DbCnodeStatusTestCase(unittest.TestCase):
         self.assertEqual(expected, monitor._db_cnode_status(job.id))
 
     def test__db_cnode_status_and_wrong_job_id(self):
-        job = engine.prepare_job()
+        job = engine2.prepare_job()
         expected = {}
         for node, status in [("O1", "up"), ("O2", "down"), ("O3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
@@ -56,12 +56,12 @@ class DbCnodeStatusTestCase(unittest.TestCase):
         self.assertEqual(expected, monitor._db_cnode_status(-1))
 
     def test__db_cnode_status_and_two_jobs(self):
-        job1 = engine.prepare_job()
+        job1 = engine2.prepare_job()
         for node, status in [("P1", "up"), ("P2", "down"), ("P3", "down")]:
             ns = models.CNodeStats(oq_job=job1, node=node,
                                    current_status=status)
             ns.save(using="job_superv")
-        job2 = engine.prepare_job()
+        job2 = engine2.prepare_job()
         expected = {}
         for node, status in [("Q2", "down"), ("Q3", "down")]:
             ns = models.CNodeStats(oq_job=job2, node=node,
@@ -78,7 +78,7 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = engine.prepare_job()
+        cls.job = engine2.prepare_job()
 
     def test_cnode_stats_with_correct_data(self):
         # The db record is saved w/o triggering an exception
@@ -147,7 +147,7 @@ class CountFailedNodesTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = engine.prepare_job()
+        cls.job = engine2.prepare_job()
 
     def setUp(self):
         self.db_patch = patch(
