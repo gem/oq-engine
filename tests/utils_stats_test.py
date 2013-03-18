@@ -28,7 +28,7 @@ import string
 import sys
 import unittest
 
-from openquake.engine import engine
+from openquake.engine import engine2
 from openquake.engine.db.models import HazardCalculation, JobPhaseStats
 from openquake.engine.utils import stats
 
@@ -363,7 +363,7 @@ class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
     job = None
 
     def setUp(self):
-        self.job = engine.prepare_job()
+        self.job = engine2.prepare_job()
         self.job.hazard_calculation = HazardCalculation(no_progress_timeout=99)
 
     def test_get_progress_timing_data_before_first_increment(self):
