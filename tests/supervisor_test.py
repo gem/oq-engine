@@ -19,7 +19,6 @@ import unittest
 import logging
 from datetime import datetime
 
-from openquake.engine import engine
 from openquake.engine import engine2
 from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
@@ -240,7 +239,7 @@ class AbortDueToFailedNodesTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = engine.prepare_job()
+        cls.job = engine2.prepare_job()
 
     def setUp(self):
         self.monitor_patch = patch(
