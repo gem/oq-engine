@@ -19,7 +19,7 @@ import unittest
 import logging
 from datetime import datetime
 
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
 from openquake.engine.supervising import supervisor
@@ -100,7 +100,7 @@ record_job_stop_time')
 
         logging.root.setLevel(logging.CRITICAL)
 
-        self.job = engine2.prepare_job()
+        self.job = engine.prepare_job()
 
     def tearDown(self):
         # Stop all the started patches
@@ -239,7 +239,7 @@ class AbortDueToFailedNodesTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = engine2.prepare_job()
+        cls.job = engine.prepare_job()
 
     def setUp(self):
         self.monitor_patch = patch(

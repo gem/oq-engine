@@ -6,7 +6,7 @@ from datetime import datetime
 from openquake.engine.performance import \
     PerformanceMonitor, EnginePerformanceMonitor
 from openquake.engine.db.models import Performance
-from openquake.engine import engine2
+from openquake.engine import engine
 
 
 class TestCase(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestCase(unittest.TestCase):
         self.check_result(pmon, nproc=1)
 
     def testEnginePerformanceMonitor(self):
-        job = engine2.prepare_job()
+        job = engine.prepare_job()
         mock_task = mock.Mock()
         mock_task.__name__ = 'mock_task'
         mock_task.request.id = task_id = uuid.uuid1()
@@ -38,7 +38,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(Performance.objects.filter(task_id=task_id)), 1)
 
     def testEnginePerformanceMonitorNoTask(self):
-        job = engine2.prepare_job()
+        job = engine.prepare_job()
         operation = uuid.uuid1()
         with EnginePerformanceMonitor(operation, job.id) as pmon:
             pass
