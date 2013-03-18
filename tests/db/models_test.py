@@ -23,7 +23,6 @@ import numpy
 
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine
 from openquake.engine import engine2
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
@@ -53,7 +52,7 @@ class Inputs4JobTestCase(unittest.TestCase):
     paths = itertools.cycle(string.ascii_lowercase)
 
     def setUp(self):
-        self.job = engine.prepare_job()
+        self.job = engine2.prepare_job()
 
     def test_inputs4job_with_no_input(self):
         # No inputs exist, an empty list is returned.
