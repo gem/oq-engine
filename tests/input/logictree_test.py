@@ -1841,20 +1841,20 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_source_type(self):
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'areaSource'})
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
         for source in (self.simple_fault, self.complex_fault, self.point,
                        self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.area), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'pointSource'})
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
         for source in (self.simple_fault, self.complex_fault, self.area,
                        self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.point), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'simpleFaultSource'}
+            None, {'applyToSourceType': 'simpleFault'}
         )
         for source in (self.complex_fault, self.point, self.area,
                        self.characteristic_fault):
@@ -1862,7 +1862,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertEqual(bs.filter_source(self.simple_fault), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'complexFaultSource'}
+            None, {'applyToSourceType': 'complexFault'}
         )
         for source in (self.simple_fault, self.point, self.area,
                        self.characteristic_fault):
@@ -1870,7 +1870,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertEqual(bs.filter_source(self.complex_fault), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'characteristicFaultSource'}
+            None, {'applyToSourceType': 'characteristicFault'}
         )
         for source in (self.simple_fault, self.point, self.area,
                        self.complex_fault):
