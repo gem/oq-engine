@@ -43,7 +43,6 @@ from django.core import exceptions
 from openquake.engine.calculators.hazard.general import store_gmpe_map
 from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
-from openquake.engine.engine import JobContext
 from openquake.engine import engine2
 from openquake.engine import logs
 from openquake.engine.input.logictree import LogicTreeProcessor
@@ -144,12 +143,6 @@ def testdata_path(file_name):
     """
     return os.path.normpath(os.path.join(
         os.path.dirname(__file__), "../data/demos", file_name))
-
-
-def create_job(params, **kwargs):
-    job_id = kwargs.pop('job_id', 0)
-
-    return JobContext(params, job_id, **kwargs)
 
 
 def run_hazard_job(cfg, exports=None):
