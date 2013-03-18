@@ -40,8 +40,6 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.engine.calculators.hazard.general import store_gmpe_map
-from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
@@ -211,31 +209,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
     print 'Running:', ' '.join(args)  # this is useful for debugging
     return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
                                  if silence else None)
-
-
-def store_hazard_logic_trees(a_job):
-    """Helper function to store the source model and GMPE logic trees in the
-    KVS so that it can be read by the Java code.
-
-    :param a_job:
-        :class:`openquake.engine.engine.JobContext` instance.
-    """
-    lt_proc = LogicTreeProcessor(
-        a_job['BASE_PATH'],
-        a_job['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
-        a_job['GMPE_LOGIC_TREE_FILE_PATH'])
-
-    src_model_seed = a_job['SOURCE_MODEL_LT_RANDOM_SEED']
-    gmpe_seed = a_job['GMPE_LT_RANDOM_SEED']
-
-    src_model_rnd = random.Random()
-    src_model_rnd.seed(src_model_seed)
-    gmpe_rnd = random.Random()
-    gmpe_rnd.seed(gmpe_seed)
-
-    store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
-                       a_job.params, lt_proc)
-    store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
 
 
 def timeit(method):
