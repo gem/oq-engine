@@ -19,6 +19,7 @@
 Tests for python logic tree processor.
 """
 
+import numpy
 import os
 import os.path
 import unittest
@@ -1812,30 +1813,69 @@ class BranchSetFilterTestCase(unittest.TestCase):
                      openquake.hazardlib.geo.Point(1, 1, 2)])]
         )
 
+        lons = numpy.array([-1., 1., -1., 1.])
+        lats = numpy.array([0., 0., 0., 0.])
+        depths = numpy.array([0., 0., 10., 10.])
+
+        points = [openquake.hazardlib.geo.Point(lon, lat, depth)
+                  for lon, lat, depth in
+                  zip(lons, lats, depths)]
+        self.characteristic_fault = \
+            openquake.hazardlib.source.CharacteristicFaultSource(
+            source_id='characteristic_fault',
+            name='characteristic fault',
+            tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            surface=openquake.hazardlib.geo.PlanarSurface(
+                mesh_spacing=1.0, strike=0.0, dip=90.0,
+                top_left=points[0], top_right=points[1],
+                bottom_right=points[3], bottom_left=points[2]
+            ),
+            rake=0
+        )
+
+
     def test_unknown_filter(self):
         bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_source_type(self):
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
-        for source in (self.simple_fault, self.complex_fault, self.point):
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'areaSource'})
+        for source in (self.simple_fault, self.complex_fault, self.point,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.area), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
-        for source in (self.simple_fault, self.complex_fault, self.area):
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'pointSource'})
+        for source in (self.simple_fault, self.complex_fault, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.point), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'simpleFault'})
-        for source in (self.complex_fault, self.point, self.area):
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'simpleFaultSource'}
+        )
+        for source in (self.complex_fault, self.point, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.simple_fault), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'complexFault'})
-        for source in (self.simple_fault, self.point, self.area):
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'complexFaultSource'}
+        )
+        for source in (self.simple_fault, self.point, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.complex_fault), True)
+
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'characteristicFaultSource'}
+        )
+        for source in (self.simple_fault, self.point, self.area,
+                       self.complex_fault):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.characteristic_fault), True)
 
     def test_tectonic_region_type(self):
         test = lambda trt, source: \
