@@ -62,11 +62,9 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
             gmf_collection=models.GmfCollection.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard output", "gmf"),
-                lt_realization=lt_realization,
-                complete_logic_tree_gmf=False),
+                lt_realization=lt_realization),
             investigation_time=hc.investigation_time,
-            ses_ordinal=1,
-            complete_logic_tree_gmf=False)
+            ses_ordinal=1)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
