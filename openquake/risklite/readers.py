@@ -87,17 +87,12 @@ def read_fragility(rows):
     if fmt == "continuous":
         fns = dict([(taxonomy,
                      dict(imt=imt,
-                          fn=scientific.FragilityFunctionContinuous(
-                              *zip(*params))))
+                          fns=[scientific.FragilityFunctionContinuous(
+                              mean, stddev) for mean, stddev in params]))
                     for taxonomy, imt, params
                     in fns_data])
     else:
-        fns = dict([(taxonomy,
-                     dict(imt=imt,
-                          fn=scientific.FragilityFunctionDiscrete(
-                              *zip(*params))))
-                    for taxonomy, imt, params
-                    in fns_data])
+        raise NotImplementedError
     return {'format': fmt,
             'limit_states': limit_states,
             'fragility_functions': fns}

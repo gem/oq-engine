@@ -8,11 +8,11 @@ from openquake.risklite.readers import read_calculator_input, Archive
 
 TEST_FRAGILITY = '''\
 'continuous'	['slight', 'moderate', 'extensive', 'complete']
-'W'	{'IMT': 'PGA', 'imls': None}	[(0.147, 0.414), (0.236, 0.666), (0.416, 1.172), (0.627, 1.77)]	None
-'A'	{'IMT': 'PGA', 'imls': None}	[(0.122, 0.345), (0.171, 0.483), (0.236, 0.666), (0.383, 1.08)]	None
-'DS'	{'IMT': 'PGA', 'imls': None}	[(0.081, 0.23), (0.122, 0.345), (0.228, 0.643), (0.326, 0.919)]	None
-'UFB'	{'IMT': 'PGA', 'imls': None}	[(0.114, 0.322), (0.171, 0.483), (0.326, 0.919), (0.489, 1.379)]	None
-'RC'	{'IMT': 'PGA', 'imls': None}	[(0.13, 0.368), (0.187, 0.529), (0.334, 0.942), (0.627, 1.77)]	None
+'W'	{'IMT': 'PGA', 'imls': None}	[(0.147, 0.414), (0.236, 0.666), (0.416, 1.172), (0.627, 1.77)]
+'A'	{'IMT': 'PGA', 'imls': None}	[(0.122, 0.345), (0.171, 0.483), (0.236, 0.666), (0.383, 1.08)]
+'DS'	{'IMT': 'PGA', 'imls': None}	[(0.081, 0.23), (0.122, 0.345), (0.228, 0.643), (0.326, 0.919)]
+'UFB'	{'IMT': 'PGA', 'imls': None}	[(0.114, 0.322), (0.171, 0.483), (0.326, 0.919), (0.489, 1.379)]
+'RC'	{'IMT': 'PGA', 'imls': None}	[(0.13, 0.368), (0.187, 0.529), (0.334, 0.942), (0.627, 1.77)]
 '''
 
 TEST_VULNERABILITY = '''\
@@ -97,7 +97,7 @@ class TestIO(unittest.TestCase):
     def test_read_csv_files(self):
         self.writefiles('.csv')
         inp = read_calculator_input(self.path)
-        self.assertEqual(len(inp['fragility']), 9)
+        self.assertEqual(len(inp['fragility']), 3)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)
@@ -105,7 +105,7 @@ class TestIO(unittest.TestCase):
     def test_read_csv_gz_files(self):
         self.writefiles('.csv.gz')
         inp = read_calculator_input(self.path)
-        self.assertEqual(len(inp['fragility']), 9)
+        self.assertEqual(len(inp['fragility']), 3)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)
@@ -120,7 +120,7 @@ class TestIO(unittest.TestCase):
                         ftype + '.csv')
         zfile.close()
         inp = read_calculator_input(path)
-        self.assertEqual(len(inp['fragility']), 9)
+        self.assertEqual(len(inp['fragility']), 3)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)

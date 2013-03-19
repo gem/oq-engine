@@ -76,12 +76,13 @@ def scenario_damage(ctxt, runner):
     gmf = ctxt['gmf']
     hazard_getter = HG(gmf)
     ddpt = {}  # damage distribution per taxonomy dictionary
+
     for taxonomy, assets in itertools.groupby(
             exposure, operator.attrgetter("taxonomy")):
         alist, hlist, missing = get_hazard(assets, hazard_getter)
         log.info('Taxonomy %s, %d assets, %d missing', taxonomy,
                  len(alist), len(missing))
-        calc = api.ScenarioDamage(fm['fragility_functions'][taxonomy])
+        calc = api.ScenarioDamage(fm['fragility_functions'][taxonomy]['fns'])
         fractions = [frac * asset.number_of_units for frac, asset in
                      zip(runner.run(calc, hlist), alist)]
         for asset, frac in zip(alist, fractions):
