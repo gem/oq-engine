@@ -25,7 +25,7 @@ import sys
 import openquake.engine
 
 from django.core import exceptions
-from django.db import close_connection, models as djm
+from django.db import close_connection
 
 from openquake.engine import kvs
 from openquake.engine import logs
