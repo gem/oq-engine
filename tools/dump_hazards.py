@@ -50,7 +50,8 @@ must be run by an user with sufficient permissions). Then run again
 '''
 
 
-def tuplestr(row):
+# return a string which is a valid SQL tuple
+def _tuplestr(row):
     return '(%s)' % ', '.join(str(x) for x in row)
 
 
@@ -64,7 +65,7 @@ class Cursor(object):
     def tuplestr(self, query, *args):
         "Retrieve tuples of ids a strings"
         self._cursor.execute(query, args)
-        return tuplestr(row[0] for row in self._cursor)
+        return _tuplestr(row[0] for row in self._cursor)
 
     def fetchall(self, query, *args):
         "Dispatch to .fetchall"
@@ -84,7 +85,9 @@ class Cursor(object):
 
 
 def zipdir(dirpath):
-    "zip the contents of a directory in a zipfile and remove the directory"
+    """
+    Zip the contents of a directory into a zipfile and remove the directory
+    """
     with zipfile.ZipFile(dirpath + '.zip', 'w') as z:
         for name in os.listdir(dirpath):
             z.write(os.path.join(dirpath, name))
@@ -93,7 +96,9 @@ def zipdir(dirpath):
 
 
 def restore_cmd(*names):
-    'Return a list of COPY FROM commands'
+    """
+    Return a list of COPY FROM commands
+    """
     return ["COPY %s FROM 'PWD/%s.csv';\n" % (name, name.split('.')[-1])
             for name in names]
 
@@ -183,9 +188,9 @@ def main(hazard_calculation_id):
     restore = dump_hazard_calculation(curs, hazard_calculation_id, out_dir)
     restore.extend(dump_oq_job(curs, jobs, out_dir))
     all_outs = sum([output_ids for output_type, output_ids in outputs], [])
-    restore.extend(dump_output(curs, tuplestr(all_outs), out_dir))
+    restore.extend(dump_output(curs, _tuplestr(all_outs), out_dir))
     for output_type, output_ids in outputs:
-        ids = tuplestr(output_ids)
+        ids = _tuplestr(output_ids)
         if output_type == 'hazard_curve':
             restore.extend(dump_hazard_curve(curs, ids, out_dir))
         elif output_type == 'gmf':
