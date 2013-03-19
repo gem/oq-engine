@@ -935,14 +935,12 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
         hazard_output = models.GmfCollection.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test Hazard output", "gmf"),
-            lt_realization=rlz,
-            complete_logic_tree_gmf=False)
+            lt_realization=rlz)
 
         gmf_set = models.GmfSet.objects.create(
             gmf_collection=hazard_output,
             investigation_time=hc.investigation_time,
-            ses_ordinal=1,
-            complete_logic_tree_gmf=False)
+            ses_ordinal=1)
 
         for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                       "POINT(15.48 38.091)", "POINT(15.565 38.17)",
@@ -990,8 +988,7 @@ def get_rupture_ids(job, hc, lt_realization, num):
                 job, "Test SES Collection", "ses"),
             lt_realization=lt_realization),
         investigation_time=hc.investigation_time,
-        ordinal=1,
-        complete_logic_tree_ses=False)
+        ordinal=1)
 
     return [
         models.SESRupture.objects.create(
