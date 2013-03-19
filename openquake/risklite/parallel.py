@@ -23,7 +23,7 @@ from __future__ import print_function
 import sys
 import traceback
 import logging
-from concurrent import futures
+from openquake.concurrent import futures
 from openquake.risklite import calculators, readers
 
 log = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ def getname(func):
 
 
 class FakeFuture(object):
-    "A replacement for a real :class:concurrent.futures.Future object"
+    "A replacement for a real :class:openquake.concurrent.futures.Future object"
     def __init__(self, thunk):
         self.thunk = thunk
 
