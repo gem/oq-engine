@@ -314,4 +314,3 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
         return self.fragility_functions
-

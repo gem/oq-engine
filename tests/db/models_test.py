@@ -24,7 +24,6 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
@@ -141,9 +140,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -155,9 +154,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
