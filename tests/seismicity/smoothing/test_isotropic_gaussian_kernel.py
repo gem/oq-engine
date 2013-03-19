@@ -1,8 +1,4 @@
-#!/usr/bin/env/python
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#
 # LICENSE
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
@@ -45,7 +41,6 @@
 # 
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
-
 # -*- coding: utf-8 -*-
 '''
 Tests for the module :mod: 

@@ -1,14 +1,11 @@
-#!/usr/bin/env/python
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
+# -*- coding: utf-8 -*- 
 #
 # LICENSE
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public 
 # License as published by the Free Software Foundation, either version 
 # 3 of the License, or (at your option) any later version.
@@ -45,6 +42,5 @@
 # 
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
-
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 
