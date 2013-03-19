@@ -20,6 +20,9 @@ from nose.plugins.attrib import attr
 from qa_tests import risk
 from openquake.engine.db import models
 
+# FIXME(lp). This is a regression testing meant to exercize the sd-imt
+# logic in the SR calculator. Data has not been validated
+
 
 class ScenarioRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
@@ -40,7 +43,7 @@ class ScenarioRiskCase3TestCase(risk.End2EndRiskQATestCase):
                 [agg.mean, agg.std_dev]]
 
     def expected_data(self):
-        return [[[129.816031875000, 68.8305957840654],
-                 [148.677565155000, 145.463557832699],
-                 [172.300742141476, 204.843616089138]],
-                [450.7943,  389.1273]]
+        return [[[148.44755639, 52.8373292],
+                 [157.38642536, 115.71188488],
+                 [363.68724334, 345.80409812]],
+                 [669.52122509, 294.1758526]]
