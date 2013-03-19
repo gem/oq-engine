@@ -20,6 +20,7 @@
 Core functionality for the scenario_damage risk calculator.
 """
 
+import StringIO
 import collections
 
 import numpy
@@ -283,8 +284,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Parse the fragility XML file and return fragility_model,
         fragility_functions, and damage_states for usage in set_risk_models.
         """
-        path = self.rc.inputs.get(input_type='fragility').path
-        iterparse = iter(parsers.FragilityModelParser(path))
+        content = StringIO.StringIO(
+            self.rc.inputs.get(
+                input_type='fragility').model_content.raw_content_ascii)
+        iterparse = iter(parsers.FragilityModelParser(content))
         fmt, limit_states = iterparse.next()
 
         self.damage_states = ['no_damage'] + limit_states
