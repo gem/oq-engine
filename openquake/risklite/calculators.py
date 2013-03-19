@@ -68,7 +68,7 @@ def scenario_damage(ctxt, runner):
     by_asset_csv = os.path.join(outdir, 'dmg_dist_by_asset.csv')
     by_taxonomy_csv = os.path.join(outdir, 'dmg_dist_by_taxonomy.csv')
     total_csv = os.path.join(outdir, 'dmg_dist_total.csv')
-    damage_states = ['no_damage'] + fm.limit_states
+    damage_states = ['no_damage'] + fm['limit_states']
     by_asset = writers.ScenarioDamageWriter(by_asset_csv, damage_states)
     by_taxonomy = writers.ScenarioDamageWriter(by_taxonomy_csv, damage_states)
     total = writers.ScenarioDamageWriter(total_csv, damage_states)
@@ -76,12 +76,13 @@ def scenario_damage(ctxt, runner):
     gmf = ctxt['gmf']
     hazard_getter = HG(gmf)
     ddpt = {}  # damage distribution per taxonomy dictionary
+
     for taxonomy, assets in itertools.groupby(
             exposure, operator.attrgetter("taxonomy")):
         alist, hlist, missing = get_hazard(assets, hazard_getter)
         log.info('Taxonomy %s, %d assets, %d missing', taxonomy,
                  len(alist), len(missing))
-        calc = api.ScenarioDamage(fm[taxonomy])
+        calc = api.ScenarioDamage(fm['fragility_functions'][taxonomy]['fns'])
         fractions = [frac * asset.number_of_units for frac, asset in
                      zip(runner.run(calc, hlist), alist)]
         for asset, frac in zip(alist, fractions):
