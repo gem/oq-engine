@@ -68,6 +68,8 @@ class ProbabilisticEventBased(object):
         if not len(ground_motion_fields):
             return numpy.array([[]]), []
 
+        # this call prevents vulnerability functions to be simple
+        # callables
         self.vulnerability_function.init_distribution(
             len(ground_motion_fields), len(ground_motion_fields[0]),
             self.seed, self.correlation)
@@ -116,4 +118,6 @@ class ScenarioDamage(object):
         The ground motion field is a list of ground motion values
         (one array for each site). Returns a list of arrays (one per site).
         """
-        return map(self.ffs.ground_motion_fractions, ground_motion_fields)
+        return [
+            scientific.scenario_damage(self.ffs, asset_gmvs)
+            for asset_gmvs in ground_motion_fields]

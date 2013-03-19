@@ -97,7 +97,7 @@ class TestIO(unittest.TestCase):
     def test_read_csv_files(self):
         self.writefiles('.csv')
         inp = read_calculator_input(self.path)
-        self.assertEqual(len(inp['fragility']), 5)
+        self.assertEqual(len(inp['fragility']), 9)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)
@@ -105,7 +105,7 @@ class TestIO(unittest.TestCase):
     def test_read_csv_gz_files(self):
         self.writefiles('.csv.gz')
         inp = read_calculator_input(self.path)
-        self.assertEqual(len(inp['fragility']), 5)
+        self.assertEqual(len(inp['fragility']), 9)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)
@@ -120,7 +120,7 @@ class TestIO(unittest.TestCase):
                         ftype + '.csv')
         zfile.close()
         inp = read_calculator_input(path)
-        self.assertEqual(len(inp['fragility']), 5)
+        self.assertEqual(len(inp['fragility']), 9)
         self.assertEqual(len(inp['vulnerability']), 2)
         self.assertEqual(len(inp['exposure']), 37)
         self.assertEqual(len(inp['gmf']), 12)
