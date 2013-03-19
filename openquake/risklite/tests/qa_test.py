@@ -1,6 +1,6 @@
 import os
 import unittest
-from concurrent.futures import ProcessPoolExecutor
+from openquake.concurrent.futures import ProcessPoolExecutor
 from openquake.risklite.parallel import run_calc, Runner, BaseRunner
 
 from nose.plugins.attrib import attr

@@ -1,5 +1,5 @@
 from nose.tools import assert_equal
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from openquake.concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from openquake.risklite.parallel import Runner, BaseRunner
 
 
