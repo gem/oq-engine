@@ -30,7 +30,7 @@ import collections
 
 import numpy
 
-from openquake.risklib.scientific import VulnerabilityFunction
+from openquake.risklib import scientific
 from openquake.risklib.utils import Register
 
 
@@ -81,9 +81,26 @@ def read_fragility(rows):
     Given a list of string lists returns a FragilityModel
     """
     irows = iter(rows)
-    fmt, iml, limit_states = map(ast.literal_eval, irows.next())
-    args = [map(ast.literal_eval, row) for row in irows]
-    return [fmt, iml['IMT'], iml['imls'], limit_states] + args
+    first_line = irows.next()
+    fmt, limit_states = map(ast.literal_eval, first_line)
+    fns_data = [map(ast.literal_eval, row) for row in irows]
+    if fmt == "continuous":
+        fns = dict([(taxonomy,
+                     dict(imt=imt,
+                          fn=scientific.FragilityFunctionContinuous(
+                              *zip(*params))))
+                    for taxonomy, imt, params
+                    in fns_data])
+    else:
+        fns = dict([(taxonomy,
+                     dict(imt=imt,
+                          fn=scientific.FragilityFunctionDiscrete(
+                              *zip(*params))))
+                    for taxonomy, imt, params
+                    in fns_data])
+    return {'format': fmt,
+            'limit_states': limit_states,
+            'fragility_functions': fns}
 
 
 @read.add('vulnerability')
@@ -95,7 +112,7 @@ def read_vulnerability(rows):
     for row in rows:
         id_, imt, iml, loss_ratio, coefficients, distribution = map(
             ast.literal_eval, row)
-        d[id_] = VulnerabilityFunction(
+        d[id_] = scientific.VulnerabilityFunction(
             iml, loss_ratio, coefficients, distribution)
     return d
 
