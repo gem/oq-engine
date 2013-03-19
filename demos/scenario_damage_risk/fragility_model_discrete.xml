@@ -6,7 +6,6 @@
     <fragilityModel format="discrete">
         <description>Fragility model for Pavia (discrete)</description>
 
-        <IML IMT="MMI">7 8 9 10 11</IML>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
             minor
@@ -18,6 +17,7 @@
         <!-- fragility function set, each with its own, distinct taxonomy -->
         <ffs>
             <taxonomy>RC/DMRF-D/LR</taxonomy>
+            <IML IMT="PGA">7 8 9 10 11</IML>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
@@ -37,6 +37,7 @@
         <!-- fragility function set, with different IMLs -->
         <ffs>
             <taxonomy>RC/DMRF-D/HR</taxonomy>
+            <IML IMT="PGA">7 8 9 10 11</IML>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
