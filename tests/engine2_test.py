@@ -23,7 +23,7 @@ import unittest
 
 from django.core import exceptions
 
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.job import validation
 
@@ -33,7 +33,7 @@ from tests.utils import helpers
 class PrepareJobTestCase(unittest.TestCase):
 
     def test_prepare_job_default_user(self):
-        job = engine2.prepare_job()
+        job = engine.prepare_job()
 
         self.assertEqual('openquake', job.owner.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -47,7 +47,7 @@ class PrepareJobTestCase(unittest.TestCase):
 
     def test_prepare_job_specified_user(self):
         user_name = helpers.random_string()
-        job = engine2.prepare_job(user_name=user_name)
+        job = engine.prepare_job(user_name=user_name)
 
         self.assertEqual(user_name, job.owner.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -62,7 +62,7 @@ class PrepareJobTestCase(unittest.TestCase):
         # By default, a job is created with a log level of 'progress'
         # (just to show calculation progress).
         # In this test, we'll specify 'debug' as the log level.
-        job = engine2.prepare_job(log_level='debug')
+        job = engine.prepare_job(log_level='debug')
 
         self.assertEqual('debug', job.log_level)
 
@@ -76,7 +76,7 @@ class PrepareUserTestCase(unittest.TestCase):
         )
         existing_user.save()
 
-        user = engine2.prepare_user(user_name)
+        user = engine.prepare_user(user_name)
         self.assertEqual(existing_user.id, user.id)
 
     def test_prepare_user_does_not_exist(self):
@@ -87,7 +87,7 @@ class PrepareUserTestCase(unittest.TestCase):
             0, len(models.OqUser.objects.filter(user_name=user_name))
         )
 
-        engine2.prepare_user(user_name)
+        engine.prepare_user(user_name)
 
         # Now the user should exist.
         self.assertEqual(
@@ -120,7 +120,7 @@ bar = baz
             'bar': 'baz',
         }
 
-        params, _ = engine2.parse_config(source)
+        params, _ = engine.parse_config(source)
 
         self.assertEqual(expected_params, params)
 
@@ -150,7 +150,7 @@ random_seed=0
             'maximum_distance': '0'
         }
 
-        params, files = engine2.parse_config(source)
+        params, files = engine.parse_config(source)
         self.assertEqual(expected_params, params)
         self.assertEqual(['site_model_file'], files.keys())
         self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
@@ -170,7 +170,7 @@ class FileDigestTestCase(unittest.TestCase):
         else:
             expected = subprocess.check_output(
                 ["md5sum", self.PATH]).split()[0]
-        actual = engine2._file_digest(self.PATH)
+        actual = engine._file_digest(self.PATH)
         self.assertEqual(expected, actual)
 
 
@@ -178,12 +178,12 @@ class GetContentTypeTestCase(unittest.TestCase):
 
     def test__get_content_type(self):
         # no file extension
-        self.assertEqual('unknown', engine2._get_content_type('/foo/bar/baz'))
+        self.assertEqual('unknown', engine._get_content_type('/foo/bar/baz'))
         # xml file extension
-        self.assertEqual('xml', engine2._get_content_type('/foo/bar/baz.xml'))
+        self.assertEqual('xml', engine._get_content_type('/foo/bar/baz.xml'))
         # hdf5 file extension
         self.assertEqual(
-            'HDF5', engine2._get_content_type('/foo/bar/baz.HDF5')
+            'HDF5', engine._get_content_type('/foo/bar/baz.HDF5')
         )
 
 
@@ -214,7 +214,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         site_model.save()
         files = [site_model]
 
-        hc = engine2.create_hazard_calculation(owner, params, files)
+        hc = engine.create_hazard_calculation(owner, params, files)
         # Normalize/clean fields by fetching a fresh copy from the db.
         hc = models.HazardCalculation.objects.get(id=hc.id)
 
@@ -258,7 +258,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
 
         files = [vuln_file, exposure_file]
 
-        rc = engine2.create_risk_calculation(owner, params, files)
+        rc = engine.create_risk_calculation(owner, params, files)
         # Normalize/clean fields by fetching a fresh copy from the db.
         rc = models.RiskCalculation.objects.get(id=rc.id)
 
@@ -283,9 +283,9 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
 
     def test_read_and_validate_hazard_config(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        job = engine2.prepare_job(getpass.getuser())
-        params, files = engine2.parse_config(open(cfg, 'r'))
-        calculation = engine2.create_hazard_calculation(
+        job = engine.prepare_job(getpass.getuser())
+        params, files = engine.parse_config(open(cfg, 'r'))
+        calculation = engine.create_hazard_calculation(
             job.owner, params, files.values())
 
         form = validation.ClassicalHazardForm(
@@ -337,7 +337,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        engine2.del_haz_calc(hazard_calc.id)
+        engine.del_haz_calc(hazard_calc.id)
 
         # Check that the hazard calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
@@ -349,7 +349,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertEqual(0, hazard_calcs.count())
 
     def test_del_haz_calc_does_not_exist(self):
-        self.assertRaises(RuntimeError, engine2.del_haz_calc, -1)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, -1)
 
     def test_del_haz_calc_no_access(self):
         # Test the case where we try to delete a hazard calculation which does
@@ -359,7 +359,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
                                             username=helpers.random_string())
         hazard_calc = hazard_job.hazard_calculation
 
-        self.assertRaises(RuntimeError, engine2.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
 
     def test_del_haz_calc_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing the hazard
@@ -378,7 +378,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         risk_calc.hazard_calculation = hazard_calc
         risk_calc.save(using='admin')
 
-        self.assertRaises(RuntimeError, engine2.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
 
     def test_del_haz_calc_output_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing one of the
@@ -391,7 +391,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         hazard_job = risk_job.risk_calculation.hazard_output.oq_job
         hazard_calc = hazard_job.hazard_calculation
 
-        self.assertRaises(RuntimeError, engine2.del_haz_calc, hazard_calc.id)
+        self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
 
 class DeleteRiskCalcTestCase(unittest.TestCase):
 
@@ -425,7 +425,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        engine2.del_risk_calc(risk_calc.id)
+        engine.del_risk_calc(risk_calc.id)
 
         # Check that the risk calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=risk_job.id)
@@ -437,7 +437,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertEqual(0, risk_calcs.count())
 
     def test_del_risk_calc_does_not_exist(self):
-        self.assertRaises(RuntimeError, engine2.del_risk_calc, -1)
+        self.assertRaises(RuntimeError, engine.del_risk_calc, -1)
 
     def test_del_risk_calc_no_access(self):
         # Test the case where we try to delete a risk calculation which does
@@ -449,4 +449,4 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         )
         risk_calc = risk_job.risk_calculation
 
-        self.assertRaises(RuntimeError, engine2.del_risk_calc, risk_calc.id)
+        self.assertRaises(RuntimeError, engine.del_risk_calc, risk_calc.id)

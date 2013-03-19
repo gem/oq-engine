@@ -20,7 +20,7 @@ from django.test import TestCase as DjangoTestCase
 
 from shapely.geometry import Point
 from openquake.engine.db import models
-from openquake.engine import engine2
+from openquake.engine import engine
 
 from tests.utils import helpers
 
@@ -38,7 +38,7 @@ class DamageStateTestCase(DjangoTestCase):
         default_user = helpers.default_user()
 
         cls.job = models.OqJob(owner=default_user)
-        rc = engine2.create_risk_calculation(
+        rc = engine.create_risk_calculation(
             cls.job.owner,
             dict(calculation_mode='scenario_damage', base_path='/'), [])
         cls.job.risk_calculation = rc
