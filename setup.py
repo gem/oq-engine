@@ -21,12 +21,13 @@ very welcome.
 
 Copyright (C) 2013 GEM Foundation.
 """
+import os
 from setuptools import setup, find_packages
 
 
 version = "0.2.0"
 url = "http://github.com/gem/oq-risklib"
-
+cd = os.path.dirname(os.path.join(__file__))
 
 setup(
     name='openquake.risklib',
@@ -34,7 +35,9 @@ setup(
     description="oq-risklib is a library for performing seismic risk analysis",
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=['tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
+    scripts=[os.path.join(cd, 'bin/run_risk')],
+    packages=find_packages(exclude=[
+        'tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
     install_requires=[
         'numpy',
         'scipy'
