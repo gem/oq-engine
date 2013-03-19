@@ -295,7 +295,7 @@ class NumpyListField(PickleField):
         if isinstance(value, numpy.ndarray):
             return super(NumpyListField, self).get_prep_value(value.tolist())
         else:
-            if not instance(value, (list, tuple)):
+            if not isinstance(value, (list, tuple)):
                 raise ValueError(
                     "Unexpected value of type '%s'. Expected 'list', 'tuple', "
                     "or 'numpy.ndarray'"
