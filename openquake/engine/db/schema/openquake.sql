@@ -1145,16 +1145,7 @@ CREATE TABLE hzrdr.ses_collection (
     -- Stochastic Event Set Collection, containing a single stochastic
     -- event set containing all of the ruptures from the entire
     -- calculation.
-    lt_realization_id INTEGER CONSTRAINT ses_collection_lt_realization_check
-        CHECK(
-            -- Case 1: Normal stochastic event set
-            ((lt_realization_id IS NOT NULL) AND (complete_logic_tree_ses = FALSE))
-            -- Case 2: Stochastic event set containing all ruptures for the entire
-            -- logic tree.
-            OR ((lt_realization_id IS NULL) AND (complete_logic_tree_ses = TRUE))),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` SES collection.
-    complete_logic_tree_ses BOOLEAN NOT NULL DEFAULT FALSE
+    lt_realization_id INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -1165,17 +1156,7 @@ CREATE TABLE hzrdr.ses (
     investigation_time float NOT NULL,
     -- Order number of this Stochastic Event Set in a series of SESs
     -- (for a given logic tree realization).
-    ordinal INTEGER CONSTRAINT ses_ordinal_check
-        CHECK(
-            -- Case 1: Normal stochastic event set
-            ((ordinal IS NOT NULL) AND (complete_logic_tree_ses = FALSE))
-            -- Case 2: Stochastic event set containing all ruptures for the entire
-            -- logic tree.
-            OR (ordinal IS NULL) AND (complete_logic_tree_ses = TRUE)),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` SES.
-    -- If `true`, there should be no `ordinal` specified.
-    complete_logic_tree_ses BOOLEAN NOT NULL DEFAULT FALSE
+    ordinal INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- A rupture as part of a Stochastic Event Set.
@@ -1204,16 +1185,7 @@ CREATE TABLE hzrdr.gmf_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
     -- FK to lt_realization.id
-    lt_realization_id INTEGER CONSTRAINT gmf_collection_lt_realization_check
-        CHECK(
-            -- Case 1: Normal GMF collection
-            ((lt_realization_id IS NOT NULL) AND (complete_logic_tree_gmf= FALSE))
-            -- Case 2: GMF collection containing all ground motion fields for the entire
-            -- logic tree.
-            OR ((lt_realization_id IS NULL) AND (complete_logic_tree_gmf = TRUE))),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` GMF collection.
-    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
+    lt_realization_id INTEGER
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_set (
@@ -1221,14 +1193,7 @@ CREATE TABLE hzrdr.gmf_set (
     gmf_collection_id INTEGER NOT NULL,  -- FK to gmf_collection.id
     investigation_time float NOT NULL,
     -- Keep track of the stochastic event set which this GMF set is associated with
-    ses_ordinal INTEGER CONSTRAINT gmf_set_ses_ordinal_check
-        CHECK(
-            -- Case 1: Normal GMF set
-            ((ses_ordinal IS NOT NULL) AND (complete_logic_tree_gmf = FALSE))
-            -- Case 2: GMF set containing all ground motion fields for the entire
-            -- logic tree.
-            OR ((ses_ordinal IS NULL) AND (complete_logic_tree_gmf = TRUE))),
-    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
+    ses_ordinal INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- This table stores ground motion values. Given an hazard calculation

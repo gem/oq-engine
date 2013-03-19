@@ -312,8 +312,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='gmf',
-                gmfcollection__lt_realization__isnull=False,
-                gmfcollection__complete_logic_tree_gmf=False).order_by('id')
+                gmfcollection__lt_realization__isnull=False).order_by('id')
 
     def hazard_times(self):
         """
