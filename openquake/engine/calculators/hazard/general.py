@@ -601,6 +601,28 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 for record in parsers.VulnerabilityModelParser(content)]))
             hc.save()
 
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            parser = iter(parsers.FragilityModelParser(
+                StringIO.StringIO(
+                    queryset.all()[0].model_content.raw_content_ascii)))
+            hc = self.hc
+
+            fragility_format, _limit_states = parser.next()
+
+            if (fragility_format == "continuous" and
+                hc.calculation_mode != "scenario"):
+                raise NotImplementedError(
+                    "Getting IMT and levels from "
+                    "a continuous fragility model is not yet supported")
+
+            hc.intensity_measure_types_and_levels = dict([
+                (iml['IMT'], iml['imls'])
+                for _taxonomy, iml, _params, _no_damage_limit in parser])
+            hc.intensity_measure_types = (
+                hc.intensity_measure_types_and_levels.keys())
+            hc.save()
+
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
             exposure_model_input = queryset.all()[0]
