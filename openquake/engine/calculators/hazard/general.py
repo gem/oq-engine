@@ -39,8 +39,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
-from openquake.engine import engine2
-from openquake.engine import kvs
+from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -67,39 +66,6 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-
-def store_source_model(job_id, seed, params, calc):
-    """Generate source model from the source model logic tree and store it in
-    the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param dict params: the config parameters as (dict)
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing source model from job config")
-    key = kvs.tokens.source_model_key(job_id)
-    mfd_bin_width = float(params.get('WIDTH_OF_MFD_BIN'))
-    calc.sample_and_save_source_model_logictree(
-        kvs.get_client(), key, seed, mfd_bin_width)
-
-
-def store_gmpe_map(job_id, seed, calc):
-    """Generate a hash map of GMPEs (keyed by Tectonic Region Type) and store
-    it in the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing GMPE map from job config")
-    key = kvs.tokens.gmpe_key(job_id)
-    calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
 
 
 @transaction.commit_on_success(using='job_init')
@@ -586,7 +552,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
-            inp = engine2.get_input(full_path, 'source', self.hc.owner)
+            inp = engine.get_input(full_path, 'source', self.hc.owner)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
