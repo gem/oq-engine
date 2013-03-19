@@ -615,22 +615,25 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 def average_loss(losses, poes):
     """
     Given a loss curve with `poes` over `losses` defined on a given
-    time span it computes the average loss on this period of time
+    time span it computes the average loss on this period of time.
+
+    :note: As the loss curve is supposed to be piecewise linear as it
+    is a result of a linear interpolation, we compute an exact
+    integral by using the trapeizodal rule with the width given by the
+    loss bin width.
     """
 
-    mean_ratios = pairwise_mean(pairwise_mean(losses))
-    mean_pes = pairwise_diff(pairwise_mean(poes))
-    return numpy.dot(mean_ratios, mean_pes)
+    return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
 
 
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
-    return [numpy.mean(pair) for pair in utils.pairwise(values)]
+    return numpy.array([numpy.mean(pair) for pair in utils.pairwise(values)])
 
 
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
-    return [x - y for x, y in utils.pairwise(values)]
+    return numpy.array([x - y for x, y in utils.pairwise(values)])
 
 
 def mean_std(fractions):
