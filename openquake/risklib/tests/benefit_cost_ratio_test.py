@@ -42,7 +42,7 @@ class RiskCommonTestCase(unittest.TestCase):
                                   (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
         self.assertAlmostEqual(
-            0.023305,
+            0.025485,
             scientific.average_loss(
                 loss_ratio_curve.abscissae,
-                loss_ratio_curve.ordinates), 3)
+                loss_ratio_curve.ordinates))
