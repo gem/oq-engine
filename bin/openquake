@@ -88,7 +88,7 @@ except ImportError:
 import openquake.engine
 
 from openquake.engine import __version__
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
@@ -235,10 +235,10 @@ def run_hazard(cfg_file, log_level, log_file, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(
+        job = engine.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(open(cfg_file, 'r'))
-        calculation = engine2.create_hazard_calculation(job.owner, params,
+        params, files = engine.parse_config(open(cfg_file, 'r'))
+        calculation = engine.create_hazard_calculation(job.owner, params,
                                                         files.values())
         job.hazard_calculation = calculation
         job.save()
@@ -249,7 +249,7 @@ def run_hazard(cfg_file, log_level, log_file, exports):
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_calc(
+        completed_job = engine.run_calc(
             job, log_level, log_file, exports, 'hazard')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
@@ -436,16 +436,16 @@ def run_risk(
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(
+        job = engine.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(open(cfg_file, 'r'))
+        params, files = engine.parse_config(open(cfg_file, 'r'))
 
         # Add the hazard output id to the risk calculation constructor
         # args
         params.update(dict(hazard_output_id=hazard_output_id,
                            hazard_calculation_id=hazard_calculation_id))
 
-        calculation = engine2.create_risk_calculation(
+        calculation = engine.create_risk_calculation(
             job.owner, params, files.values())
         job.risk_calculation = calculation
         job.save()
@@ -456,7 +456,7 @@ def run_risk(
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_calc(
+        completed_job = engine.run_calc(
             job, log_level, log_file, exports, 'risk')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
@@ -495,7 +495,7 @@ def del_haz_calc(hc_id, confirmed=False):
             'Are you sure you want to delete this hazard calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine2.del_haz_calc(hc_id)
+            engine.del_haz_calc(hc_id)
         except RuntimeError, err:
             print err.message
 
@@ -508,7 +508,7 @@ def del_risk_calc(rc_id, confirmed=False):
             'Are you sure you want to delete this risk calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine2.del_risk_calc(rc_id)
+            engine.del_risk_calc(rc_id)
         except RuntimeError, err:
             print err.message
 
