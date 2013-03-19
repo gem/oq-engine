@@ -1944,8 +1944,8 @@ class GmfSet(djm.Model):
         if self.ses_ordinal is None:  # complete logic tree
             job = self.gmf_collection.output.oq_job
             return SES.objects.get(
-	            ordinal=None,
-	            ses_collection__output__oq_job=job).id
+                ordinal=None,
+                ses_collection__output__oq_job=job).id
         else:
             rlz = self.gmf_collection.lt_realization
             return SES.objects.get(

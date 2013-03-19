@@ -22,7 +22,7 @@ import openquake.hazardlib
 from openquake.hazardlib import geo as hazardlib_geo
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
 from openquake.engine.utils import get_calculator_class
 from openquake.engine.db import models
@@ -212,7 +212,7 @@ class GetSiteModelTestCase(unittest.TestCase):
             'random_seed': 37,
         }
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, [])
+        hc = engine.create_hazard_calculation(owner, params, [])
         return hc
 
     def test_get_site_model(self):
@@ -264,7 +264,7 @@ class GetSiteModelTestCase(unittest.TestCase):
 class ClosestSiteModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        owner = engine2.prepare_user('openquake')
+        owner = engine.prepare_user('openquake')
         self.site_model_inp = models.Input(
             owner=owner, digest='fake', path='fake',
             input_type='site_model', size=0
@@ -392,12 +392,12 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         username = helpers.default_user().user_name
 
-        job = engine2.prepare_job(username)
+        job = engine.prepare_job(username)
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
 
-        haz_calc = engine2.create_hazard_calculation(
+        haz_calc = engine.create_hazard_calculation(
             job.owner, params, files.values())
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
