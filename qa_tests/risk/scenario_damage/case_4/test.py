@@ -21,6 +21,10 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
+# FIXME(lp). This is a regression testing meant to exercize the sd-imt
+# logic in the SR calculator. Data has not been validated
+
+
 class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_damage.ini')
@@ -43,15 +47,15 @@ class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
                 [[total.mean, total.stddev] for total in totals]]
 
     def expected_data(self):
-        return [[[2874.69636761608, 197.792901143125],
-                 [122.855791108662, 191.068095747441],
-                 [2.44784127525955, 6.96559410484012],
-                 [227.163109698912, 409.831523111090],
-                 [416.615638168489, 332.480242607810],
-                 [356.221252132599, 339.438202966314],
-                 [654.287293017278, 766.567549865467],
-                 [912.676055800385, 636.202291872638],
-                 [433.036651182337, 615.022456277666]],
-                [[3756.14677033227, 1270.35632891829],
-                 [1452.14748507754, 887.121887430101],
-                 [791.705744590195, 946.270780416918]]]
+        return [[[2812.89159829, 305.30774015],
+                 [176.46099651, 260.49485714],
+                 [10.6474052, 67.91431319],
+                 [170.586342372, 269.649798893],
+                 [429.890862122, 293.620740973],
+                 [399.522795506, 379.53932617],
+                 [613.816376078, 692.704382194],
+                 [791.456779538, 539.202644042],
+                 [594.726844384, 704.006611109]],
+                [[3597.29431674, 799.587511177],
+                 [1397.80863817, 652.81154025],
+                 [1004.89704509, 813.235867669]]]
