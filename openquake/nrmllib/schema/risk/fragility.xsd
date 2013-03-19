@@ -16,14 +16,10 @@
     <xs:complexType name="FragilityModel">
                 <xs:sequence>
                     <xs:element name="description" type="xs:string"/>
-                    <xs:element name="IML" type="IMLType" minOccurs="1" maxOccurs="1" />
                     <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
                 </xs:sequence>
                 <xs:attribute name="format" type="Fmformat" use="required"/>
-                <xs:attribute name="imlUnit" type="xs:string" use="optional"/>
-                <xs:attribute name="minIML" type="PositiveDoubleType" use="optional"/>
-                <xs:attribute name="maxIML" type="PositiveDoubleType" use="optional"/>
     </xs:complexType>
 
     <xs:simpleType name="LimitStates">
@@ -36,6 +32,7 @@
     <xs:complexType name="Ffs">
                 <xs:sequence>
                     <xs:element name="taxonomy" minOccurs="1" maxOccurs="1" type="xs:string"/>
+                    <xs:element name="IML" type="IMLType" minOccurs="1" maxOccurs="1" />
                     <!-- continuous and discrete fragility functions are
                          mutually exclusive i.e.
                             - cannot mix types inside a particular ffs

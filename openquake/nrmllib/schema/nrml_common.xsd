@@ -24,6 +24,9 @@
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
                 <xs:attribute name="IMT" type="xs:string" use="required"/>
+                <xs:attribute name="imlUnit" type="xs:string" use="optional"/>
+                <xs:attribute name="minIML" type="PositiveDoubleType" use="optional"/>
+                <xs:attribute name="maxIML" type="PositiveDoubleType" use="optional"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>

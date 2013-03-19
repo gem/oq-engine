@@ -247,91 +247,45 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
 
 class FragilityModelParserTestCase(unittest.TestCase):
 
-    def test_damage_states_bad_ordering(self):
-        fm_file = StringIO.StringIO('''<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <fragilityModel format="continuous" imlUnit="m" minIML="0.1" maxIML="9.9">
-        <description>Fragility model for Pavia (continuous)</description>
-        <IML IMT="PGA"/>
-        <!-- limit states apply to the entire fragility model -->
-        <limitStates>
-            slight
-            moderate
-            extensive
-            complete
-        </limitStates>
-
-        <!-- fragility function set, each with its own, distinct taxonomy -->
-        <ffs noDamageLimit="0.05" type="lognormal">
-            <taxonomy>RC/DMRF-D/LR</taxonomy>
-
-            <!-- fragility function in continuous format, 1 per limit state -->
-            <ffc ls="slight">
-                <params mean="11.19" stddev="8.27" />
-            </ffc>
-
-            <ffc ls="extensive">
-                <params mean="48.05" stddev="42.49" />
-            </ffc>
-
-            <ffc ls="moderate">
-                <params mean="27.98" stddev="20.677" />
-            </ffc>
-
-            <ffc ls="complete">
-                <params mean="108.9" stddev="123.7" />
-            </ffc>
-        </ffs>
- </fragilityModel>
-</nrml>
-''')
-        self.assertRaises(ValueError, list,
-                          parsers.FragilityModelParser(fm_file))
-
     def test_parse_continuous(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_c.xml')))
 
-        fmt, iml, limit_states = p.next()
+        fmt, limit_states = p.next()
         self.assertEqual(fmt, 'continuous')
-        self.assertEqual("PGA", iml['IMT'])
-        self.assertIsNone(iml['imls'])
         self.assertEqual(limit_states,
                          ['slight', 'moderate', 'extensive', 'complete'])
 
         ffs1, ffs2 = list(p)
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
-                          [(11.19, 8.27),
-                           (27.98, 20.677),
-                           (48.05, 42.49),
-                           (108.9, 123.7)], 0.05))
+                          {'IMT': "PGA", 'imls': None},
+                          [(11.19, 8.27), (27.98, 20.677),
+                           (48.05, 42.49), (108.9, 123.7)], 0.05))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
-                          [(11.18, 8.28),
-                           (27.99, 20.667),
-                           (48.06, 42.48),
-                           (108.8, 123.6)], None))
+                          {'IMT': "PGA", 'imls': None},
+                          [(11.18, 8.28), (27.99, 20.667),
+                           (48.06, 42.48), (108.8, 123.6)], None))
 
     def test_parse_discrete(self):
         p = iter(parsers.FragilityModelParser(get_example('fragm_d.xml')))
 
-        fmt, iml, limit_states = p.next()
+        fmt, limit_states = p.next()
         self.assertEqual(fmt, 'discrete')
-        self.assertEqual(iml['IMT'], 'MMI')
-        self.assertEqual(iml['imls'], [7.0, 8.0, 9.0, 10.0, 11.0])
         self.assertEqual(limit_states,
                          ['minor', 'moderate', 'severe', 'collapse'])
 
         ffs1, ffs2 = list(p)
         self.assertEqual(ffs1,
                          ('RC/DMRF-D/LR',
+                          {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
                           [[0.0, 0.09, 0.56, 0.91, 0.98],
                            [0.0, 0.0, 0.04, 0.78, 0.96],
                            [0.0, 0.0, 0.0, 0.29, 0.88],
                            [0.0, 0.0, 0.0, 0.03, 0.63]], 5.0))
         self.assertEqual(ffs2,
                          ('RC/DMRF-D/HR',
+                          {'IMT': "MMI", 'imls': [7.0, 8.0, 9.0, 10.0, 11.0]},
                           [[0.0, 0.09, 0.56, 0.92, 0.99],
                            [0.0, 0.0, 0.04, 0.79, 0.97],
                            [0.0, 0.0, 0.0, 0.3, 0.89],
