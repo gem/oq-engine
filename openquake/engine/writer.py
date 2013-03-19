@@ -20,14 +20,11 @@ Base classes for the output methods of the various codecs.
 """
 
 import logging
-from os.path import basename
 
 from django.db import transaction
 from django.db import connections
 from django.db import router
 from django.contrib.gis.db import models as gis_models
-
-from openquake.engine.db import models
 
 LOGGER = logging.getLogger('serializer')
 
