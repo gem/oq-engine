@@ -40,7 +40,6 @@ from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
 from openquake.engine import engine
-from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
