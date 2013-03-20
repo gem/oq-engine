@@ -24,7 +24,6 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
@@ -141,9 +140,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -155,9 +154,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
@@ -440,9 +439,7 @@ class ParseImtTestCase(unittest.TestCase):
 
 class FakeGmfSet(object):
 
-    def __init__(self, complete_logic_tree_gmf, ses_ordinal,
-                 investigation_time, gmfs):
-        self.complete_logic_tree_gmf = complete_logic_tree_gmf
+    def __init__(self, ses_ordinal, investigation_time, gmfs):
         self.ses_ordinal = ses_ordinal
         self.investigation_time = investigation_time
         self.gmfs = gmfs
@@ -469,27 +466,26 @@ class GmfSetIterTestCase(unittest.TestCase):
         td = gmf_set_iter_test_data
 
         exp_gmf_sets = [
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+            FakeGmfSet(ses_ordinal=1,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_0),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+            FakeGmfSet(ses_ordinal=2,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_1),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+            FakeGmfSet(ses_ordinal=3,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_2),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
+            FakeGmfSet(ses_ordinal=1,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_3),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
+            FakeGmfSet(ses_ordinal=2,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_4),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
+            FakeGmfSet(ses_ordinal=3,
                        investigation_time=10.0,
                        gmfs=td.GMFS_GMF_SET_5),
         ]
         return exp_gmf_sets
-
 
     @attr('slow')
     def test_complete_logic_tree_gmf_iter(self):
@@ -500,8 +496,7 @@ class GmfSetIterTestCase(unittest.TestCase):
         exp_gmfs = itertools.chain(
             td.GMFS_GMF_SET_0, td.GMFS_GMF_SET_1, td.GMFS_GMF_SET_2,
             td.GMFS_GMF_SET_3, td.GMFS_GMF_SET_4, td.GMFS_GMF_SET_5)
-        exp_gmf_set = FakeGmfSet(complete_logic_tree_gmf=True,
-                                 ses_ordinal=None,
+        exp_gmf_set = FakeGmfSet(ses_ordinal=None,
                                  investigation_time=60.0,
                                  gmfs=exp_gmfs)
 
@@ -511,9 +506,6 @@ class GmfSetIterTestCase(unittest.TestCase):
             .order_by('id')
 
         self.assertEqual(len(list(exp_gmf_set)), len(list(act_gmf_set)))
-
-        self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                         act_gmf_set.complete_logic_tree_gmf)
         self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
         self.assertEqual(exp_gmf_set.investigation_time,
                          act_gmf_set.investigation_time)
@@ -538,8 +530,6 @@ class GmfSetIterTestCase(unittest.TestCase):
 
         for i, exp_gmf_set in enumerate(exp_gmf_sets):
             act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                             act_gmf_set.complete_logic_tree_gmf)
             self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
             self.assertEqual(exp_gmf_set.investigation_time,
                              act_gmf_set.investigation_time)
@@ -565,8 +555,6 @@ class GmfSetIterTestCase(unittest.TestCase):
 
         for i, exp_gmf_set in enumerate(exp_gmf_sets):
             act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                             act_gmf_set.complete_logic_tree_gmf)
             self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
             self.assertEqual(exp_gmf_set.investigation_time,
                              act_gmf_set.investigation_time)

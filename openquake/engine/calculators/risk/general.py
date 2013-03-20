@@ -17,9 +17,8 @@
 
 """Common functionality for Risk calculators."""
 
-import os
 import random
-
+import StringIO
 
 from openquake.risklib import scientific
 
@@ -35,7 +34,7 @@ from openquake.engine.calculators.risk import hazard_getters
 from openquake.nrmllib.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
-from openquake.engine.input import exposure as exposure_writer
+from openquake.engine.input import exposure as db_writer
 
 
 #: Maximum number of loss curves to cache in buffers, for selects and inserts
@@ -325,12 +324,11 @@ class BaseRiskCalculator(base.CalculatorNext):
                            "was already present")
             return exposure_model_input.exposuremodel
 
-        with logs.tracing('storing exposure'):
-            path = os.path.join(self.rc.base_path, exposure_model_input.path)
-            exposure_stream = parsers.ExposureModelParser(path)
-            w = exposure_writer.ExposureDBWriter(exposure_model_input)
-            w.serialize(exposure_stream)
-        return w.model
+        content = StringIO.StringIO(
+            exposure_model_input.model_content.raw_content_ascii)
+        db_writer.ExposureDBWriter(exposure_model_input).serialize(
+            parsers.ExposureModelParser(content))
+        return exposure_model_input.exposuremodel
 
     def _initialize_progress(self, total):
         """Record the total/completed number of work items.
@@ -358,12 +356,12 @@ class BaseRiskCalculator(base.CalculatorNext):
         orphans = set(self.taxonomies) - set(taxonomies)
         if orphans:
             msg = ('The following taxonomies are in the exposure model '
-                   'but not in the fragility model: %s' % sorted(orphans))
+                   'but not in the risk model: %s' % sorted(orphans))
             if self.rc.taxonomies_from_model:
                 # only consider the taxonomies in the fragility model
                 self.taxonomies = dict((t, self.taxonomies[t])
-                                       for t in self.fragility_model
-                                       if t in self.taxonomies)
+                                       for t in self.taxonomies
+                                       if t in taxonomies)
                 logs.LOG.warn(msg)
             else:
                 # all taxonomies in the exposure must be covered
@@ -390,11 +388,13 @@ class BaseRiskCalculator(base.CalculatorNext):
         else:
             input_type = "vulnerability"
 
-        path = self.rc.inputs.get(input_type=input_type).path
+        content = StringIO.StringIO(
+            self.rc.inputs.get(
+                input_type=input_type).model_content.raw_content_ascii)
 
         vfs = dict()
 
-        for record in parsers.VulnerabilityModelParser(path):
+        for record in parsers.VulnerabilityModelParser(content):
             taxonomy = record['ID']
             imt = record['IMT']
             registered_imt = self.taxonomies_imts.get(taxonomy, imt)
