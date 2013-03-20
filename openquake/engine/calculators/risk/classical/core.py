@@ -17,6 +17,8 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import numpy
+
 from collections import OrderedDict
 
 from openquake.risklib import api, scientific
@@ -112,11 +114,11 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
 
         with logs.tracing('writing curve statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
-                loss_ratio_curve_matrix = asset_outputs.values()
+                loss_ratio_curve_matrix = numpy.array(asset_outputs.values())
                 for i, asset in enumerate(assets):
                     general.curve_statistics(
                         asset,
-                        loss_ratio_curve_matrix[i],
+                        loss_ratio_curve_matrix[:,i],
                         weights,
                         mean_loss_curve_id,
                         quantile_loss_curve_ids,
