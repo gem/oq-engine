@@ -1779,9 +1779,6 @@ class SESCollection(djm.Model):
     # event set containing all of the ruptures from the entire
     # calculation.
     lt_realization = djm.ForeignKey('LtRealization', null=True)
-    # A flag to indicate that this is a `complete logic
-    # tree` SES collection.
-    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
@@ -1806,9 +1803,6 @@ class SES(djm.Model):
     # (for a given logic tree realization).
     # For `complete logic tree` SESs, this should be None/NULL.
     ordinal = djm.IntegerField(null=True)
-    # A flag to indicate that this is a `complete logic
-    # tree` SES.
-    complete_logic_tree_ses = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
@@ -1917,9 +1911,6 @@ class GmfCollection(djm.Model):
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
     lt_realization = djm.ForeignKey('LtRealization', null=True)
-    # A flag to indicate that this is a `complete logic
-    # tree` GMF collection.
-    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
@@ -1940,7 +1931,6 @@ class GmfSet(djm.Model):
     # Keep track of the stochastic event set which this GMF set is associated
     # with.
     ses_ordinal = djm.IntegerField()
-    complete_logic_tree_gmf = djm.BooleanField(default=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_set'
@@ -1951,15 +1941,14 @@ class GmfSet(djm.Model):
         :returns: the ID of the stochastic event set which this ground
         motion field set has been generated from
         """
-        if self.complete_logic_tree_gmf:
+        if self.ses_ordinal is None:  # complete logic tree
             job = self.gmf_collection.output.oq_job
             return SES.objects.get(
-                complete_logic_tree_ses=True,
+                ordinal=None,
                 ses_collection__output__oq_job=job).id
         else:
             rlz = self.gmf_collection.lt_realization
             return SES.objects.get(
-                complete_logic_tree_ses=False,
                 ses_collection__lt_realization=rlz,
                 ordinal=self.ses_ordinal).id
 
@@ -1984,7 +1973,7 @@ class GmfSet(djm.Model):
         """
         job = self.gmf_collection.output.oq_job
         hc = job.hazard_calculation
-        if self.complete_logic_tree_gmf:
+        if self.ses_ordinal is None:  # complete logic tree
             # Get all of the GmfSets associated with a logic tree realization,
             # for this calculation.
             lt_gmf_sets = GmfSet.objects\
