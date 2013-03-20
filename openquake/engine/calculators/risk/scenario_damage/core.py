@@ -20,12 +20,15 @@
 Core functionality for the scenario_damage risk calculator.
 """
 
+import StringIO
+import collections
+
 import numpy
+
 from django import db
 
 from openquake.nrmllib.risk import parsers
 from openquake.risklib import api, scientific
-from openquake.risklib.models.input import FragilityModel
 
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks
@@ -51,8 +54,8 @@ def scenario_damage(job_id, hazard,
       :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
       element is the corresponding weight.
     :param taxonomy: the taxonomy being considered
-    :param fragility_functions: a
-    :class:`openquake.risklib.models.input.FragilityFunctionSequence object
+    :param list fragility_functions: a list of callables representing the
+      fragility functions used by the risklib calculator
     :param _output_containers: a dictionary {hazard_id: output_id}
     of output_type "dmg_dist_per_asset"
     """
@@ -149,6 +152,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
     Scenario Damage Risk Calculator. Computes four kinds of damage
     distributions: per asset, per taxonomy, total and collapse map.
+
+    :attr dict fragility_functions: a dictionary of dictionary mapping
+    taxonomy -> (limit state -> fragility function) where a fragility
+    function is an instance of
+    :class:`openquake.risklib.scientific.FragilityFunctionContinuous`
+    or :class:`openquake.risklib.scientific.FragilityFunctionDiscrete`
     """
 
     #: The core calculation celery task function
@@ -164,7 +173,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.ddpt = {}
         self.ddpt_output = None  # will be set in #create_outputs
         self.ddt_output = None  # will be set in #create_outputs
-        self.fragility_model = None  # will be set in #set_risk_models
         self.fragility_functions = None  # will be set in #set_risk_models
         self.damage_states = None  # will be set in #set_risk_models
 
@@ -198,7 +206,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         to pass to a worker. In this case taxonomy, fragility_model and
         fragility_functions for the given taxonomy.
         """
-        return [taxonomy, self.fragility_model[taxonomy]]
+        return [taxonomy,
+                self.fragility_functions[taxonomy]]
 
     def task_completed_hook(self, message):
         """
@@ -258,18 +267,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         # save the damage states for the given risk calculation
         for lsi, dstate in enumerate(self.damage_states):
-            models.DmgState(risk_calculation=self.job.risk_calculation,
-                            dmg_state=dstate, lsi=lsi).save()
+            models.DmgState.objects.create(
+                risk_calculation=self.job.risk_calculation,
+                dmg_state=dstate, lsi=lsi)
 
     def set_risk_models(self):
         """
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        self.fragility_model = fm = self.parse_fragility_model()
-        self.damage_states = ['no_damage'] + fm.limit_states
-        for taxonomy in self.taxonomies:
-            self.taxonomies_imts[taxonomy] = fm.imt
+        self.fragility_functions = fm = self.parse_fragility_model()
         self.check_taxonomies(fm)
 
     def parse_fragility_model(self):
@@ -277,9 +284,33 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Parse the fragility XML file and return fragility_model,
         fragility_functions, and damage_states for usage in set_risk_models.
         """
-        path = self.rc.inputs.get(input_type='fragility').path
-        iterparse = iter(parsers.FragilityModelParser(path))
-        fmt, iml, limit_states = iterparse.next()
-        fm = FragilityModel(
-            fmt, iml['IMT'], iml['imls'], limit_states, *iterparse)
-        return fm
+        content = StringIO.StringIO(
+            self.rc.inputs.get(
+                input_type='fragility').model_content.raw_content_ascii)
+        iterparse = iter(parsers.FragilityModelParser(content))
+        fmt, limit_states = iterparse.next()
+
+        self.damage_states = ['no_damage'] + limit_states
+        self.fragility_functions = collections.defaultdict(dict)
+
+        for taxonomy, iml, params, no_damage_limit in iterparse:
+            self.taxonomies_imts[taxonomy] = iml['IMT']
+
+            if fmt == "discrete":
+                if no_damage_limit is None:
+                    self.fragility_functions[taxonomy] = [
+                        scientific.FragilityFunctionDiscrete(
+                            iml['imls'], poes, iml['imls'][0])
+                        for poes in params]
+                else:
+                    self.fragility_functions[taxonomy] = [
+                        scientific.FragilityFunctionDiscrete(
+                            [no_damage_limit] + iml['imls'], [0.0] + poes,
+                            no_damage_limit)
+                        for poes in params]
+
+            else:
+                self.fragility_functions[taxonomy] = [
+                    scientific.FragilityFunctionContinuous(*mean_stddev)
+                    for mean_stddev in params]
+        return self.fragility_functions
