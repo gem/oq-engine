@@ -8,7 +8,6 @@ from nose.plugins.attrib import attr
 DATADIR = os.path.join(os.path.dirname(__file__),  'data')
 
 
-@attr('slow')
 class EngineTest(unittest.TestCase):
 
     @classmethod
@@ -16,15 +15,19 @@ class EngineTest(unittest.TestCase):
         cls.seq_runner = BaseRunner()
         cls.par_runner = Runner(ProcessPoolExecutor())
 
+    @attr('slow')
     def test_scenario_damage_seq(self):
         run_calc(DATADIR, self.seq_runner, 'job_damage.ini')
 
+    @attr('slow')
     def test_scenario_damage_par(self):
         run_calc(DATADIR, self.par_runner, 'job_damage.ini')
 
+    @attr('slow')
     def test_scenario_seq(self):
         run_calc(DATADIR, self.seq_runner, 'job_risk.ini')
 
+    @attr('slow')
     def test_scenario_par(self):
         run_calc(DATADIR, self.par_runner, 'job_risk.ini')
 

@@ -88,9 +88,12 @@ def _remove_dead_thread_references():
     """Remove inactive threads from _thread_references.
 
     Should be called periodically to prevent memory leaks in scenarios such as:
-    >>> while True:
-    >>> ...    t = ThreadPoolExecutor(max_workers=5)
-    >>> ...    t.map(int, ['1', '2', '3', '4', '5'])
+
+    .. code-block:: python
+
+        while True:
+            t = ThreadPoolExecutor(max_workers=5)
+            t.map(int, ['1', '2', '3', '4', '5'])
     """
     for thread_reference in set(_thread_references):
         if thread_reference() is None:
