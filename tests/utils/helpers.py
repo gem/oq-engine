@@ -43,7 +43,6 @@ from django.core import exceptions
 from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
-from openquake.engine.input.logictree import LogicTreeProcessor
 from openquake.engine.utils import config, get_calculator_class
 
 CD = os.path.dirname(__file__)  # current directory
@@ -65,15 +64,6 @@ patch = functools.partial(mock_module.patch, mocksignature=True)
 def default_user():
     """Return the default user to be used for test setups."""
     return models.OqUser.objects.get(user_name="openquake")
-
-
-def delete_profile(job):
-    """Disassociate the job's profile and delete it."""
-    [j2p] = models.Job2profile.objects.extra(
-        where=["oq_job_id=%s"], params=[job.id])
-    jp = j2p.oq_job_profile
-    j2p.delete()
-    jp.delete()
 
 
 def insert_inputs(job, inputs):
@@ -174,7 +164,7 @@ def run_hazard_job(cfg, exports=None):
 
 
 def run_job_sp(job_type, config_file, hazard_id=None, params=None,
-               silence=False):
+               silence=False, log_level="error"):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
@@ -190,6 +180,8 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         List of additional command line params to bin/openquake. Optional.
     :param bool silence:
         If `True`, silence all stdout messages.
+    :param str log_level:
+        Log Level (default to error) used by the engine for the job
 
     :returns:
         With the default input, return the return code of the subprocess.
@@ -199,7 +191,7 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         :exception:`subprocess.CalledProcessError` is raised.
     """
     args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
-            "--log-level=error"]
+            "--log-level=%s" % log_level]
     if hazard_id:
         args.append("--hazard-output-id=%d" % hazard_id)
     if params:
