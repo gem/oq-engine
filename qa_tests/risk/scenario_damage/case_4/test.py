@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
-# FIXME(lp). This is a regression testing meant to exercize the sd-imt
+# FIXME(lp). This is a regression test meant to exercize the sd-imt
 # logic in the SR calculator. Data has not been validated
 
 
