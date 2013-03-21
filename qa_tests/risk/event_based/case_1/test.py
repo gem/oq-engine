@@ -311,7 +311,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     26.0726, 11.3905][::-1]
 
         # FIXME(lp) insured losses has not been got from a reliable
-        # implementation. This is just a regression testing
+        # implementation. This is just a regression test
         insured_losses_1 = [40.5835007, 64.7589890606,
                             68.2290881107, 72.2352916074,
                             76.6619792681, 81.0886669289,
