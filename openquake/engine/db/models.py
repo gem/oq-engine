@@ -807,10 +807,20 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
-    poes_hazard_maps = fields.FloatArrayField(
+    poes = fields.FloatArrayField(
         help_text=('PoEs (probabilities of exceedence) to be used for '
-                   'computing hazard maps (from individual curves, mean and '
-                   'quantile curves if calculated)'),
+                   'computing hazard maps and uniform hazard spectra'),
+        null=True,
+        blank=True,
+    )
+    hazard_maps = fields.OqNullBooleanField(
+        help_text='Compute hazard maps',
+        null=True,
+        blank=True,
+    )
+    uniform_hazard_spectra = fields.OqNullBooleanField(
+        help_text=('Compute uniform hazard spectra; if true, hazard maps will'
+                   ' be computed as well'),
         null=True,
         blank=True,
     )
@@ -1617,6 +1627,15 @@ class HazardMap(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
 
+    def __str__(self):
+        return (
+            'HazardMap(poe=%(poe)s, imt=%(imt)s, sa_period=%(sa_period)s, '
+            'statistics=%(statistics)s, quantile=%(quantile)s)'
+        ) % self.__dict__
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def parse_imt(imt):
     """
@@ -2227,50 +2246,42 @@ class GmfData(djm.Model):
         db_table = 'hzrdr\".\"gmf_data'
 
 
-class UhSpectra(djm.Model):
-    """Uniform Hazard Spectra
-
-    A Collection of Uniform Hazard Spectrum which share a set of periods.
-    A UH Spectrum has a PoE (Probability of Exceedence) and is conceptually
-    composed of a set of 2D matrices, 1 matrix per site/point of interest.
-    Each 2D matrix has a number of row equal to ``realizations`` and a number
-    of columns equal to the number of ``periods``.
+class UHS(djm.Model):
     """
-    output = djm.ForeignKey('Output')
-    timespan = djm.FloatField()
-    realizations = djm.IntegerField()
-    periods = fields.FloatArrayField()
-
-    class Meta:
-        db_table = 'hzrdr\".\"uh_spectra'
-
-
-class UhSpectrum(djm.Model):
-    """Uniform Hazard Spectrum
-
+    UHS/Uniform Hazard Spectra:
     * "Uniform" meaning "the same PoE"
     * "Spectrum" because it covers a range/band of periods/frequencies
+
+    Records in this table contain metadata for a collection of UHS data.
     """
-    uh_spectra = djm.ForeignKey('UhSpectra')
+    output = djm.OneToOneField('Output', null=True)
+    # FK only required for non-statistical results (i.e., mean or quantile
+    # curves).
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    investigation_time = djm.FloatField()
     poe = djm.FloatField()
+    periods = fields.FloatArrayField()
+    STAT_CHOICES = (
+        (u'mean', u'Mean'),
+        (u'quantile', u'Quantile'),
+    )
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:
-        db_table = 'hzrdr\".\"uh_spectrum'
+        db_table = 'hzrdr\".\"uhs'
 
 
-class UhSpectrumData(djm.Model):
-    """Uniform Hazard Spectrum Data
-
-    A single "row" of data in a UHS matrix for a specific site/point of
-    interest.
+class UHSData(djm.Model):
     """
-    uh_spectrum = djm.ForeignKey('UhSpectrum')
-    realization = djm.IntegerField()
-    sa_values = fields.FloatArrayField()
+    UHS curve for a given location.
+    """
+    uhs = djm.ForeignKey('UHS')
+    imls = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'hzrdr\".\"uh_spectrum_data'
+        db_table = 'hzrdr\".\"uhs_data'
 
 
 class LtRealization(djm.Model):

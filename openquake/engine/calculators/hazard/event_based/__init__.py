@@ -99,7 +99,7 @@ curve calculation method employed in the Classical hazard calculator. The user
 can activate this calculation option by specifying
 `hazard_curves_from_gmfs = true` in the configuration parameters. All hazard
 curve post-processing options are available as well: `mean_hazard_curves`,
-`quantile_hazard_curves`, and `poes_hazard_maps` (for producing hazard maps).
+`quantile_hazard_curves`, and `poes` (for producing hazard maps).
 
 Hazard curves are computed from GMFs as follows:
 

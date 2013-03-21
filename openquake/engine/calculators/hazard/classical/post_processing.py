@@ -24,15 +24,19 @@ E.g. mean and quantile curves.
 import math
 import numpy
 
+from celery.task.sets import TaskSet
+from django.db import transaction
+from itertools import izip
+
 import openquake.engine
 
-from celery.task.sets import TaskSet
-
 from openquake.engine import logs
+from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
+from openquake.engine.writer import BulkInserter
 
 
 # Number of locations considered by each task
@@ -87,6 +91,10 @@ _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
     'hazard-map(%(poe)s)-%(imt)s-quantile(%(quantile)s)')
 # Hazard maps for a specific end branch
 _HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
+
+_UHS_DISP_NAME_MEAN_FMT = 'uhs-(%(poe)s)-mean'
+_UHS_DISP_NAME_QUANTILE_FMT = 'uhs-(%(poe)s)-quantile(%(quantile)s)'
+_UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
 
 
 # Silencing 'Too many local variables'
@@ -181,7 +189,7 @@ def do_hazard_map_post_process(job):
     logs.LOG.debug('> Post-processing - Hazard Maps')
     block_size = int(config.get('hazard', 'concurrent_tasks'))
 
-    poes = job.hazard_calculation.poes_hazard_maps
+    poes = job.hazard_calculation.poes
 
     # Stats for debug logging:
     hazard_curve_ids = models.HazardCurve.objects.filter(
@@ -213,3 +221,154 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))
     logs.LOG.debug('< Done post-processing - Hazard Maps')
+
+
+def do_uhs_post_proc(job):
+    """
+    Compute and save (to the DB) Uniform Hazard Spectra for all hazard maps for
+    the given ``job``.
+
+    :param job:
+        Instance of :class:`openquake.engine.db.models.OqJob`.
+    """
+    hc = job.hazard_calculation
+
+    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+
+    for poe in hc.poes:
+        maps_for_poe = models.HazardMap.objects.filter(
+            output__oq_job=job, poe=poe
+        )
+
+        # mean (if defined)
+        mean_maps = maps_for_poe.filter(statistics='mean')
+        if mean_maps.count() > 0:
+            mean_uhs = make_uhs(mean_maps)
+            _save_uhs(job, mean_uhs, poe, statistics='mean')
+
+        # quantiles (if defined)
+        for quantile in hc.quantile_hazard_curves:
+            quantile_maps = maps_for_poe.filter(
+                statistics='quantile', quantile=quantile
+            )
+            quantile_uhs = make_uhs(quantile_maps)
+            _save_uhs(job, quantile_uhs, poe, statistics='quantile',
+                      quantile=quantile)
+
+        # for each logic tree branch:
+        for rlz in rlzs:
+            rlz_maps = maps_for_poe.filter(
+                statistics=None, lt_realization=rlz
+            )
+            rlz_uhs = make_uhs(rlz_maps)
+            _save_uhs(job, rlz_uhs, poe, rlz=rlz)
+
+
+def make_uhs(maps):
+    """
+    Make Uniform Hazard Spectra curves for each location.
+
+    It is assumed that the `lons` and `lats` for each of the ``maps`` are
+    uniform.
+
+    :param maps:
+        A sequence of :class:`openquake.engine.db.models.HazardMap` objects, or
+        equivalent objects with the same fields attributes.
+    :returns:
+        A `dict` with two values:
+        * 'periods': a list of the SA periods from all of the ``maps``, sorted
+          ascendingly
+        * 'uh_spectra': a list of triples (lon, lat, imls), where `imls` is a
+          `tuple` of the IMLs from all maps for each of the `periods`
+    """
+    result = dict()
+    result['periods'] = []
+
+    # filter out non-PGA -SA maps
+    maps = [x for x in maps if x.imt in ('PGA', 'SA')]
+
+    # give PGA maps an sa_period of 0.0
+    # this is slightly hackish, but makes the sorting simple
+    for each_map in maps:
+        if each_map.imt == 'PGA':
+            each_map.sa_period = 0.0
+
+    # sort the maps by period:
+    sorted_maps = sorted(maps, key=lambda m: m.sa_period)
+
+    # start constructing the results:
+    result['periods'] = [x.sa_period for x in sorted_maps]
+
+    # assume the `lons` and `lats` are uniform for all maps
+    lons = sorted_maps[0].lons
+    lats = sorted_maps[0].lats
+
+    result['uh_spectra'] = []
+    imls_list = izip(*(x.imls for x in sorted_maps))
+    for lon, lat, imls in izip(lons, lats, imls_list):
+        result['uh_spectra'].append((lon, lat, imls))
+
+    return result
+
+
+def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
+    """
+    Save computed UHS data to the DB.
+
+    UHS results can be either for an end branch or for mean or quantile
+    statistics.
+
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance to be associated
+        with the results.
+    :param uhs_results:
+        UHS computation results structured like the output of :func:`make_uhs`.
+    :param float poe:
+        Probability of exceedance of the hazard maps from which these UH
+        Spectra were produced.
+    :param rlz:
+        :class:`openquake.engine.db.models.LtRealization`. Specify only if
+        these results are for an end branch.
+    :param statistics:
+        'mean' or 'quantile'. Specify only if these are statistical results.
+    :param float quantile:
+        Specify only if ``statistics`` == 'quantile'.
+    """
+    output = models.Output(
+        oq_job=job,
+        owner=job.owner,
+        output_type='uh_spectra'
+    )
+    uhs = models.UHS(
+        poe=poe,
+        investigation_time=job.hazard_calculation.investigation_time,
+        periods=uhs_results['periods'],
+    )
+    if rlz is not None:
+        uhs.lt_realization = rlz
+        output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
+    elif statistics is not None:
+        uhs.statistics = statistics
+        if statistics == 'quantile':
+            uhs.quantile = quantile
+            output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
+                                % dict(poe=poe, quantile=quantile))
+        else:
+            # mean
+            output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
+    output.save()
+    uhs.output = output
+    # This should fail if neither `lt_realization` nor `statistics` is defined:
+    uhs.save()
+
+    with transaction.commit_on_success(using='reslt_writer'):
+        inserter = BulkInserter(models.UHSData,
+                                max_cache_size=CURVE_CACHE_SIZE)
+
+        for lon, lat, imls in uhs_results['uh_spectra']:
+            inserter.add_entry(
+                uhs_id=uhs.id,
+                imls='{%s}' % ','.join(str(x) for x in imls),
+                location='POINT(%s %s)' % (lon, lat)
+            )
+        inserter.flush()
