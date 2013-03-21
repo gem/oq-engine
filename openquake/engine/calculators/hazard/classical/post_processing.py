@@ -31,7 +31,7 @@ from itertools import izip
 import openquake.engine
 
 from openquake.engine import logs
-from openquake.engine.calculators.hazard.general import _CURVE_CACHE_SIZE
+from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
@@ -363,7 +363,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
 
     with transaction.commit_on_success(using='reslt_writer'):
         inserter = BulkInserter(models.UHSData,
-                                max_cache_size=_CURVE_CACHE_SIZE)
+                                max_cache_size=CURVE_CACHE_SIZE)
 
         for lon, lat, imls in uhs_results['uh_spectra']:
             inserter.add_entry(
