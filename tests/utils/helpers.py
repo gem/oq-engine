@@ -163,6 +163,34 @@ def run_hazard_job(cfg, exports=None):
     return completed_job
 
 
+def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    if exports is None:
+        exports = []
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = get_risk_job(cfg, hazard_calculation_id=hazard_calculation_id,
+                       hazard_output_id=hazard_output_id)
+    job.is_running = True
+    job.save()
+
+    models.JobStats.objects.create(oq_job=job)
+
+    calc_mode = job.risk_calculation.calculation_mode
+    calc = get_calculator_class('risk', calc_mode)(job)
+    completed_job = engine._do_run_calc(job, exports, calc, 'risk')
+    job.is_running = False
+    job.save()
+
+    return completed_job
+
+
 def run_job_sp(job_type, config_file, hazard_id=None, params=None,
                silence=False, log_level="error"):
     """
@@ -820,6 +848,33 @@ def get_hazard_job(cfg, username=None):
         job.owner, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
+    job.save()
+    return job
+
+
+def get_risk_job(cfg, username=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    username = username if username is not None else default_user().user_name
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+
+    params.update(
+        dict(hazard_output_id=hazard_output_id,
+             hazard_calculation_id=hazard_calculation_id)
+    )
+
+    risk_calc = engine.create_risk_calculation(
+        job.owner, params, files.values())
+    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
+    job.risk_calculation = risk_calc
     job.save()
     return job
 
