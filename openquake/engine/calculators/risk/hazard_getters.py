@@ -114,7 +114,6 @@ class HazardGetter(object):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        logs.LOG.warning(data)
         return ([self.asset_dict[asset_id] for asset_id in data
                  if asset_id in self.asset_dict],
                 [data[asset_id] for asset_id in data
