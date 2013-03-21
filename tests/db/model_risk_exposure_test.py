@@ -17,8 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from collections import namedtuple
-
 from django.db import transaction
 from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
