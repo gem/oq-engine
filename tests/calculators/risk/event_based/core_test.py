@@ -27,7 +27,7 @@ class EventBasedRiskCalculatorTestCase(
     Integration test for the event based risk calculator
     """
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('event_based_risk/job.ini'),
             demo_file('event_based_hazard/job.ini'), output_type="gmf")
 
