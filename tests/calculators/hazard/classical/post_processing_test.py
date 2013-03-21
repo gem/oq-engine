@@ -24,18 +24,14 @@ Test classical calculator post processing features
 """
 
 import decimal
-import itertools
-import math
 import mock
 import numpy
-import random
 import unittest
 
 from nose.plugins.attrib import attr
 from scipy.stats import mstats
 
 from tests.utils import helpers
-from tests.utils.helpers import random_location_generator
 
 from openquake.engine.db import models
 from openquake.engine.calculators import post_processing
