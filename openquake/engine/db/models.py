@@ -1565,8 +1565,8 @@ class Output(djm.Model):
         # metadata regarding statistics or logic tree
         statistics = None
         quantile = None
-        source_model_path = None
-        gsim_path = None
+        sm_lt_path = None
+        gsim_lt_path = None
 
         if rc.calculation_mode != 'scenario':
             # Two cases:
@@ -1582,17 +1582,50 @@ class Output(djm.Model):
                         statistics = ho.hazardcurve.statistics
                         quantile = ho.hazardcurve.quantile
                     else:
-                        source_model_path = lt.sm_lt_path
-                        gsim_path = lt.gsim_lt_path
+                        sm_lt_path = lt.sm_lt_path
+                        gsim_lt_path = lt.gsim_lt_path
                 else:
-                    # TODO: we assume it's GMF??
                     lt = ho.gmfcollection.lt_realization
-                    source_model_path = lt.sm_lt_path
-                    gsim_path = lt.gsim_lt_path
+                    sm_lt_path = lt.sm_lt_path
+                    gsim_lt_path = lt.gsim_lt_path
+            elif rc.hazard_calculation is not None:
+                # we're consuming multiple outputs from a single hazard
+                # calculation
+                if self.output_type == 'loss_curve':
+                    the_output = self.loss_curve
+                elif self.output_type == 'loss_map':
+                    the_output = self.loss_map
+                else:
+                    raise RuntimeError(
+                        'Error getting hazard metadata: Unexpected output_type'
+                        ' "%s"' % self.output_type
+                )
+
+                if the_output.hazard_output_id is not None:
+                    haz_output = the_output.hazard_output
+                    haz_curve = haz_output.hazardcurve
+
+                    # TODO: Do we ever encounter this case?
+                    # TODO: Or will we always have a LT Realization?
+                    statistics = haz_curve.statistics
+                    quantile = haz_curve.quantile
+
+                    if haz_curve.lt_realization is not None:
+                        sm_lt_path = (
+                            haz_curve.lt_realization.sm_lt_path
+                        )
+                        gsim_lt_path = (
+                            haz_curve.lt_realization.gsim_lt_path
+                        )
+                else:
+                    if self.output_type == 'loss_curve':
+                        # it's a mean/quantile loss curve
+                        statistics = self.loss_curve.statistics
+                        quantile = self.loss_curve.quantile
 
         return self.HazardMetadata(investigation_time,
                                    statistics, quantile,
-                                   source_model_path, gsim_path)
+                                   sm_lt_path, gsim_lt_path)
 
 
 class ErrorMsg(djm.Model):
