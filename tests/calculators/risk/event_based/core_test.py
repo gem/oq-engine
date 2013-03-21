@@ -39,9 +39,7 @@ class EventBasedRiskCalculatorTestCase(
         self.job.save()
 
     def test_calculator_parameters(self):
-        """
-        Test that the specific calculation parameters are present
-        """
+        # Test that the specific calculation parameters are present
 
         params = dict(zip(
             ['conditional_loss_poes', 'insured_losses',
@@ -56,10 +54,8 @@ class EventBasedRiskCalculatorTestCase(
         self.assertEqual(0.0, params['asset_correlation'])
 
     def test_hazard_id(self):
-        """
-        Test that the hazard output used by the calculator is a
-        `openquake.engine.db.models.GmfCollection` object
-        """
+        # Test that the hazard output used by the calculator is a
+        # `openquake.engine.db.models.GmfCollection` object
 
         outputs = self.calculator.hazard_outputs(
             self.calculator.rc.get_hazard_calculation())
@@ -112,10 +108,8 @@ class EventBasedRiskCalculatorTestCase(
         patches[1].stop()
 
     def test_complete_workflow(self):
-        """
-        Test the complete risk classical calculation workflow and test
-        for the presence of the outputs
-        """
+        # Test the complete risk classical calculation workflow and test
+        # for the presence of the outputs
         self.calculator.execute()
 
         # 1 loss curve + 3 loss maps + 1 aggregate curve + 1 insured curve
