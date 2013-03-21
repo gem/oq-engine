@@ -1599,7 +1599,7 @@ class Output(djm.Model):
                     raise RuntimeError(
                         'Error getting hazard metadata: Unexpected output_type'
                         ' "%s"' % self.output_type
-                )
+                    )
 
                 if the_output.hazard_output_id is not None:
                     haz_output = the_output.hazard_output
