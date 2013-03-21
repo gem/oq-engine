@@ -824,7 +824,7 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
+def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
     """
     Takes in input the paths to a risk job config file and a hazard job config
     file.
