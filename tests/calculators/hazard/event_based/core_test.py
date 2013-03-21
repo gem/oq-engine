@@ -18,13 +18,11 @@ import getpass
 import unittest
 import mock
 import numpy
-import kombu
 
 from openquake.hazardlib import imt
 from nose.plugins.attrib import attr
 
 from openquake.engine.db import models
-from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard.event_based import core
 from openquake.engine.utils import stats
 
