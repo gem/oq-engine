@@ -43,7 +43,6 @@ from django.core import exceptions
 from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
-from openquake.engine.input.logictree import LogicTreeProcessor
 from openquake.engine.utils import config, get_calculator_class
 
 CD = os.path.dirname(__file__)  # current directory
