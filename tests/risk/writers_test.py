@@ -16,10 +16,19 @@
 
 import os
 import unittest
+from lxml import etree
 import StringIO
 import collections
+
+from openquake import nrmllib
 from openquake.nrmllib.risk import writers
+
 from tests import _utils
+
+
+HazardMetadata = collections.namedtuple(
+    'hazard_metadata',
+    'investigation_time statistics quantile sm_path gsim_path')
 
 
 LOSS_NODE = collections.namedtuple(
@@ -411,6 +420,37 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+
+class LossFractionsWriterTestCase(unittest.TestCase):
+    tearDown = remove_file
+    filename = "loss_fractions.xml"
+
+    def test_serialize_taxonomies(self):
+        expected = file(
+            os.path.join(
+                os.path.dirname(__file__),
+                "../../examples/loss-fractions-taxonomies.xml"))
+
+        writers.loss_fractions_writer(
+            self.filename,
+            "taxonomy",
+            dict(RC=(400, 0.2), RM=(1600, 0.8)),
+            {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
+             (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))},
+            loss_unit="EUR",
+            loss_category="building",
+            hazard_metadata=HazardMetadata(
+                investigation_time=50.,
+                statistics=None,
+                quantile=None,
+                sm_path="b1_b2_b4",
+                gsim_path="b1_b2"), poe=None)
+
+        etree.XMLSchema(
+            etree.parse(nrmllib.nrml_schema_file())).assert_(
+                etree.parse(self.filename))
+        _utils.assert_xml_equal(expected, self.filename)
 
 
 class BCRMapXMLWriterTestCase(unittest.TestCase):
