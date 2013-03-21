@@ -305,7 +305,7 @@ def make_uhs(maps):
 
     result['uh_spectra'] = []
     imls_list = izip(*(x.imls for x in sorted_maps))
-    for i, (lon, lat, imls) in enumerate(izip(lons, lats, imls_list)):
+    for lon, lat, imls in izip(lons, lats, imls_list):
         result['uh_spectra'].append((lon, lat, imls))
 
     return result
