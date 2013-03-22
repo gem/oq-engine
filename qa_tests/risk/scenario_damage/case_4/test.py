@@ -21,7 +21,7 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
-# FIXME(lp). This is a regression test meant to exercize the sd-imt
+# FIXME(lp). This is a regression test meant to exercise the sd-imt
 # logic in the SR calculator. Data has not been validated
 
 
