@@ -72,19 +72,17 @@ class SiMidorikawa1999Asc(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        assert imt in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
-        mean = self._get_mean(rup.mag, rup.hypo_depth, dists.rrup, d=0)
-        stddevs = self._get_stddevs(stddev_types, dist.rrup)
+        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
+        stddevs = self._get_stddevs(stddev_types, dists.rrup)
 
         return mean, stddevs
 
-    def _get_mean(self, mag, hypo_depth, rrup, d):
+    def _get_mean(self, imt, mag, hypo_depth, rrup, d):
         """
         Return mean value as defined in equation 3.5.1-1 page 148
         """
+        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+
         mean = (
             0.58 * mag +
             0.0038 * hypo_depth +
@@ -103,7 +101,10 @@ class SiMidorikawa1999Asc(GMPE):
         """
         Return standard deviations as defined in equation 3.5.5-2 page 151
         """
-        std = numpy.zeros_like(rrup)
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+
+        std = np.zeros_like(rrup)
 
         std[rrup <= 20] = 0.23
 
@@ -139,11 +140,8 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        assert imt in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
-        mean = self._get_mean(rup.mag, rup.hypo_depth, dists.rrup, d=-0.02)
+        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup,
+                              d=-0.02)
         stddevs = self._get_stddevs(stddev_types, np.exp(mean))
 
         return mean, stddevs
@@ -152,12 +150,15 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         """
         Return standard deviations as defined in equation 3.5.5-1 page 151
         """
-        std = numpy.zeros_like(pgv)
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+
+        std = np.zeros_like(pgv)
 
         std[pgv <= 25] = 0.20
 
         idx = (pgv > 25) & (pgv <= 50)
-        std[idx] = 0.20 - 0.05 * (pgv - 25) / 25
+        std[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
 
         std[pgv > 50] = 0.15
 
@@ -188,11 +189,7 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        assert imt in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
-        mean = self._get_mean(rup.mag, rup.hypo_depth, dists.rrup, d=0.12)
+        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0.12)
         stddevs = self._get_stddevs(stddev_types, np.exp(mean))
 
         return mean, stddevs
