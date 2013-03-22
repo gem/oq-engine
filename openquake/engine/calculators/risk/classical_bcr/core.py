@@ -68,7 +68,7 @@ def classical_bcr(job_id, hazard, vulnerability_function,
 
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
-        (bcr_distribution_id,) = output_containers[hazard_output_id]
+        bcr_distribution_id = output_containers[hazard_output_id][0]
 
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()

@@ -172,8 +172,47 @@ class BaseRiskCalculator(base.CalculatorNext):
         5) the output containers to be populated
         6) the specific calculator parameter set
         """
+        multiple_hazard_outputs_p = len(self.considered_hazard_outputs()) > 1
+
+        # Create mean `Output` and `LossCurve` containers, if means are
+        # requested:
+        if self.rc.mean_loss_curves and multiple_hazard_outputs_p:
+            mean_loss_curve_id = models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='mean-loss-curves',
+                    output_type='loss_curve'),
+                statistics='mean').id
+        else:
+            mean_loss_curve_id = None
+
+        # quantile loss curves
+        # Create quantile `Output` and `LossCurve` containers, if quantiles are
+        # requested:
+        quantile_loss_curve_ids = {}
+        if multiple_hazard_outputs_p and self.rc.quantile_loss_curves:
+            for quantile in self.rc.quantile_loss_curves:
+                quantile_loss_curve_ids[quantile] = (
+                    models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name='quantile(%s)-curves' % quantile,
+                            output_type='loss_curve'),
+                        statistics='quantile',
+                        quantile=quantile).id)
 
         output_containers = self.rc.output_container_builder(self)
+
+        # FIXME: This is kind of ugly. The mean and quantile container IDs need
+        # to be available with each set of containers for a given hazard
+        # output. Technically, this seems to work correctly, but it's pretty
+        # ugly and was implemented to fix a bug where redundant mean/quantile
+        # curve containers were being created.
+        for v in output_containers.values():
+            # order matters, because of the way we unpack this!
+            # mean first, then quantile
+            v.append(mean_loss_curve_id)
+            v.append(quantile_loss_curve_ids)
 
         calculator_parameters = self.calculator_parameters
 
@@ -450,33 +489,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                         "loss_map"),
                     poe=poe).pk
 
-        # mean loss curves ...
-        multiple_hazard_outputs_p = len(self.considered_hazard_outputs()) > 1
-        if self.rc.mean_loss_curves and multiple_hazard_outputs_p:
-            mean_loss_curve_id = models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.job,
-                    display_name='loss-curves',
-                    output_type='loss_curve'),
-                statistics='mean').id
-        else:
-            mean_loss_curve_id = None
-
-        # quantile loss curves
-        quantile_loss_curve_ids = {}
-        if multiple_hazard_outputs_p and self.rc.quantile_loss_curves:
-            for quantile in self.rc.quantile_loss_curves:
-                quantile_loss_curve_ids[quantile] = (
-                    models.LossCurve.objects.create(
-                        output=models.Output.objects.create_output(
-                            job=self.job,
-                            display_name='quantile(%s)-curves' % quantile,
-                            output_type='loss_curve'),
-                        statistics='quantile',
-                        quantile=quantile).id)
-
-        return [loss_curve_id, loss_map_ids,
-                mean_loss_curve_id, quantile_loss_curve_ids]
+        return [loss_curve_id, loss_map_ids]
 
 
 def hazard_getter(hazard_getter_name, hazard_id, *args):
@@ -626,7 +639,6 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
     if mean_loss_curve_id:
         mean_curve = post_processing.mean_curve(
             curves_poes, weights=curves_weights)
-
         write_loss_curve(
             mean_loss_curve_id,
             asset,
