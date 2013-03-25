@@ -39,6 +39,7 @@ from openquake.engine.calculators import base
 def event_based(job_id, hazard,
                 task_seed, vulnerability_function,
                 output_containers,
+                statistical_output_containers,
                 conditional_loss_poes, insured_losses,
                 time_span, tses,
                 loss_curve_resolution, asset_correlation,
@@ -66,6 +67,12 @@ def event_based(job_id, hazard,
       insured losses; d is the ID of the
       :class:`openquake.engine.db.models.AggregateLossCurve` output container
       used to store the computed loss curves
+    :param dict statistical_output_containers: A dictionary mapping hazard
+      Output ID to a tuple (a, b, c, d) where a and b are the IDs of the
+      :class:`openquake.engine.db.models.LossCurve` output containers used to
+      store the mean/quantile loss curve and c, d are dictionaries that map
+      poe to ID of the :class:`openquake.engine.db.models.LossMap` used to
+      store mean/quantile loss maps
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     :param bool insured_losses: True if insured losses should be computed
@@ -87,7 +94,6 @@ def event_based(job_id, hazard,
         hazard_getter, _ = hazard_data
 
         (loss_curve_id, loss_map_ids,
-         mean_loss_curve_id, quantile_loss_curve_ids,
          insured_curve_id, aggregate_loss_curve_id) = (
              output_containers[hazard_output_id])
 
@@ -144,7 +150,8 @@ def event_based(job_id, hazard,
                         general.write_loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve, poe))
+                                loss_ratio_curve.abscissae,
+                                loss_ratio_curve.ordinates, poe))
 
                     # insured losses
                     if insured_losses:
@@ -183,28 +190,19 @@ def event_based(job_id, hazard,
                 general.update_aggregate_losses(
                     aggregate_loss_curve_id, aggregate_losses)
 
-    # compute mean and quantile loss curves if multiple hazard
+    # compute mean and quantile loss curves/maps if multiple hazard
     # realizations are computed
-    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+
+    if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
 
-        with logs.tracing('writing curve statistics'):
+        with logs.tracing('writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                loss_ratio_curve_matrix = loss_ratio_curves.values()
-
-                # here we are relying on the fact that assets do not
-                # change across different logic tree realizations (as
-                # the hazard grid does not change, so the hazard
-                # getters always returns the same assets)
-                for i, asset in enumerate(assets):
-                    general.curve_statistics(
-                        asset,
-                        loss_ratio_curve_matrix[i],
-                        weights,
-                        mean_loss_curve_id,
-                        quantile_loss_curve_ids,
-                        hazard_montecarlo_p,
-                        assume_equal="image")
+                general.compute_and_write_statistics(
+                    statistical_output_containers,
+                    weights, assets,
+                    numpy.array(loss_ratio_curves.values()),
+                    hazard_montecarlo_p, conditional_loss_poes, "image")
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings),
