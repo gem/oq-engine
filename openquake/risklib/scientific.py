@@ -564,13 +564,15 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     :param float probability: the probability value used to
     interpolate the loss curve
     """
-    # the loss curve is always decreasing
     if probability > poes[0]:  # max poes
         return 0.0
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
     else:
         interval_index = bisect.bisect_right(list(reversed(poes)), probability)
+
+        if interval_index == len(poes):  # poes are all nan
+            return float('nan')
         return interpolate.interp1d(
             list(
                 reversed(
