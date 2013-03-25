@@ -374,7 +374,7 @@ def _print_outputs_summary(outputs):
     """
     if len(outputs) > 0:
         print 'id | output_type | name'
-        for o in outputs:
+        for o in outputs.order_by('output_type'):
             print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
 
 
