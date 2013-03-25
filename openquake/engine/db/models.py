@@ -1074,11 +1074,12 @@ class RiskCalculation(djm.Model):
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
-    # GmfSet) used by the risk calculation
+    # GmfCollection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
-    # the HazardCalculation object used by the risk calculation (each
-    # Output (ergo each logic tree realization) is considered
+    # the HazardCalculation object used by the risk calculation when
+    # each individual Output (i.e. each hazard logic tree realization)
+    # is considered
     hazard_calculation = djm.ForeignKey("HazardCalculation",
                                         null=True, blank=True)
 
@@ -1086,15 +1087,20 @@ class RiskCalculation(djm.Model):
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
 
-    ##########################################
-    # For calculators that output loss curves
-    ##########################################
+    ####################################################
+    # For calculators that output (conditional) loss map
+    ####################################################
+    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
+
+    ####################################################
+    # For calculators that output statistical results
+    ####################################################
     mean_loss_curves = fields.OqNullBooleanField(
-        help_text='Compute mean loss curves',
+        help_text='Compute mean loss curves, maps, etc.',
         null=True,
         blank=True)
     quantile_loss_curves = fields.FloatArrayField(
-        help_text='Compute quantile loss curves',
+        help_text='List of quantiles for computing quantile outputs',
         null=True,
         blank=True)
 
@@ -1112,7 +1118,7 @@ class RiskCalculation(djm.Model):
     # Classical parameters:
     #######################
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
-    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
+    # poes_disagg = fields.FloatArrayField(null=True, blank=True)
 
     #########################
     # Event-Based parameters:
@@ -1146,27 +1152,6 @@ class RiskCalculation(djm.Model):
                 'The job #%d has no hazard calculation '
                 'associated' % self.hazard_output.oq_job.id)
         return hcalc
-
-    def has_output_containers(self):
-        """
-        :returns: True if RiskCalculation has more than one output
-        container.
-        """
-        return self.calculation_mode != "scenario"
-
-    def output_container_builder(self, risk_calculator):
-        """
-        :returns: a dictionary mapping openquake.engine.db.models.Output ids
-            to a list of risk output container ids.
-        """
-        if self.has_output_containers():
-            return dict((hazard_output.id,
-                         risk_calculator.create_outputs(hazard_output))
-                        for hazard_output in
-                        risk_calculator.considered_hazard_outputs())
-        else:
-            return {self.hazard_output.id:
-                    risk_calculator.create_outputs(self.hazard_output)}
 
     @property
     def best_maximum_distance(self):
@@ -2365,6 +2350,8 @@ class LossMap(djm.Model):
     hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
     insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_map'

@@ -172,47 +172,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         5) the output containers to be populated
         6) the specific calculator parameter set
         """
-        multiple_hazard_outputs_p = len(self.considered_hazard_outputs()) > 1
+        output_containers = dict(
+            (hazard_output.id,
+             self.create_outputs(hazard_output))
+            for hazard_output in self.considered_hazard_outputs())
 
-        # Create mean `Output` and `LossCurve` containers, if means are
-        # requested:
-        if self.rc.mean_loss_curves and multiple_hazard_outputs_p:
-            mean_loss_curve_id = models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.job,
-                    display_name='mean-loss-curves',
-                    output_type='loss_curve'),
-                statistics='mean').id
+        if self.rc.hazard_calculation:
+            statistical_output_containers = self.create_statistical_outputs()
         else:
-            mean_loss_curve_id = None
-
-        # quantile loss curves
-        # Create quantile `Output` and `LossCurve` containers, if quantiles are
-        # requested:
-        quantile_loss_curve_ids = {}
-        if multiple_hazard_outputs_p and self.rc.quantile_loss_curves:
-            for quantile in self.rc.quantile_loss_curves:
-                quantile_loss_curve_ids[quantile] = (
-                    models.LossCurve.objects.create(
-                        output=models.Output.objects.create_output(
-                            job=self.job,
-                            display_name='quantile(%s)-curves' % quantile,
-                            output_type='loss_curve'),
-                        statistics='quantile',
-                        quantile=quantile).id)
-
-        output_containers = self.rc.output_container_builder(self)
-
-        # FIXME: This is kind of ugly. The mean and quantile container IDs need
-        # to be available with each set of containers for a given hazard
-        # output. Technically, this seems to work correctly, but it's pretty
-        # ugly and was implemented to fix a bug where redundant mean/quantile
-        # curve containers were being created.
-        for v in output_containers.values():
-            # order matters, because of the way we unpack this!
-            # mean first, then quantile
-            v.append(mean_loss_curve_id)
-            v.append(quantile_loss_curve_ids)
+            statistical_output_containers = []
 
         calculator_parameters = self.calculator_parameters
 
@@ -240,6 +208,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 yield ([self.job.id, hazard] +
                        worker_args +
                        [output_containers] +
+                       [statistical_output_containers] +
                        calculator_parameters)
 
     def worker_args(self, taxonomy):
@@ -294,6 +263,56 @@ class BaseRiskCalculator(base.CalculatorNext):
         associated to an hazard logic tree realization
         """
         raise NotImplementedError
+
+    def create_statistical_outputs(self):
+        """
+        Create mean/quantile `Output` and `LossCurve`/`LossMap` containers.
+        """
+
+        mean_loss_curve_id = models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+                job=self.job,
+                display_name='Mean Loss Curves',
+                output_type='loss_curve'),
+            statistics='mean').id
+
+        quantile_loss_curve_ids = dict(
+            (quantile,
+             models.LossCurve.objects.create(
+                 output=models.Output.objects.create_output(
+                     job=self.job,
+                     display_name='quantile(%s)-curves' % quantile,
+                     output_type='loss_curve'),
+                 statistics='quantile',
+                 quantile=quantile).id)
+            for quantile in self.rc.quantile_loss_curves)
+
+        mean_loss_map_ids = dict(
+            (poe,
+             models.LossMap.objects.create(
+                 output=models.Output.objects.create_output(
+                     job=self.job,
+                     display_name="Mean Loss Map poe=%.4f" % poe,
+                     output_type="loss_map"),
+                 statistics="mean").id)
+            for poe in self.rc.conditional_loss_poes)
+
+        quantile_loss_map_ids = dict(
+            (quantile,
+             dict(
+                 (poe, models.LossMap.objects.create(
+                     output=models.Output.objects.create_output(
+                         job=self.job,
+                         display_name="Quantile Loss Map poe=%.4f q=%.4f" % (
+                             poe, quantile),
+                         output_type="loss_map"),
+                     statistics="quantile",
+                     quantile=quantile).id)
+                 for poe in self.rc.conditional_loss_poes))
+            for quantile in self.rc.quantile_loss_curves)
+
+        return (mean_loss_curve_id, quantile_loss_curve_ids,
+                mean_loss_map_ids, quantile_loss_map_ids)
 
     def create_getter(self, output, imt, assets):
         """
@@ -610,15 +629,17 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
                      mean_loss_curve_id, quantile_loss_curve_ids,
                      explicit_quantiles, assume_equal):
 
+    loss_ratios = loss_ratio_curves[0].abscissae
+
     if assume_equal == 'support':
-        loss_ratios = loss_ratio_curves[0].abscissae
         curves_poes = [curve.ordinates for curve in loss_ratio_curves]
     elif assume_equal == 'image':
-        loss_ratios = loss_ratio_curves[0].abscissae
         curves_poes = [curve.ordinate_for(loss_ratios)
                        for curve in loss_ratio_curves]
     else:
         raise NotImplementedError
+
+    quantiles_poes = dict()
 
     for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
         if explicit_quantiles:
@@ -628,23 +649,110 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
             q_curve = post_processing.quantile_curve(
                 curves_poes, quantile)
 
+        quantiles_poes[quantile] = q_curve.tolist()
+
         write_loss_curve(
             quantile_loss_curve_id,
             asset,
-            q_curve.tolist(),
+            quantiles_poes[quantile],
             loss_ratios,
-            scientific.average_loss(loss_ratios, q_curve.tolist()))
+            scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
 
     # then means
+    mean_poes = None
     if mean_loss_curve_id:
         mean_curve = post_processing.mean_curve(
             curves_poes, weights=curves_weights)
+        mean_poes = mean_curve.tolist()
+
         write_loss_curve(
             mean_loss_curve_id,
             asset,
-            mean_curve.tolist(),
+            mean_poes,
             loss_ratios,
-            scientific.average_loss(loss_ratios, mean_curve.tolist()))
+            scientific.average_loss(loss_ratios, mean_poes))
+
+    return mean_poes, quantiles_poes
+
+
+def compute_and_write_statistics(
+        statistical_output_containers, weights,
+        assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
+        conditional_loss_poes, assume_equal):
+    """
+    :param statistical_output_containers: see
+      `openquake.engine.calculators.risk.classical.core.classical`
+    :param weights: the weights of each realization considered
+    :param assets: the assets on which we are computing the statistics
+    :param loss_ratio_curve_matrix: a numpy 2d array that stores the
+      individual loss curves for each asset in `assets`
+    :param bool hazard_montecarlo_p: if True explicit mean/quantiles
+    should be used
+    :param list conditional_loss_poes: The poes taken into account to
+      compute the loss maps
+    :param str assume_equal: see
+      `openquake.engine.calculators.risk.general.curve_statistics`
+    """
+    (mean_loss_curve_id, quantile_loss_curve_ids,
+     mean_loss_map_ids, quantile_loss_map_ids) = statistical_output_containers
+
+    for i, asset in enumerate(assets):
+        loss_ratio_curves = loss_ratio_curve_matrix[:, i]
+        loss_ratios = loss_ratio_curves[0].abscissae
+
+        if assume_equal == 'support':
+            curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+        elif assume_equal == 'image':
+            curves_poes = [curve.ordinate_for(loss_ratios)
+                           for curve in loss_ratio_curves]
+        else:
+            raise NotImplementedError
+
+        quantiles_poes = dict()
+
+        for quantile, quantile_loss_curve_id in (
+                quantile_loss_curve_ids.items()):
+            if hazard_montecarlo_p:
+                q_curve = post_processing.weighted_quantile_curve(
+                    curves_poes, weights, quantile)
+            else:
+                q_curve = post_processing.quantile_curve(curves_poes, quantile)
+
+            quantiles_poes[quantile] = q_curve.tolist()
+
+            write_loss_curve(
+                quantile_loss_curve_id,
+                asset,
+                quantiles_poes[quantile],
+                loss_ratios,
+                scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
+
+        # then mean loss curve
+        mean_poes = None
+        if mean_loss_curve_id:
+            mean_curve = post_processing.mean_curve(curves_poes, weights)
+            mean_poes = mean_curve.tolist()
+
+            write_loss_curve(
+                mean_loss_curve_id,
+                asset,
+                mean_poes,
+                loss_ratios,
+                scientific.average_loss(loss_ratios, mean_poes))
+
+        # statistic loss map
+        loss_ratios = loss_ratio_curve_matrix[0, 0].abscissae
+
+        for poe in conditional_loss_poes:
+            write_loss_map_data(
+                mean_loss_map_ids[poe],
+                asset,
+                scientific.conditional_loss_ratio(loss_ratios, mean_poes, poe))
+            for quantile, poes in quantiles_poes.items():
+                write_loss_map_data(
+                    quantile_loss_map_ids[quantile][poe],
+                    asset,
+                    scientific.conditional_loss_ratio(loss_ratios, poes, poe))
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
