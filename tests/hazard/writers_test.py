@@ -82,7 +82,8 @@ class SESRupture(object):
 
     def __init__(self, rupture_id,
                  magnitude, strike, dip, rake, tectonic_region_type,
-                 is_from_fault_source, lons=None, lats=None, depths=None,
+                 is_from_fault_source, is_multi_surface,
+                 lons=None, lats=None, depths=None,
                  top_left_corner=None, top_right_corner=None,
                  bottom_right_corner=None, bottom_left_corner=None):
         self.id = rupture_id
@@ -92,6 +93,7 @@ class SESRupture(object):
         self.rake = rake
         self.tectonic_region_type = tectonic_region_type
         self.is_from_fault_source = is_from_fault_source
+        self.is_multi_surface = is_multi_surface
         self.lons = lons
         self.lats = lats
         self.depths = depths
@@ -468,13 +470,15 @@ class SESXMLWriterTestCase(unittest.TestCase):
     def test_serialize(self):
         ruptures1 = [
             SESRupture(1,
-                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust', False,
+                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
+                False, False,
                 top_left_corner=(1.1, 1.01, 10.0),
                 top_right_corner=(2.1, 2.01, 20.0),
                 bottom_right_corner=(3.1, 3.01, 30.0),
                 bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(2,
-                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
+                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+                True, False,
                 lons=[
                     [5.1, 6.1],
                     [7.1, 8.1],
@@ -491,14 +495,18 @@ class SESXMLWriterTestCase(unittest.TestCase):
         ses1 = SES(1, 50.0, ruptures1)
 
         ruptures2 = [
-            SESRupture(3,
-                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust', False,
+            SESRupture(
+                3,
+                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
+                False, False,
                 top_left_corner=(1.1, 1.01, 10.0),
                 top_right_corner=(2.1, 2.01, 20.0),
-                bottom_right_corner=(3.1, 3.01, 30.0),
-                bottom_left_corner=(4.1, 4.01, 40.0)),
-            SESRupture(4,
-                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust', True,
+                bottom_left_corner=(4.1, 4.01, 40.0),
+                bottom_right_corner=(3.1, 3.01, 30.0)),
+            SESRupture(
+                4,
+                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
+                True, False,
                 lons=[
                     [5.2, 6.2],
                     [7.2, 8.2],
@@ -511,6 +519,13 @@ class SESXMLWriterTestCase(unittest.TestCase):
                     [10.1, 10.2],
                     [10.3, 10.4],
                 ]),
+            SESRupture(
+                5,
+                7.4, 4.0, 44.0, 14.0, 'Stable Shallow Crust',
+                False, True,
+                lons = [-1.0, 1.0, -1.0, 1.0, 0.0, 1.1, 0.9, 2.0],
+                lats = [1.0, 1.0, -1.0, -1.0, 1.1, 2.0, 0.0, 0.9],
+                depths = [21.0, 21.0, 59.0, 59.0, 20.0, 20.0, 80.0, 80.0])
         ]
         ses2 = SES(2, 40.0, ruptures2)
 
@@ -588,13 +603,15 @@ class SESXMLWriterTestCase(unittest.TestCase):
     def test_serialize_complete_lt_ses(self):
         ruptures = [
             SESRupture(1,
-                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust', False,
+                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
+                False, False,
                 top_left_corner=(1.1, 1.01, 10.0),
                 top_right_corner=(2.1, 2.01, 20.0),
                 bottom_right_corner=(3.1, 3.01, 30.0),
                 bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(2,
-                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
+                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+                True, False,
                 lons=[
                     [5.1, 6.1],
                     [7.1, 8.1],
@@ -608,13 +625,15 @@ class SESXMLWriterTestCase(unittest.TestCase):
                     [10.7, 10.8],
                 ]),
             SESRupture(3,
-                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust', False,
+                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
+                False, False,
                 top_left_corner=(1.1, 1.01, 10.0),
                 top_right_corner=(2.1, 2.01, 20.0),
                 bottom_right_corner=(3.1, 3.01, 30.0),
                 bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(4,
-                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust', True,
+                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
+                True, False,
                 lons=[
                     [5.2, 6.2],
                     [7.2, 8.2],
@@ -686,7 +705,8 @@ class SESXMLWriterTestCase(unittest.TestCase):
         # empty.
         rup_elem = etree.Element('test_rup_elem')
         rupture = SESRupture(1,
-            6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust', True,
+            6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+            True, False,
             lons=[[], []],
             lats=[[5.01, 6.01],
                   [7.01, 8.01]],
