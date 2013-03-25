@@ -34,7 +34,8 @@ from openquake.engine import logs
 
 @tasks.oqtask
 @general.count_progress_risk('r')
-def classical(job_id, hazard, vulnerability_function, output_containers,
+def classical(job_id, hazard, vulnerability_function,
+              output_containers, statistical_output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
               hazard_montecarlo_p):
     """
@@ -54,9 +55,15 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
-      store the computed loss curves and b is a dictionary that maps poe to ID
+      store individual loss curves and b is a dictionary that maps poe to ID
       of the :class:`openquake.engine.db.models.LossMap` used to store
-      the loss maps
+      the individual loss maps
+    :param dict statistical_output_containers: A dictionary mapping hazard
+      Output ID to a tuple (a, b, c, d) where a and b are the IDs of the
+      :class:`openquake.engine.db.models.LossCurve` output containers used to
+      store the mean/quantile loss curve and c, d are dictionaries that map
+      poe to ID of the :class:`openquake.engine.db.models.LossMap` used to
+      store mean/quantile loss maps
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param conditional_loss_poes:
@@ -68,17 +75,14 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
 
     asset_outputs = OrderedDict()
 
-    calculator = api.Classical(
-        vulnerability_function, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_function, lrem_steps_per_interval)
 
     for hazard_output_id, hazard_data in hazard.items():
         # the second item of the tuple is the weight of the hazard (at
         # this moment we are not interested in it)
         hazard_getter, _ = hazard_data
 
-        (loss_curve_id, loss_map_ids,
-         mean_loss_curve_id, quantile_loss_curve_ids) = (
-             output_containers[hazard_output_id])
+        loss_curve_id, loss_map_ids = output_containers[hazard_output_id]
 
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()
@@ -107,23 +111,17 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
                         general.write_loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve, poe))
+                                loss_ratio_curve.abscissae,
+                                loss_ratio_curve.ordinates, poe))
 
-    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+    if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
-
-        with logs.tracing('writing curve statistics'):
+        with logs.tracing('writing statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
-                loss_ratio_curve_matrix = numpy.array(asset_outputs.values())
-                for i, asset in enumerate(assets):
-                    general.curve_statistics(
-                        asset,
-                        loss_ratio_curve_matrix[:,i],
-                        weights,
-                        mean_loss_curve_id,
-                        quantile_loss_curve_ids,
-                        hazard_montecarlo_p,
-                        assume_equal="support")
+                general.compute_and_write_statistics(
+                    statistical_output_containers, weights,
+                    assets, numpy.array(asset_outputs.values()),
+                    hazard_montecarlo_p, conditional_loss_poes, "support")
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings))
