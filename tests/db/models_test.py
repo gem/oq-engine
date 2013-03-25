@@ -177,7 +177,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual([], list(models.inputs4rcalc(-1)))
 
     def test_a_few_inputs(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
@@ -191,7 +191,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
     def test_with_input_type(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation

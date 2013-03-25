@@ -35,7 +35,8 @@ from django.db import transaction
 @general.count_progress_risk('r')
 def event_based_bcr(job_id, hazard, task_seed,
                     vulnerability_function, vulnerability_function_retrofitted,
-                    output_containers, time_span, tses,
+                    output_containers, _statistical_output_containers,
+                    time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
@@ -57,6 +58,7 @@ def event_based_bcr(job_id, hazard, task_seed,
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
       used to store the computed bcr distribution
+    :param statistical_output_containers: not used at this moment
     :param float time_span:
         Time Span of the hazard calculation.
     :param float tses:
@@ -78,7 +80,7 @@ def event_based_bcr(job_id, hazard, task_seed,
 
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
-        (bcr_distribution_id,) = output_containers[hazard_output_id]
+        bcr_distribution_id = output_containers[hazard_output_id][0]
 
         seed = rnd.randint(0, models.MAX_SINT_32)
         calc_original = api.ProbabilisticEventBased(
@@ -193,6 +195,14 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                     "BCR Distribution for hazard %s" % hazard_output,
                     "bcr_distribution")).pk
         ]
+
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass
+
 
     def set_risk_models(self):
         """

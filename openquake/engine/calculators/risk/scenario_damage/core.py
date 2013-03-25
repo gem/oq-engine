@@ -41,7 +41,7 @@ from openquake.engine.calculators import base
 @general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
                     taxonomy, fragility_functions,
-                    _output_containers):
+                    _output_containers, _statistical_output_contaienrs):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -58,6 +58,7 @@ def scenario_damage(job_id, hazard,
       fragility functions used by the risklib calculator
     :param _output_containers: a dictionary {hazard_id: output_id}
     of output_type "dmg_dist_per_asset"
+    :param statistical_output_containers: not used at this moment
     """
     calculator = api.ScenarioDamage(fragility_functions)
 
@@ -249,19 +250,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # controller node, in the task_completion_hook, whereas the
         # computations per asset only need the risk_calculation_id,
         # extracted from the job_id
-        models.Output.objects.create_output(
+        ddpa = models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
-        models.Output.objects.create_output(
+        ddpt = models.Output.objects.create_output(
             self.job, "Damage Distribution per Taxonomy",
             "dmg_dist_per_taxonomy")
 
-        models.Output.objects.create_output(
+        ddt = models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        models.Output.objects.create_output(
+        collapse_map = models.Output.objects.create_output(
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
@@ -270,6 +271,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             models.DmgState.objects.create(
                 risk_calculation=self.job.risk_calculation,
                 dmg_state=dstate, lsi=lsi)
+
+        return [ddpa, ddpt, ddt, collapse_map]
 
     def set_risk_models(self):
         """
@@ -314,3 +317,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
         return self.fragility_functions
+
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass
