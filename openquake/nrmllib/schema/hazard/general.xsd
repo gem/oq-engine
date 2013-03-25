@@ -131,7 +131,7 @@
     </xs:complexType>
 
     <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
-    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>    
+    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
     <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
     <xs:complexType name="FaultEdge">
         <xs:complexContent>
