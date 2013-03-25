@@ -19,6 +19,7 @@ Classes for serializing various NRML XML artifacts.
 
 from lxml import etree
 from collections import OrderedDict
+from itertools import izip
 
 import openquake.nrmllib
 from openquake.nrmllib import utils
@@ -329,6 +330,7 @@ class SESXMLWriter(object):
             * `rake`
             * `tectonic_region_type`
             * `is_from_fault_source` (a `bool`)
+            * `is_multi_surface` (a `bool`)
             * `lons`
             * `lats`
             * `depths`
@@ -348,6 +350,19 @@ class SESXMLWriter(object):
             * `top_right_corner`
             * `bottom_right_corner`
             * `bottom_left_corner`
+
+            Each of these should be a triple of `lon`, `lat`, `depth`.
+
+            If `is_multi_surface` is `True`, the rupture originated from a
+            multi-surface source. In this case, `lons`, `lats`, and `depths`
+            should have uniform length. The length should be a multiple of 4,
+            where each segment of 4 represents the corner points of a planar
+            surface in the following order:
+
+            * top left
+            * top right
+            * bottom right
+            * bottom left
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
@@ -396,10 +411,14 @@ class SESXMLWriter(object):
                         # points
                         self._create_rupture_mesh(rupture, rup_elem)
                     else:
-                        # rupture is from a point or area source
-                        # the rupture geometry is represented by four 3D corner
-                        # points
-                        self._create_planar_surface(rupture, rup_elem)
+                        if rupture.is_multi_surface:
+                            self._create_multi_planar_surface(rupture,
+                                                              rup_elem)
+                        else:
+                            # rupture is from a point or area source
+                            # the rupture geometry is represented by four 3D
+                            # corner points
+                            self._create_planar_surface(rupture, rup_elem)
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
@@ -461,6 +480,43 @@ class SESXMLWriter(object):
             corner_elem.set('lon', str(corner[0]))
             corner_elem.set('lat', str(corner[1]))
             corner_elem.set('depth', str(corner[2]))
+
+    @staticmethod
+    def _create_multi_planar_surface(rupture, rup_elem):
+        """
+        """
+        assert len(rupture.lons) % 4 == 0
+        assert len(rupture.lons) == len(rupture.lats) == len(rupture.depths)
+
+        for offset in xrange(len(rupture.lons) / 4):
+            start = offset * 4
+            end = offset * 4 + 4
+            lons = rupture.lons[start:end]
+            lats = rupture.lats[start:end]
+            depths = rupture.depths[start:end]
+
+            ps_elem = etree.SubElement(
+                rup_elem, 'planarSurface')
+
+            top_left, top_right, bottom_left, bottom_right = \
+                izip(lons, lats, depths)
+
+            # NOTE: There is a subtle change in ordering here.
+            # The order of bottom right and bottom left are switched.
+            # Be careful.
+            # This is due to inconsitency with how the planar surfaces are
+            # handled in various places.
+            # A proper test should exercise that the ordering is correct.
+            for el_name, corner in (
+                    ('topLeft', top_left),
+                    ('topRight', top_right),
+                    ('bottomRight', bottom_right),
+                    ('bottomLeft', bottom_left)):
+
+                corner_elem = etree.SubElement(ps_elem, el_name)
+                corner_elem.set('lon', str(corner[0]))
+                corner_elem.set('lat', str(corner[1]))
+                corner_elem.set('depth', str(corner[2]))
 
 
 class HazardMapXMLWriter(object):
