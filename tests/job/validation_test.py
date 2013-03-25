@@ -1058,7 +1058,7 @@ openquake.hazardlib.gsim"],
 
 class ClassicalRiskFormTestCase(unittest.TestCase):
     def setUp(self):
-        job, _ = helpers.get_risk_job(
+        job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini')
         )
@@ -1104,7 +1104,7 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
 
 class ClassicalBCRRiskFormTestCase(unittest.TestCase):
     def setUp(self):
-        job, _ = helpers.get_risk_job(
+        job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini')
         )
@@ -1153,7 +1153,7 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
 class EventBasedBCRRiskForm(unittest.TestCase):
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('event_based_bcr/job.ini'),
             demo_file('event_based_hazard/job.ini')
         )
@@ -1199,7 +1199,7 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 
 class EventBasedValidationTestCase(unittest.TestCase):
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('event_based_risk/job.ini'),
             demo_file('event_based_hazard/job.ini')
         )

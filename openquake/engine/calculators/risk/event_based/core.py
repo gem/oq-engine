@@ -87,8 +87,8 @@ def event_based(job_id, hazard,
         hazard_getter, _ = hazard_data
 
         (loss_curve_id, loss_map_ids,
-         mean_loss_curve_id, quantile_loss_curve_ids,
-         insured_curve_id, aggregate_loss_curve_id) = (
+         insured_curve_id, aggregate_loss_curve_id,
+         mean_loss_curve_id, quantile_loss_curve_ids) = (
              output_containers[hazard_output_id])
 
         seed = rnd.randint(0, models.MAX_SINT_32)
