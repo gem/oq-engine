@@ -1899,7 +1899,7 @@ class SESRupture(djm.Model):
     # If `is_from_fault_source` is False, each of these fields should contain
     # a sequence (tuple, list, or numpy array, for example) of 4 values. In
     # order, the triples of (lon, lat, depth) represent top left, top right,
-    # bottom right, and bottom left corners of the the rupture's planar
+    # bottom left, and bottom right corners of the the rupture's planar
     # surface.
     # Update:
     # There is now a third case. If the rupture originated from a
@@ -1952,14 +1952,14 @@ class SESRupture(djm.Model):
         return None
 
     @property
-    def bottom_right_corner(self):
+    def bottom_left_corner(self):
         if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[2], self.lats[2], self.depths[2]
         return None
 
     @property
-    def bottom_left_corner(self):
+    def bottom_right_corner(self):
         if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
