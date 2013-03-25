@@ -28,7 +28,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     An abstract class that just setup a risk job
     """
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
 
@@ -114,11 +114,9 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         # Test that the proper output containers are created
 
         for hazard_output in self.hazard_outputs:
-            [loss_curve_id, loss_map_ids,
-             mean, quantile] = self.calculator.create_outputs(hazard_output)
+            [loss_curve_id, loss_map_ids] = \
+                self.calculator.create_outputs(hazard_output)
 
-            self.assertIsNone(mean)
-            self.assertEqual({}, quantile)
             self.assertTrue(
                 models.LossCurve.objects.filter(pk=loss_curve_id).exists())
 

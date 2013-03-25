@@ -365,7 +365,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # Test the case where a risk calculation is referencing the hazard
         # calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -384,7 +384,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # Test the case where a risk calculation is referencing one of the
         # belonging to the hazard calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -401,7 +401,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         cls.risk_cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
 
     def test_del_risk_calc(self):
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -443,7 +443,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # Test the case where we try to delete a risk calculation which does
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=helpers.random_string()
         )

@@ -1074,11 +1074,12 @@ class RiskCalculation(djm.Model):
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
-    # GmfSet) used by the risk calculation
+    # GmfCollection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
-    # the HazardCalculation object used by the risk calculation (each
-    # Output (ergo each logic tree realization) is considered
+    # the HazardCalculation object used by the risk calculation when
+    # each individual Output (i.e. each hazard logic tree realization)
+    # is considered
     hazard_calculation = djm.ForeignKey("HazardCalculation",
                                         null=True, blank=True)
 
@@ -1086,15 +1087,20 @@ class RiskCalculation(djm.Model):
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
 
-    ##########################################
-    # For calculators that output loss curves
-    ##########################################
+    ####################################################
+    # For calculators that output (conditional) loss map
+    ####################################################
+    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
+
+    ####################################################
+    # For calculators that output statistical results
+    ####################################################
     mean_loss_curves = fields.OqNullBooleanField(
-        help_text='Compute mean loss curves',
+        help_text='Compute mean loss curves, maps, etc.',
         null=True,
         blank=True)
     quantile_loss_curves = fields.FloatArrayField(
-        help_text='Compute quantile loss curves',
+        help_text='List of quantiles for computing quantile outputs',
         null=True,
         blank=True)
 
@@ -1112,7 +1118,7 @@ class RiskCalculation(djm.Model):
     # Classical parameters:
     #######################
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
-    conditional_loss_poes = fields.FloatArrayField(null=True, blank=True)
+    # poes_disagg = fields.FloatArrayField(null=True, blank=True)
 
     #########################
     # Event-Based parameters:
@@ -1146,27 +1152,6 @@ class RiskCalculation(djm.Model):
                 'The job #%d has no hazard calculation '
                 'associated' % self.hazard_output.oq_job.id)
         return hcalc
-
-    def has_output_containers(self):
-        """
-        :returns: True if RiskCalculation has more than one output
-        container.
-        """
-        return self.calculation_mode != "scenario"
-
-    def output_container_builder(self, risk_calculator):
-        """
-        :returns: a dictionary mapping openquake.engine.db.models.Output ids
-            to a list of risk output container ids.
-        """
-        if self.has_output_containers():
-            return dict((hazard_output.id,
-                         risk_calculator.create_outputs(hazard_output))
-                        for hazard_output in
-                        risk_calculator.considered_hazard_outputs())
-        else:
-            return {self.hazard_output.id:
-                    risk_calculator.create_outputs(self.hazard_output)}
 
     @property
     def best_maximum_distance(self):
@@ -1563,29 +1548,69 @@ class Output(djm.Model):
         # computed over multiple hazard outputs (related to different
         # logic tree realizations). Then, We do not have to collect
         # metadata regarding statistics or logic tree
-        if rc.calculation_mode != 'scenario' and rc.hazard_output is not None:
-            ho = rc.hazard_output
+        statistics = None
+        quantile = None
+        sm_lt_path = None
+        gsim_lt_path = None
 
-            if ho.is_hazard_curve():
-                lt = rc.hazard_output.hazardcurve.lt_realization
-                statistics = ho.hazardcurve.statistics
-                quantile = ho.hazardcurve.quantile
-                if statistics is None:
-                    source_model_path, gsim_path = (
-                        lt.sm_lt_path, lt.gsim_lt_path)
+        if rc.calculation_mode != 'scenario':
+            # Two cases:
+            # - hazard_output
+            # - hazard_calculation
+            if rc.hazard_output is not None:
+                ho = rc.hazard_output
+
+                if ho.is_hazard_curve():
+                    lt = rc.hazard_output.hazardcurve.lt_realization
+                    if lt is None:
+                        # statistical result:
+                        statistics = ho.hazardcurve.statistics
+                        quantile = ho.hazardcurve.quantile
+                    else:
+                        sm_lt_path = lt.sm_lt_path
+                        gsim_lt_path = lt.gsim_lt_path
                 else:
-                    source_model_path, gsim_path = None, None
-            else:
-                statistics, quantile = None, None  # no mean/quantile for gmf
-                lt = ho.gmfcollection.lt_realization
-                source_model_path, gsim_path = lt.sm_lt_path, lt.gsim_lt_path
-        else:
-            statistics, quantile, source_model_path, gsim_path = (
-                None, None, None, None)
+                    lt = ho.gmfcollection.lt_realization
+                    sm_lt_path = lt.sm_lt_path
+                    gsim_lt_path = lt.gsim_lt_path
+            elif rc.hazard_calculation is not None:
+                # we're consuming multiple outputs from a single hazard
+                # calculation
+                if self.output_type == 'loss_curve':
+                    the_output = self.loss_curve
+                elif self.output_type == 'loss_map':
+                    the_output = self.loss_map
+                else:
+                    raise RuntimeError(
+                        'Error getting hazard metadata: Unexpected output_type'
+                        ' "%s"' % self.output_type
+                    )
+
+                if the_output.hazard_output_id is not None:
+                    haz_output = the_output.hazard_output
+                    haz_curve = haz_output.hazardcurve
+
+                    # TODO: Do we ever encounter this case?
+                    # TODO: Or will we always have a LT Realization?
+                    statistics = haz_curve.statistics
+                    quantile = haz_curve.quantile
+
+                    if haz_curve.lt_realization is not None:
+                        sm_lt_path = (
+                            haz_curve.lt_realization.sm_lt_path
+                        )
+                        gsim_lt_path = (
+                            haz_curve.lt_realization.gsim_lt_path
+                        )
+                else:
+                    if self.output_type == 'loss_curve':
+                        # it's a mean/quantile loss curve
+                        statistics = self.loss_curve.statistics
+                        quantile = self.loss_curve.quantile
 
         return self.HazardMetadata(investigation_time,
                                    statistics, quantile,
-                                   source_model_path, gsim_path)
+                                   sm_lt_path, gsim_lt_path)
 
 
 class ErrorMsg(djm.Model):
@@ -2342,6 +2367,8 @@ class LossMap(djm.Model):
     hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
     insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
