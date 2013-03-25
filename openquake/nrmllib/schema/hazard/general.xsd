@@ -178,8 +178,8 @@
         <xs:sequence>
             <xs:element name="topLeft" type="PlanarSurfaceVertex" />
             <xs:element name="topRight" type="PlanarSurfaceVertex" />
-            <xs:element name="bottomRight" type="PlanarSurfaceVertex" />
             <xs:element name="bottomLeft" type="PlanarSurfaceVertex" />
+            <xs:element name="bottomRight" type="PlanarSurfaceVertex" />
         </xs:sequence>
         <xs:attribute name="strike" type="Strike" />
         <xs:attribute name="dip" type="Dip" />

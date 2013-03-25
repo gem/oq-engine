@@ -541,8 +541,8 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <planarSurface>
           <topLeft lon="1.1" lat="1.01" depth="10.0"/>
           <topRight lon="2.1" lat="2.01" depth="20.0"/>
-          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
           <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
+          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         </planarSurface>
       </rupture>
       <rupture id="2" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
@@ -559,8 +559,8 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <planarSurface>
           <topLeft lon="1.1" lat="1.01" depth="10.0"/>
           <topRight lon="2.1" lat="2.01" depth="20.0"/>
-          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
           <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
+          <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         </planarSurface>
       </rupture>
       <rupture id="4" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
@@ -575,14 +575,14 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <planarSurface>
           <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
           <topRight lon="1.0" lat="1.0" depth="21.0"/>
-          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
           <bottomLeft lon="-1.0" lat="-1.0" depth="59.0"/>
+          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
         </planarSurface>
         <planarSurface>
           <topLeft lon="0.0" lat="1.1" depth="20.0"/>
           <topRight lon="1.1" lat="2.0" depth="20.0"/>
-          <bottomRight lon="2.0" lat="0.9" depth="80.0"/>
           <bottomLeft lon="0.9" lat="0.0" depth="80.0"/>
+          <bottomRight lon="2.0" lat="0.9" depth="80.0"/>
         </planarSurface>
       </rupture>
     </stochasticEventSet>
@@ -658,8 +658,8 @@ class SESXMLWriterTestCase(unittest.TestCase):
       <planarSurface>
         <topLeft lon="1.1" lat="1.01" depth="10.0"/>
         <topRight lon="2.1" lat="2.01" depth="20.0"/>
-        <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
+        <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
       </planarSurface>
     </rupture>
     <rupture id="2" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
@@ -674,8 +674,8 @@ class SESXMLWriterTestCase(unittest.TestCase):
       <planarSurface>
         <topLeft lon="1.1" lat="1.01" depth="10.0"/>
         <topRight lon="2.1" lat="2.01" depth="20.0"/>
-        <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         <bottomLeft lon="4.1" lat="4.01" depth="40.0"/>
+        <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
       </planarSurface>
     </rupture>
     <rupture id="4" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">

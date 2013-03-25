@@ -473,8 +473,8 @@ class SESXMLWriter(object):
         for el_name, corner in (
                 ('topLeft', rupture.top_left_corner),
                 ('topRight', rupture.top_right_corner),
-                ('bottomRight', rupture.bottom_right_corner),
-                ('bottomLeft', rupture.bottom_left_corner)):
+                ('bottomLeft', rupture.bottom_left_corner),
+                ('bottomRight', rupture.bottom_right_corner)):
 
             corner_elem = etree.SubElement(ps_elem, el_name)
             corner_elem.set('lon', str(corner[0]))
@@ -510,8 +510,8 @@ class SESXMLWriter(object):
             for el_name, corner in (
                     ('topLeft', top_left),
                     ('topRight', top_right),
-                    ('bottomRight', bottom_right),
-                    ('bottomLeft', bottom_left)):
+                    ('bottomLeft', bottom_left),
+                    ('bottomRight', bottom_right)):
 
                 corner_elem = etree.SubElement(ps_elem, el_name)
                 corner_elem.set('lon', str(corner[0]))
