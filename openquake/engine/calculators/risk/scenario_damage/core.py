@@ -249,19 +249,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # controller node, in the task_completion_hook, whereas the
         # computations per asset only need the risk_calculation_id,
         # extracted from the job_id
-        models.Output.objects.create_output(
+        ddpa = models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
-        models.Output.objects.create_output(
+        ddpt = models.Output.objects.create_output(
             self.job, "Damage Distribution per Taxonomy",
             "dmg_dist_per_taxonomy")
 
-        models.Output.objects.create_output(
+        ddt = models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        models.Output.objects.create_output(
+        collapse_map = models.Output.objects.create_output(
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
@@ -270,6 +270,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             models.DmgState.objects.create(
                 risk_calculation=self.job.risk_calculation,
                 dmg_state=dstate, lsi=lsi)
+
+        return [ddpa, ddpt, ddt, collapse_map]
 
     def set_risk_models(self):
         """
