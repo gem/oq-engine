@@ -78,7 +78,7 @@ def event_based_bcr(job_id, hazard, task_seed,
 
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
-        (bcr_distribution_id,) = output_containers[hazard_output_id]
+        bcr_distribution_id = output_containers[hazard_output_id][0]
 
         seed = rnd.randint(0, models.MAX_SINT_32)
         calc_original = api.ProbabilisticEventBased(
