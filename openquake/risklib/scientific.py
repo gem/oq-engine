@@ -573,14 +573,13 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
-        return interpolate.interp1d(
-            list(
-                reversed(
-                    list(utils.pairwise(poes))[-interval_index])),
-            list(
-                reversed(
-                    list(utils.pairwise(loss_ratios))[-interval_index])))(
-                        probability)
+
+        x1, x2 = poes[-interval_index-1:-interval_index + 1]
+        y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
+        if x1 == x2:
+            return y2
+
+        return (y2 - y1) / (x2 - x1) * (probability - x1) + y1
 
 
 ##
