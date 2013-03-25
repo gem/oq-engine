@@ -2316,6 +2316,23 @@ class LtRealization(djm.Model):
 ## Tables in the 'riskr' schema.
 
 
+class LossFraction(djm.Model):
+    """
+    Holds metadata for loss fraction data
+    """
+    output = djm.OneToOneField("Output", related_name="loss_fraction")
+    variable = djm.TextField(choices=(("taxonomy", "taxonomy")))
+    hazard_output = djm.OneToOneField(
+        "Output", related_name="risk_loss_fraction")
+    poe = djm.FloatField(null=True)
+
+
+class LossFractionData(djm.Model):
+    loss_fraction = djm.ForeignKey(LossFraction)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    fractions = fields.DictField()
+
+
 class LossMap(djm.Model):
     '''
     Holds metadata for loss maps

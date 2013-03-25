@@ -1006,6 +1006,7 @@ CREATE TABLE uiapi.output (
             'hazard_curve',
             'hazard_map',
             'loss_curve',
+            'loss_fraction',
             'loss_map',
             'ses',
             'uh_spectra',
@@ -1364,6 +1365,26 @@ CREATE TABLE riskr.loss_map_data (
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Loss fraction data.
+CREATE TABLE riskr.loss_fraction (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    hazard_output_id INTEGER NULL,
+    `variable` VARCHAR NOT NULL,
+    -- poe is significant only for classical calculations
+    poe FLOAT NULL CONSTRAINT valid_poe
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.loss_fraction_data (
+    id SERIAL PRIMARY KEY,
+    loss_fraction_id INTEGER NOT NULL, -- FK to loss_fraction.id
+    fractions bytea NOT NULL,  -- stored as a pickled Python `dict`
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'loss_fraction_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Aggregate Loss.
