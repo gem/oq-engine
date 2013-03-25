@@ -361,8 +361,8 @@ class SESXMLWriter(object):
 
             * top left
             * top right
-            * bottom right
             * bottom left
+            * bottom right
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
@@ -468,8 +468,8 @@ class SESXMLWriter(object):
         # create the corner point elements, in the order of:
         # * top left
         # * top right
-        # * bottom right
         # * bottom left
+        # * bottom right
         for el_name, corner in (
                 ('topLeft', rupture.top_left_corner),
                 ('topRight', rupture.top_right_corner),
@@ -501,12 +501,6 @@ class SESXMLWriter(object):
             top_left, top_right, bottom_left, bottom_right = \
                 izip(lons, lats, depths)
 
-            # NOTE: There is a subtle change in ordering here.
-            # The order of bottom right and bottom left are switched.
-            # Be careful.
-            # This is due to inconsitency with how the planar surfaces are
-            # handled in various places.
-            # A proper test should exercise that the ordering is correct.
             for el_name, corner in (
                     ('topLeft', top_left),
                     ('topRight', top_right),
