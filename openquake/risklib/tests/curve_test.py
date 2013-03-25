@@ -69,22 +69,6 @@ class CurveTestCase(unittest.TestCase):
         # test high-end:
         self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
 
-    def test_abscissa_for_in_not_ascending_order_with_dups(self):
-        """ This tests the corner case when:
-            "vals must be arranged in ascending order with no duplicates"
-        """
-        vals = [1, 1, 1]
-
-        curve = Curve(zip(vals, vals))
-
-        self.assertRaises(ValueError, curve.abscissa_for, vals)
-
-    def test_abscissa_for_with_multiple_yvals(self):
-        """ tests the correctness of the abscissa method """
-        self.assertEqual(
-            self.simple_curve.abscissa_for(self.y_vals).tolist(),
-            self.x_vals)
-
     def test_equals_when_have_the_same_values(self):
         curve1 = Curve([(0.1, 1.0), (0.2, 2.0)])
         curve2 = Curve([(0.1, 1.0), (0.2, 2.0)])
@@ -103,7 +87,6 @@ class CurveTestCase(unittest.TestCase):
     def test_can_pickle(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
         curve.ordinate_for(0.35)
-        curve.abscissa_for(1.35)
         self.assertEqual(pickle.loads(pickle.dumps(curve)), curve)
 
     def test_ordinate_diffs(self):

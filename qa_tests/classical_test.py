@@ -77,7 +77,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         conditional_losses = dict([
             (poe, scientific.conditional_loss_ratio(
-                loss_ratio_curve, poe) * asset_value)
+                self.loss_ratios, poes, poe) * asset_value)
             for poe in [0.01, 0.02, 0.05]])
 
         self.assertAlmostEqual(0.264586283238, conditional_losses[0.01])
@@ -116,4 +116,4 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             0.264870863283,
             scientific.conditional_loss_ratio(
-                loss_ratio_curve, 0.01) * asset_value)
+                self.loss_ratios, poes, 0.01) * asset_value)

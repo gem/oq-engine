@@ -30,50 +30,50 @@ class ClassicalTestCase(unittest.TestCase):
         self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
 
     def test_loss_is_zero_if_probability_is_too_high(self):
-        loss_curve = Curve([
-            (0.21, 0.131), (0.24, 0.108),
-            (0.27, 0.089), (0.30, 0.066),
-        ])
-
         self.assertAlmostEqual(
-            0.0, scientific.conditional_loss_ratio(loss_curve, 0.200))
+            0.00, scientific.conditional_loss_ratio(
+                [0.21, 0.24, 0.27, 0.30],
+                [0.131, 0.108, 0.089, 0.066],
+                .200))
 
     def test_loss_is_max_if_probability_is_too_low(self):
-        loss_curve = Curve([
-            (0.21, 0.131), (0.24, 0.108),
-            (0.27, 0.089), (0.30, 0.066),
-        ])
-
         self.assertAlmostEqual(
-            0.30,
-            scientific.conditional_loss_ratio(loss_curve, 0.050))
+            0.30, scientific.conditional_loss_ratio(
+                [0.21, 0.24, 0.27, 0.30],
+                [0.131, 0.108, 0.089, 0.066],
+                .01))
 
     def test_conditional_loss_duplicates(self):
         # we feed compute_conditional_loss with some duplicated data to see if
         # it's handled correctly
 
-        loss1 = scientific.conditional_loss_ratio(Curve([
-            (0.21, 0.131), (0.24, 0.108),
-            (0.27, 0.089), (0.30, 0.066),
-        ]), 0.100)
-
-        # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
-        # should be skipped
-        loss2 = scientific.conditional_loss_ratio(Curve([
-            (0.19, 0.131), (0.20, 0.131), (0.21, 0.131),
-            (0.24, 0.108), (0.27, 0.089), (0.30, 0.066),
-        ]), 0.100)
-
-        numpy.testing.assert_allclose(loss1, loss2)
-
-    def test_conditional_loss_computation(self):
-        loss_curve = Curve([
+        loss_ratios1, poes1 = zip(*[
             (0.21, 0.131), (0.24, 0.108),
             (0.27, 0.089), (0.30, 0.066),
         ])
 
-        self.assertAlmostEqual(0.2526, scientific.conditional_loss_ratio(
-            loss_curve, 0.100), 4)
+        # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
+        # should be skipped
+        loss_ratios2, poes2 = zip(*[
+            (0.19, 0.131), (0.20, 0.131), (0.21, 0.131),
+            (0.24, 0.108), (0.27, 0.089), (0.30, 0.066),
+        ])
+
+        numpy.testing.assert_allclose(
+            scientific.conditional_loss_ratio(
+                loss_ratios1, poes1, 0.1),
+            scientific.conditional_loss_ratio(
+                loss_ratios2, poes2, 0.1))
+
+    def test_conditional_loss_computation(self):
+        loss_ratios, poes = zip(*[
+            (0.21, 0.131), (0.24, 0.108),
+            (0.27, 0.089), (0.30, 0.066),
+        ])
+
+        self.assertAlmostEqual(
+            0.25263157,
+            scientific.conditional_loss_ratio(loss_ratios, poes, 0.1))
 
     def test_compute_lrem_using_beta_distribution(self):
         expected_lrem = [
@@ -156,47 +156,6 @@ class ClassicalTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_steps, vulnerability_function.mean_imls())
 
-    def test_split_with_real_values_from_turkey(self):
-        loss_ratios = [
-            0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
-            7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
-
-        result = [0.0, 3.9199999999999996e-16,
-                  7.8399999999999992e-16, 1.1759999999999998e-15,
-                  1.5679999999999998e-15, 1.9599999999999999e-15,
-                  5.0756799999999998e-13, 1.0131759999999998e-12,
-                  1.5187839999999998e-12, 2.024392e-12, 2.5299999999999999e-12,
-                  1.6202400000000001e-10, 3.2151800000000003e-10,
-                  4.8101199999999999e-10, 6.4050600000000006e-10,
-                  8.0000000000000003e-10, 1.726e-08, 3.372e-08,
-                  5.0179999999999997e-08, 6.6639999999999993e-08,
-                  8.3099999999999996e-08, 7.7048000000000005e-07,
-                  1.4578600000000002e-06, 2.1452400000000005e-06,
-                  2.8326200000000003e-06, 3.5200000000000002e-06,
-                  1.7136000000000003e-05, 3.0752000000000006e-05,
-                  4.4368000000000013e-05, 5.7984000000000013e-05,
-                  7.1600000000000006e-05, 0.00021648000000000001,
-                  0.00036136000000000002, 0.00050624000000000003,
-                  0.00065112000000000004, 0.00079600000000000005,
-                  0.0017108000000000002, 0.0026256000000000001,
-                  0.0035404, 0.0044552000000000003, 0.0053699999999999998,
-                  0.0090760000000000007, 0.012782, 0.016487999999999999,
-                  0.020194, 0.023900000000000001, 0.034140000000000004,
-                  0.044380000000000003, 0.054620000000000002,
-                  0.064860000000000001, 0.0751, 0.095479999999999995,
-                  0.11585999999999999, 0.13624,
-                  0.15661999999999998, 0.17699999999999999]
-
-        numpy.testing.assert_allclose(
-            result, scientific._evenly_spaced_loss_ratios(loss_ratios, 5))
-
-    def test_split_with_real_values_from_taiwan(self):
-        loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
-                       2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
-                       5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
-        self.assertEqual(56, len(
-            scientific._evenly_spaced_loss_ratios(loss_ratios, 5)))
-
     def test_compute_loss_ratio_curve(self):
         hazard_curve = [
             (0.01, 0.99), (0.08, 0.96),
@@ -246,25 +205,28 @@ class ClassicalTestCase(unittest.TestCase):
 
     def test_split_single_interval_with_no_steps_between(self):
         numpy.testing.assert_allclose(
-            [1.0, 2.0],
-            scientific._evenly_spaced_loss_ratios([1.0, 2.0], 1))
+            [0.0, 0.5, 0.7, 1.0],
+            scientific._evenly_spaced_loss_ratios([0.5, 0.7], 1))
 
     def test_evenly_spaced_single_interval_with_a_step_between(self):
         numpy.testing.assert_allclose(
-            [1.0, 1.5, 2.0],
-            scientific._evenly_spaced_loss_ratios([1.0, 2.0], 2))
+            [0., 0.25, 0.5, 0.6, 0.7, 0.85, 1.],
+            scientific._evenly_spaced_loss_ratios([0.5, 0.7], 2))
 
     def test_evenly_spaced_single_interval_with_steps_between(self):
         numpy.testing.assert_allclose(
-            [1.0, 1.25, 1.50, 1.75, 2.0],
-            scientific._evenly_spaced_loss_ratios([1.0, 2.0], 4))
+            [0., 0.125, 0.25, 0.375, 0.5, 0.55, 0.6, 0.65,
+             0.7, 0.775, 0.85, 0.925, 1.],
+            scientific._evenly_spaced_loss_ratios([0.5, 0.7], 4))
 
     def test_evenly_spaced_multiple_intervals_with_a_step_between(self):
         numpy.testing.assert_allclose(
-            [1.0, 1.5, 2.0, 2.5, 3.0],
-            scientific._evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 2))
+            [0., 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.],
+            scientific._evenly_spaced_loss_ratios([0.25, 0.5, 0.75], 2))
 
     def test_evenly_spaced_multiple_intervals_with_steps_between(self):
         numpy.testing.assert_allclose(
-            [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0],
-            scientific._evenly_spaced_loss_ratios([1.0, 2.0, 3.0], 4))
+            [0., 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375,
+             0.4375, 0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125,
+             0.875, 0.9375, 1.],
+            scientific._evenly_spaced_loss_ratios([0.25, 0.5, 0.75], 4))
