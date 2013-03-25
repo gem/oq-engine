@@ -556,6 +556,20 @@ class SESXMLWriterTestCase(unittest.TestCase):
           <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
         </mesh>
       </rupture>
+      <rupture id="5" magnitude="7.4" strike="4.0" dip="44.0" rake="14.0" tectonicRegion="Stable Shallow Crust">
+        <planarSurface>
+          <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
+          <topRight lon="1.0" lat="1.0" depth="21.0"/>
+          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
+          <bottomLeft lon="-1.0" lat="-1.0" depth="59.0"/>
+        </planarSurface>
+        <planarSurface>
+          <topLeft lon="0.0" lat="1.1" depth="20.0"/>
+          <topRight lon="1.1" lat="2.0" depth="20.0"/>
+          <bottomRight lon="2.0" lat="0.9" depth="80.0"/>
+          <bottomLeft lon="0.9" lat="0.0" depth="80.0"/>
+        </planarSurface>
+      </rupture>
     </stochasticEventSet>
   </stochasticEventSetCollection>
 </nrml>
