@@ -432,8 +432,7 @@ class LossFractionsWriterTestCase(unittest.TestCase):
                 os.path.dirname(__file__),
                 "../../examples/loss-fractions-taxonomies.xml"))
 
-        writers.loss_fractions_writer(
-            self.filename,
+        writers.LossFractionsWriter(self.filename).serialize(
             "taxonomy",
             dict(RC=(400, 0.2), RM=(1600, 0.8)),
             {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
