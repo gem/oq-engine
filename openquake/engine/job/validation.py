@@ -497,6 +497,7 @@ class ClassicalRiskForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
+            'poes_disagg'
         )
 
 
