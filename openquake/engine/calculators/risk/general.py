@@ -474,6 +474,12 @@ class BaseRiskCalculator(base.CalculatorNext):
               (Coefficient of Variation) is > 0.0. This is mathematically
               impossible.
         """
+        hazard_curve = None
+        if self.rc.hazard_output is not None:
+            # We're running a risk calc on only a single output.
+            if self.rc.hazard_output.output_type == 'hazard_curve':
+                hazard_curve = self.rc.hazard_output.hazardcurve
+
         vfs = dict()
 
         for record in parsers.VulnerabilityModelParser(vuln_content):
@@ -481,6 +487,17 @@ class BaseRiskCalculator(base.CalculatorNext):
             imt = record['IMT']
             loss_ratios = record['lossRatio']
             covs = record['coefficientsVariation']
+
+            if hazard_curve is not None:
+                # FIXME: How are we handling SA periods here?
+                # This will probably produce unexpected results, since the
+                # period is not encoded in the IMT in the hazard curve
+                if imt != hazard_curve.imt:
+                    msg = ("With the specified hazard output, only "
+                           "vulnerability sets with an IMT of '%s' are allowed"
+                           % hazard_curve.imt
+                    )
+                    raise ValueError(msg)
 
             registered_imt = self.taxonomies_imts.get(taxonomy, imt)
 
