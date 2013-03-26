@@ -1384,7 +1384,15 @@ CREATE TABLE riskr.loss_fraction (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     hazard_output_id INTEGER NULL,
-    `variable` VARCHAR NOT NULL,
+    variable VARCHAR NOT NULL,
+    statistics VARCHAR CONSTRAINT loss_fraction_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT loss_fraction_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
     -- poe is significant only for classical calculations
     poe FLOAT NULL CONSTRAINT valid_poe
         CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
@@ -1393,7 +1401,8 @@ CREATE TABLE riskr.loss_fraction (
 CREATE TABLE riskr.loss_fraction_data (
     id SERIAL PRIMARY KEY,
     loss_fraction_id INTEGER NOT NULL, -- FK to loss_fraction.id
-    fractions bytea NOT NULL,  -- stored as a pickled Python `dict`
+    value VARCHAR NOT NULL,
+    absolute_loss FLOAT NOT NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_fraction_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
@@ -1903,6 +1912,22 @@ ALTER TABLE riskr.loss_map
 ADD CONSTRAINT riskr_loss_map_hazard_output_fk
 FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.loss_map_data
+ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction
+ADD CONSTRAINT riskr_loss_fraction_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction
+ADD CONSTRAINT riskr_loss_fraction_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction_data
+ADD CONSTRAINT riskr_loss_fraction_data_loss_map_fk
+FOREIGN KEY (loss_fraction_id) REFERENCES riskr.loss_fraction(id) ON DELETE CASCADE;
+
 ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
@@ -1922,10 +1947,6 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 ALTER TABLE riskr.aggregate_loss_curve_data
 ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.loss_map_data
-ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
-FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.aggregate_loss
 ADD CONSTRAINT riskr_aggregate_loss_output_fk
