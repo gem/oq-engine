@@ -285,7 +285,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                      output_type='loss_curve'),
                  statistics='quantile',
                  quantile=quantile).id)
-            for quantile in self.rc.quantile_loss_curves)
+            for quantile in self.rc.quantile_loss_curves or [])
 
         mean_loss_map_ids = dict(
             (poe,
@@ -295,7 +295,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                      display_name="Mean Loss Map poe=%.4f" % poe,
                      output_type="loss_map"),
                  statistics="mean").id)
-            for poe in self.rc.conditional_loss_poes)
+            for poe in self.rc.conditional_loss_poes or [])
 
         quantile_loss_map_ids = dict(
             (quantile,
@@ -309,7 +309,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                      statistics="quantile",
                      quantile=quantile).id)
                  for poe in self.rc.conditional_loss_poes))
-            for quantile in self.rc.quantile_loss_curves)
+            for quantile in self.rc.quantile_loss_curves or [])
 
         return [mean_loss_curve_id, quantile_loss_curve_ids,
                 mean_loss_map_ids, quantile_loss_map_ids]

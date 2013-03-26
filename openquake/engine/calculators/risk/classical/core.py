@@ -252,7 +252,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                      statistics="quantile",
                      quantile=quantile).id)
                  for poe in self.rc.poes_disagg))
-            for quantile in self.rc.quantile_loss_curves)
+            for quantile in self.rc.quantile_loss_curves or [])
 
         containers = super(
             ClassicalRiskCalculator, self).create_statistical_outputs()
