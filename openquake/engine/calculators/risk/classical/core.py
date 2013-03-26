@@ -192,4 +192,5 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
         return [self.rc.lrem_steps_per_interval,
                 self.rc.conditional_loss_poes or [],
+                self.rc.poes_disagg or [],
                 self.hc.number_of_logic_tree_samples == 0]
