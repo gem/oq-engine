@@ -311,8 +311,8 @@ class BaseRiskCalculator(base.CalculatorNext):
                  for poe in self.rc.conditional_loss_poes))
             for quantile in self.rc.quantile_loss_curves)
 
-        return (mean_loss_curve_id, quantile_loss_curve_ids,
-                mean_loss_map_ids, quantile_loss_map_ids)
+        return [mean_loss_curve_id, quantile_loss_curve_ids,
+                mean_loss_map_ids, quantile_loss_map_ids]
 
     def create_getter(self, output, imt, assets):
         """
@@ -687,25 +687,43 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
 
 
 def compute_and_write_statistics(
-        statistical_output_containers, weights,
-        assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
-        conditional_loss_poes, assume_equal):
+        mean_loss_curve_id, quantile_loss_curve_ids,
+        mean_loss_map_ids, quantile_loss_map_ids,
+        mean_loss_fraction_ids, quantile_loss_fraction_ids,
+        weights, assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
+        conditional_loss_poes, poes_disagg, assume_equal):
     """
-    :param statistical_output_containers: see
-      `openquake.engine.calculators.risk.classical.core.classical`
-    :param weights: the weights of each realization considered
-    :param assets: the assets on which we are computing the statistics
-    :param loss_ratio_curve_matrix: a numpy 2d array that stores the
-      individual loss curves for each asset in `assets`
-    :param bool hazard_montecarlo_p: if True explicit mean/quantiles
-    should be used
-    :param list conditional_loss_poes: The poes taken into account to
-      compute the loss maps
-    :param str assume_equal: see
-      `openquake.engine.calculators.risk.general.curve_statistics`
+    :param int mean_loss_curve_id:
+      the ID of the mean loss curve output container
+    :param dict quantile_loss_curve_id:
+      it maps quantile values to IDs of quantile loss curve output containers
+    :param dict mean_loss_map_id:
+      it maps poes to IDs of mean loss map output containers
+    :param dict quantile_loss_map_ids:
+      it maps quantile values to dicts poe -> ID of loss map output container
+    :param dict mean_loss_fraction_ids:
+      it maps poes to IDs of mean loss fraction output containers
+    :param dict quantile_loss_fraction_ids:
+      it maps quantile values to dicts poe -> ID of loss fraction output
+      containers
+    :param weights:
+      the weights of each realization considered
+    :param assets:
+      the assets on which we are computing the statistics
+    :param loss_ratio_curve_matrix:
+      a numpy 2d array that stores the individual loss curves for each asset
+      in `assets`
+    :param bool hazard_montecarlo_p:
+      True when explicit mean/quantiles calculation is used
+    :param list conditional_loss_poes:
+      The poes taken into account to compute the loss maps
+    :param list poes_disagg:
+      The poes taken into account to compute the loss maps needed for
+      disaggregation
+    :param str assume_equal:
+      equal to "support" if loss curves has the same abscissae, or "image" if
+      they have the same ordinates
     """
-    (mean_loss_curve_id, quantile_loss_curve_ids,
-     mean_loss_map_ids, quantile_loss_map_ids) = statistical_output_containers
 
     for i, asset in enumerate(assets):
         loss_ratio_curves = loss_ratio_curve_matrix[:, i]
@@ -751,7 +769,7 @@ def compute_and_write_statistics(
                 loss_ratios,
                 scientific.average_loss(loss_ratios, mean_poes))
 
-        # statistic loss map
+        # mean and quantile loss maps
         loss_ratios = loss_ratio_curve_matrix[0, 0].abscissae
 
         for poe in conditional_loss_poes:
@@ -764,6 +782,37 @@ def compute_and_write_statistics(
                     quantile_loss_map_ids[quantile][poe],
                     asset,
                     scientific.conditional_loss_ratio(loss_ratios, poes, poe))
+
+        # mean and quantile loss fractions (only disaggregation by
+        # taxonomy is supported here)
+        for poe in poes_disagg:
+            write_loss_fraction_data(
+                mean_loss_fraction_ids[poe],
+                value=asset.taxonomy,
+                location=asset.site,
+                absolute_loss=scientific.conditional_loss_ratio(
+                    loss_ratios, mean_poes, poe) * asset.value)
+            for quantile, poes in quantiles_poes.items():
+                write_loss_fraction_data(
+                    quantile_loss_fraction_ids[quantile][poe],
+                    value=asset.taxonomy,
+                    location=asset.site,
+                    absolute_loss=scientific.conditional_loss_ratio(
+                        loss_ratios, poes, poe) * asset.value)
+
+
+def write_loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
+    """
+    Create, save and return an instance of
+    :class:`openquake.engine.db.models.LossFractionData` associated
+    with `loss_fraction_id`, `value`, `location` and `absolute_loss`
+    """
+
+    return models.LossFractionData.objects.create(
+        loss_fraction_id=loss_fraction_id,
+        value=value,
+        location=location,
+        absolute_loss=absolute_loss)
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
