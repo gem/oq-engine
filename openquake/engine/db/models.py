@@ -1875,6 +1875,7 @@ class SESRupture(djm.Model):
     # If True, this rupture was generated from a simple/complex fault
     # source. If False, this rupture was generated from a point/area source.
     is_from_fault_source = djm.BooleanField()
+    is_multi_surface = djm.BooleanField()
     # The following fields can be interpreted different ways, depending on the
     # value of `is_from_fault_source`.
     # If `is_from_fault_source` is True, each of these fields should contain a
@@ -1883,8 +1884,13 @@ class SESRupture(djm.Model):
     # If `is_from_fault_source` is False, each of these fields should contain
     # a sequence (tuple, list, or numpy array, for example) of 4 values. In
     # order, the triples of (lon, lat, depth) represent top left, top right,
-    # bottom right, and bottom left corners of the the rupture's planar
+    # bottom left, and bottom right corners of the the rupture's planar
     # surface.
+    # Update:
+    # There is now a third case. If the rupture originated from a
+    # characteristic fault source with a multi-planar-surface geometry,
+    # `lons`, `lats`, and `depths` will contain one or more sets of 4 points,
+    # similar to how planar surface geometry is stored (see above).
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
@@ -1918,28 +1924,28 @@ class SESRupture(djm.Model):
 
     @property
     def top_left_corner(self):
-        if not self.is_from_fault_source:
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[0], self.lats[0], self.depths[0]
         return None
 
     @property
     def top_right_corner(self):
-        if not self.is_from_fault_source:
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[1], self.lats[1], self.depths[1]
         return None
 
     @property
-    def bottom_right_corner(self):
-        if not self.is_from_fault_source:
+    def bottom_left_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[2], self.lats[2], self.depths[2]
         return None
 
     @property
-    def bottom_left_corner(self):
-        if not self.is_from_fault_source:
+    def bottom_right_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
