@@ -48,27 +48,26 @@ class BaseRiskCalculator(base.CalculatorNext):
     distribution/execution logic.
 
     :attribute dict taxonomies:
-      A dictionary mapping each taxonomy with the number of assets the
-      calculator will work on. Assets are extracted from the exposure
-      input and filtered according with the RiskCalculation
-      region_constraint
+        A dictionary mapping each taxonomy with the number of assets the
+        calculator will work on. Assets are extracted from the exposure input
+        and filtered according to the `RiskCalculation.region_constraint`.
 
     :attribute asset_offsets:
-      A generator of asset offsets used by each celery task. Assets are
-      ordered by their id. An asset offset is an int that identify the
-      set of assets going from offset to offset + block_size.
+        A generator of asset offsets used by each celery task. Assets are
+        ordered by their id. An asset offset is an int that identify the set of
+        assets going from offset to offset + block_size.
 
     :attribute dict vulnerability_functions:
-       A dict mapping taxonomy to vulnerability functions used for
-       this calculation
+        A dict mapping taxonomy to vulnerability functions used for this
+        calculation.
 
     :attribute rnd:
-      The random number generator (initialized with a master seed) used
-      for sampling
+        The random number generator (initialized with a master seed) used for
+        sampling.
 
     :attribute dict taxonomies_imts:
-      A dictionary mapping taxonomies to intensity measure type, to
-      support structure dependent intensity measure types
+        A dictionary mapping taxonomies to intensity measure type, to
+        support structure dependent intensity measure types
     """
 
     hazard_getter = None  # the name of the hazard getter class; to override
@@ -83,19 +82,16 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def pre_execute(self):
         """
-        In this phase, the general workflow is
+        In this phase, the general workflow is:
 
-        1. Parse the exposure input and store the exposure data (if
-        not already present)
+            1. Parse the exposure input and store the exposure data (if not
+               already present)
+            2. Check if the exposure filtered with region_constraint is not
+               empty
+            3. Parse the risk models
+            4. Initialize progress counters
+            5. Initialize random number generator
 
-        2. Check if the exposure filtered with region_constraint is
-        not empty
-
-        3. Parse the risk models
-
-        4. Initialize progress counters
-
-        5. Initialize random number generator
         """
 
         # reload the risk calculation to avoid getting raw string
@@ -164,13 +160,15 @@ class BaseRiskCalculator(base.CalculatorNext):
         :param int block_size:
             The number of work items per task (sources, sites, etc.).
 
-        :returns: an iterator over a list of arguments. Each contains
-        1) the job id
-        2) the exposure subset on which the celery task is applied on
-        3) the hazard getter and the hazard_id to be used
-        4) a seed (eventually generated from a master seed)
-        5) the output containers to be populated
-        6) the specific calculator parameter set
+        :returns:
+            An iterator over a list of arguments. Each contains:
+
+            1. the job id
+            2. the exposure subset on which the celery task is applied on
+            3. the hazard getter and the hazard_id to be used
+            4. a seed (eventually generated from a master seed)
+            5. the output containers to be populated
+            6. the specific calculator parameter set
         """
         multiple_hazard_outputs_p = len(self.considered_hazard_outputs()) > 1
 
@@ -244,10 +242,11 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def worker_args(self, taxonomy):
         """
-        :returns: a fixed list of arguments that a calculator may want
-        to pass to a worker. Default to a seed generated from the
-        master seed and the vulnerability function associated with the
-        assets taxonomy. May be overriden.
+        :returns:
+            A fixed list of arguments that a calculator may want to pass to a
+            worker. Default to a seed generated from the master seed and the
+            vulnerability function associated with the assets taxonomy. May be
+            overriden.
         """
         return [self.rnd.randint(0, models.MAX_SINT_32),
                 self.vulnerability_functions[taxonomy]]
@@ -256,8 +255,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         If requested by the user, automatically export all result artifacts.
 
-        :returns: A list of the export filenames, including the
-            absolute path to each file.
+        :returns:
+            A list of the export filenames, including the absolute path to each
+            file.
         """
 
         exported_files = []
@@ -282,42 +282,42 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def hazard_outputs(self, hazard_calculation):
         """
-        :returns: a list of :class:`openquake.engine.db.models.Output`
-        objects to be used for a risk calculation.
+        Calculators must override this to select from the hazard calculation
+        given in input which are the Output objects to be considered by the
+        risk calculation to get the actual hazard input.
 
-        Calculator must override this to select from the hazard
-        calculation given in input which are the Output objects to be
-        considered by the risk calculation to get the actual hazard
-        input.
+        Result objects should be ordered (e.g. by id) and be associated to a
+        hazard logic tree realization.
 
-        Result objects should be ordered (e.g. by id) and be
-        associated to an hazard logic tree realization
+        :returns:
+            A list of :class:`openquake.engine.db.models.Output`
+            objects to be used for a risk calculation.
         """
         raise NotImplementedError
 
     def create_getter(self, output, imt, assets):
         """
-        Create an instance of :class:`.hazard_getters.HazardGetter`
-        associated to an hazard output.
+        Create an instance of :class:`.hazard_getters.HazardGetter` associated
+        to an hazard output.
 
-        :returns: a tuple where the first element is the hazard getter
-        and the second is the associated weight (if `output` is
-        associated with a logic tree realization).
+        Calculator must override this to create the proper hazard getter.
 
-        Calculator must override this to create the proper hazard
-        getter.
+        :param output:
+            The ID of an :class:`openquake.engine.db.models.Output` produced by
+            a hazard calculation.
 
-        :param hazard_output: the ID of an
-        :class:`openquake.engine.db.models.Output` produced by an
-        hazard calculation
+        :param str imt:
+            The imt used by the hazard getter to filter the hazard (a hazard
+            output may contain values computed in multiple imt).
 
-        :param str imt: the imt used by the hazard getter to filter
-        the hazard (an hazard output may contain values computed in
-        multiple imt).
+        :returns:
+            A tuple where the first element is the hazard getter and the second
+            is the associated weight (if `output` is associated with a logic
+            tree realization).
 
-        :raises: `RuntimeError` if the hazard associated with the
-        `hazard_output` is not suitable to be used with this
-        calculator
+        :raises:
+            `RuntimeError` if the hazard associated with the `output` is not
+            suitable to be used with this calculator.
         """
         raise NotImplementedError
 
@@ -386,11 +386,11 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def check_taxonomies(self, taxonomies):
         """
-        :param taxonomies:
-           taxonomies coming from the fragility/vulnerability model
-
         If the model has less taxonomies than the exposure raises an
         error unless the parameter ``taxonomies_from_model`` is set.
+
+        :param taxonomies:
+            Taxonomies coming from the fragility/vulnerability model
         """
         orphans = set(self.taxonomies) - set(taxonomies)
         if orphans:
@@ -415,11 +415,13 @@ class BaseRiskCalculator(base.CalculatorNext):
         taxonomies and IMT (that is needed for further hazard
         filtering) in the attribute `taxonomies_imts`.
 
-        :param bool retrofitted: true if the retrofitted model is
-        going to be parsed
+        :param bool retrofitted:
+            `True` if the retrofitted model is going to be parsed
 
-         :returns: a dictionary mapping each taxonomy to a
-        `:class:openquake.risklib.scientific.VulnerabilityFunction` instance.
+        :returns:
+            A dictionary mapping each taxonomy to a
+            :class:`openquake.risklib.scientific.VulnerabilityFunction`
+            instance.
         """
 
         if retrofitted:
@@ -462,8 +464,9 @@ class BaseRiskCalculator(base.CalculatorNext):
         The default behavior is to create a loss curve and loss maps
         output.
 
-        :returns: a dictionary mapping an Output object ID to a list
-        of int (id of containers) or dict (poe->int)
+        :returns:
+            A dictionary mapping an Output object ID to a list of int (id of
+            containers) or dict (poe->int)
         """
 
         job = self.job
@@ -503,9 +506,10 @@ def hazard_getter(hazard_getter_name, hazard_id, *args):
 def update_aggregate_losses(curve_id, losses):
     """
     Update an aggregate loss curve with new `losses` (that will be
-    added)
+    added).
 
-    :type losses: numpy array
+    :type losses:
+        Numpy array.
     """
 
     # to avoid race conditions we lock the table
@@ -533,11 +537,14 @@ def write_loss_map_data(loss_map_id, asset, loss_ratio, std_dev=None):
     """
     Create :class:`openquake.engine.db.models.LossMapData`
 
-    :param int loss_map_id: the ID of the output container
-    :param asset: an instance of
-           :class:`openquake.engine.db.models.ExposureData`
-    :param float value: loss ratio value
-    :param float std_dev: std dev on loss ratios.
+    :param int loss_map_id:
+        The ID of the output container.
+    :param asset:
+        An instance of :class:`openquake.engine.db.models.ExposureData`.
+    :param float value:
+        Loss ratio value.
+    :param float std_dev:
+        Standard devation on loss ratios.
     """
 
     if std_dev is not None:
@@ -558,18 +565,19 @@ def write_bcr_distribution(
     `asset_output` and links it to the output container identified by
     `bcr_distribution_id`.
 
-    :param int bcr_distribution_id: the ID of
-    :class:`openquake.engine.db.models.BCRDistribution` instance that holds
-    the BCR map
+    :param int bcr_distribution_id:
+        The ID of :class:`openquake.engine.db.models.BCRDistribution` instance
+        that holds the BCR map.
 
-    :param asset: an instance of
-        :class:`openquake.engine.db.models.ExposureData`
+    :param asset:
+        An instance of :class:`openquake.engine.db.models.ExposureData`.
 
-    :param float eal_original: expected annual loss in the original model
-    for the asset
-    :param float eal_retrofitted: expected annual loss in the retrofitted model
-    for the asset
-    :param float bcr: Benefit Cost Ratio parameter
+    :param float eal_original:
+        Expected annual loss in the original model for the asset.
+    :param float eal_retrofitted:
+        Expected annual loss in the retrofitted model for the asset.
+    :param float bcr:
+        Benefit Cost Ratio parameter.
     """
     models.BCRDistributionData.objects.create(
         bcr_distribution_id=bcr_distribution_id,
@@ -588,14 +596,17 @@ def write_loss_curve(
     :class:`openquake.engine.db.models.LossCurve` output container is
     identified by `loss_curve_id`.
 
-    :param int loss_curve_id: the ID of the output container
-    :param asset: an instance of
-           :class:`openquake.engine.db.models.ExposureData`
-    :param loss_ratios: a list of loss ratios
-    :param poes: a list of poes associated to `loss_ratios`
-    :param float average_loss_ratio: the average loss ratio of the curve
+    :param int loss_curve_id:
+        The ID of the output container.
+    :param asset:
+        An instance of :class:`openquake.engine.db.models.ExposureData`.
+    :param loss_ratios:
+        A list of loss ratios.
+    :param poes:
+        A list of poes associated to `loss_ratios`.
+    :param float average_loss_ratio:
+        The average loss ratio of the curve.
     """
-
     return models.LossCurveData.objects.create(
         loss_curve_id=loss_curve_id,
         asset_ref=asset.asset_ref,
@@ -649,9 +660,9 @@ def curve_statistics(asset, loss_ratio_curves, curves_weights,
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
     """
-    Extend :class:`openquake.engine.utils.stats.count_progress` to
-    work with celery task where the number of items (i.e. assets) are
-    embedded in hazard getters
+    Extend :class:`openquake.engine.utils.stats.count_progress` to work with
+    celery task where the number of items (i.e. assets) are embedded in hazard
+    getters.
     """
     def get_task_data(self, job_id, hazard_data, *args):
 
