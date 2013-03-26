@@ -1142,8 +1142,11 @@ class RiskCalculation(djm.Model):
 
     def get_hazard_calculation(self):
         """
-        :returns: the hazard calculation associated with the hazard
-        output used as input in risk calculation
+        Get the hazard calculation associated with the hazard output used as an
+        input to this risk calculation.
+
+        :returns:
+            :class:`HazardCalculation` instance.
         """
         hcalc = (self.hazard_calculation or
                  self.hazard_output.oq_job.hazard_calculation)
@@ -1159,10 +1162,10 @@ class RiskCalculation(djm.Model):
         Get the asset-hazard maximum distance (in km) to be used in
         hazard getters.
 
-        :returns: the minimum between the maximum distance provided by
-        the user (if not given, `DEFAULT_MAXIMUM_DISTANCE` is
-        used as default) and the step (if exists) used by the hazard
-        calculation.
+        :returns:
+            The minimum between the maximum distance provided by the user (if
+            not given, `DEFAULT_MAXIMUM_DISTANCE` is used as default) and the
+            step (if exists) used by the hazard calculation.
         """
         dist = self.maximum_distance
 
@@ -1527,13 +1530,16 @@ class Output(djm.Model):
         Given an Output produced by a risk calculation it returns the
         corresponding hazard metadata.
 
-        :returns: a namedtuple with the following attributes:
-           investigation_time) the hazard investigation time (float)
-           statistics) the kind of hazard statistics
-                       (None, "mean" or "quantile")
-           quantile) quantile value (when the statistics is "quantile")
-           sm_path) a list representing the source model path
-           gsim_path) a list representing the gsim logic tree path
+        :returns:
+            A `namedtuple` with the following attributes::
+
+                * investigation_time: the hazard investigation time (float)
+                * statistics: the kind of hazard statistics (None, "mean" or
+                  "quantile")
+                * quantile: quantile value (when `statistics` is "quantile")
+                * sm_path: a list representing the source model path
+                * gsim_path: a list representing the gsim logic tree path
+
         """
 
         rc = self.oq_job.risk_calculation
@@ -1875,6 +1881,7 @@ class SESRupture(djm.Model):
     # If True, this rupture was generated from a simple/complex fault
     # source. If False, this rupture was generated from a point/area source.
     is_from_fault_source = djm.BooleanField()
+    is_multi_surface = djm.BooleanField()
     # The following fields can be interpreted different ways, depending on the
     # value of `is_from_fault_source`.
     # If `is_from_fault_source` is True, each of these fields should contain a
@@ -1883,8 +1890,13 @@ class SESRupture(djm.Model):
     # If `is_from_fault_source` is False, each of these fields should contain
     # a sequence (tuple, list, or numpy array, for example) of 4 values. In
     # order, the triples of (lon, lat, depth) represent top left, top right,
-    # bottom right, and bottom left corners of the the rupture's planar
+    # bottom left, and bottom right corners of the the rupture's planar
     # surface.
+    # Update:
+    # There is now a third case. If the rupture originated from a
+    # characteristic fault source with a multi-planar-surface geometry,
+    # `lons`, `lats`, and `depths` will contain one or more sets of 4 points,
+    # similar to how planar surface geometry is stored (see above).
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
@@ -1918,28 +1930,28 @@ class SESRupture(djm.Model):
 
     @property
     def top_left_corner(self):
-        if not self.is_from_fault_source:
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[0], self.lats[0], self.depths[0]
         return None
 
     @property
     def top_right_corner(self):
-        if not self.is_from_fault_source:
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[1], self.lats[1], self.depths[1]
         return None
 
     @property
-    def bottom_right_corner(self):
-        if not self.is_from_fault_source:
+    def bottom_left_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[2], self.lats[2], self.depths[2]
         return None
 
     @property
-    def bottom_left_corner(self):
-        if not self.is_from_fault_source:
+    def bottom_right_corner(self):
+        if not (self.is_from_fault_source or self.is_multi_surface):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
@@ -1982,8 +1994,10 @@ class GmfSet(djm.Model):
     @property
     def stochastic_event_set_id(self):
         """
-        :returns: the ID of the stochastic event set which this ground
-        motion field set has been generated from
+
+        :returns:
+            The ID of the stochastic event set which this ground motion field
+            set has been generated from.
         """
         if self.ses_ordinal is None:  # complete logic tree
             job = self.gmf_collection.output.oq_job
@@ -2577,10 +2591,11 @@ class ExposureModel(djm.Model):
 
     def taxonomies_in(self, region_constraint):
         """
-        :param str region_constraint: polygon in wkt format the assets
-        must be contained into
-        :returns: a dictionary mapping each taxonomy with the number
-        of assets contained in `region_constraint`
+        :param str region_constraint:
+            polygon in wkt format the assets must be contained into
+        :returns:
+            A dictionary mapping each taxonomy with the number of assets
+            contained in `region_constraint`
         """
 
         return ExposureData.objects.taxonomies_contained_in(
@@ -2588,16 +2603,19 @@ class ExposureModel(djm.Model):
 
     def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
         """
-        :returns: a list of `openquake.engine.db.models.ExposureData` objects
-        of a given taxonomy contained in a region and paginated
 
-        :param str taxonomy: the taxonomy of the returned objects
+        :param str taxonomy:
+            The taxonomy of the returned objects.
+        :param Polygon region_constraint:
+            A Polygon object with a wkt property used to filter the exposure.
+        :param int offset:
+            An offset used to paginate the returned set.
+        :param int count:
+            An offset used to paginate the returned set.
 
-        :param Polygon region_constraint: a Polygon object with a wkt
-        property used to filter the exposure
-
-        :param int offset: An offset used to paginate the returned set
-        :param int count: An offset used to paginate the returned set
+        :returns:
+            A list of `openquake.engine.db.models.ExposureData` objects of a
+            given taxonomy contained in a region and paginated.
         """
         return ExposureData.objects.contained_in(
             self.id, taxonomy, region_constraint, offset, count)
@@ -2642,9 +2660,11 @@ class AssetManager(djm.GeoManager):
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
-        :returns: a dictionary which map each taxonomy associated with
-        `exposure_model` and contained in `region_constraint` with the
-        number of assets.
+
+        :returns:
+            A dictionary which map each taxonomy associated with
+            `exposure_model` and contained in `region_constraint` with the
+            number of assets.
         """
         cursor = connection.cursor()
 
@@ -2700,10 +2720,12 @@ class ExposureData(djm.Model):
     @staticmethod
     def per_asset_value(
             cost, cost_type, area, area_type, number_of_units, category):
-        """Return per-asset value for the given exposure data set.
+        """
+        Return per-asset value for the given exposure data set.
 
         Calculate per asset value by considering the given exposure
         data as follows:
+
             case 1: cost type: aggregated:
                 cost = economic value
             case 2: cost type: per asset:
@@ -2712,9 +2734,13 @@ class ExposureData(djm.Model):
                 cost * area = economic value
             case 4: cost type: per area and area type: per asset:
                 cost * area * number = economic value
+
         The same "formula" applies to contenst/retrofitting cost analogously.
-        :returns: the per-asset value as a `float`
-        :raises: `ValueError` in case of a malformed (risk exposure data) input
+
+        :returns:
+            The per-asset value as a `float`.
+        :raises:
+            `ValueError` in case of a malformed (risk exposure data) input.
         """
         if category is not None and category == "population":
             return number_of_units
@@ -2731,7 +2757,9 @@ class ExposureData(djm.Model):
 
     @property
     def value(self):
-        """The structural per-asset value."""
+        """
+        The structural per-asset value.
+        """
         return self.per_asset_value(
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
@@ -2740,7 +2768,9 @@ class ExposureData(djm.Model):
 
     @property
     def retrofitting_cost(self):
-        """The retrofitting per-asset value."""
+        """
+        The retrofitting per-asset value.
+        """
         return self.per_asset_value(
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,

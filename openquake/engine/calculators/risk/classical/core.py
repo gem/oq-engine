@@ -150,7 +150,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     def create_getter(self, output, imt, assets):
         """
-        See :method:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..general.BaseRiskCalculator.create_getter`
         """
         if not output.is_hazard_curve():
             raise RuntimeError(
@@ -173,9 +173,11 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     def hazard_outputs(self, hazard_calculation):
         """
-        :returns: a list of :class:`openquake.engine.db.models.HazardCurve`
-        object that stores the hazard curves associated to
-        `hazard_calculation` that are associated with a realization
+
+        :returns:
+            A list of :class:`openquake.engine.db.models.HazardCurve` object
+            that stores the hazard curves associated to `hazard_calculation`
+            that are associated with a realization.
         """
 
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
