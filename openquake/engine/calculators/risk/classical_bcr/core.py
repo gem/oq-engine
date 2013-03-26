@@ -111,9 +111,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     Classical BCR risk calculator. Computes BCR distributions for a
     given set of assets.
 
-    :attribute dict vulnerability_functions_retrofitted:
-    A dictionary mapping each taxonomy to a vulnerability functions
-    for the retrofitted losses computation
+    :attr dict vulnerability_functions_retrofitted:
+        A dictionary mapping each taxonomy to a vulnerability functions for the
+        retrofitted losses computation
     """
     core_calc_task = classical_bcr
 
