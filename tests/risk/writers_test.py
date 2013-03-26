@@ -16,10 +16,19 @@
 
 import os
 import unittest
+from lxml import etree
 import StringIO
 import collections
+
+from openquake import nrmllib
 from openquake.nrmllib.risk import writers
+
 from tests import _utils
+
+
+HazardMetadata = collections.namedtuple(
+    'hazard_metadata',
+    'investigation_time statistics quantile sm_path gsim_path')
 
 
 LOSS_NODE = collections.namedtuple(
@@ -148,8 +157,10 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def test_serialize_an_insured_loss_curve(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves  insured="True" investigationTime="10.0" sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossCurves  insured="True" investigationTime="10.0"
+    sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -195,8 +206,10 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
     def test_serialize_statistics_metadata(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0" statistics="quantile" quantileValue="0.5">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossCurves investigationTime="10.0"
+              statistics="quantile" quantileValue="0.5">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -316,7 +329,8 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
     def test_serialize_a_model(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="10.0" poE="0.8" statistics="mean">
     <node>
       <gml:Point>
@@ -358,8 +372,10 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
     def test_serialize_optional_metadata(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="10.0" poE="0.8" statistics="quantile"
+        quantileValue="0.5" lossCategory="economic" unit="USD">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -387,8 +403,11 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
     def test_serialize_using_hazard_realization(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD">
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <lossMap investigationTime="10.0" poE="0.8"
+           sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
+           lossCategory="economic" unit="USD">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -411,6 +430,54 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+
+class LossFractionsWriterTestCase(unittest.TestCase):
+    tearDown = remove_file
+    filename = "loss_fractions.xml"
+
+    def test_serialize_taxonomies(self):
+        expected = file(
+            os.path.join(
+                os.path.dirname(__file__),
+                "../../examples/loss-fractions-taxonomies.xml"))
+
+        writers.LossFractionsWriter(
+            self.filename, "taxonomy",
+            loss_unit="EUR",
+            loss_category="building",
+            hazard_metadata=HazardMetadata(
+                investigation_time=50.,
+                statistics=None,
+                quantile=None,
+                sm_path="b1_b2_b4",
+                gsim_path="b1_b2"), poe=0.1).serialize(
+                    dict(RC=(400, 0.2), RM=(1600, 0.8)),
+                    {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
+                     (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
+
+        etree.XMLSchema(
+            etree.parse(nrmllib.nrml_schema_file())).assert_(
+                etree.parse(self.filename))
+        _utils.assert_xml_equal(expected, self.filename)
+
+    def test_serialize_taxonomies_from_statistics(self):
+        writers.LossFractionsWriter(
+            self.filename, "taxonomy",
+            loss_unit="EUR",
+            loss_category="building",
+            hazard_metadata=HazardMetadata(
+                investigation_time=50.,
+                statistics="quantile",
+                quantile=0.3,
+                sm_path=None,
+                gsim_path=None), poe=None).serialize(
+                    dict(RC=(400, 0.2), RM=(1600, 0.8)),
+                    {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
+                     (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
+        etree.XMLSchema(
+            etree.parse(nrmllib.nrml_schema_file())).assert_(
+                etree.parse(self.filename))
 
 
 class BCRMapXMLWriterTestCase(unittest.TestCase):

@@ -89,8 +89,9 @@ def assert_xml_equal(a, b):
     tools.assert_equal(contents_a, contents_b)
 
 
-def validates_against_xml_schema(xml_instance_path,
-                                 schema_path=openquake.nrmllib.nrml_schema_file()):
+def validates_against_xml_schema(
+        xml_instance_path,
+        schema_path=openquake.nrmllib.nrml_schema_file()):
     """
     Check whether an XML file validates against an XML schema.
     """

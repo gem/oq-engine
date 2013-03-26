@@ -359,6 +359,9 @@ class LossMapXMLWriter(object):
                 if self._loss_map is None:
                     self._create_loss_map_elem(root)
 
+                # FIXME(lp). This implementation clearly implies that
+                # all the map data will be stored into memory. So, it
+                # will never scale well
                 loss_node = self._loss_nodes.get(loss.location.wkt)
 
                 if loss_node is None:
@@ -406,6 +409,107 @@ class LossMapXMLWriter(object):
 
         if self._unit is not None:
             self._loss_map.set("unit", str(self._unit))
+
+
+class LossFractionsWriter(object):
+    """
+    Serializer for loss fractions produced with the classical and
+    event based calculators.
+
+    :attr path:
+      Full pathname file, where the results will be saved into.
+    :attr str variable:
+      The variable used for disaggregation
+    :attr str unit:
+        Attribute describing how the value of the assets has been measured.
+    :attr str loss_category:
+        Attribute describing the category (economic, population, buildings,
+        etc..) of the losses producing this loss map.
+    :attr object hazard_metadata: metadata of hazard outputs used by risk
+       calculation. It has the attributes: investigation_time,
+       source_model_tree_path, gsim_tree_path, statistics, quantile_value
+    :attr float poe:
+        Probability of exceedance used to interpolate the losses
+        producing this fraction map.
+    """
+
+    def __init__(self, path, variable, loss_unit,
+                 loss_category, hazard_metadata, poe=None):
+        self.path = path
+        self.variable = variable
+        self.loss_unit = loss_unit
+        self.loss_category = loss_category
+        self.hazard_metadata = hm = hazard_metadata
+        self.poe = poe
+
+        validate_hazard_metadata(
+            hm.gsim_path,
+            hm.sm_path,
+            hm.statistics,
+            hm.quantile)
+
+    def serialize(self, total_fractions, locations_fractions):
+        """
+        Actually serialize the fractions.
+
+        :param dict total_fractions:
+            maps a value of `variable` with a tuple representing the absolute
+            losses and the fraction
+        :param dict locations_fractions:
+            a dictionary mapping a tuple (longitude, latitude) to
+            bins. Each bin is a dictionary with the same structure of
+            `total_fractions`.
+        """
+
+        def write_bins(parent, bin_data):
+            for value, (absolute_loss, fraction) in bin_data.items():
+                bin_element = etree.SubElement(parent, "bin")
+                bin_element.set("value", str(value))
+                bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
+                bin_element.set("fraction", "%.5f" % fraction)
+
+        with open(self.path, "w") as output:
+            root = etree.Element(
+                "nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+
+            # container element
+            container = etree.SubElement(root, "lossFraction")
+            container.set("investigationTime",
+                          "%.2f" % self.hazard_metadata.investigation_time)
+
+            if self.poe is not None:
+                container.set("poE", "%.4f" % self.poe)
+
+            container.set(
+                "sourceModelTreePath", self.hazard_metadata.sm_path or "")
+            container.set("gsimTreePath", self.hazard_metadata.gsim_path or "")
+
+            if self.hazard_metadata.statistics is not None:
+                container.set("statistics", self.hazard_metadata.statistics)
+
+            if self.hazard_metadata.quantile is not None:
+                container.set(
+                    "quantileValue", "%.4f" % self.hazard_metadata.quantile)
+            container.set("lossCategory", self.loss_category)
+            container.set("unit", self.loss_unit)
+            container.set("variable", self.variable)
+
+            # total fractions
+            total = etree.SubElement(container, "total")
+            write_bins(total, total_fractions)
+
+            # map
+            map_element = etree.SubElement(container, "map")
+
+            for lonlat, bin_data in locations_fractions.iteritems():
+                node_element = etree.SubElement(map_element, "node")
+                node_element.set("lon", str(lonlat[0]))
+                node_element.set("lat", str(lonlat[1]))
+                write_bins(node_element, bin_data)
+
+            output.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
 
 
 class BCRMapXMLWriter(object):

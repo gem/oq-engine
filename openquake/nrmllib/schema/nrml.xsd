@@ -38,6 +38,7 @@
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/loss_map.xsd"/>
+    <xs:include schemaLocation="./risk/loss_fraction.xsd"/>
     <xs:include schemaLocation="./risk/vulnerability.xsd"/>
     <xs:include schemaLocation="./risk/collapse_map.xsd"/>
 
@@ -68,6 +69,7 @@
             <xs:element ref="hazardMap" />
             <xs:element ref="logicTree" />
             <xs:element ref="lossCurves" />
+            <xs:element ref="lossFraction" />
             <xs:element ref="lossMap" />
             <xs:element ref="rawSourceModel" />
             <xs:element ref="riskResult" />
