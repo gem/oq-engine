@@ -418,18 +418,40 @@ class LossFractionsWriter(object):
 
     :attr path:
       Full pathname file, where the results will be saved into.
+    :attr str variable:
+      The variable used for disaggregation
+    :attr str unit:
+        Attribute describing how the value of the assets has been measured.
+    :attr str loss_category:
+        Attribute describing the category (economic, population, buildings,
+        etc..) of the losses producing this loss map.
+    :attr object hazard_metadata: metadata of hazard outputs used by risk
+       calculation. It has the attributes: investigation_time,
+       source_model_tree_path, gsim_tree_path, statistics, quantile_value
+    :attr float poe:
+        Probability of exceedance used to interpolate the losses
+        producing this fraction map.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, variable, loss_unit,
+                 loss_category, hazard_metadata, poe=None):
         self.path = path
+        self.variable = variable
+        self.loss_unit = loss_unit
+        self.loss_category = loss_category
+        self.hazard_metadata = hm = hazard_metadata
+        self.poe = poe
 
-    def serialize(self, variable, total_fractions, locations_fractions,
-                  loss_unit, loss_category, hazard_metadata, poe=None):
+        validate_hazard_metadata(
+            hm.gsim_path,
+            hm.sm_path,
+            hm.statistics,
+            hm.quantile)
+
+    def serialize(self, total_fractions, locations_fractions):
         """
         Actually serialize the fractions.
 
-        :param str variable:
-            The variable used for disaggregation
         :param dict total_fractions:
             maps a value of `variable` with a tuple representing the absolute
             losses and the fraction
@@ -437,17 +459,6 @@ class LossFractionsWriter(object):
             a dictionary mapping a tuple (longitude, latitude) to
             bins. Each bin is a dictionary with the same structure of
             `total_fractions`.
-        :param str unit:
-            Attribute describing how the value of the assets has been measured.
-        :param str loss_category:
-            Attribute describing the category (economic, population, buildings,
-            etc..) of the losses producing this loss map.
-        :param object hazard_metadata: metadata of hazard outputs used by risk
-           calculation. It has the attributes: investigation_time,
-           source_model_tree_path, gsim_tree_path, statistics, quantile_value
-        :param float poe:
-            Probability of exceedance used to interpolate the losses
-            producing this fraction map.
         """
 
         def write_bins(parent, bin_data):
@@ -464,27 +475,24 @@ class LossFractionsWriter(object):
             # container element
             container = etree.SubElement(root, "lossFraction")
             container.set("investigationTime",
-                          "%.2f" % hazard_metadata.investigation_time)
+                          "%.2f" % self.hazard_metadata.investigation_time)
 
-            if poe is not None:
-                container.set("poE", "%.2f" % poe)
+            if self.poe is not None:
+                container.set("poE", "%.4f" % self.poe)
 
-            if hazard_metadata.sm_path is not None:
-                container.set("sourceModelTreePath",
-                              hazard_metadata.sm_path)
+            container.set(
+                "sourceModelTreePath", self.hazard_metadata.sm_path or "")
+            container.set("gsimTreePath", self.hazard_metadata.gsim_path or "")
 
-            if hazard_metadata.gsim_path is not None:
-                container.set("gsimTreePath", hazard_metadata.gsim_path)
+            if self.hazard_metadata.statistics is not None:
+                container.set("statistics", self.hazard_metadata.statistics)
 
-            if hazard_metadata.statistics is not None:
-                container.set("statistics", hazard_metadata.statistics)
-
-            if hazard_metadata.quantile is not None:
-                container.set("quantileValue", str(hazard_metadata.quantile))
-
-            container.set("lossCategory", loss_category)
-            container.set("unit", loss_unit)
-            container.set("variable", variable)
+            if self.hazard_metadata.quantile is not None:
+                container.set(
+                    "quantileValue", "%.4f" % self.hazard_metadata.quantile)
+            container.set("lossCategory", self.loss_category)
+            container.set("unit", self.loss_unit)
+            container.set("variable", self.variable)
 
             # total fractions
             total = etree.SubElement(container, "total")
