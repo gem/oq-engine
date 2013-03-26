@@ -427,7 +427,7 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def get_vulnerability_model(self, retrofitted=False):
         """
-        Parse vulnerability model input associated with this
+        Load and parse the vulnerability model input associated with this
         calculation.
 
         As a side effect, it also stores the mapping between
@@ -452,24 +452,59 @@ class BaseRiskCalculator(base.CalculatorNext):
             self.rc.inputs.get(
                 input_type=input_type).model_content.raw_content_ascii)
 
+        return self.parse_vulnerability_model(content)
+
+    def parse_vulnerability_model(self, vuln_content):
+        """
+        Parse the vulnerability model and return a `dict` of vulnerability
+        functions keyed by taxonomy.
+
+        If a taxonomy is associated with more than one Intensity Measure Type
+        (IMT), a `ValueError` will be raised.
+
+        :param vuln_content:
+            File-like object containg the vulnerability model XML.
+        :returns:
+            A dictionary mapping each taxonomy (as a `str`) to a
+            :class:`openquake.risklib.scientific.VulnerabilityFunction`
+            instance.
+        :raises:
+            * `ValueError` if a taxonomy is associated with more than one IMT.
+            * `ValueError` if a loss ratio is 0 and its corresponding CoV
+              (Coefficient of Variation) is > 0.0. This is mathematically
+              impossible.
+        """
         vfs = dict()
 
-        for record in parsers.VulnerabilityModelParser(content):
+        for record in parsers.VulnerabilityModelParser(vuln_content):
             taxonomy = record['ID']
             imt = record['IMT']
+            loss_ratios = record['lossRatio']
+            covs = record['coefficientsVariation']
+
             registered_imt = self.taxonomies_imts.get(taxonomy, imt)
 
             if imt != registered_imt:
-                raise RuntimeError("The same taxonomy is associated with "
-                                   "different imts %s and %s" % (
+                raise ValueError("The same taxonomy is associated with "
+                                 "different imts %s and %s" % (
                                        imt, registered_imt))
             else:
                 self.taxonomies_imts[taxonomy] = imt
 
+            # Check the lossRatio/coefficientsVariation for invalid values:
+            for lr, cov in zip(loss_ratios, covs):
+                if lr == 0.0 and cov > 0.0:
+                    msg = ("Invalid vulnerability function with ID '%s': "
+                           "You cannot define a loss ratio = 0.0 with a "
+                           "corresponding coeff. of varation > 0.0"
+                           % taxonomy
+                    )
+                    raise ValueError(msg)
+
             vfs[taxonomy] = scientific.VulnerabilityFunction(
                 record['IML'],
-                record['lossRatio'],
-                record['coefficientsVariation'],
+                loss_ratios,
+                covs,
                 record['probabilisticDistribution'])
         return vfs
 
