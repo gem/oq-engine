@@ -400,7 +400,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
-        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions = self.get_vulnerability_model()
         self.check_taxonomies(self.vulnerability_functions)
 
     def check_taxonomies(self, taxonomies):
@@ -425,7 +425,7 @@ class BaseRiskCalculator(base.CalculatorNext):
                 # all taxonomies in the exposure must be covered
                 raise RuntimeError(msg)
 
-    def parse_vulnerability_model(self, retrofitted=False):
+    def get_vulnerability_model(self, retrofitted=False):
         """
         Parse vulnerability model input associated with this
         calculation.
