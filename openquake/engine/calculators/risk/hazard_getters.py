@@ -18,7 +18,7 @@
 """
 Hazard getters for Risk calculators.
 
-An HazardGetter is responsible to get hazard outputs needed by a risk
+A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
@@ -44,14 +44,17 @@ class HazardGetter(object):
     or not, using postgis or not).
 
     :attr hazard_id:
-      the ID of an Hazard output container (e.g.
-      :class:`openquake.engine.db.models.HazardCurve`)
+        The ID of an Hazard output container (e.g.
+        :class:`openquake.engine.db.models.HazardCurve`)
 
-    :attr imt: the imt of the hazard considered by the getter
+    :attr imt:
+        The imt of the hazard considered by the getter.
 
-    :attr assets: the assets for which we wants to compute
+    :attr assets:
+        The assets for which we wants to compute.
 
-    :attr max_distance: the maximum distance, in kilometers, to use
+    :attr max_distance:
+        The maximum distance, in kilometers, to use.
     """
     def __init__(self, hazard_id, imt, assets, max_distance):
         self.hazard_id = hazard_id
@@ -74,25 +77,26 @@ class HazardGetter(object):
 
     def get_data(self):
         """
-        :returns: an OrderedDict mapping ID of
-        :class:`openquake.engine.db.models.ExposureData` objects to
-        hazard_data (e.g. an array with the poes, or an array with the
-        ground motion values). Mind that the returned data could lack
-        some assets being filtered out by the ``maximum_distance``
-        criteria.
-
         Subclasses must implement this.
+
+        :returns:
+            An OrderedDict mapping ID of
+            :class:`openquake.engine.db.models.ExposureData` objects to
+            hazard_data (e.g. an array with the poes, or an array with the
+            ground motion values). Bear in mind that the returned data could
+            lack some assets being filtered out by the ``maximum_distance``
+            criteria.
         """
         raise NotImplementedError
 
     def __call__(self):
         """
-        :returns: a tuple with three elements. The first is an array
-        of instances of
-        :class:`openquake.engine.db.models.ExposureData`, the second
-        is an array with the corresponding hazard data, the third is
-        the array of IDs of assets that has been filtered out by the
-        getter by the ``maximum_distance`` criteria.
+        :returns:
+            A tuple with three elements. The first is an array of instances of
+            :class:`openquake.engine.db.models.ExposureData`, the second is an
+            array with the corresponding hazard data, the third is the array of
+            IDs of assets that has been filtered out by the getter by the
+            ``maximum_distance`` criteria.
         """
         data = self.get_data()
 
@@ -126,11 +130,11 @@ class HazardCurveGetterPerAsset(HazardGetter):
     Simple HazardCurve Getter that performs a spatial query for each
     asset.
 
-    :attr imls: the intensity measure levels of the curves we are
-    going to get.
+    :attr imls:
+        The intensity measure levels of the curves we are going to get.
 
-    :attr dict _cache: a cache of the computed hazard curve object on
-    a per-location basis.
+    :attr dict _cache:
+        A cache of the computed hazard curve object on a per-location basis.
     """
 
     def __init__(self, hazard_id, imt, assets, max_distance):
@@ -141,8 +145,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
     def get_data(self):
         """
-        Calls ``get_by_site`` for each asset and pack the results as
-        requested by the :method:`HazardGetter.get_data` interface.
+        Calls ``get_by_site`` for each asset and pack the results as requested
+        by the :meth:`HazardGetter.get_data` interface.
         """
         hazard_assets = [(asset.id, self.get_by_site(asset.site))
                          for asset in self.assets]
@@ -154,9 +158,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
     def get_by_site(self, site):
         """
-        :param site: an instance of
-        :class:`django.contrib.gis.geos.point.Point` corresponding to
-        the location of an asset.
+        :param site:
+            An instance of :class:`django.contrib.gis.geos.point.Point`
+            corresponding to the location of an asset.
         """
         if site.wkt in self._cache:
             return self._cache[site.wkt]
