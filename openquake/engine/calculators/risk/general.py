@@ -504,7 +504,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             if imt != registered_imt:
                 raise ValueError("The same taxonomy is associated with "
                                  "different imts %s and %s" % (
-                                       imt, registered_imt))
+                                 imt, registered_imt))
             else:
                 self.taxonomies_imts[taxonomy] = imt
 
