@@ -200,8 +200,12 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        self.assertRaises(ValueError, self.calc.parse_vulnerability_model,
-                          vuln_content)
+        self.job.risk_calculation.hazard_output = None
+        with self.assertRaises(ValueError) as ar:
+            self.calc.parse_vulnerability_model(vuln_content)
+        expected_error = ('The same taxonomy is associated with different imts'
+                          ' MMI and PGA')
+        self.assertEqual(expected_error, ar.exception.message)
 
     def test_lr_eq_0_cov_gt_0(self):
         # If a vulnerability function loss ratio is 0 and its corresponding CoV
@@ -214,7 +218,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
                                   lossCategory="fatalities">
-            <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
+            <IML IMT="PGV">0.005 0.007 0.0098 0.0137</IML>
             <discreteVulnerability vulnerabilityFunctionID="A"
                                    probabilisticDistribution="LN">
                 <lossRatio>0.00 0.06 0.18 0.36</lossRatio>
@@ -224,8 +228,12 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        self.assertRaises(ValueError, self.calc.parse_vulnerability_model,
-                          vuln_content)
+        with self.assertRaises(ValueError) as ar:
+            self.calc.parse_vulnerability_model(vuln_content)
+        expected_error = ("Invalid vulnerability function with ID 'A': You "
+                          "cannot define a loss ratio = 0.0 with a "
+                          "corresponding coeff. of varation > 0.0")
+        self.assertEqual(expected_error, ar.exception.message)
 
     def test_incompatible_imts(self):
         vuln_content = StringIO.StringIO("""\
@@ -246,5 +254,10 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        self.assertRaises(ValueError, self.calc.parse_vulnerability_model,
-                          vuln_content)
+        with self.assertRaises(ValueError) as ar:
+            self.calc.parse_vulnerability_model(vuln_content)
+        expected_error = (
+            "With the specified hazard output, only vulnerability sets with an"
+            " IMT of 'PGV' are allowed"
+        )
+        self.assertEqual(expected_error, ar.exception.message)
