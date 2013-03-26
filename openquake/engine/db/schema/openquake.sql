@@ -1178,6 +1178,7 @@ CREATE TABLE hzrdr.ses_rupture (
     rake float NOT NULL,
     tectonic_region_type VARCHAR NOT NULL,
     is_from_fault_source BOOLEAN NOT NULL,
+    is_multi_surface BOOLEAN NOT NULL,
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
