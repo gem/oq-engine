@@ -19,6 +19,7 @@ import mock
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
+from openquake.engine import engine
 from openquake.engine.calculators.risk import general as risk
 from openquake.engine.db import models
 from openquake.engine.utils import stats
@@ -149,7 +150,22 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.calc = risk.BaseRiskCalculator(None)
+        haz_job = engine.prepare_job()
+        hazard_curve_output = models.Output.objects.create_output(
+            haz_job, 'test_hazard_curve', 'hazard_curve'
+        )
+        hazard_curve = models.HazardCurve.objects.create(
+            output=hazard_curve_output,
+            investigation_time=50.0,
+            imt='PGV',
+            statistics='mean'
+        )
+
+        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        self.job = helpers.get_risk_job(
+            cfg, hazard_output_id=hazard_curve_output.id
+        )
+        self.calc = risk.BaseRiskCalculator(self.job)
 
     def test_one_taxonomy_many_imts(self):
         # Should raise a ValueError if a vulnerabilityFunctionID is used for
@@ -202,6 +218,28 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
             <discreteVulnerability vulnerabilityFunctionID="A"
                                    probabilisticDistribution="LN">
                 <lossRatio>0.00 0.06 0.18 0.36</lossRatio>
+                <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
+            </discreteVulnerability>
+        </discreteVulnerabilitySet>
+    </vulnerabilityModel>
+</nrml>
+""")
+        self.assertRaises(ValueError, self.calc.parse_vulnerability_model,
+                          vuln_content)
+
+    def test_incompatible_imts(self):
+        vuln_content = StringIO.StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <vulnerabilityModel>
+        <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
+                                  assetCategory="population"
+                                  lossCategory="fatalities">
+            <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
+            <discreteVulnerability vulnerabilityFunctionID="A"
+                                   probabilisticDistribution="LN">
+                <lossRatio>0.01 0.06 0.18 0.36</lossRatio>
                 <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
             </discreteVulnerability>
         </discreteVulnerabilitySet>
