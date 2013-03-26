@@ -412,7 +412,7 @@ CREATE TABLE uiapi.risk_calculation (
     quantile_loss_curves float[],
     conditional_loss_poes float[],
 
-    -- poes_disagg boolean DEFAULT false,
+    poes_disagg float[],
 
     taxonomies_from_model BOOLEAN,
 
