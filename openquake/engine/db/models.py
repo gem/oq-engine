@@ -1118,7 +1118,11 @@ class RiskCalculation(djm.Model):
     # Classical parameters:
     #######################
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
-    # poes_disagg = fields.FloatArrayField(null=True, blank=True)
+
+    poes_disagg = fields.FloatArrayField(
+        null=True, blank=True,
+        help_text='The probability of exceedance used to interpolate '
+                  'loss curves for disaggregation purposes')
 
     #########################
     # Event-Based parameters:
