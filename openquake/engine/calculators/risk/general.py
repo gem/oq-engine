@@ -82,15 +82,16 @@ class BaseRiskCalculator(base.CalculatorNext):
 
     def pre_execute(self):
         """
-        In this phase, the general workflow is::
+        In this phase, the general workflow is:
 
-        1. Parse the exposure input and store the exposure data (if
-           not already present)
-        2. Check if the exposure filtered with region_constraint is
-           not empty
-        3. Parse the risk models
-        4. Initialize progress counters
-        5. Initialize random number generator
+            1. Parse the exposure input and store the exposure data (if not
+               already present)
+            2. Check if the exposure filtered with region_constraint is not
+               empty
+            3. Parse the risk models
+            4. Initialize progress counters
+            5. Initialize random number generator
+
         """
 
         # reload the risk calculation to avoid getting raw string
@@ -160,7 +161,7 @@ class BaseRiskCalculator(base.CalculatorNext):
             The number of work items per task (sources, sites, etc.).
 
         :returns:
-            An iterator over a list of arguments. Each contains::
+            An iterator over a list of arguments. Each contains:
 
             1. the job id
             2. the exposure subset on which the celery task is applied on
