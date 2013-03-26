@@ -34,13 +34,16 @@ For more information on computing ground motion fields, see
 import random
 
 import openquake.hazardlib.imt
-import openquake.hazardlib.source
 import numpy.random
 
 from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf as gmf_calc
 from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.geo import MultiSurface
+from openquake.hazardlib.source import CharacteristicFaultSource
+from openquake.hazardlib.source import ComplexFaultSource
+from openquake.hazardlib.source import SimpleFaultSource
 
 from openquake.engine import logs
 from openquake.engine import writer
@@ -268,8 +271,12 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         ``result_grp_ordinal``).
     """
     is_from_fault_source = rupture.source_typology in (
-        openquake.hazardlib.source.ComplexFaultSource,
-        openquake.hazardlib.source.SimpleFaultSource)
+        ComplexFaultSource, SimpleFaultSource
+    )
+    is_multi_surface = False
+    if (rupture.source_typology is CharacteristicFaultSource
+            and isinstance(rupture.surface, MultiSurface)):
+        is_multi_surface = True
 
     if is_from_fault_source:
         # for simple and complex fault sources,
@@ -279,23 +286,40 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         lats = surf_mesh.lats
         depths = surf_mesh.depths
     else:
-        # For area or point source,
-        # rupture geometry is represented by a planar surface,
-        # defined by 3D corner points
-        surface = rupture.surface
-        lons = numpy.zeros((4))
-        lats = numpy.zeros((4))
-        depths = numpy.zeros((4))
+        if is_multi_surface:
+            # `list` of openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = rupture.surface.surfaces
 
-        # NOTE: It is important to maintain the order of these corner
-        # points.
-        for i, corner in enumerate((surface.top_left,
-                                    surface.top_right,
-                                    surface.bottom_right,
-                                    surface.bottom_left)):
-            lons[i] = corner.longitude
-            lats[i] = corner.latitude
-            depths[i] = corner.depth
+            # lons, lats, and depths are arrays with len == 4*N, where N is the
+            # number of surfaces in the multisurface
+            # for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            surface = rupture.surface
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these corner
+            # points.
+            # TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
 
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
@@ -307,6 +331,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         rake=rupture.rake,
         tectonic_region_type=rupture.tectonic_region_type,
         is_from_fault_source=is_from_fault_source,
+        is_multi_surface=is_multi_surface,
         lons=lons,
         lats=lats,
         depths=depths,
@@ -325,6 +350,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
             rake=rupture.rake,
             tectonic_region_type=rupture.tectonic_region_type,
             is_from_fault_source=is_from_fault_source,
+            is_multi_surface=is_multi_surface,
             lons=lons,
             lats=lats,
             depths=depths,
