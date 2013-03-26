@@ -275,11 +275,11 @@ def make_uhs(maps):
         A sequence of :class:`openquake.engine.db.models.HazardMap` objects, or
         equivalent objects with the same fields attributes.
     :returns:
-        A `dict` with two values:
-        * 'periods': a list of the SA periods from all of the ``maps``, sorted
-          ascendingly
-        * 'uh_spectra': a list of triples (lon, lat, imls), where `imls` is a
-          `tuple` of the IMLs from all maps for each of the `periods`
+        A `dict` with two values::
+            * periods: a list of the SA periods from all of the ``maps``,
+              sorted ascendingly
+            * uh_spectra: a list of triples (lon, lat, imls), where `imls`
+              is a `tuple` of the IMLs from all maps for each of the `periods`
     """
     result = dict()
     result['periods'] = []
