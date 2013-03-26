@@ -131,7 +131,7 @@
     </xs:complexType>
 
     <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
-    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>    
+    <xs:element name="intermediateEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
     <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
     <xs:complexType name="FaultEdge">
         <xs:complexContent>
@@ -172,6 +172,23 @@
                 </xs:sequence>
             </xs:restriction>
         </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="PlanarSurface">
+        <xs:sequence>
+            <xs:element name="topLeft" type="PlanarSurfaceVertex" />
+            <xs:element name="topRight" type="PlanarSurfaceVertex" />
+            <xs:element name="bottomLeft" type="PlanarSurfaceVertex" />
+            <xs:element name="bottomRight" type="PlanarSurfaceVertex" />
+        </xs:sequence>
+        <xs:attribute name="strike" type="Strike" />
+        <xs:attribute name="dip" type="Dip" />
+    </xs:complexType>
+
+    <xs:complexType name="PlanarSurfaceVertex">
+        <xs:attribute name="lon" type="Longitude" />
+        <xs:attribute name="lat" type="Latitude" />
+        <xs:attribute name="depth" type="PositiveDoubleType" />
     </xs:complexType>
 
 </xs:schema>

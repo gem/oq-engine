@@ -27,7 +27,7 @@
 
     <xs:complexType name="SESRupture">
         <xs:choice>
-            <xs:element name="planarSurface" type="SESPlanarSurface" />
+            <xs:element name="planarSurface" type="PlanarSurface" minOccurs="1" maxOccurs="unbounded" />
             <xs:element name="mesh" type="SESMesh" />
         </xs:choice>
         <xs:attribute name="id" type="PositiveNonZeroDoubleType" use="required" />
@@ -36,22 +36,6 @@
         <xs:attribute name="dip" type="Dip" use="required" />
         <xs:attribute name="rake" type="Rake" use="required" />
         <xs:attribute name="tectonicRegion" type="xs:string" use="required" />
-    </xs:complexType>
-
-    <!-- For ruptures generated from a point or area source -->
-    <xs:complexType name="SESPlanarSurface">
-        <xs:sequence>
-            <xs:element name="topLeft" type="PlanarSurfaceNode" minOccurs="1" maxOccurs="1" />
-            <xs:element name="topRight" type="PlanarSurfaceNode" minOccurs="1" maxOccurs="1" />
-            <xs:element name="bottomRight" type="PlanarSurfaceNode" minOccurs="1" maxOccurs="1" />
-            <xs:element name="bottomLeft" type="PlanarSurfaceNode" minOccurs="1" maxOccurs="1" />
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="PlanarSurfaceNode">
-        <xs:attribute name="lon" type="xs:float" use="required" />
-        <xs:attribute name="lat" type="xs:float" use="required" />
-        <xs:attribute name="depth" type="xs:float" use="required" />
     </xs:complexType>
 
     <!-- For ruptures generated from a simple or complex fault source -->
