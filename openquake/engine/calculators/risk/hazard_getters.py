@@ -145,8 +145,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
     def get_data(self):
         """
-        Calls ``get_by_site`` for each asset and pack the results as
-        requested by the :method:`HazardGetter.get_data` interface.
+        Calls ``get_by_site`` for each asset and pack the results as requested
+        by the :meth:`HazardGetter.get_data` interface.
         """
         hazard_assets = [(asset.id, self.get_by_site(asset.site))
                          for asset in self.assets]
