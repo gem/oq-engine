@@ -204,7 +204,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
     def create_getter(self, output, imt, assets):
         """
-        See :method:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..general.BaseRiskCalculator.create_getter`
         """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(

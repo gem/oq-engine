@@ -391,8 +391,8 @@ class SESRuptureTestCase(unittest.TestCase):
             id=self.source_rupture.id)
         self.assertEqual((1, 2, 0.1), source_rupture.top_left_corner)
         self.assertEqual((3, 4, 0.2), source_rupture.top_right_corner)
-        self.assertEqual((5, 6, 0.3), source_rupture.bottom_right_corner)
-        self.assertEqual((7, 8, 0.4), source_rupture.bottom_left_corner)
+        self.assertEqual((5, 6, 0.3), source_rupture.bottom_left_corner)
+        self.assertEqual((7, 8, 0.4), source_rupture.bottom_right_corner)
 
     def test__validate_planar_surface(self):
         source_rupture = models.SESRupture.objects.get(
