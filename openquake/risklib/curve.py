@@ -40,7 +40,6 @@ class Curve(object):
             self.abscissae[index] = key
             self.ordinates[index] = val
         self._interp = None  # set by ordinate_for
-        self._inverse = None  # set by abscissa_for
 
     @property
     def ordinate_for(self):
@@ -103,18 +102,10 @@ class Curve(object):
             return max_val
         return val
 
-    @property
-    def inverse(self):
-        """Cached attribute. Returns the inverse function."""
-        if self._inverse is None:
-            with_unique_ys = dict(zip(self.ordinates, self.abscissae))
-            self._inverse = self.__class__(with_unique_ys.iteritems())
-        return self._inverse
-
     # so that the curve is pickeable even if self.interp has been instantiated
     def __getstate__(self):
         return dict(abscissae=self.abscissae, ordinates=self.ordinates,
-                    _interp=None, _inverse=self._inverse)
+                    _interp=None)
 
     def __eq__(self, other):
         return numpy.allclose(self.abscissae, other.abscissae)\
@@ -136,23 +127,8 @@ class Curve(object):
         ys = self.ordinate_for(xs)
         return [i - j for i, j in zip(ys, ys[1:])]
 
-    def abscissa_for(self, y_value):
-        """
-        Return the x value corresponding to the given y value.
-        Notice that non-invertible function are inverted by
-        discarding duplicated y values for the same x!
-        Mathematicians would cry.
-        """
-        return self.inverse.ordinate_for(y_value)
-
     @property
     def xy(self):
         return self.abscissae, self.ordinates
-
-    def ordinate_out_of_bounds(self, y_value):
-        """
-        Check if the given value is outside the Y values boundaries.
-        """
-        return y_value < min(self.ordinates) or y_value > max(self.ordinates)
 
 EMPTY_CURVE = Curve(())

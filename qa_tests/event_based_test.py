@@ -205,7 +205,7 @@ class EventBasedTestCase(unittest.TestCase):
         asset_values_rm = 3000, 1000
         for i, curve_rm in enumerate(curves_rm):
             conditional_loss = scientific.conditional_loss_ratio(
-                curve_rm, CONDITIONAL_LOSS_POE)
+                curve_rm.abscissae, curve_rm.ordinates, CONDITIONAL_LOSS_POE)
             self.assertAlmostEqual(
                 mb.expected_loss_map[i],
                 conditional_loss * asset_values_rm[i],
@@ -226,7 +226,8 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             mb.expected_loss_map[2],
             scientific.conditional_loss_ratio(
-                curve_rc, CONDITIONAL_LOSS_POE) * asset_value_rc,
+                curve_rc.abscissae, curve_rc.ordinates,
+                CONDITIONAL_LOSS_POE) * asset_value_rc,
             delta=0.05 * mb.expected_loss_map[2])
 
         numpy.testing.assert_allclose(
