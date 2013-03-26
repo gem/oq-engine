@@ -1590,6 +1590,8 @@ class Output(djm.Model):
                     the_output = self.loss_curve
                 elif self.output_type == 'loss_map':
                     the_output = self.loss_map
+                elif self.output_type == 'loss_fraction':
+                    the_output = self.loss_fraction
                 else:
                     raise RuntimeError(
                         'Error getting hazard metadata: Unexpected output_type'
@@ -2367,13 +2369,87 @@ class LossFraction(djm.Model):
     variable = djm.TextField(choices=(("taxonomy", "taxonomy")))
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_loss_fraction")
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_fraction'
+
+    def total_fractions(self):
+        """
+        :returns: a dictionary mapping values of `variable` (e.g. a
+        taxonomy) to tuples yielding the associated absolute losses
+        (e.g. the absolute losses for assets of a taxonomy) and the
+        percentage (expressed in decimal format) over the total losses
+        """
+        cursor = connection.cursor()
+
+        total = self.lossfractiondata_set.aggregate(
+            djm.Sum('absolute_loss')).values()[0]
+
+        query = """
+        SELECT value, sum(absolute_loss) / %s
+        FROM riskr.loss_fraction_data
+        WHERE loss_fraction_id = %s
+        GROUP BY value
+        """
+        cursor.execute(query, (self.id, total))
+
+        return dict(cursor.fetchall())
+
+    def iteritems(self):
+        """
+        Yields tuples with two elements. The first one is a location
+        (described by a lon/lat tuple), the second one is a dictionary
+        modeling the disaggregation of the losses on such location. In
+        this dictionary, each key is a value of `variable`, and each
+        corresponding value is a tuple holding the absolute losses and
+        the fraction of losses occurring in that location.
+        """
+        cursor = connection.cursor()
+
+        query = """
+        SELECT ST_X(location), ST_Y(location), value, absolute_loss,
+               SUM(absolute_loss) OVER w, COUNT(*) OVER w
+        FROM riskr.loss_fraction_data
+        WHERE loss_fraction_id = %s
+        WINDOW w AS (PARTITION BY location)
+        """
+
+        cursor.execute(query, (self.id, ))
+
+        # We iterate on loss fraction data by location in two steps.
+        # First we fetch a loss fraction for a single location and a
+        # single value. In the same query we get the number `count` of
+        # bins stored for such location. Then, we fetch `count` - 1
+        # fractions to finalize the fractions on the current location.
+
+        while 1:
+            data = cursor.fetchone()
+            if data is None:
+                raise StopIteration
+            lon, lat, value, absolute_loss, total_loss, count = data
+
+            node = ((lon, lat),
+                    {value: (absolute_loss, absolute_loss / total_loss)})
+
+            data = cursor.fetchmany(count - 1)
+
+            for lon, lat, value, absolute_loss, total_loss, count in data:
+                node[1][value] = (absolute_loss, absolute_loss / total_loss)
+
+            yield node
 
 
 class LossFractionData(djm.Model):
     loss_fraction = djm.ForeignKey(LossFraction)
     location = djm.PointField(srid=DEFAULT_SRID)
-    fractions = fields.DictField()
+    value = djm.TextField()
+    absolute_loss = djm.TextField()
+
+    class Meta:
+        db_table = 'riskr\".\"loss_fraction_data'
 
 
 class LossMap(djm.Model):
