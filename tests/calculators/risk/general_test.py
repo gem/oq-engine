@@ -230,8 +230,8 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 """)
         with self.assertRaises(ValueError) as ar:
             self.calc.parse_vulnerability_model(vuln_content)
-        expected_error = ("Invalid vulnerability function with ID 'A': You "
-                          "cannot define a loss ratio = 0.0 with a "
+        expected_error = ("Invalid vulnerability function with ID 'A': It is "
+                          "not valid to define a loss ratio = 0.0 with a "
                           "corresponding coeff. of varation > 0.0")
         self.assertEqual(expected_error, ar.exception.message)
 
