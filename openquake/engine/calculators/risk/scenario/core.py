@@ -33,6 +33,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 @tasks.oqtask
 @general.count_progress_risk('r')
 def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
+             _statistical_output_containers,
              insured_losses, asset_correlation):
     """
     Celery task for the scenario damage risk calculator.
@@ -48,6 +49,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     :param seed: the seed used to initialize the rng
     :param output_containers: a dictionary {hazard_id: output_id}
         where output id represents the id of the loss map
+    :param statistical_output_containers: not used at this moment
     :param bool insured_losses: True if also insured losses should be computed
     :param asset_correlation: asset correlation coefficient
     """
@@ -242,3 +244,10 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 output=models.Output.objects.create_output(
                     self.job, "Loss Map", "loss_map"),
                 hazard_output=hazard_output).id] + insured_loss_map
+
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass

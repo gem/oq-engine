@@ -41,7 +41,7 @@ from openquake.engine.calculators import base
 @general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
                     taxonomy, fragility_functions,
-                    _output_containers):
+                    _output_containers, _statistical_output_contaienrs):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -321,3 +321,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
         return self.fragility_functions
+
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass
