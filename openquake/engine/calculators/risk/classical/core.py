@@ -59,12 +59,15 @@ def classical(job_id, hazard, vulnerability_function,
       store individual loss curves and b is a dictionary that maps poe to ID
       of the :class:`openquake.engine.db.models.LossMap` used to store
       the individual loss maps
-    :param dict statistical_output_containers: A dictionary mapping hazard
-      Output ID to a tuple (a, b, c, d) where a and b are the IDs of the
-      :class:`openquake.engine.db.models.LossCurve` output containers used to
-      store the mean/quantile loss curve and c, d are dictionaries that map
-      poe to ID of the :class:`openquake.engine.db.models.LossMap` used to
-      store mean/quantile loss maps
+    :param dict statistical_output_containers: A tuple with four elements:
+      1) the ID of a mean loss curve (
+      :class:`openquake.engine.db.models.LossCurve`)
+      2) a dict mapping quantile levels to instances of
+      :class:`openquake.engine.db.models.LossCurve`
+      3) a dict mapping poes to instances of
+      :class:`openquake.engine.db.models.LossMap`
+      4) a dict mapping quantile levels to dictionary mapping poes to instances
+      of :class:`openquake.engine.db.models.LossMap`
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param conditional_loss_poes:
