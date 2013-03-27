@@ -246,9 +246,6 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
 
-        # get the time of the stochastic event set and the
-        # investigation time (needed to compute the aggregate loss
-        # curve)
         tses, time_span = self.hazard_times()
 
         for hazard_output in self.considered_hazard_outputs():
