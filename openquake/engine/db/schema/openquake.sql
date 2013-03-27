@@ -980,7 +980,7 @@ ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT oq_job_profile_geometry CHECK(
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    oq_job_id INTEGER NOT NULL,
+    oq_job_id INTEGER,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
     path VARCHAR UNIQUE,
