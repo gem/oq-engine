@@ -85,8 +85,8 @@ def event_based(job_id, hazard,
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
-        (loss_curve_id, loss_map_ids, insured_curve_id, mean_loss_curve_id,
-         quantile_loss_curve_ids) = output_containers[hazard_output_id]
+        (loss_curve_id, loss_map_ids, insured_curve_id) = (
+            output_containers[hazard_output_id])
 
         seed = rnd.randint(0, models.MAX_SINT_32)
         logs.LOG.info("Using seed %s with hazard output %s" % (
@@ -266,7 +266,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
                 models.AggregateLossCurveData.objects.create(
                     loss_curve=models.LossCurve.objects.create(
-                        aggregate=True,
+                        aggregate=True, insured=False,
                         hazard_output=hazard_output,
                         output=models.Output.objects.create_output(
                             self.job,
