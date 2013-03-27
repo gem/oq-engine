@@ -26,7 +26,7 @@ def import_gmf_scenario(fname):
             gmvs = '{%s}' % str(gmvs)[1:-1]
             print >> f, '\t'.join([output_id, imt, gmvs, loc])
         f.seek(0)  # rewind
-    else:
+    else:  # assume a tab-separated file
         f = open(fname)
     ## import the file-like object with a COPY FROM
     try:
