@@ -508,21 +508,18 @@ class BaseRiskCalculator(base.CalculatorNext):
             else:
                 self.taxonomies_imts[taxonomy] = imt
 
-            # Check the lossRatio/coefficientsVariation for invalid values:
-            for lr, cov in zip(loss_ratios, covs):
-                if lr == 0.0 and cov > 0.0:
-                    msg = ("Invalid vulnerability function with ID '%s': "
-                           "You cannot define a loss ratio = 0.0 with a "
-                           "corresponding coeff. of varation > 0.0"
-                           % taxonomy
-                    )
-                    raise ValueError(msg)
-
-            vfs[taxonomy] = scientific.VulnerabilityFunction(
-                record['IML'],
-                loss_ratios,
-                covs,
-                record['probabilisticDistribution'])
+            try:
+                vfs[taxonomy] = scientific.VulnerabilityFunction(
+                    record['IML'],
+                    loss_ratios,
+                    covs,
+                    record['probabilisticDistribution'])
+            except ValueError, err:
+                msg = (
+                    "Invalid vulnerability function with ID '%s': %s"
+                    % (taxonomy, err.message)
+                )
+                raise ValueError(msg)
         return vfs
 
     def create_outputs(self, hazard_output):
