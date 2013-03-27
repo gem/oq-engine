@@ -216,7 +216,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                         poe, hazard_output.id),
                     "loss_fraction"),
                 poe=poe).pk)
-            for poe in self.rc.poes_disagg)
+            for poe in self.rc.poes_disagg or [])
 
         # the base class provides individual loss curve/map ids
         containers = super(ClassicalRiskCalculator, self).create_outputs(
