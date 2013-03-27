@@ -63,6 +63,13 @@ class VulnerabilityFunction(object):
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
+
+        for lr, cov in itertools.izip(self.mean_loss_ratios, self.covs):
+            if lr == 0.0 and cov > 0.0:
+                msg = ("It is not valid to define a loss ratio = 0.0 with a "
+                       "corresponding coeff. of varation > 0.0")
+                raise ValueError(msg)
+
         self.distribution_name = distribution_name
         (self.max_iml, self.min_iml, self.resolution,
          self.stddevs, self._mlr_i1d, self._covs_i1d,
