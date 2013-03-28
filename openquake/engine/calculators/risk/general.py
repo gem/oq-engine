@@ -806,6 +806,15 @@ def write_loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
     Create, save and return an instance of
     :class:`openquake.engine.db.models.LossFractionData` associated
     with `loss_fraction_id`, `value`, `location` and `absolute_loss`
+    :param int loss_fraction_id:
+       an ID to an output container instance
+       of type :class:`openquake.engine.db.models.LossFraction
+    :param str value:
+       A value representing the fraction. In case of disaggregation by taxonomy
+       it is a taxonomy string.
+    :param point location: the location, the fraction refers to
+    :param float absolute_loss:
+       the absolute loss contribution of `value` in `location`
     """
 
     return models.LossFractionData.objects.create(
