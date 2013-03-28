@@ -2366,7 +2366,7 @@ class LossFraction(djm.Model):
     Holds metadata for loss fraction data
     """
     output = djm.OneToOneField("Output", related_name="loss_fraction")
-    variable = djm.TextField(choices=(("taxonomy", "taxonomy")))
+    variable = djm.TextField(choices=(("taxonomy", "taxonomy"),))
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_loss_fraction")
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
