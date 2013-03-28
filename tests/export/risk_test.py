@@ -100,13 +100,13 @@ class ExportTestCase(unittest.TestCase):
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
                                'loss_category': 'air',
-                               'path': '/tmp/loss-maps-0-poe-0.1.xml',
+                               'path': '/tmp/loss-maps-0.xml',
                                'poe': 0.1,
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual('/tmp/loss-maps-0-poe-0.1.xml', ret)
+            self.assertEqual('/tmp/loss-maps-0.xml', ret)
 
     def test_export_bcr_distribution(self):
         writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
