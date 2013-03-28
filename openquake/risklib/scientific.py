@@ -125,8 +125,8 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 for x in imls)
         assert len(covs) == len(imls)
         assert len(loss_ratios) == len(imls)
+        assert all(x >= 0.0 for x in loss_ratios)
         assert all(x >= 0.0 for x in covs)
-        assert all(x >= 0.0 and x <= 1.0 for x in loss_ratios)
         assert distribution in ["LN", "BT"]
 
     def __call__(self, imls):
