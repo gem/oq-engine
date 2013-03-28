@@ -59,20 +59,12 @@ def event_based(job_id, hazard,
     :param task_seed:
       the seed used to initialize the rng
     :param dict output_containers: a dictionary mapping hazard Output
-      ID to a list (a, b, c, d) where a is the ID of the
+      ID to a list (a, b, c) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
       store the computed loss curves; b is the dictionary poe->ID of
       the :class:`openquake.engine.db.models.LossMap` output container used
       to store the computed loss maps; c is the same as a but for
-      insured losses; d is the ID of the
-      :class:`openquake.engine.db.models.AggregateLossCurve` output container
-      used to store the computed loss curves
-    :param dict statistical_output_containers: A dictionary mapping hazard
-      Output ID to a tuple (a, b, c, d) where a and b are the IDs of the
-      :class:`openquake.engine.db.models.LossCurve` output containers used to
-      store the mean/quantile loss curve and c, d are dictionaries that map
-      poe to ID of the :class:`openquake.engine.db.models.LossMap` used to
-      store mean/quantile loss maps
+      insured losses;
     :param conditional_loss_poes:
       The poes taken into accout to compute the loss maps
     :param bool insured_losses: True if insured losses should be computed
@@ -93,9 +85,8 @@ def event_based(job_id, hazard,
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
 
-        (loss_curve_id, loss_map_ids,
-         insured_curve_id, aggregate_loss_curve_id) = (
-             output_containers[hazard_output_id])
+        (loss_curve_id, loss_map_ids, insured_curve_id) = (
+            output_containers[hazard_output_id])
 
         seed = rnd.randint(0, models.MAX_SINT_32)
         logs.LOG.info("Using seed %s with hazard output %s" % (
@@ -183,26 +174,25 @@ def event_based(job_id, hazard,
                         event_loss_table[rupture_id] = (
                             event_loss_table.get(rupture_id, 0) + loss)
 
-                # update the aggregate losses
-                aggregate_losses = sum(
-                    loss_ratio_matrix[i] * asset.value
-                    for i, asset in enumerate(assets))
-                general.update_aggregate_losses(
-                    aggregate_loss_curve_id, aggregate_losses)
-
-    # compute mean and quantile loss curves/maps if multiple hazard
-    # realizations are computed
-
+    # compute mean and quantile outputs
     if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
+
+        (mean_loss_curve_id, quantile_loss_curve_ids,
+         mean_loss_map_ids, quantile_loss_map_ids) = (
+             statistical_output_containers)
 
         with logs.tracing('writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 general.compute_and_write_statistics(
-                    statistical_output_containers,
+                    mean_loss_curve_id, quantile_loss_curve_ids,
+                    mean_loss_map_ids, quantile_loss_map_ids,
+                    None, None,  # no mean/quantile loss fractions
                     weights, assets,
                     numpy.array(loss_ratio_curves.values()),
-                    hazard_montecarlo_p, conditional_loss_poes, "image")
+                    hazard_montecarlo_p, conditional_loss_poes,
+                    [],  # no mean/quantile loss fractions
+                    "image")
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings),
@@ -252,28 +242,42 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 "Deductible or insured limit missing in exposure")
 
     def post_process(self):
-        # compute aggregate loss curves
+        """
+          Compute aggregate loss curves and event loss tables
+        """
+
+        tses, time_span = self.hazard_times()
+
         for hazard_output in self.considered_hazard_outputs():
-            loss_curve = models.LossCurve.objects.get(
-                hazard_output=hazard_output,
-                aggregate=True, output__oq_job=self.job)
-            curve_data = loss_curve.aggregatelosscurvedata
 
-            tses, time_span = self.hazard_times()
+            gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
 
-            # Finalize the aggregate losses by running the event based
-            # algorithm on it and by computing the average loss
+            aggregate_losses = [
+                self.event_loss_table[rupture.id]
+                for rupture in models.SESRupture.objects.filter(
+                    ses__pk__in=[gmf_set.stochastic_event_set_id
+                                 for gmf_set in gmf_sets])
+                if rupture.id in self.event_loss_table]
 
-            if len(curve_data.losses):
+            if aggregate_losses:
                 aggregate_loss_curve = scientific.event_based(
-                    curve_data.losses, tses, time_span,
+                    aggregate_losses, tses, time_span,
                     curve_resolution=self.rc.loss_curve_resolution)
 
-                curve_data.losses = aggregate_loss_curve.abscissae.tolist()
-                curve_data.poes = aggregate_loss_curve.ordinates.tolist()
-                curve_data.average_loss = scientific.average_loss(
-                    curve_data.losses, curve_data.poes)
-                curve_data.save()
+                models.AggregateLossCurveData.objects.create(
+                    loss_curve=models.LossCurve.objects.create(
+                        aggregate=True, insured=False,
+                        hazard_output=hazard_output,
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "Aggregate Loss Curve "
+                            "for hazard %s" % hazard_output,
+                            "agg_loss_curve")),
+                    losses=aggregate_loss_curve.abscissae.tolist(),
+                    poes=aggregate_loss_curve.ordinates.tolist(),
+                    average_loss=scientific.average_loss(
+                        aggregate_loss_curve.abscissae,
+                        aggregate_loss_curve.ordinates))
 
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
@@ -346,23 +350,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
 
     def create_outputs(self, hazard_output):
         """
-        Add Aggregate loss curve and Insured Curve output containers
+        Add Insured Curve output containers
         """
         outputs = super(EventBasedRiskCalculator, self).create_outputs(
             hazard_output)
-
-        aggregate_loss_curve = models.LossCurve.objects.create(
-            aggregate=True,
-            hazard_output=hazard_output,
-            output=models.Output.objects.create_output(
-                self.job, "Aggregate Loss Curve for hazard %s" % hazard_output,
-                "agg_loss_curve"))
-
-        # for aggregate loss curve, we need to create also the
-        # aggregate loss individual curve object
-        models.AggregateLossCurveData.objects.create(
-            loss_curve=aggregate_loss_curve,
-            average_loss=0)
 
         if self.rc.insured_losses:
             insured_curve_id = (
@@ -377,4 +368,4 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         else:
             insured_curve_id = None
 
-        return outputs + [insured_curve_id, aggregate_loss_curve.id]
+        return outputs + [insured_curve_id]
