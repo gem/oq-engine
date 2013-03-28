@@ -155,7 +155,11 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             if haz_output.output_type == 'hazard_curve':
                 vuln_imts = list(set(self.taxonomies_imts.values()))
                 haz_curve = haz_output.hazardcurve
-                if vuln_imts != [haz_curve.imt]:
+                hc_imt = haz_curve.imt
+                if hc_imt == 'SA':
+                    hc_imt = 'SA(%s)' % haz_curve.sa_period
+
+                if vuln_imts != [hc_imt]:
                     msg = (
                         "Vulnerability model and the specified hazard curve "
                         "are incompatible. Vulnerability IMT(s): %s. Hazard "
