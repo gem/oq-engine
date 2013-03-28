@@ -548,6 +548,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'asset_correlation',
             'mean_loss_curves',
             'quantile_loss_curves',
+            'sites_disagg'
         )
 
 
@@ -631,6 +632,22 @@ def no_progress_timeout_is_valid(mdl):
 
 
 def sites_is_valid(mdl):
+    valid = True
+    errors = []
+
+    lons = [pt.x for pt in mdl.sites]
+    lats = [pt.y for pt in mdl.sites]
+    if not all([-180 <= x <= 180 for x in lons]):
+        valid = False
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        valid = False
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return valid, errors
+
+
+def sites_disagg_is_valid(mdl):
     valid = True
     errors = []
 

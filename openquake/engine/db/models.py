@@ -1131,6 +1131,10 @@ class RiskCalculation(djm.Model):
         null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
     insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
 
+    # The points of interest for disaggregation
+    sites_disagg = djm.MultiPointField(
+        srid=DEFAULT_SRID, null=True, blank=True)
+
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
     ######################################
