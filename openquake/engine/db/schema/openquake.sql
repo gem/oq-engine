@@ -405,8 +405,14 @@ CREATE TABLE uiapi.risk_calculation (
 
     exposure_input_id INTEGER,
 
+    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
+    hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
+
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
+    conditional_loss_poes float[],
+
+    -- poes_disagg boolean DEFAULT false,
 
     taxonomies_from_model BOOLEAN,
 
@@ -420,9 +426,6 @@ CREATE TABLE uiapi.risk_calculation (
 
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
-    conditional_loss_poes float[],
-    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
-    hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
 
     -- event-based parameters:
     loss_curve_resolution INTEGER NOT NULL DEFAULT 50
@@ -1351,7 +1354,15 @@ CREATE TABLE riskr.loss_map (
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
-        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0)),
+    statistics VARCHAR CONSTRAINT loss_map_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT loss_map_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.loss_map_data (
