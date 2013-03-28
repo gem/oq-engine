@@ -547,7 +547,19 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps):
         steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
         steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63, 0.7, 0.8, 0.9, 1]
     """
-    loss_ratios = numpy.concatenate([[0.0], loss_ratios, [1.0]])
+    loss_ratios = numpy.array(loss_ratios)
+
+    min_lr = min(loss_ratios)
+    max_lr = max(loss_ratios)
+
+    if min_lr > 0.0:
+        # prepend with a zero
+        loss_ratios = numpy.concatenate([[0.0], loss_ratios])
+
+    if max_lr < 1.0:
+        # append a 1.0
+        loss_ratios = numpy.concatenate([loss_ratios, [1.0]])
+
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
                             for x, y in utils.pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
