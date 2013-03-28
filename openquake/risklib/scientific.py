@@ -172,7 +172,7 @@ class VulnerabilityFunction(object):
         :type vuln_function:
             :class:`openquake.risklib.vulnerability_function.\
             VulnerabilityFunction`
-        :param int steps:
+        :param int curve_resolution:
             Number of steps between loss ratios.
         """
         loss_ratios = _evenly_spaced_loss_ratios(
