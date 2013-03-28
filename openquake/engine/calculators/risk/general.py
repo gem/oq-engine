@@ -121,15 +121,16 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        imts = self.hc.get_imts()
+        if self.hc is not None:
+            imts = self.hc.get_imts()
 
-        # check that the hazard calculation has all the imts needed by
-        # the risk calculation
-        for imt in set(self.taxonomies_imts.values()):
-            if not imt in imts:
-                raise RuntimeError(
-                    "There is no hazard output for the intensity measure %s; "
-                    "the available IMTs are %s" % (imt, imts))
+            # check that the hazard calculation has all the imts needed by
+            # the risk calculation
+            for imt in set(self.taxonomies_imts.values()):
+                if not imt in imts:
+                    raise RuntimeError(
+                        "There is no hazard output for the intensity measure "
+                        "%s; the available IMTs are %s" % (imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -400,7 +401,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
-        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions = self.get_vulnerability_model()
         self.check_taxonomies(self.vulnerability_functions)
 
     def check_taxonomies(self, taxonomies):
@@ -425,9 +426,9 @@ class BaseRiskCalculator(base.CalculatorNext):
                 # all taxonomies in the exposure must be covered
                 raise RuntimeError(msg)
 
-    def parse_vulnerability_model(self, retrofitted=False):
+    def get_vulnerability_model(self, retrofitted=False):
         """
-        Parse vulnerability model input associated with this
+        Load and parse the vulnerability model input associated with this
         calculation.
 
         As a side effect, it also stores the mapping between
@@ -452,25 +453,58 @@ class BaseRiskCalculator(base.CalculatorNext):
             self.rc.inputs.get(
                 input_type=input_type).model_content.raw_content_ascii)
 
+        return self.parse_vulnerability_model(content)
+
+    def parse_vulnerability_model(self, vuln_content):
+        """
+        Parse the vulnerability model and return a `dict` of vulnerability
+        functions keyed by taxonomy.
+
+        If a taxonomy is associated with more than one Intensity Measure Type
+        (IMT), a `ValueError` will be raised.
+
+        :param vuln_content:
+            File-like object containg the vulnerability model XML.
+        :returns:
+            A dictionary mapping each taxonomy (as a `str`) to a
+            :class:`openquake.risklib.scientific.VulnerabilityFunction`
+            instance.
+        :raises:
+            * `ValueError` if a taxonomy is associated with more than one IMT.
+            * `ValueError` if a loss ratio is 0 and its corresponding CoV
+              (Coefficient of Variation) is > 0.0. This is mathematically
+              impossible.
+        """
         vfs = dict()
 
-        for record in parsers.VulnerabilityModelParser(content):
+        for record in parsers.VulnerabilityModelParser(vuln_content):
             taxonomy = record['ID']
             imt = record['IMT']
+            loss_ratios = record['lossRatio']
+            covs = record['coefficientsVariation']
+
+
             registered_imt = self.taxonomies_imts.get(taxonomy, imt)
 
             if imt != registered_imt:
-                raise RuntimeError("The same taxonomy is associated with "
-                                   "different imts %s and %s" % (
-                                       imt, registered_imt))
+                raise ValueError("The same taxonomy is associated with "
+                                 "different imts %s and %s" % (
+                                 imt, registered_imt))
             else:
                 self.taxonomies_imts[taxonomy] = imt
 
-            vfs[taxonomy] = scientific.VulnerabilityFunction(
-                record['IML'],
-                record['lossRatio'],
-                record['coefficientsVariation'],
-                record['probabilisticDistribution'])
+            try:
+                vfs[taxonomy] = scientific.VulnerabilityFunction(
+                    record['IML'],
+                    loss_ratios,
+                    covs,
+                    record['probabilisticDistribution'])
+            except ValueError, err:
+                msg = (
+                    "Invalid vulnerability function with ID '%s': %s"
+                    % (taxonomy, err.message)
+                )
+                raise ValueError(msg)
         return vfs
 
     def create_outputs(self, hazard_output):
