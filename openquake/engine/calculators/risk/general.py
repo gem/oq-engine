@@ -121,15 +121,16 @@ class BaseRiskCalculator(base.CalculatorNext):
         with logs.tracing('store risk model'):
             self.set_risk_models()
 
-        imts = self.hc.get_imts()
+        if self.hc is not None:
+            imts = self.hc.get_imts()
 
-        # check that the hazard calculation has all the imts needed by
-        # the risk calculation
-        for imt in set(self.taxonomies_imts.values()):
-            if not imt in imts:
-                raise RuntimeError(
-                    "There is no hazard output for the intensity measure %s; "
-                    "the available IMTs are %s" % (imt, imts))
+            # check that the hazard calculation has all the imts needed by
+            # the risk calculation
+            for imt in set(self.taxonomies_imts.values()):
+                if not imt in imts:
+                    raise RuntimeError(
+                        "There is no hazard output for the intensity measure "
+                        "%s; the available IMTs are %s" % (imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
