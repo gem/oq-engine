@@ -150,21 +150,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        haz_job = engine.prepare_job()
-        hazard_curve_output = models.Output.objects.create_output(
-            haz_job, 'test_hazard_curve', 'hazard_curve'
-        )
-        hazard_curve = models.HazardCurve.objects.create(
-            output=hazard_curve_output,
-            investigation_time=50.0,
-            imt='PGV',
-            statistics='mean'
-        )
-
         cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
-        self.job = helpers.get_risk_job(
-            cfg, hazard_output_id=hazard_curve_output.id
-        )
+        self.job = helpers.get_risk_job(cfg)
         self.calc = risk.BaseRiskCalculator(self.job)
 
     def test_one_taxonomy_many_imts(self):
@@ -233,31 +220,4 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         expected_error = ("Invalid vulnerability function with ID 'A': It is "
                           "not valid to define a loss ratio = 0.0 with a "
                           "corresponding coeff. of varation > 0.0")
-        self.assertEqual(expected_error, ar.exception.message)
-
-    def test_incompatible_imts(self):
-        vuln_content = StringIO.StringIO("""\
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-    <vulnerabilityModel>
-        <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
-                                  assetCategory="population"
-                                  lossCategory="fatalities">
-            <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
-            <discreteVulnerability vulnerabilityFunctionID="A"
-                                   probabilisticDistribution="LN">
-                <lossRatio>0.01 0.06 0.18 0.36</lossRatio>
-                <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
-            </discreteVulnerability>
-        </discreteVulnerabilitySet>
-    </vulnerabilityModel>
-</nrml>
-""")
-        with self.assertRaises(ValueError) as ar:
-            self.calc.parse_vulnerability_model(vuln_content)
-        expected_error = (
-            "With the specified hazard output, only vulnerability sets with an"
-            " IMT of 'PGV' are allowed"
-        )
         self.assertEqual(expected_error, ar.exception.message)
