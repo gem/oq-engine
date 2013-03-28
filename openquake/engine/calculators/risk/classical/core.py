@@ -143,6 +143,27 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = hazard_getters.HazardCurveGetterPerAsset
 
+    def pre_execute(self):
+        """
+        In addition to the base classical `pre_execute` actions, also check for
+        IMT compatibility between the specified hazard output and the
+        vulnerability model.
+        """
+        super(ClassicalRiskCalculator, self).pre_execute()
+        if self.rc.hazard_output is not None:
+            haz_output = self.rc.hazard_output
+            if haz_output.output_type == 'hazard_curve':
+                vuln_imts = list(set(self.taxonomies_imts.values()))
+                haz_curve = haz_output.hazardcurve
+                if vuln_imts != [haz_curve.imt]:
+                    msg = (
+                        "Vulnerability model and the specified hazard curve "
+                        "are incompatible. Vulnerability IMT(s): %s. Hazard "
+                        "curve IMT: %s"
+                        % (vuln_imts, haz_curve.imt)
+                    )
+                    raise ValueError(msg)
+
     def worker_args(self, taxonomy):
         """
         As we do not need a seed in the classical calculator we just
