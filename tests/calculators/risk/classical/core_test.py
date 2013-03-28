@@ -108,7 +108,7 @@ class PreExecuteTestCase(unittest.TestCase):
         hazard_curve = models.HazardCurve.objects.create(
             output=hazard_curve_output,
             investigation_time=50.0,
-            imt='PGV',  # the vulnerability model only defines PGA
+            imt='PGV',  # the vulnerability model only defines SA(0.1)
             statistics='mean'
         )
 
@@ -124,8 +124,8 @@ class PreExecuteTestCase(unittest.TestCase):
             calc.pre_execute()
         self.assertEqual(
             "Vulnerability model and the specified hazard curve are "
-            "incompatible. Vulnerability IMT(s): ['PGA']. Hazard curve IMT: "
-            "PGV",
+            "incompatible. Vulnerability IMT(s): ['SA(0.1)']. Hazard curve "
+            "IMT: PGV",
             ar.exception.message
         )
 
@@ -138,7 +138,9 @@ class PreExecuteTestCase(unittest.TestCase):
             output=hazard_curve_output,
             investigation_time=50.0,
             # this imt is compatible with the vuln model
-            imt='PGA',  # the vulnerability model only defines PGA
+            imt='SA',
+            sa_period=0.1,
+            sa_damping=5.0,
             statistics='mean'
         )
 
