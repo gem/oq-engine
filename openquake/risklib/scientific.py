@@ -185,10 +185,23 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col in range(self.resolution):
                 mean_loss_ratio = self.mean_loss_ratios[col]
-                loss_ratio_stddev = self.stddevs[col]
+                # NOTE: stddev = CoV * LR
+                stddev = self.stddevs[col]
 
-                lrem[row][col] = self.distribution.survival(
-                    loss_ratio, mean_loss_ratio, loss_ratio_stddev)
+                if mean_loss_ratio > 0 and stddev == 0:
+                    # When the LR > 0 and CoV == 0,
+                    # the LREM value for any loss ratio value in up to and
+                    # including the defined (mean) loss ratio will be 1.
+                    if loss_ratio <= mean_loss_ratio:
+                        lrem[row][col] = 1
+                    # For any value > the (mean) loss ratio, the value is 0.
+                    elif loss_ratio > mean_loss_ratio:
+                        lrem[row][col] = 0
+                elif mean_loss_ratio == 0 and stddev == 0:
+                    lrem[row][col] = 0
+                else:
+                    lrem[row][col] = self.distribution.survival(
+                        loss_ratio, mean_loss_ratio, stddev)
 
         return lrem
 
