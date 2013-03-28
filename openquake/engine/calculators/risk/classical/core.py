@@ -166,6 +166,31 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = hazard_getters.HazardCurveGetterPerAsset
 
+    def pre_execute(self):
+        """
+        In addition to the base classical `pre_execute` actions, also check for
+        IMT compatibility between the specified hazard output and the
+        vulnerability model.
+        """
+        super(ClassicalRiskCalculator, self).pre_execute()
+        if self.rc.hazard_output is not None:
+            haz_output = self.rc.hazard_output
+            if haz_output.output_type == 'hazard_curve':
+                vuln_imts = list(set(self.taxonomies_imts.values()))
+                haz_curve = haz_output.hazardcurve
+                hc_imt = haz_curve.imt
+                if hc_imt == 'SA':
+                    hc_imt = 'SA(%s)' % haz_curve.sa_period
+
+                if vuln_imts != [hc_imt]:
+                    msg = (
+                        "Vulnerability model and the specified hazard curve "
+                        "are incompatible. Vulnerability IMT(s): %s. Hazard "
+                        "curve IMT: %s"
+                        % (vuln_imts, haz_curve.imt)
+                    )
+                    raise ValueError(msg)
+
     def worker_args(self, taxonomy):
         """
         As we do not need a seed in the classical calculator we just
@@ -240,7 +265,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                      display_name="Mean Loss Fractions poe=%.4f" % poe,
                      output_type="loss_fraction"),
                  statistics="mean").id)
-            for poe in self.rc.poes_disagg)
+            for poe in self.rc.poes_disagg or [])
 
         quantile_loss_fraction_ids = dict(
             (quantile,
@@ -254,7 +279,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                          output_type="loss_fraction"),
                      statistics="quantile",
                      quantile=quantile).id)
-                 for poe in self.rc.poes_disagg))
+                 for poe in self.rc.poes_disagg or []))
             for quantile in self.rc.quantile_loss_curves or [])
 
         containers = super(
