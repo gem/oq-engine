@@ -63,6 +63,13 @@ class VulnerabilityFunction(object):
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
         self.covs = numpy.array(covs)
+
+        for lr, cov in itertools.izip(self.mean_loss_ratios, self.covs):
+            if lr == 0.0 and cov > 0.0:
+                msg = ("It is not valid to define a loss ratio = 0.0 with a "
+                       "corresponding coeff. of varation > 0.0")
+                raise ValueError(msg)
+
         self.distribution_name = distribution_name
         (self.max_iml, self.min_iml, self.resolution,
          self.stddevs, self._mlr_i1d, self._covs_i1d,
@@ -118,8 +125,8 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 for x in imls)
         assert len(covs) == len(imls)
         assert len(loss_ratios) == len(imls)
+        assert all(x >= 0.0 for x in loss_ratios)
         assert all(x >= 0.0 for x in covs)
-        assert all(x >= 0.0 and x <= 1.0 for x in loss_ratios)
         assert distribution in ["LN", "BT"]
 
     def __call__(self, imls):
@@ -165,7 +172,7 @@ class VulnerabilityFunction(object):
         :type vuln_function:
             :class:`openquake.risklib.vulnerability_function.\
             VulnerabilityFunction`
-        :param int steps:
+        :param int curve_resolution:
             Number of steps between loss ratios.
         """
         loss_ratios = _evenly_spaced_loss_ratios(
@@ -178,10 +185,23 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col in range(self.resolution):
                 mean_loss_ratio = self.mean_loss_ratios[col]
-                loss_ratio_stddev = self.stddevs[col]
+                # NOTE: stddev = CoV * LR
+                stddev = self.stddevs[col]
 
-                lrem[row][col] = self.distribution.survival(
-                    loss_ratio, mean_loss_ratio, loss_ratio_stddev)
+                if mean_loss_ratio > 0 and stddev == 0:
+                    # When the LR > 0 and CoV == 0,
+                    # the LREM value for any loss ratio value in up to and
+                    # including the defined (mean) loss ratio will be 1.
+                    if loss_ratio <= mean_loss_ratio:
+                        lrem[row][col] = 1
+                    # For any value > the (mean) loss ratio, the value is 0.
+                    elif loss_ratio > mean_loss_ratio:
+                        lrem[row][col] = 0
+                elif mean_loss_ratio == 0 and stddev == 0:
+                    lrem[row][col] = 0
+                else:
+                    lrem[row][col] = self.distribution.survival(
+                        loss_ratio, mean_loss_ratio, stddev)
 
         return lrem
 
@@ -540,7 +560,19 @@ def _evenly_spaced_loss_ratios(loss_ratios, steps):
         steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
         steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63, 0.7, 0.8, 0.9, 1]
     """
-    loss_ratios = numpy.concatenate([[0.0], loss_ratios, [1.0]])
+    loss_ratios = numpy.array(loss_ratios)
+
+    min_lr = min(loss_ratios)
+    max_lr = max(loss_ratios)
+
+    if min_lr > 0.0:
+        # prepend with a zero
+        loss_ratios = numpy.concatenate([[0.0], loss_ratios])
+
+    if max_lr < 1.0:
+        # append a 1.0
+        loss_ratios = numpy.concatenate([loss_ratios, [1.0]])
+
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
                             for x, y in utils.pairwise(loss_ratios)])
     return numpy.concatenate([ls, [loss_ratios[-1]]])
