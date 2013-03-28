@@ -265,7 +265,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                      display_name="Mean Loss Fractions poe=%.4f" % poe,
                      output_type="loss_fraction"),
                  statistics="mean").id)
-            for poe in self.rc.poes_disagg)
+            for poe in self.rc.poes_disagg or [])
 
         quantile_loss_fraction_ids = dict(
             (quantile,
@@ -279,7 +279,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                          output_type="loss_fraction"),
                      statistics="quantile",
                      quantile=quantile).id)
-                 for poe in self.rc.poes_disagg))
+                 for poe in self.rc.poes_disagg or []))
             for quantile in self.rc.quantile_loss_curves or [])
 
         containers = super(
