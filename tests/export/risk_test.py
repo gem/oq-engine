@@ -180,8 +180,9 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 2, loss_curves.filter(statistics='quantile').count()
             )
 
-            # 16 logic tree realizations = 16
-            self.assertEqual(16, loss_map_outputs.count())
+            # 16 logic tree realizations = 16 loss map + 1 mean loss
+            # map + 2 quantile loss map
+            self.assertEqual(19, loss_map_outputs.count())
 
             # Now try to export everything, just to do a "smoketest" of the
             # exporter code:
@@ -194,7 +195,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 loss_map_files.extend(risk.export(o.id, target_dir))
 
             self.assertEqual(19, len(loss_curve_files))
-            self.assertEqual(16, len(loss_map_files))
+            self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:
                 self._test_exported_file(f)
