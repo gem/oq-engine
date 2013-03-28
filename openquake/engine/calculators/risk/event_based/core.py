@@ -196,13 +196,21 @@ def event_based(job_id, hazard,
     if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
 
+        (mean_loss_curve_id, quantile_loss_curve_ids,
+         mean_loss_map_ids, quantile_loss_map_ids) = (
+             statistical_output_containers)
+
         with logs.tracing('writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 general.compute_and_write_statistics(
-                    statistical_output_containers,
+                    mean_loss_curve_id, quantile_loss_curve_ids,
+                    mean_loss_map_ids, quantile_loss_map_ids,
+                    None, None,  # no mean/quantile loss fractions
                     weights, assets,
                     numpy.array(loss_ratio_curves.values()),
-                    hazard_montecarlo_p, conditional_loss_poes, "image")
+                    hazard_montecarlo_p, conditional_loss_poes,
+                    [],  # no mean/quantile loss fractions
+                    "image")
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings),
