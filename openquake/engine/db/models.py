@@ -1135,6 +1135,22 @@ class RiskCalculation(djm.Model):
     sites_disagg = djm.MultiPointField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
+    mag_bin_width = djm.FloatField(
+        help_text=('Width of magnitude bins'),
+        null=True,
+        blank=True,
+    )
+    distance_bin_width = djm.FloatField(
+        help_text=('Width of distance bins'),
+        null=True,
+        blank=True,
+    )
+    coordinate_bin_width = djm.FloatField(
+        help_text=('Width of coordinate bins'),
+        null=True,
+        blank=True,
+    )
+
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
     ######################################
@@ -1220,6 +1236,7 @@ def _prep_geometry(kwargs):
     # If geometries were specified as string lists of coords,
     # convert them to WKT before doing anything else.
     for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
+                           ('sites_disagg', 'MULTIPOINT(%s)'),
                            ('region', 'POLYGON((%s))'),
                            ('region_constraint', 'POLYGON((%s))')):
         if field in kwargs:
@@ -1910,6 +1927,10 @@ class SESRupture(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
+
+    # HazardLib Surface object. Stored as it is needed by risk disaggregation
+    surface = fields.PickleField()
+
     result_grp_ordinal = djm.IntegerField()
     # NOTE(LB): The ordinal of a rupture within a given result group (indicated
     # by ``result_grp_ordinal``). This rupture correspond to the indices of the
@@ -2370,7 +2391,10 @@ class LossFraction(djm.Model):
     Holds metadata for loss fraction data
     """
     output = djm.OneToOneField("Output", related_name="loss_fraction")
-    variable = djm.TextField(choices=(("taxonomy", "taxonomy")))
+    variable = djm.TextField(choices=(("taxonomy", "taxonomy"),
+                                      ("magnitude_distance",
+                                       "Magnitude Distance"),
+                                       ("coordinate", "Coordinate")))
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_loss_fraction")
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
@@ -2379,6 +2403,34 @@ class LossFraction(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
+
+    def display_value(self, value):
+        """
+        Converts `value` in a form that is best suited to be
+        displayed.
+
+        :returns: `value` if the attribute `variable` is equal to
+           taxonomy. if the attribute `variable` is equal to
+           `magnitude-distance`, then it extracts two integers (comma
+           separated) from `value` and convert them into ranges
+           encoded back as csv.
+        """
+        rc = self.output.oq_job.risk_calculation
+        if self.variable == "taxonomy":
+            return value
+        elif self.variable == "magnitude_distance":
+            magnitude, distance = map(float, value.split(","))
+            return "%.4f,%.4f|%.4f,%.4f" % (
+                magnitude * rc.mag_bin_width,
+                (magnitude + 1) * rc.mag_bin_width,
+                distance * rc.distance_bin_width,
+                (distance + 1) * rc.distance_bin_width)
+        elif self.variable == "coordinate":
+            return "%.4f,%.4f" % (float(value) * rc.coordinate_bin_width,
+                                  (float(value) + 1) * rc.coordinate_bin_width)
+        else:
+            raise RuntimeError(
+                "disaggregation of type %s not supported" % self.variable)
 
     def total_fractions(self):
         """
@@ -2398,9 +2450,10 @@ class LossFraction(djm.Model):
         WHERE loss_fraction_id = %s
         GROUP BY value
         """
-        cursor.execute(query, (self.id, total))
+        cursor.execute(query, (total, self.id))
 
-        return dict(cursor.fetchall())
+        return dict([(self.display_value(value), (total, loss))
+                    for value, loss in cursor])
 
     def iteritems(self):
         """
@@ -2435,13 +2488,17 @@ class LossFraction(djm.Model):
                 raise StopIteration
             lon, lat, value, absolute_loss, total_loss, count = data
 
-            node = ((lon, lat),
-                    {value: (absolute_loss, absolute_loss / total_loss)})
+            fraction = absolute_loss / total_loss
+            display_value = self.display_value(value)
+
+            node = ((lon, lat), {display_value: (absolute_loss, fraction)})
 
             data = cursor.fetchmany(count - 1)
 
             for lon, lat, value, absolute_loss, total_loss, count in data:
-                node[1][value] = (absolute_loss, absolute_loss / total_loss)
+                fraction = absolute_loss / total_loss
+                display_value = self.display_value(value)
+                node[1][display_value] = (absolute_loss, fraction)
 
             yield node
 
