@@ -548,8 +548,25 @@ class EventBasedRiskForm(BaseOQModelForm):
             'asset_correlation',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'sites_disagg'
+            'sites_disagg',
+            'mag_bin_width',
+            'distance_bin_width',
+            'coordinate_bin_width',
         )
+
+    def is_valid(self):
+        super_valid = super(EventBasedRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if rc.sites_disagg and not [rc.mag_bin_width and
+                                    rc.coordinate_bin_width and
+                                    rc.distance_bin_width]:
+            self._add_error('sites_disagg', "disaggregation requires "
+                            "mag_bin_width, coordinate_bin_width, "
+                            "distance_bin_width")
+            return False
+
+        return super_valid
 
 
 class ScenarioDamageRiskForm(BaseOQModelForm):
@@ -651,8 +668,8 @@ def sites_disagg_is_valid(mdl):
     valid = True
     errors = []
 
-    lons = [pt.x for pt in mdl.sites]
-    lats = [pt.y for pt in mdl.sites]
+    lons = [pt.x for pt in mdl.sites_disagg]
+    lats = [pt.y for pt in mdl.sites_disagg]
     if not all([-180 <= x <= 180 for x in lons]):
         valid = False
         errors.append('Longitude values must in the range [-180, 180]')

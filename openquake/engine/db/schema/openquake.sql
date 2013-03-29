@@ -424,6 +424,10 @@ CREATE TABLE uiapi.risk_calculation (
       ((asset_correlation >= 0) AND (asset_correlation <= 1))),
     master_seed INTEGER NULL,
 
+    mag_bin_width float,
+    distance_bin_width float,
+    coordinate_bin_width float,
+
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
 
@@ -439,7 +443,7 @@ CREATE TABLE uiapi.risk_calculation (
 
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
-
+SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
 
 CREATE TABLE uiapi.cnode_stats (
     id SERIAL PRIMARY KEY,
@@ -1182,6 +1186,7 @@ CREATE TABLE hzrdr.ses_rupture (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
+    surface BYTEA NOT NULL,
     result_grp_ordinal INTEGER NOT NULL,
     -- The sequence number of the rupture within a given task/result group
     rupture_ordinal INTEGER NOT NULL

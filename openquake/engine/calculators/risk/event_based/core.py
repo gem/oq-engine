@@ -24,6 +24,7 @@ import numpy
 
 from django import db
 
+from openquake.hazardlib.geo import mesh
 from openquake.risklib import api, scientific
 
 from openquake.engine.calculators.risk import hazard_getters
@@ -102,7 +103,7 @@ def event_based(job_id, hazard,
 
         (loss_curve_id, loss_map_ids, insured_curve_id,
          loss_fractions_magnitude_distance_id, loss_fractions_coords_id) = (
-            output_containers[hazard_output_id])
+             output_containers[hazard_output_id])
 
         seed = rnd.randint(0, models.MAX_SINT_32)
         logs.LOG.info("Using seed %s with hazard output %s" % (
@@ -193,30 +194,36 @@ def event_based(job_id, hazard,
                         # compute and save disaggregation
                         rupture = models.SESRupture.objects.get(pk=rupture_id)
 
-                        magnitude_distance = (
-                            (numpy.floor(
-                                rupture.mag / mag_bin_width),
-                             numpy.floor(
-                                 rupture.surface.get_joyner_boore_distance(
-                                     sites_disagg) / coordinate_bin_width)))
+                        if asset.site in sites_disagg:
+                            site = asset.site
+                            site_mesh = mesh.Mesh(numpy.array([site.x]),
+                                                  numpy.array([site.y]), None)
 
-                        general.write_loss_fraction_data(
-                            loss_fractions_magnitude_distance_id,
-                            location=asset.site,
-                            value="%d-%d" % magnitude_distance,
-                            absolute_loss=loss)
+                            magnitude_distance = (
+                                numpy.floor(rupture.magnitude / mag_bin_width),
+                                numpy.floor(
+                                    rupture.surface.get_joyner_boore_distance(
+                                        site_mesh))[0] / coordinate_bin_width)
 
-                        closest_point = rupture.get_closest_points(
-                            sites_disagg)
+                            general.write_loss_fraction_data(
+                                loss_fractions_magnitude_distance_id,
+                                location=asset.site,
+                                value="%d,%d" % magnitude_distance,
+                                absolute_loss=loss)
 
-                        coordinate = (closest_point.x / coordinate_bin_width,
-                                      closest_point.y / coordinate_bin_width)
+                            closest_point = iter(
+                                rupture.surface.get_closest_points(
+                                    site_mesh)).next()
 
-                        general.write_loss_fraction_data(
-                            loss_fractions_magnitude_distance_id,
-                            location=asset.site,
-                            value="%d-%d" % coordinate,
-                            absolute_loss=loss)
+                            coordinate = (
+                                closest_point.longitude / coordinate_bin_width,
+                                closest_point.latitude / coordinate_bin_width)
+
+                            general.write_loss_fraction_data(
+                                loss_fractions_magnitude_distance_id,
+                                location=asset.site,
+                                value="%d,%d" % coordinate,
+                                absolute_loss=loss)
 
     # compute mean and quantile outputs
     if statistical_output_containers:
@@ -392,8 +399,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 self.rc.loss_curve_resolution, correlation,
                 self.rc.sites_disagg or [],
                 self.rc.mag_bin_width,
-                self.rc.dist_bin_width,
-                self.rc.coord_bin_width,
+                self.rc.distance_bin_width,
+                self.rc.coordinate_bin_width,
                 self.hc.number_of_logic_tree_samples == 0]
 
     def create_outputs(self, hazard_output):
@@ -416,4 +423,28 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         else:
             insured_curve_id = None
 
-        return outputs + [insured_curve_id]
+        if self.rc.sites_disagg:
+            loss_fractions_magnitude_distance_id = (
+                models.LossFraction.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "Loss Fractions by ruptures grouped by range of "
+                        "magnitude/distance for hazard %s" % hazard_output,
+                        "loss_fraction"),
+                    hazard_output=hazard_output,
+                    variable="magnitude_distance").id)
+            loss_fractions_coords_id = models.LossFraction.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "Loss Fractions by ruptures grouped by range of "
+                    "coordinates for hazard %s" % hazard_output,
+                    "loss_fraction"),
+                hazard_output=hazard_output,
+                variable="coordinate").id
+        else:
+            loss_fractions_magnitude_distance_id = None
+            loss_fractions_coords_id = None
+
+        return outputs + [insured_curve_id,
+                          loss_fractions_magnitude_distance_id,
+                          loss_fractions_coords_id]
