@@ -5,10 +5,10 @@
     <logicTree logicTreeID='lt1'>
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                    applyToTectonicRegionType="active shallow crust">
+                    applyToTectonicRegionType="Active Shallow Crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
