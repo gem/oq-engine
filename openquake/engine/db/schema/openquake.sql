@@ -1406,6 +1406,9 @@ CREATE TABLE riskr.loss_fraction (
 CREATE TABLE riskr.loss_fraction_data (
     id SERIAL PRIMARY KEY,
     loss_fraction_id INTEGER NOT NULL, -- FK to loss_fraction.id
+    --- Holds a serialized representation of `variable`. if `variable`
+    --- is a taxonomy, then `value` is a string representing an asset
+    --- taxonomy
     value VARCHAR NOT NULL,
     absolute_loss FLOAT NOT NULL
 ) TABLESPACE riskr_ts;
