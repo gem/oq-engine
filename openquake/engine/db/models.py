@@ -1174,10 +1174,6 @@ class RiskCalculation(djm.Model):
         """
         hcalc = (self.hazard_calculation or
                  self.hazard_output.oq_job.hazard_calculation)
-        if hcalc is None:
-            raise ObjectDoesNotExist(
-                'The job #%d has no hazard calculation '
-                'associated' % self.hazard_output.oq_job.id)
         return hcalc
 
     @property
