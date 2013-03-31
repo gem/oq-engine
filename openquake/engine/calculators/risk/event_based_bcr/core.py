@@ -209,6 +209,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions = self.get_vulnerability_model()
         self.vulnerability_functions_retrofitted = (
-            self.parse_vulnerability_model(True))
+            self.get_vulnerability_model(True))
