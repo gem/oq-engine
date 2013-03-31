@@ -194,7 +194,10 @@ def event_based(job_id, hazard,
                         # compute and save disaggregation
                         rupture = models.SESRupture.objects.get(pk=rupture_id)
 
-                        if asset.site in sites_disagg:
+                    if asset.site in sites_disagg:
+                        for j, rupture_id in enumerate(rupture_id_matrix[i]):
+
+                            loss = loss_ratio_matrix[i][j] * asset.value
                             site = asset.site
                             site_mesh = mesh.Mesh(numpy.array([site.x]),
                                                   numpy.array([site.y]), None)
@@ -203,7 +206,7 @@ def event_based(job_id, hazard,
                                 numpy.floor(rupture.magnitude / mag_bin_width),
                                 numpy.floor(
                                     rupture.surface.get_joyner_boore_distance(
-                                        site_mesh))[0] / coordinate_bin_width)
+                                        site_mesh))[0] / distance_bin_width)
 
                             general.write_loss_fraction_data(
                                 loss_fractions_magnitude_distance_id,
@@ -220,7 +223,7 @@ def event_based(job_id, hazard,
                                 closest_point.latitude / coordinate_bin_width)
 
                             general.write_loss_fraction_data(
-                                loss_fractions_magnitude_distance_id,
+                                loss_fractions_coords_id,
                                 location=asset.site,
                                 value="%d,%d" % coordinate,
                                 absolute_loss=loss)
