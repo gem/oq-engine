@@ -2444,16 +2444,20 @@ class LossFraction(djm.Model):
         total = self.lossfractiondata_set.aggregate(
             djm.Sum('absolute_loss')).values()[0]
 
+        if not total:
+            return {}
+
         query = """
-        SELECT value, sum(absolute_loss) / %s
+        SELECT value, sum(absolute_loss)
         FROM riskr.loss_fraction_data
         WHERE loss_fraction_id = %s
         GROUP BY value
         """
-        cursor.execute(query, (total, self.id))
+        cursor.execute(query, (self.id,))
 
-        return dict([(self.display_value(value), (total, loss))
-                    for value, loss in cursor])
+        return collections.OrderedDict(
+            [(self.display_value(value), (loss, loss / total))
+             for value, loss in cursor])
 
     def iteritems(self):
         """
@@ -2467,14 +2471,29 @@ class LossFraction(djm.Model):
         cursor = connection.cursor()
 
         query = """
-        SELECT ST_X(location), ST_Y(location), value, absolute_loss,
-               SUM(absolute_loss) OVER w, COUNT(*) OVER w
-        FROM riskr.loss_fraction_data
-        WHERE loss_fraction_id = %s
-        WINDOW w AS (PARTITION BY location)
+        SELECT lon, lat, value,
+               fraction_loss,
+               SUM(fraction_loss) OVER w,
+               COUNT(*) OVER w
+        FROM (SELECT ST_X(location) as lon,
+                     ST_Y(location) as lat,
+              value, sum(absolute_loss) as fraction_loss
+              FROM riskr.loss_fraction_data
+              WHERE loss_fraction_id = 42
+              GROUP BY location, value) g
+        WINDOW w AS (PARTITION BY lon, lat)
         """
 
         cursor.execute(query, (self.id, ))
+
+        def display_value_and_fractions(value, absolute_loss, total_loss):
+            display_value = self.display_value(value)
+
+            if total_loss > 0:
+                fraction = absolute_loss / total_loss
+            else:
+                fraction = float('nan')
+            return display_value, fraction
 
         # We iterate on loss fraction data by location in two steps.
         # First we fetch a loss fraction for a single location and a
@@ -2488,16 +2507,16 @@ class LossFraction(djm.Model):
                 raise StopIteration
             lon, lat, value, absolute_loss, total_loss, count = data
 
-            fraction = absolute_loss / total_loss
-            display_value = self.display_value(value)
-
-            node = ((lon, lat), {display_value: (absolute_loss, fraction)})
+            display_value, fraction = display_value_and_fractions(
+                value, absolute_loss, total_loss)
+            node = ((lon, lat),
+                    {display_value: (absolute_loss, fraction)})
 
             data = cursor.fetchmany(count - 1)
 
             for lon, lat, value, absolute_loss, total_loss, count in data:
-                fraction = absolute_loss / total_loss
-                display_value = self.display_value(value)
+                display_value, fraction = display_value_and_fractions(
+                    value, absolute_loss, total_loss)
                 node[1][display_value] = (absolute_loss, fraction)
 
             yield node
