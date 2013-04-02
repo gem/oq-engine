@@ -170,11 +170,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         return [time_span, tses,
                 self.rc.loss_curve_resolution, correlation,
-                self.rc.sites_disagg or [],
-                self.rc.mag_bin_width,
-                self.rc.distance_bin_width,
-                self.rc.coordinate_bin_width,
-                self.hc.number_of_logic_tree_samples == 0,
                 self.rc.asset_life_expectancy,
                 self.rc.interest_rate]
 
@@ -211,7 +206,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         not compute mean/quantiles outputs"
         """
         pass
-
 
     def set_risk_models(self):
         """
