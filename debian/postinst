@@ -81,9 +81,9 @@ chown -R root.openquake $SDIR
 #  NOTE
 #        look 'debian/config' file if you want to change something here
 #
-# Is postgres installed on this system?
+# is postgresql installed on this system?
 if [ -f "$PG_CONF" ]; then
-    # exists a bad explicit configuration?
+    # does a bad explicit configuration exist?
     if grep -q '^[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
         if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
             db_get python-oq-engine/override-psql-std-conf-str || true
@@ -114,7 +114,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     # Restart postgres in order to get rid of idle/open connections
     # held by celeryd processes.
 
-    # Stop celeryd.
+    # stop celeryd.
     if [ -x /etc/init.d/celeryd ]; then
         /etc/init.d/celeryd stop
     else
@@ -200,7 +200,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     cd $DDIR && find . | grep gz$ | xargs gunzip -f
     # Last but not least copy the smoke tests into a more prominent place.
     if [ -d $HDIR/demos ]; then
-        # Do the existing demos differ from the ones we just installed?
+        # are existing demos different from the ones we just installed?
         if ! diff -qrN $HDIR/demos $DDIR >/dev/null ; then
             # The demos do differ, move the old demos out of the way.
             tstamp=`date +"%Y-%m-%d-%H-%M-%S"`
