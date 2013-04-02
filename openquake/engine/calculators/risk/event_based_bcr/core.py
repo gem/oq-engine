@@ -161,13 +161,22 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Specific calculator parameters returned as list suitable to be
         passed in task_arg_gen.
         """
+        time_span, tses = self.hazard_times()
 
-        super_params = super(EventBasedBCRRiskCalculator,
-                             self).calculator_parameters
+        if self.rc.asset_correlation is None:
+            correlation = 0
+        else:
+            correlation = self.rc.asset_correlation
 
-        return super_params[2:-1] + [
-            self.rc.asset_life_expectancy, self.rc.interest_rate
-        ]
+        return [time_span, tses,
+                self.rc.loss_curve_resolution, correlation,
+                self.rc.sites_disagg or [],
+                self.rc.mag_bin_width,
+                self.rc.distance_bin_width,
+                self.rc.coordinate_bin_width,
+                self.hc.number_of_logic_tree_samples == 0,
+                self.rc.asset_life_expectancy,
+                self.rc.interest_rate]
 
     def post_process(self):
         """

@@ -23,38 +23,32 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
+# FIXME(lp). This is no more than a smoke test
 class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
-
-    EXPECTED_LOSS_FRACTION = """<nrml xmlns:gml="http://www.opengis.net/gml"
-    xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossFraction investigationTime="50.00" poE="0.1000"
-                sourceModelTreePath="b1" gsimTreePath="b1"
-                lossCategory="buildings" unit="USD" variable="taxonomy">
-    <total/>
-    <map>
-      <node lon="80.317596" lat="28.87">
-        <bin value="A" absoluteLoss="8.1652e+07" fraction="0.46765"/>
-        <bin value="UFB" absoluteLoss="3.1436e+07" fraction="0.18005"/>
-        <bin value="DS" absoluteLoss="4.7710e+07" fraction="0.27325"/>
-        <bin value="W" absoluteLoss="1.3432e+07" fraction="0.07693"/>
-        <bin value="RC" absoluteLoss="3.6983e+05" fraction="0.00212"/>
-      </node>
-    </map>
-  </lossFraction>
-</nrml>"""
 
     @noseattr('qa', 'risk', 'event_based', 'e2e')
     def test(self):
         self._run_test()
 
     def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
+        return models.Output.objects.filter(output_type='gmf').latest(
+            'last_update').id
 
-    def actual_xml_outputs(self, job):
-        return models.Output.objects.filter(
-            oq_job=job, output_type="loss_fraction").order_by('id')
+    def actual_data(self, job):
+        loss_fraction = models.LossFraction.objects.get(
+            variable='magnitude_distance',
+            output__oq_job=job)
 
-    def expected_outputs(self):
-        return [self.EXPECTED_LOSS_FRACTION]
+        fractions = [fractions
+                     for fractions in loss_fraction.iteritems()]
+
+        return [[len(loss_fraction.total_fractions())],
+                [node[0] for node in fractions],
+                [len(node[1]) for node in fractions]]
+
+    def expected_data(self):
+        return [2,
+                [[80.838823, 29.386172], [80.988823, 29.611172]],
+                [1, 1]]

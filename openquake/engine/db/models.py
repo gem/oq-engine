@@ -37,7 +37,6 @@ import openquake.hazardlib
 import numpy
 
 from django.db import connection
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -2390,7 +2389,7 @@ class LossFraction(djm.Model):
     variable = djm.TextField(choices=(("taxonomy", "taxonomy"),
                                       ("magnitude_distance",
                                        "Magnitude Distance"),
-                                       ("coordinate", "Coordinate")))
+                                      ("coordinate", "Coordinate")))
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_loss_fraction")
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
@@ -2452,8 +2451,10 @@ class LossFraction(djm.Model):
         cursor.execute(query, (self.id,))
 
         return collections.OrderedDict(
-            [(self.display_value(value), (loss, loss / total))
-             for value, loss in cursor])
+            sorted(
+                [(self.display_value(value), (loss, loss / total))
+                 for value, loss in cursor],
+                key=lambda kv: kv[1][0]))
 
     def iteritems(self):
         """
@@ -2475,7 +2476,7 @@ class LossFraction(djm.Model):
                      ST_Y(location) as lat,
               value, sum(absolute_loss) as fraction_loss
               FROM riskr.loss_fraction_data
-              WHERE loss_fraction_id = 42
+              WHERE loss_fraction_id = %s
               GROUP BY location, value) g
         WINDOW w AS (PARTITION BY lon, lat)
         """
@@ -2505,8 +2506,8 @@ class LossFraction(djm.Model):
 
             display_value, fraction = display_value_and_fractions(
                 value, absolute_loss, total_loss)
-            node = ((lon, lat),
-                    {display_value: (absolute_loss, fraction)})
+            node = [(lon, lat),
+                    {display_value: (absolute_loss, fraction)}]
 
             data = cursor.fetchmany(count - 1)
 
@@ -2515,6 +2516,9 @@ class LossFraction(djm.Model):
                     value, absolute_loss, total_loss)
                 node[1][display_value] = (absolute_loss, fraction)
 
+            node[1] = collections.OrderedDict(
+                sorted([(k, v) for k, v in node[1].items()],
+                       key=lambda kv: kv[1][0]))
             yield node
 
 
