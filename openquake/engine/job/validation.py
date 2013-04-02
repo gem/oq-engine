@@ -665,6 +665,9 @@ def sites_is_valid(mdl):
 
 
 def sites_disagg_is_valid(mdl):
+    # sites_disagg is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
     valid = True
     errors = []
 
@@ -987,18 +990,30 @@ def region_constraint_is_valid(_mdl):
 
 
 def mag_bin_width_is_valid(mdl):
+    # mag_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.mag_bin_width > 0.0:
         return False, ['Magnitude bin width must be > 0.0']
     return True, []
 
 
 def distance_bin_width_is_valid(mdl):
+    # distance_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.distance_bin_width > 0.0:
         return False, ['Distance bin width must be > 0.0']
     return True, []
 
 
 def coordinate_bin_width_is_valid(mdl):
+    # coordinate_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.coordinate_bin_width > 0.0:
         return False, ['Coordinate bin width must be > 0.0']
     return True, []
@@ -1071,6 +1086,9 @@ def number_of_ground_motion_fields_is_valid(mdl):
 
 
 def poes_disagg_is_valid(mdl):
+    # poes_disagg optional in classical risk
+    if mdl.calculation_mode == 'classical':
+        return True, []
     poesd = mdl.poes_disagg
     if len(poesd) == 0:
         return False, ['`poes_disagg` must contain at least 1 value']
