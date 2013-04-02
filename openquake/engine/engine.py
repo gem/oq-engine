@@ -17,6 +17,7 @@
 calculations."""
 
 import ConfigParser
+import csv
 import getpass
 import md5
 import os
@@ -107,9 +108,20 @@ def parse_config(source):
     params = dict(base_path=base_path)
     files = dict()
 
+    # Directory containing the config file we're parsing.
+    base_path = os.path.dirname(os.path.abspath(source.name))
+
     for sect in cp.sections():
         for key, value in cp.items(sect):
-            if key.endswith('_file'):
+            if key == 'sites_csv':
+                # Parse site coordinates from the csv file,
+                # return as MULTIPOINT WKT:
+                path = value
+                if not os.path.isabs(path):
+                    # It's a relative path
+                    path = os.path.join(base_path, path)
+                params['sites'] = _parse_sites_csv(open(path, 'r'))
+            elif key.endswith('_file'):
                 input_type = key[:-5]
                 if not input_type in INPUT_TYPES:
                     raise ValueError(
@@ -120,11 +132,7 @@ def parse_config(source):
                 # could be an absolute path.
                 if not os.path.isabs(path):
                     # It's a relative path.
-                    if hasattr(source, 'name'):
-                        base_path = os.path.dirname(
-                            os.path.abspath(source.name)
-                        )
-                        path = os.path.join(base_path, path)
+                    path = os.path.join(base_path, path)
 
                 files[key] = get_input(
                     path, input_type, prepare_user(getpass.getuser())
@@ -133,6 +141,25 @@ def parse_config(source):
                 params[key] = value
 
     return params, files
+
+
+def _parse_sites_csv(fh):
+    """
+    Get sites of interest from a csv file. The csv file (``fh``) is expected to
+    have 2 columns: lon,lat.
+
+    :param fh:
+        File-like containing lon,lat coordinates in csv format.
+
+    :returns:
+        MULTIPOINT WKT representing all of the sites in the csv file.
+    """
+    reader = csv.reader(fh)
+    coords = []
+    for lon, lat in reader:
+        coords.append('%s %s' % (lon, lat))
+
+    return 'MULTIPOINT(%s)' % ', '.join(coords)
 
 
 def _file_digest(path):
