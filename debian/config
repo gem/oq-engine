@@ -1,7 +1,9 @@
 #!/bin/sh -e
 PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
 
-echo "CONFIG $*" >> /tmp/oq-engine.log
+#echo "CONFIG [$PPID] $*" >> /tmp/oq-engine.log
+#env >> /tmp/oq-engine.log
+#echo "FINISH" >> /tmp/oq-engine.log
 
 # Source debconf library.
 . /usr/share/debconf/confmodule
@@ -10,7 +12,7 @@ echo "CONFIG $*" >> /tmp/oq-engine.log
 #  NOTE
 #        look 'debian/postinst' file if you want to change something here
 #
-# exists postgres config file ?
+# does postgresql config file exist ?
 if [ -f "$PG_CONF" ]; then
     # is standard_conforming_strings set to the wrong value for us ?
     if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
