@@ -19,20 +19,22 @@
 """
 A script to dump hazard outputs. If you launch it with a hazard_calculation_id
 it will dump all the hazard outputs relevant for risk calculations in a
-zip file named hc<hazard-calculation-id>.zip. The zip file can then be
-moved around and restored in a different database. Just unzip it and
+tarfile named hc<hazard-calculation-id>.tar. The tar file can then
+be moved around and restored in a different database. Just untar it and
 follow the instructions in the README.txt file, i.e. run the included
 restore.sh file. Internally the dump and restore procedures are based on
 COPY TO and COPY FROM commands, so they are quite performant even for
-large datasets. They could trivially be extended to perform binary
-dump/restore, if needed.
+large datasets. They cannot trivially be extended to perform binary
+dump/restore for postgis 1.5, since the geography type has no binary form.
 """
 
 import os
 import shutil
-import zipfile
+import tarfile
+import gzip
 import argparse
-from django.db import connection
+import psycopg2
+import tempfile
 
 README = '''\
 To restore a hazard computation and all of its outputs into a new database,
@@ -77,22 +79,22 @@ class Cursor(object):
         Performs a COPY TO/FROM operation; sql is the query, dest
         is the destination directory, name is the destination name
         and mode is 'w' (for COPY TO) or 'r' (for COPY FROM).
+        It works directly with gzipped files.
         """
-        fname = os.path.join(dest, name)
-        print '%s (-> %s)' % (query, fname)
-        with open(fname, mode) as f:
+        fname = os.path.join(dest, name + '.gz')
+        print '%s\n(-> %s)' % (query, fname)
+        with gzip.open(fname, mode) as f:
             self._cursor.copy_expert(query, f)
 
 
-def zipdir(dirpath):
+def tardir(dirpath, name):
     """
-    Zip the contents of a directory into a zipfile and remove the directory
+    Tar the contents of a directory into a tarfile and remove the directory
     """
-    with zipfile.ZipFile(dirpath + '.zip', 'w') as z:
-        for name in os.listdir(dirpath):
-            z.write(os.path.join(dirpath, name))
+    with tarfile.open(dirpath + '.tar', 'w') as t:
+        t.add(dirpath, name)
     shutil.rmtree(dirpath)
-    return dirpath + '.zip'
+    return dirpath + '.tar'
 
 
 def restore_cmd(*names):
@@ -103,76 +105,109 @@ def restore_cmd(*names):
             for name in names]
 
 
-def dump_hazard_calculation(curs, id_, dest):
-    curs.copy("""copy (select * from uiapi.hazard_calculation where id=%s)
-              to stdout""" % id_, dest, 'hazard_calculation.csv', 'w')
-    curs.copy("""copy (select * from hzrdr.lt_realization
-              where hazard_calculation_id=%s)
-              to stdout""" % id_, dest, 'lt_realization.csv', 'w')
-    return restore_cmd('uiapi.hazard_calculation', 'hzrdr.lt_realization')
+class Dumper(object):
+
+    def __init__(self, curs, dest, format):
+        self.curs = curs
+        self.dest = dest
+        self.format = format
+        assert format == 'text', format
+        # there is no binary format for geography in postgis 1.5,
+        # this is why we are requiring text format
+
+    def hazard_calculation(self, id_):
+        self.curs.copy(
+            """copy (select * from uiapi.hazard_calculation where id=%s)
+                  to stdout with (format '%s')""" % (id_, self.format),
+            self.dest, 'hazard_calculation.csv', 'w')
+        self.curs.copy(
+            """copy (select * from hzrdr.lt_realization
+                  where hazard_calculation_id=%s)
+                  to stdout with (format '%s')""" % (id_, self.format),
+            self.dest, 'lt_realization.csv', 'w')
+        return restore_cmd('uiapi.hazard_calculation', 'hzrdr.lt_realization')
+
+    def oq_job(self, id_):
+        self.curs.copy(
+            """copy (select * from uiapi.oq_job where id in %s)
+                  to stdout with (format '%s')""" % (id_, self.format),
+            self.dest, 'oq_job.csv', 'w')
+        return restore_cmd('uiapi.oq_job')
+
+    def output(self, ids):
+        self.curs.copy(
+            """copy (select * from uiapi.output where id in %s)
+                  to stdout with (format '%s')""" % (ids, self.format),
+            self.dest, 'output.csv', 'w')
+        return restore_cmd('uiapi.output')
+
+    def hazard_curve(self, output):
+        self.curs.copy(
+            """copy (select * from hzrdr.hazard_curve where output_id in %s)
+                  to stdout with (format '%s')""" % (output, self.format),
+            self.dest, 'hazard_curve.csv', 'w')
+
+        ids = self.curs.tuplestr(
+            'select id from hzrdr.hazard_curve where output_id in %s' % output)
+        self.curs.copy(
+            """copy (select * from hzrdr.hazard_curve_data
+                  where hazard_curve_id in {})
+                  to stdout with (format '{}')""".format(ids, self.format),
+            self.dest, 'hazard_curve_data.csv', 'w')
+
+        return restore_cmd('hzrdr.hazard_curve', 'hzrdr.hazard_curve_data')
+
+    def gmf_collection(self, output):
+        self.curs.copy(
+            """copy (select * from hzrdr.gmf_collection
+                  where output_id in %s)
+                  to stdout with (format '%s')""" % (output, self.format),
+            self.dest, 'gmf_collection.csv', 'w')
+
+        coll_ids = self.curs.tuplestr('select id from hzrdr.gmf_collection '
+                                      'where output_id in %s' % output)
+        self.curs.copy(
+            """copy (select * from hzrdr.gmf_set
+                  where gmf_collection_id in %s)
+                  to stdout with (format '%s')""" % (coll_ids, self.format),
+            self.dest, 'gmf_set.csv', 'w')
+
+        set_ids = self.curs.tuplestr(
+            'select id from hzrdr.gmf_set '
+            'where gmf_collection_id in %s' % coll_ids)
+        self.curs.copy(
+            """copy (select * from hzrdr.gmf where gmf_set_id in {})
+                  to stdout with (format '{}')""".format(set_ids, self.format),
+            self.dest, 'gmf.csv', 'w')
+
+        return restore_cmd(
+            'hzrdr.gmf_collection', 'hzrdr.gmf_set', 'hzrdr.gmf')
+
+    def gmf_scenario(self, output):
+        self.curs.copy("""copy (select * from hzrdr.gmf_scenario
+                     where output_id in %s)
+                     to stdout with (format '%s')""" % (output, self.format),
+                       self.dest, 'gmf_scenario.csv', 'w')
+        return restore_cmd('hzrdr.gmf_scenario')
 
 
-def dump_oq_job(curs, id_, dest):
-    curs.copy("""copy (select * from uiapi.oq_job where id in %s)
-              to stdout""" % id_, dest, 'oq_job.csv', 'w')
-    return restore_cmd('uiapi.oq_job')
-
-
-def dump_output(curs, ids, dest):
-    curs.copy("""copy (select * from uiapi.output where id in %s)
-              to stdout""" % ids, dest, 'output.csv', 'w')
-    return restore_cmd('uiapi.output')
-
-
-def dump_hazard_curve(curs, output, dest):
-    curs.copy("""copy (select * from hzrdr.hazard_curve where output_id in %s)
-              to stdout""" % output, dest, 'hazard_curve.csv', 'w')
-
-    ids = curs.tuplestr(
-        'select id from hzrdr.hazard_curve where output_id in %s' % output)
-    curs.copy("""copy (select * from hzrdr.hazard_curve_data
-              where hazard_curve_id in {})
-              to stdout""".format(ids), dest, 'hazard_curve_data.csv', 'w')
-
-    return restore_cmd('hzrdr.hazard_curve', 'hzrdr.hazard_curve_data')
-
-
-def dump_gmf_collection(curs, output, dest):
-    curs.copy("""copy (select * from hzrdr.gmf_collection
-              where output_id in %s)
-              to stdout""" % output, dest, 'gmf_collection.csv', 'w')
-
-    coll_ids = curs.tuplestr('select id from hzrdr.gmf_collection '
-                             'where output_id in %s' % output)
-    curs.copy("""copy (select * from hzrdr.gmf_set
-              where gmf_collection_id in %s)
-              to stdout""" % coll_ids, dest, 'gmf_set.csv', 'w')
-
-    set_ids = curs.tuplestr('select id from hzrdr.gmf_set '
-                            'where gmf_collection_id in %s' % coll_ids)
-    curs.copy("""copy (select * from hzrdr.gmf where gmf_set_id in {})
-              to stdout""".format(set_ids), dest, 'gmf.csv', 'w')
-
-    return restore_cmd('hzrdr.gmf_collection', 'hzrdr.gmf_set', 'hzrdr.gmf')
-
-
-def dump_gmf_scenario(curs, output, dest):
-    curs.copy("""copy (select * from hzrdr.gmf_scenario
-                 where output_id in %s)
-                 to stdout""" % output, dest, 'gmf_scenario.csv', 'w')
-    return restore_cmd('hzrdr.gmf_scenario')
-
-
-def main(hazard_calculation_id):
+def main(hazard_calculation_id, host='localhost', dbname='openquake',
+         user='oq_admin', password=''):
     """
     Dump a hazard_calculation and its relative outputs.
     """
-    out_dir = 'hc%s' % hazard_calculation_id
+    dirname = 'hc%s' % hazard_calculation_id
+    out_dir = tempfile.mkdtemp(prefix=dirname)
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
 
-    curs = Cursor(connection.cursor().cursor.cursor)
+    conn = psycopg2.connect(host=None if host == 'localhost' else host,
+                            dbname=dbname, user=user, password=password)
+
+    curs = Cursor(conn.cursor())
+
+    dump = Dumper(curs, out_dir, 'text')
 
     jobs = curs.tuplestr(
         'select id from uiapi.oq_job where hazard_calculation_id =%s',
@@ -185,18 +220,19 @@ def main(hazard_calculation_id):
        """ % jobs)
     if not outputs:
         raise SystemExit('No outputs for jobs %s' % jobs)
-    restore = dump_hazard_calculation(curs, hazard_calculation_id, out_dir)
-    restore.extend(dump_oq_job(curs, jobs, out_dir))
+
+    restore = dump.hazard_calculation(hazard_calculation_id)
+    restore.extend(dump.oq_job(jobs))
     all_outs = sum([output_ids for output_type, output_ids in outputs], [])
-    restore.extend(dump_output(curs, _tuplestr(all_outs), out_dir))
+    restore.extend(dump.output(_tuplestr(all_outs)))
     for output_type, output_ids in outputs:
         ids = _tuplestr(output_ids)
         if output_type == 'hazard_curve':
-            restore.extend(dump_hazard_curve(curs, ids, out_dir))
+            restore.extend(dump.hazard_curve(ids))
         elif output_type == 'gmf':
-            restore.extend(dump_gmf_collection(curs, ids, out_dir))
+            restore.extend(dump.gmf_collection(ids))
         elif output_type == 'gmf_scenario':
-            restore.extend(dump_gmf_scenario(curs, ids, out_dir))
+            restore.extend(dump.gmf_scenario(ids))
 
     restore_script = os.path.join(out_dir, 'restore.sql')
     with open(restore_script, 'w') as f:
@@ -204,13 +240,19 @@ def main(hazard_calculation_id):
             f.write(cmd)
     with open(os.path.join(out_dir, 'restore.sh'), 'w') as f:
         f.write('sed -ie "s@PWD@`pwd`@g" restore.sql\n')
-        f.write('psql openquake -f restore.sql\n')
+        f.write('gunzip *.gz\n')
+        f.write('psql -U %s %s -f restore.sql\n' % (user, dbname))
     with open(os.path.join(out_dir, 'README.txt'), 'w') as f:
         f.write(README)
-    print 'Written %s' % zipdir(out_dir)
+    print 'Written %s' % tardir(out_dir, dirname)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('hazard_calculation_id')
+    p.add_argument('host', nargs='?', default='localhost')
+    p.add_argument('dbname', nargs='?', default='openquake')
+    p.add_argument('user', nargs='?', default='oq_admin')
+    p.add_argument('password', nargs='?', default='')
     arg = p.parse_args()
-    main(arg.hazard_calculation_id)
+    main(arg.hazard_calculation_id, arg.host, arg.dbname,
+         arg.user, arg.password)
