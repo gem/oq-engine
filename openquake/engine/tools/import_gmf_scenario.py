@@ -2,10 +2,11 @@ import argparse
 from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.engine.db.models import Output, OqUser
+from openquake.engine.engine import get_current_user
 from django.db import connection
 
 
-def import_gmf_scenario(fname):
+def import_gmf_scenario(fileobj, user=None):
     """
     Parse the file with the GMF fields and import it into the table
     gmf_scenario. It also creates a new output record, unrelated to a job.
@@ -13,20 +14,23 @@ def import_gmf_scenario(fname):
     (imt, gmvs, location).
     :returns: the generated :class:`openquake.engine.db.models.Output` object
     """
+    fname = fileobj.name
     curs = connection.cursor().cursor.cursor  # DB API cursor
-    openquake = OqUser.objects.get(user_name='openquake')
+    owner = OqUser.objects.get(user_name=user or get_current_user())
     out = Output.objects.create(
-        owner=openquake, display_name='Imported from %r' % fname,
+        owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
     output_id = str(out.id)
+    f = StringIO()
     if fname.endswith('.xml'):
-        f = StringIO()  # convert the XML into a tab-separated StringIO
-        for imt, gmvs, loc in GMFScenarioParser(fname).parse():
+        # convert the XML into a tab-separated StringIO
+        for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
             gmvs = '{%s}' % str(gmvs)[1:-1]
             print >> f, '\t'.join([output_id, imt, gmvs, loc])
-        f.seek(0)  # rewind
     else:  # assume a tab-separated file
-        f = open(fname)
+        for line in fileobj:
+            f.write('\t'.join([output_id, line]))
+    f.seek(0)  # rewind
     ## import the file-like object with a COPY FROM
     try:
         curs.copy_expert(
