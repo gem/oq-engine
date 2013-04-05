@@ -2391,8 +2391,8 @@ class LossFraction(djm.Model):
                                       ("magnitude_distance",
                                        "Magnitude Distance"),
                                       ("coordinate", "Coordinate")))
-    hazard_output = djm.OneToOneField(
-        "Output", related_name="risk_loss_fraction")
+    hazard_output = djm.ForeignKey(
+        "Output", related_name="risk_loss_fractions")
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
@@ -2468,6 +2468,8 @@ class LossFraction(djm.Model):
         """
         cursor = connection.cursor()
 
+        # Partition by lon,lat because partitioning on geometry types
+        # seems not supported in postgres 1.5
         query = """
         SELECT lon, lat, value,
                fraction_loss,
@@ -2489,8 +2491,8 @@ class LossFraction(djm.Model):
 
             if total_loss > 0:
                 fraction = absolute_loss / total_loss
-            else:
-                fraction = float('nan')
+            else:  # total_loss = absolute_loss = 0
+                fraction = 0
             return display_value, fraction
 
         # We iterate on loss fraction data by location in two steps.
