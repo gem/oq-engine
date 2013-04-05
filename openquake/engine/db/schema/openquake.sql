@@ -983,8 +983,6 @@ CREATE TABLE uiapi.output (
     oq_job_id INTEGER,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
-    path VARCHAR UNIQUE,
-    -- The GUI display name to be used for this output.
     display_name VARCHAR NOT NULL,
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
