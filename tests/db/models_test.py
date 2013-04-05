@@ -18,6 +18,7 @@ import getpass
 import itertools
 import string
 import unittest
+import mock
 
 import numpy
 
@@ -649,3 +650,38 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+
+class LossFractionTestCase(unittest.TestCase):
+    def test_display_taxonomy_value(self):
+        lf = models.LossFraction(variable="taxonomy")
+        rc = mock.Mock()
+
+        self.assertEqual("RC", lf.display_value("RC", rc))
+
+    def test_display_magnitude_distance_value(self):
+        rc = mock.Mock()
+        rc.mag_bin_width = 2
+        rc.distance_bin_width = 10
+
+        lf = models.LossFraction(variable="magnitude_distance")
+
+        self.assertEqual("12.0000,14.0000|300.0000,310.0000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("14.0000,16.0000|210.0000,220.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,2.0000|0.0000,10.0000",
+                         lf.display_value("0, 0", rc))
+
+    def test_display_coordinate_value(self):
+        rc = mock.Mock()
+        rc.coordinate_bin_width = 0.5
+
+        lf = models.LossFraction(variable="coordinate")
+
+        self.assertEqual("3.0000,3.5000|15.0000,15.5000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("3.5000,4.0000|10.5000,11.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,0.5000|0.0000,0.5000",
+                         lf.display_value("0.0, 0.0", rc))

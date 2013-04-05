@@ -420,12 +420,12 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         Event Loss is in CSV format
         """
         return models.Output.objects.filter(oq_job=job).exclude(
-            output_type='event_loss')
+            output_type='event_loss').order_by('id')
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,
                 self.EXPECTED_LOSS_MAP_0_1_XML,
                 self.EXPECTED_LOSS_MAP_0_2_XML,
                 self.EXPECTED_LOSS_MAP_0_3_XML,
-                self.EXPECTED_AGG_LOSS_CURVE_XML,
-                self.EXPECTED_INS_LOSS_CURVE_XML]
+                self.EXPECTED_INS_LOSS_CURVE_XML,
+                self.EXPECTED_AGG_LOSS_CURVE_XML]
