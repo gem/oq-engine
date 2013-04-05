@@ -1063,9 +1063,9 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
             demo_file('simple_fault_demo_hazard/job.ini')
         )
         self.compulsory_arguments = dict(
-            calculation_mode="classical",
             lrem_steps_per_interval=5)
         self.other_args = dict(
+            calculation_mode="classical",
             owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -1089,15 +1089,18 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
             return itertools.chain.from_iterable(
                 itertools.combinations(s, r) for r in range(len(s) + 1))
 
+        # for each set of compulsory arguments, we set them to None
         for fields in list(powerset(self.compulsory_arguments))[1:]:
-            compulsory_arguments = dict(self.compulsory_arguments.items())
+            arguments = dict(self.compulsory_arguments.items())
             for field in fields:
-                compulsory_arguments[field] = None
-            compulsory_arguments.update(self.other_args)
-            rc = models.RiskCalculation(**compulsory_arguments)
+                arguments[field] = None
 
-            form = validation.ClassicalRiskForm(
-                instance=rc, files=None)
+            # then we set other not-compulsory arguments
+            arguments.update(self.other_args)
+
+            rc = models.RiskCalculation(**arguments)
+
+            form = validation.ClassicalRiskForm(instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
 
