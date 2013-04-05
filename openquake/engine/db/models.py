@@ -2400,10 +2400,13 @@ class LossFraction(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
 
-    def display_value(self, value):
+    def display_value(self, value, rc):
         """
         Converts `value` in a form that is best suited to be
         displayed.
+
+        :param rc:
+           A `RiskCalculation` object used to get the bin width
 
         :returns: `value` if the attribute `variable` is equal to
            taxonomy. if the attribute `variable` is equal to
@@ -2411,7 +2414,7 @@ class LossFraction(djm.Model):
            separated) from `value` and convert them into ranges
            encoded back as csv.
         """
-        rc = self.output.oq_job.risk_calculation
+
         if self.variable == "taxonomy":
             return value
         elif self.variable == "magnitude_distance":
@@ -2422,8 +2425,12 @@ class LossFraction(djm.Model):
                 distance * rc.distance_bin_width,
                 (distance + 1) * rc.distance_bin_width)
         elif self.variable == "coordinate":
-            return "%.4f,%.4f" % (float(value) * rc.coordinate_bin_width,
-                                  (float(value) + 1) * rc.coordinate_bin_width)
+            lon, lat = map(float, value.split(","))
+            return "%.4f,%.4f|%.4f,%.4f" % (
+                lon * rc.coordinate_bin_width,
+                (lon + 1) * rc.coordinate_bin_width,
+                lat * rc.coordinate_bin_width,
+                (lat + 1) * rc.coordinate_bin_width)
         else:
             raise RuntimeError(
                 "disaggregation of type %s not supported" % self.variable)
@@ -2451,9 +2458,11 @@ class LossFraction(djm.Model):
         """
         cursor.execute(query, (self.id,))
 
+        rc = self.output.oq_job.risk_calculation
+
         return collections.OrderedDict(
             sorted(
-                [(self.display_value(value), (loss, loss / total))
+                [(self.display_value(value, rc), (loss, loss / total))
                  for value, loss in cursor],
                 key=lambda kv: kv[1][0]))
 
@@ -2466,10 +2475,11 @@ class LossFraction(djm.Model):
         corresponding value is a tuple holding the absolute losses and
         the fraction of losses occurring in that location.
         """
+        rc = self.output.oq_job.risk_calculation
         cursor = connection.cursor()
 
         # Partition by lon,lat because partitioning on geometry types
-        # seems not supported in postgres 1.5
+        # seems not supported in postgis 1.5
         query = """
         SELECT lon, lat, value,
                fraction_loss,
@@ -2487,7 +2497,7 @@ class LossFraction(djm.Model):
         cursor.execute(query, (self.id, ))
 
         def display_value_and_fractions(value, absolute_loss, total_loss):
-            display_value = self.display_value(value)
+            display_value = self.display_value(value, rc)
 
             if total_loss > 0:
                 fraction = absolute_loss / total_loss
