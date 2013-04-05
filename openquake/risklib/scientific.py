@@ -94,6 +94,27 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
+    def strictly_increasing(self):
+        """
+        :returns:
+          a new vulnerability function that is strictly increasing.
+          It is built by removing piece of the function where the mean
+          loss ratio is constant.
+        """
+        imls, mlrs, covs = [], [], []
+
+        previous_mlr = None
+        for i, mlr in enumerate(self.mean_loss_ratios):
+            if previous_mlr == mlr:
+                continue
+            else:
+                mlrs.append(mlr)
+                imls.append(self.imls[i])
+                covs.append(self.covs[i])
+                previous_mlr = mlr
+
+        return self.__class__(imls, mlrs, covs, self.distribution_name)
+
     def mean_loss_ratios_with_steps(self, steps):
         """
         Split the mean loss ratios, producing a new set of loss ratios. The new
@@ -536,11 +557,12 @@ def classical(vulnerability_function, hazard_curve_values, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    loss_ratios, lrem = vulnerability_function.loss_ratio_exceedance_matrix(
-        steps)
+    vf = vulnerability_function.strictly_increasing()
+
+    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
-        vulnerability_function, lrem, hazard_curve_values)
+        vf, lrem, hazard_curve_values)
 
     poes = lrem_po.sum(axis=1)
 
