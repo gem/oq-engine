@@ -16,7 +16,7 @@ def import_gmf_scenario(fileobj, user=None):
     """
     fname = fileobj.name
     curs = connection.cursor().cursor.cursor  # DB API cursor
-    owner = OqUser.objects.get(user_name=user or get_current_user())
+    owner = OqUser.objects.get(user_name=user) if user else get_current_user()
     out = Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
