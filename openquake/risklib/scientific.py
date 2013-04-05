@@ -495,9 +495,9 @@ def event_based(loss_values, tses, time_span,
     poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
     reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
-    values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
+    losses = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
 
-    return curve.Curve(zip(values, reference_poes))
+    return losses[::-1], reference_poes[::-1]
 
 
 ##

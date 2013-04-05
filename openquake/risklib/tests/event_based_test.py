@@ -326,8 +326,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_constant(self):
         expected = [10] * 100
-        actual = scientific.event_based(expected, 50, 50, 11)
+        losses, poes = scientific.event_based(expected, 50, 50, 11)
 
-        numpy.testing.assert_allclose([10] * 11, actual.abscissae)
+        numpy.testing.assert_allclose([10] * 11, losses)
         numpy.testing.assert_allclose(
-            numpy.arange(0, 1.1, 0.1), actual.ordinates)
+            numpy.arange(1.0, -0.1, -0.1), poes,
+            atol=1E-10)

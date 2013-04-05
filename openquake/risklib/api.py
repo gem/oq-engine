@@ -78,10 +78,10 @@ class ProbabilisticEventBased(object):
             for ground_motion_field in ground_motion_fields]
 
         return (loss_ratios,
-                [scientific.event_based(
+                [curve.Curve(zip(*scientific.event_based(
                     asset_loss_ratios,
                     tses=self.tses, time_span=self.time_span,
-                    curve_resolution=self.curve_resolution)
+                    curve_resolution=self.curve_resolution)))
                     for asset_loss_ratios in loss_ratios])
 
 
