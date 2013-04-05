@@ -88,12 +88,9 @@ class EventBasedRiskCalculatorTestCase(
         # specific method to write loss curves
 
         base_path = 'openquake.engine.calculators.risk.general'
-        patches = [helpers.patch(x)
-                   for x in ['%s.write_loss_curve' % base_path,
-                             '%s.update_aggregate_losses' % base_path]]
+        patch = helpers.patch('%s.write_loss_curve' % base_path)
 
-        mocked_loss_writer = patches[0].start()
-        mocked_agg_loss_writer = patches[1].start()
+        mocked_loss_writer = patch.start()
 
         event_based.event_based(
             *self.calculator.task_arg_gen(
@@ -103,17 +100,17 @@ class EventBasedRiskCalculatorTestCase(
         # constraint, so there are only four loss curves (2 of them
         # are insured) to be written
         self.assertEqual(2, mocked_loss_writer.call_count)
-        self.assertEqual(1, mocked_agg_loss_writer.call_count)
-        patches[0].stop()
-        patches[1].stop()
+        patch.stop()
 
     def test_complete_workflow(self):
         # Test the complete risk classical calculation workflow and test
         # for the presence of the outputs
         self.calculator.execute()
+        self.calculator.post_process()
 
-        # 1 loss curve + 3 loss maps + 1 aggregate curve + 1 insured curve
-        self.assertEqual(6,
+        # 1 loss curve + 3 loss maps + 1 aggregate curve + 1 insured
+        # curve + 1 event loss table
+        self.assertEqual(7,
                          models.Output.objects.filter(oq_job=self.job).count())
         self.assertEqual(1,
                          models.LossCurve.objects.filter(
@@ -145,4 +142,4 @@ class EventBasedRiskCalculatorTestCase(
                              loss_map__output__oq_job=self.job).count())
 
         files = self.calculator.export(exports=True)
-        self.assertEqual(6, len(files))
+        self.assertEqual(7, len(files))

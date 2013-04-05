@@ -112,6 +112,8 @@ GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve_data           TO oq_reslt_writer
 GRANT SELECT,INSERT,UPDATE ON riskr.aggregate_loss_curve_data TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.loss_map                  TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.loss_map_data             TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_fraction             TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE ON riskr.loss_fraction_data        TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.aggregate_loss            TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.bcr_distribution          TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.bcr_distribution_data     TO oq_reslt_writer;
