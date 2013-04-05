@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import numpy
-from openquake.risklib import scientific
+from openquake.risklib import scientific, curve
 
 
 class Classical(object):
@@ -29,15 +29,14 @@ class Classical(object):
     def __init__(self, vulnerability_function, steps=10):
         self.vulnerability_function = vulnerability_function
         self.steps = steps
-        self.loss_ratio_exceedance_matrix = (
-            vulnerability_function.loss_ratio_exceedance_matrix(steps))
 
     def __call__(self, hazard_curves):
-        return [scientific.classical(
+        return [curve.Curve(
+            zip(*scientific.classical(
                 self.vulnerability_function,
-                self.loss_ratio_exceedance_matrix,
                 hazard_curve,
-                self.steps) for hazard_curve in hazard_curves]
+                steps=self.steps)))
+                for hazard_curve in hazard_curves]
 
 
 class ProbabilisticEventBased(object):
