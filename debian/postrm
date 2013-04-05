@@ -26,6 +26,13 @@ case "$1" in
     done
     ;;
   purge)
+    if [ -e /usr/share/debconf/confmodule ]; then
+        # Source debconf library.
+        . /usr/share/debconf/confmodule
+        # Remove my changes to the db.
+        db_purge
+    fi
+
     # This package has previously been removed and is now having
     # its configuration purged from the system.
     :
