@@ -259,6 +259,8 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - dmg_dist_per_taxonomy
     - dmg_dist_total
     - bcr_distribution';
+COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
+NULL if the output was imported from an external source';
 
 
 COMMENT ON TABLE uiapi.src2ltsrc IS '
