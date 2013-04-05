@@ -37,7 +37,6 @@ import openquake.hazardlib
 import numpy
 
 from django.db import connection
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -1119,7 +1118,11 @@ class RiskCalculation(djm.Model):
     # Classical parameters:
     #######################
     lrem_steps_per_interval = djm.IntegerField(null=True, blank=True)
-    # poes_disagg = fields.FloatArrayField(null=True, blank=True)
+
+    poes_disagg = fields.FloatArrayField(
+        null=True, blank=True,
+        help_text='The probability of exceedance used to interpolate '
+                  'loss curves for disaggregation purposes')
 
     #########################
     # Event-Based parameters:
@@ -1127,6 +1130,26 @@ class RiskCalculation(djm.Model):
     loss_curve_resolution = djm.IntegerField(
         null=False, blank=True, default=DEFAULT_LOSS_CURVE_RESOLUTION)
     insured_losses = djm.NullBooleanField(null=True, blank=True, default=False)
+
+    # The points of interest for disaggregation
+    sites_disagg = djm.MultiPointField(
+        srid=DEFAULT_SRID, null=True, blank=True)
+
+    mag_bin_width = djm.FloatField(
+        help_text=('Width of magnitude bins'),
+        null=True,
+        blank=True,
+    )
+    distance_bin_width = djm.FloatField(
+        help_text=('Width of distance bins'),
+        null=True,
+        blank=True,
+    )
+    coordinate_bin_width = djm.FloatField(
+        help_text=('Width of coordinate bins'),
+        null=True,
+        blank=True,
+    )
 
     ######################################
     # BCR (Benefit-Cost Ratio) parameters:
@@ -1209,6 +1232,7 @@ def _prep_geometry(kwargs):
     # If geometries were specified as string lists of coords,
     # convert them to WKT before doing anything else.
     for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
+                           ('sites_disagg', 'MULTIPOINT(%s)'),
                            ('region', 'POLYGON((%s))'),
                            ('region_constraint', 'POLYGON((%s))')):
         if field in kwargs:
@@ -1584,6 +1608,8 @@ class Output(djm.Model):
                     the_output = self.loss_curve
                 elif self.output_type == 'loss_map':
                     the_output = self.loss_map
+                elif self.output_type == 'loss_fraction':
+                    the_output = self.loss_fraction
                 else:
                     raise RuntimeError(
                         'Error getting hazard metadata: Unexpected output_type'
@@ -1898,6 +1924,10 @@ class SESRupture(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     depths = fields.PickleField()
+
+    # HazardLib Surface object. Stored as it is needed by risk disaggregation
+    surface = fields.PickleField()
+
     result_grp_ordinal = djm.IntegerField()
     # NOTE(LB): The ordinal of a rupture within a given result group (indicated
     # by ``result_grp_ordinal``). This rupture correspond to the indices of the
@@ -2351,6 +2381,173 @@ class LtRealization(djm.Model):
 
 
 ## Tables in the 'riskr' schema.
+
+
+class LossFraction(djm.Model):
+    """
+    Holds metadata for loss fraction data
+    """
+    output = djm.OneToOneField("Output", related_name="loss_fraction")
+    variable = djm.TextField(choices=(("taxonomy", "taxonomy"),
+                                      ("magnitude_distance",
+                                       "Magnitude Distance"),
+                                      ("coordinate", "Coordinate")))
+    hazard_output = djm.ForeignKey(
+        "Output", related_name="risk_loss_fractions")
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
+    poe = djm.FloatField(null=True)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_fraction'
+
+    def display_value(self, value, rc):
+        """
+        Converts `value` in a form that is best suited to be
+        displayed.
+
+        :param rc:
+           A `RiskCalculation` object used to get the bin width
+
+        :returns: `value` if the attribute `variable` is equal to
+           taxonomy. if the attribute `variable` is equal to
+           `magnitude-distance`, then it extracts two integers (comma
+           separated) from `value` and convert them into ranges
+           encoded back as csv.
+        """
+
+        if self.variable == "taxonomy":
+            return value
+        elif self.variable == "magnitude_distance":
+            magnitude, distance = map(float, value.split(","))
+            return "%.4f,%.4f|%.4f,%.4f" % (
+                magnitude * rc.mag_bin_width,
+                (magnitude + 1) * rc.mag_bin_width,
+                distance * rc.distance_bin_width,
+                (distance + 1) * rc.distance_bin_width)
+        elif self.variable == "coordinate":
+            lon, lat = map(float, value.split(","))
+            return "%.4f,%.4f|%.4f,%.4f" % (
+                lon * rc.coordinate_bin_width,
+                (lon + 1) * rc.coordinate_bin_width,
+                lat * rc.coordinate_bin_width,
+                (lat + 1) * rc.coordinate_bin_width)
+        else:
+            raise RuntimeError(
+                "disaggregation of type %s not supported" % self.variable)
+
+    def total_fractions(self):
+        """
+        :returns: a dictionary mapping values of `variable` (e.g. a
+        taxonomy) to tuples yielding the associated absolute losses
+        (e.g. the absolute losses for assets of a taxonomy) and the
+        percentage (expressed in decimal format) over the total losses
+        """
+        cursor = connection.cursor()
+
+        total = self.lossfractiondata_set.aggregate(
+            djm.Sum('absolute_loss')).values()[0]
+
+        if not total:
+            return {}
+
+        query = """
+        SELECT value, sum(absolute_loss)
+        FROM riskr.loss_fraction_data
+        WHERE loss_fraction_id = %s
+        GROUP BY value
+        """
+        cursor.execute(query, (self.id,))
+
+        rc = self.output.oq_job.risk_calculation
+
+        return collections.OrderedDict(
+            sorted(
+                [(self.display_value(value, rc), (loss, loss / total))
+                 for value, loss in cursor],
+                key=lambda kv: kv[1][0]))
+
+    def iteritems(self):
+        """
+        Yields tuples with two elements. The first one is a location
+        (described by a lon/lat tuple), the second one is a dictionary
+        modeling the disaggregation of the losses on such location. In
+        this dictionary, each key is a value of `variable`, and each
+        corresponding value is a tuple holding the absolute losses and
+        the fraction of losses occurring in that location.
+        """
+        rc = self.output.oq_job.risk_calculation
+        cursor = connection.cursor()
+
+        # Partition by lon,lat because partitioning on geometry types
+        # seems not supported in postgis 1.5
+        query = """
+        SELECT lon, lat, value,
+               fraction_loss,
+               SUM(fraction_loss) OVER w,
+               COUNT(*) OVER w
+        FROM (SELECT ST_X(location) as lon,
+                     ST_Y(location) as lat,
+              value, sum(absolute_loss) as fraction_loss
+              FROM riskr.loss_fraction_data
+              WHERE loss_fraction_id = %s
+              GROUP BY location, value) g
+        WINDOW w AS (PARTITION BY lon, lat)
+        """
+
+        cursor.execute(query, (self.id, ))
+
+        def display_value_and_fractions(value, absolute_loss, total_loss):
+            display_value = self.display_value(value, rc)
+
+            if total_loss > 0:
+                fraction = absolute_loss / total_loss
+            else:
+                # When a rupture is associated with a positive ground
+                # shaking (gmv > 0) but with a loss = 0, we still
+                # store this information. In that case, total_loss =
+                # absolute_loss = 0
+                fraction = 0
+            return display_value, fraction
+
+        # We iterate on loss fraction data by location in two steps.
+        # First we fetch a loss fraction for a single location and a
+        # single value. In the same query we get the number `count` of
+        # bins stored for such location. Then, we fetch `count` - 1
+        # fractions to finalize the fractions on the current location.
+
+        while 1:
+            data = cursor.fetchone()
+            if data is None:
+                raise StopIteration
+            lon, lat, value, absolute_loss, total_loss, count = data
+
+            display_value, fraction = display_value_and_fractions(
+                value, absolute_loss, total_loss)
+            node = [(lon, lat),
+                    {display_value: (absolute_loss, fraction)}]
+
+            data = cursor.fetchmany(count - 1)
+
+            for lon, lat, value, absolute_loss, total_loss, count in data:
+                display_value, fraction = display_value_and_fractions(
+                    value, absolute_loss, total_loss)
+                node[1][display_value] = (absolute_loss, fraction)
+
+            node[1] = collections.OrderedDict(
+                sorted([(k, v) for k, v in node[1].items()],
+                       key=lambda kv: kv[1][0]))
+            yield node
+
+
+class LossFractionData(djm.Model):
+    loss_fraction = djm.ForeignKey(LossFraction)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    value = djm.TextField()
+    absolute_loss = djm.TextField()
+
+    class Meta:
+        db_table = 'riskr\".\"loss_fraction_data'
 
 
 class LossMap(djm.Model):
