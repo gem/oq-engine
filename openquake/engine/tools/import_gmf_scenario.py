@@ -1,4 +1,3 @@
-import os
 import argparse
 from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
@@ -40,22 +39,6 @@ def import_gmf_scenario(fname):
     finally:
         f.close()
     return out
-
-
-## the test is here waiting for a better location
-## should this functionality enter into bin/openquake?
-def test_import_gmf_scenario():
-    from openquake import nrmllib
-    from nose.tools import assert_equal
-    repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
-    out = import_gmf_scenario(
-        os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
-    curs = connection.cursor()
-    curs.execute('select count(*) from hzrdr.gmf_scenario where output_id=%s',
-                 (out.id,))
-    assert_equal(curs.fetchone()[0], 9)  # 9 rows entered
-    # just testing that the import does not break, to save us from
-    # changes in the schema
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
