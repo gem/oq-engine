@@ -1502,7 +1502,8 @@ class Output(djm.Model):
         'investigation_time statistics quantile sm_path gsim_path')
 
     owner = djm.ForeignKey('OqUser')
-    oq_job = djm.ForeignKey('OqJob')
+    oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
+    # coming from an external source, with no job associated
     display_name = djm.TextField()
     OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
