@@ -116,6 +116,7 @@ class Dumper(object):
         # this is why we are requiring text format
 
     def hazard_calculation(self, id_):
+        "Dump hazard_calculation"
         self.curs.copy(
             """copy (select * from uiapi.hazard_calculation where id=%s)
                   to stdout with (format '%s')""" % (id_, self.format),
@@ -128,13 +129,29 @@ class Dumper(object):
         return restore_cmd('uiapi.hazard_calculation', 'hzrdr.lt_realization')
 
     def oq_job(self, id_):
+        "Dump oq_job, oq_user, organization"
         self.curs.copy(
             """copy (select * from uiapi.oq_job where id in %s)
                   to stdout with (format '%s')""" % (id_, self.format),
             self.dest, 'oq_job.csv', 'w')
-        return restore_cmd('uiapi.oq_job')
+        owner_id = self.curs.tuplestr(
+            'select owner_id from uiapi.oq_job where id in %s' % id_)
+        self.curs.copy(
+            """copy (select * from admin.oq_user where id in %s and id != 1)
+                  to stdout with (format '%s')""" % (owner_id, self.format),
+            self.dest, 'oq_user.csv', 'w')
+        org_id = self.curs.tuplestr(
+            'select organization_id from admin.oq_user where id in %s'
+            % owner_id)
+        self.curs.copy(
+            """copy (select * from admin.organization where id in %s
+            and id != 1) to stdout with (format '%s')""" %
+            (org_id, self.format), self.dest, 'organization.csv', 'w')
+        return restore_cmd(
+            'uiapi.oq_job', 'admin.oq_user', 'admin.organization')
 
     def output(self, ids):
+        "Dump output"
         self.curs.copy(
             """copy (select * from uiapi.output where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
@@ -142,6 +159,7 @@ class Dumper(object):
         return restore_cmd('uiapi.output')
 
     def hazard_curve(self, output):
+        "Dump hazard_curve, hazard_curve_data"
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
@@ -158,6 +176,7 @@ class Dumper(object):
         return restore_cmd('hzrdr.hazard_curve', 'hzrdr.hazard_curve_data')
 
     def gmf_collection(self, output):
+        "Dump gmf_collection, gmf_set, gmf"
         self.curs.copy(
             """copy (select * from hzrdr.gmf_collection
                   where output_id in %s)
@@ -184,6 +203,7 @@ class Dumper(object):
             'hzrdr.gmf_collection', 'hzrdr.gmf_set', 'hzrdr.gmf')
 
     def gmf_scenario(self, output):
+        "Dump gmf_scenario"
         self.curs.copy("""copy (select * from hzrdr.gmf_scenario
                      where output_id in %s)
                      to stdout with (format '%s')""" % (output, self.format),
