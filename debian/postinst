@@ -18,13 +18,16 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+# load debconf suite
+. /usr/share/debconf/confmodule
+
 GEM_DEB_PACKAGE="python-oq-engine"
+PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
 
 if [ -f /usr/sbin/rabbitmqctl ]; then
     # create rabbitmq configuration for python-celery
     celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
-    if [ $celeryuser_count -eq 0 ];
-    then
+    if [ $celeryuser_count -eq 0 ]; then
         rabbitmqctl add_user celeryuser celery
     fi;
     celeryvhost_count=`rabbitmqctl list_vhosts | grep celeryvhost | wc -l`
@@ -74,14 +77,44 @@ do
 done
 chown -R root.openquake $SDIR
 
-# Is postgres installed on this system?
+#
+#  NOTE
+#        look 'debian/config' file if you want to change something here
+#
+# is postgresql installed on this system?
+if [ -f "$PG_CONF" ]; then
+    # does a bad explicit configuration exist?
+    if grep -q '^[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
+        if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
+            db_get python-oq-engine/override-psql-std-conf-str || true
+            if [ "$RET" = "true" ]; then
+                if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
+                    cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
+                fi
+                sed -i 's/^[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
+            fi
+        fi
+    elif grep -q  '^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
+        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
+            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
+        fi
+        sed -i 's/^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
+    else
+        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
+            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
+        fi
+        echo "# ADDED BY python-oq-engine" >>  "$PG_CONF"
+        echo "standard_conforming_strings = off" >>  "$PG_CONF"
+    fi
+fi
+
 if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     # postgres is installed, flatten and recreate the database.
 
     # Restart postgres in order to get rid of idle/open connections
     # held by celeryd processes.
 
-    # Stop celeryd.
+    # stop celeryd.
     if [ -x /etc/init.d/celeryd ]; then
         /etc/init.d/celeryd stop
     else
@@ -115,6 +148,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         echo "and attach this file to it:"
         echo "    $LOGFILE"
         su -c "psql -p $pgport c \"DROP DATABASE openquake\" >/dev/null 2>&1" postgres
+        db_stop
         exit 1
     fi
 
@@ -166,7 +200,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     cd $DDIR && find . | grep gz$ | xargs gunzip -f
     # Last but not least copy the smoke tests into a more prominent place.
     if [ -d $HDIR/demos ]; then
-        # Do the existing demos differ from the ones we just installed?
+        # are existing demos different from the ones we just installed?
         if ! diff -qrN $HDIR/demos $DDIR >/dev/null ; then
             # The demos do differ, move the old demos out of the way.
             tstamp=`date +"%Y-%m-%d-%H-%M-%S"`
@@ -199,4 +233,5 @@ find /usr/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
 
 #DEBHELPER#
 
+db_stop
 exit 0
