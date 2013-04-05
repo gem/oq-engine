@@ -2502,7 +2502,11 @@ class LossFraction(djm.Model):
 
             if total_loss > 0:
                 fraction = absolute_loss / total_loss
-            else:  # total_loss = absolute_loss = 0
+            else:
+                # When a rupture is associated with a positive ground
+                # shaking (gmv > 0) but with a loss = 0, we still
+                # store this information. In that case, total_loss =
+                # absolute_loss = 0
                 fraction = 0
             return display_value, fraction
 
