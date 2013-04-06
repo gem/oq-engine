@@ -25,7 +25,7 @@ from tests.utils import helpers
 from openquake.engine.db import models
 
 
-# FIXME(lp). This is a regression testing. Data has not been validated
+# FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
 
 
