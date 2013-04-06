@@ -54,8 +54,8 @@ from openquake.engine.calculators.hazard.classical import (
 from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
-from openquake.engine.utils import stats
-from openquake.engine.utils import tasks as utils_tasks
+from openquake.engine.utils import stats, tasks as utils_tasks
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 #: Always 1 for the computation of ground motion fields in the event-based
@@ -214,10 +214,10 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         if hc.ground_motion_fields:
             # save the GMFs to the DB
-            logs.LOG.debug('> saving GMF results to DB')
-            _save_gmfs(
-                gmf_set, gmf_cache, points_to_compute, result_grp_ordinal)
-            logs.LOG.debug('< done saving GMF results to DB')
+            with EnginePerformanceMonitor(
+                    'save gmfs, ses_rlz=%d' % ses_rlz_n, job_id, ses_and_gmfs):
+                _save_gmfs(
+                    gmf_set, gmf_cache, points_to_compute, result_grp_ordinal)
 
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
