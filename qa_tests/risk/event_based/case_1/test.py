@@ -311,7 +311,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     26.0726, 11.3905][::-1]
 
         # FIXME(lp) insured losses has not been got from a reliable
-        # implementation. This is just a regression testing
+        # implementation. This is just a regression test
         insured_losses_1 = [40.5835007, 64.7589890606,
                             68.2290881107, 72.2352916074,
                             76.6619792681, 81.0886669289,
@@ -420,12 +420,12 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         Event Loss is in CSV format
         """
         return models.Output.objects.filter(oq_job=job).exclude(
-            output_type='event_loss')
+            output_type='event_loss').order_by('id')
 
     def expected_outputs(self):
         return [self.EXPECTED_LOSS_CURVE_XML,
                 self.EXPECTED_LOSS_MAP_0_1_XML,
                 self.EXPECTED_LOSS_MAP_0_2_XML,
                 self.EXPECTED_LOSS_MAP_0_3_XML,
-                self.EXPECTED_AGG_LOSS_CURVE_XML,
-                self.EXPECTED_INS_LOSS_CURVE_XML]
+                self.EXPECTED_INS_LOSS_CURVE_XML,
+                self.EXPECTED_AGG_LOSS_CURVE_XML]
