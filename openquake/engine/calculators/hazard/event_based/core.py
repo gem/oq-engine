@@ -112,17 +112,17 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    if hc.ground_motion_fields:
-        # For ground motion field calculation, we need the points of interest
-        # for the calculation.
-        points_to_compute = hc.points_to_compute()
+    # For ground motion field calculation, we need the points of interest
+    # for the calculation.
+    points_to_compute = hc.points_to_compute() if hc.ground_motion_fields \
+        else []
 
-        imts = [haz_general.imt_to_hazardlib(x)
-                for x in hc.intensity_measure_types]
+    imts = [haz_general.imt_to_hazardlib(x)
+            for x in hc.intensity_measure_types]
 
-        correl_model = None
-        if hc.ground_motion_correlation_model is not None:
-            correl_model = haz_general.get_correl_model(hc)
+    correl_model = None
+    if hc.ground_motion_correlation_model is not None:
+        correl_model = haz_general.get_correl_model(hc)
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
@@ -153,14 +153,17 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         filtered_sources = (src for src, _ in ssd_filter(sources_sites))
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
-        if hc.ground_motion_fields:
-            gmf_cache = _create_gmf_cache(len(points_to_compute), imts)
 
-            logs.LOG.debug('> computing also ground motion fields')
-            # This will be the "container" for all computed ground motion field
-            # results for this stochastic event set.
-            gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
+        # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
+        n_sites = len(points_to_compute)
+        gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
+                                    rupture_ids=[]))
+                         for imt in imts)
+
+        # This will be the "container" for all computed ground motion field
+        # results for this stochastic event set.
+        gmf_set = models.GmfSet.objects.get(
+            gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
 
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time)
@@ -195,9 +198,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     filters.rupture_site_distance_filter(
                         hc.maximum_distance),
                 }
-                logs.LOG.debug('> computing ground motion fields')
                 gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
-                logs.LOG.debug('< done computing ground motion fields')
 
                 # update the gmf cache:
                 for imt_key, v in gmf_dict.iteritems():
@@ -221,30 +222,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
-
-
-def _create_gmf_cache(n_sites, imts):
-    """
-    Create a `dict` to cache GMF data during the course of a computation.
-
-    The `dict` is keyed by IMTs (which are IMT objects from
-    :mod:`openquake.hazardlib.imt`).
-    Each value is initialized to a numpy array with a shape of (n, 0), where n
-    is `n_sites`.
-
-    :param int n_sites:
-        The number of sites in the calculation.
-    :param imts:
-        A `list` or other sequence of :mod:`openquake.hazardlib.imt` IMT
-        objects.
-    """
-    cache = dict()
-
-    for imt in imts:
-        cache[imt] = dict(gmvs=numpy.empty((n_sites, 0)),
-                          rupture_ids=[])
-
-    return cache
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -371,8 +348,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A :class:`openquake.engine.db.models.GmfSet` instance, which will be
         the "container" for these GMFs.
     :param dict gmf_dict:
-        The dict use to cache/buffer up GMF results during the calculation.
-        See :func:`_create_gmf_cache`.
+        The dict used to cache/buffer up GMF results during the calculation.
     :param points_to_compute:
         An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing all
         of the points of interest for a calculation.
@@ -382,6 +358,9 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
+    if len(points_to_compute) == 0:
+        return
+
     inserter = writer.BulkInserter(models.Gmf)
 
     for imt, gmf_data in gmf_dict.iteritems():
