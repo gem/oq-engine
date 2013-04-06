@@ -483,6 +483,15 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         for rlz in realizations:
             # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi"),
+                lt_realization=rlz,
+                investigation_time=self.hc.investigation_time)
+
+            # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
@@ -969,6 +978,28 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
+
+        if self.hc.mean_hazard_curves:
+            # create a new `HazardCurve` 'container' record for mean
+            # curves (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "mean-curves-multi-imt",
+                    "hazard_curve_multi"),
+                statistics="mean",
+                investigation_time=self.hc.investigation_time)
+
+        if self.hc.quantile_hazard_curves:
+            for quantile in self.hc.quantile_hazard_curves:
+                # create a new `HazardCurve` 'container' record for mean
+                # curves (virtual container for multiple imts)
+                models.HazardCurve.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, 'quantile(%s)-curves' % quantile,
+                        "hazard_curve_multi"),
+                    statistics="quantile",
+                    quantile=quantile,
+                    investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
             im_type, sa_period, sa_damping = models.parse_imt(imt)
