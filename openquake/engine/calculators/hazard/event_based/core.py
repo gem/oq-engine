@@ -639,18 +639,20 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-        logs.LOG.debug('> starting post processing')
-
         if self.hc.hazard_curves_from_gmfs:
-            post_processing.do_post_process(self.job)
+            with EnginePerformanceMonitor('generating hazard curves',
+                                          self.job.id):
+                post_processing.do_post_process(self.job)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                self.do_aggregate_post_proc()
+                with EnginePerformanceMonitor(
+                        'generating mean/quantile curves', self.job.id):
+                    self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                cls_post_proc.do_hazard_map_post_process(self.job)
-
-        logs.LOG.debug('< done with post processing')
+                with EnginePerformanceMonitor('generating hazard maps',
+                                              self.job.id):
+                    cls_post_proc.do_hazard_map_post_process(self.job)
