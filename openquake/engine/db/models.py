@@ -1520,6 +1520,7 @@ class Output(djm.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
         (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
         # FIXME(lp). We should distinguish between conditional losses
@@ -1541,7 +1542,7 @@ class Output(djm.Model):
         db_table = 'uiapi\".\"output'
 
     def is_hazard_curve(self):
-        return self.output_type == 'hazard_curve'
+        return self.output_type in ['hazard_curve', 'hazard_curve_multi']
 
     def is_gmf_scenario(self):
         return self.output_type == 'gmf_scenario'
@@ -1763,6 +1764,25 @@ class HazardCurve(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
+
+    def __iter__(self):
+        assert self.output.output_type == 'hazard_curve_multi'
+
+        if not self.statistics:
+            return iter(
+                self.output.job.hazard_calculation.output_set.filter(
+                    output_type='hazard_curve',
+                    hazard_curve__lt_realization__isnull=False))
+        elif self.quantile:
+            return iter(
+                self.output.job.hazard_calculation.output_set.filter(
+                    output_type='hazard_curve',
+                    hazard_curve__quantile=self.quantile))
+        else:
+            return iter(
+                self.output.job.hazard_calculation.output_set.filter(
+                    output_type='hazard_curve',
+                    hazard_curve__statistics="mean"))
 
 
 class HazardCurveDataManager(djm.GeoManager):

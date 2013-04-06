@@ -61,6 +61,7 @@ def export(output_id, target_dir):
 
 
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
+HAZARD_CURVES_MULTI_FILENAME_FMT = 'hazard-curves-multi-%(id)s.xml'
 HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
 GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
 SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
@@ -135,6 +136,37 @@ def export_hazard_curve(output, target_dir):
     """
     hc = models.HazardCurve.objects.get(output=output.id)
 
+    hcd = _curve_data(hc)
+    filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
+
+    metadata, path = _curve_metadata(hc, target_dir, filename)
+    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
+    writer.serialize(hcd)
+
+    return [path]
+
+
+@core.makedirs
+def export_hazard_curve_multi(output, target_dir):
+    hcs = iter(output.hazard_curve)
+
+    data = [_curve_data(hc) for hc in iter(hcs)]
+    filename = HAZARD_CURVES_MULTI_FILENAME_FMT % dict(id=hcs.id)
+
+    metadata_set = []
+    path = None
+    for hc in iter(hcs):
+        metadata, path = _curve_metadata(hc, target_dir, filename)
+        metadata_set.append(metadata)
+    assert(path)
+
+    writer = nrml_writers.MultiHazardCurveXMLWriter(path, metadata_set)
+    writer.serialize(data)
+
+    return [path]
+
+
+def _curve_data(hc):
     curves = models.HazardCurveData.objects.all_curves_simple(
         filter_args=dict(hazard_curve=hc.id)
     )
@@ -142,10 +174,10 @@ def export_hazard_curve(output, target_dir):
     # XML writer:
     Location = namedtuple('Location', 'x y')
     HazardCurveData = namedtuple('HazardCurveData', 'location poes')
-    hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
+    return (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
-    filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
 
+def _curve_metadata(hc, target_dir, filename):
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
@@ -166,7 +198,7 @@ def export_hazard_curve(output, target_dir):
         gsimlt_path = None
         path = os.path.abspath(os.path.join(target_dir, filename))
 
-    metadata = {
+    return {
         'quantile_value': hc.quantile,
         'statistics': hc.statistics,
         'smlt_path': smlt_path,
@@ -176,11 +208,7 @@ def export_hazard_curve(output, target_dir):
         'investigation_time': hc.investigation_time,
         'imt': hc.imt,
         'imls': hc.imls,
-    }
-    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
-    writer.serialize(hcd)
-
-    return [path]
+    }, path
 
 
 @core.makedirs
