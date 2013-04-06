@@ -127,7 +127,8 @@ bar = baz
     def test_parse_config_with_files(self):
         site_model_input = helpers.touch(content="foo")
 
-        source = StringIO.StringIO("""
+        try:
+            source = StringIO.StringIO("""
 [general]
 calculation_mode = classical
 [site]
@@ -135,26 +136,69 @@ site_model_file = %s
 maximum_distance=0
 truncation_level=0
 random_seed=0
-""" % site_model_input)
+    """ % site_model_input)
 
-        # Add a 'name' to make this look like a real file:
-        source.name = 'path/to/some/job.ini'
-        exp_base_path = os.path.dirname(
-            os.path.join(os.path.abspath('.'), source.name))
+            # Add a 'name' to make this look like a real file:
+            source.name = 'path/to/some/job.ini'
+            exp_base_path = os.path.dirname(
+                os.path.join(os.path.abspath('.'), source.name))
 
-        expected_params = {
-            'base_path': exp_base_path,
-            'calculation_mode': 'classical',
-            'truncation_level': '0',
-            'random_seed': '0',
-            'maximum_distance': '0'
-        }
+            expected_params = {
+                'base_path': exp_base_path,
+                'calculation_mode': 'classical',
+                'truncation_level': '0',
+                'random_seed': '0',
+                'maximum_distance': '0'
+            }
 
-        params, files = engine.parse_config(source)
-        self.assertEqual(expected_params, params)
-        self.assertEqual(['site_model_file'], files.keys())
-        self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
-                         files['site_model_file'].digest)
+            params, files = engine.parse_config(source)
+            self.assertEqual(expected_params, params)
+            self.assertEqual(['site_model_file'], files.keys())
+            self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
+                             files['site_model_file'].digest)
+        finally:
+            os.unlink(site_model_input)
+
+    def test__parse_sites_csv(self):
+        expected_wkt = 'MULTIPOINT(0.1 0.2, 2 3, 4.1 5.6)'
+        source = StringIO.StringIO("""\
+0.1,0.2
+2,3
+4.1,5.6
+""")
+        wkt = engine._parse_sites_csv(source)
+        self.assertEqual(expected_wkt, wkt)
+
+    def test_parse_config_with_sites_csv(self):
+        sites_csv = helpers.touch(content='1.0,2.1\n3.0,4.1\n5.0,6.1')
+        try:
+            source = StringIO.StringIO("""
+[general]
+calculation_mode = classical
+[geometry]
+sites_csv = %s
+[misc]
+maximum_distance=0
+truncation_level=3
+random_seed=5
+""" % sites_csv)
+            source.name = 'path/to/some/job.ini'
+            exp_base_path = os.path.dirname(
+                os.path.join(os.path.abspath('.'), source.name))
+
+            expected_params = {
+                'base_path': exp_base_path,
+                'sites': 'MULTIPOINT(1.0 2.1, 3.0 4.1, 5.0 6.1)',
+                'calculation_mode': 'classical',
+                'truncation_level': '3',
+                'random_seed': '5',
+                'maximum_distance': '0'
+            }
+
+            params, _ = engine.parse_config(source)
+            self.assertEqual(expected_params, params)
+        finally:
+            os.unlink(sites_csv)
 
 
 class FileDigestTestCase(unittest.TestCase):
@@ -365,7 +409,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # Test the case where a risk calculation is referencing the hazard
         # calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -384,7 +428,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # Test the case where a risk calculation is referencing one of the
         # belonging to the hazard calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -401,7 +445,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         cls.risk_cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
 
     def test_del_risk_calc(self):
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=getpass.getuser()
         )
@@ -443,7 +487,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # Test the case where we try to delete a risk calculation which does
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
-        risk_job, _ = helpers.get_risk_job(
+        risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curves', username=helpers.random_string()
         )
