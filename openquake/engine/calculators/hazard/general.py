@@ -59,7 +59,7 @@ from openquake.engine.utils.general import block_splitter
 
 
 #: Maximum number of hazard curves to cache, for selects or inserts
-_CURVE_CACHE_SIZE = 100000
+CURVE_CACHE_SIZE = 100000
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
@@ -601,6 +601,28 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                 for record in parsers.VulnerabilityModelParser(content)]))
             hc.save()
 
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            parser = iter(parsers.FragilityModelParser(
+                StringIO.StringIO(
+                    queryset.all()[0].model_content.raw_content_ascii)))
+            hc = self.hc
+
+            fragility_format, _limit_states = parser.next()
+
+            if (fragility_format == "continuous" and
+                hc.calculation_mode != "scenario"):
+                raise NotImplementedError(
+                    "Getting IMT and levels from "
+                    "a continuous fragility model is not yet supported")
+
+            hc.intensity_measure_types_and_levels = dict([
+                (iml['IMT'], iml['imls'])
+                for _taxonomy, iml, _params, _no_damage_limit in parser])
+            hc.intensity_measure_types = (
+                hc.intensity_measure_types_and_levels.keys())
+            hc.save()
+
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
             exposure_model_input = queryset.all()[0]
@@ -941,9 +963,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         num_rlzs = models.LtRealization.objects.filter(
             hazard_calculation=self.hc).count()
 
-        num_site_blocks_per_incr = int(_CURVE_CACHE_SIZE) / int(num_rlzs)
+        num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
-            # This means we have `num_rlzs` >= `_CURVE_CACHE_SIZE`.
+            # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
@@ -997,7 +1019,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             with transaction.commit_on_success(using='reslt_writer'):
                 inserter = writer.BulkInserter(
-                    models.HazardCurveData, max_cache_size=_CURVE_CACHE_SIZE
+                    models.HazardCurveData, max_cache_size=CURVE_CACHE_SIZE
                 )
 
                 for chunk in models.queryset_iter(all_curves_for_imt,
