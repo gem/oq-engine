@@ -112,18 +112,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    # For ground motion field calculation, we need the points of interest
-    # for the calculation.
-    points_to_compute = hc.points_to_compute() if hc.ground_motion_fields \
-        else []
-
-    imts = [haz_general.imt_to_hazardlib(x)
-            for x in hc.intensity_measure_types]
-
-    correl_model = None
-    if hc.ground_motion_correlation_model is not None:
-        correl_model = haz_general.get_correl_model(hc)
-
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
 
@@ -154,77 +142,85 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
 
-        if hc.ground_motion_fields:
-
-            # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-            n_sites = len(points_to_compute)
-            gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
-                                        rupture_ids=[]))
-                             for imt in imts)
-            # This will be the "container" for all computed ground motion field
-            # results for this stochastic event set.
-            gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
-
         ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time))
 
         with EnginePerformanceMonitor(
-            'computing %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
+            'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
                 len(ses_poissonian), ses_rlz_n, lt_rlz_id),
                 job_id, ses_and_gmfs):
-            rupture_ordinal = 0
-            for rupture in ses_poissonian:
-                rupture_ordinal += 1
+            rupture_ids = [
+                _save_ses_rupture(
+                    ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
+                for i, rupture in enumerate(ses_poissonian, 1)]
+        if hc.ground_motion_fields:
+            with EnginePerformanceMonitor(
+                    'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
+                    len(ses_poissonian), ses_rlz_n, lt_rlz_id),
+                    job_id, ses_and_gmfs):
+                gmf_cache, points_to_compute = _compute_gmfs(
+                    hc, gsims, ses_poissonian, rupture_ids,
+                    result_grp_ordinal)
 
-                # Prepare and save SES ruptures to the db:
-                logs.LOG.debug('> saving SES rupture to DB')
-                rupture_id = _save_ses_rupture(
-                    ses, rupture, cmplt_lt_ses, result_grp_ordinal,
-                    rupture_ordinal)
-                logs.LOG.debug('> done saving SES rupture to DB')
+                # This will be the "container" for all computed GMFs
+                # for this stochastic event set.
+                gmf_set = models.GmfSet.objects.get(
+                    gmf_collection__lt_realization=lt_rlz,
+                    ses_ordinal=ses_rlz_n)
+                # save the GMFs to the DB
+                _save_gmfs(gmf_set, gmf_cache, points_to_compute,
+                           result_grp_ordinal)
 
-                # Compute ground motion fields (if requested)
-                logs.LOG.debug('compute ground motion fields?  %s'
-                               % hc.ground_motion_fields)
-                if hc.ground_motion_fields:
-                    # Compute and save ground motion fields
-
-                    gmf_calc_kwargs = {
-                        'rupture': rupture,
-                        'sites': hc.site_collection,
-                        'imts': imts,
-                        'gsim': gsims[rupture.tectonic_region_type],
-                        'truncation_level': hc.truncation_level,
-                        'realizations': DEFAULT_GMF_REALIZATIONS,
-                        'correlation_model': correl_model,
-                        'rupture_site_filter':
-                        filters.rupture_site_distance_filter(
-                            hc.maximum_distance),
-                    }
-                    gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
-
-                    # update the gmf cache:
-                    for imt_key, v in gmf_dict.iteritems():
-                        gmf_cache[imt_key]['gmvs'] = numpy.append(
-                            gmf_cache[imt_key]['gmvs'], v, axis=1)
-                        gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
-
-        logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
-                       % (rupture_ordinal, ses_rlz_n,
-                          hc.ses_per_logic_tree_path))
         logs.LOG.debug('< done computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
-        if hc.ground_motion_fields:
-            # save the GMFs to the DB
-            with EnginePerformanceMonitor(
-                    'save gmfs, ses_rlz=%d' % ses_rlz_n, job_id, ses_and_gmfs):
-                _save_gmfs(
-                    gmf_set, gmf_cache, points_to_compute, result_grp_ordinal)
-
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
+
+
+def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
+
+    imts = [haz_general.imt_to_hazardlib(x)
+            for x in hc.intensity_measure_types]
+
+    correl_model = None
+    if hc.ground_motion_correlation_model is not None:
+        correl_model = haz_general.get_correl_model(hc)
+
+    # For ground motion field calculation, we need the points of interest
+    # for the calculation.
+    points_to_compute = hc.points_to_compute()
+    n_points = len(points_to_compute)
+
+    # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
+    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
+                                rupture_ids=[]))
+                     for imt in imts)
+
+    for rupture, rupture_id in zip(ruptures, rupture_ids):
+
+        # Compute and save ground motion fields
+        gmf_calc_kwargs = {
+            'rupture': rupture,
+            'sites': hc.site_collection,
+            'imts': imts,
+            'gsim': gsims[rupture.tectonic_region_type],
+            'truncation_level': hc.truncation_level,
+            'realizations': DEFAULT_GMF_REALIZATIONS,
+            'correlation_model': correl_model,
+            'rupture_site_filter':
+            filters.rupture_site_distance_filter(
+                hc.maximum_distance),
+        }
+        gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
+
+        # update the gmf cache:
+        for imt_key, v in gmf_dict.iteritems():
+            gmf_cache[imt_key]['gmvs'] = numpy.append(
+                gmf_cache[imt_key]['gmvs'], v, axis=1)
+            gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
+
+    return gmf_cache, points_to_compute
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -455,7 +451,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     task_seed,
                     result_grp_ordinal
                 )
-                print 'Generating task %d' % result_grp_ordinal
                 yield task_args
                 result_grp_ordinal += 1
 
