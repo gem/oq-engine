@@ -154,59 +154,62 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
 
-        # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-        n_sites = len(points_to_compute)
-        gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
-                                    rupture_ids=[]))
-                         for imt in imts)
+        if hc.ground_motion_fields:
 
-        # This will be the "container" for all computed ground motion field
-        # results for this stochastic event set.
-        gmf_set = models.GmfSet.objects.get(
-            gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
+            # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
+            n_sites = len(points_to_compute)
+            gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
+                                        rupture_ids=[]))
+                             for imt in imts)
+            # This will be the "container" for all computed ground motion field
+            # results for this stochastic event set.
+            gmf_set = models.GmfSet.objects.get(
+                gmf_collection__lt_realization=lt_rlz, ses_ordinal=ses_rlz_n)
 
-        ses_poissonian = stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time)
+        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+            filtered_sources, hc.investigation_time))
 
-        logs.LOG.debug('> looping over ruptures')
-        rupture_ordinal = 0
-        for rupture in ses_poissonian:
-            rupture_ordinal += 1
+        with EnginePerformanceMonitor(
+            'computing %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
+                len(ses_poissonian), ses_rlz_n, lt_rlz_id),
+                job_id, ses_and_gmfs):
+            rupture_ordinal = 0
+            for rupture in ses_poissonian:
+                rupture_ordinal += 1
 
-            # Prepare and save SES ruptures to the db:
-            logs.LOG.debug('> saving SES rupture to DB')
-            rupture_id = _save_ses_rupture(
-                ses, rupture, cmplt_lt_ses, result_grp_ordinal,
-                rupture_ordinal)
-            logs.LOG.debug('> done saving SES rupture to DB')
+                # Prepare and save SES ruptures to the db:
+                logs.LOG.debug('> saving SES rupture to DB')
+                rupture_id = _save_ses_rupture(
+                    ses, rupture, cmplt_lt_ses, result_grp_ordinal,
+                    rupture_ordinal)
+                logs.LOG.debug('> done saving SES rupture to DB')
 
-            # Compute ground motion fields (if requested)
-            logs.LOG.debug('compute ground motion fields?  %s'
-                           % hc.ground_motion_fields)
-            if hc.ground_motion_fields:
-                # Compute and save ground motion fields
+                # Compute ground motion fields (if requested)
+                logs.LOG.debug('compute ground motion fields?  %s'
+                               % hc.ground_motion_fields)
+                if hc.ground_motion_fields:
+                    # Compute and save ground motion fields
 
-                gmf_calc_kwargs = {
-                    'rupture': rupture,
-                    'sites': hc.site_collection,
-                    'imts': imts,
-                    'gsim': gsims[rupture.tectonic_region_type],
-                    'truncation_level': hc.truncation_level,
-                    'realizations': DEFAULT_GMF_REALIZATIONS,
-                    'correlation_model': correl_model,
-                    'rupture_site_filter':
-                    filters.rupture_site_distance_filter(
-                        hc.maximum_distance),
-                }
-                gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
+                    gmf_calc_kwargs = {
+                        'rupture': rupture,
+                        'sites': hc.site_collection,
+                        'imts': imts,
+                        'gsim': gsims[rupture.tectonic_region_type],
+                        'truncation_level': hc.truncation_level,
+                        'realizations': DEFAULT_GMF_REALIZATIONS,
+                        'correlation_model': correl_model,
+                        'rupture_site_filter':
+                        filters.rupture_site_distance_filter(
+                            hc.maximum_distance),
+                    }
+                    gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
 
-                # update the gmf cache:
-                for imt_key, v in gmf_dict.iteritems():
-                    gmf_cache[imt_key]['gmvs'] = numpy.append(
-                        gmf_cache[imt_key]['gmvs'], v, axis=1)
-                    gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
+                    # update the gmf cache:
+                    for imt_key, v in gmf_dict.iteritems():
+                        gmf_cache[imt_key]['gmvs'] = numpy.append(
+                            gmf_cache[imt_key]['gmvs'], v, axis=1)
+                        gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
 
-        logs.LOG.debug('< Done looping over ruptures')
         logs.LOG.debug('%s ruptures computed for SES realization %s of %s'
                        % (rupture_ordinal, ses_rlz_n,
                           hc.ses_per_logic_tree_path))
@@ -244,7 +247,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
     :param int rupture_ordinal:
-        The ordinal of a rupture with a given result group (inidicated by
+        The ordinal of a rupture with a given result group (indicated by
         ``result_grp_ordinal``).
     """
     is_from_fault_source = rupture.source_typology in (
@@ -358,7 +361,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-    if len(points_to_compute) == 0:
+    if len(points_to_compute) == 0:  # nothing to do
         return
 
     inserter = writer.BulkInserter(models.Gmf)
@@ -440,7 +443,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
-
             for offset in xrange(0, len(source_ids), block_size):
                 # Since this seed will used for numpy random seeding, it needs
                 # to be positive (since numpy will convert it to a unsigned
@@ -453,6 +455,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     task_seed,
                     result_grp_ordinal
                 )
+                print 'Generating task %d' % result_grp_ordinal
                 yield task_args
                 result_grp_ordinal += 1
 
