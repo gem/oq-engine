@@ -104,7 +104,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
 
     # Compute stochastic event sets
-    with EnginePerformanceMonitor('computing ses for lt=%d' % lt_rlz_id,
+    with EnginePerformanceMonitor('filtering sources for lt=%d' % lt_rlz_id,
                                   job_id, ses_and_gmfs):
 
         numpy.random.seed(task_seed)
@@ -133,9 +133,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         # Get the filtered sources, ignore the site collection:
         filtered_sources = (src for src, _ in ssd_filter(sources_sites))
 
-        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time))
-
     # Save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -150,6 +147,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
+
+        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+            filtered_sources, hc.investigation_time))
 
         with EnginePerformanceMonitor(
             'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
