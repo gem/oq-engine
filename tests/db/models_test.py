@@ -18,13 +18,13 @@ import getpass
 import itertools
 import string
 import unittest
+import mock
 
 import numpy
 
 from nose.plugins.attrib import attr
 
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
@@ -141,9 +141,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -155,9 +155,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'))
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
@@ -178,7 +178,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual([], list(models.inputs4rcalc(-1)))
 
     def test_a_few_inputs(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
@@ -192,7 +192,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
     def test_with_input_type(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
@@ -392,8 +392,8 @@ class SESRuptureTestCase(unittest.TestCase):
             id=self.source_rupture.id)
         self.assertEqual((1, 2, 0.1), source_rupture.top_left_corner)
         self.assertEqual((3, 4, 0.2), source_rupture.top_right_corner)
-        self.assertEqual((5, 6, 0.3), source_rupture.bottom_right_corner)
-        self.assertEqual((7, 8, 0.4), source_rupture.bottom_left_corner)
+        self.assertEqual((5, 6, 0.3), source_rupture.bottom_left_corner)
+        self.assertEqual((7, 8, 0.4), source_rupture.bottom_right_corner)
 
     def test__validate_planar_surface(self):
         source_rupture = models.SESRupture.objects.get(
@@ -650,3 +650,38 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+
+class LossFractionTestCase(unittest.TestCase):
+    def test_display_taxonomy_value(self):
+        lf = models.LossFraction(variable="taxonomy")
+        rc = mock.Mock()
+
+        self.assertEqual("RC", lf.display_value("RC", rc))
+
+    def test_display_magnitude_distance_value(self):
+        rc = mock.Mock()
+        rc.mag_bin_width = 2
+        rc.distance_bin_width = 10
+
+        lf = models.LossFraction(variable="magnitude_distance")
+
+        self.assertEqual("12.0000,14.0000|300.0000,310.0000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("14.0000,16.0000|210.0000,220.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,2.0000|0.0000,10.0000",
+                         lf.display_value("0, 0", rc))
+
+    def test_display_coordinate_value(self):
+        rc = mock.Mock()
+        rc.coordinate_bin_width = 0.5
+
+        lf = models.LossFraction(variable="coordinate")
+
+        self.assertEqual("3.0000,3.5000|15.0000,15.5000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("3.5000,4.0000|10.5000,11.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,0.5000|0.0000,0.5000",
+                         lf.display_value("0.0, 0.0", rc))

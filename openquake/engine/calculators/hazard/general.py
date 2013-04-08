@@ -39,8 +39,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
-from openquake.engine import engine2
-from openquake.engine import kvs
+from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -60,46 +59,13 @@ from openquake.engine.utils.general import block_splitter
 
 
 #: Maximum number of hazard curves to cache, for selects or inserts
-_CURVE_CACHE_SIZE = 100000
+CURVE_CACHE_SIZE = 100000
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-
-def store_source_model(job_id, seed, params, calc):
-    """Generate source model from the source model logic tree and store it in
-    the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param dict params: the config parameters as (dict)
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing source model from job config")
-    key = kvs.tokens.source_model_key(job_id)
-    mfd_bin_width = float(params.get('WIDTH_OF_MFD_BIN'))
-    calc.sample_and_save_source_model_logictree(
-        kvs.get_client(), key, seed, mfd_bin_width)
-
-
-def store_gmpe_map(job_id, seed, calc):
-    """Generate a hash map of GMPEs (keyed by Tectonic Region Type) and store
-    it in the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing GMPE map from job config")
-    key = kvs.tokens.gmpe_key(job_id)
-    calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
 
 
 @transaction.commit_on_success(using='job_init')
@@ -586,7 +552,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
-            inp = engine2.get_input(full_path, 'source', self.hc.owner)
+            inp = engine.get_input(full_path, 'source', self.hc.owner)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
@@ -622,25 +588,50 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         vulnerability model (if there is one)
         """
 
-        if self.hc.inputs.filter(input_type='vulnerability').exists():
-            path = self.hc.inputs.get(input_type='vulnerability').path
+        queryset = self.hc.inputs.filter(input_type='vulnerability')
+        if queryset.exists():
+            content = StringIO.StringIO(
+                queryset.all()[0].model_content.raw_content_ascii)
             hc = self.hc
             hc.intensity_measure_types_and_levels = dict([
                 (record['IMT'], record['IML'])
-                for record in parsers.VulnerabilityModelParser(path)])
+                for record in parsers.VulnerabilityModelParser(content)])
             hc.intensity_measure_types = list(set([
                 record['IMT']
-                for record in parsers.VulnerabilityModelParser(path)]))
+                for record in parsers.VulnerabilityModelParser(content)]))
             hc.save()
 
-        if self.hc.inputs.filter(input_type='exposure').exists():
-            exposure_model_input = self.hc.inputs.get(input_type='exposure')
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            parser = iter(parsers.FragilityModelParser(
+                StringIO.StringIO(
+                    queryset.all()[0].model_content.raw_content_ascii)))
+            hc = self.hc
+
+            fragility_format, _limit_states = parser.next()
+
+            if (fragility_format == "continuous" and
+                hc.calculation_mode != "scenario"):
+                raise NotImplementedError(
+                    "Getting IMT and levels from "
+                    "a continuous fragility model is not yet supported")
+
+            hc.intensity_measure_types_and_levels = dict([
+                (iml['IMT'], iml['imls'])
+                for _taxonomy, iml, _params, _no_damage_limit in parser])
+            hc.intensity_measure_types = (
+                hc.intensity_measure_types_and_levels.keys())
+            hc.save()
+
+        queryset = self.hc.inputs.filter(input_type='exposure')
+        if queryset.exists():
+            exposure_model_input = queryset.all()[0]
+            content = StringIO.StringIO(
+                exposure_model_input.model_content.raw_content_ascii)
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     exposure_model_input).serialize(
-                        parsers.ExposureModelParser(
-                            os.path.join(
-                                self.hc.base_path, exposure_model_input.path)))
+                        parsers.ExposureModelParser(content))
 
     def initialize_site_model(self):
         """
@@ -972,9 +963,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         num_rlzs = models.LtRealization.objects.filter(
             hazard_calculation=self.hc).count()
 
-        num_site_blocks_per_incr = int(_CURVE_CACHE_SIZE) / int(num_rlzs)
+        num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
-            # This means we have `num_rlzs` >= `_CURVE_CACHE_SIZE`.
+            # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
@@ -1028,7 +1019,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
             with transaction.commit_on_success(using='reslt_writer'):
                 inserter = writer.BulkInserter(
-                    models.HazardCurveData, max_cache_size=_CURVE_CACHE_SIZE
+                    models.HazardCurveData, max_cache_size=CURVE_CACHE_SIZE
                 )
 
                 for chunk in models.queryset_iter(all_curves_for_imt,
