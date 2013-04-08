@@ -44,6 +44,7 @@ from openquake.hazardlib.geo import MultiSurface
 from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
+from openquake.hazardlib.site import SiteCollection
 
 from openquake.engine import logs
 from openquake.engine import writer
@@ -55,6 +56,7 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import stats, tasks as utils_tasks
+from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -67,7 +69,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
+def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -100,8 +102,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
     """
-    logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
-                    'lt_realization_id=%s') % (job_id, lt_rlz_id))
     numpy.random.seed(task_seed)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
@@ -112,73 +112,84 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    ltp = logictree.LogicTreeProcessor(hc.id)
+    realizations = models.LtRealization.objects.filter(
+        hazard_calculation=hc, is_complete=False).order_by('id')
 
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+    for lt_rlz in realizations:
+        logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
+                        'lt_realization_id=%s') % (job_id, lt_rlz.id))
 
-    sources = list(haz_general.gen_sources(
-        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-        hc.width_of_mfd_bin, hc.area_source_discretization))
+        source_progress = models.SourceProgress.objects.filter(
+            is_complete=False, lt_realization=lt_rlz).order_by('id')
+        src_ids = source_progress.values_list('parsed_source_id', flat=True)
 
-    # Compute stochastic event sets
-    # For each rupture generated, we can optionally calculate a GMF
-    for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
-        logs.LOG.debug('> computing stochastic event set %s of %s'
-                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
+        ltp = logictree.LogicTreeProcessor(hc.id)
 
-        # This is the container for all ruptures for this stochastic event set
-        # (specified by `ordinal` and the logic tree realization).
-        # NOTE: Many tasks can contribute ruptures to this SES.
-        ses = models.SES.objects.get(
-            ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
+        apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-        sources_sites = ((src, hc.site_collection) for src in sources)
+        sources = list(haz_general.gen_sources(
+            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+            hc.width_of_mfd_bin, hc.area_source_discretization))
+
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
-        filtered_sources = (src for src, _ in ssd_filter(sources_sites))
-        # Calculate stochastic event sets:
-        logs.LOG.debug('> computing stochastic event sets')
+        filtered_sources = (src for src, _ in ssd_filter(
+            (src, sites) for src in sources))
 
         ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time))
 
-        with EnginePerformanceMonitor(
-            'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
-                len(ses_poissonian), ses_rlz_n, lt_rlz_id),
-                job_id, ses_and_gmfs):
-            rupture_ids = [
-                _save_ses_rupture(
-                    ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
-                for i, rupture in enumerate(ses_poissonian, 1)]
-        if hc.ground_motion_fields:
+        # Compute stochastic event sets
+        # For each rupture generated, we can optionally calculate a GMF
+        for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
+            logs.LOG.debug('> computing stochastic event set %s of %s'
+                           % (ses_rlz_n, hc.ses_per_logic_tree_path))
+
+            # the container for all ruptures for the stochastic event set
+            # specified by `ordinal` and the logic tree realization.
+            # NOTE: Many tasks can contribute ruptures to this SES.
+            ses = models.SES.objects.get(
+                ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
+
+            # Calculate stochastic event sets:
+            logs.LOG.debug('> computing stochastic event sets')
+
             with EnginePerformanceMonitor(
-                    'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
-                    len(ses_poissonian), ses_rlz_n, lt_rlz_id),
+                'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
+                    len(ses_poissonian), ses_rlz_n, lt_rlz.id),
                     job_id, ses_and_gmfs):
-                gmf_cache, points_to_compute = _compute_gmfs(
-                    hc, gsims, ses_poissonian, rupture_ids,
-                    result_grp_ordinal)
+                rupture_ids = [
+                    _save_ses_rupture(
+                        ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
+                    for i, rupture in enumerate(ses_poissonian, 1)]
+            if hc.ground_motion_fields:
+                with EnginePerformanceMonitor(
+                        'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
+                        len(ses_poissonian), ses_rlz_n, lt_rlz.id),
+                        job_id, ses_and_gmfs):
+                    gmf_cache = _compute_gmfs(
+                        hc, sites, gsims, ses_poissonian, rupture_ids,
+                        result_grp_ordinal)
 
-                # This will be the "container" for all computed GMFs
-                # for this stochastic event set.
-                gmf_set = models.GmfSet.objects.get(
-                    gmf_collection__lt_realization=lt_rlz,
-                    ses_ordinal=ses_rlz_n)
-                # save the GMFs to the DB
-                _save_gmfs(gmf_set, gmf_cache, points_to_compute,
-                           result_grp_ordinal)
+                    # This will be the "container" for all computed GMFs
+                    # for this stochastic event set.
+                    gmf_set = models.GmfSet.objects.get(
+                        gmf_collection__lt_realization=lt_rlz,
+                        ses_ordinal=ses_rlz_n)
+                    # save the GMFs to the DB
+                    _save_gmfs(gmf_set, gmf_cache, sites.mesh,
+                               result_grp_ordinal)
 
-        logs.LOG.debug('< done computing stochastic event set %s of %s'
-                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
+            logs.LOG.debug('< done computing stochastic event set %s of %s'
+                           % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
-def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
+def _compute_gmfs(hc, sites, gsims, ruptures, rupture_ids, result_grp_ordinal):
 
     imts = [haz_general.imt_to_hazardlib(x)
             for x in hc.intensity_measure_types]
@@ -187,13 +198,10 @@ def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    # For ground motion field calculation, we need the points of interest
-    # for the calculation.
-    points_to_compute = hc.points_to_compute()
-    n_points = len(points_to_compute)
+    n_sites = len(sites)
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
+    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
                                 rupture_ids=[]))
                      for imt in imts)
 
@@ -202,7 +210,7 @@ def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
         # Compute and save ground motion fields
         gmf_calc_kwargs = {
             'rupture': rupture,
-            'sites': hc.site_collection,
+            'sites': sites,
             'imts': imts,
             'gsim': gsims[rupture.tectonic_region_type],
             'truncation_level': hc.truncation_level,
@@ -220,7 +228,7 @@ def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
                 gmf_cache[imt_key]['gmvs'], v, axis=1)
             gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
 
-    return gmf_cache, points_to_compute
+    return gmf_cache
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -430,29 +438,19 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
 
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False).order_by('id')
-
         result_grp_ordinal = 1
-        for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-            source_ids = source_progress.values_list('parsed_source_id',
-                                                     flat=True)
-            for offset in xrange(0, len(source_ids), block_size):
-                # Since this seed will used for numpy random seeding, it needs
-                # to be positive (since numpy will convert it to a unsigned
-                # long).
-                task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (
-                    self.job.id,
-                    source_ids[offset:offset + block_size],
-                    lt_rlz.id,
-                    task_seed,
-                    result_grp_ordinal
-                )
-                yield task_args
-                result_grp_ordinal += 1
+        for sites in block_splitter(self.hc.site_collection, block_size=100):
+            # Since this seed will used for numpy random seeding, it needs
+            # to be positive (since numpy will convert it to a unsigned
+            # long).
+            task_seed = rnd.randint(0, models.MAX_SINT_32)
+            task_args = (
+                self.job.id,
+                SiteCollection(sites),
+                task_seed,
+                result_grp_ordinal
+            )
+            yield task_args
 
     def initialize_ses_db_records(self, lt_rlz):
         """
