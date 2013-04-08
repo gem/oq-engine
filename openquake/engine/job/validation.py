@@ -281,8 +281,10 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'maximum_distance',
             'mean_hazard_curves',
             'quantile_hazard_curves',
-            'poes_hazard_maps',
+            'poes',
             'export_dir',
+            'hazard_maps',
+            'uniform_hazard_spectra',
         )
 
     def is_valid(self):
@@ -332,8 +334,9 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'hazard_curves_from_gmfs',
             'mean_hazard_curves',
             'quantile_hazard_curves',
-            'poes_hazard_maps',
+            'poes',
             'export_dir',
+            'hazard_maps',
         )
 
     def is_valid(self):
@@ -494,6 +497,7 @@ class ClassicalRiskForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
+            'poes_disagg'
         )
 
 
@@ -544,7 +548,25 @@ class EventBasedRiskForm(BaseOQModelForm):
             'asset_correlation',
             'mean_loss_curves',
             'quantile_loss_curves',
+            'sites_disagg',
+            'mag_bin_width',
+            'distance_bin_width',
+            'coordinate_bin_width',
         )
+
+    def is_valid(self):
+        super_valid = super(EventBasedRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if rc.sites_disagg and not [rc.mag_bin_width and
+                                    rc.coordinate_bin_width and
+                                    rc.distance_bin_width]:
+            self._add_error('sites_disagg', "disaggregation requires "
+                            "mag_bin_width, coordinate_bin_width, "
+                            "distance_bin_width")
+            return False
+
+        return super_valid
 
 
 class ScenarioDamageRiskForm(BaseOQModelForm):
@@ -632,6 +654,25 @@ def sites_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites]
     lats = [pt.y for pt in mdl.sites]
+    if not all([-180 <= x <= 180 for x in lons]):
+        valid = False
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        valid = False
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return valid, errors
+
+
+def sites_disagg_is_valid(mdl):
+    # sites_disagg is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+    valid = True
+    errors = []
+
+    lons = [pt.x for pt in mdl.sites_disagg]
+    lats = [pt.y for pt in mdl.sites_disagg]
     if not all([-180 <= x <= 180 for x in lons]):
         valid = False
         errors.append('Longitude values must in the range [-180, 180]')
@@ -858,9 +899,9 @@ def quantile_loss_curves_is_valid(mdl):
     return True, []
 
 
-def poes_hazard_maps_is_valid(mdl):
-    phm = mdl.poes_hazard_maps
-    error_msg = 'PoEs for hazard maps must be in the range [0, 1]'
+def poes_is_valid(mdl):
+    phm = mdl.poes
+    error_msg = '`poes` values must be in the range [0, 1]'
     return _validate_poe_list(phm, error_msg)
 
 
@@ -949,18 +990,30 @@ def region_constraint_is_valid(_mdl):
 
 
 def mag_bin_width_is_valid(mdl):
+    # mag_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.mag_bin_width > 0.0:
         return False, ['Magnitude bin width must be > 0.0']
     return True, []
 
 
 def distance_bin_width_is_valid(mdl):
+    # distance_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.distance_bin_width > 0.0:
         return False, ['Distance bin width must be > 0.0']
     return True, []
 
 
 def coordinate_bin_width_is_valid(mdl):
+    # coordinate_bin_width is optional in risk event based
+    if mdl.calculation_mode == 'event_based' and mdl.sites_disagg is None:
+        return True, []
+
     if not mdl.coordinate_bin_width > 0.0:
         return False, ['Coordinate bin width must be > 0.0']
     return True, []
@@ -1033,8 +1086,23 @@ def number_of_ground_motion_fields_is_valid(mdl):
 
 
 def poes_disagg_is_valid(mdl):
+    # poes_disagg optional in classical risk
+    if mdl.calculation_mode == 'classical':
+        return True, []
     poesd = mdl.poes_disagg
     if len(poesd) == 0:
         return False, ['`poes_disagg` must contain at least 1 value']
     error_msg = 'PoEs for disaggregation must be in the range [0, 1]'
     return _validate_poe_list(poesd, error_msg)
+
+
+def hazard_maps_is_valid(mdl):
+    if mdl.hazard_maps and mdl.poes is None:
+        return False, ['`poes` are required to compute hazard maps']
+    return True, []
+
+
+def uniform_hazard_spectra_is_valid(mdl):
+    if mdl.uniform_hazard_spectra and mdl.poes is None:
+        return False, ['`poes` are required to compute UHS']
+    return True, []

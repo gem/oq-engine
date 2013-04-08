@@ -28,7 +28,7 @@ class ScenarioRiskCalculatorTestCase(
     """
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('scenario_risk/job.ini'),
             demo_file('scenario_hazard/job.ini'), output_type="gmf_scenario")
 

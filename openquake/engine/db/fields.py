@@ -156,6 +156,18 @@ class CharArrayField(djm.Field):
     def db_type(self, _connection):
         return 'varchar[]'
 
+    def to_python(self, value):
+        """
+        Split strings on whitespace or commas and return the list.
+
+        If the input ``value`` is not a string, just return the value (for
+        example, if ``value`` is already a list).
+        """
+        if isinstance(value, basestring):
+            return list(ARRAY_RE.split(value))
+
+        return value
+
     def get_prep_value(self, value):
         """Return data in a format that has been prepared for use as a
         parameter in a query.
@@ -295,7 +307,7 @@ class NumpyListField(PickleField):
         if isinstance(value, numpy.ndarray):
             return super(NumpyListField, self).get_prep_value(value.tolist())
         else:
-            if not instance(value, (list, tuple)):
+            if not isinstance(value, (list, tuple)):
                 raise ValueError(
                     "Unexpected value of type '%s'. Expected 'list', 'tuple', "
                     "or 'numpy.ndarray'"

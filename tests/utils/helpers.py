@@ -40,14 +40,9 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.engine.calculators.hazard.general import store_gmpe_map
-from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
-from openquake.engine.engine import JobContext
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine import logs
-from openquake.engine.input.logictree import LogicTreeProcessor
 from openquake.engine.utils import config, get_calculator_class
 
 CD = os.path.dirname(__file__)  # current directory
@@ -69,15 +64,6 @@ patch = functools.partial(mock_module.patch, mocksignature=True)
 def default_user():
     """Return the default user to be used for test setups."""
     return models.OqUser.objects.get(user_name="openquake")
-
-
-def delete_profile(job):
-    """Disassociate the job's profile and delete it."""
-    [j2p] = models.Job2profile.objects.extra(
-        where=["oq_job_id=%s"], params=[job.id])
-    jp = j2p.oq_job_profile
-    j2p.delete()
-    jp.delete()
 
 
 def insert_inputs(job, inputs):
@@ -147,27 +133,6 @@ def testdata_path(file_name):
         os.path.dirname(__file__), "../data/demos", file_name))
 
 
-def job_from_file(config_file_path):
-    """
-    Create a JobContext instance from the given configuration file.
-
-    The results are configured to go to XML files.  *No* database record will
-    be stored for the job.  This allows running test on jobs without requiring
-    a database.
-    """
-
-    job = engine._job_from_file(config_file_path, 'xml')
-    cleanup_loggers()
-
-    return job
-
-
-def create_job(params, **kwargs):
-    job_id = kwargs.pop('job_id', 0)
-
-    return JobContext(params, job_id, **kwargs)
-
-
 def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
@@ -191,7 +156,35 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
+    completed_job = engine._do_run_calc(job, exports, calc, 'hazard')
+    job.is_running = False
+    job.save()
+
+    return completed_job
+
+
+def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    if exports is None:
+        exports = []
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = get_risk_job(cfg, hazard_calculation_id=hazard_calculation_id,
+                       hazard_output_id=hazard_output_id)
+    job.is_running = True
+    job.save()
+
+    models.JobStats.objects.create(oq_job=job)
+
+    calc_mode = job.risk_calculation.calculation_mode
+    calc = get_calculator_class('risk', calc_mode)(job)
+    completed_job = engine._do_run_calc(job, exports, calc, 'risk')
     job.is_running = False
     job.save()
 
@@ -199,7 +192,7 @@ def run_hazard_job(cfg, exports=None):
 
 
 def run_job_sp(job_type, config_file, hazard_id=None, params=None,
-               silence=False):
+               silence=False, log_level="error"):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
@@ -215,6 +208,8 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         List of additional command line params to bin/openquake. Optional.
     :param bool silence:
         If `True`, silence all stdout messages.
+    :param str log_level:
+        Log Level (default to error) used by the engine for the job
 
     :returns:
         With the default input, return the return code of the subprocess.
@@ -224,7 +219,7 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
         :exception:`subprocess.CalledProcessError` is raised.
     """
     args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
-            "--log-level=error"]
+            "--log-level=%s" % log_level]
     if hazard_id:
         args.append("--hazard-output-id=%d" % hazard_id)
     if params:
@@ -234,31 +229,6 @@ def run_job_sp(job_type, config_file, hazard_id=None, params=None,
     print 'Running:', ' '.join(args)  # this is useful for debugging
     return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
                                  if silence else None)
-
-
-def store_hazard_logic_trees(a_job):
-    """Helper function to store the source model and GMPE logic trees in the
-    KVS so that it can be read by the Java code.
-
-    :param a_job:
-        :class:`openquake.engine.engine.JobContext` instance.
-    """
-    lt_proc = LogicTreeProcessor(
-        a_job['BASE_PATH'],
-        a_job['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
-        a_job['GMPE_LOGIC_TREE_FILE_PATH'])
-
-    src_model_seed = a_job['SOURCE_MODEL_LT_RANDOM_SEED']
-    gmpe_seed = a_job['GMPE_LT_RANDOM_SEED']
-
-    src_model_rnd = random.Random()
-    src_model_rnd.seed(src_model_seed)
-    gmpe_rnd = random.Random()
-    gmpe_rnd.seed(gmpe_seed)
-
-    store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
-                       a_job.params, lt_proc)
-    store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
 
 
 def timeit(method):
@@ -872,9 +842,9 @@ def get_hazard_job(cfg, username=None):
     """
     username = username if username is not None else default_user().user_name
 
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(cfg, 'r'))
-    haz_calc = engine2.create_hazard_calculation(
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+    haz_calc = engine.create_hazard_calculation(
         job.owner, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
@@ -882,7 +852,35 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
+def get_risk_job(cfg, username=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    username = username if username is not None else default_user().user_name
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+
+    params.update(
+        dict(hazard_output_id=hazard_output_id,
+             hazard_calculation_id=hazard_calculation_id)
+    )
+
+    risk_calc = engine.create_risk_calculation(
+        job.owner, params, files.values())
+    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
+    job.risk_calculation = risk_calc
+    job.save()
+    return job
+
+
+def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
+                      username=None):
     """
     Takes in input the paths to a risk job config file and a hazard job config
     file.
@@ -954,12 +952,12 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
 
     hazard_job.status = "complete"
     hazard_job.save()
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(risk_cfg, 'r'))
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
-    risk_calc = engine2.create_risk_calculation(
+    risk_calc = engine.create_risk_calculation(
         job.owner, params, files.values())
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc

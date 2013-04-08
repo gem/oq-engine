@@ -20,6 +20,7 @@
 Core functionality for the scenario_damage risk calculator.
 """
 
+import StringIO
 import collections
 
 import numpy
@@ -40,23 +41,25 @@ from openquake.engine.calculators import base
 @general.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
                     taxonomy, fragility_functions,
-                    _output_containers):
+                    _output_containers, _statistical_output_contaienrs):
     """
     Celery task for the scenario damage risk calculator.
 
-    :param job_id: the id of the current
-    :class:`openquake.engine.db.models.OqJob`
+    :param job_id:
+        The id of the current :class:`openquake.engine.db.models.OqJob`
     :param dict hazard:
-      A dictionary mapping IDs of
-      :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmfscenario') to a tuple where the first element is an instance of
-      :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
-      element is the corresponding weight.
-    :param taxonomy: the taxonomy being considered
-    :param list fragility_functions: a list of callables representing the
-      fragility functions used by the risklib calculator
-    :param _output_containers: a dictionary {hazard_id: output_id}
-    of output_type "dmg_dist_per_asset"
+        A dictionary mapping IDs of :class:`openquake.engine.db.models.Output`
+        (with output_type set to 'gmf_scenario') to a tuple where the first
+        element is an instance of
+        :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
+        element is the corresponding weight.
+    :param taxonomy:
+        The taxonomy being considered
+    :param list fragility_functions:
+        A list of callables representing the fragility functions used by the
+        risklib calculator
+    :param _output_containers:
+        A dictionary {hazard_id: output_id} of output_type "dmg_dist_per_asset"
     """
     calculator = api.ScenarioDamage(fragility_functions)
 
@@ -152,11 +155,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     Scenario Damage Risk Calculator. Computes four kinds of damage
     distributions: per asset, per taxonomy, total and collapse map.
 
-    :attr dict fragility_functions: a dictionary of dictionary mapping
-    taxonomy -> (limit state -> fragility function) where a fragility
-    function is an instance of
-    :class:`openquake.risklib.scientific.FragilityFunctionContinuous`
-    or :class:`openquake.risklib.scientific.FragilityFunctionDiscrete`
+    :attr dict fragility_functions:
+        A dictionary of dictionary mapping taxonomy ->
+        (limit state -> fragility function) where a fragility function is an
+        instance of
+        :class:`openquake.risklib.scientific.FragilityFunctionContinuous` or
+        :class:`openquake.risklib.scientific.FragilityFunctionDiscrete`.
     """
 
     #: The core calculation celery task function
@@ -177,8 +181,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def hazard_outputs(self, hazard_calculation):
         """
-        :returns: the single hazard output associated to
-        `hazard_calculation`
+        :returns:
+            The single hazard output associated to `hazard_calculation`
         """
 
         # in scenario hazard calculation we do not have hazard logic
@@ -189,7 +193,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def create_getter(self, output, imt, assets):
         """
-        See :method:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..general.BaseRiskCalculator.create_getter`
         """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
@@ -201,20 +205,22 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def worker_args(self, taxonomy):
         """
-        :returns: a fixed list of arguments that a calculator may want
-        to pass to a worker. In this case taxonomy, fragility_model and
-        fragility_functions for the given taxonomy.
+        :returns:
+            A fixed list of arguments that a calculator may want to pass to a
+            worker. In this case taxonomy, fragility_model and
+            fragility_functions for the given taxonomy.
         """
         return [taxonomy,
                 self.fragility_functions[taxonomy]]
 
     def task_completed_hook(self, message):
         """
-        :param dict message: the message sent by the worker
-
         Update the dictionary self.ddpt, i.e. aggregate the damage distribution
         by taxonomy; called every time a block of assets is computed for each
         taxonomy. Fractions and taxonomy are extracted from the message.
+
+        :param dict message:
+            The message sent by the worker
         """
         taxonomy = message['taxonomy']
         fractions = message.get('fractions')
@@ -248,19 +254,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # controller node, in the task_completion_hook, whereas the
         # computations per asset only need the risk_calculation_id,
         # extracted from the job_id
-        models.Output.objects.create_output(
+        ddpa = models.Output.objects.create_output(
             self.job, "Damage Distribution per Asset",
             "dmg_dist_per_asset")
 
-        models.Output.objects.create_output(
+        ddpt = models.Output.objects.create_output(
             self.job, "Damage Distribution per Taxonomy",
             "dmg_dist_per_taxonomy")
 
-        models.Output.objects.create_output(
+        ddt = models.Output.objects.create_output(
             self.job, "Damage Distribution Total",
             "dmg_dist_total")
 
-        models.Output.objects.create_output(
+        collapse_map = models.Output.objects.create_output(
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
@@ -269,6 +275,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             models.DmgState.objects.create(
                 risk_calculation=self.job.risk_calculation,
                 dmg_state=dstate, lsi=lsi)
+
+        return [ddpa, ddpt, ddt, collapse_map]
 
     def set_risk_models(self):
         """
@@ -283,8 +291,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Parse the fragility XML file and return fragility_model,
         fragility_functions, and damage_states for usage in set_risk_models.
         """
-        path = self.rc.inputs.get(input_type='fragility').path
-        iterparse = iter(parsers.FragilityModelParser(path))
+        content = StringIO.StringIO(
+            self.rc.inputs.get(
+                input_type='fragility').model_content.raw_content_ascii)
+        iterparse = iter(parsers.FragilityModelParser(content))
         fmt, limit_states = iterparse.next()
 
         self.damage_states = ['no_damage'] + limit_states
@@ -311,3 +321,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
         return self.fragility_functions
+
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass

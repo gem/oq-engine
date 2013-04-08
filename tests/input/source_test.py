@@ -23,7 +23,6 @@ from openquake.hazardlib import pmf
 from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.nrmllib import parsers as nrml_parsers
-from shapely import wkt
 
 from openquake.engine.db import models
 from openquake.engine.input import source as source_input
