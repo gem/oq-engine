@@ -250,6 +250,11 @@ class BranchSet(object):
                     if not isinstance(
                         source, openquake.hazardlib.source.ComplexFaultSource):
                         return False
+                elif value == 'characteristicFault':
+                    if not isinstance(
+                        source,
+                        openquake.hazardlib.source.CharacteristicFaultSource):
+                        return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
             elif key == 'applyToSources':

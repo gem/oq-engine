@@ -29,7 +29,7 @@ class ClassicalBCRRiskCalculatorTestCase(
     """
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('classical_bcr/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
 
