@@ -116,7 +116,7 @@ class Dumper(object):
         # this is why we are requiring text format
 
     def hazard_calculation(self, id_):
-        "Dump hazard_calculation"
+        "Dump organization, oq_user, hazard_calculation, lt_realization"
         self.curs.copy(
             """copy (select * from uiapi.hazard_calculation where id=%s)
                   to stdout with (format '%s')""" % (id_, self.format),
@@ -126,16 +126,8 @@ class Dumper(object):
                   where hazard_calculation_id=%s)
                   to stdout with (format '%s')""" % (id_, self.format),
             self.dest, 'lt_realization.csv', 'w')
-        return restore_cmd('uiapi.hazard_calculation', 'hzrdr.lt_realization')
-
-    def oq_job(self, id_):
-        "Dump oq_job, oq_user, organization"
-        self.curs.copy(
-            """copy (select * from uiapi.oq_job where id in %s)
-                  to stdout with (format '%s')""" % (id_, self.format),
-            self.dest, 'oq_job.csv', 'w')
         owner_id = self.curs.tuplestr(
-            'select owner_id from uiapi.oq_job where id in %s' % id_)
+            'select owner_id from uiapi.hazard_calculation where id=%s' % id_)
         self.curs.copy(
             """copy (select * from admin.oq_user where id in %s and id != 1)
                   to stdout with (format '%s')""" % (owner_id, self.format),
@@ -148,7 +140,16 @@ class Dumper(object):
             and id != 1) to stdout with (format '%s')""" %
             (org_id, self.format), self.dest, 'organization.csv', 'w')
         return restore_cmd(
-            'uiapi.oq_job', 'admin.oq_user', 'admin.organization')
+            'admin.organization', 'admin.oq_user',
+            'uiapi.hazard_calculation', 'hzrdr.lt_realization')
+
+    def oq_job(self, id_):
+        "Dump oq_job"
+        self.curs.copy(
+            """copy (select * from uiapi.oq_job where id in %s)
+                  to stdout with (format '%s')""" % (id_, self.format),
+            self.dest, 'oq_job.csv', 'w')
+        return restore_cmd('uiapi.oq_job')
 
     def output(self, ids):
         "Dump output"
