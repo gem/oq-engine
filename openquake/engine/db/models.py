@@ -1710,36 +1710,6 @@ def parse_imt(imt):
     return hc_im_type, sa_period, sa_damping
 
 
-class HazardCurveManager(djm.Manager):
-    """
-    Manager class to filter and create HazardCurve objects
-    """
-
-    def create_aggregate_curve(self, output, imt, statistics, quantile=None):
-        """
-        Create an aggregate curve with intensity measure type `imt`
-        for the given `statistics` (default to mean) and `quantile`.
-        Here imt is given in long form. e.g. SA(10)
-        """
-        if quantile and not statistics == "quantile":
-            raise ValueError(
-                "A quantile level can be specified only for quantile curves")
-
-        hc = output.oq_job.hazard_calculation
-        hc_im_type, sa_period, sa_damping = parse_imt(imt)
-        levels = hc.intensity_measure_types_and_levels[imt]
-        curve = self.create(output=output,
-                            lt_realization=None,
-                            investigation_time=hc.investigation_time,
-                            imt=hc_im_type,
-                            imls=levels,
-                            statistics=statistics,
-                            quantile=quantile,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping)
-        return curve
-
-
 class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
@@ -1759,8 +1729,6 @@ class HazardCurve(djm.Model):
     quantile = djm.FloatField(null=True)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-
-    objects = HazardCurveManager()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
