@@ -102,28 +102,41 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     """
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
-    numpy.random.seed(task_seed)
-
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
-
-    cmplt_lt_ses = None
-    if hc.complete_logic_tree_ses:
-        cmplt_lt_ses = models.SES.objects.get(
-            ses_collection__output__oq_job=job_id,
-            ordinal=None)
-
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    ltp = logictree.LogicTreeProcessor(hc.id)
-
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    sources = list(haz_general.gen_sources(
-        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-        hc.width_of_mfd_bin, hc.area_source_discretization))
 
     # Compute stochastic event sets
+    with EnginePerformanceMonitor('computing ses for lt=%d' % lt_rlz_id,
+                                  job_id, ses_and_gmfs):
+
+        numpy.random.seed(task_seed)
+
+        hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+        cmplt_lt_ses = None
+        if hc.complete_logic_tree_ses:
+            cmplt_lt_ses = models.SES.objects.get(
+                ses_collection__output__oq_job=job_id,
+                ordinal=None)
+
+        lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
+        ltp = logictree.LogicTreeProcessor(hc.id)
+
+        apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+        sources = list(haz_general.gen_sources(
+            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+            hc.width_of_mfd_bin, hc.area_source_discretization))
+
+        sources_sites = ((src, hc.site_collection) for src in sources)
+        ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
+        # Get the filtered sources, ignore the site collection:
+        filtered_sources = (src for src, _ in ssd_filter(sources_sites))
+
+        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+            filtered_sources, hc.investigation_time))
+
+    # Save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
         logs.LOG.debug('> computing stochastic event set %s of %s'
@@ -135,15 +148,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        sources_sites = ((src, hc.site_collection) for src in sources)
-        ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        # Get the filtered sources, ignore the site collection:
-        filtered_sources = (src for src, _ in ssd_filter(sources_sites))
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
-
-        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time))
 
         with EnginePerformanceMonitor(
             'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
