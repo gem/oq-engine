@@ -13,6 +13,7 @@ Contents:
     engine
     job/validation
     calculators/hazard
+    calculators/risk
     export/index
     db/models
     db/fields
@@ -22,7 +23,6 @@ Contents:
     input
     risk
     schema
-    shapes
     utils
     writer
 

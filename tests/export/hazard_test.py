@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -134,29 +134,57 @@ class ClassicalExportTestCase(BaseExportTestCase):
             job = models.OqJob.objects.latest('id')
 
             outputs = export_core.get_outputs(job.id)
-            expected_outputs = 18  # 6 hazard curves + 12 hazard maps
-            self.assertEqual(expected_outputs, len(outputs))
 
-            # Export the hazard curves:
+            expected_outputs = 40  # 10 hazard curves, 20 maps, 10 uhs
+            self.assertEqual(expected_outputs, outputs.count())
+
+            # Number of curves:
+            # (2 imts * 2 realizations)
+            # + (2 imts * (1 mean + 2 quantiles)
+            # = 10
             curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(10, curves.count())
+
+            # Number of maps:
+            # (2 poes * 2 imts * 2 realizations)
+            # + (2 poes * 2 imts * (1 mean + 2 quantiles))
+            # = 20
+            # Number of UHS:
+            maps = outputs.filter(output_type='hazard_map')
+            self.assertEqual(20, maps.count())
+
+            # Number of UHS:
+            # (20 maps_PGA_SA / 2 poes)
+            # = 10
+            uhs = outputs.filter(output_type='uh_spectra')
+            self.assertEqual(10, uhs.count())
+
+            # Test hazard curve export:
             hc_files = []
             for curve in curves:
                 hc_files.extend(hazard.export(curve.id, target_dir))
 
-            self.assertEqual(6, len(hc_files))
+            self.assertEqual(10, len(hc_files))
 
             for f in hc_files:
                 self._test_exported_file(f)
 
-            # Test hazard map export as well.
-            maps = outputs.filter(output_type='hazard_map')
+            # Test hazard map export:
             hm_files = []
             for haz_map in maps:
                 hm_files.extend(hazard.export(haz_map.id, target_dir))
 
-            self.assertEqual(12, len(hm_files))
+            self.assertEqual(20, len(hm_files))
 
             for f in hm_files:
+                self._test_exported_file(f)
+
+            # Test UHS export:
+            uhs_files = []
+            for u in uhs:
+                uhs_files.extend(hazard.export(u.id, target_dir))
+
+            for f in uhs_files:
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
@@ -185,8 +213,13 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
-            # and 4 hazard curve collections
-            self.assertEqual(18, len(outputs))
+            # ((2 imts * 2 realizations) + (2 imts * (1 mean + 3 quantiles))
+            # hazard curves,
+            # (2 poes * 2 imts * 2 realizations)
+            # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
+            # Total: 42
+            self.assertEqual(42, len(outputs))
+
 
             #######
             # SESs:
@@ -237,15 +270,23 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             # Check for the correct number of GMFs in the file:
             tree = etree.parse(exported_file)
-            self.assertEqual(442, number_of('nrml:gmf', tree))
+            self.assertEqual(532, number_of('nrml:gmf', tree))
 
             ################
             # Hazard curves:
             haz_curves = outputs.filter(output_type='hazard_curve')
+            self.assertEqual(12, haz_curves.count())
             for curve in haz_curves:
                 [exported_file] = hazard.export(curve.id, target_dir)
                 self._test_exported_file(exported_file)
 
+            ##############
+            # Hazard maps:
+            haz_maps = outputs.filter(output_type='hazard_map')
+            self.assertEqual(24, haz_maps.count())
+            for hmap in haz_maps:
+                [exported_file] = hazard.export(hmap.id, target_dir)
+                self._test_exported_file(exported_file)
         finally:
             shutil.rmtree(target_dir)
 

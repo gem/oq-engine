@@ -109,26 +109,6 @@ COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
 COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
 
 
--- uhs
-COMMENT ON TABLE hzrdr.uh_spectra IS 'Uniform Hazard Spectra
-
-A collection of Uniform Hazard Spectrum which share a set of periods.
-A UH Spectrum has a PoE (Probability of Exceedence) and is conceptually
-composed of a set of 2D matrices, 1 matrix per site/point of interest.
-Each 2D matrix has a number of rows equal to `realizations` and a number of
-columns equal ot the number of `periods`.';
-COMMENT ON COLUMN hzrdr.uh_spectra.periods IS 'There should be at least 1 period value defined.';
-COMMENT ON TABLE hzrdr.uh_spectrum IS 'Uniform Hazard Spectrum
-
-* "Uniform" meaning "the same PoE"
-* "Spectrum" because it covers a range/band of periods/frequencies';
-COMMENT ON TABLE hzrdr.uh_spectrum_data IS 'Uniform Hazard Spectrum Data
-
-A single "row" of data in a UHS matrix for a specific site/point of interest.';
-COMMENT ON COLUMN hzrdr.uh_spectrum_data.realization IS 'Logic tree sample number for this calculation result, from 0 to N.';
-
-
-
 -- oqmif schema tables ------------------------------------------
 COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN oqmif.exposure_data.area IS 'asset area';
@@ -279,6 +259,8 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - dmg_dist_per_taxonomy
     - dmg_dist_total
     - bcr_distribution';
+COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
+NULL if the output was imported from an external source';
 
 
 COMMENT ON TABLE uiapi.src2ltsrc IS '

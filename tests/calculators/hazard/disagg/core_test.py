@@ -20,7 +20,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard.disaggregation \
     import core as disagg_core
@@ -47,7 +47,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
             self.acks += 1
 
     def setUp(self):
-        self.job = engine2.prepare_job()
+        self.job = engine.prepare_job()
         self.calc = disagg_core.DisaggHazardCalculator(self.job)
 
         # Mock `disagg_task_arg_gen`
