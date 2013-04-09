@@ -93,7 +93,6 @@ from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.job.validation import validate
-from openquake.engine.utils import version
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
