@@ -94,31 +94,8 @@ def _get_end_branch_export_path(target_dir, result, ltp):
         * sa_period
 
         See :class:`~openquake.engine.db.models.HazardCurve` for an example.
-    :param ltp:
-        Instance of a :class:`~openquake.engine.input.logictree.\
-LogicTreeProcessor`.
     """
-    lt_rlz = result.lt_realization
-    gsim_dir_name = '_'.join(
-        [ltp.gmpe_lt.branches[br].value.__class__.__name__
-         for br in lt_rlz.gsim_lt_path]
-    )
-
-    imt = result.imt
-    if imt == 'SA':
-        # if it's SA, include the period
-        period = str(result.sa_period)
-        period = period.replace('.', '')
-        imt = 'SA[%s]' % period
-
-    export_dir = os.path.abspath(os.path.join(target_dir, gsim_dir_name, imt))
-    if not os.path.exists(export_dir):
-        os.makedirs(export_dir)
-
-    return export_dir
-
-
-@core.makedirs
+@core.makedirsdeco
 def export_hazard_curve(output, target_dir):
     """
     Export the specified hazard curve ``output`` to the ``target_dir``.
@@ -183,7 +160,7 @@ def export_hazard_curve(output, target_dir):
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_gmf(output, target_dir):
     """
     Export the GMF Collection specified by ``output`` to the ``target_dir``.
@@ -225,7 +202,7 @@ def export_gmf(output, target_dir):
 export_complete_lt_gmf = export_gmf
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_gmf_scenario(output, target_dir):
     """
     Export the GMFs specified by ``output`` to the ``target_dir``.
@@ -248,7 +225,7 @@ def export_gmf_scenario(output, target_dir):
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_ses(output, target_dir):
     """
     Export the Stochastic Event Set Collection specified by ``output`` to the
@@ -291,7 +268,7 @@ def export_ses(output, target_dir):
 export_complete_lt_ses = export_ses
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_hazard_map(output, target_dir):
     """
     Export the specified hazard map ``output`` to the ``target_dir``.
@@ -379,7 +356,7 @@ class _DisaggMatrix(object):
         self.iml = iml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_disagg_matrix(output, target_dir):
     """
     Export disaggregation histograms to the ``target_dir``.
@@ -443,7 +420,7 @@ def export_disagg_matrix(output, target_dir):
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_uh_spectra(output, target_dir):
     """
     Export the specified UHS ``output`` to the ``target_dir``.
