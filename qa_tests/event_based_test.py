@@ -271,8 +271,8 @@ class EventBasedTestCase(unittest.TestCase):
 
         for i, insured_loss_curve in enumerate(insured_losses):
             numpy.testing.assert_allclose(
-                il.expected_poes[i], insured_loss_curve.ordinates, rtol=10E-5)
+                il.expected_poes[i], insured_loss_curve[1], rtol=10E-5)
 
             numpy.testing.assert_allclose(
                 il.expected_losses[i],
-                insured_loss_curve.abscissae, rtol=10E-5)
+                insured_loss_curve[0], rtol=10E-5)

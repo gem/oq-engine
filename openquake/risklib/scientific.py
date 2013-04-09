@@ -94,6 +94,57 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
+    def strictly_increasing(self):
+        """
+        :returns:
+          a new vulnerability function that is strictly increasing.
+          It is built by removing piece of the function where the mean
+          loss ratio is constant.
+        """
+        imls, mlrs, covs = [], [], []
+
+        previous_mlr = None
+        for i, mlr in enumerate(self.mean_loss_ratios):
+            if previous_mlr == mlr:
+                continue
+            else:
+                mlrs.append(mlr)
+                imls.append(self.imls[i])
+                covs.append(self.covs[i])
+                previous_mlr = mlr
+
+        return self.__class__(imls, mlrs, covs, self.distribution_name)
+
+    def mean_loss_ratios_with_steps(self, steps):
+        """
+        Split the mean loss ratios, producing a new set of loss ratios. The new
+        set of loss ratios always includes 0.0 and 1.0
+
+        :param int steps: the number of steps we make to go from one loss
+            ratio to the next. For example, if we have [0.5, 0.7]:
+
+            steps = 1 produces [0.0,  0.5, 0.7, 1]
+            steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
+            steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63,
+                                0.7, 0.8, 0.9, 1]
+        """
+        loss_ratios = self.mean_loss_ratios
+
+        min_lr = min(loss_ratios)
+        max_lr = max(loss_ratios)
+
+        if min_lr > 0.0:
+            # prepend with a zero
+            loss_ratios = numpy.concatenate([[0.0], loss_ratios])
+
+        if max_lr < 1.0:
+            # append a 1.0
+            loss_ratios = numpy.concatenate([loss_ratios, [1.0]])
+
+        ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
+                                for x, y in utils.pairwise(loss_ratios)])
+        return numpy.concatenate([ls, [loss_ratios[-1]]])
+
     def _cov_for(self, imls):
         """
         Clip `imls` to the range associated with the support of the
@@ -163,8 +214,8 @@ class VulnerabilityFunction(object):
 
         return ret
 
-    def loss_ratio_exceedance_matrix(
-            self, curve_resolution=DEFAULT_CURVE_RESOLUTION):
+    @utils.memoized
+    def loss_ratio_exceedance_matrix(self, steps):
         """Compute the LREM (Loss Ratio Exceedance Matrix).
 
         :param vuln_function:
@@ -172,11 +223,12 @@ class VulnerabilityFunction(object):
         :type vuln_function:
             :class:`openquake.risklib.vulnerability_function.\
             VulnerabilityFunction`
-        :param int curve_resolution:
+        :param int steps:
             Number of steps between loss ratios.
         """
-        loss_ratios = _evenly_spaced_loss_ratios(
-            self.mean_loss_ratios, curve_resolution)
+
+        # add steps between mean loss ratio values
+        loss_ratios = self.mean_loss_ratios_with_steps(steps)
 
         # LREM has number of rows equal to the number of loss ratios
         # and number of columns equal to the number of imls
@@ -185,25 +237,10 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col in range(self.resolution):
                 mean_loss_ratio = self.mean_loss_ratios[col]
-                # NOTE: stddev = CoV * LR
                 stddev = self.stddevs[col]
-
-                if mean_loss_ratio > 0 and stddev == 0:
-                    # When the LR > 0 and CoV == 0,
-                    # the LREM value for any loss ratio value in up to and
-                    # including the defined (mean) loss ratio will be 1.
-                    if loss_ratio <= mean_loss_ratio:
-                        lrem[row][col] = 1
-                    # For any value > the (mean) loss ratio, the value is 0.
-                    elif loss_ratio > mean_loss_ratio:
-                        lrem[row][col] = 0
-                elif mean_loss_ratio == 0 and stddev == 0:
-                    lrem[row][col] = 0
-                else:
-                    lrem[row][col] = self.distribution.survival(
-                        loss_ratio, mean_loss_ratio, stddev)
-
-        return lrem
+                lrem[row][col] = self.distribution.survival(
+                    loss_ratio, mean_loss_ratio, stddev)
+        return loss_ratios, lrem
 
     def mean_imls(self):
         """
@@ -335,6 +372,7 @@ class Distribution(object):
         Return the survival function of the distribution with `mean`
         and `stddev` applied to `loss_ratio`
         """
+
         pass
 
 
@@ -395,6 +433,17 @@ class LogNormalDistribution(Distribution):
         return numpy.exp(mu + (epsilons[0:len(sigma)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
+
+        # scipy does not handle correctly the limit case stddev = 0.
+        # In that case, when `mean` > 0 the survival function
+        # approaches to a step function, otherwise (`mean` == 0) we
+        # returns 0
+        if stddev == 0:
+            if loss_ratio > mean or mean == 0:
+                return 0
+            elif loss_ratio <= mean:
+                return 1
+
         variance = stddev ** 2.0
         sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
         mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
@@ -467,9 +516,9 @@ def event_based(loss_values, tses, time_span,
     poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
     reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
-    values = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
+    losses = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
 
-    return curve.Curve(zip(values, reference_poes))
+    return losses[::-1], reference_poes[::-1]
 
 
 ##
@@ -496,15 +545,8 @@ def scenario_damage(fragility_functions, gmvs):
 ## Classical
 ##
 
-def classical(vulnerability_function, lrem, hazard_curve_values, steps):
-    """Compute a loss ratio curve for a specific hazard curve (e.g., site),
-    by applying a given vulnerability function.
-
-    A loss ratio curve is a function that has loss ratios as X values
-    and PoEs (Probabilities of Exceendance) as Y values.
-
-    This is the main (and only) public function of this module.
-
+def classical(vulnerability_function, hazard_curve_values, steps=10):
+    """
     :param vulnerability_function: an instance of
         :py:class:`openquake.risklib.scientific.VulnerabilityFunction`
         representing the vulnerability function used to compute the
@@ -515,11 +557,16 @@ def classical(vulnerability_function, lrem, hazard_curve_values, steps):
     :param int steps:
         Number of steps between loss ratios.
     """
+    vf = vulnerability_function.strictly_increasing()
+
+    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
+
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
-        vulnerability_function, lrem, hazard_curve_values)
-    loss_ratios = _evenly_spaced_loss_ratios(
-        vulnerability_function.mean_loss_ratios, steps)
-    return curve.Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
+        vf, lrem, hazard_curve_values)
+
+    poes = lrem_po.sum(axis=1)
+
+    return loss_ratios, poes
 
 
 def _loss_ratio_exceedance_matrix_per_poos(
@@ -539,55 +586,31 @@ def _loss_ratio_exceedance_matrix_per_poos(
     lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
     imls = vuln_function.mean_imls()
-    if hazard_curve_values:
-        # compute the PoOs (Probability of Occurence) from the PoEs
-        pos = curve.Curve(hazard_curve_values).ordinate_diffs(imls)
-        for idx, po in enumerate(pos):
-            lrem_po[:, idx] = lrem[:, idx] * po  # column * po
+
+    # compute the PoOs (Probability of Occurence) from the PoEs
+    pos = curve.Curve(hazard_curve_values).ordinate_diffs(imls)
+    for idx, po in enumerate(pos):
+        lrem_po[:, idx] = lrem[:, idx] * po  # column * po
     return lrem_po
-
-
-def _evenly_spaced_loss_ratios(loss_ratios, steps):
-    """
-    Split the loss ratios, producing a new set of loss ratios. The new
-    set of loss ratios always includes 0.0 and 1.0
-
-    :param floats loss_ratios: the loss ratios to split.
-    :param int steps: the number of steps we make to go from one loss
-        ratio to the next. For example, if we have [0.5, 0.7]:
-
-        steps = 1 produces [0.0,  0.5, 0.7, 1]
-        steps = 2 produces [0.0, 0.25, 0.5, 0.6, 0.7, 0.85, 1]
-        steps = 3 produces [0.0, 0.17, 0.33, 0.5, 0.57, 0.63, 0.7, 0.8, 0.9, 1]
-    """
-    loss_ratios = numpy.array(loss_ratios)
-
-    min_lr = min(loss_ratios)
-    max_lr = max(loss_ratios)
-
-    if min_lr > 0.0:
-        # prepend with a zero
-        loss_ratios = numpy.concatenate([[0.0], loss_ratios])
-
-    if max_lr < 1.0:
-        # append a 1.0
-        loss_ratios = numpy.concatenate([loss_ratios, [1.0]])
-
-    ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                            for x, y in utils.pairwise(loss_ratios)])
-    return numpy.concatenate([ls, [loss_ratios[-1]]])
 
 
 def conditional_loss_ratio(loss_ratios, poes, probability):
     """
     Return the loss ratio corresponding to the given PoE (Probability
-    of Exceendance).
+    of Exceendance). We can have four cases:
 
-    Return the max loss ratio if the given PoE is smaller than the
-    lowest PoE defined.
+      1) If `probability` is in `poes` it takes the bigger
+      corresponding loss_ratios.
 
-    Return zero if the given PoE is greater than the highest PoE
-    defined.
+      2) If it is in `(poe1, poe2)` where both `poe1` and `poe2` are
+      in `poes`, then we perform a linear interpolation on the
+      corresponding losses
+
+      3) if the given probability is smaller than the
+      lowest PoE defined, it returns the max loss ratio .
+
+      4) if the given probability is greater than the highest PoE
+      defined it returns zero.
 
     :param loss_ratios: an iterable over non-decreasing loss ratio
     values (float)
@@ -596,18 +619,29 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     :param float probability: the probability value used to
     interpolate the loss curve
     """
+
+    rpoes = poes[::-1]
+
     if probability > poes[0]:  # max poes
         return 0.0
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
+    if probability in poes:
+        return max([loss
+                    for i, loss in enumerate(loss_ratios)
+                    if probability == poes[i]])
     else:
-        interval_index = bisect.bisect_right(list(reversed(poes)), probability)
+        interval_index = bisect.bisect_right(rpoes, probability)
 
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
+        elif interval_index == 1:  # boundary case
+            x1, x2 = poes[-3:-1]
+            y1, y2 = loss_ratios[-3:-1]
+        else:
+            x1, x2 = poes[-interval_index-1:-interval_index + 1]
+            y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
 
-        x1, x2 = poes[-interval_index-1:-interval_index + 1]
-        y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
         if x1 == x2:
             return y2
 
