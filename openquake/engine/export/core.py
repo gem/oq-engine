@@ -24,7 +24,7 @@ from openquake.engine.db import models
 
 
 #: Used to separate node labels in a logic tree path
-LT_PATH_JOIN_TOKEN = '|'
+LT_PATH_JOIN_TOKEN = '_'
 
 
 def _export_fn_not_implemented(output, _target_dir):
