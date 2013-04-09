@@ -597,13 +597,20 @@ def _loss_ratio_exceedance_matrix_per_poos(
 def conditional_loss_ratio(loss_ratios, poes, probability):
     """
     Return the loss ratio corresponding to the given PoE (Probability
-    of Exceendance).
+    of Exceendance). We can have four cases:
 
-    Return the max loss ratio if the given PoE is smaller than the
-    lowest PoE defined.
+      1) If `probability` is in `poes` it takes the bigger
+      corresponding loss_ratios.
 
-    Return zero if the given PoE is greater than the highest PoE
-    defined.
+      2) If it is in `(poe1, poe2)` where both `poe1` and `poe2` are
+      in `poes`, then we perform a linear interpolation on the
+      corresponding losses
+
+      3) if the given probability is smaller than the
+      lowest PoE defined, it returns the max loss ratio .
+
+      4) if the given probability is greater than the highest PoE
+      defined it returns zero.
 
     :param loss_ratios: an iterable over non-decreasing loss ratio
     values (float)
@@ -612,18 +619,29 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     :param float probability: the probability value used to
     interpolate the loss curve
     """
+
+    rpoes = poes[::-1]
+
     if probability > poes[0]:  # max poes
         return 0.0
     elif probability < poes[-1]:  # min PoE
         return loss_ratios[-1]
+    if probability in poes:
+        return max([loss
+                    for i, loss in enumerate(loss_ratios)
+                    if probability == poes[i]])
     else:
-        interval_index = bisect.bisect_right(list(reversed(poes)), probability)
+        interval_index = bisect.bisect_right(rpoes, probability)
 
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
+        elif interval_index == 1:  # boundary case
+            x1, x2 = poes[-3:-1]
+            y1, y2 = loss_ratios[-3:-1]
+        else:
+            x1, x2 = poes[-interval_index-1:-interval_index + 1]
+            y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
 
-        x1, x2 = poes[-interval_index-1:-interval_index + 1]
-        y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
         if x1 == x2:
             return y2
 

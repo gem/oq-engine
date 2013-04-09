@@ -60,10 +60,44 @@ class ClassicalTestCase(unittest.TestCase):
         ])
 
         numpy.testing.assert_allclose(
-            scientific.conditional_loss_ratio(
-                loss_ratios1, poes1, 0.1),
-            scientific.conditional_loss_ratio(
-                loss_ratios2, poes2, 0.1))
+            scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.1),
+        scientific.conditional_loss_ratio(loss_ratios2, poes2, 0.1))
+
+    def test_conditional_loss_second(self):
+        loss_ratios1, poes1 = zip(*[
+            (0.21, 0.131), (0.24, 0.108),
+            (0.27, 0.089), (0.30, 0.066),
+        ])
+        numpy.testing.assert_allclose(
+            0.2113043478,
+            scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.13))
+
+    def test_conditional_loss_first(self):
+        loss_ratios1, poes1 = zip(*[
+            (0.21, 0.131), (0.24, 0.108),
+            (0.27, 0.089), (0.30, 0.066),
+        ])
+        numpy.testing.assert_allclose(
+            0.21,
+            scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.131))
+
+    def test_conditional_loss_last(self):
+        loss_ratios1, poes1 = zip(*[
+            (0.21, 0.131), (0.24, 0.108),
+            (0.27, 0.089), (0.30, 0.066),
+        ])
+        numpy.testing.assert_allclose(
+            0.3047368421052632,
+            scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.067))
+
+    def test_conditional_loss_last_exact(self):
+        loss_ratios1, poes1 = zip(*[
+            (0.21, 0.131), (0.24, 0.108),
+            (0.27, 0.089), (0.30, 0.066),
+        ])
+        numpy.testing.assert_allclose(
+            0.30,
+            scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.066))
 
     def test_conditional_loss_computation(self):
         loss_ratios, poes = zip(*[
