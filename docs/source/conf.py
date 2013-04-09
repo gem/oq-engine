@@ -70,7 +70,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'OpenQuake'
+project = u'OpenQuake Engine'
 copyright = u'2013, GEM Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
