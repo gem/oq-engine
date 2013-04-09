@@ -1736,21 +1736,17 @@ class HazardCurve(djm.Model):
     def __iter__(self):
         assert self.output.output_type == 'hazard_curve_multi'
 
+        siblings = self.__class__.objects.filter(
+            output__oq_job=self.output.oq_job,
+            output__output_type='hazard_curve')
+
         if not self.statistics:
-            return iter(
-                self.output.job.hazard_calculation.output_set.filter(
-                    output_type='hazard_curve',
-                    hazard_curve__lt_realization__isnull=False))
+            return iter(siblings.filter(lt_realization__isnull=False))
         elif self.quantile:
             return iter(
-                self.output.job.hazard_calculation.output_set.filter(
-                    output_type='hazard_curve',
-                    hazard_curve__quantile=self.quantile))
+                siblings.filter(statistics="quantile", quantile=self.quantile))
         else:
-            return iter(
-                self.output.job.hazard_calculation.output_set.filter(
-                    output_type='hazard_curve',
-                    hazard_curve__statistics="mean"))
+            return iter(siblings.filter(statistics="mean"))
 
 
 class HazardCurveDataManager(djm.GeoManager):
