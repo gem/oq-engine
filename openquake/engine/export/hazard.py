@@ -148,14 +148,15 @@ def export_hazard_curve(output, target_dir):
 
 @core.makedirs
 def export_hazard_curve_multi(output, target_dir):
-    hcs = iter(output.hazard_curve)
+    hcs = output.hazardcurve
 
-    data = [_curve_data(hc) for hc in iter(hcs)]
-    filename = HAZARD_CURVES_MULTI_FILENAME_FMT % dict(id=hcs.id)
+    data = [_curve_data(hc) for hc in hcs]
+    filename = HAZARD_CURVES_MULTI_FILENAME_FMT % dict(
+        id=output.hazardcurve.id)
 
     metadata_set = []
     path = None
-    for hc in iter(hcs):
+    for hc in hcs:
         metadata, path = _curve_metadata(hc, target_dir, filename)
         metadata_set.append(metadata)
     assert(path)
