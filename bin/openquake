@@ -557,7 +557,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(version.info(__version__))
+        complain_and_exit(__version__)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
