@@ -79,7 +79,7 @@ def _export_common(output):
                 unit=unit)
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_agg_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
@@ -94,7 +94,7 @@ def export_agg_loss_curve_xml(output, target_dir):
 export_agg_loss_curve = export_agg_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
@@ -113,7 +113,7 @@ def export_loss_curve_xml(output, target_dir):
 export_loss_curve = export_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_map_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss map
@@ -134,7 +134,7 @@ def export_loss_map_xml(output, target_dir):
 export_loss_map = export_loss_map_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_fraction_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss fractions
@@ -165,7 +165,7 @@ def export_loss_fraction_xml(output, target_dir):
 export_loss_fraction = export_loss_fraction_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_bcr_distribution_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml bcr distribution
@@ -191,7 +191,7 @@ export_bcr_distribution = export_bcr_distribution_xml
 
 def make_dmg_dist_export(damagecls, writercls, filename):
     # XXX: clearly this is not a good approach for large exposures
-    @core.makedirs
+    @core.makedirsdeco
     def export_dmg_dist(output, target_dir):
         """
         Export the damage distribution identified
