@@ -135,11 +135,8 @@ def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
 
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         # Get the filtered sources, ignore the site collection:
-        filtered_sources = (src for src, _ in ssd_filter(
-            (src, sites) for src in sources))
-
-        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time))
+        filtered_sources = [src for src, _ in ssd_filter(
+            (src, sites) for src in sources)]
 
         # Compute stochastic event sets
         # For each rupture generated, we can optionally calculate a GMF
@@ -155,6 +152,9 @@ def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
 
             # Calculate stochastic event sets:
             logs.LOG.debug('> computing stochastic event sets')
+
+            ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+                filtered_sources, hc.investigation_time))
 
             with EnginePerformanceMonitor(
                 'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
