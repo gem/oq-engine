@@ -69,32 +69,81 @@ COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
 GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
 
 
-def _get_end_branch_export_path(target_dir, result, ltp):
+def _get_result_export_path(calc_id, target_dir, result):
     """
-    Given a hazard result for a particular logic tree end branch, construct an
-    export path by concatenating ``target_dir``, GSIM name, and IMT, create the
-    directory structure (if it doesn't already exist), and return the path.
+    Get the full absolute path (including file name) for a given ``result``.
 
-    In the resulting path, the IMT is used as-is, except for SA IMTs. In this
-    case, the IMT component of the path is formatted like so:
+    As a side effect, intermediate directories are created such that the file
+    can be created and written to immediately.
 
-    `SA[0025]` for SA with a period of 0.025.
-
+    :param int calc_id:
+        ID of the associated
+        :class:`openquake.engine.db.models.HazardCalculation`.
     :param str target_dir:
         Destination directory location for exported files.
     :param result:
-        :mod:`openquake.engine.db.models` result object `with a foreign key
-        reference to :class:`~openquake.engine.db.models.LtRealization`. The
-        realization is needed to identify the logic tree paths, and thus, the
-        name of the GSIM.
+        :mod:`openquake.engine.db.models` result object with a foreign key
+        reference to :class:`~openquake.engine.db.models.Output`.
 
-        ``result`` should also have the following the attributes:
-
-        * imt
-        * sa_period
-
-        See :class:`~openquake.engine.db.models.HazardCurve` for an example.
+    :returns:
+        Full path (including filename) to the destination export file.
     """
+    output = result.output
+    output_type = output.output_type
+
+    # Create the names for each subdirectory
+    calc_dir = 'calc_%s' % calc_id
+
+    type_dir = output_type
+    if output_type in ('complete_lt_gmf', 'gmf_scenario'):
+        type_dir = 'gmf'
+    elif output_type == 'complete_lt_ses':
+        type_dir = 'ses'
+
+    imt_dir = ''  # if blank, we don't have an IMT dir
+    if output_type in ('hazard_curve', 'hazard_map', 'disagg_matrix'):
+        imt_dir = result.imt
+        if result.imt == 'SA':
+            imt_dir = 'SA-%s' % result.sa_period
+
+    # construct the directory which will contain the result XML file:
+    directory = os.path.join(target_dir, calc_dir, type_dir, imt_dir)
+    core.makedirs(directory)
+
+    if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+        if result.statistics is not None:
+            # we could have stats
+            if result.statistics == 'quantile':
+                # quantile
+                filename = '%s-%s.xml' % (output_type,
+                                          'quantile_%s' % result.quantile)
+            else:
+                # mean
+                filename = '%s-%s.xml' % (output_type, result.statistics)
+        else:
+            # otherwise, we need to include logic tree branch info
+            ltr = result.lt_realization
+            sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
+            gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
+            filename = '%s-sm_ltp_%s-gsim_ltp_%s-ltr_%s.xml' % (
+                output_type, sm_ltp, gsim_ltp, ltr.ordinal
+            )
+    elif output_type in ('disagg_matrix', 'gmf', 'ses'):
+        # only logic trees, no stats
+        ltr = result.lt_realization
+        sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
+        gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
+        filename = '%s-sm_ltp_%s-gsim_ltp_%s-ltr_%s.xml' % (
+            output_type, sm_ltp, gsim_ltp, ltr.ordinal
+        )
+    elif output_type == 'gmf_scenario':
+        filename = 'gmf.xml'
+    else:
+        filename = '%s.xml' % output_type
+
+    return os.path.abspath(os.path.join(directory, filename))
+
+
 @core.makedirsdeco
 def export_hazard_curve(output, target_dir):
     """
