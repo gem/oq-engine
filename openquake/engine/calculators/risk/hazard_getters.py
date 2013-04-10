@@ -146,9 +146,11 @@ class HazardCurveGetterPerAsset(HazardGetter):
             self.imls = hc.imls
             self.actual_hazard_id = hc.id
         elif hc.output.output_type == 'hazard_curve_multi':
-            hc = models.HazardCurve.objects.filter(
+            hc = models.HazardCurve.objects.get(
                 output__oq_job=hc.output.oq_job,
                 output__output_type='hazard_curve',
+                statistics=hc.statistics,
+                lt_realization=hc.lt_realization,
                 imt=self._imt,
                 sa_period=self._sa_period,
                 sa_damping=self._sa_damping)
@@ -187,7 +189,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 AS min_distance
         FROM hzrdr.hazard_curve_data
         WHERE hazard_curve_id = %s
-        AND imt = %s
         GROUP BY id
         ORDER BY min_distance
         LIMIT 1;"""
