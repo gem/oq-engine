@@ -823,6 +823,10 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    export_multi_curves = fields.OqNullBooleanField(
+        help_text=('If true hazard curve outputs that groups multiple curves '
+                   'in multiple imt will be exported when asked in export '
+                   'phase.'))
     # Event-Based params:
     #####################
     complete_logic_tree_ses = fields.OqNullBooleanField(

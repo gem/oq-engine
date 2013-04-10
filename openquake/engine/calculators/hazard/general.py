@@ -919,6 +919,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         if 'exports' in kwargs and 'xml' in kwargs['exports']:
             outputs = export_core.get_outputs(self.job.id)
 
+            if not self.hc.export_multi_curves:
+                outputs = outputs.exclude(output_type='hazard_curve_multi')
+
             for output in outputs:
                 exported_files.extend(hazard_export.export(
                     output.id, self.job.hazard_calculation.export_dir))
