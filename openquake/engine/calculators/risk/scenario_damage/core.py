@@ -31,6 +31,7 @@ from openquake.nrmllib.risk import parsers
 from openquake.risklib import api, scientific
 
 from openquake.engine.calculators.risk import general
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import logs
@@ -65,9 +66,8 @@ def scenario_damage(job_id, hazard,
 
     # Scenario Damage works only on one hazard
     hazard_getter = hazard.values()[0][0]
-
-    assets, ground_motion_values, missings = hazard_getter()
-
+    with EnginePerformanceMonitor('hazard_getter', job_id, scenario_damage):
+        assets, ground_motion_values, missings = hazard_getter()
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
         base.signal_task_complete(

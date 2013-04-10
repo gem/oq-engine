@@ -254,8 +254,7 @@ class GroundMotionValuesGetter(HazardGetter):
      AND location && %s
      GROUP BY location) AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-  AND taxonomy = %s AND exposure_model_id = %s
+  WHERE taxonomy = %s AND exposure_model_id = %s
   AND array_length(gmf_table.allgmvs_arr, 1) > 0
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
@@ -264,7 +263,6 @@ class GroundMotionValuesGetter(HazardGetter):
         assets_extent = self._assets_mesh.get_convex_hull()
         args += (assets_extent.dilate(self.max_distance).wkt,
                  self.max_distance * KILOMETERS_TO_METERS,
-                 assets_extent.wkt,
                  self.assets[0].taxonomy,
                  self.assets[0].exposure_model_id)
 
@@ -331,8 +329,7 @@ class GroundMotionScenarioGetter(HazardGetter):
            AND hzrdr.gmf_scenario.output_id = %s
            AND hzrdr.gmf_scenario.location && %s) gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-    AND taxonomy = %s AND exposure_model_id = %s
+  WHERE taxonomy = %s AND exposure_model_id = %s
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """
@@ -345,9 +342,8 @@ class GroundMotionScenarioGetter(HazardGetter):
         args = (imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
                 self.max_distance * KILOMETERS_TO_METERS,
-                assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
-
+        # print cursor.mogrify(query, args)
         return OrderedDict(cursor.fetchall())
