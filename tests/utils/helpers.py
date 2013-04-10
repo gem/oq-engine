@@ -323,24 +323,6 @@ def assertModelAlmostEqual(test_case, expected, actual):
             test_case.assertEqual(exp_val, act_val)
 
 
-def wait_for_celery_tasks(celery_results,
-                          max_wait_loops=MAX_WAIT_LOOPS,
-                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
-    """celery_results is a list of celery task result objects.
-    This function waits until all tasks have finished.
-    """
-
-    # if a celery task has not yet finished, wait for a second
-    # then check again
-    counter = 0
-    while (False in [result.ready() for result in celery_results]):
-        counter += 1
-
-        if counter > max_wait_loops:
-            raise RuntimeError("wait too long for celery worker threads")
-
-        time.sleep(wait_time)
-
 # preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
 # otherwise we could just use __stdout__/__stderr__)
 STDOUT = sys.stdout
