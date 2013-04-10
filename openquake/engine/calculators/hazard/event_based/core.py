@@ -38,7 +38,7 @@ import numpy.random
 
 from django.db import transaction
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.calc import gmf as gmf_calc
+from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.geo import MultiSurface
 from openquake.hazardlib.source import CharacteristicFaultSource
@@ -164,7 +164,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         ses_poissonian = stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time)
-
         logs.LOG.debug('> looping over ruptures')
         rupture_ordinal = 0
         for rupture in ses_poissonian:
@@ -182,7 +181,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                            % hc.ground_motion_fields)
             if hc.ground_motion_fields:
                 # Compute and save ground motion fields
-
                 gmf_calc_kwargs = {
                     'rupture': rupture,
                     'sites': hc.site_collection,
@@ -196,7 +194,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                         hc.maximum_distance),
                 }
                 logs.LOG.debug('> computing ground motion fields')
-                gmf_dict = gmf_calc.ground_motion_fields(**gmf_calc_kwargs)
+                gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
                 logs.LOG.debug('< done computing ground motion fields')
 
                 # update the gmf cache:
@@ -433,6 +431,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
     and (optionally) ground motion fields.
     """
+    n_sources = None  # set by task_arg_gen
 
     core_calc_task = ses_and_gmfs
 
@@ -461,8 +460,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                 is_complete=False, lt_realization=lt_rlz).order_by('id')
             source_ids = source_progress.values_list('parsed_source_id',
                                                      flat=True)
-
-            for offset in xrange(0, len(source_ids), block_size):
+            self.n_sources = len(source_ids)
+            for offset in xrange(0, self.n_sources, block_size):
                 # Since this seed will used for numpy random seeding, it needs
                 # to be positive (since numpy will convert it to a unsigned
                 # long).
