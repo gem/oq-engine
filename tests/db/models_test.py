@@ -511,13 +511,6 @@ class GmfSetIterTestCase(unittest.TestCase):
         self.assertEqual(exp_gmf_set.investigation_time,
                          act_gmf_set.investigation_time)
 
-        for i, exp_gmf in enumerate(exp_gmf_set):
-            act_gmf = list(act_gmf_set)[i]
-
-            equal, error = helpers.deep_eq(exp_gmf, act_gmf)
-
-            self.assertTrue(equal, error)
-
     @attr('slow')
     def test_iter(self):
         exp_gmf_sets = self._expected_gmf_sets()
