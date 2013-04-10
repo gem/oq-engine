@@ -111,10 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def get_output_path(file_name):
-    return os.path.join(OUTPUT_DIR, file_name)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
@@ -122,15 +118,6 @@ def demo_file(file_name):
     """
     return os.path.join(
         os.path.dirname(__file__), "../../demos", file_name)
-
-
-def testdata_path(file_name):
-    """
-    Take a file name and return the full path to the file in the
-    tests/data/demos directory
-    """
-    return os.path.normpath(os.path.join(
-        os.path.dirname(__file__), "../data/demos", file_name))
 
 
 def run_hazard_job(cfg, exports=None):
@@ -637,13 +624,6 @@ class DbTestCase(object):
         except ValueError:
             # no job profile for this job
             pass
-
-    def generate_output_path(self, job, output_type="hazard_map"):
-        """Return a random output path for the given job."""
-        path = touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
-        return path
 
     def teardown_output(self, output, teardown_job=True, filesystem_only=True):
         """
