@@ -35,8 +35,6 @@ from tests.utils import helpers
 
 LOG = logs.LOG
 
-TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
-
 SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
     'simple_fault_demo_hazard/source_model_logic_tree.xml')
 SIMPLE_FAULT_GMPE_LT = helpers.demo_file(
