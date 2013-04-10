@@ -363,6 +363,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes float[],
     hazard_maps boolean DEFAULT false,
     uniform_hazard_spectra boolean DEFAULT false,
+    export_multi_curves boolean DEFAULT false,
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
