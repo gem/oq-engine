@@ -517,6 +517,7 @@ class GmfSetIterTestCase(unittest.TestCase):
 
             self.assertTrue(equal, error)
 
+    @attr('slow')
     def test_iter(self):
         exp_gmf_sets = self._expected_gmf_sets()
 
@@ -540,6 +541,7 @@ class GmfSetIterTestCase(unittest.TestCase):
                     exp_gmf, act_gmf, exclude=["rupture_id"])
                 self.assertTrue(equal, error)
 
+    @attr('slow')
     def test_iter_gmfs_by_location(self):
         search_loc = 'POINT(0.0 0.5)'
         exp_gmf_sets = self._expected_gmf_sets()

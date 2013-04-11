@@ -2110,13 +2110,12 @@ class GmfSet(djm.Model):
                     # collect gmf nodes for each event
                     gmf_nodes = collections.OrderedDict()
                     for gmf in gmfs:
-                        for i, rupture_id in enumerate(gmf.rupture_ids):
+                        for gmv, rupture_id in zip(gmf.gmvs, gmf.rupture_ids):
                             if not rupture_id in gmf_nodes:
                                 gmf_nodes[rupture_id] = []
                             gmf_nodes[rupture_id].append(
                                 _GroundMotionFieldNode(
-                                    gmv=gmf.gmvs[i],
-                                    location=gmf.location))
+                                    gmv=gmv, location=gmf.location))
 
                     # then yield ground motion fields for each rupture
                     first = gmfs[0]
