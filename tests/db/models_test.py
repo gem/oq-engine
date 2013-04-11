@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import getpass
 import itertools
 import string
@@ -31,8 +30,6 @@ from openquake.engine.db import models
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
 from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
-
-from openquake.hazardlib import calc
 
 
 class Profile4JobTestCase(helpers.DbTestCase):
