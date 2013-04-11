@@ -363,11 +363,12 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
 
-        for rupture_id, aggregate_loss in self.event_loss_table.items():
-            models.EventLoss.objects.create(
-                output=event_loss_table_output,
-                rupture_id=rupture_id,
-                aggregate_loss=aggregate_loss)
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            for rupture_id, aggregate_loss in self.event_loss_table.items():
+                models.EventLoss.objects.create(
+                    output=event_loss_table_output,
+                    rupture_id=rupture_id,
+                    aggregate_loss=aggregate_loss)
 
     def create_getter(self, output, imt, assets):
         """
