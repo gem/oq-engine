@@ -134,11 +134,11 @@ def event_based(job_id, hazard,
                 num_items=len(missings))
             return
 
-        with logs.tracing('computing risk'):
+        with logs.tracing('computing losses and loss curves'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
                 calculator(ground_motion_values))
 
-        with logs.tracing('writing results'):
+        with logs.tracing('writing loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -153,6 +153,12 @@ def event_based(job_id, hazard,
                             loss_ratio_curve.abscissae,
                             loss_ratio_curve.ordinates))
 
+        with logs.tracing('writing and computing loss maps'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
+
                     # loss maps
                     for poe in conditional_loss_poes:
                         general.write_loss_map_data(
@@ -160,6 +166,12 @@ def event_based(job_id, hazard,
                             scientific.conditional_loss_ratio(
                                 loss_ratio_curve.abscissae,
                                 loss_ratio_curve.ordinates, poe))
+
+        with logs.tracing('writing and computing insured loss curves'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
 
                     # insured losses
                     if insured_losses:
@@ -184,19 +196,30 @@ def event_based(job_id, hazard,
                             scientific.average_loss(
                                 insured_losses_losses, insured_losses_poes))
 
-                for i, asset in enumerate(assets):
-                    for j, rupture_id in enumerate(rupture_id_matrix[i]):
-                        # update the event loss table of this task
-                        loss = loss_ratio_matrix[i][j] * asset.value
-                        event_loss_table[rupture_id] = (
-                            event_loss_table.get(rupture_id, 0) + loss)
+        with logs.tracing('computing event loss table'):
+            for i, asset in enumerate(assets):
+                for j, rupture_id in enumerate(rupture_id_matrix[i]):
+                    # update the event loss table of this task
+                    loss = loss_ratio_matrix[i][j] * asset.value
+                    event_loss_table[rupture_id] = (
+                        event_loss_table.get(rupture_id, 0) + loss)
 
-                        # compute and save disaggregation
-                        rupture = models.SESRupture.objects.get(pk=rupture_id)
-
+        # compute and save disaggregation
+        with logs.tracing('computing and writing disaggregation'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
                     if asset.site in sites_disagg:
                         for j, rupture_id in enumerate(rupture_id_matrix[i]):
 
+                            # As the path of the code is not frequent
+                            # (we expect few request for
+                            # disaggregation and few elements in
+                            # `sites_disagg` this query is performed
+                            # here and not directly in the hazard
+                            # getter
+                            rupture = models.SESRupture.objects.get(pk=rupture_id)
                             loss = loss_ratio_matrix[i][j] * asset.value
                             site = asset.site
                             site_mesh = mesh.Mesh(numpy.array([site.x]),
@@ -236,7 +259,7 @@ def event_based(job_id, hazard,
          mean_loss_map_ids, quantile_loss_map_ids) = (
              statistical_output_containers)
 
-        with logs.tracing('writing statistics'):
+        with logs.tracing('computing and writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 general.compute_and_write_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
