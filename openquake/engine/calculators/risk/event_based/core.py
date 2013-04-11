@@ -32,8 +32,7 @@ from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
-from openquake.engine.performance import (
-    EnginePerformanceMonitorWithLog as profiler)
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import base
 
 
@@ -95,7 +94,7 @@ def event_based(job_id, hazard,
     """
 
     def profile(name):
-        return profiler(name, job_id, event_based)
+        return EnginePerformanceMonitor(name, job_id, event_based, True)
 
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
