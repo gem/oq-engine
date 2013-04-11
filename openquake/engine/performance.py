@@ -194,3 +194,21 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """
         if no_distribute():
             logs.LOG.warn('PyMem: %d mb, PgMem: %d mb' % self.mem_peaks)
+
+
+class EnginePerformanceMonitorWithLog(EnginePerformanceMonitor):
+    """
+    a monitor that also log the operation
+    """
+    def __init__(self, operation, job_id, task=None, tic=0.1):
+        super(EnginePerformanceMonitorWithLog, self).__init__(
+            operation, job_id, task, tic)
+        self.tracer = logs.tracing(operation)
+
+    def __enter__(self):
+        super(EnginePerformanceMonitorWithLog, self).__enter__()
+        self.tracer.__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        super(EnginePerformanceMonitorWithLog, self).__exit__(*args, **kwargs)
+        self.tracer.__exit__(*args, **kwargs)
