@@ -2119,6 +2119,12 @@ class GmfSet(djm.Model):
                             rupture_id=rupture_id,
                             gmf_nodes=gmf_nodes[rupture_id])
 
+    def to_str(self):
+        "Method used in testing and debugging"
+        return '<GmfSet ses_ordinal=%s, ses=%d, gmfs=\n%s>' % (
+            self.ses_ordinal, self.stochastic_event_set_id,
+            '\n'.join(map(str, self)))
+
 
 class _GroundMotionField(object):
 
@@ -2135,12 +2141,22 @@ class _GroundMotionField(object):
     def __getitem__(self, key):
         return self.gmf_nodes[key]
 
+    def __str__(self):
+        mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
+                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
+                 vars(self))
+        return 'GMF(%s\n%s)' % (mdata, '\n'.join(map(str, self.gmf_nodes)))
+
 
 class _GroundMotionFieldNode(object):
 
     def __init__(self, gmv, location):
         self.gmv = gmv
         self.location = location  # must have x and y attributes
+
+    def __str__(self):
+        return '<X=%s, Y=%s, GMV=%s>' % (self.location.x, self.location.y,
+                                         self.gmv)
 
 
 class Gmf(djm.Model):
