@@ -125,17 +125,31 @@ def _get_result_export_path(calc_id, target_dir, result):
             ltr = result.lt_realization
             sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
             gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
-            filename = '%s-sm_ltp_%s-gsim_ltp_%s-ltr_%s.xml' % (
-                output_type, sm_ltp, gsim_ltp, ltr.ordinal
-            )
+            if ltr.weight is None:
+                # Monte-Carlo logic tree sampling
+                filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
+                    output_type, sm_ltp, gsim_ltp, ltr.ordinal
+                )
+            else:
+                # End Branch Enumeration
+                filename = '%s-smltp_%s-gsimltp_%s.xml' % (
+                    output_type, sm_ltp, gsim_ltp
+                )
     elif output_type in ('disagg_matrix', 'gmf', 'ses'):
         # only logic trees, no stats
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
         gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
-        filename = '%s-sm_ltp_%s-gsim_ltp_%s-ltr_%s.xml' % (
-            output_type, sm_ltp, gsim_ltp, ltr.ordinal
-        )
+        if ltr.weight is None:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
+                output_type, sm_ltp, gsim_ltp, ltr.ordinal
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-smltp_%s-gsimltp_%s.xml' % (
+                output_type, sm_ltp, gsim_ltp
+            )
     elif output_type == 'gmf_scenario':
         filename = 'gmf.xml'
     else:
