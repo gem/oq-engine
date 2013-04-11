@@ -1723,7 +1723,7 @@ class HazardCurve(djm.Model):
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
-    imt = djm.TextField(choices=IMT_CHOICES)
+    imt = djm.TextField(choices=IMT_CHOICES, default=None, blank=True)
     imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
