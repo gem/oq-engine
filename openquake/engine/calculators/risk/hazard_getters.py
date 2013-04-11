@@ -26,7 +26,7 @@ from collections import OrderedDict
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from django.db import connection
+from django.db import connections
 
 
 #: Scaling constant do adapt to the postgis functions (that work with
@@ -165,7 +165,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         query = """
         SELECT
@@ -209,7 +209,7 @@ class GroundMotionValuesGetter(HazardGetter):
                 "At the moment, we only support computation of loss curves "
                 "for a specific logic tree branch.")
 
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         spectral_filters = ""
         args = (self._imt, gmf_set_ids)
@@ -317,7 +317,7 @@ class GroundMotionScenarioGetter(HazardGetter):
     """
 
     def get_data(self):
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
