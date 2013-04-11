@@ -133,6 +133,9 @@ def testdata_path(file_name):
         os.path.dirname(__file__), "../data/demos", file_name))
 
 
+# this function is used in various tests to run a computation in-process;
+# task distribution is disabled to make it possible to debug and profile
+# the tests
 def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
@@ -156,11 +159,14 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    engine._do_run_calc(job, exports, calc, 'hazard')
-    job.is_running = False
-    job.calc = calc
-    job.save()
-
+    os.environ['OQ_NO_DISTRIBUTE'] = '1'
+    try:
+        engine._do_run_calc(job, exports, calc, 'hazard')
+    finally:
+        del os.environ['OQ_NO_DISTRIBUTE']
+        job.is_running = False
+        job.calc = calc
+        job.save()
     return job
 
 
