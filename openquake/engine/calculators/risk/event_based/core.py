@@ -32,6 +32,8 @@ from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
+from openquake.engine.performance import (
+    EnginePerformanceMonitorWithLog as profiler)
 from openquake.engine.calculators import base
 
 
@@ -92,6 +94,9 @@ def event_based(job_id, hazard,
     representing the correlation between the generated loss ratios
     """
 
+    def profile(name):
+        return profiler(name, job_id, event_based)
+
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
 
@@ -117,7 +122,7 @@ def event_based(job_id, hazard,
             seed=seed,
             correlation=asset_correlation)
 
-        with logs.tracing('getting input data from db'):
+        with profile('getting input data from db'):
             assets, gmvs_ruptures, missings = hazard_getter()
 
         if len(assets):
@@ -134,11 +139,11 @@ def event_based(job_id, hazard,
                 num_items=len(missings))
             return
 
-        with logs.tracing('computing losses and loss curves'):
+        with profile('computing losses and loss curves'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
                 calculator(ground_motion_values))
 
-        with logs.tracing('writing loss curves'):
+        with profile('writing loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -153,7 +158,7 @@ def event_based(job_id, hazard,
                             loss_ratio_curve.abscissae,
                             loss_ratio_curve.ordinates))
 
-        with logs.tracing('writing and computing loss maps'):
+        with profile('writing and computing loss maps'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -167,7 +172,7 @@ def event_based(job_id, hazard,
                                 loss_ratio_curve.abscissae,
                                 loss_ratio_curve.ordinates, poe))
 
-        with logs.tracing('writing and computing insured loss curves'):
+        with profile('writing and computing insured loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -196,7 +201,7 @@ def event_based(job_id, hazard,
                             scientific.average_loss(
                                 insured_losses_losses, insured_losses_poes))
 
-        with logs.tracing('computing event loss table'):
+        with profile('computing event loss table'):
             for i, asset in enumerate(assets):
                 for j, rupture_id in enumerate(rupture_id_matrix[i]):
                     # update the event loss table of this task
@@ -205,7 +210,7 @@ def event_based(job_id, hazard,
                         event_loss_table.get(rupture_id, 0) + loss)
 
         # compute and save disaggregation
-        with logs.tracing('computing and writing disaggregation'):
+        with profile('computing and writing disaggregation'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -217,9 +222,9 @@ def event_based(job_id, hazard,
                             # (we expect few request for
                             # disaggregation and few elements in
                             # `sites_disagg` this query is performed
-                            # here and not directly in the hazard
-                            # getter
-                            rupture = models.SESRupture.objects.get(pk=rupture_id)
+                            # here and not directly in the getter
+                            rupture = models.SESRupture.objects.get(
+                                pk=rupture_id)
                             loss = loss_ratio_matrix[i][j] * asset.value
                             site = asset.site
                             site_mesh = mesh.Mesh(numpy.array([site.x]),
@@ -259,7 +264,7 @@ def event_based(job_id, hazard,
          mean_loss_map_ids, quantile_loss_map_ids) = (
              statistical_output_containers)
 
-        with logs.tracing('computing and writing statistics'):
+        with profile('computing and writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 general.compute_and_write_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
