@@ -26,13 +26,8 @@ from collections import OrderedDict
 from openquake.hazardlib.calc import disagg
 from openquake.nrmllib import writers as nrml_writers
 
-from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.export import core
-from openquake.engine.input import logictree
-
-
-LOG = logs.LOG
 
 
 # for each output_type there must be a function
@@ -58,15 +53,6 @@ def export(output_id, target_dir):
     export_fn = globals().get(
         'export_' + output.output_type, core._export_fn_not_implemented)
     return export_fn(output, os.path.expanduser(target_dir))
-
-
-HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
-HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
-GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
-SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
-GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
 
 
 def _get_result_export_path(calc_id, target_dir, result):
