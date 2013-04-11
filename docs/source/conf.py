@@ -70,7 +70,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'OpenQuake'
+project = u'OpenQuake Engine'
 copyright = u'2013, GEM Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -78,7 +78,7 @@ copyright = u'2013, GEM Foundation'
 # built documents.
 #
 # The short X.Y version.
-version = '.'.join([str(x) for x in openquake.engine.__version__[:3]])
+version = openquake.engine.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
