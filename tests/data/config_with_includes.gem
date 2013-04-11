@@ -1,4 +1,0 @@
-[general]
-CALCULATION_MODE = Event Based
-risk_include = risk-config.gem
-hazard_include = hazard-config.gem

@@ -111,10 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def get_output_path(file_name):
-    return os.path.join(OUTPUT_DIR, file_name)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
@@ -122,15 +118,6 @@ def demo_file(file_name):
     """
     return os.path.join(
         os.path.dirname(__file__), "../../demos", file_name)
-
-
-def testdata_path(file_name):
-    """
-    Take a file name and return the full path to the file in the
-    tests/data/demos directory
-    """
-    return os.path.normpath(os.path.join(
-        os.path.dirname(__file__), "../data/demos", file_name))
 
 
 # this function is used in various tests to run a computation in-process;
@@ -342,24 +329,6 @@ def assertModelAlmostEqual(test_case, expected, actual):
         else:
             test_case.assertEqual(exp_val, act_val)
 
-
-def wait_for_celery_tasks(celery_results,
-                          max_wait_loops=MAX_WAIT_LOOPS,
-                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
-    """celery_results is a list of celery task result objects.
-    This function waits until all tasks have finished.
-    """
-
-    # if a celery task has not yet finished, wait for a second
-    # then check again
-    counter = 0
-    while (False in [result.ready() for result in celery_results]):
-        counter += 1
-
-        if counter > max_wait_loops:
-            raise RuntimeError("wait too long for celery worker threads")
-
-        time.sleep(wait_time)
 
 # preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
 # otherwise we could just use __stdout__/__stderr__)
@@ -644,13 +613,6 @@ class DbTestCase(object):
         except ValueError:
             # no job profile for this job
             pass
-
-    def generate_output_path(self, job, output_type="hazard_map"):
-        """Return a random output path for the given job."""
-        path = touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
-        return path
 
     def teardown_output(self, output, teardown_job=True, filesystem_only=True):
         """

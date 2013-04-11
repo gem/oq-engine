@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="n1">
-  <riskResult gml:id="rr1">
-    <aggregateLossCurve gml:id="alc1">
-      <loss>1.1 3.3 2.2</loss>
-      <poE>0.1 0.3 0.2</poE>
-    </aggregateLossCurve>
-  </riskResult>
-</nrml>
