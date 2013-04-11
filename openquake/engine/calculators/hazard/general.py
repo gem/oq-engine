@@ -489,6 +489,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     self.job, "hc-multi-imt-rlz-%s" % rlz.id,
                     "hazard_curve_multi"),
                 lt_realization=rlz,
+                imt=None,
                 investigation_time=self.hc.investigation_time)
 
             # create a new `HazardCurve` 'container' record for each
@@ -990,17 +991,19 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     self.job, "mean-curves-multi-imt",
                     "hazard_curve_multi"),
                 statistics="mean",
+                imt=None,
                 investigation_time=self.hc.investigation_time)
 
         if self.hc.quantile_hazard_curves:
             for quantile in self.hc.quantile_hazard_curves:
-                # create a new `HazardCurve` 'container' record for mean
+                # create a new `HazardCurve` 'container' record for quantile
                 # curves (virtual container for multiple imts)
                 models.HazardCurve.objects.create(
                     output=models.Output.objects.create_output(
                         self.job, 'quantile(%s)-curves' % quantile,
                         "hazard_curve_multi"),
                     statistics="quantile",
+                    imt=None,
                     quantile=quantile,
                     investigation_time=self.hc.investigation_time)
 
