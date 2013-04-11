@@ -95,7 +95,7 @@ def _get_result_export_path(calc_id, target_dir, result):
     calc_dir = 'calc_%s' % calc_id
 
     type_dir = output_type
-    if output_type in ('complete_lt_gmf', 'gmf_scenario'):
+    if output_type == 'complete_lt_gmf':
         type_dir = 'gmf'
     elif output_type == 'complete_lt_ses':
         type_dir = 'ses'
