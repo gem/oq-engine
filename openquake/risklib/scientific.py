@@ -426,11 +426,10 @@ class LogNormalDistribution(Distribution):
                              "before you can use it")
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
-        variance = (means * covs) ** 2
-        sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
-        mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
+        sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
 
-        return numpy.exp(mu + (epsilons[0:len(sigma)] * sigma))
+        return (means / numpy.sqrt(1 + covs ** 2) *
+                numpy.exp(epsilons[0:len(sigma)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
 
@@ -445,6 +444,7 @@ class LogNormalDistribution(Distribution):
                 return 1
 
         variance = stddev ** 2.0
+
         sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
         mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
@@ -641,9 +641,6 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
         else:
             x1, x2 = poes[-interval_index-1:-interval_index + 1]
             y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
-
-        if x1 == x2:
-            return y2
 
         return (y2 - y1) / (x2 - x1) * (probability - x1) + y1
 
