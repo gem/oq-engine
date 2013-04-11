@@ -23,6 +23,7 @@ from openquake.hazardlib import pmf
 from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib import models as nrml_models
 
 from openquake.engine.db import models
 from openquake.engine.input import source as source_input
@@ -378,6 +379,47 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         eq, msg = helpers.deep_eq(exp, actual)
 
         self.assertTrue(eq, msg)
+
+    def test_raises_useful_error(self):
+        # Test that the source id and name are included with conversion errors,
+        # to help the users deal with problems in their source models.
+        area_geom = nrml_models.AreaGeometry(
+            wkt='POLYGON((0.0 0.0, 1.0 0.0, 0.0 0.0 ))',
+            upper_seismo_depth=0.0, lower_seismo_depth=10.0,
+        )
+        area_mfd = nrml_models.IncrementalMFD(
+            min_mag=6.55, bin_width=0.1,
+            occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                         5.080653E-4],
+        )
+        area_npd = [
+            nrml_models.NodalPlane(probability=decimal.Decimal("0.3"),
+                                   strike=0.0, dip=90.0, rake=0.0),
+            nrml_models.NodalPlane(probability=decimal.Decimal("0.7"),
+                                   strike=90.0, dip=45.0, rake=90.0),
+        ]
+        area_hdd = [
+            nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=4.0),
+            nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=8.0),
+        ]
+        area_src = nrml_models.AreaSource(
+            id='1', name='Quito', trt='Active Shallow Crust',
+            geometry=area_geom, mag_scale_rel='PeerMSR',
+            rupt_aspect_ratio=1.5, mfd=area_mfd, nodal_plane_dist=area_npd,
+            hypo_depth_dist=area_hdd,
+        )
+
+        with self.assertRaises(RuntimeError) as ar:
+            source_input.nrml_to_hazardlib(area_src, MESH_SPACING, BIN_WIDTH,
+                                           AREA_SRC_DISC)
+        expected_error = (
+            "The following error has occurred with source id='1', "
+            "name='Quito': Could not create geometry because of errors while "
+            "reading input."
+        )
+        self.assertEqual(expected_error, ar.exception.message)
 
 
 class SourceDBWriterTestCase(unittest.TestCase):
