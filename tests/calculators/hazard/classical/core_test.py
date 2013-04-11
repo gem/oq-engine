@@ -292,7 +292,7 @@ store_site_model'
             self.assertEqual(
                 1,
                 models.HazardCurve.objects.filter(
-                    lt_realization=rlz.id, imt="", statistics=None).count())
+                    lt_realization=rlz.id, imt=None, statistics=None).count())
 
             # In this calculation, we have 120 sites of interest.
             # We should have exactly that many curves per realization
@@ -327,7 +327,7 @@ store_site_model'
             models.HazardCurve.objects.filter(
                 output__oq_job=self.job,
                 lt_realization__isnull=True, statistics="mean",
-                imt="").count())
+                imt=None).count())
 
         for quantile in hc.quantile_hazard_curves:
             self.assertEqual(
@@ -350,7 +350,7 @@ store_site_model'
                     lt_realization__isnull=True, statistics="quantile",
                     output__oq_job=self.job,
                     quantile=quantile,
-                    imt="").count())
+                    imt=None).count())
 
         # Test for the correct number of maps.
         # The expected count is:
