@@ -36,7 +36,7 @@ from datetime import datetime
 import openquake.hazardlib
 import numpy
 
-from django.db import connection
+from django.db import connections
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -2443,7 +2443,7 @@ class LossFraction(djm.Model):
         (e.g. the absolute losses for assets of a taxonomy) and the
         percentage (expressed in decimal format) over the total losses
         """
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         total = self.lossfractiondata_set.aggregate(
             djm.Sum('absolute_loss')).values()[0]
@@ -2477,7 +2477,7 @@ class LossFraction(djm.Model):
         the fraction of losses occurring in that location.
         """
         rc = self.output.oq_job.risk_calculation
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         # Partition by lon,lat because partitioning on geometry types
         # seems not supported in postgis 1.5
@@ -2861,7 +2861,7 @@ class AssetManager(djm.GeoManager):
             `exposure_model` and contained in `region_constraint` with the
             number of assets.
         """
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         cursor.execute("""
         SELECT oqmif.exposure_data.taxonomy, COUNT(*)
