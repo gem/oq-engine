@@ -2046,7 +2046,7 @@ class GmfSet(djm.Model):
         """
         return self.iter_gmfs()
 
-    def iter_gmfs(self, location=None):
+    def iter_gmfs(self, location=None, num_tasks=None, imts=None):
         """
         Queries for and iterates over child :class:`Gmf` records, with the
         option of specifying a ``location``.
@@ -2056,9 +2056,17 @@ class GmfSet(djm.Model):
             ``location`` is expected to be a point represented as WKT.
 
             Example: `POINT(21.1 45.8)`
+
+       :param num_tasks:
+            If given, only the result_grp_ordinal <= num_tasks are returned,
+            otherwise there is no filtering; this is used only in a test and
+            this parameter will disappear in the future
+
+        :param imts:
+            A list of IMT triples; if not given, all the calculated IMTs
+            are taken in consideration (no filtering)
         """
         job = self.gmf_collection.output.oq_job
-        hc = job.hazard_calculation
         if self.ses_ordinal is None:  # complete logic tree
             # Get all of the GmfSets associated with a logic tree realization,
             # for this calculation.
@@ -2072,12 +2080,12 @@ class GmfSet(djm.Model):
                       for each_set in lt_gmf_sets)):
                 yield gmf
         else:
-            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
-
-            imts = [parse_imt(x) for x in hc.intensity_measure_types]
+            num_tasks = num_tasks or \
+                JobStats.objects.get(oq_job=job.id).num_tasks
+            imts = imts or \
+                map(parse_imt, job.hazard_calculation.intensity_measure_types)
 
             for imt, sa_period, sa_damping in imts:
-
                 for result_grp_ordinal in xrange(1, num_tasks + 1):
                     gmfs = order_by_location(
                         Gmf.objects.filter(
@@ -2118,12 +2126,6 @@ class GmfSet(djm.Model):
                             sa_damping=first.sa_damping,
                             rupture_id=rupture_id,
                             gmf_nodes=gmf_nodes[rupture_id])
-
-    def to_str(self):
-        "Method used in testing and debugging"
-        return '<GmfSet ses_ordinal=%s, ses=%d, gmfs=\n%s>' % (
-            self.ses_ordinal, self.stochastic_event_set_id,
-            '\n'.join(map(str, self)))
 
 
 class _GroundMotionField(object):
