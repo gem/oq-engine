@@ -23,7 +23,8 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
-# FIXME(lp). This is no more than a smoke test
+# TODO(lp). This is a regression test that checks for the presence of
+# the results
 class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
@@ -44,11 +45,7 @@ class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
         fractions = [fractions
                      for fractions in loss_fraction.iteritems()]
 
-        return [[len(loss_fraction.total_fractions())],
-                [node[0] for node in fractions],
-                [len(node[1]) for node in fractions]]
+        return [node[0] for node in fractions]
 
     def expected_data(self):
-        return [2,
-                [[80.838823, 29.386172], [80.988823, 29.611172]],
-                [1, 1]]
+        return [80.838823, 29.386172], [80.988823, 29.611172]
