@@ -201,23 +201,6 @@ random_seed=5
             os.unlink(sites_csv)
 
 
-class FileDigestTestCase(unittest.TestCase):
-    """Test the _file_digest() function."""
-
-    PATH = helpers.get_data_path("src_model1.dat")
-
-    def test__file_digest(self):
-        # Make sure the digest returned by the function matches the one
-        # obtained via /usr/bin/md5sum
-        if sys.platform == 'darwin':
-            expected = subprocess.check_output(["md5", self.PATH]).split()[-1]
-        else:
-            expected = subprocess.check_output(
-                ["md5sum", self.PATH]).split()[0]
-        actual = engine._file_digest(self.PATH)
-        self.assertEqual(expected, actual)
-
-
 class GetContentTypeTestCase(unittest.TestCase):
 
     def test__get_content_type(self):
