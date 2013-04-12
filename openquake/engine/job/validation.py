@@ -318,11 +318,13 @@ class ClassicalHazardForm(BaseHazardModelForm):
         super_valid = super(ClassicalHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_and_levels_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types_and_levels', errs)
+        if 'vulnerability_file' in self.files:
+            if self.instance.intensity_measure_types_and_levels is not None:
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -384,43 +386,56 @@ class EventBasedHazardForm(BaseHazardModelForm):
             self._add_error('complete_logic_tree_gmf', msg)
             all_valid = False
 
+        # If a vulnerability model is defined, show warnings if the user also
+        # specified `intensity_measure_types_and_levels` or
+        # `intensity_measure_types`:
+        if 'vulnerability_file' in self.files:
+            if (self.instance.intensity_measure_types_and_levels
+                    is not None):
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when '
+                    'a `vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
+            if (self.instance.intensity_measure_types is not None):
+                msg = (
+                    '`intensity_measure_types` is ignored when '
+                    'a `vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
+
         # For the case where the user has requested to post-process GMFs into
         # hazard curves:
         if hc.hazard_curves_from_gmfs:
-            # 1) We need to make sure `intensity_measure_types_and_levels` is
-            #    defined (and valid)
-            if hc.intensity_measure_types_and_levels is None:
-                # Not defined
-                msg = '`%s` requires `%s`'
-                msg %= ('hazard_curve_from_gmfs',
-                        'intensity_measure_types_and_levels')
-
-                self._add_error('intensity_measure_types_and_levels', msg)
-                all_valid = False
-            elif 'vulnerability_file' not in self.files:
-                # Defined, but is it valid?
-                valid, errs = intensity_measure_types_and_levels_is_valid(hc)
-                all_valid &= valid
-                self._add_error('hazard_curves_from_gmfs', errs)
-
-                # 2) The IMT keys in `intensity_measure_types_and_levels` need
-                #    to be a subset of `intensity_measure_types`.
-                imts = set(hc.intensity_measure_types_and_levels.keys())
-
-                all_imts = set(hc.intensity_measure_types)
-
-                if not imts.issubset(all_imts):
-                    msg = 'Unknown IMT(s) [%s] in `%s`'
-                    msg %= (', '.join(sorted(imts - all_imts)),
-                            'intensity_measure_types')
+            # The vulnerability model can define the IMTs/IMLs;
+            # if there isn't one, we need to check that
+            # `intensity_measure_types_and_levels` and
+            # `intensity_measure_types` are both defined and valid.
+            if not 'vulnerability_file' in self.files:
+                if hc.intensity_measure_types_and_levels is None:
+                    # Not defined
+                    msg = '`%s` requires `%s`'
+                    msg %= ('hazard_curve_from_gmfs',
+                            'intensity_measure_types_and_levels')
 
                     self._add_error('intensity_measure_types_and_levels', msg)
                     all_valid = False
-        elif 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types', errs)
+                else:
+                    # IMTs/IMLs is defined
+                    # The IMT keys in `intensity_measure_types_and_levels` need
+                    # to be a subset of `intensity_measure_types`.
+                    imts = set(hc.intensity_measure_types_and_levels.keys())
+
+                    all_imts = set(hc.intensity_measure_types)
+
+                    if not imts.issubset(all_imts):
+                        msg = 'Unknown IMT(s) [%s] in `%s`'
+                        msg %= (', '.join(sorted(imts - all_imts)),
+                                'intensity_measure_types')
+
+                        self._add_error('intensity_measure_types_and_levels',
+                                        msg)
+                        all_valid = False
 
         return all_valid
 
@@ -462,11 +477,13 @@ class DisaggHazardForm(BaseHazardModelForm):
         super_valid = super(DisaggHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_and_levels_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types_and_levels', errs)
+        if 'vulnerability_file' in self.files:
+            if self.instance.intensity_measure_types_and_levels is not None:
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -502,11 +519,13 @@ class ScenarioHazardForm(BaseHazardModelForm):
         super_valid = super(ScenarioHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types', errs)
+        if 'vulnerability_file' in self.files:
+            if self.instance.intensity_measure_types is not None:
+                msg = (
+                    '`intensity_measure_types` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -823,6 +842,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
 
     valid = True
     errors = []
+
+    if im is None:
+        return valid, errors
 
     for im_type, imls in im.iteritems():
         # validate IMT:
