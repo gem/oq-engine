@@ -2162,8 +2162,8 @@ class _GroundMotionFieldNode(object):
 
     def __str__(self):
         "Return lon, lat and gmv of the node in a compact string form"
-        return '<X=%s, Y=%s, GMV=%s>' % (self.location.x, self.location.y,
-                                         self.gmv)
+        return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
+            self.location.x, self.location.y, self.gmv)
 
 
 class Gmf(djm.Model):
