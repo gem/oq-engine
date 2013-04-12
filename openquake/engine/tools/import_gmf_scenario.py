@@ -3,7 +3,7 @@ from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.engine.db.models import Output, OqUser
 from openquake.engine.engine import get_current_user
-from django.db import connection
+from django.db import connections
 
 
 def import_gmf_scenario(fileobj, user=None):
@@ -15,7 +15,7 @@ def import_gmf_scenario(fileobj, user=None):
     :returns: the generated :class:`openquake.engine.db.models.Output` object
     """
     fname = fileobj.name
-    curs = connection.cursor().cursor.cursor  # DB API cursor
+    curs = connections['admin'].cursor().cursor.cursor  # DB API cursor
     owner = OqUser.objects.get(user_name=user) if user else get_current_user()
     out = Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
