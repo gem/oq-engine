@@ -128,8 +128,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-            self.assertEqual(0, retcode)
+            helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
 
@@ -206,8 +205,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('event_based_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-            self.assertEqual(0, retcode)
+            helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
 
@@ -219,7 +217,6 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
             # Total: 42
             self.assertEqual(42, len(outputs))
-
 
             #######
             # SESs:
@@ -301,8 +298,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
             cfg = helpers.demo_file('scenario_hazard/job.ini')
 
             # run the calculation to create something to export
-            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-            self.assertEqual(0, retcode)
+            helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
 
@@ -337,8 +333,7 @@ class DisaggExportTestCase(BaseExportTestCase):
         try:
             cfg = helpers.demo_file('disaggregation/job.ini')
 
-            retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-            self.assertEqual(0, retcode)
+            helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
 
