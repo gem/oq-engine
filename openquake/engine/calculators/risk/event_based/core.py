@@ -94,7 +94,8 @@ def event_based(job_id, hazard,
     """
 
     def profile(name):
-        return EnginePerformanceMonitor(name, job_id, event_based, True)
+        return EnginePerformanceMonitor(
+            name, job_id, event_based, tracing=True)
 
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
