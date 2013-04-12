@@ -67,7 +67,7 @@ $coll1<tab>$out1<tab>...
 $coll2<tab>$out2<tab>...
 $coll3<tab>$out3<tab>...
 
-The PGImporter takes in input templates like these and replace
+The PGImporter takes in input templates like these and replaces
 the $-identifiers with the right numbers: it looks at the
 maximum identifier in the target database and increments it;
 for instance if the maximum id for the output table is 10000,
@@ -84,7 +84,8 @@ $coll2 -> 20002
 $coll3 -> 20003
 
 This is enough to solve the problem of populating a test database; copying
-data from a db to another is more cumbersome.
+data from a db to another is more cumbersome and will require a smarter
+approach (perhaps by using temporary tables).
 """
 
 import re

@@ -2060,7 +2060,7 @@ class GmfSet(djm.Model):
        :param num_tasks:
             If given, only the result_grp_ordinal <= num_tasks are returned,
             otherwise there is no filtering; this is used only in a test and
-            this parameter will disappear in the future
+            will disappear in the future
 
         :param imts:
             A list of IMT triples; if not given, all the calculated IMTs
@@ -2143,6 +2143,11 @@ class _GroundMotionField(object):
         return self.gmf_nodes[key]
 
     def __str__(self):
+        """
+        String representation of a _GroundMotionField object showing the
+        content of the nodes (lon, lat an gmv). This is useful for debugging
+        and testing.
+        """
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
                  'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
                  vars(self))
@@ -2156,6 +2161,7 @@ class _GroundMotionFieldNode(object):
         self.location = location  # must have x and y attributes
 
     def __str__(self):
+        "Return lon, lat and gmv of the node in a compact string form"
         return '<X=%s, Y=%s, GMV=%s>' % (self.location.x, self.location.y,
                                          self.gmv)
 
