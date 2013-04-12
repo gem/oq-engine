@@ -18,6 +18,7 @@ import shutil
 import tempfile
 import unittest
 
+from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
@@ -29,89 +30,210 @@ from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
 
 
-class UtilsTestCase(unittest.TestCase):
+class GetResultExportPathTestCase(unittest.TestCase):
 
     def setUp(self):
-        class FakeLtRealization(object):
-            def __init__(self, gsim_lt_path):
-                self.gsim_lt_path = gsim_lt_path
-
-        class FakeResult(object):
-            def __init__(self, lt_realization, imt, sa_period):
-                self.lt_realization = lt_realization
-                self.imt = imt
-                self.sa_period = sa_period
-
-        class FakeGMPE(object):
-            pass
-
-        class FakeGMPELTBranch(object):
-            value = FakeGMPE()
-
-        class FakeGMPELT(object):
-            def __init__(self, branches):
-                self.branches = branches
-
-        class FakeLogicTreeProcessor(object):
-            def __init__(self, gmpe_lt):
-                self.gmpe_lt = gmpe_lt
-
-        self.FakeResult = FakeResult
-        self.FakeGMPELTBranch = FakeGMPELTBranch
-
-        self.lt_rlz = FakeLtRealization(['b1'])
-        branches = dict(b1=FakeGMPELTBranch())
-        gmpe_lt = FakeGMPELT(branches)
-        self.ltp = FakeLogicTreeProcessor(gmpe_lt)
-
-        self.target_dir = '/tmp/oq/'
-
-    def test__get_end_branch_export_path_one_gsim_bl(self):
-        # Test with one GSIM branching level
-
-        # PGA:
-        result = self.FakeResult(self.lt_rlz, 'PGA', None)
-        expected = '/tmp/oq/FakeGMPE/PGA'
-        actual = hazard._get_end_branch_export_path(
-            self.target_dir, result, self.ltp
+        self.FakeHazardCurve = namedtuple(
+            'HazardCurve',
+            'output, lt_realization, imt, sa_period, statistics, quantile'
         )
-        self.assertEqual(expected, actual)
-
-        # SA:
-        result = self.FakeResult(self.lt_rlz, 'SA', '0.025')
-        expected = '/tmp/oq/FakeGMPE/SA[0025]'
-        actual = hazard._get_end_branch_export_path(
-            self.target_dir, result, self.ltp
+        self.FakeHazardMap = namedtuple(
+            'HazardMap',
+            'output, lt_realization, imt, sa_period, statistics, quantile'
         )
-        self.assertEqual(expected, actual)
-
-    def test__get_end_branch_export_path_two_gsim_bls(self):
-        # Same test as above but with multiple GSIM branching levels
-        # In this case, we have two branching levels in the GSIM logic tree.
-        # The GSIM names should be joined on a `_` to form the directory name.
-
-        class FakeGMPE2(object):
-            pass
-        b2 = self.FakeGMPELTBranch()
-        b2.value = FakeGMPE2()
-        self.ltp.gmpe_lt.branches['b2'] = b2
-        self.lt_rlz.gsim_lt_path.append('b2')
-
-        # PGA:
-        result = self.FakeResult(self.lt_rlz, 'PGA', None)
-        expected = '/tmp/oq/FakeGMPE_FakeGMPE2/PGA'
-        actual = hazard._get_end_branch_export_path(
-            self.target_dir, result, self.ltp
+        self.FakeUHS = namedtuple(
+            'UHS',
+            'output, lt_realization, statistics, quantile'
         )
-        self.assertEqual(expected, actual)
-
-        # SA:
-        result = self.FakeResult(self.lt_rlz, 'SA', '0.025')
-        expected = '/tmp/oq/FakeGMPE_FakeGMPE2/SA[0025]'
-        actual = hazard._get_end_branch_export_path(
-            self.target_dir, result, self.ltp
+        self.FakeDisagg = namedtuple(
+            'Disagg',
+            'output, lt_realization, imt, sa_period'
         )
-        self.assertEqual(expected, actual)
+        self.FakeGMF = namedtuple(
+            'GMF',
+            'output, lt_realization'
+        )
+        self.FakeSES = namedtuple(
+            'SES',
+            'output, lt_realization'
+        )
+        self.FakeCLTGMF = namedtuple(
+            'CompleteLogicTreeGMF',
+            'output'
+        )
+        self.FakeCLTSES = namedtuple(
+            'CompleteLogicTreeSES',
+            'output'
+        )
+        self.FakeOutput = namedtuple(
+            'Output',
+            'output_type'
+        )
+        self.FakeLTR = namedtuple(
+            'LtRealization',
+            'sm_lt_path, gsim_lt_path, ordinal, weight'
+        )
+
+        self.ltr_mc = self.FakeLTR(['B1', 'B3'], ['B2', 'B4'], 3, None)
+        self.ltr_enum = self.FakeLTR(['B10', 'B9'], ['B7', 'B8'], 0, 0.6)
+
+        self.target_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.target_dir)
+
+    def test_hazard_curve(self):
+        output = self.FakeOutput('hazard_curve')
+
+        curves = [
+            self.FakeHazardCurve(output, self.ltr_mc, 'PGA', None, None, None),
+            self.FakeHazardCurve(output, self.ltr_enum, 'SA', 0.025, None,
+                                 None),
+            self.FakeHazardCurve(output, None, 'SA', 0.025, 'mean', None),
+            self.FakeHazardCurve(output, None, 'SA', 0.025, 'quantile', 0.85),
+        ]
+        expected_paths = [
+            '%s/calc_7/hazard_curve/PGA/'
+            'hazard_curve-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/hazard_curve/SA-0.025/'
+            'hazard_curve-smltp_B10_B9-gsimltp_B7_B8.xml',
+            '%s/calc_7/hazard_curve/SA-0.025/'
+            'hazard_curve-mean.xml',
+            '%s/calc_7/hazard_curve/SA-0.025/'
+            'hazard_curve-quantile_0.85.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, curve in enumerate(curves):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_path(7, self.target_dir, curve)
+            )
+
+    def test_hazard_map(self):
+        output = self.FakeOutput('hazard_map')
+
+        maps = [
+            self.FakeHazardMap(output, self.ltr_mc, 'PGA', None, None, None),
+            self.FakeHazardMap(output, self.ltr_mc, 'SA', 0.025, None, None),
+            self.FakeHazardMap(output, None, 'SA', 0.025, 'mean', None),
+            self.FakeHazardMap(output, None, 'SA', 0.025, 'quantile', 0.85),
+        ]
+        expected_paths = [
+            '%s/calc_7/hazard_map/PGA/'
+            'hazard_map-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/hazard_map/SA-0.025/'
+            'hazard_map-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/hazard_map/SA-0.025/'
+            'hazard_map-mean.xml',
+            '%s/calc_7/hazard_map/SA-0.025/'
+            'hazard_map-quantile_0.85.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, hmap in enumerate(maps):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_path(7, self.target_dir, hmap)
+            )
+
+    def test_uhs(self):
+        output = self.FakeOutput('uh_spectra')
+
+        uh_spectra = [
+            self.FakeUHS(output, self.ltr_mc, None, None),
+            self.FakeUHS(output, None, 'mean', None),
+            self.FakeUHS(output, None, 'quantile', 0.85),
+        ]
+        expected_paths = [
+            '%s/calc_7/uh_spectra/'
+            'uh_spectra-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/uh_spectra/uh_spectra-mean.xml',
+            '%s/calc_7/uh_spectra/uh_spectra-quantile_0.85.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, uhs in enumerate(uh_spectra):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_path(7, self.target_dir, uhs)
+            )
+
+    def test_disagg(self):
+        output = self.FakeOutput('disagg_matrix')
+
+        matrices = [
+            self.FakeDisagg(output, self.ltr_mc, 'PGA', None),
+            self.FakeDisagg(output, self.ltr_mc, 'SA', 0.025),
+        ]
+
+        expected_paths = [
+            '%s/calc_7/disagg_matrix/PGA/'
+            'disagg_matrix-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/disagg_matrix/SA-0.025/'
+            'disagg_matrix-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, matrix in enumerate(matrices):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_path(7, self.target_dir, matrix)
+            )
+
+    def test_gmf(self):
+        output = self.FakeOutput('gmf')
+
+        gmf = self.FakeGMF(output, self.ltr_enum)
+        expected_path = (
+            '%s/calc_8/gmf/gmf-smltp_B10_B9-gsimltp_B7_B8.xml'
+            % self.target_dir
+        )
+
+        self.assertEqual(
+            expected_path,
+            hazard._get_result_export_path(8, self.target_dir, gmf)
+        )
+
+    def test_ses(self):
+        output = self.FakeOutput('ses')
+
+        ses = self.FakeGMF(output, self.ltr_enum)
+        expected_path = (
+            '%s/calc_8/ses/ses-smltp_B10_B9-gsimltp_B7_B8.xml'
+            % self.target_dir
+        )
+
+        self.assertEqual(
+            expected_path,
+            hazard._get_result_export_path(8, self.target_dir, ses)
+        )
+
+    def test_clt_gmf(self):
+        output = self.FakeOutput('complete_lt_gmf')
+
+        gmf = self.FakeCLTGMF(output)
+
+        expected_path = '%s/calc_9/gmf/complete_lt_gmf.xml'
+        expected_path %= self.target_dir
+
+        self.assertEqual(
+            expected_path,
+            hazard._get_result_export_path(9, self.target_dir, gmf)
+        )
+
+    def test_clt_ses(self):
+        output = self.FakeOutput('complete_lt_ses')
+
+        ses = self.FakeCLTSES(output)
+
+        expected_path = '%s/calc_10/ses/complete_lt_ses.xml'
+        expected_path %= self.target_dir
+
+        self.assertEqual(
+            expected_path,
+            hazard._get_result_export_path(10, self.target_dir, ses)
+        )
 
 
 class ClassicalExportTestCase(BaseExportTestCase):
