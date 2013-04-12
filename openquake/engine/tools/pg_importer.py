@@ -138,8 +138,10 @@ class PGImporter(object):
         self.dic = {}
 
     def import_templ(self, table_name, templ):
-        "Import a csv by replacing the ids"
-        # NB: currval does not work on empty tables, this is why I use max
+        "Import a csv by replacing the ids; return the last inserted id"
+        # NB: currval does not work on empty tables, this is why I use max;
+        # nextval is also bad since it would increase the serial
+        # number by 1 even when importing empty files
         self.curs.execute("select max(id) from %s" % table_name)
         max_id = self.curs.fetchone()[0] or 0
         data = Replacer(self.dic, max_id).replace_ids(templ)
@@ -148,6 +150,8 @@ class PGImporter(object):
         next_id = max_id + data.count('\n')
         setval = "select setval('%s_id_seq', %s)" % (table_name, next_id)
         self.curs.execute(setval)
+        self.curs.execute("select nextval('%s_id_seq')" % table_name)
+        return self.curs.fetchone()[0] - 1  # next_id - 1
 
     def import_all(self, table_name_data_list):
         """
