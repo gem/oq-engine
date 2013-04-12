@@ -121,9 +121,10 @@ def demo_file(file_name):
 
 
 # this function is used in various tests to run a computation in-process;
-# task distribution is disabled to make it possible to debug and profile
-# the tests
-def run_hazard_job(cfg, exports=None):
+# task distribution is disabled by default to make it possible to debug and
+# profile the tests; notice however that in the QA tests (see
+# BaseQATestCase.run_hazard) the distribution is enabled
+def run_hazard_job(cfg, exports=None, distribute=False):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
@@ -146,11 +147,13 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    os.environ['OQ_NO_DISTRIBUTE'] = '1'
+    if not distribute:
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
     try:
         engine._do_run_calc(job, exports, calc, 'hazard')
     finally:
-        del os.environ['OQ_NO_DISTRIBUTE']
+        if not distribute:
+            del os.environ['OQ_NO_DISTRIBUTE']
         job.is_running = False
         job.calc = calc
         job.save()
