@@ -29,9 +29,6 @@ from tests.utils.helpers import patch
 from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 
-CONFIG_FILE = "config.gem"
-
-
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
     def setUp(self):
         self.job = self.setup_classic_job(create_job_path=False)
