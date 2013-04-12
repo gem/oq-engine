@@ -36,8 +36,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        self.cfg = helpers.get_data_path('event_based_hazard/job.ini')
+        self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
 

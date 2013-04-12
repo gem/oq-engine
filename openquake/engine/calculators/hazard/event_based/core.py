@@ -122,6 +122,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         apply_uncertainties = ltp.parse_source_model_logictree_path(
             lt_rlz.sm_lt_path)
+
         gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
         sources = list(haz_general.gen_sources(
@@ -130,8 +131,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         sources_sites = ((src, hc.site_collection) for src in sources)
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        # Get the filtered sources, ignore the site collection:
-        filtered_sources = (src for src, _ in ssd_filter(sources_sites))
+        filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
 
     # Save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -164,7 +164,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
                     len(ses_poissonian), ses_rlz_n, lt_rlz_id),
                     job_id, ses_and_gmfs):
-                gmf_cache, points_to_compute = _compute_gmfs(
+                gmf_cache, points_to_compute = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
 
@@ -183,8 +183,11 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
-def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
-
+def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
+    """
+    Compute a ground motion field value for each rupture, for all the
+    points affected by that rupture, for all IMTs.
+    """
     imts = [haz_general.imt_to_hazardlib(x)
             for x in hc.intensity_measure_types]
     correl_model = None
@@ -212,8 +215,7 @@ def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
             'truncation_level': hc.truncation_level,
             'realizations': DEFAULT_GMF_REALIZATIONS,
             'correlation_model': correl_model,
-            'rupture_site_filter':
-            filters.rupture_site_distance_filter(
+            'rupture_site_filter': filters.rupture_site_distance_filter(
                 hc.maximum_distance),
         }
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
