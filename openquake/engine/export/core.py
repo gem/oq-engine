@@ -24,7 +24,7 @@ from openquake.engine.db import models
 
 
 #: Used to separate node labels in a logic tree path
-LT_PATH_JOIN_TOKEN = '|'
+LT_PATH_JOIN_TOKEN = '_'
 
 
 def _export_fn_not_implemented(output, _target_dir):
@@ -34,7 +34,7 @@ def _export_fn_not_implemented(output, _target_dir):
                               % output.output_type)
 
 
-def makedirs(fn):
+def makedirsdeco(fn):
     """Decorator for export functions. Creates intermediate directories (if
     necessary) to the target export directory.
 
@@ -45,14 +45,7 @@ def makedirs(fn):
         """Call :func:`os.makedirs` to create intermediate directories to
         the ``target_dir``.
         """
-        if os.path.exists(target_dir):
-            if not os.path.isdir(target_dir):
-                # If it's not a directory, we can't do anything.
-                # This is a problem
-                raise RuntimeError('%s already exists and is not a directory.'
-                                   % target_dir)
-        else:
-            os.makedirs(target_dir)
+        makedirs(target_dir)
         return fn(output, target_dir)
 
     # This fixes doc generation problems with decorators
@@ -60,6 +53,20 @@ def makedirs(fn):
     wrapped.__repr__ = fn.__repr__
 
     return wrapped
+
+
+def makedirs(path):
+    """
+    Make all of the directories in the ``path`` using `os.makedirs`.
+    """
+    if os.path.exists(path):
+        if not os.path.isdir(path):
+            # If it's not a directory, we can't do anything.
+            # This is a problem
+            raise RuntimeError('%s already exists and is not a directory.'
+                               % path)
+    else:
+        os.makedirs(path)
 
 
 def get_outputs(job_id):
