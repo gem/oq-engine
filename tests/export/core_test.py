@@ -41,16 +41,16 @@ class BaseExportTestCase(unittest.TestCase):
         self.assertTrue(os.path.getsize(filename) > 0)
 
 
-@export.makedirs
+@export.makedirsdeco
 def _decorated(_output, _target_dir):
-    """Just a test function for exercising the `makedirs` decorator."""
+    """Just a test function for exercising the `makedirsdeco` decorator."""
     return []
 
 
 class UtilsTestCase(unittest.TestCase):
     """Tests for misc. export utilties."""
 
-    def test_makedirs_deco(self):
+    def test_makedirsdeco(self):
         temp_dir = tempfile.mkdtemp()
 
         try:
@@ -64,7 +64,7 @@ class UtilsTestCase(unittest.TestCase):
         finally:
             shutil.rmtree(temp_dir)
 
-    def test_makedirs_deco_dir_already_exists(self):
+    def test_makedirsdeco_dir_already_exists(self):
         # If the dir already exists, this should work with no errors.
         # The decorator should just gracefully pass through.
         temp_dir = tempfile.mkdtemp()
@@ -73,7 +73,7 @@ class UtilsTestCase(unittest.TestCase):
         finally:
             shutil.rmtree(temp_dir)
 
-    def test_makedirs_deco_target_exists_as_file(self):
+    def test_makedirsdeco_target_exists_as_file(self):
         # If a file exists with the exact path of the target dir,
         # we should get a RuntimeError.
         _, temp_file = tempfile.mkstemp()

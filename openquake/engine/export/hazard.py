@@ -26,13 +26,8 @@ from collections import OrderedDict
 from openquake.hazardlib.calc import disagg
 from openquake.nrmllib import writers as nrml_writers
 
-from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.export import core
-from openquake.engine.input import logictree
-
-
-LOG = logs.LOG
 
 
 # for each output_type there must be a function
@@ -60,65 +55,94 @@ def export(output_id, target_dir):
     return export_fn(output, os.path.expanduser(target_dir))
 
 
-HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
-HAZARD_MAP_FILENAME_FMT = 'hazard-map-%(hazard_map_id)s.xml'
-GMF_FILENAME_FMT = 'gmf-%(gmf_coll_id)s.xml'
-SES_FILENAME_FMT = 'ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_SES_FILENAME_FMT = 'complete-lt-ses-%(ses_coll_id)s.xml'
-COMPLETE_LT_GMF_FILENAME_FMT = 'complete-lt-gmf-%(gmf_coll_id)s.xml'
-GMF_SCENARIO_FMT = 'gmf-%(output_id)s.xml'
-
-
-def _get_end_branch_export_path(target_dir, result, ltp):
+def _get_result_export_path(calc_id, target_dir, result):
     """
-    Given a hazard result for a particular logic tree end branch, construct an
-    export path by concatenating ``target_dir``, GSIM name, and IMT, create the
-    directory structure (if it doesn't already exist), and return the path.
+    Get the full absolute path (including file name) for a given ``result``.
 
-    In the resulting path, the IMT is used as-is, except for SA IMTs. In this
-    case, the IMT component of the path is formatted like so:
+    As a side effect, intermediate directories are created such that the file
+    can be created and written to immediately.
 
-    `SA[0025]` for SA with a period of 0.025.
-
+    :param int calc_id:
+        ID of the associated
+        :class:`openquake.engine.db.models.HazardCalculation`.
     :param str target_dir:
         Destination directory location for exported files.
     :param result:
-        :mod:`openquake.engine.db.models` result object `with a foreign key
-        reference to :class:`~openquake.engine.db.models.LtRealization`. The
-        realization is needed to identify the logic tree paths, and thus, the
-        name of the GSIM.
+        :mod:`openquake.engine.db.models` result object with a foreign key
+        reference to :class:`~openquake.engine.db.models.Output`.
 
-        ``result`` should also have the following the attributes:
-
-        * imt
-        * sa_period
-
-        See :class:`~openquake.engine.db.models.HazardCurve` for an example.
-    :param ltp:
-        Instance of a :class:`~openquake.engine.input.logictree.\
-LogicTreeProcessor`.
+    :returns:
+        Full path (including filename) to the destination export file.
     """
-    lt_rlz = result.lt_realization
-    gsim_dir_name = '_'.join(
-        [ltp.gmpe_lt.branches[br].value.__class__.__name__
-         for br in lt_rlz.gsim_lt_path]
-    )
+    output = result.output
+    output_type = output.output_type
 
-    imt = result.imt
-    if imt == 'SA':
-        # if it's SA, include the period
-        period = str(result.sa_period)
-        period = period.replace('.', '')
-        imt = 'SA[%s]' % period
+    # Create the names for each subdirectory
+    calc_dir = 'calc_%s' % calc_id
 
-    export_dir = os.path.abspath(os.path.join(target_dir, gsim_dir_name, imt))
-    if not os.path.exists(export_dir):
-        os.makedirs(export_dir)
+    type_dir = output_type
+    if output_type == 'complete_lt_gmf':
+        type_dir = 'gmf'
+    elif output_type == 'complete_lt_ses':
+        type_dir = 'ses'
 
-    return export_dir
+    imt_dir = ''  # if blank, we don't have an IMT dir
+    if output_type in ('hazard_curve', 'hazard_map', 'disagg_matrix'):
+        imt_dir = result.imt
+        if result.imt == 'SA':
+            imt_dir = 'SA-%s' % result.sa_period
+
+    # construct the directory which will contain the result XML file:
+    directory = os.path.join(target_dir, calc_dir, type_dir, imt_dir)
+    core.makedirs(directory)
+
+    if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+        if result.statistics is not None:
+            # we could have stats
+            if result.statistics == 'quantile':
+                # quantile
+                filename = '%s-%s.xml' % (output_type,
+                                          'quantile_%s' % result.quantile)
+            else:
+                # mean
+                filename = '%s-%s.xml' % (output_type, result.statistics)
+        else:
+            # otherwise, we need to include logic tree branch info
+            ltr = result.lt_realization
+            sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
+            gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
+            if ltr.weight is None:
+                # Monte-Carlo logic tree sampling
+                filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
+                    output_type, sm_ltp, gsim_ltp, ltr.ordinal
+                )
+            else:
+                # End Branch Enumeration
+                filename = '%s-smltp_%s-gsimltp_%s.xml' % (
+                    output_type, sm_ltp, gsim_ltp
+                )
+    elif output_type in ('disagg_matrix', 'gmf', 'ses'):
+        # only logic trees, no stats
+        ltr = result.lt_realization
+        sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
+        gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
+        if ltr.weight is None:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
+                output_type, sm_ltp, gsim_ltp, ltr.ordinal
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-smltp_%s-gsimltp_%s.xml' % (
+                output_type, sm_ltp, gsim_ltp
+            )
+    else:
+        filename = '%s.xml' % output_type
+
+    return os.path.abspath(os.path.join(directory, filename))
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_hazard_curve(output, target_dir):
     """
     Export the specified hazard curve ``output`` to the ``target_dir``.
@@ -134,6 +158,7 @@ def export_hazard_curve(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
+    haz_calc = output.oq_job.hazard_calculation
 
     curves = models.HazardCurveData.objects.all_curves_simple(
         filter_args=dict(hazard_curve=hc.id)
@@ -144,27 +169,18 @@ def export_hazard_curve(output, target_dir):
     HazardCurveData = namedtuple('HazardCurveData', 'location poes')
     hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
-    filename = HAZARD_CURVES_FILENAME_FMT % dict(hazard_curve_id=hc.id)
-
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
         lt_rlz = hc.lt_realization
         smlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsimlt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
-
-        # Also include the GSIM name and IMT in the directory structure.
-        # This is much more useful and organized than simply dumping all of the
-        # results to a single directory.
-        haz_calc = hc.lt_realization.hazard_calculation
-        ltp = logictree.LogicTreeProcessor(haz_calc.id)
-        export_dir = _get_end_branch_export_path(target_dir, hc, ltp)
-        path = os.path.join(export_dir, filename)
     else:
         # These curves must be statistical aggregates
         smlt_path = None
         gsimlt_path = None
-        path = os.path.abspath(os.path.join(target_dir, filename))
+
+    path = _get_result_export_path(haz_calc.id, target_dir, output.hazardcurve)
 
     metadata = {
         'quantile_value': hc.quantile,
@@ -183,7 +199,7 @@ def export_hazard_curve(output, target_dir):
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_gmf(output, target_dir):
     """
     Export the GMF Collection specified by ``output`` to the ``target_dir``.
@@ -200,21 +216,17 @@ def export_gmf(output, target_dir):
     """
     gmf_coll = models.GmfCollection.objects.get(output=output.id)
     lt_rlz = gmf_coll.lt_realization
+    haz_calc = output.oq_job.hazard_calculation
 
     if output.output_type == 'complete_lt_gmf':
-        filename = COMPLETE_LT_GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
-
-        # For the `complete logic tree` GMF, the LT paths are not relevant.
         sm_lt_path = None
         gsim_lt_path = None
     else:
-        # output type should be `gmf`
-        filename = GMF_FILENAME_FMT % dict(gmf_coll_id=gmf_coll.id)
-
         sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    path = os.path.abspath(os.path.join(target_dir, filename))
+    path = _get_result_export_path(haz_calc.id, target_dir,
+                                   output.gmfcollection)
 
     writer = nrml_writers.EventBasedGMFXMLWriter(
         path, sm_lt_path, gsim_lt_path)
@@ -225,7 +237,7 @@ def export_gmf(output, target_dir):
 export_complete_lt_gmf = export_gmf
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_gmf_scenario(output, target_dir):
     """
     Export the GMFs specified by ``output`` to the ``target_dir``.
@@ -240,15 +252,18 @@ def export_gmf_scenario(output, target_dir):
         A list of exported file names (including the absolute path to each
         file).
     """
+    haz_calc = output.oq_job.hazard_calculation
+    calc_dir = 'calc_%s' % haz_calc.id
+    path = os.path.abspath(os.path.join(target_dir, calc_dir,
+                                        'gmf', 'gmf.xml'))
+    core.makedirs(os.path.dirname(path))
     gmfs = models.get_gmfs_scenario(output)
-    filename = GMF_SCENARIO_FMT % dict(output_id=output.id)
-    path = os.path.abspath(os.path.join(target_dir, filename))
     writer = nrml_writers.ScenarioGMFXMLWriter(path)
     writer.serialize(gmfs)
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_ses(output, target_dir):
     """
     Export the Stochastic Event Set Collection specified by ``output`` to the
@@ -265,23 +280,18 @@ def export_ses(output, target_dir):
         file).
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
-    # lt_rlz can be `None` in the case of a `complete logic tree` SES
-    lt_rlz = ses_coll.lt_realization
+    haz_calc = output.oq_job.hazard_calculation
 
     if output.output_type == 'complete_lt_ses':
-        filename = COMPLETE_LT_SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
-
-        # For the `complete logic tree` SES, the LT paths are not relevant.
         sm_lt_path = None
         gsim_lt_path = None
     else:
-        # output_type should be `ses`
-        filename = SES_FILENAME_FMT % dict(ses_coll_id=ses_coll.id)
-
+        lt_rlz = ses_coll.lt_realization
         sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    path = os.path.abspath(os.path.join(target_dir, filename))
+    path = _get_result_export_path(haz_calc.id, target_dir,
+                                   output.sescollection)
 
     writer = nrml_writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
@@ -291,7 +301,7 @@ def export_ses(output, target_dir):
 export_complete_lt_ses = export_ses
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_hazard_map(output, target_dir):
     """
     Export the specified hazard map ``output`` to the ``target_dir``.
@@ -307,9 +317,7 @@ def export_hazard_map(output, target_dir):
         file).
     """
     hazard_map = models.HazardMap.objects.get(output=output)
-
-    filename = HAZARD_MAP_FILENAME_FMT % dict(hazard_map_id=hazard_map.id)
-    path = os.path.abspath(os.path.join(target_dir, filename))
+    haz_calc = output.oq_job.hazard_calculation
 
     if hazard_map.lt_realization is not None:
         # If the maps are for a specified logic tree realization,
@@ -321,6 +329,8 @@ def export_hazard_map(output, target_dir):
         # These maps must be constructed from mean or quantile curves
         smlt_path = None
         gsimlt_path = None
+
+    path = _get_result_export_path(haz_calc.id, target_dir, output.hazardmap)
 
     metadata = {
         'quantile_value': hazard_map.quantile,
@@ -379,7 +389,7 @@ class _DisaggMatrix(object):
         self.iml = iml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_disagg_matrix(output, target_dir):
     """
     Export disaggregation histograms to the ``target_dir``.
@@ -397,12 +407,10 @@ def export_disagg_matrix(output, target_dir):
     # We expect 1 result per `Output`
     [disagg_result] = models.DisaggResult.objects.filter(output=output)
     lt_rlz = disagg_result.lt_realization
+    haz_calc = output.oq_job.hazard_calculation
 
-    filename = '%s.xml' % output.display_name
-    haz_calc = disagg_result.lt_realization.hazard_calculation
-    ltp = logictree.LogicTreeProcessor(haz_calc.id)
-    export_dir = _get_end_branch_export_path(target_dir, disagg_result, ltp)
-    path = os.path.abspath(os.path.join(export_dir, filename))
+    path = _get_result_export_path(haz_calc.id, target_dir,
+                                   output.disaggresult)
 
     pmf_map = OrderedDict([
         (('Mag', ), disagg.mag_pmf),
@@ -443,7 +451,7 @@ def export_disagg_matrix(output, target_dir):
     return [path]
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_uh_spectra(output, target_dir):
     """
     Export the specified UHS ``output`` to the ``target_dir``.
@@ -458,9 +466,9 @@ def export_uh_spectra(output, target_dir):
         A list containing the exported file name.
     """
     uhs = models.UHS.objects.get(output=output)
+    haz_calc = output.oq_job.hazard_calculation
 
-    filename = '%s.xml' % output.display_name
-    path = os.path.abspath(os.path.join(target_dir, filename))
+    path = _get_result_export_path(haz_calc.id, target_dir, output.uhs)
 
     if uhs.lt_realization is not None:
         lt_rlz = uhs.lt_realization
