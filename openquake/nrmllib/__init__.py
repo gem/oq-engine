@@ -13,10 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-
-"""NRML base path"""
+"""
+NRML base path
+"""
 
 import os
+from lxml import etree
 
 __version__ = "0.4.4"
 
@@ -30,9 +32,25 @@ SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 
 _NRML_SCHEMA_FILE = 'nrml.xsd'
 
+_NRML_SCHEMA = None  # defined in assert_valid
+
 
 def nrml_schema_file():
-    """Returns the absolute path to the NRML schema file"""
+    """
+    Returns the absolute path to the NRML schema file
+    """
     return os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
         'schema', _NRML_SCHEMA_FILE)
+
+
+def assert_valid(source):
+    """
+    Raises a `lxml.etree.DocumentInvalid` error for invalid files.
+
+    :param source: a filename or a file-like object.
+    """
+    global _NRML_SCHEMA
+    if _NRML_SCHEMA is None:  # the nrml schema is parsed only once
+        _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
+    _NRML_SCHEMA.assertValid(etree.parse(source))
