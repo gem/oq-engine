@@ -71,7 +71,7 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         aaae(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
         aaae(test_data.RLZ_2_POE_01_SA, rlz2.matrix)
 
-        # Lastly, we should an export of at least one of these results to
+        # Lastly, we should check an export of at least one of these results to
         # ensure that the disagg export/serialization is working properly.
         # The export isn't just a simple dump from the database; it requires
         # extraction of PMFs (Probability Mass Function) from a 6d matrix,

@@ -49,9 +49,6 @@ def read_one_line(path):
     return open(path, 'r').readline().strip('\n')
 
 
-ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
-
-
 class JSONEncoderTestCase(unittest.TestCase):
     def test_numpy_1_dimensional_array(self):
         encoder = kvs.NumpyAwareJSONEncoder()
