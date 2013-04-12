@@ -186,8 +186,7 @@ def export_hazard_curve_multi(output, target_dir):
 
 
 def _curve_metadata(output, target_dir):
-    hc = output.oq_job.hazard_calculation
-
+    hc = models.HazardCurve.objects.get(output=output.id)
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
@@ -199,7 +198,8 @@ def _curve_metadata(output, target_dir):
         smlt_path = None
         gsimlt_path = None
 
-    path = _get_result_export_path(hc.id, target_dir, output.hazardcurve)
+    haz_calc = output.oq_job.hazard_calculation
+    path = _get_result_export_path(haz_calc.id, target_dir, output.hazardcurve)
 
     return {
         'quantile_value': hc.quantile,
