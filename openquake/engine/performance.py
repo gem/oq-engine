@@ -6,7 +6,7 @@ import psutil
 
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
-from django.db import connection
+from django.db import connections
 
 MB = 1024 * 1024  # 1 megabyte
 
@@ -145,7 +145,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.task_id = None
         self.operation = operation
         py_pid = os.getpid()
-        pg_pid = connection.cursor().connection.get_backend_pid()
+        pg_pid = connections['job_init'].cursor().connection.get_backend_pid()
         try:
             psutil.Process(pg_pid)
         except psutil.error.NoSuchProcess:  # the db is on a different machine
