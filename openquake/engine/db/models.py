@@ -1199,6 +1199,12 @@ class RiskCalculation(djm.Model):
         hc = self.get_hazard_calculation()
         if hc.sites is None and hc.region_grid_spacing is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
+
+        # if we are computing hazard at exact location we set the
+        # maximum_distance to a very small number in order to help the
+        # query to find the results.
+        if hc.inputs.filter(input_type='exposure').exists():
+            dist = 0.001
         return dist
 
     @property
@@ -1667,7 +1673,7 @@ class HazardMap(djm.Model):
     '''
     Hazard Map header (information which pertains to entire map)
     '''
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1835,7 +1841,7 @@ class SESCollection(djm.Model):
 
     See also :class:`SES` and :class:`SESRupture`.
     """
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # If `lt_realization` is None, this is a `complete logic tree`
     # Stochastic Event Set Collection, containing a single stochastic
     # event set containing all of the ruptures from the entire
@@ -2034,7 +2040,7 @@ class GmfSet(djm.Model):
         """
         return self.iter_gmfs()
 
-    def iter_gmfs(self, location=None):
+    def iter_gmfs(self, location=None, num_tasks=None, imts=None):
         """
         Queries for and iterates over child :class:`Gmf` records, with the
         option of specifying a ``location``.
@@ -2044,9 +2050,17 @@ class GmfSet(djm.Model):
             ``location`` is expected to be a point represented as WKT.
 
             Example: `POINT(21.1 45.8)`
+
+       :param num_tasks:
+            If given, only the result_grp_ordinal <= num_tasks are returned,
+            otherwise there is no filtering; this is used only in a test and
+            will disappear in the future
+
+        :param imts:
+            A list of IMT triples; if not given, all the calculated IMTs
+            are taken in consideration (no filtering)
         """
         job = self.gmf_collection.output.oq_job
-        hc = job.hazard_calculation
         if self.ses_ordinal is None:  # complete logic tree
             # Get all of the GmfSets associated with a logic tree realization,
             # for this calculation.
@@ -2060,12 +2074,12 @@ class GmfSet(djm.Model):
                       for each_set in lt_gmf_sets)):
                 yield gmf
         else:
-            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
-
-            imts = [parse_imt(x) for x in hc.intensity_measure_types]
+            num_tasks = num_tasks or \
+                JobStats.objects.get(oq_job=job.id).num_tasks
+            imts = imts or \
+                map(parse_imt, job.hazard_calculation.intensity_measure_types)
 
             for imt, sa_period, sa_damping in imts:
-
                 for result_grp_ordinal in xrange(1, num_tasks + 1):
                     gmfs = order_by_location(
                         Gmf.objects.filter(
@@ -2090,13 +2104,12 @@ class GmfSet(djm.Model):
                     # collect gmf nodes for each event
                     gmf_nodes = collections.OrderedDict()
                     for gmf in gmfs:
-                        for i, rupture_id in enumerate(gmf.rupture_ids):
+                        for gmv, rupture_id in zip(gmf.gmvs, gmf.rupture_ids):
                             if not rupture_id in gmf_nodes:
                                 gmf_nodes[rupture_id] = []
                             gmf_nodes[rupture_id].append(
                                 _GroundMotionFieldNode(
-                                    gmv=gmf.gmvs[i],
-                                    location=gmf.location))
+                                    gmv=gmv, location=gmf.location))
 
                     # then yield ground motion fields for each rupture
                     first = gmfs[0]
@@ -2123,12 +2136,28 @@ class _GroundMotionField(object):
     def __getitem__(self, key):
         return self.gmf_nodes[key]
 
+    def __str__(self):
+        """
+        String representation of a _GroundMotionField object showing the
+        content of the nodes (lon, lat an gmv). This is useful for debugging
+        and testing.
+        """
+        mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
+                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
+                 vars(self))
+        return 'GMF(%s\n%s)' % (mdata, '\n'.join(map(str, self.gmf_nodes)))
+
 
 class _GroundMotionFieldNode(object):
 
     def __init__(self, gmv, location):
         self.gmv = gmv
         self.location = location  # must have x and y attributes
+
+    def __str__(self):
+        "Return lon, lat and gmv of the node in a compact string form"
+        return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
+            self.location.x, self.location.y, self.gmv)
 
 
 class Gmf(djm.Model):
@@ -2265,7 +2294,7 @@ class DisaggResult(djm.Model):
     hazard curve, logic tree path information, and investigation time.
     """
 
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     lt_realization = djm.ForeignKey('LtRealization')
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
