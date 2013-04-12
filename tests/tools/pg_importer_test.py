@@ -143,10 +143,30 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709362
 
 
 class PGImporterTestCase(unittest.TestCase):
-    def testImportGmfCollection(self):
+    @classmethod
+    def setupClass(cls):
         connection.cursor()  # open the connection
-        imp = PGImporter(connection.connection)
-        imp.import_all([
+        cls.imp = PGImporter(connection.connection)
+
+    def test_empty_file(self):
+        out = Output.objects.latest('id')
+        last_id = self.imp.import_templ('uiapi.output', '')
+        self.assertEqual(last_id, out.id)  # inserted nothing
+        self.imp.conn.rollback()  # cleanup
+
+    def test_serial_updated(self):
+        data = '''\
+$out1	1	\N	gmf-rlz-1	gmf	2013-04-11 03:08:46
+$out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
+'''
+        out = Output.objects.latest('id')
+        last_id = self.imp.import_templ('uiapi.output', data)
+        self.assertEqual(last_id, out.id + 2)  # inserted 2 rows
+        self.imp.conn.rollback()  # cleanup
+
+    def _testImportGmfCollection(self):
+        self.imp = PGImporter(connection.connection)
+        self.imp.import_all([
             ('uiapi.output', output),
             ('hzrdr.gmf_collection', gmf_collection),
             ('hzrdr.gmf_set', gmf_set),
