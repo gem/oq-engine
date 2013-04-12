@@ -163,26 +163,26 @@ def event_based(job_id, hazard,
 
                     # insured losses
                     if insured_losses:
-                        insured_loss_curve = scientific.event_based(
-                            scientific.insured_losses(
-                                loss_ratio_matrix[i],
-                                asset.value,
-                                asset.deductible,
-                                asset.ins_limit),
-                            tses,
-                            time_span,
-                            loss_curve_resolution)
+                        insured_losses_losses, insured_losses_poes = (
+                            scientific.event_based(
+                                scientific.insured_losses(
+                                    loss_ratio_matrix[i],
+                                    asset.value,
+                                    asset.deductible,
+                                    asset.ins_limit),
+                                tses,
+                                time_span,
+                                loss_curve_resolution))
 
-                        insured_loss_curve.abscissae = (
-                            insured_loss_curve.abscissae / asset.value)
+                        # FIXME(lp). Insured losses are still computed
+                        # as absolute values.
+                        insured_losses_losses /= asset.value
 
                         general.write_loss_curve(
                             insured_curve_id, asset,
-                            insured_loss_curve.ordinates,
-                            insured_loss_curve.abscissae,
+                            insured_losses_poes, insured_losses_losses,
                             scientific.average_loss(
-                                insured_loss_curve.abscissae,
-                                insured_loss_curve.ordinates))
+                                insured_losses_losses, insured_losses_poes))
 
                 for i, asset in enumerate(assets):
                     for j, rupture_id in enumerate(rupture_id_matrix[i]):
@@ -314,9 +314,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 if rupture.id in self.event_loss_table]
 
             if aggregate_losses:
-                aggregate_loss_curve = scientific.event_based(
-                    aggregate_losses, tses, time_span,
-                    curve_resolution=self.rc.loss_curve_resolution)
+                aggregate_loss_losses, aggregate_loss_poes = (
+                    scientific.event_based(
+                        aggregate_losses, tses, time_span,
+                        curve_resolution=self.rc.loss_curve_resolution))
 
                 models.AggregateLossCurveData.objects.create(
                     loss_curve=models.LossCurve.objects.create(
@@ -327,11 +328,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                             "Aggregate Loss Curve "
                             "for hazard %s" % hazard_output,
                             "agg_loss_curve")),
-                    losses=aggregate_loss_curve.abscissae.tolist(),
-                    poes=aggregate_loss_curve.ordinates.tolist(),
+                    losses=aggregate_loss_losses, poes=aggregate_loss_poes,
                     average_loss=scientific.average_loss(
-                        aggregate_loss_curve.abscissae,
-                        aggregate_loss_curve.ordinates))
+                        aggregate_loss_losses, aggregate_loss_poes))
 
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
