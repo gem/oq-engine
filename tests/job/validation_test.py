@@ -14,10 +14,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import itertools
 import json
 import unittest
-import itertools
+import warnings
 
+from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.job import validation
 
@@ -587,6 +589,50 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
+    def test_is_valid_warns(self):
+        # `is_valid` should warn if we specify a `vulnerability_file` as well
+        # as `intensity_measure_types_and_levels`
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes=[1.0, 0.5, 0.0],
+        )
+        form = validation.ClassicalHazardForm(
+            instance=hc, files=dict(vulnerability_file=object())
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            form.is_valid()
+
+        expected_warnings = [
+            '`intensity_measure_types_and_levels` is ignored when a '
+            '`vulnerability_file` is specified',
+        ]
+
+        actual_warnings = [m.message.message for m in w]
+        self.assertEqual(expected_warnings, actual_warnings)
+
 
 class EventBasedHazardFormTestCase(unittest.TestCase):
 
@@ -869,6 +915,64 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
+    def test_is_valid_warns(self):
+        # `is_valid` should warn if we specify a `vulnerability_file` as well
+        # as `intensity_measure_types` and `intensity_measure_types_and_levels`
+        subset_iml_imt = VALID_IML_IMT.copy()
+        subset_iml_imt.pop('PGA')
+
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            region=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'
+            ),
+            region_grid_spacing=0.001,
+            calculation_mode='event_based',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            # intensity_measure_types_and_levels just needs to be a subset of
+            # intensity_measure_types
+            intensity_measure_types_and_levels=subset_iml_imt,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            ses_per_logic_tree_path=5,
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params={"vs30_clustering": True},
+            complete_logic_tree_ses=False,
+            complete_logic_tree_gmf=True,
+            ground_motion_fields=True,
+            hazard_curves_from_gmfs=True,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.5, 0.95],
+            poes=[0.1, 0.2],
+        )
+        form = validation.EventBasedHazardForm(
+            instance=hc, files=dict(vulnerability_file=object())
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            form.is_valid()
+
+        expected_warnings = [
+            '`intensity_measure_types_and_levels` is ignored when a '
+            '`vulnerability_file` is specified',
+            '`intensity_measure_types` is ignored when a `vulnerability_file` '
+            'is specified',
+        ]
+
+        actual_warnings = [m.message.message for m in w]
+        self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
 class DisaggHazardFormTestCase(unittest.TestCase):
 
@@ -993,6 +1097,48 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
 
+    def test_is_valid_warns(self):
+        # `is_valid` should warn if we specify a `vulnerability_file` as well
+        # as `intensity_measure_types_and_levels`
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='disaggregation',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            mag_bin_width=0.3,
+            distance_bin_width=10.0,
+            coordinate_bin_width=0.02,  # decimal degrees
+            num_epsilon_bins=4,
+            poes_disagg=[0.02, 0.1],
+        )
+        form = validation.DisaggHazardForm(
+            instance=hc, files=dict(vulnerability_file=object())
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            form.is_valid()
+
+        expected_warnings = [
+            '`intensity_measure_types_and_levels` is ignored when a '
+            '`vulnerability_file` is specified',
+        ]
+
+        actual_warnings = [m.message.message for m in w]
+        self.assertEqual(expected_warnings, actual_warnings)
+
 
 class ScenarioFormTestCase(unittest.TestCase):
 
@@ -1054,6 +1200,42 @@ openquake.hazardlib.gsim"],
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
+
+    def test_valid_scenario_calc(self):
+        # `is_valid` should warn if we specify a `vulnerability_file` as well
+        # as `intensity_measure_types_and_levels`
+        hc = models.HazardCalculation(
+            owner=helpers.default_user(),
+            description='',
+            sites='MULTIPOINT((-122.114 38.113))',
+            calculation_mode='scenario',
+            random_seed=37,
+            rupture_mesh_spacing=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            intensity_measure_types=VALID_IML_IMT.keys(),
+            truncation_level=0.1,
+            maximum_distance=100.0,
+            gsim='BooreAtkinson2008',
+            ground_motion_correlation_model='JB2009',
+            number_of_ground_motion_fields=10,
+        )
+        form = validation.ScenarioHazardForm(
+            instance=hc, files=None
+        )
+
+        with warnings.catch_warnings(record=True) as w:
+            form.is_valid()
+
+        expected_warnings = [
+            '`intensity_measure_types` is ignored when a '
+            '`vulnerability_file` is specified',
+        ]
+
+        actual_warnings = [m.message.message for m in w]
+        self.assertEqual(expected_warnings, actual_warnings)
 
 
 class ClassicalRiskFormTestCase(unittest.TestCase):
@@ -1247,3 +1429,38 @@ class EventBasedValidationTestCase(unittest.TestCase):
         form = validation.EventBasedRiskForm(
             instance=rc, files=None)
         self.assertFalse(form.is_valid())
+
+
+class ValidateTestCase(unittest.TestCase):
+    """
+    Tests for :func:`openquake.engine.job.validation.validate`.
+    """
+
+    def test_validate_warns(self):
+        # Test that `validate` raises warnings if unnecessary parameters are
+        # specified for a given calculation.
+        # For example, `ses_per_logic_tree_path` is an event-based hazard
+        # param; if this param is specified for a classical hazard job, a
+        # warning should be raised.
+        cfg_file = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        job = engine.prepare_job()
+        params, files = engine.parse_config(open(cfg_file, 'r'))
+        # Add a few superfluous parameters:
+        params['ses_per_logic_tree_path'] = 5
+        params['ground_motion_correlation_model'] = 'JB2009'
+        calculation = engine.create_hazard_calculation(job.owner, params,
+                                                       files.values())
+        job.hazard_calculation = calculation
+        job.save()
+
+        with warnings.catch_warnings(record=True) as w:
+            validation.validate(job, 'hazard', params, files, ['xml'])
+
+        expected_warnings = [
+            "Unknown parameter '%s' for calculation mode 'classical'."
+            " Ignoring." % x for x in ('ses_per_logic_tree_path',
+                                       'ground_motion_correlation_model')
+        ]
+
+        actual_warnings = [m.message.message for m in w]
+        self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
