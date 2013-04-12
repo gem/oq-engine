@@ -24,7 +24,8 @@ from collections import namedtuple
 from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
-from openquake.nrmllib import writers as nrml_writers
+from openquake import nrmllib
+from openquake.nrmllib import writers
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -37,7 +38,7 @@ LOG = logs.LOG
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir):
+def export(output_id, target_dir, check_schema=False):
     """
     Export the given hazard calculation output from the database to the
     specified directory.
@@ -46,6 +47,8 @@ def export(output_id, target_dir):
         ID of a :class:`openquake.engine.db.models.Output`.
     :param str target_dir:
         Directory where output artifacts should be written.
+    :param bool check_schema:
+        If True, checks that the generated file is valid for the NRML schema
     :returns:
         List of file names (including the full directory path) containing the
         exported results.
@@ -57,7 +60,11 @@ def export(output_id, target_dir):
     output = models.Output.objects.get(id=output_id)
     export_fn = globals().get(
         'export_' + output.output_type, core._export_fn_not_implemented)
-    return export_fn(output, os.path.expanduser(target_dir))
+    fnames = export_fn(output, os.path.expanduser(target_dir))
+    if check_schema:
+        for fname in fnames:
+            nrmllib.assert_valid(fname)
+    return fnames
 
 
 HAZARD_CURVES_FILENAME_FMT = 'hazard-curves-%(hazard_curve_id)s.xml'
@@ -177,7 +184,7 @@ def export_hazard_curve(output, target_dir):
         'imt': hc.imt,
         'imls': hc.imls,
     }
-    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
+    writer = writers.HazardCurveXMLWriter(path, **metadata)
     writer.serialize(hcd)
 
     return [path]
@@ -216,7 +223,7 @@ def export_gmf(output, target_dir):
 
     path = os.path.abspath(os.path.join(target_dir, filename))
 
-    writer = nrml_writers.EventBasedGMFXMLWriter(
+    writer = writers.EventBasedGMFXMLWriter(
         path, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
@@ -243,7 +250,7 @@ def export_gmf_scenario(output, target_dir):
     gmfs = models.get_gmfs_scenario(output)
     filename = GMF_SCENARIO_FMT % dict(output_id=output.id)
     path = os.path.abspath(os.path.join(target_dir, filename))
-    writer = nrml_writers.ScenarioGMFXMLWriter(path)
+    writer = writers.ScenarioGMFXMLWriter(path)
     writer.serialize(gmfs)
     return [path]
 
@@ -283,7 +290,7 @@ def export_ses(output, target_dir):
 
     path = os.path.abspath(os.path.join(target_dir, filename))
 
-    writer = nrml_writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
+    writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
 
     return [path]
@@ -334,7 +341,7 @@ def export_hazard_map(output, target_dir):
         'poe': hazard_map.poe,
     }
 
-    writer = nrml_writers.HazardMapXMLWriter(path, **metadata)
+    writer = writers.HazardMapXMLWriter(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return [path]
 
@@ -432,7 +439,7 @@ def export_disagg_matrix(output, target_dir):
         gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
     )
 
-    writer = nrml_writers.DisaggXMLWriter(path, **writer_kwargs)
+    writer = writers.DisaggXMLWriter(path, **writer_kwargs)
 
     data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
                           disagg_result.poe, disagg_result.iml)
@@ -479,7 +486,7 @@ def export_uh_spectra(output, target_dir):
         'periods': uhs.periods,
     }
 
-    writer = nrml_writers.UHSXMLWriter(path, **metadata)
+    writer = writers.UHSXMLWriter(path, **metadata)
     writer.serialize(uhs)
 
     return [path]
