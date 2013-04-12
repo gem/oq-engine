@@ -145,7 +145,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.task_id = None
         self.operation = operation
         py_pid = os.getpid()
-        pg_pid = connections['admin'].cursor().connection.get_backend_pid()
+        pg_pid = connections['job_init'].cursor().connection.get_backend_pid()
         try:
             psutil.Process(pg_pid)
         except psutil.error.NoSuchProcess:  # the db is on a different machine
