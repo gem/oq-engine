@@ -216,7 +216,7 @@ def _compute_gmfs(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
             filters.rupture_site_distance_filter(
                 hc.maximum_distance),
         }
-                gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
+        gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
 
         # update the gmf cache:
         for imt_key, v in gmf_dict.iteritems():
