@@ -32,14 +32,14 @@ $out1	1	\N	gmf-rlz	gmf	2013-04-11 03:08:46.797773
 
 # id output_id lt_realization_id
 gmf_collection = '''\
-$coll10	$out1	\N
+$coll1	$out1	\N
 '''
 
 # id gmf_collection_id investigation_time ses_ordinal
 gmf_set = '''\
-$set1	$coll10	10	1
-$set2	$coll10	10	2
-$set3	$coll10	10	3
+$set1	$coll1	10	1
+$set2	$coll1	10	2
+$set3	$coll1	10	3
 '''
 
 # id gmf_set_id imt sa_period sa_damping gmvs rupture_ids result_grp_ordinal location
@@ -81,65 +81,66 @@ num_tasks = 4
 # expected stochastic event set 1
 set1_exp = '''\
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709346
-<X=0.0, Y=0.0, GMV=0.252294938307>
-<X=0.0, Y=0.5, GMV=0.00894558476908>)
+<X=  0.00000, Y=  0.00000, GMV=0.2522949>
+<X=  0.00000, Y=  0.50000, GMV=0.0089456>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709350
-<X=0.0, Y=0.0, GMV=0.1511329333>
-<X=0.0, Y=0.5, GMV=0.0720017584565>)
+<X=  0.00000, Y=  0.00000, GMV=0.1511329>
+<X=  0.00000, Y=  0.50000, GMV=0.0720018>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709352
-<X=0.0, Y=0.0, GMV=0.0477298423602>
-<X=0.0, Y=0.5, GMV=0.0209473778737>)
+<X=  0.00000, Y=  0.00000, GMV=0.0477298>
+<X=  0.00000, Y=  0.50000, GMV=0.0209474>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709354
-<X=0.0, Y=0.0, GMV=0.014282637513>
-<X=0.0, Y=0.5, GMV=0.00810452525441>)
+<X=  0.00000, Y=  0.00000, GMV=0.0142826>
+<X=  0.00000, Y=  0.50000, GMV=0.0081045>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709356
-<X=0.0, Y=0.0, GMV=0.053177248284>
-<X=0.0, Y=0.5, GMV=0.0149335924442>)
+<X=  0.00000, Y=  0.00000, GMV=0.0531772>
+<X=  0.00000, Y=  0.50000, GMV=0.0149336>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709358
-<X=0.0, Y=0.0, GMV=0.0346846321727>
-<X=0.0, Y=0.5, GMV=0.0247923869973>)
+<X=  0.00000, Y=  0.00000, GMV=0.0346846>
+<X=  0.00000, Y=  0.50000, GMV=0.0247924>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709346
-<X=0.0, Y=0.0, GMV=0.729799582246>
-<X=0.0, Y=0.5, GMV=0.0141248596268>)
+<X=  0.00000, Y=  0.00000, GMV=0.7297996>
+<X=  0.00000, Y=  0.50000, GMV=0.0141249>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709350
-<X=0.0, Y=0.0, GMV=0.0571210320882>
-<X=0.0, Y=0.5, GMV=0.0457237221727>)
+<X=  0.00000, Y=  0.00000, GMV=0.0571210>
+<X=  0.00000, Y=  0.50000, GMV=0.0457237>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709352
-<X=0.0, Y=0.0, GMV=0.0851203442597>
-<X=0.0, Y=0.5, GMV=0.0250737105548>)
+<X=  0.00000, Y=  0.00000, GMV=0.0851203>
+<X=  0.00000, Y=  0.50000, GMV=0.0250737>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709354
-<X=0.0, Y=0.0, GMV=0.0512935367105>
-<X=0.0, Y=0.5, GMV=0.0466984811966>)
+<X=  0.00000, Y=  0.00000, GMV=0.0512935>
+<X=  0.00000, Y=  0.50000, GMV=0.0466985>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709356
-<X=0.0, Y=0.0, GMV=0.0647094509156>
-<X=0.0, Y=0.5, GMV=0.0137011674891>)
+<X=  0.00000, Y=  0.00000, GMV=0.0647095>
+<X=  0.00000, Y=  0.50000, GMV=0.0137012>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709358
-<X=0.0, Y=0.0, GMV=0.156892787041>
-<X=0.0, Y=0.5, GMV=0.0153675056626>)'''
+<X=  0.00000, Y=  0.00000, GMV=0.1568928>
+<X=  0.00000, Y=  0.50000, GMV=0.0153675>)'''
+
 
 # expected stochastic event set 2
 set2_exp = '''\
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709360
-<X=0.0, Y=0.0, GMV=0.00509134495334>
-<X=0.0, Y=0.5, GMV=0.018772047308>)
+<X=  0.00000, Y=  0.00000, GMV=0.0050913>
+<X=  0.00000, Y=  0.50000, GMV=0.0187720>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709360
-<X=0.0, Y=0.0, GMV=0.0168322906205>
-<X=0.0, Y=0.5, GMV=0.0267122052505>)'''
+<X=  0.00000, Y=  0.00000, GMV=0.0168323>
+<X=  0.00000, Y=  0.50000, GMV=0.0267122>)'''
 
 # expected stochastic event set 3
 set3_exp = '''\
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709348
-<X=0.0, Y=0.0, GMV=0.231643520547>
-<X=0.0, Y=0.5, GMV=0.0264362061113>)
+<X=  0.00000, Y=  0.00000, GMV=0.2316435>
+<X=  0.00000, Y=  0.50000, GMV=0.0264362>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=709362
-<X=0.0, Y=0.0, GMV=0.00327192823764>
-<X=0.0, Y=0.5, GMV=0.00257996694936>)
+<X=  0.00000, Y=  0.00000, GMV=0.0032719>
+<X=  0.00000, Y=  0.50000, GMV=0.0025800>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709348
-<X=0.0, Y=0.0, GMV=0.734686515811>
-<X=0.0, Y=0.5, GMV=0.130897324686>)
+<X=  0.00000, Y=  0.00000, GMV=0.7346865>
+<X=  0.00000, Y=  0.50000, GMV=0.1308973>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709362
-<X=0.0, Y=0.0, GMV=0.017415248896>
-<X=0.0, Y=0.5, GMV=0.00365106296336>)'''
+<X=  0.00000, Y=  0.00000, GMV=0.0174152>
+<X=  0.00000, Y=  0.50000, GMV=0.0036511>)'''
 
 
 class PGImporterTestCase(unittest.TestCase):
@@ -164,14 +165,20 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
         self.assertEqual(last_id, out.id + 2)  # inserted 2 rows
         self.imp.conn.rollback()  # cleanup
 
-    def _testImportGmfCollection(self):
-        self.imp = PGImporter(connection.connection)
+    def testImportGmfCollection(self):
+        gmf_coll_orig_id = GmfCollection.objects.latest('id').id
+
         self.imp.import_all([
             ('uiapi.output', output),
             ('hzrdr.gmf_collection', gmf_collection),
             ('hzrdr.gmf_set', gmf_set),
             ('hzrdr.gmf', gmf),
         ])
+
+        gmf_coll_id = GmfCollection.objects.latest('id').id
+        self.assertEqual(gmf_coll_orig_id + 1, gmf_coll_id)
+
+        # check that the db contains the expected GmfSets
         out = Output.objects.latest('id')
         out.oq_job = OqJob.objects.create(owner_id=1)  # fake job
         # the fake job is unfortunately needed in GmfSet.iter_gmfs
