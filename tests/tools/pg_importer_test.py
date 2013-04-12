@@ -154,7 +154,7 @@ class PGImporterTestCase(unittest.TestCase):
         ])
         out = Output.objects.latest('id')
         out.oq_job = OqJob.objects.create(owner_id=1)  # fake job
-        # the fake job is unfortunately used in GmfSet.iter_gmfs
+        # the fake job is unfortunately needed in GmfSet.iter_gmfs
         out.save()
         [coll] = GmfCollection.objects.filter(output=out)
         set1, set2, set3 = list(coll)
