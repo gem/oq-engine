@@ -135,7 +135,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     string, a job_id, and a celery task; the on_exit method
     saves in the uiapi.performance table the relevant info.
     """
-    def __init__(self, operation, job_id, task=None, tic=0.1):
+    def __init__(self, operation, job_id, task=None, tic=0.1, tracing=False):
         self.job_id = job_id
         if task:
             self.task = task.__name__
@@ -152,7 +152,17 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             pids = [py_pid]
         else:
             pids = [py_pid, pg_pid]
+
+        if tracing:
+            self.tracer = logs.tracing(operation)
+        self.tracing = tracing
+
         super(EnginePerformanceMonitor, self).__init__(pids, tic)
+
+    def __enter__(self):
+        super(EnginePerformanceMonitor, self).__enter__()
+        if self.tracing:
+            self.tracer.__enter__()
 
     @property
     def mem(self):
@@ -194,3 +204,8 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """
         if no_distribute():
             logs.LOG.warn('PyMem: %d mb, PgMem: %d mb' % self.mem_peaks)
+
+    def __exit__(self, *args, **kwargs):
+        super(EnginePerformanceMonitor, self).__exit__(*args, **kwargs)
+        if self.tracing:
+            self.tracer.__exit__(*args, **kwargs)
