@@ -15,7 +15,7 @@ def import_gmf_scenario(fileobj, user=None):
     :returns: the generated :class:`openquake.engine.db.models.Output` object
     """
     fname = fileobj.name
-    curs = connections['admin'].cursor().cursor.cursor  # DB API cursor
+    curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
     owner = OqUser.objects.get(user_name=user) if user else get_current_user()
     out = Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
