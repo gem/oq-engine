@@ -131,6 +131,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
+            self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
 
@@ -208,6 +209,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
+            self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
@@ -307,6 +309,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
             helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
+            self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
 
@@ -342,6 +345,7 @@ class DisaggExportTestCase(BaseExportTestCase):
             helpers.run_hazard_job(cfg)
 
             job = models.OqJob.objects.latest('id')
+            self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
 

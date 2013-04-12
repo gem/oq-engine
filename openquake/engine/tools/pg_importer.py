@@ -67,7 +67,7 @@ $coll1<tab>$out1<tab>...
 $coll2<tab>$out2<tab>...
 $coll3<tab>$out3<tab>...
 
-The PGImporter takes in input templates like these and replace
+The PGImporter takes in input templates like these and replaces
 the $-identifiers with the right numbers: it looks at the
 maximum identifier in the target database and increments it;
 for instance if the maximum id for the output table is 10000,
@@ -84,7 +84,8 @@ $coll2 -> 20002
 $coll3 -> 20003
 
 This is enough to solve the problem of populating a test database; copying
-data from a db to another is more cumbersome.
+data from a db to another is more cumbersome and will require a smarter
+approach (perhaps by using temporary tables).
 """
 
 import re
@@ -101,10 +102,10 @@ class Replacer(object):
     >>> dic = OrderedDict()
     >>> Replacer(dic, 1000).replace_ids('$out1|some|thing')
     '1001|some|thing'
-    >>> Replacer(dic, 2000).replace_ids('$coll10|$out1')
-    '2010|1001'
+    >>> Replacer(dic, 2000).replace_ids('$coll1|$out1')
+    '2001|1001'
     >>> dic  # populated dictionary
-    OrderedDict([('out1', 1001), ('coll10', 2010)])
+    OrderedDict([('out1', 1001), ('coll1', 2001)])
     """
     ID = re.compile(r'^\$[a-z]+(\d+)', re.MULTILINE)
 
@@ -136,22 +137,31 @@ class PGImporter(object):
         self.curs = conn.cursor()
         self.dic = {}
 
+    # NB: the template variables must have number starting from 1
     def import_templ(self, table_name, templ):
-        "Import a csv by replacing the ids"
-        # NB: currval does not work on empty tables, this is why I use max
+        "Import a csv by replacing the ids; return the last inserted id"
+        # NB: currval does not work on empty tables, this is why I use max;
+        # nextval is also bad since it would increase the serial
+        # number by 1 even when importing empty files
         self.curs.execute("select max(id) from %s" % table_name)
         max_id = self.curs.fetchone()[0] or 0
-        data = Replacer(self.dic, max_id).replace_ids(templ)
+        repl = Replacer(self.dic, max_id)
+        data = repl.replace_ids(templ)
+        nlines = templ.count('\n')
+        reserve_ids = "select nextval('%s_id_seq') "\
+            "from generate_series(1, %d)" % (table_name, nlines)
+        self.curs.execute(reserve_ids)  # make sure the ids are available
         self.curs.copy_from(StringIO(data), table_name)
-        # make sure the serial field is incremented correctly
-        next_id = max_id + data.count('\n')
-        setval = "select setval('%s_id_seq', %s)" % (table_name, next_id)
-        self.curs.execute(setval)
+        self.curs.execute("select max(id) from %s" % table_name)
+        return self.curs.fetchone()[0] or 0  # latest id
 
+    # NB: The approach used here is good for tests, but not for large data
+    # sets, since it requires keeping everything in memory
     def import_all(self, table_name_data_list):
         """
         Import all the data in the list [(table_name, table_data), ...]
-        in a single transaction.
+        in a single transaction. Notice that table_data must be a template
+        string, not a stream.
         """
         try:
             for table_name, table_data in table_name_data_list:
