@@ -18,6 +18,7 @@ This module contains functions and Django model forms for carrying out job
 profile validation.
 """
 import re
+import warnings
 
 from django.forms import ModelForm
 
@@ -30,16 +31,23 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
 
 
 # used in bin/openquake
-def validate(job, job_type, files, exports):
+def validate(job, job_type, params, files, exports):
     """
     Validate a job of type 'hazard' or 'risk' by instantiating its
     form class with the given files and exports.
 
-    :param job: an instance of :class:`openquake.engine.db.models.OqJob`
-    :param str job_type: "hazard" or "risk"
-    :param dict files: {fname: :class:`openquake.engine.db.models.Input` obj}
-    :param exports: a list of export types
-    :returns: an error message if the form is invalid, None otherwise.
+    :param job:
+        an instance of :class:`openquake.engine.db.models.OqJob`
+    :param str job_type:
+        "hazard" or "risk"
+    :param dict params:
+        The raw dictionary of parameters parsed from the config file.
+    :param dict files:
+        {fname: :class:`openquake.engine.db.models.Input` obj}
+    :param exports:
+        a list of export types
+    :returns:
+        an error message if the form is invalid, None otherwise.
     """
     calculation = getattr(job, '%s_calculation' % job_type)
     calc_mode = calculation.calculation_mode
@@ -50,6 +58,26 @@ def validate(job, job_type, files, exports):
     except KeyError:
         return 'Could not find form class for "%s"' % calc_mode
     form = form_class(instance=calculation, files=files, exports=exports)
+
+    # Check for superfluous params and raise warnings:
+    params_copy = params.copy()
+    # There are a couple of parameters we can ignore.
+    # `calculation_mode` is supplied in every config file, but is validated in
+    # a special way; therefore, we don't declare it on the forms.
+    # The `base_path` is extracted from the directory containing the config
+    # file; it's not a real param.
+    # `hazard_output_id` and `hazard_calculation_id` are supplied via command
+    # line args.
+    for p in ('calculation_mode', 'base_path', 'hazard_output_id',
+              'hazard_calculation_id'):
+        if p in params_copy:
+            params_copy.pop(p)
+
+    for param in set(params_copy.keys()).difference(set(form._meta.fields)):
+        msg = "Unknown parameter '%s' for calculation mode '%s'. Ignoring."
+        msg %= (param, calc_mode)
+        warnings.warn(msg, RuntimeWarning)
+
     if not form.is_valid():
         return 'Job configuration is not valid. Errors: %s' % dict(form.errors)
 
