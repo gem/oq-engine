@@ -219,7 +219,6 @@ class BaseHazardModelForm(BaseOQModelForm):
         'reference_vs30_type',
         'reference_depth_to_2pt5km_per_sec',
         'reference_depth_to_1pt0km_per_sec',
-        'intensity_measure_types',
         'export_dir',
     )
 
@@ -295,7 +294,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
-            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
@@ -341,6 +340,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'random_seed',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
@@ -438,7 +438,7 @@ class DisaggHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
-            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
