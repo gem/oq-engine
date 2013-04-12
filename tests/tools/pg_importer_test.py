@@ -27,7 +27,7 @@ Test that we can import a GmfCollection with the PGImporter
 
 # id owner_id oq_job_id display_name output_type last_update
 output = '''\
-$out1	2	\N	gmf-rlz	gmf	2013-04-11 03:08:46.797773
+$out1	1	\N	gmf-rlz	gmf	2013-04-11 03:08:46.797773
 '''
 
 # id output_id lt_realization_id
