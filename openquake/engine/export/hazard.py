@@ -136,8 +136,6 @@ def _get_result_export_path(calc_id, target_dir, result):
             filename = '%s-smltp_%s-gsimltp_%s.xml' % (
                 output_type, sm_ltp, gsim_ltp
             )
-    elif output_type == 'gmf_scenario':
-        filename = 'gmf.xml'
     else:
         filename = '%s.xml' % output_type
 
