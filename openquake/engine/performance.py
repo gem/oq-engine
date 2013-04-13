@@ -205,10 +205,10 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         if no_distribute():
             logs.LOG.warn('PyMem: %d mb, PgMem: %d mb' % self.mem_peaks)
 
-    def __exit__(self, *args, **kwargs):
-        super(EnginePerformanceMonitor, self).__exit__(*args, **kwargs)
+    def __exit__(self, etype, exc, tb):
+        super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
         if self.tracing:
-            self.tracer.__exit__(*args, **kwargs)
+            self.tracer.__exit__(etype, exc, tb)
 
 
 class DummyMonitor(object):
