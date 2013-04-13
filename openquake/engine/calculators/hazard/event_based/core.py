@@ -153,18 +153,16 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         if not ses_poissonian:  # this is very common due to the filtering
             continue
         with EnginePerformanceMonitor(
-            'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
-                len(ses_poissonian), ses_rlz_n, lt_rlz_id),
-                job_id, ses_and_gmfs):
+            'saving ruptures: ses_rlz=%d, lt_rlz=%d' % (
+                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
                     ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
                 for i, rupture in enumerate(ses_poissonian, 1)]
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
-                    'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
-                    len(ses_poissonian), ses_rlz_n, lt_rlz_id),
-                    job_id, ses_and_gmfs):
+                    'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
+                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
                 gmf_cache, points_to_compute = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
@@ -385,9 +383,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
             sa_damping = imt.damping
         imt_name = imt.__class__.__name__
 
-        for i, location in enumerate(points_to_compute):
-            all_gmvs = gmfs[i]
-
+        for all_gmvs, location in zip(gmfs, points_to_compute):
             # take only the nonzero ground motion values and the
             # corresponding rupture ids
             nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
@@ -660,6 +656,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                with EnginePerformanceMonitor('generating hazard maps',
-                                              self.job.id):
+                with EnginePerformanceMonitor(
+                        'generating hazard maps', self.job.id):
                     cls_post_proc.do_hazard_map_post_process(self.job)
