@@ -103,7 +103,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
 
-    # Compute stochastic event sets
+    # filtering sources
     with EnginePerformanceMonitor('filtering sources for lt=%d' % lt_rlz_id,
                                   job_id, ses_and_gmfs):
 
@@ -150,7 +150,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
             filtered_sources, hc.investigation_time))
-
+        if not ses_poissonian:  # this is very common due to the filtering
+            continue
         with EnginePerformanceMonitor(
             'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
                 len(ses_poissonian), ses_rlz_n, lt_rlz_id),
