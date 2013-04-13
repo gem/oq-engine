@@ -133,7 +133,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
 
-    # Save stochastic event sets
+    # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
         logs.LOG.debug('> computing stochastic event set %s of %s'
