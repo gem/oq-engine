@@ -20,7 +20,7 @@ import unittest
 from django.db import connection
 from openquake.engine.tools.pg_importer import PGImporter
 from openquake.engine.db.models import Output, GmfCollection, OqJob
-from tests.utils import gmf_collection as c
+from tests.utils import data
 
 
 class PGImporterTestCase(unittest.TestCase):
@@ -36,19 +36,19 @@ class PGImporterTestCase(unittest.TestCase):
         self.imp.conn.rollback()  # cleanup
 
     def test_serial_updated(self):
-        data = '''\
+        output_str = '''\
 $out1	1	\N	gmf-rlz-1	gmf	2013-04-11 03:08:46
 $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
 '''
         out = Output.objects.latest('id')
-        last_id = self.imp.import_templ('uiapi.output', data)
+        last_id = self.imp.import_templ('uiapi.output', output_str)
         self.assertEqual(last_id, out.id + 2)  # inserted 2 rows
         self.imp.conn.rollback()  # cleanup
 
     def testImportGmfCollection(self):
         gmf_coll_orig_id = GmfCollection.objects.latest('id').id
 
-        c.import_a_gmf_collection(self.imp.conn)
+        data.import_a_gmf_collection(self.imp.conn)
 
         gmf_coll_id = GmfCollection.objects.latest('id').id
         self.assertEqual(gmf_coll_orig_id + 1, gmf_coll_id)
@@ -61,11 +61,11 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
         [coll] = GmfCollection.objects.filter(output=out)
         set1, set2, set3 = sorted(coll, key=lambda s: s.id)
         set1_str = '\n'.join(
-            map(str, set1.iter_gmfs(num_tasks=c.num_tasks, imts=c.imts)))
+            map(str, set1.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
         set2_str = '\n'.join(
-            map(str, set2.iter_gmfs(num_tasks=c.num_tasks, imts=c.imts)))
+            map(str, set2.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
         set3_str = '\n'.join(
-            map(str, set3.iter_gmfs(num_tasks=c.num_tasks, imts=c.imts)))
-        self.assertEqual(set1_str, c.set1_exp)
-        self.assertEqual(set2_str, c.set2_exp)
-        self.assertEqual(set3_str, c.set3_exp)
+            map(str, set3.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
+        self.assertEqual(set1_str, data.set1_exp)
+        self.assertEqual(set2_str, data.set2_exp)
+        self.assertEqual(set3_str, data.set3_exp)
