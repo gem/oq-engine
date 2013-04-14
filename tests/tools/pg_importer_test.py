@@ -48,12 +48,7 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
     def testImportGmfCollection(self):
         gmf_coll_orig_id = GmfCollection.objects.latest('id').id
 
-        self.imp.import_all([
-            ('uiapi.output', c.output),
-            ('hzrdr.gmf_collection', c.gmf_collection),
-            ('hzrdr.gmf_set', c.gmf_set),
-            ('hzrdr.gmf', c.gmf),
-        ])
+        c.import_a_gmf_collection(self.imp.conn)
 
         gmf_coll_id = GmfCollection.objects.latest('id').id
         self.assertEqual(gmf_coll_orig_id + 1, gmf_coll_id)
