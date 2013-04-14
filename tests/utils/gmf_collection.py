@@ -17,8 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Test data to import a GmfCollection with the PGImporter
+Helpers to import test data with the PGImporter
 """
+
+from openquake.engine.tools.pg_importer import PGImporter
 
 # id owner_id oq_job_id display_name output_type last_update
 output = '''\
@@ -136,3 +138,21 @@ GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709348
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=709362
 <X=  0.00000, Y=  0.00000, GMV=0.0174152>
 <X=  0.00000, Y=  0.50000, GMV=0.0036511>)'''
+
+
+def import_a_gmf_collection(conn):
+    """
+    Import a fixed gmf_collection into the database. This is a useful
+    helper to populate the risk tests without having to run a full hazard
+    computation.
+
+    :param conn: a DB API 2 connection
+
+    conn.cursor() must return a psycopg2 cursor with a .copy_expert() method
+    """
+    PGImporter(conn).import_all([
+        ('uiapi.output', output),
+        ('hzrdr.gmf_collection', gmf_collection),
+        ('hzrdr.gmf_set', gmf_set),
+        ('hzrdr.gmf', gmf),
+    ])
