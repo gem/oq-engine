@@ -36,8 +36,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        self.cfg = helpers.get_data_path('event_based_hazard/job.ini')
+        self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
 
@@ -200,14 +200,17 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         calculator to make the test faster and independent on the stochastic
         number generator
         """
-        rupture1 = mock.Mock(tectonic_region_type='Active Shallow Crust')
-        rupture2 = mock.Mock(tectonic_region_type='Active Shallow Crust')
+        rupture1 = mock.Mock()
+        rupture1.tectonic_region_type = 'Active Shallow Crust'
+        rupture2 = mock.Mock()
+        rupture2.tectonic_region_type = 'Active Shallow Crust'
         self.patch_ses = mock.patch(
             'openquake.hazardlib.calc.stochastic.'
             'stochastic_event_set_poissonian',
-            mock.Mock(return_value=[rupture1, rupture2]))
+            mock.MagicMock(return_value=[rupture1, rupture2]))
         self.patch_gmf = mock.patch(
-            'openquake.hazardlib.calc.gmf.ground_motion_fields')
+            'openquake.hazardlib.calc.gmf.ground_motion_fields',
+            mock.MagicMock())
         self.patch_save_rup = mock.patch(
             'openquake.engine.calculators.hazard.'
             'event_based.core._save_ses_rupture')
