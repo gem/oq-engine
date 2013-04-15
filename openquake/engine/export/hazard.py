@@ -492,6 +492,7 @@ def export_uh_spectra(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'poe': uhs.poe,
         'periods': uhs.periods,
+        'investigation_time': uhs.investigation_time,
     }
 
     writer = writers.UHSXMLWriter(path, **metadata)
