@@ -184,7 +184,7 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
         # the fake job is unfortunately needed in GmfSet.iter_gmfs
         out.save()
         [coll] = GmfCollection.objects.filter(output=out)
-        set1, set2, set3 = list(coll)
+        set1, set2, set3 = sorted(coll, key=lambda s: s.id)
         set1_str = '\n'.join(
             map(str, set1.iter_gmfs(num_tasks=num_tasks, imts=imts)))
         set2_str = '\n'.join(
