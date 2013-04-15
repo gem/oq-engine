@@ -512,8 +512,8 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
 
 class DisaggHazardFormTestCase(unittest.TestCase):
 
-    def test_valid_disagg_calc(self):
-        hc = models.HazardCalculation(
+    def setUp(self):
+        self.hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
@@ -537,8 +537,10 @@ class DisaggHazardFormTestCase(unittest.TestCase):
             num_epsilon_bins=4,
             poes_disagg=[0.02, 0.1],
         )
+
+    def test_valid_disagg_calc(self):
         form = validation.DisaggHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -554,39 +556,22 @@ class DisaggHazardFormTestCase(unittest.TestCase):
                             ' [0, 1]'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='disaggregation',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mag_bin_width=0.0,
-            distance_bin_width=0.0,
-            coordinate_bin_width=0.0,  # decimal degrees
-            num_epsilon_bins=0,
-            poes_disagg=[1.00001, -0.5, 0.0],
-        )
-        form = validation.DisaggHazardForm(instance=hc, files=None)
+        self.hc.mag_bin_width = 0.0
+        self.hc.distance_bin_width = 0.0
+        self.hc.coordinate_bin_width = 0.0  # decimal degrees
+        self.hc.num_epsilon_bins = 0
+        self.hc.poes_disagg = [1.00001, -0.5, 0.0]
+        self.hc.truncation_level = 0.0
+
+        form = validation.DisaggHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
         # test with an empty `poes_disagg` list
-        hc.poes_disagg = []
-        form = validation.DisaggHazardForm(instance=hc, files=None)
+        self.hc.poes_disagg = []
+        form = validation.DisaggHazardForm(instance=self.hc, files=None)
         expected_errors['poes_disagg'] = [(
             '`poes_disagg` must contain at least 1 value')]
         self.assertFalse(form.is_valid())
@@ -605,30 +590,14 @@ class DisaggHazardFormTestCase(unittest.TestCase):
                             ' [0, 1]'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='disaggregation',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
-            maximum_distance=100.0,
-            mag_bin_width=0.0,
-            distance_bin_width=0.0,
-            coordinate_bin_width=0.0,  # decimal degrees
-            num_epsilon_bins=0,
-            poes_disagg=[1.00001, -0.5, 0.0],
-        )
-        form = validation.DisaggHazardForm(instance=hc, files=None)
+        self.hc.truncation_level = None
+        self.hc.mag_bin_width = 0.0
+        self.hc.distance_bin_width = 0.0
+        self.hc.coordinate_bin_width = 0.0  # decimal degrees
+        self.hc.num_epsilon_bins = 0
+        self.hc.poes_disagg = [1.00001, -0.5, 0.0]
+
+        form = validation.DisaggHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
@@ -636,32 +605,8 @@ class DisaggHazardFormTestCase(unittest.TestCase):
     def test_is_valid_warns(self):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='disaggregation',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
-            truncation_level=0.1,
-            maximum_distance=100.0,
-            mag_bin_width=0.3,
-            distance_bin_width=10.0,
-            coordinate_bin_width=0.02,  # decimal degrees
-            num_epsilon_bins=4,
-            poes_disagg=[0.02, 0.1],
-        )
         form = validation.DisaggHazardForm(
-            instance=hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
