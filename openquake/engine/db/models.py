@@ -2247,10 +2247,10 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
+        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(output__id=output.id, imt=imt):
+        for gmf in GmfScenario.objects.filter(
+                output__id=output.id, imt=imt_long):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
                 nodes[i].append(
                     _GroundMotionFieldNode(gmv=gmv, location=gmf.location))
