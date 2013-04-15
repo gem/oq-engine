@@ -2020,7 +2020,7 @@ WHERE
 -- for instance the slowest operations can be extracted with 
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
 CREATE VIEW uiapi.performance_view AS
-SELECT description, p.* FROM (
+SELECT h.id AS hazard_calculation_id, description, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
      max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
      FROM uiapi.performance
