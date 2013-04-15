@@ -60,8 +60,8 @@ INVALID_IML_IMT = {
 class ClassicalHazardFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
 
-    def test_hazard_calculation_is_valid_region_only(self):
-        hc = models.HazardCalculation(
+    def setUp(self):
+        self.hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -87,128 +87,25 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardForm(
-            instance=hc, files=None
-        )
-        self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_calculation_is_valid_region_only_as_str_list(self):
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region='-122.0, 38.113, -122.114, 38.113, -122.57, 38.111',
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
+    def test_hazard_calculation_is_valid_region_only(self):
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
     def test_hazard_calculation_is_valid_with_site_model(self):
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            # The 4 `reference` parameters should be ignored since the site
-            # model file is specified.
-            # We can define invalid values here; the validator shouldn't care.
-            reference_vs30_value=0,
-            reference_vs30_type=None,
-            reference_depth_to_2pt5km_per_sec=0,
-            reference_depth_to_1pt0km_per_sec=0,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
         form = validation.ClassicalHazardForm(
-            instance=hc, files=dict(site_model_file=object())
+            instance=self.hc, files=dict(site_model_file=object())
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
     def test_hazard_calculation_is_valid_sites_only(self):
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT_STR,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves='true',
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
+        self.hc.region = None
+        self.hc.region_grid_spacing = None
+        self.hc.sites = 'MULTIPOINT((-122.114 38.113))'
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
-        )
-        self.assertTrue(form.is_valid(), dict(form.errors))
-
-    def test_hazard_calculation_is_valid_sites_only_as_str_list(self):
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='-122.114, 38.113, -122.115, 38.114',
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
-        form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -219,30 +116,10 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             'sites': [
                 'Must specify either `region`, `sites` or `exposure_file`.'],
         }
-
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
+        self.hc.region = None
+        self.hc.sites = None
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertFalse(form.is_valid())
 
@@ -317,6 +194,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             rupture_mesh_spacing=0,
             width_of_mfd_bin=0,
             area_source_discretization=0,
+            reference_vs30_type=None,
             reference_vs30_value=0,
             reference_depth_to_2pt5km_per_sec=0,
             reference_depth_to_1pt0km_per_sec=0,
@@ -344,42 +222,16 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
                 'Region geometry can only be a single linear ring',
                 'Longitude values must in the range [-180, 180]',
                 'Latitude values must be in the range [-90, 90]'],
-            'reference_vs30_value': ['Reference VS30 value must be > 0'],
-            'reference_vs30_type': [
-                'Reference VS30 type must be either "measured" or "inferred"',
-            ],
-            'reference_depth_to_1pt0km_per_sec': [
-                'Reference depth to 1.0 km/sec must be > 0',
-            ],
-            'reference_depth_to_2pt5km_per_sec': [
-                'Reference depth to 2.5 km/sec must be > 0',
-            ],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-180.001 90.001, 180.001 -90.001, -179.001 -89.001, '
-                '179.001 89.001, -180.001 90.001), (1 1, 2 2, 3 3, 4 4, 1 1))'
-            ),
-            region_grid_spacing=0,
-            calculation_mode='classical',
-            random_seed=2147483647,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=1,
-            width_of_mfd_bin=1,
-            area_source_discretization=1,
-            investigation_time=1,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0,
-            maximum_distance=1,
-            quantile_hazard_curves=[0.0, 0.1, 1.0],
-            poes=[1.0, 0.5, 0.0],
+        self.hc.region_grid_spacing = 0
+        self.hc.region = (
+            'POLYGON((-180.001 90.001, 180.001 -90.001, -179.001 -89.001, '
+            '179.001 89.001, -180.001 90.001), (1 1, 2 2, 3 3, 4 4, 1 1))'
         )
 
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -391,34 +243,10 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             'region': ['`region` requires `region_grid_spacing`'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
+        self.hc.region_grid_spacing = None
 
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -431,38 +259,14 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
                 'Longitude values must in the range [-180, 180]',
                 'Latitude values must be in the range [-90, 90]',
             ],
-            'reference_vs30_value': ['Reference VS30 value must be > 0'],
-            'reference_vs30_type': [
-                'Reference VS30 type must be either "measured" or "inferred"',
-            ],
-            'reference_depth_to_1pt0km_per_sec': [
-                'Reference depth to 1.0 km/sec must be > 0',
-            ],
-            'reference_depth_to_2pt5km_per_sec': [
-                'Reference depth to 2.5 km/sec must be > 0',
-            ],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-180.001 90.001), (180.001 -90.001))',
-            calculation_mode='classical',
-            random_seed=2147483647,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=1,
-            width_of_mfd_bin=1,
-            area_source_discretization=1,
-            investigation_time=1,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0,
-            maximum_distance=1,
-            quantile_hazard_curves=[0.0, 0.1, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
+        self.hc.region = None
+        self.hc.region_grid_spacing = None
+        self.hc.sites = 'MULTIPOINT((-180.001 90.001), (180.001 -90.001))'
 
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -478,74 +282,12 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             'export_dir': [err],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
-
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None, exports=['xml']
+            instance=self.hc, files=None, exports=['xml']
         )
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
-
-    def test_hazard_calculation_is_valid_with_no_exports(self):
-        # When the user does not specify '--exports' on the command line the
-        # 'export_dir' parameter needs not be present in the .ini file.
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
-
-        form = validation.ClassicalHazardForm(
-            instance=hc, files=None
-        )
-        self.assertTrue(form.is_valid())
 
     def test_classical_hc_hazard_maps_uhs_no_poes(self):
         # Test that errors are reported if `hazard_maps` and
@@ -556,34 +298,12 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             'uniform_hazard_spectra': ['`poes` are required to compute UHS'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            hazard_maps=True,
-            uniform_hazard_spectra=True,
-        )
+        self.hc.hazard_maps = True
+        self.hc.uniform_hazard_spectra = True
+        self.hc.poes = None
 
         form = validation.ClassicalHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
@@ -592,34 +312,8 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
     def test_is_valid_warns(self):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='classical',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes=[1.0, 0.5, 0.0],
-        )
         form = validation.ClassicalHazardForm(
-            instance=hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
