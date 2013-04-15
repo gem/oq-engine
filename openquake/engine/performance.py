@@ -163,6 +163,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__enter__()
         if self.tracing:
             self.tracer.__enter__()
+        return self
 
     @property
     def mem(self):
