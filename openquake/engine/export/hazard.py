@@ -479,6 +479,7 @@ def export_uh_spectra(output, target_dir):
         gsimlt_path = None
 
     metadata = {
+        'investigation_time': uhs.investigation_time,
         'quantile_value': uhs.quantile,
         'statistics': uhs.statistics,
         'smlt_path': smlt_path,
