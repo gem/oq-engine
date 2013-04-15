@@ -40,7 +40,9 @@ from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.geo import ComplexFaultSurface
 from openquake.hazardlib.geo import MultiSurface
+from openquake.hazardlib.geo import SimpleFaultSurface
 from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
@@ -268,8 +270,12 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         The ordinal of a rupture with a given result group (inidicated by
         ``result_grp_ordinal``).
     """
-    is_from_fault_source = rupture.source_typology in (
-        ComplexFaultSource, SimpleFaultSource
+    is_from_fault_source = (
+        rupture.source_typology in (ComplexFaultSource, SimpleFaultSource)
+        or
+        (rupture.source_typology is CharacteristicFaultSource
+         and isinstance(rupture.surface, (ComplexFaultSurface,
+                                          SimpleFaultSurface)))
     )
     is_multi_surface = False
     if (rupture.source_typology is CharacteristicFaultSource
