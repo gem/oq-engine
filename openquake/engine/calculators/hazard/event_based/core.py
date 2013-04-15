@@ -163,7 +163,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             with EnginePerformanceMonitor(
                     'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
                     ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
-                gmf_cache, points_to_compute = compute_gmf_cache(
+                gmf_cache = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
 
@@ -173,7 +173,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     gmf_collection__lt_realization=lt_rlz,
                     ses_ordinal=ses_rlz_n)
                 # save the GMFs to the DB
-                _save_gmfs(gmf_set, gmf_cache, points_to_compute,
+                _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
 
         logs.LOG.debug('< done computing stochastic event set %s of %s'
@@ -182,7 +182,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
-def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
+def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
+                      result_grp_ordinal):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for all IMTs.
@@ -193,10 +194,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    # For ground motion field calculation, we need the points of interest
-    # for the calculation.
-    points_to_compute = hc.points_to_compute()
-    n_points = len(points_to_compute)
+    n_points = len(hc.points_to_compute())
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
     gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
@@ -225,7 +223,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
                 gmf_cache[imt_key]['gmvs'], v, axis=1)
             gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
 
-    return gmf_cache, points_to_compute
+    return gmf_cache
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -362,8 +360,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-    if len(points_to_compute) == 0:  # nothing to do
-        return
 
     inserter = writer.BulkInserter(models.Gmf)
 
