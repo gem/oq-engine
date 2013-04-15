@@ -330,48 +330,11 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
 
 class EventBasedHazardFormTestCase(unittest.TestCase):
 
-    def test_ses_per_logic_tree_path_is_not_valid(self):
-        expected_errors = {
-            'ses_per_logic_tree_path': [
-                '`Stochastic Event Sets Per Sample` (ses_per_logic_tree_path) '
-                'must be > 0'],
-        }
-
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            truncation_level=0.0,
-            maximum_distance=100.0,
-        )
-        form = validation.EventBasedHazardForm(
-            instance=hc, files=None
-        )
-        self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
-        self.assertTrue(equal, err)
-
-    def test_valid_event_based_params(self):
+    def setUp(self):
         subset_iml_imt = VALID_IML_IMT.copy()
         subset_iml_imt.pop('PGA')
 
-        hc = models.HazardCalculation(
+        self.hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -407,11 +370,29 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.5, 0.95],
             poes=[0.1, 0.2],
         )
+
+    def test_valid_event_based_params(self):
         form = validation.EventBasedHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_ses_per_logic_tree_path_is_not_valid(self):
+        expected_errors = {
+            'ses_per_logic_tree_path': [
+                '`Stochastic Event Sets Per Sample` (ses_per_logic_tree_path) '
+                'must be > 0'],
+        }
+
+        self.hc.ses_per_logic_tree_path = -1
+
+        form = validation.EventBasedHazardForm(
+            instance=self.hc, files=None
+        )
+        self.assertFalse(form.is_valid())
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
 
     def test_invalid_imts(self):
         expected_errors = {
@@ -424,37 +405,12 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             ],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=INVALID_IML_IMT.keys(),
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
-            ground_motion_fields=True,
-        )
+        self.hc.intensity_measure_types = INVALID_IML_IMT.keys()
+        self.hc.intensity_measure_types_and_levels = None
+        self.hc.hazard_curves_from_gmfs = False
+
         form = validation.EventBasedHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -468,42 +424,14 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         # `intensity_measure_types_and_levels`.
         expected_errors = {
             'intensity_measure_types_and_levels': [
-                '`hazard_curve_from_gmfs` requires '
+                '`hazard_curves_from_gmfs` requires '
                 '`intensity_measure_types_and_levels`'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
-            ground_motion_fields=True,
-            hazard_curves_from_gmfs=True,
-        )
+        self.hc.intensity_measure_types_and_levels = None
+
         form = validation.EventBasedHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -523,39 +451,11 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         iml_imt = VALID_IML_IMT.keys()
         iml_imt.pop()
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=iml_imt,
-            intensity_measure_types_and_levels=VALID_IML_IMT,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
-            ground_motion_fields=True,
-            hazard_curves_from_gmfs=True,
-        )
+        self.hc.intensity_measure_types = iml_imt
+        self.hc.intensity_measure_types_and_levels = VALID_IML_IMT
+
         form = validation.EventBasedHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -572,37 +472,11 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
                 'enumeration'],
         }
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=0,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
-            ground_motion_fields=True,
-        )
+        self.hc.number_of_logic_tree_samples = 0
+        self.hc.complete_logic_tree_gmf = True
+
         form = validation.EventBasedHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
@@ -615,44 +489,12 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         subset_iml_imt = VALID_IML_IMT.copy()
         subset_iml_imt.pop('PGA')
 
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            region=(
-                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
-                '-122.0 38.113))'
-            ),
-            region_grid_spacing=0.001,
-            calculation_mode='event_based',
-            random_seed=37,
-            number_of_logic_tree_samples=1,
-            rupture_mesh_spacing=0.001,
-            width_of_mfd_bin=0.001,
-            area_source_discretization=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            investigation_time=1.0,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            # intensity_measure_types_and_levels just needs to be a subset of
-            # intensity_measure_types
-            intensity_measure_types_and_levels=subset_iml_imt,
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            ses_per_logic_tree_path=5,
-            ground_motion_correlation_model='JB2009',
-            ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
-            ground_motion_fields=True,
-            hazard_curves_from_gmfs=True,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.5, 0.95],
-            poes=[0.1, 0.2],
-        )
+        # intensity_measure_types_and_levels just needs to be a subset of
+        # intensity_measure_types
+        self.hc.intensity_measure_types_and_levels = subset_iml_imt
+
         form = validation.EventBasedHazardForm(
-            instance=hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
