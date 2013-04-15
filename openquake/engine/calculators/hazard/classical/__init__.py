@@ -93,7 +93,7 @@ where
 Hazard curves are grouped by IMT and realization (1 group per IMT per
 realization). Each group includes 1 curve for each point of interest.
 
-Additionally, for each realization an hazard curve
+Additionally, for each realization a hazard curve
 container (with ``output_type`` equal to ``hazard_curve_multi``) is
 created. This container output could be used in contexts where
 you need to identify a whole group of hazard curves sharing the
@@ -148,7 +148,7 @@ where
 * ``P`` is the number of geographical points of interest
 * ``I`` is the number of IMT/IML definitions
 
-Furthermore, also in that case an hazard curve set grouping all the mean curves
+Furthermore, also in that case a hazard curve set grouping all the mean curves
 is produced (of type ``hazard_curve_multi``).
 
 Quantile Curves
