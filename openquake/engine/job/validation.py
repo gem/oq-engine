@@ -415,7 +415,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
                 if hc.intensity_measure_types_and_levels is None:
                     # Not defined
                     msg = '`%s` requires `%s`'
-                    msg %= ('hazard_curve_from_gmfs',
+                    msg %= ('hazard_curves_from_gmfs',
                             'intensity_measure_types_and_levels')
 
                     self._add_error('intensity_measure_types_and_levels', msg)
