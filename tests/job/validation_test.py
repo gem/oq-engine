@@ -1142,8 +1142,8 @@ class DisaggHazardFormTestCase(unittest.TestCase):
 
 class ScenarioFormTestCase(unittest.TestCase):
 
-    def test_valid_scenario_calc(self):
-        hc = models.HazardCalculation(
+    def setUp(self):
+        self.hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
@@ -1161,8 +1161,10 @@ class ScenarioFormTestCase(unittest.TestCase):
             ground_motion_correlation_model='JB2009',
             number_of_ground_motion_fields=10,
         )
+
+    def test_valid_scenario_calc(self):
         form = validation.ScenarioHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
@@ -1174,56 +1176,21 @@ openquake.hazardlib.gsim"],
                 'The number_of_ground_motion_fields must be a positive '
                 'integer, got -10']
         }
-
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='scenario',
-            random_seed=37,
-            rupture_mesh_spacing=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            truncation_level=0.1,
-            maximum_distance=100.0,
-            gsim='BooreAtkinson208',
-            ground_motion_correlation_model='JB2009',
-            number_of_ground_motion_fields=-10,
-        )
+        self.hc.number_of_ground_motion_fields = -10
+        self.hc.gsim = 'BooreAtkinson208'
         form = validation.ScenarioHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=None
         )
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
-    def test_valid_scenario_calc(self):
+    def test_is_valid_warns(self):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
-        # as `intensity_measure_types_and_levels`
-        hc = models.HazardCalculation(
-            owner=helpers.default_user(),
-            description='',
-            sites='MULTIPOINT((-122.114 38.113))',
-            calculation_mode='scenario',
-            random_seed=37,
-            rupture_mesh_spacing=0.001,
-            reference_vs30_value=0.001,
-            reference_vs30_type='measured',
-            reference_depth_to_2pt5km_per_sec=0.001,
-            reference_depth_to_1pt0km_per_sec=0.001,
-            intensity_measure_types=VALID_IML_IMT.keys(),
-            truncation_level=0.1,
-            maximum_distance=100.0,
-            gsim='BooreAtkinson2008',
-            ground_motion_correlation_model='JB2009',
-            number_of_ground_motion_fields=10,
-        )
+        # as `intensity_measure_types`
         form = validation.ScenarioHazardForm(
-            instance=hc, files=None
+            instance=self.hc, files=dict(vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
