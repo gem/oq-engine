@@ -136,6 +136,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         hazardlib_imt = haz_general.imt_to_hazardlib(imt)
         hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
+        imls = numpy.array(imls[::-1])
+
         # loop over sites
         for site in sites:
             # get curve for this point/IMT/realization

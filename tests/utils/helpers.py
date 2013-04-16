@@ -111,10 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def get_output_path(file_name):
-    return os.path.join(OUTPUT_DIR, file_name)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
@@ -124,16 +120,11 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-def testdata_path(file_name):
-    """
-    Take a file name and return the full path to the file in the
-    tests/data/demos directory
-    """
-    return os.path.normpath(os.path.join(
-        os.path.dirname(__file__), "../data/demos", file_name))
-
-
-def run_hazard_job(cfg, exports=None):
+# this function is used in various tests to run a computation in-process;
+# task distribution is disabled by default to make it possible to debug and
+# profile the tests; notice however that in the QA tests (see
+# BaseQATestCase.run_hazard) the distribution is enabled
+def run_hazard_job(cfg, exports=None, distribute=False):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
@@ -156,11 +147,17 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    completed_job = engine._do_run_calc(job, exports, calc, 'hazard')
-    job.is_running = False
-    job.save()
-
-    return completed_job
+    if not distribute:
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
+    try:
+        engine._do_run_calc(job, exports, calc, 'hazard')
+    finally:
+        if not distribute:
+            del os.environ['OQ_NO_DISTRIBUTE']
+        job.is_running = False
+        job.calc = calc
+        job.save()
+    return job
 
 
 def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
@@ -335,24 +332,6 @@ def assertModelAlmostEqual(test_case, expected, actual):
         else:
             test_case.assertEqual(exp_val, act_val)
 
-
-def wait_for_celery_tasks(celery_results,
-                          max_wait_loops=MAX_WAIT_LOOPS,
-                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
-    """celery_results is a list of celery task result objects.
-    This function waits until all tasks have finished.
-    """
-
-    # if a celery task has not yet finished, wait for a second
-    # then check again
-    counter = 0
-    while (False in [result.ready() for result in celery_results]):
-        counter += 1
-
-        if counter > max_wait_loops:
-            raise RuntimeError("wait too long for celery worker threads")
-
-        time.sleep(wait_time)
 
 # preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
 # otherwise we could just use __stdout__/__stderr__)
@@ -637,13 +616,6 @@ class DbTestCase(object):
         except ValueError:
             # no job profile for this job
             pass
-
-    def generate_output_path(self, job, output_type="hazard_map"):
-        """Return a random output path for the given job."""
-        path = touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
-        return path
 
     def teardown_output(self, output, teardown_job=True, filesystem_only=True):
         """

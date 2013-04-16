@@ -649,7 +649,8 @@ class SourceModelLogicTree(BaseLogicTree):
     """
     Source model logic tree parser.
     """
-    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault')
+    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
+                    'characteristicFault')
 
     def __init__(self, *args, **kwargs):
         self.source_ids = set()

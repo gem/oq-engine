@@ -23,7 +23,7 @@ exit 0
 }
 
 # Openquake version
-oq_version=`python -c "import openquake.engine; print '.'.join(str(x) for x in openquake.engine.__version__[:-1])"`
+oq_version=`python -c "import openquake.engine; print openquake.engine.__version__"`
 
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
@@ -134,7 +134,7 @@ if [ "$table_spaces_only" == "off" ]; then
 
     if [ "$user_interaction" = "on" ]; then
         # Last chance to abort.
-        echo '!! This will destroy *ALL* data in the OpenQuake database named $db_name !!'
+        echo "!! This will destroy *ALL* data in the OpenQuake database named $db_name !!"
         echo 'Press <enter> to continue or Ctrl-C to abort'
         read
     fi
