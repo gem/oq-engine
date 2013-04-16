@@ -731,7 +731,7 @@ def compute_and_write_statistics(
                 for curve in loss_ratio_curves:
                     if (curve.abscissae == 0).all():
                         curves_poes.append(
-                            numpy.zeros(reference_curve.abscissae))
+                            numpy.zeros(reference_curve.abscissae.shape))
                     else:
                         curves_poes.append(
                             curve.ordinate_for(
