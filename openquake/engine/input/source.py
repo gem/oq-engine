@@ -41,40 +41,78 @@ _SCALE_REL_MAP = {
 
 
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
-    """Convert a seismic source object from the NRML representation to the
-    HazardLib representation. Inputs can be point, area, simple fault, or
-    complex fault sources.
+    """
+    Convert a seismic source or rupture object from the NRML representation to
+    the HazardLib representation. Inputs can be point, area, simple fault, or
+    complex fault sources, or simple or complex fault ruptures.
 
     See :mod:`openquake.nrmllib.models` and :mod:`openquake.hazardlib.source`.
 
     :param src:
-        :mod:`openquake.nrmllib.models` seismic source instance.
+        :mod:`openquake.nrmllib.models` seismic source or rupture instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
         Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
         width.
+
+        Only needed for converting seismic sources; use `None` for ruptures.
     :param float area_src_disc:
         Area source discretization, in km. Applies only to area sources.
         If the input source is known to be a type other than an area source,
         you can specify `area_src_disc=None`.
+
+        Only needed for converting seismic sources; use `None` for ruptures.
     :returns:
         The HazardLib representation of the input source.
     """
-    # The ordering of the switch here matters because:
-    #   - AreaSource inherits from PointSource
-    #   - ComplexFaultSource inherits from SimpleFaultSource
-    if isinstance(src, nrml_models.AreaSource):
-        return _area_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc)
-    elif isinstance(src, nrml_models.PointSource):
-        return _point_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.ComplexFaultSource):
-        return _complex_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.SimpleFaultSource):
-        return _simple_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.CharacteristicSource):
-        return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.ComplexFaultRuptureModel):
+    if isinstance(src, (nrml_models.AreaSource, nrml_models.PointSource,
+                        nrml_models.ComplexFaultSource,
+                        nrml_models.SimpleFaultSource,
+                        nrml_models.CharacteristicSource)):
+        return _nrml_source_to_hazardlib(src, mesh_spacing, bin_width,
+                                         area_src_disc)
+    elif isinstance(src, (nrml_models.ComplexFaultRuptureModel,
+                          nrml_models.SimpleFaultRuptureModel)):
+        return _nrml_rupture_to_hazardlib(src, mesh_spacing)
+
+
+def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
+    """
+    Convert a NRML source object into the HazardLib representation.
+
+    Parameters and return values are the same as :func:`nrml_to_hazardlib`.
+    """
+    try:
+        # The ordering of the switch here matters because:
+        #   - AreaSource inherits from PointSource
+        #   - ComplexFaultSource inherits from SimpleFaultSource
+        if isinstance(src, nrml_models.AreaSource):
+            return _area_to_hazardlib(src, mesh_spacing, bin_width,
+                                      area_src_disc)
+        elif isinstance(src, nrml_models.PointSource):
+            return _point_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.ComplexFaultSource):
+            return _complex_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.SimpleFaultSource):
+            return _simple_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.CharacteristicSource):
+            return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
+    except Exception, err:
+        msg = (
+            "The following error has occurred with source id='%s', name='%s': "
+            "%s" % (src.id, src.name, err.message)
+        )
+        raise RuntimeError(msg)
+
+
+def _nrml_rupture_to_hazardlib(src, mesh_spacing):
+    """
+    Convert a NRML rupture object into the HazardLib representation.
+
+    Parameters and return values are similar to :func:`nrml_to_hazardlib`.
+    """
+    if isinstance(src, nrml_models.ComplexFaultRuptureModel):
         return _complex_rupture_to_hazardlib(src, mesh_spacing)
     elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
         return _simple_rupture_to_hazardlib(src, mesh_spacing)
