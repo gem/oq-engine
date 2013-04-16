@@ -341,11 +341,11 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'region',
             'region_grid_spacing',
             'sites',
-            'intensity_measure_types',
-            'intensity_measure_types_and_levels',
             'random_seed',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
+            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'width_of_mfd_bin',
             'area_source_discretization',
             'reference_vs30_value',
@@ -403,15 +403,12 @@ class EventBasedHazardForm(BaseHazardModelForm):
                     'a `vulnerability_file` is specified'
                 )
                 warnings.warn(msg)
-
-        # For the case where the user has requested to post-process GMFs into
-        # hazard curves:
-        if hc.hazard_curves_from_gmfs:
-            # The vulnerability model can define the IMTs/IMLs;
-            # if there isn't one, we need to check that
-            # `intensity_measure_types_and_levels` and
-            # `intensity_measure_types` are both defined and valid.
-            if not 'vulnerability_file' in self.files:
+        else:
+            if hc.hazard_curves_from_gmfs:
+                # The vulnerability model can define the IMTs/IMLs;
+                # if there isn't one, we need to check that
+                # `intensity_measure_types_and_levels` and
+                # `intensity_measure_types` are both defined and valid.
                 if hc.intensity_measure_types_and_levels is None:
                     # Not defined
                     msg = '`%s` requires `%s`'
@@ -873,6 +870,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
 
 def intensity_measure_types_is_valid(mdl):
     imts = mdl.intensity_measure_types
+
+    if imts is None:
+        return True, []
 
     if isinstance(imts, str):
         imts = [imts]
