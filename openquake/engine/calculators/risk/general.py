@@ -727,13 +727,15 @@ def compute_and_write_statistics(
                 reference_curve = loss_ratio_curves[numpy.argmin(max_losses)]
                 loss_ratios = reference_curve.abscissae
 
-                curves_poes = [
-                    reference_curve.ordinate_for(
-                        [poe for loss, poe
-                         in zip(curve.abscissae, curve.ordinates)
-                         if loss <= min(max_losses)])
-                    for curve in loss_ratio_curves]
-
+                curves_poes = []
+                for curve in loss_ratio_curves:
+                    if (curve.abscissae == 0).all():
+                        curves_poes.append(
+                            numpy.zeros(reference_curve.abscissae))
+                    else:
+                        curves_poes.append(
+                            curve.ordinate_for(
+                                reference_curve.ordinates))
         else:
             raise NotImplementedError
 
