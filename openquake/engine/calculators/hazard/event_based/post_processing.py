@@ -44,7 +44,7 @@ import numpy
 import openquake
 
 from celery.task.sets import TaskSet
-from django.db import connections
+from django import db
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -53,20 +53,7 @@ from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
-
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
-
-
-GMF_AGG = '''\
-INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping,
-sa_period, location, gmvs, rupture_ids)
-SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
-array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
-array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
-GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location
-'''
 
 
 def gmf_post_process_arg_gen(job):
@@ -200,6 +187,31 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
 gmf_to_hazard_curve_task.ignore_result = False
 
 
+def populate_gmf_agg(hc):
+    """
+    Populate the table gmf_agg from gmf and gmf_set.
+    """
+    GMF_AGG = '''\
+INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping,
+sa_period, location, gmvs, rupture_ids)
+SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
+array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
+array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
+FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
+WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
+GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location;
+'''
+    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
+    conn = db.connections['reslt_writer']
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        curs = conn.cursor()
+        for rlz in rlzs:
+            coll = models.GmfCollection.objects.get(lt_realization=rlz)
+            curs.execute(GMF_AGG % coll.id)
+            # TODO: delete the copied rows from gmf; this can be done
+            # only after changing the export procedure to read from gmf_agg
+
+
 def do_post_process(job):
     """
     Run the GMF to hazard curve post-processing tasks for the given ``job``.
@@ -216,19 +228,13 @@ def do_post_process(job):
     # Stats for debug logging:
     n_imts = len(hc.intensity_measure_types_and_levels)
     n_sites = len(hc.points_to_compute())
-    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
+    n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
 
-    # populate the gmf_agg table
-    curs = connections['admin'].cursor()
     with EnginePerformanceMonitor('populating gmf_agg', job.id):
-        for rlz in rlzs:
-            coll = models.GmfCollection.objects.get(lt_realization=rlz)
-            curs.execute(GMF_AGG % coll.id)
-            # TODO: delete the copied rows from gmf; this can be done
-            # only after changing the export procedure to read from gmf_agg
+        populate_gmf_agg(hc)
 
     total_blocks = int(math.ceil(
-        (n_imts * n_sites * len(rlzs)) / float(block_size)))
+        (n_imts * n_sites * n_rlzs) / float(block_size)))
 
     for i, block in enumerate(block_gen):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
