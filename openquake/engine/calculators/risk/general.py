@@ -19,6 +19,7 @@
 
 import random
 import StringIO
+import numpy
 
 from openquake.risklib import scientific
 
@@ -711,13 +712,27 @@ def compute_and_write_statistics(
 
     for i, asset in enumerate(assets):
         loss_ratio_curves = loss_ratio_curve_matrix[:, i]
-        loss_ratios = loss_ratio_curves[0].abscissae
 
         if assume_equal == 'support':
+            loss_ratios = loss_ratio_curves[0].abscissae
             curves_poes = [curve.ordinates for curve in loss_ratio_curves]
         elif assume_equal == 'image':
-            curves_poes = [curve.ordinate_for(loss_ratios)
-                           for curve in loss_ratio_curves]
+            max_losses = [lc.abscissae[0] for lc in loss_ratio_curves
+                          if lc.abscissae[0]]
+            if not max_losses:  # no damage. all trivial curves
+                loss_ratios = loss_ratio_curves[0].abscissae
+                curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+            else:  # standard case
+                reference_curve = loss_ratio_curves[numpy.argmin(max_losses)]
+                loss_ratios = reference_curve.abscissae
+
+                curves_poes = [
+                    reference_curve.ordinate_for(
+                        [poe for loss, poe
+                         in zip(curve.abscissae, curve.ordinates)
+                         if loss <= min(max_losses)])
+                    for curve in loss_ratio_curves]
+
         else:
             raise NotImplementedError
 
