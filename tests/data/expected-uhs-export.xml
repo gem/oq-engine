@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="n1">
-  <uhsResultSet>
-    <uhsPeriods>0.025 0.45 2.5</uhsPeriods>
-    <timeSpan>50.0</timeSpan>
-    <uhsResult poE="0.1" path="/some/path/uhs_poe:0.1.hdf5"/>
-    <uhsResult poE="0.02" path="/some/path/uhs_poe:0.02.hdf5"/>
-  </uhsResultSet>
-</nrml>
