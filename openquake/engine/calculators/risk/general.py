@@ -731,13 +731,12 @@ def compute_and_write_statistics(
 
                 curves_poes = []
                 for curve in loss_ratio_curves:
-                    if (curve.abscissae == 0).all():
+                    if curve.abscissae[-1]:
                         curves_poes.append(
-                            numpy.zeros(reference_curve.abscissae.shape))
+                            curve.ordinate_for(reference_curve.abscissae))
                     else:
                         curves_poes.append(
-                            curve.ordinate_for(
-                                reference_curve.ordinates))
+                            numpy.zeros(reference_curve.abscissae.shape))
         else:
             raise NotImplementedError
 
