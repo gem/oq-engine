@@ -23,7 +23,8 @@ from qa_tests import risk
 from tests.utils import helpers
 
 from openquake.engine.db import models
-
+from openquake.engine.calculators.hazard.event_based.post_processing import \
+    populate_gmf_agg
 
 # FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
@@ -84,6 +85,8 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
+
+            populate_gmf_agg(job.hazard_calculation)
 
         return gmf_set.gmf_collection.output.id
 
