@@ -670,56 +670,6 @@ def write_loss_curve(
         average_loss_ratio=average_loss_ratio)
 
 
-def curve_statistics(asset, loss_ratio_curves, curves_weights,
-                     mean_loss_curve_id, quantile_loss_curve_ids,
-                     explicit_quantiles, assume_equal):
-
-    loss_ratios = loss_ratio_curves[0].abscissae
-
-    if assume_equal == 'support':
-        curves_poes = [curve.ordinates for curve in loss_ratio_curves]
-    elif assume_equal == 'image':
-        curves_poes = [curve.ordinate_for(loss_ratios)
-                       for curve in loss_ratio_curves]
-    else:
-        raise NotImplementedError
-
-    quantiles_poes = dict()
-
-    for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
-        if explicit_quantiles:
-            q_curve = post_processing.weighted_quantile_curve(
-                curves_poes, curves_weights, quantile)
-        else:
-            q_curve = post_processing.quantile_curve(
-                curves_poes, quantile)
-
-        quantiles_poes[quantile] = q_curve.tolist()
-
-        write_loss_curve(
-            quantile_loss_curve_id,
-            asset,
-            quantiles_poes[quantile],
-            loss_ratios,
-            scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
-
-    # then means
-    mean_poes = None
-    if mean_loss_curve_id:
-        mean_curve = post_processing.mean_curve(
-            curves_poes, weights=curves_weights)
-        mean_poes = mean_curve.tolist()
-
-        write_loss_curve(
-            mean_loss_curve_id,
-            asset,
-            mean_poes,
-            loss_ratios,
-            scientific.average_loss(loss_ratios, mean_poes))
-
-    return mean_poes, quantiles_poes
-
-
 def compute_and_write_statistics(
         mean_loss_curve_id, quantile_loss_curve_ids,
         mean_loss_map_ids, quantile_loss_map_ids,
