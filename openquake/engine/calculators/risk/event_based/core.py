@@ -32,6 +32,7 @@ from openquake.engine.calculators.risk import general
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import base
 
 
@@ -92,6 +93,10 @@ def event_based(job_id, hazard,
     representing the correlation between the generated loss ratios
     """
 
+    def profile(name):
+        return EnginePerformanceMonitor(
+            name, job_id, event_based, tracing=True)
+
     loss_ratio_curves = OrderedDict()
     event_loss_table = dict()
 
@@ -117,7 +122,7 @@ def event_based(job_id, hazard,
             seed=seed,
             correlation=asset_correlation)
 
-        with logs.tracing('getting input data from db'):
+        with profile('getting input data from db'):
             assets, gmvs_ruptures, missings = hazard_getter()
 
         if len(assets):
@@ -134,11 +139,11 @@ def event_based(job_id, hazard,
                 num_items=len(missings))
             return
 
-        with logs.tracing('computing risk'):
+        with profile('computing losses and loss curves'):
             loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
                 calculator(ground_motion_values))
 
-        with logs.tracing('writing results'):
+        with profile('writing loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 for i, loss_ratio_curve in enumerate(
                         loss_ratio_curves[hazard_output_id]):
@@ -153,6 +158,12 @@ def event_based(job_id, hazard,
                             loss_ratio_curve.abscissae,
                             loss_ratio_curve.ordinates))
 
+        with profile('writing and computing loss maps'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
+
                     # loss maps
                     for poe in conditional_loss_poes:
                         general.write_loss_map_data(
@@ -161,42 +172,59 @@ def event_based(job_id, hazard,
                                 loss_ratio_curve.abscissae,
                                 loss_ratio_curve.ordinates, poe))
 
+        with profile('writing and computing insured loss curves'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
+
                     # insured losses
                     if insured_losses:
-                        insured_loss_curve = scientific.event_based(
-                            scientific.insured_losses(
-                                loss_ratio_matrix[i],
-                                asset.value,
-                                asset.deductible,
-                                asset.ins_limit),
-                            tses,
-                            time_span,
-                            loss_curve_resolution)
+                        insured_losses_losses, insured_losses_poes = (
+                            scientific.event_based(
+                                scientific.insured_losses(
+                                    loss_ratio_matrix[i],
+                                    asset.value,
+                                    asset.deductible,
+                                    asset.ins_limit),
+                                tses,
+                                time_span,
+                                loss_curve_resolution))
 
-                        insured_loss_curve.abscissae = (
-                            insured_loss_curve.abscissae / asset.value)
+                        # FIXME(lp). Insured losses are still computed
+                        # as absolute values.
+                        insured_losses_losses /= asset.value
 
                         general.write_loss_curve(
                             insured_curve_id, asset,
-                            insured_loss_curve.ordinates,
-                            insured_loss_curve.abscissae,
+                            insured_losses_poes, insured_losses_losses,
                             scientific.average_loss(
-                                insured_loss_curve.abscissae,
-                                insured_loss_curve.ordinates))
+                                insured_losses_losses, insured_losses_poes))
 
-                for i, asset in enumerate(assets):
-                    for j, rupture_id in enumerate(rupture_id_matrix[i]):
-                        # update the event loss table of this task
-                        loss = loss_ratio_matrix[i][j] * asset.value
-                        event_loss_table[rupture_id] = (
-                            event_loss_table.get(rupture_id, 0) + loss)
+        with profile('computing event loss table'):
+            for i, asset in enumerate(assets):
+                for j, rupture_id in enumerate(rupture_id_matrix[i]):
+                    # update the event loss table of this task
+                    loss = loss_ratio_matrix[i][j] * asset.value
+                    event_loss_table[rupture_id] = (
+                        event_loss_table.get(rupture_id, 0) + loss)
 
-                        # compute and save disaggregation
-                        rupture = models.SESRupture.objects.get(pk=rupture_id)
-
+        # compute and save disaggregation
+        with profile('computing and writing disaggregation'):
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for i, loss_ratio_curve in enumerate(
+                        loss_ratio_curves[hazard_output_id]):
+                    asset = assets[i]
                     if asset.site in sites_disagg:
                         for j, rupture_id in enumerate(rupture_id_matrix[i]):
 
+                            # As the path of the code is not frequent
+                            # (we expect few request for
+                            # disaggregation and few elements in
+                            # `sites_disagg` this query is performed
+                            # here and not directly in the getter
+                            rupture = models.SESRupture.objects.get(
+                                pk=rupture_id)
                             loss = loss_ratio_matrix[i][j] * asset.value
                             site = asset.site
                             site_mesh = mesh.Mesh(numpy.array([site.x]),
@@ -236,7 +264,7 @@ def event_based(job_id, hazard,
          mean_loss_map_ids, quantile_loss_map_ids) = (
              statistical_output_containers)
 
-        with logs.tracing('writing statistics'):
+        with profile('computing and writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
                 general.compute_and_write_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
@@ -314,9 +342,10 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                 if rupture.id in self.event_loss_table]
 
             if aggregate_losses:
-                aggregate_loss_curve = scientific.event_based(
-                    aggregate_losses, tses, time_span,
-                    curve_resolution=self.rc.loss_curve_resolution)
+                aggregate_loss_losses, aggregate_loss_poes = (
+                    scientific.event_based(
+                        aggregate_losses, tses, time_span,
+                        curve_resolution=self.rc.loss_curve_resolution))
 
                 models.AggregateLossCurveData.objects.create(
                     loss_curve=models.LossCurve.objects.create(
@@ -327,20 +356,19 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                             "Aggregate Loss Curve "
                             "for hazard %s" % hazard_output,
                             "agg_loss_curve")),
-                    losses=aggregate_loss_curve.abscissae.tolist(),
-                    poes=aggregate_loss_curve.ordinates.tolist(),
+                    losses=aggregate_loss_losses, poes=aggregate_loss_poes,
                     average_loss=scientific.average_loss(
-                        aggregate_loss_curve.abscissae,
-                        aggregate_loss_curve.ordinates))
+                        aggregate_loss_losses, aggregate_loss_poes))
 
         event_loss_table_output = models.Output.objects.create_output(
             self.job, "Event Loss Table", "event_loss")
 
-        for rupture_id, aggregate_loss in self.event_loss_table.items():
-            models.EventLoss.objects.create(
-                output=event_loss_table_output,
-                rupture_id=rupture_id,
-                aggregate_loss=aggregate_loss)
+        with db.transaction.commit_on_success(using='reslt_writer'):
+            for rupture_id, aggregate_loss in self.event_loss_table.items():
+                models.EventLoss.objects.create(
+                    output=event_loss_table_output,
+                    rupture_id=rupture_id,
+                    aggregate_loss=aggregate_loss)
 
     def create_getter(self, output, imt, assets):
         """
