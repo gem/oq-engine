@@ -63,6 +63,10 @@ class SiMidorikawa1999Asc(GMPE):
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = set(('rrup', ))
 
+    #: Amplification factor to scale PGV at 400 km vs30,
+    #: see equation 3.5.1-1 page 148
+    AMP_F = 1.41
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Implements equation 3.5.1-1 page 148 for mean value and equation
@@ -93,7 +97,8 @@ class SiMidorikawa1999Asc(GMPE):
         )
 
         # convert from log10 to ln
-        mean = np.log(10 ** mean)
+        # and apply amplification function
+        mean = np.log(10 ** mean * self.AMP_F)
 
         return mean
 
