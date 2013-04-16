@@ -41,6 +41,8 @@ def check_export(output_id, target_dir):
 class GetResultExportPathTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.Location = namedtuple('Location', 'x, y')
+
         self.FakeHazardCurve = namedtuple(
             'HazardCurve',
             'output, lt_realization, imt, sa_period, statistics, quantile'
@@ -55,7 +57,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
         )
         self.FakeDisagg = namedtuple(
             'Disagg',
-            'output, lt_realization, imt, sa_period'
+            'output, lt_realization, imt, sa_period, location'
         )
         self.FakeGMF = namedtuple(
             'GMF',
@@ -171,15 +173,18 @@ class GetResultExportPathTestCase(unittest.TestCase):
         output = self.FakeOutput('disagg_matrix')
 
         matrices = [
-            self.FakeDisagg(output, self.ltr_mc, 'PGA', None),
-            self.FakeDisagg(output, self.ltr_mc, 'SA', 0.025),
+            self.FakeDisagg(output, self.ltr_mc, 'PGA', None,
+                            self.Location(33.333, -89.999001)),
+            self.FakeDisagg(output, self.ltr_enum, 'SA', 0.025,
+                            self.Location(40.1, 10.1)),
         ]
 
         expected_paths = [
             '%s/calc_7/disagg_matrix/PGA/'
-            'disagg_matrix-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            'disagg_matrix-lon_33.333-lat_-89.999001-smltp_B1_B3-'
+            'gsimltp_B2_B4-ltr_3.xml',
             '%s/calc_7/disagg_matrix/SA-0.025/'
-            'disagg_matrix-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            'disagg_matrix-lon_40.1-lat_10.1-smltp_B10_B9-gsimltp_B7_B8.xml'
         ]
         expected_paths = [x % self.target_dir for x in expected_paths]
 
@@ -206,9 +211,9 @@ class GetResultExportPathTestCase(unittest.TestCase):
     def test_ses(self):
         output = self.FakeOutput('ses')
 
-        ses = self.FakeGMF(output, self.ltr_enum)
+        ses = self.FakeGMF(output, self.ltr_mc)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B10_B9-gsimltp_B7_B8.xml'
+            '%s/calc_8/ses/ses-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml'
             % self.target_dir
         )
 
