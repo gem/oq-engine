@@ -58,14 +58,14 @@ HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
 
 
 GMF_AGG = '''\
-INSERT INTO gmf_agg (gmf_collection_id, imt, sa_damping,
+INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping,
 sa_period, location, gmvs, rupture_ids)
 SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
 array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
 array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b WHERE a.gmf_set_id=b.id
-WHERE gmf_collection_id=%d
-GROUP BY location, imt, sa_damping, sa_period
+FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
+WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
+GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location
 '''
 
 
@@ -213,11 +213,12 @@ def do_post_process(job):
     rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
 
     # populate the gmf_agg table
-    curs = connections['job_init'].cursor()
-    for rlz in n_rlzs:
-        coll = models.GmfCollection.objects.get(lt_realization=rlz)
-        curs.execute(GMF_AGG % coll.id)
-        # TODO: delete the copied rows
+    curs = connections['admin'].cursor()
+    with EnginePerformanceMonitor('populating gmf_agg', job.id):
+        for rlz in rlzs:
+            coll = models.GmfCollection.objects.get(lt_realization=rlz)
+            curs.execute(GMF_AGG % coll.id)
+            # TODO: delete the copied rows
 
     total_blocks = int(math.ceil(
         (n_imts * n_sites * len(rlzs)) / float(block_size)))

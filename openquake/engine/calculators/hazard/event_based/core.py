@@ -44,7 +44,6 @@ from openquake.hazardlib.geo import MultiSurface
 from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
-from openquake.hazardlib.site import SiteCollection
 
 from openquake.engine import logs
 from openquake.engine import writer
@@ -56,7 +55,6 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import stats, tasks as utils_tasks
-from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -69,7 +67,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # pylint: disable=R0914
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
+def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -104,6 +102,7 @@ def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
     """
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
+
     # filtering sources
     with EnginePerformanceMonitor('filtering sources for lt=%d' % lt_rlz_id,
                                   job_id, ses_and_gmfs):
@@ -140,13 +139,11 @@ def ses_and_gmfs(job_id, sites, task_seed, result_grp_ordinal):
         logs.LOG.debug('> computing stochastic event set %s of %s'
                        % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
-        apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
-        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-        sources = list(haz_general.gen_sources(
-            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin, hc.area_source_discretization))
+        # This is the container for all ruptures for this stochastic event set
+        # (specified by `ordinal` and the logic tree realization).
+        # NOTE: Many tasks can contribute ruptures to this SES.
+        ses = models.SES.objects.get(
+            ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
         # Calculate stochastic event sets:
         logs.LOG.debug('> computing stochastic event sets')
@@ -200,7 +197,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
     n_points = len(hc.points_to_compute())
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_sites, 0)),
+    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
                                 rupture_ids=[]))
                      for imt in imts)
 
@@ -209,7 +206,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
         # Compute and save ground motion fields
         gmf_calc_kwargs = {
             'rupture': rupture,
-            'sites': sites,
+            'sites': hc.site_collection,
             'imts': imts,
             'gsim': gsims[rupture.tectonic_region_type],
             'truncation_level': hc.truncation_level,
@@ -432,6 +429,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
+
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False).order_by('id')
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
