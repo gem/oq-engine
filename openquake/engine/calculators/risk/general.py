@@ -721,6 +721,7 @@ def compute_and_write_statistics(
                           if lc.abscissae[-1]]
             if not max_losses:  # no damage. all trivial curves
                 logs.LOG.info("No damages in asset %s" % asset)
+                logs.LOG.debug("Loss curves: %s", loss_ratio_curves)
                 loss_ratios = loss_ratio_curves[0].abscissae
                 curves_poes = [curve.ordinates for curve in loss_ratio_curves]
             else:  # standard case
