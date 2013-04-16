@@ -907,6 +907,15 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 hazard_job, "Test Hazard output", "gmf"),
             lt_realization=rlz)
 
+        # this is needed because the AggregateLossCurve is only generated if
+        # there are GmfSets; the problem is in
+        # risk/event_based/core.py:EventBasedRiskCalculator.post_process, line
+        # gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
+        models.GmfSet.objects.create(
+            gmf_collection=hazard_output,
+            investigation_time=hc.investigation_time,
+            ses_ordinal=1)
+
         for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                       "POINT(15.48 38.091)", "POINT(15.565 38.17)",
                       "POINT(15.481 38.25)"]:
