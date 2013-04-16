@@ -168,7 +168,7 @@ def export_hazard_curve(output, target_dir):
 
     hcd = _curve_data(hc)
     metadata, path = _curve_metadata(output, target_dir)
-    nrml_writers.HazardCurveXMLWriter(path, **metadata).serialize(hcd)
+    writers.HazardCurveXMLWriter(path, **metadata).serialize(hcd)
 
     return [path]
 
@@ -186,7 +186,7 @@ def export_hazard_curve_multi(output, target_dir):
         metadata_set.append(metadata)
     assert(path)
 
-    writer = nrml_writers.MultiHazardCurveXMLWriter(path, metadata_set)
+    writer = writers.MultiHazardCurveXMLWriter(path, metadata_set)
     writer.serialize(data)
 
     return [path]
