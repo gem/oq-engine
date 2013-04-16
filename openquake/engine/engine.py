@@ -22,6 +22,7 @@ import getpass
 import md5
 import os
 import sys
+import warnings
 
 import openquake.engine
 
@@ -254,6 +255,13 @@ def create_hazard_calculation(owner, params, files):
     """
     if "export_dir" in params:
         params["export_dir"] = os.path.abspath(params["export_dir"])
+
+    haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
+    for param in set(params.keys()) - set(haz_calc_fields):
+        msg = "Unknown parameter '%s'. Ignoring."
+        msg %= param
+        warnings.warn(msg, RuntimeWarning)
+        params.pop(param)
 
     hc = models.HazardCalculation(**params)
     hc.owner = owner
