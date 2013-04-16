@@ -176,8 +176,14 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
         Spectral Acceleration damping. Used only with ``imt`` of 'SA'.
     """
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    gmfs = models.GmfAgg.objects.filter(
-        gmf_collection__lt_realization=lt_rlz_id,
+    #gmfs = models.GmfAgg.objects.filter(
+    #    gmf_collection__lt_realization=lt_rlz_id,
+    #    imt=imt,
+    #    sa_period=sa_period,
+    #    sa_damping=sa_damping).extra(where=[
+    #        "location::geometry ~= 'SRID=4326;%s'::geometry" % point.wkt2d])
+    gmfs = models.Gmf.objects.filter(
+        gmf_set__gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
         sa_period=sa_period,
         sa_damping=sa_damping).extra(where=[
@@ -218,7 +224,8 @@ def do_post_process(job):
         for rlz in rlzs:
             coll = models.GmfCollection.objects.get(lt_realization=rlz)
             curs.execute(GMF_AGG % coll.id)
-            # TODO: delete the copied rows
+            # TODO: delete the copied rows from gmf; this can be done
+            # only after changing the export procedure to read from gmf_agg
 
     total_blocks = int(math.ceil(
         (n_imts * n_sites * len(rlzs)) / float(block_size)))
