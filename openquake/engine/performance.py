@@ -204,7 +204,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         is intended for debugging purposes.
         """
         if no_distribute():
-            logs.LOG.warn('PyMem: %d mb, PgMem: %d mb' % self.mem_peaks)
+            logs.LOG.warn('PyMem: %s mb, PgMem: %s mb' % self.mem_peaks)
 
     def __exit__(self, etype, exc, tb):
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
