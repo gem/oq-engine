@@ -44,6 +44,7 @@ import numpy
 import openquake
 
 from celery.task.sets import TaskSet
+from django.db import connections
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -54,6 +55,18 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
+
+
+GMF_AGG = '''\
+INSERT INTO gmf_agg (gmf_collection_id, imt, sa_damping,
+sa_period, location, gmvs, rupture_ids)
+SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
+array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
+array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
+FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b WHERE a.gmf_set_id=b.id
+WHERE gmf_collection_id=%d
+GROUP BY location, imt, sa_damping, sa_period
+'''
 
 
 def gmf_post_process_arg_gen(job):
@@ -163,8 +176,8 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
         Spectral Acceleration damping. Used only with ``imt`` of 'SA'.
     """
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    gmfs = models.Gmf.objects.filter(
-        gmf_set__gmf_collection__lt_realization=lt_rlz_id,
+    gmfs = models.GmfAgg.objects.filter(
+        gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
         sa_period=sa_period,
         sa_damping=sa_damping).extra(where=[
@@ -197,9 +210,17 @@ def do_post_process(job):
     # Stats for debug logging:
     n_imts = len(hc.intensity_measure_types_and_levels)
     n_sites = len(hc.points_to_compute())
-    n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
+    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
+
+    # populate the gmf_agg table
+    curs = connections['job_init'].cursor()
+    for rlz in n_rlzs:
+        coll = models.GmfCollection.objects.get(lt_realization=rlz)
+        curs.execute(GMF_AGG % coll.id)
+        # TODO: delete the copied rows
+
     total_blocks = int(math.ceil(
-        (n_imts * n_sites * n_rlzs) / float(block_size)))
+        (n_imts * n_sites * len(rlzs)) / float(block_size)))
 
     for i, block in enumerate(block_gen):
         logs.LOG.debug('> GMF post-processing block, %s of %s'

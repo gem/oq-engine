@@ -200,10 +200,7 @@ class GroundMotionValuesGetter(HazardGetter):
         gmf_collection = models.GmfCollection.objects.get(
             id=self.hazard_id)
 
-        if gmf_collection.output.output_type == "gmf":
-            gmf_set_ids = tuple(
-                gmf_collection.gmfset_set.values_list('id', flat=True))
-        else:
+        if gmf_collection.output.output_type != "gmf":
             raise ValueError(
                 "Output must be of type `gmf`. "
                 "At the moment, we only support computation of loss curves "
@@ -212,7 +209,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor = connections['job_init'].cursor()
 
         spectral_filters = ""
-        args = (self._imt, gmf_set_ids)
+        args = (self._imt, gmf_collection.id)
 
         if self._imt == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
@@ -242,21 +239,15 @@ class GroundMotionValuesGetter(HazardGetter):
         # gmvs
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id)
-  oqmif.exposure_data.id, gmf_table.allgmvs_arr, gmf_table.allrupture_ids
+  oqmif.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
   FROM oqmif.exposure_data JOIN
-    (SELECT location,
-            array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal)
-            AS allgmvs_arr,
-            array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-            AS allrupture_ids
-     FROM hzrdr.gmf
-     WHERE imt = %s AND gmf_set_id IN %s {}
-     AND location && %s
+    (SELECT * FROM hzrdr.gmf_agg
+     WHERE imt = %s AND gmf_collection_id = %s {} AND location && %s
      GROUP BY location) AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
   AND taxonomy = %s AND exposure_model_id = %s
-  AND array_length(gmf_table.allgmvs_arr, 1) > 0
+  AND array_length(gmf_table.gmvs, 1) > 0
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
