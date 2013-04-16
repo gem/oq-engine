@@ -319,6 +319,108 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         self.assertTrue(utils.validates_against_xml_schema(self.path))
 
 
+class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
+    """
+    Tests for the `serialize` method of the hazard curve XML writer.
+    """
+
+    def setUp(self):
+        self.data1 = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.1, 0.2, 0.3]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.4, 0.5, 0.6]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.7, 0.8, 0.8]),
+        ]
+
+        self.data2 = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.01, 0.02, 0.03]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.04, 0.05, 0.06]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.07, 0.08, 0.08]),
+        ]
+
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
+    def test_serialize(self):
+        # Just a basic serialization test.
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves sourceModelTreePath="b1_b2_b4"
+                gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50"
+                saPeriod="0.025" saDamping="5.0">
+    <IMLs>0.005 0.007 0.0098</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.1 0.2 0.3</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.4 0.5 0.6</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.7 0.8 0.8</poEs>
+    </hazardCurve>
+  </hazardCurves>
+  <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="PGA"
+                investigationTime="30">
+    <IMLs>0.05 0.07 0.8</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.01 0.02 0.03</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.04 0.05 0.06</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.07 0.08 0.08</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+""")
+
+        metadata1 = dict(
+            investigation_time=50, imt='SA', imls=[0.005, 0.007, 0.0098],
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5'
+        )
+
+        metadata2 = dict(
+            investigation_time=30, imt='PGA', imls=[0.05, 0.07, 0.8],
+            smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
+        )
+
+        writer = writers.MultiHazardCurveXMLWriter(
+            self.path, [metadata1, metadata2])
+        writer.serialize([self.data1, self.data2])
+
+        utils.assert_xml_equal(expected, self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
+
+
 class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
 
     def test_serialize(self):

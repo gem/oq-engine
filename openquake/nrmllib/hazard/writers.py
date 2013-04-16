@@ -178,26 +178,75 @@ class HazardCurveXMLWriter(BaseCurveXMLWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
-
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            self.add_hazard_curves(root, self.metadata, data)
 
-            hazard_curves = etree.SubElement(root, 'hazardCurves')
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
 
-            _set_metadata(hazard_curves, self.metadata, _ATTR_MAP)
+    def add_hazard_curves(self, root, metadata, data):
+        """
+        Add hazard curves stored into `data` as child of the `root`
+        element with `metadata`. See the documentation of the method
+        `serialize` and the constructor for a description of `data`
+        and `metadata`, respectively.
+        """
+        hazard_curves = etree.SubElement(root, 'hazardCurves')
 
-            imls_elem = etree.SubElement(hazard_curves, 'IMLs')
-            imls_elem.text = ' '.join([str(x) for x in self.metadata['imls']])
+        _set_metadata(hazard_curves, metadata, _ATTR_MAP)
 
-            for hc in data:
-                hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
-                gml_point = etree.SubElement(hc_elem, '{%s}Point' % gml_ns)
-                gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
-                gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
-                poes_elem = etree.SubElement(hc_elem, 'poEs')
-                poes_elem.text = ' '.join([str(x) for x in hc.poes])
+        imls_elem = etree.SubElement(hazard_curves, 'IMLs')
+        imls_elem.text = ' '.join([str(x) for x in metadata['imls']])
+        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+
+        for hc in data:
+            hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
+            gml_point = etree.SubElement(hc_elem, '{%s}Point' % gml_ns)
+            gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+            gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
+            poes_elem = etree.SubElement(hc_elem, 'poEs')
+            poes_elem.text = ' '.join([str(x) for x in hc.poes])
+
+
+class MultiHazardCurveXMLWriter(object):
+    """
+    A serializer of multiple hazard curve set having multiple
+    metadata. It uses
+    :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter` to
+    actually serialize the single set of curves.
+
+    :attr str path:
+         The path of the filename to be written
+    :attr metadata_set:
+         Iterable over metadata suitable to create instances of
+         :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+    """
+    def __init__(self, path, metadata_set):
+        self.path = path
+        self.metadata_set = metadata_set
+
+        for metadata in metadata_set:
+            _validate_hazard_metadata(metadata)
+
+    def serialize(self, curve_set):
+        """
+        Write a set of sequence of hazard curves to the specified file.
+        :param curve_set:
+
+           Iterable over sequence of curves. Each element returned by
+           the iterable is an iterable suitable to be used by the
+           :meth:`serialize` of the class
+           :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            for metadata, curve_data in zip(self.metadata_set, curve_set):
+                writer = HazardCurveXMLWriter(self.path, **metadata)
+                writer.add_hazard_curves(root, metadata, curve_data)
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
