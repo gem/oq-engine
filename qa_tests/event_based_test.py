@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import os
-import collections
 import unittest
 import numpy
 
@@ -24,115 +23,9 @@ from openquake.risklib import api
 from openquake.risklib import scientific
 from openquake.risklib.tests.utils import vectors_from_csv
 
-#: The conditional loss poes used for testing
-CONDITIONAL_LOSS_POE = 0.50
-
 THISDIR = os.path.dirname(__file__)
 
 gmf = vectors_from_csv('gmf', THISDIR)
-
-TestData = collections.namedtuple(
-    'TestData', 'expected_poes expected_losses expected_loss_map')
-
-mean_based_loss_curve_poes = [
-    1.0, 1.0, 0.992492256, 0.9849845130, 0.9774767690, 0.9699690250,
-    0.962461282, 0.954953538, 0.947445794, 0.939938051, 0.932430307,
-    0.924922563, 0.917414819, 0.909907076, 0.902399332, 0.894891588,
-    0.887383845, 0.879876101, 0.872368357, 0.864860614, 0.857352870,
-    0.849845126, 0.842337382, 0.834829639, 0.827321895, 0.819814151,
-    0.812306408, 0.804798664, 0.79729092, 0.789783177, 0.7822754330,
-    0.774767689, 0.767259945, 0.759752202, 0.752244458, 0.744736714,
-    0.737228971, 0.729721227, 0.722213483, 0.71470574, 0.7071979960,
-    0.699690252, 0.692182508, 0.684674765, 0.677167021, 0.669659277,
-    0.662151534, 0.65464379, 0.647136046, 0.639628303, 0.6321205590]
-
-#: mean based test data
-mb = TestData(
-
-    expected_poes=[0, 0.0204, 0.0408, 0.0612, 0.0816, 0.102, 0.1224, 0.1429,
-                   0.1633, 0.1837, 0.2041, 0.2245, 0.2449, 0.2653, 0.2857,
-                   0.3061, 0.3265, 0.3469, 0.3673, 0.3878, 0.4082, 0.4286,
-                   0.449, 0.4694, 0.4898, 0.5102, 0.5306, 0.551, 0.5714,
-                   0.5918, 0.6122, 0.6327, 0.6531, 0.6735, 0.6939, 0.7143,
-                   0.7347, 0.7551, 0.7755, 0.7959, 0.8163, 0.8367, 0.8571,
-                   0.8776, 0.898, 0.9184, 0.9388, 0.9592, 0.9796, 1][::-1],
-
-    expected_losses=numpy.array([
-        [264.2259, 260.5148, 256.8037, 253.0926, 249.3815,
-         245.6704, 241.9593, 238.2482, 234.5371, 230.8261,
-         227.115, 223.4039, 219.6928, 215.9817, 212.2706,
-         208.5595, 204.8484, 201.1373, 197.4262, 193.7152,
-         190.0041, 186.293, 182.5819, 178.8708, 175.1597,
-         171.4486, 167.7375, 164.0264, 160.3153, 156.6043,
-         152.8932, 149.1393, 143.7887, 138.4381, 133.0875,
-         127.7369, 122.3862, 117.0356, 111.685, 106.3344,
-         100.9838, 95.6332, 90.2826, 85.5154, 81.0887,
-         76.662, 72.2353, 68.2291, 64.759, 34.233][::-1],
-        [49.612, 49.4029, 49.1938, 48.9847, 48.7757, 48.5666,
-         48.3575, 48.1484, 47.9394, 47.7303, 47.5212, 47.3121,
-         47.1031, 46.894, 46.6849, 46.4758, 46.2668, 46.0577,
-         45.8486, 45.6395, 45.4304, 45.2214, 45.0123, 44.8032,
-         44.5941, 44.3851, 44.176, 43.9669, 43.7578, 43.5488,
-         43.3397, 43.117, 42.3848, 41.6526, 40.9204, 40.1882,
-         39.456, 38.7239, 37.9917, 37.2595, 36.5273, 35.7951,
-         35.0629, 34.2983, 33.5148, 32.7313, 31.9478, 29.8488,
-         26.0726, 11.3905][::-1],
-        [31.04076788, 31.03280999, 31.02485209, 31.0168942,
-         31.00893631, 31.00097841, 30.99302052, 30.98506262,
-         30.97710473, 30.96914683, 30.96118894, 30.95323104,
-         30.94527315, 30.93731525, 30.92935736, 30.92139946,
-         30.91344157, 30.90548367, 30.89752578, 30.88956788,
-         30.88160999, 30.87365209, 30.8656942, 30.8577363,
-         30.84977841, 30.84182052, 30.83386262, 30.82590473,
-         30.81794683, 30.80998894, 30.80203104, 30.79256074,
-         30.72664001, 30.66071928, 30.59479855, 30.52887782,
-         30.46295709, 30.39703636, 30.33111562, 30.26519489,
-         30.19927416, 30.13335343, 30.0674327, 29.72848172,
-         29.23016035, 28.73183899, 28.23351762, 27.06330665,
-         25.03645701, 8.80769991][::-1],
-    ]),
-
-    expected_loss_map=[173.30415881565, 44.4896055766335, 30.845799462654]
-)
-
-
-il = TestData(  # insured loss test data
-
-    expected_poes=[
-        [1., 0.94736842, 0.89473684, 0.84210526,
-         0.78947368, 0.7368421, 0.68421052, 0.63157895, 0.57894737, 0.52631579,
-         0.47368421, 0.42105263, 0.36842105, 0.31578947, 0.26315789,
-         0.21052632, 0.15789474, 0.10526316, 0.05263158, 0.],
-        [1., 0.98063792,
-         0.96127585, 0.94191377, 0.9225517, 0.90318962, 0.88382754,
-         0.86446547, 0.84510339, 0.82574132, 0.80637924, 0.78701717,
-         0.76765509, 0.74829301, 0.72893094, 0.70956886, 0.69020679,
-         0.67084471, 0.65148263, 0.63212056],
-        [1., 0.947368, 0.894737,
-         0.842105, 0.789474, 0.736842, 0.684211, 0.631579, 0.578947,
-         0.526316, 0.473684, 0.421053, 0.368421, 0.315789, 0.263158,
-         0.210526, 0.157895, 0.105263, 0.052632, 0.], ],
-
-    expected_losses=numpy.array([
-        [40.5835007, 70.37142354, 81.78761801, 94.22512956,
-         108.02407352, 121.82301747, 135.62196142, 149.37739409,
-         158.94810005, 168.51880601, 178.08951197, 187.66021794,
-         197.2309239, 206.80162986, 216.37233582,
-         225.94304178, 235.51374774, 245.0844, 254.65515, 264.225865],
-        [13.1976005, 25.87908519, 29.46172057, 31.82735019,
-         32.57069097, 33.31403175, 34.05737253, 34.79752526,
-         35.23106482, 35.66460438, 36.09814394, 36.53168351,
-         36.96522307, 37.39876263, 37.83230219, 38.26584175,
-         38.69938131, 39.13292088, 39.56646044, 40.],
-        [15.04698321, 28.02375039, 29.30889206, 30.11601202,
-         30.28601773, 30.45602344, 30.62602916, 30.79449254,
-         30.81501549, 30.83553843, 30.85606138, 30.87658432,
-         30.89710727, 30.91763021, 30.93815316,
-         30.9586761, 30.97919905, 30.99972199, 31.02024494,
-         31.04076788],
-    ]),
-
-    expected_loss_map=None)
 
 
 class EventBasedTestCase(unittest.TestCase):
@@ -146,11 +39,14 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=0, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                     [1., 2., 3., 4., 5.]])
 
-        numpy.testing.assert_allclose(
-            [0.80732874, 0.82524302, 0.8401855, 0.84260182],
-            outputs[0].abscissae)
+        first_curve = outputs[0]
+        first_curve_integral = scientific.average_loss(
+            first_curve.abscissae, first_curve.ordinates)
+
+        self.assertAlmostEqual(0.500993631, first_curve_integral)
 
     def test_mean_based_with_partial_correlation(self):
         # This is a regression test. Data has not been checked
@@ -161,11 +57,13 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=0.5, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                     [1., 2., 3., 4., 5.]])
+        first_curve = outputs[0]
+        first_curve_integral = scientific.average_loss(
+            first_curve.abscissae, first_curve.ordinates)
 
-        numpy.testing.assert_allclose(
-            [0.77366888, 0.79923542, 0.81229682, 0.82383648],
-            outputs[0].abscissae)
+        self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
     def test_mean_based_with_perfect_correlation(self):
         # This is a regression test. Data has not been checked
@@ -176,11 +74,14 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=1, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10, 20, 30, 40, 50], [1, 2, 3, 4, 5]])
+        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                     [1., 2., 3., 4., 5.]])
 
-        numpy.testing.assert_allclose(
-            [0.76161603, 0.78226872, 0.79620137, 0.81240868],
-            outputs[0].abscissae)
+        first_curve = outputs[0]
+        first_curve_integral = scientific.average_loss(
+            first_curve.abscissae, first_curve.ordinates)
+
+        self.assertAlmostEqual(0.483041416, first_curve_integral)
 
     def test_mean_based(self):
         vulnerability_function_rm = (
@@ -202,77 +103,53 @@ class EventBasedTestCase(unittest.TestCase):
         loss_ratios, curves_rm = calculator_rm(gmf[0:2])
         loss_ratios, [curve_rc] = calculator_rc([gmf[2]])
 
-        asset_values_rm = 3000, 1000
         for i, curve_rm in enumerate(curves_rm):
+
             conditional_loss = scientific.conditional_loss_ratio(
-                curve_rm.abscissae, curve_rm.ordinates, CONDITIONAL_LOSS_POE)
+                curve_rm.abscissae, curve_rm.ordinates, 0.8)
+            self.assertAlmostEqual([0.0490311, 0.0428061][i], conditional_loss)
+
             self.assertAlmostEqual(
-                mb.expected_loss_map[i],
-                conditional_loss * asset_values_rm[i],
-                delta=0.05 * mb.expected_loss_map[i])
+                [0.070219108, 0.04549904][i],
+                scientific.average_loss(
+                    curve_rm.abscissae, curve_rm.ordinates))
 
-            numpy.testing.assert_allclose(
-                mb.expected_poes, curve_rm.ordinates, rtol=10E-4)
-
-            numpy.testing.assert_allclose(
-                mb.expected_losses[i], curve_rm.abscissae * asset_values_rm[i],
-                rtol=10E-4)
-
-        asset_value_rc = 2000
-
-        numpy.testing.assert_allclose(
-            mb.expected_losses[2], curve_rc.abscissae * asset_value_rc)
+        conditional_loss = scientific.conditional_loss_ratio(
+            curve_rc.abscissae, curve_rc.ordinates, 0.8)
+        self.assertAlmostEqual(0.01544306, conditional_loss)
 
         self.assertAlmostEqual(
-            mb.expected_loss_map[2],
-            scientific.conditional_loss_ratio(
-                curve_rc.abscissae, curve_rc.ordinates,
-                CONDITIONAL_LOSS_POE) * asset_value_rc,
-            delta=0.05 * mb.expected_loss_map[2])
-
-        numpy.testing.assert_allclose(
-            mb.expected_poes, curve_rc.ordinates, rtol=10E-4)
-
-        numpy.testing.assert_allclose(
-            mb.expected_losses[2],
-            curve_rc.abscissae * asset_value_rc, rtol=10E-5)
+            0.0152393,
+            scientific.average_loss(
+                curve_rc.abscissae, curve_rc.ordinates))
 
     def test_insured_loss_mean_based(self):
-        vulnerability_function_rm = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
+        vf = scientific.VulnerabilityFunction(
+            [0.001, 0.2, 0.3, 0.5, 0.7],
+            [0.01, 0.1, 0.2, 0.4, 0.8],
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            "LN")
 
-        vulnerability_function_rc = (
-            scientific.VulnerabilityFunction(
-                [0.001, 0.2, 0.3, 0.5, 0.7], [0.0035, 0.07, 0.14, 0.28, 0.56],
-                [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
-
-        calculator_rm = api.ProbabilisticEventBased(
-            vulnerability_function_rm, time_span=50, tses=50,
+        calculator = api.ProbabilisticEventBased(
+            vf,
+            time_span=50, tses=50,
             curve_resolution=20)
 
-        calculator_rc = api.ProbabilisticEventBased(
-            vulnerability_function_rc, time_span=50, tses=50,
-            curve_resolution=20)
+        loss_ratios, _curves = calculator(gmf[0:2])
 
-        loss_ratios_rm, _curves_rm = calculator_rm(gmf[0:2])
-        loss_ratios_rc, [_curve_rc] = calculator_rc([gmf[2]])
+        values = [3000, 1000]
+        insured_limits = [1250., 40.]
+        deductibles = [40, 13]
 
-        values = [3000, 1000, 2000]
-        insured_limits = [1250., 40., 500.]
-        deductibles = [40, 13, 15]
+        insured_average_losses = [
+            scientific.average_loss(*scientific.event_based(
+                scientific.insured_losses(
+                    loss_ratios,
+                    values[i], deductibles[i], insured_limits[i]),
+                50, 50, 20))
+            for i, loss_ratios in enumerate(loss_ratios)]
 
-        insured_losses = [scientific.event_based(
-            scientific.insured_losses(
-                loss_ratios, values[i], deductibles[i], insured_limits[i]),
-            50, 50, 20)
-            for i, loss_ratios in enumerate(loss_ratios_rm + loss_ratios_rc)]
+        numpy.testing.assert_allclose(
+            [207.86489132,   38.07815797],
+            insured_average_losses)
 
-        for i, insured_loss_curve in enumerate(insured_losses):
-            numpy.testing.assert_allclose(
-                il.expected_poes[i], insured_loss_curve[1], rtol=10E-5)
-
-            numpy.testing.assert_allclose(
-                il.expected_losses[i],
-                insured_loss_curve[0], rtol=10E-5)
