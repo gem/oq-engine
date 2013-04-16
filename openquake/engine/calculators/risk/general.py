@@ -717,9 +717,10 @@ def compute_and_write_statistics(
             loss_ratios = loss_ratio_curves[0].abscissae
             curves_poes = [curve.ordinates for curve in loss_ratio_curves]
         elif assume_equal == 'image':
-            max_losses = [lc.abscissae[0] for lc in loss_ratio_curves
-                          if lc.abscissae[0]]
+            max_losses = [lc.abscissae[-1] for lc in loss_ratio_curves
+                          if lc.abscissae[-1]]
             if not max_losses:  # no damage. all trivial curves
+                logs.LOG.info("No damages in asset %s" % asset)
                 loss_ratios = loss_ratio_curves[0].abscissae
                 curves_poes = [curve.ordinates for curve in loss_ratio_curves]
             else:  # standard case
