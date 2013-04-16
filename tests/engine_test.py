@@ -20,6 +20,7 @@ import StringIO
 import subprocess
 import sys
 import unittest
+import warnings
 
 from django.core import exceptions
 
@@ -216,10 +217,10 @@ class GetContentTypeTestCase(unittest.TestCase):
 
 class CreateHazardCalculationTestCase(unittest.TestCase):
 
-    def test_create_hazard_calculation(self):
+    def setUp(self):
         # Just the bare minimum set of params to satisfy not null constraints
         # in the db.
-        params = {
+        self.params = {
             'base_path': 'path/to/job.ini',
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
@@ -234,14 +235,16 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'random_seed': 37,
         }
 
-        owner = helpers.default_user()
+        self.owner = helpers.default_user()
 
-        site_model = models.Input(digest='123', path='/foo/bar', size=0,
-                                  input_type='site_model', owner=owner)
-        site_model.save()
-        files = [site_model]
+        self.site_model = models.Input(digest='123', path='/foo/bar', size=0,
+                                  input_type='site_model', owner=self.owner)
+        self.site_model.save()
+        self.files = [self.site_model]
 
-        hc = engine.create_hazard_calculation(owner, params, files)
+    def test_create_hazard_calculation(self):
+        hc = engine.create_hazard_calculation(self.owner, self.params,
+                                              self.files)
         # Normalize/clean fields by fetching a fresh copy from the db.
         hc = models.HazardCalculation.objects.get(id=hc.id)
 
@@ -257,7 +260,27 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         [inp2hcs] = models.Input2hcalc.objects.filter(
             hazard_calculation=hc.id)
 
-        self.assertEqual(site_model.id, inp2hcs.input.id)
+        self.assertEqual(self.site_model.id, inp2hcs.input.id)
+
+    def test_create_hazard_calculation_warns(self):
+        # If unknown parameters are specified in the config file, we expect
+        # `create_hazard_calculation` to raise warnings and ignore those
+        # parameters.
+
+        # Add some random unknown params:
+        self.params['blargle'] = 'spork'
+        self.params['do_science'] = 'true'
+
+        expected_warnings = [
+            "Unknown parameter 'blargle'. Ignoring.",
+            "Unknown parameter 'do_science'. Ignoring.",
+        ]
+
+        with warnings.catch_warnings(record=True) as w:
+            hc = engine.create_hazard_calculation(self.owner, self.params,
+                                                  self.files)
+        actual_warnings = [msg.message.message for msg in w]
+        self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
 
 class CreateRiskCalculationTestCase(unittest.TestCase):
