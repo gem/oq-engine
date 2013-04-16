@@ -50,6 +50,7 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
@@ -176,8 +177,7 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     # Save:
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
-        weight=lt_rlz.weight
-    )
+        weight=lt_rlz.weight)
 gmf_to_hazard_curve_task.ignore_result = False
 
 
@@ -205,17 +205,18 @@ def do_post_process(job):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        if openquake.engine.no_distribute():
-            for the_args in block:
-                gmf_to_hazard_curve_task(*the_args)
-        else:
-            tasks = []
-            for the_args in block:
-                tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
-            results = TaskSet(tasks=tasks).apply_async()
+        with EnginePerformanceMonitor('gmf_to_hazard, block=%d' % i, job.id):
+            if openquake.engine.no_distribute():
+                for the_args in block:
+                    gmf_to_hazard_curve_task(*the_args)
+            else:
+                tasks = []
+                for the_args in block:
+                    tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
+                results = TaskSet(tasks=tasks).apply_async()
 
-            # Check for Exceptions in the results and raise
-            utils_tasks._check_exception(results)
+                # Check for Exceptions in the results and raise
+                utils_tasks._check_exception(results)
 
         logs.LOG.debug('< Done GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
