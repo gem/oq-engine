@@ -116,7 +116,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         conditional_loss = scientific.conditional_loss_ratio(
             curve_rc.abscissae, curve_rc.ordinates, 0.8)
-        self.assertAlmostEqual(0.01544306, conditional_loss)
+        self.assertAlmostEqual(0.0152273, conditional_loss)
 
         self.assertAlmostEqual(
             0.0152393,

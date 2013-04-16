@@ -87,7 +87,7 @@ class ClassicalTestCase(unittest.TestCase):
             (0.27, 0.089), (0.30, 0.066),
         ])
         numpy.testing.assert_allclose(
-            0.3047368421052632,
+            0.29869565217391303,
             scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.067))
 
     def test_conditional_loss_last_exact(self):

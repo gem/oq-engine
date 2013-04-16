@@ -623,8 +623,8 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
         elif interval_index == 1:  # boundary case
-            x1, x2 = poes[-3:-1]
-            y1, y2 = loss_ratios[-3:-1]
+            x1, x2 = poes[-2:]
+            y1, y2 = loss_ratios[-2:]
         else:
             x1, x2 = poes[-interval_index-1:-interval_index + 1]
             y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
