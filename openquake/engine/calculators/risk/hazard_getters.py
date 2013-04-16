@@ -241,9 +241,8 @@ class GroundMotionValuesGetter(HazardGetter):
   SELECT DISTINCT ON (oqmif.exposure_data.id)
   oqmif.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
   FROM oqmif.exposure_data JOIN
-    (SELECT * FROM hzrdr.gmf_agg
-     WHERE imt = %s AND gmf_collection_id = %s {} AND location && %s
-     GROUP BY location) AS gmf_table
+  (SELECT * FROM hzrdr.gmf_agg
+  WHERE imt = %s AND gmf_collection_id = %s {} AND location && %s) AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE oqmif.exposure_data.site && %s
   AND taxonomy = %s AND exposure_model_id = %s
