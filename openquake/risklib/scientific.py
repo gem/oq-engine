@@ -494,31 +494,18 @@ def event_based(loss_values, tses, time_span,
     :param curve_resolution: The number of points the output curve is
     defined by
     """
-    sorted_loss_values = numpy.sort(loss_values)[::-1]
+    reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
 
-    # We compute the rates of exceedances by iterating over loss
-    # values and counting the number of distinct loss values less than
-    # the current loss. This is a workaround for a rounding error, ask Luigi
-    # for the details
-    times = [index
-             for index, (previous_val, val) in
-             enumerate(utils.pairwise(sorted_loss_values))
-             if not numpy.allclose([val], [previous_val])]
+    # TODO(lp) we can optimize more here instead of run a complete
+    # double-looping. E.g. sort loss_values, binary search in it, etc.
+    times = numpy.array(
+        [numpy.where(loss_values > loss)[0].size for loss in reference_losses])
 
-    # if there are less than 2 distinct loss values, we will keep the
-    # endpoints
-    if len(times) < 2:
-        times = [0, len(sorted_loss_values) - 1]
-
-    sorted_loss_values = sorted_loss_values[times]
     rates_of_exceedance = numpy.array(times) / float(tses)
 
     poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
-    reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
-    losses = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
-
-    return losses[::-1], reference_poes[::-1]
+    return reference_losses, poes
 
 
 ##
@@ -636,8 +623,8 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
         elif interval_index == 1:  # boundary case
-            x1, x2 = poes[-3:-1]
-            y1, y2 = loss_ratios[-3:-1]
+            x1, x2 = poes[-2:]
+            y1, y2 = loss_ratios[-2:]
         else:
             x1, x2 = poes[-interval_index-1:-interval_index + 1]
             y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
