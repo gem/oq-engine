@@ -78,8 +78,11 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
-                    if i >= len(expected_outputs):
-                        raise ValidationError("not enough outputs")
+
+                    msg = "not enough outputs (expected=%d, got=%s)" % (
+                        len(expected_outputs), self.actual_xml_outputs(job))
+                    assert i < len(expected_outputs), msg
+
                     self.assert_xml_equal(
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:

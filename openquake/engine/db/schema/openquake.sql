@@ -127,21 +127,6 @@ CREATE TABLE eqcat.surface (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 
--- global catalog view, needed for Geonode integration
-CREATE VIEW eqcat.catalog_allfields AS
-SELECT
-    eqcat.catalog.*,
-    eqcat.surface.semi_minor, eqcat.surface.semi_major,
-    eqcat.surface.strike,
-    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
-    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
-    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
-    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
-WHERE
-    eqcat.catalog.magnitude_id = eqcat.magnitude.id
-    AND eqcat.catalog.surface_id = eqcat.surface.id;
-
 
 -- Site-specific parameters for hazard calculations.
 CREATE TABLE hzrdi.site_model (
@@ -2015,3 +2000,35 @@ ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
+
+---------------------- views ----------------------------
+
+-- global catalog view, needed for Geonode integration
+CREATE VIEW eqcat.catalog_allfields AS
+SELECT
+    eqcat.catalog.*,
+    eqcat.surface.semi_minor, eqcat.surface.semi_major,
+    eqcat.surface.strike,
+    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
+    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
+    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
+    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
+FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
+WHERE
+    eqcat.catalog.magnitude_id = eqcat.magnitude.id
+    AND eqcat.catalog.surface_id = eqcat.surface.id;
+
+
+-- convenience view to analyze the performance of the jobs;
+-- for instance the slowest operations can be extracted with 
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
+CREATE VIEW uiapi.performance_view AS
+SELECT h.id AS hazard_calculation_id, description, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS duration,
+     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.hazard_calculation AS h
+ON h.id=o.hazard_calculation_id;
