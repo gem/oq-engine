@@ -1624,22 +1624,19 @@ class Output(djm.Model):
 
                 if the_output.hazard_output_id is not None:
                     haz_output = the_output.hazard_output
-                    haz_curve = haz_output.hazardcurve
 
-                    # TODO: Do we ever encounter this case?
-                    # TODO: Or will we always have a LT Realization?
-                    statistics = haz_curve.statistics
-                    quantile = haz_curve.quantile
+                    if haz_output.is_hazard_curve():
+                        haz = haz_output.hazardcurve
+                    else:
+                        haz = haz_output.gmfcollection
 
-                    if haz_curve.lt_realization is not None:
-                        sm_lt_path = (
-                            haz_curve.lt_realization.sm_lt_path
-                        )
-                        gsim_lt_path = (
-                            haz_curve.lt_realization.gsim_lt_path
-                        )
+                    if haz.lt_realization is not None:
+                        sm_lt_path = haz.lt_realization.sm_lt_path
+                        gsim_lt_path = haz.lt_realization.gsim_lt_path
                 else:
                     if self.output_type == 'loss_curve':
+                        # FIXME(lp). This is clearly not correct
+
                         # it's a mean/quantile loss curve
                         statistics = self.loss_curve.statistics
                         quantile = self.loss_curve.quantile
