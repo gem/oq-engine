@@ -19,6 +19,7 @@
 
 import random
 import StringIO
+import numpy
 
 from openquake.risklib import scientific
 
@@ -670,56 +671,6 @@ def write_loss_curve(
         average_loss_ratio=average_loss_ratio)
 
 
-def curve_statistics(asset, loss_ratio_curves, curves_weights,
-                     mean_loss_curve_id, quantile_loss_curve_ids,
-                     explicit_quantiles, assume_equal):
-
-    loss_ratios = loss_ratio_curves[0].abscissae
-
-    if assume_equal == 'support':
-        curves_poes = [curve.ordinates for curve in loss_ratio_curves]
-    elif assume_equal == 'image':
-        curves_poes = [curve.ordinate_for(loss_ratios)
-                       for curve in loss_ratio_curves]
-    else:
-        raise NotImplementedError
-
-    quantiles_poes = dict()
-
-    for quantile, quantile_loss_curve_id in quantile_loss_curve_ids.items():
-        if explicit_quantiles:
-            q_curve = post_processing.weighted_quantile_curve(
-                curves_poes, curves_weights, quantile)
-        else:
-            q_curve = post_processing.quantile_curve(
-                curves_poes, quantile)
-
-        quantiles_poes[quantile] = q_curve.tolist()
-
-        write_loss_curve(
-            quantile_loss_curve_id,
-            asset,
-            quantiles_poes[quantile],
-            loss_ratios,
-            scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
-
-    # then means
-    mean_poes = None
-    if mean_loss_curve_id:
-        mean_curve = post_processing.mean_curve(
-            curves_poes, weights=curves_weights)
-        mean_poes = mean_curve.tolist()
-
-        write_loss_curve(
-            mean_loss_curve_id,
-            asset,
-            mean_poes,
-            loss_ratios,
-            scientific.average_loss(loss_ratios, mean_poes))
-
-    return mean_poes, quantiles_poes
-
-
 def compute_and_write_statistics(
         mean_loss_curve_id, quantile_loss_curve_ids,
         mean_loss_map_ids, quantile_loss_map_ids,
@@ -761,13 +712,31 @@ def compute_and_write_statistics(
 
     for i, asset in enumerate(assets):
         loss_ratio_curves = loss_ratio_curve_matrix[:, i]
-        loss_ratios = loss_ratio_curves[0].abscissae
 
         if assume_equal == 'support':
+            loss_ratios = loss_ratio_curves[0].abscissae
             curves_poes = [curve.ordinates for curve in loss_ratio_curves]
         elif assume_equal == 'image':
-            curves_poes = [curve.ordinate_for(loss_ratios)
-                           for curve in loss_ratio_curves]
+            non_trivial_curves = [curve
+                                  for curve in loss_ratio_curves
+                                  if curve.abscissae[-1] > 0]
+            if not non_trivial_curves:  # no damage. all trivial curves
+                logs.LOG.info("No damages in asset %s" % asset)
+                loss_ratios = loss_ratio_curves[0].abscissae
+                curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+            else:  # standard case
+                max_losses = [lc.abscissae[-1] for lc in non_trivial_curves]
+                reference_curve = non_trivial_curves[numpy.argmin(max_losses)]
+                loss_ratios = reference_curve.abscissae
+
+                curves_poes = []
+                for curve in loss_ratio_curves:
+                    if curve.abscissae[-1]:
+                        curves_poes.append(
+                            curve.ordinate_for(reference_curve.abscissae))
+                    else:
+                        curves_poes.append(
+                            numpy.zeros(reference_curve.abscissae.shape))
         else:
             raise NotImplementedError
 
