@@ -270,7 +270,8 @@ class ClassicalExportTestCase(BaseExportTestCase):
 
             outputs = export_core.get_outputs(job.id)
 
-            expected_outputs = 40  # 10 hazard curves, 20 maps, 10 uhs
+            # 10 hazard curves, 20 maps, 10 uhs, 5 multi curves
+            expected_outputs = 45
             self.assertEqual(expected_outputs, outputs.count())
 
             # Number of curves:
@@ -279,6 +280,11 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # = 10
             curves = outputs.filter(output_type='hazard_curve')
             self.assertEqual(10, curves.count())
+
+            # Number of multi-curves
+            # (2 realizations + 1 mean + 2 quantiles)
+            multi_curves = outputs.filter(output_type="hazard_curve_multi")
+            self.assertEqual(5, multi_curves.count())
 
             # Number of maps:
             # (2 poes * 2 imts * 2 realizations)
@@ -300,6 +306,13 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 hc_files.extend(check_export(curve.id, target_dir))
 
             self.assertEqual(10, len(hc_files))
+
+            # Test multi hazard curve export:
+            hc_files = []
+            for curve in multi_curves:
+                hc_files.extend(hazard.export(curve.id, target_dir))
+
+            self.assertEqual(5, len(hc_files))
 
             for f in hc_files:
                 self._test_exported_file(f)
@@ -347,12 +360,13 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
-            # ((2 imts * 2 realizations) + (2 imts * (1 mean + 3 quantiles))
+            # ((2 imts * 2 realizations)
+            # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
             # hazard curves,
             # (2 poes * 2 imts * 2 realizations)
             # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
             # Total: 42
-            self.assertEqual(42, len(outputs))
+            self.assertEqual(46, len(outputs))
 
             #######
             # SESs:

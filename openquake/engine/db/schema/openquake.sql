@@ -348,6 +348,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes float[],
     hazard_maps boolean DEFAULT false,
     uniform_hazard_spectra boolean DEFAULT false,
+    export_multi_curves boolean DEFAULT false,
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
@@ -994,6 +995,7 @@ CREATE TABLE uiapi.output (
             'gmf',
             'gmf_scenario',
             'hazard_curve',
+            'hazard_curve_multi',
             'hazard_map',
             'loss_curve',
             'loss_fraction',
@@ -1090,9 +1092,10 @@ CREATE TABLE hzrdr.hazard_curve (
     output_id INTEGER NOT NULL,
     lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
     investigation_time float NOT NULL,
-    imt VARCHAR NOT NULL CONSTRAINT hazard_curve_imt
+    -- imt and imls might be null if hazard curve is the container for multiple hazard curve set
+    imt VARCHAR NULL CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
-    imls float[] NOT NULL,
+    imls float[] NULL,
     statistics VARCHAR CONSTRAINT hazard_curve_statistics
         CHECK(statistics IS NULL OR
               statistics IN ('mean', 'quantile')),
