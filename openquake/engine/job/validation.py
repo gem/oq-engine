@@ -312,6 +312,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'export_dir',
             'hazard_maps',
             'uniform_hazard_spectra',
+            'export_multi_curves',
         )
 
     def is_valid(self):
@@ -367,6 +368,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'poes',
             'export_dir',
             'hazard_maps',
+            'export_multi_curves',
         )
 
     def is_valid(self):
@@ -1117,6 +1119,10 @@ def asset_correlation_is_valid(_mdl):
 
 
 def master_seed_is_valid(_mdl):
+    return True, []
+
+
+def export_multi_curves_is_valid(_mdl):
     return True, []
 
 
