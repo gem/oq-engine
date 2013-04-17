@@ -140,8 +140,22 @@ class HazardCurveGetterPerAsset(HazardGetter):
     def __init__(self, hazard_id, imt, assets, max_distance):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard_id, imt, assets, max_distance)
-        self.imls = models.HazardCurve.objects.get(
-            pk=self.hazard_id).imls
+        hc = models.HazardCurve.objects.get(pk=self.hazard_id)
+
+        if hc.output.output_type == 'hazard_curve':
+            self.imls = hc.imls
+            self.actual_hazard_id = hc.id
+        elif hc.output.output_type == 'hazard_curve_multi':
+            hc = models.HazardCurve.objects.get(
+                output__oq_job=hc.output.oq_job,
+                output__output_type='hazard_curve',
+                statistics=hc.statistics,
+                lt_realization=hc.lt_realization,
+                imt=self._imt,
+                sa_period=self._sa_period,
+                sa_damping=self._sa_damping)
+            self.imls = hc.imls
+            self.actual_hazard_id = hc.id
 
     def get_data(self):
         """
@@ -179,7 +193,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         ORDER BY min_distance
         LIMIT 1;"""
 
-        args = (site.wkt, self.hazard_id)
+        args = (site.wkt, self.actual_hazard_id)
 
         cursor.execute(query, args)
         poes, distance = cursor.fetchone()

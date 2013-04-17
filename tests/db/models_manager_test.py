@@ -69,30 +69,6 @@ class OutputManagerTestCase(TestCaseWithAJob):
         self.assertEqual(1, self.manager.filter(pk=output.id).count())
 
 
-class HazardCurveManagerTestCase(TestCaseWithAJob):
-    """
-    Test the manager for HazardCurve
-    """
-    def setUp(self):
-        super(HazardCurveManagerTestCase, self).setUp()
-        self.manager = models.HazardCurve.objects
-        self.output = models.Output.objects.create_output(
-            self.job, "fake output", "hazard_curve")
-
-    def test_create_aggregate_curve(self):
-        curve = self.manager.create_aggregate_curve(self.output, "PGA", "mean")
-        self.assertEqual(1, self.manager.filter(pk=curve.id).count())
-
-        curve = self.manager.create_aggregate_curve(self.output,
-                                            imt="SA(0.025)",
-                                            statistics="mean")
-        self.assertEqual(1, self.manager.filter(pk=curve.id).count())
-
-        self.assertRaises(ValueError,
-                          self.manager.create_aggregate_curve,
-                          self.output, "SA(10)", "mean", quantile=0.5)
-
-
 class ExposureContainedInTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(

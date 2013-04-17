@@ -182,17 +182,35 @@ def export_hazard_curve(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    haz_calc = output.oq_job.hazard_calculation
 
-    curves = models.HazardCurveData.objects.all_curves_simple(
-        filter_args=dict(hazard_curve=hc.id)
-    )
-    # Simple object wrapper around the values, to match the interface of the
-    # XML writer:
-    Location = namedtuple('Location', 'x y')
-    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
-    hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
+    hcd = _curve_data(hc)
+    metadata, path = _curve_metadata(output, target_dir)
+    writers.HazardCurveXMLWriter(path, **metadata).serialize(hcd)
 
+    return [path]
+
+
+@core.makedirsdeco
+def export_hazard_curve_multi(output, target_dir):
+    hcs = output.hazardcurve
+
+    data = [_curve_data(hc) for hc in hcs]
+
+    metadata_set = []
+    path = None
+    for hc in hcs:
+        metadata, path = _curve_metadata(output, target_dir)
+        metadata_set.append(metadata)
+    assert(path)
+
+    writer = writers.MultiHazardCurveXMLWriter(path, metadata_set)
+    writer.serialize(data)
+
+    return [path]
+
+
+def _curve_metadata(output, target_dir):
+    hc = models.HazardCurve.objects.get(output=output.id)
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
@@ -204,9 +222,10 @@ def export_hazard_curve(output, target_dir):
         smlt_path = None
         gsimlt_path = None
 
+    haz_calc = output.oq_job.hazard_calculation
     path = _get_result_export_path(haz_calc.id, target_dir, output.hazardcurve)
 
-    metadata = {
+    return {
         'quantile_value': hc.quantile,
         'statistics': hc.statistics,
         'smlt_path': smlt_path,
@@ -216,11 +235,18 @@ def export_hazard_curve(output, target_dir):
         'investigation_time': hc.investigation_time,
         'imt': hc.imt,
         'imls': hc.imls,
-    }
-    writer = writers.HazardCurveXMLWriter(path, **metadata)
-    writer.serialize(hcd)
+    }, path
 
-    return [path]
+
+def _curve_data(hc):
+    curves = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id)
+    )
+    # Simple object wrapper around the values, to match the interface of the
+    # XML writer:
+    Location = namedtuple('Location', 'x y')
+    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
+    return (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
 
 @core.makedirsdeco
