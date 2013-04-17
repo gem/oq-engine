@@ -193,7 +193,7 @@ def do_hazard_map_post_process(job):
 
     # Stats for debug logging:
     hazard_curve_ids = models.HazardCurve.objects.filter(
-        output__oq_job=job).values_list('id', flat=True)
+        output__oq_job=job, imt__isnull=False).values_list('id', flat=True)
     logs.LOG.debug('num haz curves: %s' % len(hazard_curve_ids))
 
     # Limit the number of concurrent tasks to the configured concurrency level:
