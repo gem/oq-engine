@@ -717,25 +717,26 @@ def compute_and_write_statistics(
             loss_ratios = loss_ratio_curves[0].abscissae
             curves_poes = [curve.ordinates for curve in loss_ratio_curves]
         elif assume_equal == 'image':
-            max_losses = [lc.abscissae[-1] for lc in loss_ratio_curves
-                          if lc.abscissae[-1]]
-            if not max_losses:  # no damage. all trivial curves
+            non_trivial_curves = [curve
+                                  for curve in loss_ratio_curves
+                                  if curve.abscissae[-1] > 0]
+            if not non_trivial_curves:  # no damage. all trivial curves
                 logs.LOG.info("No damages in asset %s" % asset)
                 loss_ratios = loss_ratio_curves[0].abscissae
                 curves_poes = [curve.ordinates for curve in loss_ratio_curves]
             else:  # standard case
-                reference_curve = loss_ratio_curves[numpy.argmin(max_losses)]
+                max_losses = [lc.abscissae[-1] for lc in non_trivial_curves]
+                reference_curve = non_trivial_curves[numpy.argmin(max_losses)]
                 loss_ratios = reference_curve.abscissae
 
                 curves_poes = []
                 for curve in loss_ratio_curves:
-                    if (curve.abscissae == 0).all():
+                    if curve.abscissae[-1]:
                         curves_poes.append(
-                            numpy.zeros(reference_curve.abscissae.shape))
+                            curve.ordinate_for(reference_curve.abscissae))
                     else:
                         curves_poes.append(
-                            curve.ordinate_for(
-                                reference_curve.ordinates))
+                            numpy.zeros(reference_curve.abscissae.shape))
         else:
             raise NotImplementedError
 
