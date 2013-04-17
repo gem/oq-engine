@@ -25,6 +25,10 @@ CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
+-- indexes for the uiapi.performance table
+CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
+CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
+
 -- index for the 'owner_id' foreign key
 CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
