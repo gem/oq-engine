@@ -907,7 +907,11 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 hazard_job, "Test Hazard output", "gmf"),
             lt_realization=rlz)
 
-        gmf_set = models.GmfSet.objects.create(
+        # creating GmfSet objects as they are needed to compute aggregate
+        # results (e.g. Event Loss table, AggregateLossCurve); see
+        # risk/event_based/core.py:EventBasedRiskCalculator.post_process, line
+        # gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
+        models.GmfSet.objects.create(
             gmf_collection=hazard_output,
             investigation_time=hc.investigation_time,
             ses_ordinal=1)
@@ -915,11 +919,11 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                       "POINT(15.48 38.091)", "POINT(15.565 38.17)",
                       "POINT(15.481 38.25)"]:
-            models.Gmf.objects.create(
-                gmf_set=gmf_set,
-                imt="PGA", gmvs=[0.1, 0.2, 0.3],
+            models.GmfAgg.objects.create(
+                gmf_collection=hazard_output,
+                imt="PGA",
+                gmvs=[0.1, 0.2, 0.3],
                 rupture_ids=rupture_ids,
-                result_grp_ordinal=1,
                 location=point)
 
     hazard_job.status = "complete"

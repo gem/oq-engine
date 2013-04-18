@@ -1227,6 +1227,26 @@ CREATE TABLE hzrdr.gmf (
     location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+CREATE TABLE hzrdr.gmf_agg (
+    id SERIAL PRIMARY KEY,
+    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id),  
+    imt VARCHAR NOT NULL,
+        --CONSTRAINT hazard_curve_imt
+        --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    sa_period float,
+        -- CONSTRAINT gmf_sa_period
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_period IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float,
+        --CONSTRAINT gmf_sa_damping
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_damping IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[],
+    rupture_ids int[],
+    location GEOGRAPHY(point) NOT NULL
+) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_scenario (
     id SERIAL PRIMARY KEY,
