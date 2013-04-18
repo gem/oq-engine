@@ -907,8 +907,8 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 hazard_job, "Test Hazard output", "gmf"),
             lt_realization=rlz)
 
-        # this is needed because the AggregateLossCurve is only generated if
-        # there are GmfSets; the problem is in
+        # creating GmfSet objects as they are needed to compute aggregate
+        # results (e.g. Event Loss table, AggregateLossCurve); see
         # risk/event_based/core.py:EventBasedRiskCalculator.post_process, line
         # gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
         models.GmfSet.objects.create(

@@ -18,8 +18,6 @@ import numpy
 import StringIO
 import shutil
 
-from django.forms import ValidationError
-
 from qa_tests import _utils as qa_utils
 from tests.utils import helpers
 

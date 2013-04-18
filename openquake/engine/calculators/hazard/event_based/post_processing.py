@@ -185,20 +185,21 @@ def populate_gmf_agg(hc):
     """
     Populate the table gmf_agg from gmf and gmf_set.
     """
+    # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
+    # if location is of geography type, hence the need to cast it to geometry
     GMF_AGG = '''\
-INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping,
-sa_period, location, gmvs, rupture_ids)
-SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
-array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
-array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
-GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
+    INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
+                               location, gmvs, rupture_ids)
+    SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
+       array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
+       array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
+    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
+    WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
 '''
-    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
-    conn = db.connections['reslt_writer']
+    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+    curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
-        curs = conn.cursor()
         for rlz in rlzs:
             coll = models.GmfCollection.objects.get(lt_realization=rlz)
             curs.execute(GMF_AGG % coll.id)
@@ -224,8 +225,10 @@ def do_post_process(job):
     n_sites = len(hc.points_to_compute())
     n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
 
+    logs.LOG.info('> Populating table gmf_agg')
     with EnginePerformanceMonitor('populating gmf_agg', job.id):
         populate_gmf_agg(hc)
+    logs.LOG.info('< Done populating table gmf_agg')
 
     total_blocks = int(math.ceil(
         (n_imts * n_sites * n_rlzs) / float(block_size)))
