@@ -188,12 +188,12 @@ def populate_gmf_agg(hc):
     GMF_AGG = '''\
 INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping,
 sa_period, location, gmvs, rupture_ids)
-SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
+SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
 array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
 array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
 FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
 WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
-GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location;
+GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
 '''
     rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
     conn = db.connections['reslt_writer']
