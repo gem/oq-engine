@@ -2177,6 +2177,25 @@ class Gmf(djm.Model):
         db_table = 'hzrdr\".\"gmf'
 
 
+class GmfAgg(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    gmf_collection = djm.ForeignKey('GmfCollection')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    rupture_ids = fields.IntArrayField()
+
+    objects = djm.GeoManager()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_agg'
+
+
 class GmfScenario(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
