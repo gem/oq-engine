@@ -460,14 +460,50 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def task_arg_gen(self, block_size):
         """
-        Generator function for creating the arguments for each task.
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
 
-        Subclasses must implement this.
+        For this default implementation, yielded results are triples of
+        (job_id, realization_id, source_id_list).
+
+        Override this in subclasses as necessary.
 
         :param int block_size:
-            The number of work items per task (sources, sites, etc.).
+            The (max) number of work items for each each task. In this case,
+            sources.
         """
-        raise NotImplementedError
+        point_source_block_size = self.point_source_block_size()
+
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False)
+
+        for lt_rlz in realizations:
+            source_progress = models.SourceProgress.objects.filter(
+                is_complete=False, lt_realization=lt_rlz).order_by('id')
+
+            # separate point sources from all the other types, since
+            # we distribution point sources in different sized chunks
+            # point sources first
+            point_source_ids = source_progress\
+                .filter(parsed_source__source_type='point')\
+                .values_list('parsed_source_id', flat=True)
+
+            for block in block_splitter(point_source_ids,
+                                        point_source_block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
+
+            # now for area and fault sources
+            other_source_ids = source_progress\
+                .filter(parsed_source__source_type__in=['area',
+                                                        'complex',
+                                                        'simple',
+                                                        'characteristic'])\
+                .values_list('parsed_source_id', flat=True)
+
+            for block in block_splitter(other_source_ids, block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
 
     def finalize_hazard_curves(self):
         """
