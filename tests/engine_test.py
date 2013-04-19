@@ -286,8 +286,23 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
 class CreateRiskCalculationTestCase(unittest.TestCase):
 
     def test_create_risk_calculation(self):
+        # we need an hazard output to create a risk calculation
+        hazard_cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        hazard_job = helpers.get_hazard_job(hazard_cfg, 'openquake')
+        hc = hazard_job.hazard_calculation
+        rlz = models.LtRealization.objects.create(
+            hazard_calculation=hazard_job.hazard_calculation,
+            ordinal=1, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+        hazard_output = models.HazardCurve.objects.create(
+            lt_realization=rlz,
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve"),
+            investigation_time=hc.investigation_time,
+            imt="PGA", imls=[0.1, 0.2, 0.3])
         params = {
-            'hazard_output_id': 1,
+            'hazard_output_id': hazard_output.output.id,
             'base_path': 'path/to/job.ini',
             'export_dir': '/tmp/xxx',
             'calculation_mode': 'classical',
