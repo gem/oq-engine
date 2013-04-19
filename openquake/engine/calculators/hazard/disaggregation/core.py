@@ -382,32 +382,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.initialize_pr_data()
 
     def task_arg_gen(self, block_size):
-        """
-        Generate task args for the first phase of the disaggregation
-        calculations. This phase is concerned with computing hazard curves,
-        which must be completed in full before disaggregation calculation
-        can begin.
+        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(block_size)
 
-        See also :meth:`disagg_task_arg_gen`.
-
-        :param int block_size:
-            The number of items per task. In this case, this the number of
-            sources for hazard curve calc task, or number of sites for disagg
-            calc tasks.
-        """
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False)
-
-        # first, distribute tasks for hazard curve computation
-        for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-            source_ids = source_progress.values_list(
-                'parsed_source_id', flat=True)
-
-            for block in general_utils.block_splitter(source_ids, block_size):
-                # job_id, source id block, lt rlz, calc_type
-                yield (self.job.id, block, lt_rlz.id, 'hazard_curve')
+        for args in arg_gen:
+            yield args + ('hazard_curve', )
 
     def disagg_task_arg_gen(self, block_size):
         """
