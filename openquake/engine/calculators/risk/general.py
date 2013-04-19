@@ -20,6 +20,7 @@
 import random
 import StringIO
 import numpy
+from scipy import interpolate
 
 from openquake.risklib import scientific
 
@@ -726,17 +727,12 @@ def compute_and_write_statistics(
                 curves_poes = [curve.ordinates for curve in loss_ratio_curves]
             else:  # standard case
                 max_losses = [lc.abscissae[-1] for lc in non_trivial_curves]
-                reference_curve = non_trivial_curves[numpy.argmin(max_losses)]
+                reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
                 loss_ratios = reference_curve.abscissae
-
-                curves_poes = []
-                for curve in loss_ratio_curves:
-                    if curve.abscissae[-1]:
-                        curves_poes.append(
-                            curve.ordinate_for(reference_curve.abscissae))
-                    else:
-                        curves_poes.append(
-                            numpy.zeros(reference_curve.abscissae.shape))
+                curves_poes = [interpolate.interp1d(
+                    curve.abscissae, curve.ordinates,
+                    bounds_error=False, fill_value=0)(loss_ratios)
+                    for curve in loss_ratio_curves]
         else:
             raise NotImplementedError
 

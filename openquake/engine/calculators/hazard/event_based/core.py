@@ -644,6 +644,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
+        with EnginePerformanceMonitor(
+                'populating gmf_agg', self.job.id, tracing=True):
+            post_processing.populate_gmf_agg(self.hc)
+
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
