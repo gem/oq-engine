@@ -4,10 +4,11 @@
 
      <fragilityModel format="continuous">
         <description>Fragility model for QA test</description>
-        <IML IMT="PGA"/>
+
         <limitStates>LS1 LS2</limitStates>
         <ffs type="lognormal">
             <taxonomy>RC</taxonomy>
+            <IML IMT="PGA"/>
             <ffc ls="LS1">
                 <params mean="0.2" stddev="0.05" />
             </ffc>
@@ -17,6 +18,7 @@
         </ffs>
         <ffs type="lognormal">
             <taxonomy>RM</taxonomy>
+            <IML IMT="PGA"/>
             <ffc ls="LS1">
                 <params mean="0.25" stddev="0.08" />
             </ffc>

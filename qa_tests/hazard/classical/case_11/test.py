@@ -29,7 +29,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B2 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1|b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
+  <hazardCurves sourceModelTreePath="b1_b2" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -43,7 +43,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B3 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1|b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
+  <hazardCurves sourceModelTreePath="b1_b3" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>
@@ -57,7 +57,7 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
 
     EXPECTED_XML_B1_B4 = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <hazardCurves sourceModelTreePath="b1|b4" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
+  <hazardCurves sourceModelTreePath="b1_b4" gsimTreePath="b1" IMT="PGA" investigationTime="1.0">
     <IMLs>0.1 0.4 0.6 1.0</IMLs>
     <hazardCurve>
       <gml:Point>

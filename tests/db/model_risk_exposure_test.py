@@ -17,13 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from collections import namedtuple
-
 from django.db import transaction
 from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
 
-from openquake.engine import shapes
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -327,22 +324,22 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.stco_unit = None
         self.mdl.category = "population"
         self.mdl.save()
-        site = shapes.Site(-122.5000, 37.5000)
+        site = 'POINT(-122.5000 37.5000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site=site.point.to_wkt())
+            site=site)
         edata.save()
 
     def test_exposure_data_with_no_stco_and_category_not_population(self):
         # the structural cost must be present when we calculate exposure
         # in terms other than population.
         self.mdl.save()
-        site = shapes.Site(-122.4000, 37.6000)
+        site = 'POINT(-122.4000 37.6000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -359,11 +356,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         # exposure in terms of population
         self.mdl.category = "population"
         self.mdl.save()
-        site = shapes.Site(-122.3000, 37.7000)
+        site = 'POINT(-122.3000 37.7000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(),
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -380,11 +377,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         # cost type is not 'aggregated'.
         self.mdl.stco_type = "per_asset"
         self.mdl.save()
-        site = shapes.Site(-122.2000, 37.8000)
+        site = 'POINT(-122.2000 37.8000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=11.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -402,11 +399,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.reco_type = "per_asset"
         self.mdl.reco_unit = "LSM"
         self.mdl.save()
-        site = shapes.Site(-122.2000, 37.9000)
+        site = 'POINT(-122.2000 37.9000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=12.0, reco=13.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -424,11 +421,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.coco_type = "per_asset"
         self.mdl.coco_unit = "SUR"
         self.mdl.save()
-        site = shapes.Site(-122.0000, 38.0000)
+        site = 'POINT(-122.0000 38.0000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=14.0, coco=15.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -450,11 +447,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.coco_type = "per_asset"
         self.mdl.coco_unit = "MVR"
         self.mdl.save()
-        site = shapes.Site(-121.9000, 38.1000)
+        site = 'POINT(-121.9000 38.1000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=16.0, coco=17.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -472,11 +469,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.reco_type = "per_asset"
         self.mdl.reco_unit = "INR"
         self.mdl.save()
-        site = shapes.Site(-121.8000, 38.2000)
+        site = 'POINT(-121.8000 38.2000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=18.0, number_of_units=22,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -494,11 +491,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.coco_type = "per_asset"
         self.mdl.coco_unit = "MUR"
         self.mdl.save()
-        site = shapes.Site(-121.7000, 38.3000)
+        site = 'POINT(-121.7000 38.3000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=19.0, number_of_units=23,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -515,11 +512,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         # is set.
         self.mdl.category = "population"
         self.mdl.save()
-        site = shapes.Site(-121.6000, 38.4000)
+        site = 'POINT(-121.6000 38.4000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=24,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -538,11 +535,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.area_type = "aggregated"
         self.mdl.area_unit = "PKR"
         self.mdl.save()
-        site = shapes.Site(-121.5000, 38.5000)
+        site = 'POINT(-121.5000 38.5000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=20.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -561,11 +558,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.area_type = "aggregated"
         self.mdl.area_unit = "LKR"
         self.mdl.save()
-        site = shapes.Site(-121.4000, 38.6000)
+        site = 'POINT(-121.4000 38.6000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=21.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:
@@ -584,11 +581,11 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         self.mdl.area_type = "aggregated"
         self.mdl.area_unit = "ATS"
         self.mdl.save()
-        site = shapes.Site(-121.3000, 38.7000)
+        site = 'POINT(-121.3000 38.7000)'
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=22.0,
-            site=site.point.to_wkt())
+            site=site)
         try:
             edata.save()
         except DatabaseError, de:

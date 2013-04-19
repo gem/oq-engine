@@ -25,7 +25,7 @@ from tests.utils import helpers
 from openquake.engine.db import models
 
 
-# FIXME(lp). This is a regression testing. Data has not been validated
+# FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
 
 
@@ -62,11 +62,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     hazard_calculation=job.hazard_calculation,
                     ordinal=1, seed=1, weight=None,
                     sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                    is_complete=False, total_items=1, completed_items=1),
-                complete_logic_tree_gmf=False),
+                    is_complete=False, total_items=1, completed_items=1)),
             investigation_time=hc.investigation_time,
-            ses_ordinal=1,
-            complete_logic_tree_gmf=False)
+            ses_ordinal=1)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:

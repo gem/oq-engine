@@ -17,14 +17,16 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import numpy
+
 from collections import OrderedDict
 
 from openquake.risklib import api, scientific
 
 from django.db import transaction
 
-from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.db import models
+from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import general
 from openquake.engine.utils import tasks
@@ -33,9 +35,10 @@ from openquake.engine import logs
 
 @tasks.oqtask
 @general.count_progress_risk('r')
-def classical(job_id, hazard, vulnerability_function, output_containers,
+def classical(job_id, hazard, vulnerability_function,
+              output_containers, statistical_output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
-              hazard_montecarlo_p):
+              poes_disagg, hazard_montecarlo_p):
     """
     Celery task for the classical risk calculator.
 
@@ -53,13 +56,24 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
-      store the computed loss curves and b is a dictionary that maps poe to ID
+      store individual loss curves and b is a dictionary that maps poe to ID
       of the :class:`openquake.engine.db.models.LossMap` used to store
-      the loss maps
+      the individual loss maps
+    :param dict statistical_output_containers: A tuple with four elements:
+      1) the ID of a mean loss curve (
+      :class:`openquake.engine.db.models.LossCurve`)
+      2) a dict mapping quantile levels to instances of
+      :class:`openquake.engine.db.models.LossCurve`
+      3) a dict mapping poes to instances of
+      :class:`openquake.engine.db.models.LossMap`
+      4) a dict mapping quantile levels to dictionary mapping poes to instances
+      of :class:`openquake.engine.db.models.LossMap`
     :param int lrem_steps_per_interval:
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param conditional_loss_poes:
       The poes taken into account to compute the loss maps
+    :param poes_disagg:
+      The poes taken into account to compute the loss maps for disaggregation
     :param bool hazard_montecarlo_p:
      (meaningful only if curve statistics are computed). Wheter or not
      the hazard calculation is montecarlo based
@@ -67,17 +81,15 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
 
     asset_outputs = OrderedDict()
 
-    calculator = api.Classical(
-        vulnerability_function, lrem_steps_per_interval)
+    calculator = api.Classical(vulnerability_function, lrem_steps_per_interval)
 
     for hazard_output_id, hazard_data in hazard.items():
         # the second item of the tuple is the weight of the hazard (at
         # this moment we are not interested in it)
         hazard_getter, _ = hazard_data
 
-        (loss_curve_id, loss_map_ids,
-         mean_loss_curve_id, quantile_loss_curve_ids) = (
-             output_containers[hazard_output_id])
+        loss_curve_id, loss_map_ids, loss_fraction_ids = (
+            output_containers[hazard_output_id])
 
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()
@@ -94,30 +106,48 @@ def classical(job_id, hazard, vulnerability_function, output_containers,
 
                     # Write Loss Curves
                     general.write_loss_curve(
-                        loss_curve_id, asset, loss_ratio_curve)
+                        loss_curve_id, asset,
+                        loss_ratio_curve.ordinates,
+                        loss_ratio_curve.abscissae,
+                        scientific.average_loss(
+                            loss_ratio_curve.abscissae,
+                            loss_ratio_curve.ordinates))
 
                     # Then conditional loss maps
                     for poe in conditional_loss_poes:
                         general.write_loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve, poe))
+                                loss_ratio_curve.abscissae,
+                                loss_ratio_curve.ordinates, poe))
 
-    if len(hazard) > 1 and (mean_loss_curve_id or quantile_loss_curve_ids):
+                    # Then loss fractions
+                    for poe in poes_disagg:
+                        general.write_loss_fraction_data(
+                            loss_fraction_ids[poe],
+                            location=asset.site,
+                            value=asset.taxonomy,
+                            absolute_loss=scientific.conditional_loss_ratio(
+                                loss_ratio_curve.abscissae,
+                                loss_ratio_curve.ordinates, poe) * asset.value)
+
+    if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
 
-        with logs.tracing('writing curve statistics'):
+        (mean_loss_curve_id, quantile_loss_curve_ids,
+         mean_loss_map_ids, quantile_loss_map_ids,
+         mean_loss_fraction_ids, quantile_loss_fraction_ids) = (
+             statistical_output_containers)
+
+        with logs.tracing('writing statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
-                loss_ratio_curve_matrix = asset_outputs.values()
-                for i, asset in enumerate(assets):
-                    general.curve_statistics(
-                        asset,
-                        loss_ratio_curve_matrix[i],
-                        weights,
-                        mean_loss_curve_id,
-                        quantile_loss_curve_ids,
-                        hazard_montecarlo_p,
-                        assume_equal="support")
+                general.compute_and_write_statistics(
+                    mean_loss_curve_id, quantile_loss_curve_ids,
+                    mean_loss_map_ids, quantile_loss_map_ids,
+                    mean_loss_fraction_ids, quantile_loss_fraction_ids,
+                    weights, assets, numpy.array(asset_outputs.values()),
+                    hazard_montecarlo_p, conditional_loss_poes,
+                    poes_disagg, "support")
 
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings))
@@ -136,6 +166,31 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = hazard_getters.HazardCurveGetterPerAsset
 
+    def pre_execute(self):
+        """
+        In addition to the base classical `pre_execute` actions, also check for
+        IMT compatibility between the specified hazard output and the
+        vulnerability model.
+        """
+        super(ClassicalRiskCalculator, self).pre_execute()
+        if self.rc.hazard_output is not None:
+            haz_output = self.rc.hazard_output
+            if haz_output.output_type == 'hazard_curve':
+                vuln_imts = list(set(self.taxonomies_imts.values()))
+                haz_curve = haz_output.hazardcurve
+                hc_imt = haz_curve.imt
+                if hc_imt == 'SA':
+                    hc_imt = 'SA(%s)' % haz_curve.sa_period
+
+                if vuln_imts != [hc_imt]:
+                    msg = (
+                        "Vulnerability model and the specified hazard curve "
+                        "are incompatible. Vulnerability IMT(s): %s. Hazard "
+                        "curve IMT: %s"
+                        % (vuln_imts, haz_curve.imt)
+                    )
+                    raise ValueError(msg)
+
     def worker_args(self, taxonomy):
         """
         As we do not need a seed in the classical calculator we just
@@ -144,39 +199,107 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         """
         return [self.vulnerability_functions[taxonomy]]
 
-    def create_getter(self, output, assets):
+    def create_getter(self, output, imt, assets):
         """
-        See :method:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..general.BaseRiskCalculator.create_getter`
         """
         if not output.is_hazard_curve():
             raise RuntimeError(
                 "The provided hazard output is not an hazard curve")
 
         hc = output.hazardcurve
+
+        # The hazard curve either could be associated with a logic
+        # tree realization, either is a statistics curve (e.g. a mean
+        # curve). In that case, we just set up the weight to None
         if hc.lt_realization:
             weight = hc.lt_realization.weight
         else:
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, self.imt, assets, self.rc.best_maximum_distance)
+            hc.id, imt, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 
+    def create_outputs(self, hazard_output):
+        """
+        Create outputs container objects.
+
+        In classical risk, we finalize the output containers by adding
+        loss_fraction_ids, a dict that maps poes (coming from
+        poe_disagg) to IDs of newly created instances
+        :class:`openquake.engine.db.models.LossFraction`
+        """
+        loss_fraction_ids = dict(
+            (poe, models.LossFraction.objects.create(
+                hazard_output_id=hazard_output.id,
+                variable="taxonomy",
+                output=models.Output.objects.create_output(
+                    self.job,
+                    "Loss Fractions with poe %s for hazard %s" % (
+                        poe, hazard_output.id),
+                    "loss_fraction"),
+                poe=poe).pk)
+            for poe in self.rc.poes_disagg or [])
+
+        # the base class provides individual loss curve/map ids
+        containers = super(ClassicalRiskCalculator, self).create_outputs(
+            hazard_output)
+
+        return containers + [loss_fraction_ids]
+
+    def create_statistical_outputs(self):
+        """
+        Create statistics output containers.
+
+        In classical risk we need also loss fraction ids for aggregate
+        results
+        """
+        mean_loss_fraction_ids = dict(
+            (poe,
+             models.LossFraction.objects.create(
+                 variable="taxonomy",
+                 output=models.Output.objects.create_output(
+                     job=self.job,
+                     display_name="Mean Loss Fractions poe=%.4f" % poe,
+                     output_type="loss_fraction"),
+                 statistics="mean").id)
+            for poe in self.rc.poes_disagg or [])
+
+        quantile_loss_fraction_ids = dict(
+            (quantile,
+             dict(
+                 (poe, models.LossFraction.objects.create(
+                     variable="taxonomy",
+                     output=models.Output.objects.create_output(
+                         job=self.job,
+                         display_name="Quantile Loss Fractions "
+                                      "poe=%.4f q=%.4f" % (poe, quantile),
+                         output_type="loss_fraction"),
+                     statistics="quantile",
+                     quantile=quantile).id)
+                 for poe in self.rc.poes_disagg or []))
+            for quantile in self.rc.quantile_loss_curves or [])
+
+        containers = super(
+            ClassicalRiskCalculator, self).create_statistical_outputs()
+
+        return (containers +
+                [mean_loss_fraction_ids, quantile_loss_fraction_ids])
+
     def hazard_outputs(self, hazard_calculation):
         """
-        :returns: a list of :class:`openquake.engine.db.models.HazardCurve`
-        object that stores the hazard curves associated to
-        `hazard_calculation` that are associated with a realization
+
+        :returns:
+            A list of :class:`openquake.engine.db.models.HazardCurve` object
+            that stores the hazard curves associated to `hazard_calculation`
+            that are associated with a realization.
         """
 
-        imt, sa_period, sa_damping = models.parse_imt(self.imt)
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
                 output_type='hazard_curve',
-                hazardcurve__imt=imt,
-                hazardcurve__sa_period=sa_period,
-                hazardcurve__sa_damping=sa_damping,
                 hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property
@@ -188,4 +311,5 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
         return [self.rc.lrem_steps_per_interval,
                 self.rc.conditional_loss_poes or [],
+                self.rc.poes_disagg or [],
                 self.hc.number_of_logic_tree_samples == 0]

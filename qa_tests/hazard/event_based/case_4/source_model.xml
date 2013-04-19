@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Event-Based Hazard QA Test, Case 4 source model">
+        <simpleFaultSource id="1" name="simple fault source" tectonicRegion="active shallow crust">
+
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -0.0449660802959 2.75337803259e-18
+                        0.0449660802959 -8.26013409776e-18
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>90.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>1.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel>PeerMSR</magScaleRel>
+
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <incrementalMFD minMag="4.0" binWidth="1.0">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+
+            <rake>0.0</rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>

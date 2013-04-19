@@ -34,7 +34,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
       </gml:Point>
-      <bcr assetRef="a1" ratio="0.48070544355" aalOrig="0.00939147876423" aalRetr="0.00661175713207"/>
+      <bcr assetRef="a1" ratio="0.486045805147" aalOrig="0.00939290422672" aalRetr="0.00658230148253"/>
     </node>
   </bcrMap>
 </nrml>

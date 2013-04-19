@@ -32,7 +32,8 @@ from django.db import transaction
 @general.count_progress_risk('r')
 def classical_bcr(job_id, hazard, vulnerability_function,
                   vulnerability_function_retrofitted,
-                  output_containers, lrem_steps_per_interval,
+                  output_containers, _statistical_output_containers,
+                  lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
     """
     Celery task for the BCR risk calculator based on the classical
@@ -53,6 +54,7 @@ def classical_bcr(job_id, hazard, vulnerability_function,
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
       used to store the computed bcr distribution
+    :param statistical_output_containers: not used at this moment
     :param int lrem_steps_per_interval
       Steps per interval used to compute the Loss Ratio Exceedance matrix
     :param float interest_rate
@@ -68,7 +70,7 @@ def classical_bcr(job_id, hazard, vulnerability_function,
 
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
-        (bcr_distribution_id,) = output_containers[hazard_output_id]
+        bcr_distribution_id = output_containers[hazard_output_id][0]
 
         with logs.tracing('getting hazard'):
             assets, hazard_curves, missings = hazard_getter()
@@ -78,11 +80,11 @@ def classical_bcr(job_id, hazard, vulnerability_function,
             retrofitted_loss_curves = calc_retrofitted(hazard_curves)
 
             eal_original = [
-                scientific.mean_loss(*original_loss_curves[i].xy)
+                scientific.average_loss(*original_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             eal_retrofitted = [
-                scientific.mean_loss(*retrofitted_loss_curves[i].xy)
+                scientific.average_loss(*retrofitted_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             bcr_results = [
@@ -109,9 +111,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     Classical BCR risk calculator. Computes BCR distributions for a
     given set of assets.
 
-    :attribute dict vulnerability_functions_retrofitted:
-    A dictionary mapping each taxonomy to a vulnerability functions
-    for the retrofitted losses computation
+    :attr dict vulnerability_functions_retrofitted:
+        A dictionary mapping each taxonomy to a vulnerability functions for the
+        retrofitted losses computation
     """
     core_calc_task = classical_bcr
 
@@ -148,11 +150,18 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                     self.job, "BCR Distribution for hazard %s" % hazard_output,
                     "bcr_distribution")).pk]
 
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass
+
     def set_risk_models(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions = self.get_vulnerability_model()
         self.vulnerability_functions_retrofitted = (
-            self.parse_vulnerability_model(True))
+            self.get_vulnerability_model(True))

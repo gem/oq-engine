@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel gml:id="ep">
+		<exposureList gml:id="exp_mod_1" assetCategory="buildings" stcoType="per_asset" stcoUnit="USD">
+		<gml:description>Exposure model for buildings in Nepal</gml:description>
+			<assetDefinition gml:id="a1006">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.838823 29.386172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>158</number>
+				<stco>11340</stco>
+				<taxonomy>W</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a3227">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.838823 29.386172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>340</number>
+				<stco>11340</stco>
+				<taxonomy>A</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a5448">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.838823 29.386172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>87</number>
+				<stco>11340</stco>
+				<taxonomy>DS</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a7669">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.838823 29.386172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>205</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a1224">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.988823 29.611172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>237</number>
+				<stco>11340</stco>
+				<taxonomy>W</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a3445">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.988823 29.611172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>509</number>
+				<stco>11340</stco>
+				<taxonomy>A</taxonomy>
+			</assetDefinition>
+
+
+			<assetDefinition gml:id="a5666">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.988823 29.611172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>130</number>
+				<stco>11340</stco>
+				<taxonomy>DS</taxonomy>
+			</assetDefinition>
+
+			<assetDefinition gml:id="a7887">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.988823 29.611172</gml:pos>
+					</gml:Point>
+				</site>
+				<number>308</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+
+
+<!-- some spurious assets, not to be considered for the sites_disagg feature -->
+
+
+			<assetDefinition gml:id="a9135">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.00416667 27.3875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>489</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9136">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>86.65416667 26.7875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>474</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9137">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>80.35416667 28.8875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>353</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9138">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>87.17916667 26.8625</gml:pos>
+					</gml:Point>
+				</site>
+				<number>350</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9139">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.37916667 27.6125</gml:pos>
+					</gml:Point>
+				</site>
+				<number>346</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9140">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>83.50416667 27.6875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>293</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9141">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>82.90416667 27.6875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>292</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9142">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.07916667 27.4625</gml:pos>
+					</gml:Point>
+				</site>
+				<number>290</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9143">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.90416667 27.2375</gml:pos>
+					</gml:Point>
+				</site>
+				<number>259</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a9144">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>86.57916667 26.7875</gml:pos>
+					</gml:Point>
+				</site>
+				<number>159</number>
+				<stco>11340</stco>
+				<taxonomy>UFB</taxonomy>
+			</assetDefinition>
+		</exposureList>
+	</exposureModel>
+</nrml>

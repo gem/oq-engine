@@ -19,6 +19,7 @@
 Tests for python logic tree processor.
 """
 
+import numpy
 import os
 import os.path
 import unittest
@@ -42,7 +43,7 @@ from openquake.engine.input.source import nrml_to_hazardlib
 from tests.utils import helpers
 
 
-class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
+class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files, basepath, validate=True):
         self.files = files
         if not validate:
@@ -51,7 +52,7 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         content = files[filename]
-        super(_TesteableSourceModelLogicTree, self).__init__(
+        super(_TestableSourceModelLogicTree, self).__init__(
             content, basepath, filename, validate
         )
 
@@ -60,13 +61,13 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
     def _open_file(self, filename):
         if not filename in self.files:
-            return super(_TesteableSourceModelLogicTree, self)._open_file(
+            return super(_TestableSourceModelLogicTree, self)._open_file(
                 filename
             )
         return StringIO(self.files[filename])
 
 
-class _TesteableGMPELogicTree(logictree.GMPELogicTree):
+class _TestableGMPELogicTree(logictree.GMPELogicTree):
     def __init__(self, filename, content, basepath, tectonic_region_types,
                  validate=True):
         if not validate:
@@ -74,7 +75,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
-        super(_TesteableGMPELogicTree, self).__init__(
+        super(_TestableGMPELogicTree, self).__init__(
             tectonic_region_types, content, basepath, filename, validate
         )
 
@@ -185,7 +186,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
         with self.assertRaises(exc_class) as arc:
-            _TesteableSourceModelLogicTree(filename, files, basepath)
+            _TestableSourceModelLogicTree(filename, files, basepath)
         exc = arc.exception
         self.assertEqual(exc.filename, exc_filename or filename)
         self.assertEqual(exc.basepath, basepath)
@@ -863,7 +864,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                  tectonic_region_types,
                                  exc_class=logictree.LogicTreeError):
         with self.assertRaises(exc_class) as arc:
-            _TesteableGMPELogicTree(filename, content, basepath,
+            _TestableGMPELogicTree(filename, content, basepath,
                                     tectonic_region_types)
         exc = arc.exception
         self.assertEqual(exc.filename, filename)
@@ -1130,7 +1131,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree(
+        lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm}, 'basepath',
             validate=False
         )
@@ -1166,7 +1167,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1206,7 +1207,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1259,7 +1260,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree(
+        lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
             validate=False
         )
@@ -1308,7 +1309,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         <!-- comment -->
         """)
         sm = _whatever_sourcemodel()
-        lt = _TesteableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
+        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1390,7 +1391,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
-        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts,
+        gmpe_lt = _TestableGMPELogicTree('gmpe', gmpe, '/base', trts,
                                           validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
@@ -1812,30 +1813,69 @@ class BranchSetFilterTestCase(unittest.TestCase):
                      openquake.hazardlib.geo.Point(1, 1, 2)])]
         )
 
+        lons = numpy.array([-1., 1., -1., 1.])
+        lats = numpy.array([0., 0., 0., 0.])
+        depths = numpy.array([0., 0., 10., 10.])
+
+        points = [openquake.hazardlib.geo.Point(lon, lat, depth)
+                  for lon, lat, depth in
+                  zip(lons, lats, depths)]
+        self.characteristic_fault = \
+            openquake.hazardlib.source.CharacteristicFaultSource(
+            source_id='characteristic_fault',
+            name='characteristic fault',
+            tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            surface=openquake.hazardlib.geo.PlanarSurface(
+                mesh_spacing=1.0, strike=0.0, dip=90.0,
+                top_left=points[0], top_right=points[1],
+                bottom_right=points[3], bottom_left=points[2]
+            ),
+            rake=0
+        )
+
+
     def test_unknown_filter(self):
         bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_source_type(self):
         bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
-        for source in (self.simple_fault, self.complex_fault, self.point):
+        for source in (self.simple_fault, self.complex_fault, self.point,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.area), True)
 
         bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
-        for source in (self.simple_fault, self.complex_fault, self.area):
+        for source in (self.simple_fault, self.complex_fault, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.point), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'simpleFault'})
-        for source in (self.complex_fault, self.point, self.area):
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'simpleFault'}
+        )
+        for source in (self.complex_fault, self.point, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.simple_fault), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'complexFault'})
-        for source in (self.simple_fault, self.point, self.area):
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'complexFault'}
+        )
+        for source in (self.simple_fault, self.point, self.area,
+                       self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.complex_fault), True)
+
+        bs = logictree.BranchSet(
+            None, {'applyToSourceType': 'characteristicFault'}
+        )
+        for source in (self.simple_fault, self.point, self.area,
+                       self.complex_fault):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.characteristic_fault), True)
 
     def test_tectonic_region_type(self):
         test = lambda trt, source: \

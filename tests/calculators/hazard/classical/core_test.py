@@ -91,7 +91,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         # Finally, check the Src2ltsrc linkage:
         [smlt] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='source_model_logic_tree')
+            self.job.hazard_calculation.id,
+            input_type='source_model_logic_tree')
         [src2ltsrc] = models.Src2ltsrc.objects.filter(
             hzrd_src=source, lt_src=smlt)
         # Make sure the `filename` is exactly as it apprears in the logic tree.
@@ -285,6 +286,14 @@ store_site_model'
             [sa_curves] = models.HazardCurve.objects.filter(
                 lt_realization=rlz.id, imt='SA', sa_period=0.025)
 
+            # check that the multi-hazard-curve outputs have been
+            # created for this realization
+
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization=rlz.id, imt=None, statistics=None).count())
+
             # In this calculation, we have 120 sites of interest.
             # We should have exactly that many curves per realization
             # per IMT.
@@ -294,6 +303,75 @@ store_site_model'
             sa_curve_data = models.HazardCurveData.objects.filter(
                 hazard_curve=sa_curves.id)
             self.assertEqual(120, len(sa_curve_data))
+
+        # test post processing
+        self.job.status = 'post_processing'
+        self.job.save()
+        self.calc.post_process()
+
+        # Test for the correct number of mean/quantile curves
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="PGA").count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="SA", sa_period=0.025).count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt=None).count())
+
+        for quantile in hc.quantile_hazard_curves:
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="PGA").count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="SA", sa_period=0.025).count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt=None).count())
+
+        # Test for the correct number of maps.
+        # The expected count is:
+        # (num_poes * num_imts * num_rlzs)
+        # +
+        # (num_poes * num_imts * (1 mean + num_quantiles))
+        # Thus:
+        # (2 * 2 * 2) + (2 * 2 * (1 + 2)) = 20
+        hazard_maps = models.HazardMap.objects.filter(output__oq_job=self.job)
+        self.assertEqual(20, hazard_maps.count())
+
+        # test for the correct number of UH Spectra:
+        # The expected count is:
+        # (num_hazard_maps_PGA_or_SA / num_poes)
+        # (20 / 2) = 10
+        uhs = models.UHS.objects.filter(output__oq_job=self.job)
+        self.assertEqual(10, uhs.count())
+        # Now test the number of curves in each UH Spectra
+        # It should be equal to the number of sites (120)
+        for u in uhs:
+            self.assertEqual(120, u.uhsdata_set.count())
 
         self.job.status = 'clean_up'
         self.job.save()
@@ -310,75 +388,6 @@ store_site_model'
 
         sd = models.SiteData.objects.filter(hazard_calculation=hc.id)
         self.assertEqual(0, len(sd))
-
-    @attr('slow')
-    def test_post_process(self):
-        self.calc.pre_execute()
-        self.job.is_running = True
-
-        self.job.status = 'executing'
-        self.job.save()
-        self.calc.execute()
-
-        self.job.status = 'post_executing'
-        self.job.save()
-        self.calc.post_execute()
-
-        self.job.status = 'post_processing'
-        self.job.save()
-        self.calc.post_process()
-
-        number_of_curves = (
-            models.HazardCurveData.objects.individual_curves(
-                self.job, "PGA").count())
-
-        curves_per_loc = (
-            self.job.hazard_calculation.individual_curves_per_location())
-
-        imts_nr = len(
-            self.job.hazard_calculation.intensity_measure_types_and_levels)
-        expected_number_of_mean_curve_data = number_of_curves / curves_per_loc
-        expected_number_of_mean_curves = imts_nr
-        expected_number_of_mean_curve_outputs = expected_number_of_mean_curves
-
-        outputs = models.Output.objects.filter(
-            output_type="hazard_curve", oq_job=self.job,
-            hazardcurve__statistics="mean")
-
-        self.assertEqual(expected_number_of_mean_curve_outputs,
-                         outputs.count())
-        [pga_mean_curves] = models.HazardCurve.objects.filter(
-            output__output_type="hazard_curve", output__oq_job=self.job,
-            statistics="mean", imt='PGA')
-        [sa_mean_curves] = models.HazardCurve.objects.filter(
-            output__output_type="hazard_curve", output__oq_job=self.job,
-            statistics="mean", imt='SA', sa_period=0.025)
-
-        self.assertEqual(120, pga_mean_curves.hazardcurvedata_set.count())
-        self.assertEqual(120, sa_mean_curves.hazardcurvedata_set.count())
-
-        quantiles = len(self.job.hazard_calculation.quantile_hazard_curves)
-        expected_number_of_quantile_curve_outputs = imts_nr * quantiles
-        expected_number_of_quantile_curves = (
-            expected_number_of_quantile_curve_outputs)
-        expected_number_of_quantile_curve_data = (
-            expected_number_of_mean_curve_data * quantiles)
-
-        self.assertEqual(expected_number_of_quantile_curve_outputs,
-                         models.Output.objects.filter(
-                             output_type="hazard_curve",
-                             oq_job=self.job,
-                             hazardcurve__statistics="quantile").count())
-        self.assertEqual(expected_number_of_quantile_curves,
-                         models.HazardCurve.objects.filter(
-                             output__output_type="hazard_curve",
-                             output__oq_job=self.job,
-                             statistics="quantile").count())
-        self.assertEqual(expected_number_of_quantile_curve_data,
-                         models.HazardCurveData.objects.filter(
-                             hazard_curve__output__output_type="hazard_curve",
-                             hazard_curve__output__oq_job=self.job,
-                             hazard_curve__statistics="quantile").count())
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function

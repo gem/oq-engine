@@ -67,11 +67,6 @@ COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model source
 COMMENT ON COLUMN hzrdi.parsed_source.nrml IS 'NRML object representing the source';
 COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-COMMENT ON COLUMN hzrdi.parsed_source.polygon IS 'The surface projection (2D)
-of the "rupture enclosing" polygon for each source.
-This is relevant to all source types, including point sources.
-When considering a parsed_source record given a minimum integration distance,
-use this polygon in distance calculations.';
 
 
 COMMENT ON TABLE hzrdi.parsed_rupture_model IS 'Stores parsed hazard rupture model in serialized python object tree format';
@@ -112,26 +107,6 @@ COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
     - Median   (median)
     - Quantile (quantile)';
 COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
-
-
--- uhs
-COMMENT ON TABLE hzrdr.uh_spectra IS 'Uniform Hazard Spectra
-
-A collection of Uniform Hazard Spectrum which share a set of periods.
-A UH Spectrum has a PoE (Probability of Exceedence) and is conceptually
-composed of a set of 2D matrices, 1 matrix per site/point of interest.
-Each 2D matrix has a number of rows equal to `realizations` and a number of
-columns equal ot the number of `periods`.';
-COMMENT ON COLUMN hzrdr.uh_spectra.periods IS 'There should be at least 1 period value defined.';
-COMMENT ON TABLE hzrdr.uh_spectrum IS 'Uniform Hazard Spectrum
-
-* "Uniform" meaning "the same PoE"
-* "Spectrum" because it covers a range/band of periods/frequencies';
-COMMENT ON TABLE hzrdr.uh_spectrum_data IS 'Uniform Hazard Spectrum Data
-
-A single "row" of data in a UHS matrix for a specific site/point of interest.';
-COMMENT ON COLUMN hzrdr.uh_spectrum_data.realization IS 'Logic tree sample number for this calculation result, from 0 to N.';
-
 
 
 -- oqmif schema tables ------------------------------------------
@@ -254,7 +229,6 @@ COMMENT ON COLUMN uiapi.job_stats.num_realizations IS 'The number of logic tree 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
 COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
 COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
-COMMENT ON COLUMN uiapi.oq_job_profile.force_inputs IS 'If true: parse model inputs and write them to the database no matter what';
 COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - peak ground acceleration (pga)
@@ -285,6 +259,8 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - dmg_dist_per_taxonomy
     - dmg_dist_total
     - bcr_distribution';
+COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
+NULL if the output was imported from an external source';
 
 
 COMMENT ON TABLE uiapi.src2ltsrc IS '

@@ -35,7 +35,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
     taxonomy = 'VF'
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             self.risk_demo, self.hazard_demo, self.hazard_output_type)
 
         # need to run pre-execute to parse exposure model

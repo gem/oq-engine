@@ -54,11 +54,13 @@ from openquake.engine.utils import general as general_utils
 # Please note: the release date should always have a value of 0 (zero) in the
 # master branch. It will only be set to a meaningful value in *packaged* and
 # released OpenQuake code.
-__version__ = (
+__version_tuple__ = (
     0,  # major
     9,  # minor
     2,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
+
+__version__ = '.'.join(str(x) for x in __version_tuple__[:3])
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

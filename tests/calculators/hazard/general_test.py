@@ -22,9 +22,9 @@ import openquake.hazardlib
 from openquake.hazardlib import geo as hazardlib_geo
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
-from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.utils import get_calculator_class
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -147,8 +147,8 @@ validate_site_model`.
         ]
 
         sites_of_interest_case2 = [hazardlib_geo.Point(0.0, 0.0),
-                                    hazardlib_geo.Point(0.0, 0.1),
-                                    hazardlib_geo.Point(0.0, 0.2)]
+                                   hazardlib_geo.Point(0.0, 0.1),
+                                   hazardlib_geo.Point(0.0, 0.2)]
 
         mesh_case1 = hazardlib_geo.Mesh.from_points_list(
             sites_of_interest_case1)
@@ -212,7 +212,7 @@ class GetSiteModelTestCase(unittest.TestCase):
             'random_seed': 37,
         }
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, [])
+        hc = engine.create_hazard_calculation(owner, params, [])
         return hc
 
     def test_get_site_model(self):
@@ -264,7 +264,7 @@ class GetSiteModelTestCase(unittest.TestCase):
 class ClosestSiteModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        owner = engine2.prepare_user('openquake')
+        owner = engine.prepare_user('openquake')
         self.site_model_inp = models.Input(
             owner=owner, digest='fake', path='fake',
             input_type='site_model', size=0
@@ -370,9 +370,7 @@ class Bug1098154TestCase(unittest.TestCase):
     def test(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
-        retcode = helpers.run_hazard_job_sp(
-            cfg, silence=True, force_inputs=False
-        )
+        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
         job_stats = models.JobStats.objects.get(oq_job=job)
@@ -380,10 +378,62 @@ class Bug1098154TestCase(unittest.TestCase):
 
         # As the bug description explains, run the same job a second time and
         # check the task count. It should not grow.
-        retcode = helpers.run_hazard_job_sp(
-            cfg, silence=True, force_inputs=False
-        )
+        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
         self.assertEqual(0, retcode)
         job = models.OqJob.objects.latest('id')
         job_stats = models.JobStats.objects.get(oq_job=job)
         self.assertEqual(236, job_stats.num_tasks)
+
+
+class ParseRiskModelsTestCase(unittest.TestCase):
+    def test(self):
+        # check that if risk models are provided, then the ``points to
+        # compute`` and the imls are got from there
+
+        username = helpers.default_user().user_name
+
+        job = engine.prepare_job(username)
+
+        cfg = helpers.get_data_path('classical_job-sd-imt.ini')
+        params, files = engine.parse_config(open(cfg, 'r'))
+
+        haz_calc = engine.create_hazard_calculation(
+            job.owner, params, files.values())
+        haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
+        job.hazard_calculation = haz_calc
+        job.is_running = True
+        job.save()
+
+        base_path = ('openquake.engine.calculators.hazard.classical.core'
+                     '.ClassicalHazardCalculator')
+        init_src_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_sources'))
+        init_sm_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_site_model'))
+        init_rlz_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_realizations'))
+        record_stats_patch = helpers.patch(
+            '%s.%s' % (base_path, 'record_init_stats'))
+        init_pr_data_patch = helpers.patch(
+            '%s.%s' % (base_path, 'initialize_pr_data'))
+        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
+                   record_stats_patch, init_pr_data_patch)
+
+        mocks = [p.start() for p in patches]
+
+        get_calculator_class(
+            'hazard',
+            job.hazard_calculation.calculation_mode)(job).pre_execute()
+
+        self.assertEqual([(1.0, -1.0), (0.0, 0.0)],
+                         [(point.latitude, point.longitude)
+                          for point in haz_calc.points_to_compute()])
+        self.assertEqual(['PGA'], haz_calc.get_imts())
+
+        self.assertEqual(3, haz_calc.exposure_model.exposuredata_set.count())
+
+        for i, m in enumerate(mocks):
+            m.stop()
+            patches[i].stop()
+
+        return job
