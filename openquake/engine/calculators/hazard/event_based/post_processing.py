@@ -225,11 +225,6 @@ def do_post_process(job):
     n_sites = len(hc.points_to_compute())
     n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
 
-    logs.LOG.info('> Populating table gmf_agg')
-    with EnginePerformanceMonitor('populating gmf_agg', job.id):
-        populate_gmf_agg(hc)
-    logs.LOG.info('< Done populating table gmf_agg')
-
     total_blocks = int(math.ceil(
         (n_imts * n_sites * n_rlzs) / float(block_size)))
 

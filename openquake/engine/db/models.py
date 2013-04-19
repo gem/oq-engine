@@ -1615,7 +1615,7 @@ class Output(djm.Model):
             elif rc.hazard_calculation is not None:
                 # we're consuming multiple outputs from a single hazard
                 # calculation
-                if self.output_type == 'loss_curve':
+                if self.output_type in ['loss_curve', 'agg_loss_curve']:
                     the_output = self.loss_curve
                 elif self.output_type == 'loss_map':
                     the_output = self.loss_map
