@@ -1229,7 +1229,8 @@ CREATE TABLE hzrdr.gmf (
 
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
-    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id),  
+    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
+    ON DELETE CASCADE,  
     imt VARCHAR NOT NULL,
         --CONSTRAINT hazard_curve_imt
         --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
