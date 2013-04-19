@@ -367,7 +367,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         # Update stats to consider the disagg tasks as well:
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
-        block_size = int(config.get('hazard', 'block_size'))
+        block_size = self.block_size()
         job_stats.num_tasks += int(
             math.ceil(float(num_points) * num_rlzs / block_size)
         )
