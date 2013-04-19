@@ -444,6 +444,13 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'block_size'))
 
+    def point_source_block_size(self):
+        """
+        Similar to :meth:`block_size`, except that this parameter applies
+        specifically to grouping of point sources.
+        """
+        return int(config.get('hazard', 'point_source_block_size'))
+
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
