@@ -404,12 +404,8 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         motion field and the so-called time representative of the
         stochastic event set
         """
-        # atm, no complete_logic_tree gmf are supported
-        realizations_nr = 1
-
         time_span = self.hc.investigation_time
-        return (time_span,
-                self.hc.ses_per_logic_tree_path * realizations_nr * time_span)
+        return time_span, self.hc.ses_per_logic_tree_path * time_span
 
     @property
     def calculator_parameters(self):
