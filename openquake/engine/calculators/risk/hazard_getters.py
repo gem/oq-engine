@@ -302,6 +302,8 @@ class GroundMotionValuesGetter(HazardGetter):
             for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
+# TODO: this calls will disappear soon: see
+# https://bugs.launchpad.net/oq-engine/+bug/1170628
 class GroundMotionScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It uses the same
