@@ -234,16 +234,7 @@ class GroundMotionValuesGetter(HazardGetter):
         # which they have been generated) for a given logic tree
         # realization and a given imt.
 
-        # We first concatenate ground motion values grouped by
-        # location (so for each location we have all the ground motion
-        # values found in different gmf_sets, collected in a column
-        # called ``allgmvs_arr``).
-
-        # For performance reasons, we help the query by filtering also
-        # on a polygon built by dilating the assets extent of the
-        # maximum distance
-
-        # Then, we perform a spatial join with the exposure table that
+        # To this aim, we perform a spatial join with the exposure table that
         # is previously filtered by the assets extent, exposure model
         # and taxonomy. We are not filtering with an IN statement on
         # the ids of the assets for perfomance reasons.
@@ -257,7 +248,7 @@ class GroundMotionValuesGetter(HazardGetter):
   FROM oqmif.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s
-  AND location && %s AND imt = %s AND gmf_collection_id = %s {}
+  AND oqmif.exposure_data.site && %s AND imt = %s AND gmf_collection_id = %s {}
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
@@ -266,9 +257,10 @@ class GroundMotionValuesGetter(HazardGetter):
         args = (self.max_distance * KILOMETERS_TO_METERS,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
-                assets_extent.dilate(self.max_distance).wkt) + args
+                assets_extent.wkt) + args
 
         cursor.execute(query, args)
+        # print cursor.mogrify(query, args)
 
         data = cursor.fetchall()
 
