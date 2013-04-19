@@ -254,21 +254,19 @@ class GroundMotionValuesGetter(HazardGetter):
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id)
   oqmif.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
-  FROM oqmif.exposure_data JOIN
-  (SELECT * FROM hzrdr.gmf_agg
-  WHERE imt = %s AND gmf_collection_id = %s {} AND location && %s) AS gmf_table
+  FROM oqmif.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s
-  AND array_length(gmf_table.gmvs, 1) > 0
+  AND location && %s AND imt = %s AND gmf_collection_id = %s {}
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance).wkt,
-                 self.max_distance * KILOMETERS_TO_METERS,
-                 self.assets[0].taxonomy,
-                 self.assets[0].exposure_model_id)
+        args = (self.max_distance * KILOMETERS_TO_METERS,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id,
+                assets_extent.dilate(self.max_distance).wkt) + args
 
         cursor.execute(query, args)
 
