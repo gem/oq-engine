@@ -88,13 +88,12 @@ except ImportError:
 import openquake.engine
 
 from openquake.engine import __version__
-from openquake.engine import engine2
+from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.job.validation import validate
-from openquake.engine.utils import version
-
+from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -107,22 +106,19 @@ def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
     parser = argparse.ArgumentParser(
-        description='OpenQuake - Seismic Hazard and Risk Analysis Engine')
+        description='OpenQuake Seismic Hazard and Risk Analysis Engine')
 
     general_grp = parser.add_argument_group('General')
     general_grp.add_argument(
         '--version', action='store_true', help='Display version information')
     general_grp.add_argument(
-        '--force-inputs', action='store_true',
-        help='Parse model inputs and write them to the DB no matter what')
-    general_grp.add_argument(
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
-              ' will be printed to the console'),
+              ' will be printed to the console (to stderr)'),
         required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
-        help='Defaults to "warn"', required=False,
+        help='Defaults to "progress"', required=False,
         choices=['debug', 'info', 'progress', 'warn', 'error', 'critical'],
         default='progress')
     general_grp.add_argument(
@@ -138,7 +134,7 @@ def set_up_arg_parser():
 
     general_grp.add_argument(
         '--yes', '-y', action='store_true',
-        help='Automatically answer "yes" when asked to confirmation an action'
+        help='Automatically answer "yes" when asked to confirm an action'
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -209,12 +205,26 @@ def set_up_arg_parser():
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
         '--exports', choices=['xml'],  default=[], action="append",
-        help='Post-calculation exports, if any. Only "xml" is supported')
+        help=('Automatically export all calculation results to the specified'
+              'format. Only "xml" is supported currently.')
+    )
+
+    export_grp = parser.add_argument_group('Import')
+    export_grp.add_argument(
+        '--load-gmf',
+        help=('Load gmf from a file. Only single-source gmf are supported '
+              'currently. The file can be xml or tab-separated.'),
+        metavar='GMF_FILE',
+    )
+    export_grp.add_argument(
+        '--list-imported-outputs', action='store_true',
+        help=('List outputs which were imported from a file, not calculated '
+              'from a job'))
 
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
+def run_hazard(cfg_file, log_level, log_file, exports):
     """
     Run a hazard calculation using the specified config file and other options.
 
@@ -224,9 +234,6 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param bool force_inputs:
-        If `True`, don't attempt to reuse existing identical inputs; instead,
-        import fresh copies.
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
@@ -239,22 +246,21 @@ def run_hazard(cfg_file, log_level, log_file, force_inputs, exports):
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(
+        job = engine.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(
-            open(cfg_file, 'r'), force_inputs=force_inputs)
-        calculation = engine2.create_hazard_calculation(job.owner, params,
-                                                        files.values())
+        params, files = engine.parse_config(open(cfg_file, 'r'))
+        calculation = engine.create_hazard_calculation(job.owner, params,
+                                                       files.values())
         job.hazard_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'hazard', files, exports)
+        error_message = validate(job, 'hazard', params, files, exports)
         if error_message:
             sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_calc(
+        completed_job = engine.run_calc(
             job, log_level, log_file, exports, 'hazard')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
@@ -348,6 +354,13 @@ def _print_calcs_summary(calcs):
                 calc.id, len(jobs), status, last_update, calc.description
             )
 
+def list_imported_outputs():
+    """
+    List outputs which were imported from a file, not calculated from a job
+    """
+    outputs = models.Output.objects.filter(oq_job__isnull=True)
+    _print_outputs_summary(outputs)
+
 
 def list_hazard_outputs(hc_id):
     """
@@ -379,7 +392,7 @@ def _print_outputs_summary(outputs):
     """
     if len(outputs) > 0:
         print 'id | output_type | name'
-        for o in outputs:
+        for o in outputs.order_by('output_type'):
             print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
 
 
@@ -413,8 +426,7 @@ def export(fn, output_id, target_dir):
 
 def run_risk(
         cfg_file, log_level, log_file,
-        force_inputs, exports,
-        hazard_output_id=None, hazard_calculation_id=None):
+        exports, hazard_output_id=None, hazard_calculation_id=None):
     """
     Run a risk calculation using the specified config file and other options.
     One of hazard_output_id or hazard_calculation_id must be specified.
@@ -425,9 +437,6 @@ def run_risk(
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
         Path to log file.
-    :param bool force_inputs:
-        If `True`, don't attempt to reuse existing identical inputs; instead,
-        import fresh copies.
     :param list exports:
         A list of export types requested by the user. Currently only 'xml'
         is supported.
@@ -445,28 +454,27 @@ def run_risk(
                 raise IOError('Error writing to log file %s: %s'
                               % (log_file, e.strerror))
 
-        job = engine2.prepare_job(
+        job = engine.prepare_job(
             user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine2.parse_config(
-            open(cfg_file, 'r'), force_inputs=force_inputs)
+        params, files = engine.parse_config(open(cfg_file, 'r'))
 
         # Add the hazard output id to the risk calculation constructor
         # args
         params.update(dict(hazard_output_id=hazard_output_id,
                            hazard_calculation_id=hazard_calculation_id))
 
-        calculation = engine2.create_risk_calculation(
+        calculation = engine.create_risk_calculation(
             job.owner, params, files.values())
         job.risk_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'risk', files,  exports)
+        error_message = validate(job, 'risk', params, files,  exports)
         if error_message:
             sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
-        completed_job = engine2.run_calc(
+        completed_job = engine.run_calc(
             job, log_level, log_file, exports, 'risk')
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
@@ -505,7 +513,7 @@ def del_haz_calc(hc_id, confirmed=False):
             'Are you sure you want to delete this hazard calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine2.del_haz_calc(hc_id)
+            engine.del_haz_calc(hc_id)
         except RuntimeError, err:
             print err.message
 
@@ -518,7 +526,7 @@ def del_risk_calc(rc_id, confirmed=False):
             'Are you sure you want to delete this risk calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            engine2.del_risk_calc(rc_id)
+            engine.del_risk_calc(rc_id)
         except RuntimeError, err:
             print err.message
 
@@ -548,7 +556,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(version.info(__version__))
+        complain_and_exit(__version__)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
@@ -569,7 +577,7 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
-                   args.force_inputs, args.exports)
+                   args.exports)
     elif args.delete_hazard_calculation is not None:
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -586,11 +594,18 @@ def main():
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,
-                 args.force_inputs, args.exports,
-                 hazard_output_id=args.hazard_output_id,
+                 args.exports, hazard_output_id=args.hazard_output_id,
                  hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
+
+    # import
+    elif args.load_gmf is not None:
+        with open(args.load_gmf) as f:
+            out = import_gmf_scenario(f)
+            print 'Added output id=%d of type %s' % (out.id, out.output_type)
+    elif args.list_imported_outputs:
+        list_imported_outputs()
     else:
         arg_parser.print_usage()
 

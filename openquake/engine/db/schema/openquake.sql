@@ -127,21 +127,6 @@ CREATE TABLE eqcat.surface (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 
--- global catalog view, needed for Geonode integration
-CREATE VIEW eqcat.catalog_allfields AS
-SELECT
-    eqcat.catalog.*,
-    eqcat.surface.semi_minor, eqcat.surface.semi_major,
-    eqcat.surface.strike,
-    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
-    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
-    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
-    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
-WHERE
-    eqcat.catalog.magnitude_id = eqcat.magnitude.id
-    AND eqcat.catalog.surface_id = eqcat.surface.id;
-
 
 -- Site-specific parameters for hazard calculations.
 CREATE TABLE hzrdi.site_model (
@@ -169,17 +154,11 @@ CREATE TABLE hzrdi.parsed_source (
     input_id INTEGER NOT NULL,
     source_type VARCHAR NOT NULL
         CONSTRAINT enforce_source_type CHECK
-        (source_type IN ('area', 'point', 'complex', 'simple')),
+        (source_type IN ('area', 'point', 'complex', 'simple', 'characteristic')),
     nrml BYTEA NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE hzrdi_ts;
--- The surface projection (2D) of the "rupture enclosing" polygon for each source.
--- This is relevant to all source types, including point sources.
--- When considering a parsed_source record given a minimum integration distance,
--- use this polygon in distance calculations.
-SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2);
-ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
 -- Parsed Rupture models
@@ -312,7 +291,6 @@ CREATE TABLE uiapi.hazard_calculation (
     -- file
     base_path VARCHAR NOT NULL,
     export_dir VARCHAR,
-    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
@@ -367,7 +345,10 @@ CREATE TABLE uiapi.hazard_calculation (
     -- classical:
     mean_hazard_curves boolean DEFAULT false,
     quantile_hazard_curves float[],
-    poes_hazard_maps float[],
+    poes float[],
+    hazard_maps boolean DEFAULT false,
+    uniform_hazard_spectra boolean DEFAULT false,
+    export_multi_curves boolean DEFAULT false,
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
@@ -399,7 +380,6 @@ CREATE TABLE uiapi.risk_calculation (
     -- file
     base_path VARCHAR NOT NULL,
     export_dir VARCHAR,
-    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     description VARCHAR NOT NULL DEFAULT '',
     -- what time period w/o any progress is acceptable for calculations?
@@ -411,8 +391,14 @@ CREATE TABLE uiapi.risk_calculation (
 
     exposure_input_id INTEGER,
 
+    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
+    hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
+
     mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
+    conditional_loss_poes float[],
+
+    poes_disagg float[],
 
     taxonomies_from_model BOOLEAN,
 
@@ -424,11 +410,12 @@ CREATE TABLE uiapi.risk_calculation (
       ((asset_correlation >= 0) AND (asset_correlation <= 1))),
     master_seed INTEGER NULL,
 
+    mag_bin_width float,
+    distance_bin_width float,
+    coordinate_bin_width float,
+
     -- classical parameters:
     lrem_steps_per_interval INTEGER,
-    conditional_loss_poes float[],
-    hazard_output_id INTEGER NULL,  -- FK to uiapi.output
-    hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
 
     -- event-based parameters:
     loss_curve_resolution INTEGER NOT NULL DEFAULT 50
@@ -442,7 +429,7 @@ CREATE TABLE uiapi.risk_calculation (
 
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
-
+SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
 
 CREATE TABLE uiapi.cnode_stats (
     id SERIAL PRIMARY KEY,
@@ -460,7 +447,6 @@ CREATE TABLE uiapi.cnode_stats (
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    force_inputs boolean NOT NULL DEFAULT false,
     description VARCHAR NOT NULL DEFAULT '',
     -- One of:
     --      classical (Classical PSHA)
@@ -989,11 +975,9 @@ ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT oq_job_profile_geometry CHECK(
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    oq_job_id INTEGER NOT NULL,
+    oq_job_id INTEGER,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
-    path VARCHAR UNIQUE,
-    -- The GUI display name to be used for this output.
     display_name VARCHAR NOT NULL,
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN (
@@ -1011,8 +995,10 @@ CREATE TABLE uiapi.output (
             'gmf',
             'gmf_scenario',
             'hazard_curve',
+            'hazard_curve_multi',
             'hazard_map',
             'loss_curve',
+            'loss_fraction',
             'loss_map',
             'ses',
             'uh_spectra',
@@ -1106,9 +1092,10 @@ CREATE TABLE hzrdr.hazard_curve (
     output_id INTEGER NOT NULL,
     lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
     investigation_time float NOT NULL,
-    imt VARCHAR NOT NULL CONSTRAINT hazard_curve_imt
+    -- imt and imls might be null if hazard curve is the container for multiple hazard curve set
+    imt VARCHAR NULL CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
-    imls float[] NOT NULL,
+    imls float[] NULL,
     statistics VARCHAR CONSTRAINT hazard_curve_statistics
         CHECK(statistics IS NULL OR
               statistics IN ('mean', 'quantile')),
@@ -1154,16 +1141,7 @@ CREATE TABLE hzrdr.ses_collection (
     -- Stochastic Event Set Collection, containing a single stochastic
     -- event set containing all of the ruptures from the entire
     -- calculation.
-    lt_realization_id INTEGER CONSTRAINT ses_collection_lt_realization_check
-        CHECK(
-            -- Case 1: Normal stochastic event set
-            ((lt_realization_id IS NOT NULL) AND (complete_logic_tree_ses = FALSE))
-            -- Case 2: Stochastic event set containing all ruptures for the entire
-            -- logic tree.
-            OR ((lt_realization_id IS NULL) AND (complete_logic_tree_ses = TRUE))),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` SES collection.
-    complete_logic_tree_ses BOOLEAN NOT NULL DEFAULT FALSE
+    lt_realization_id INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -1174,17 +1152,7 @@ CREATE TABLE hzrdr.ses (
     investigation_time float NOT NULL,
     -- Order number of this Stochastic Event Set in a series of SESs
     -- (for a given logic tree realization).
-    ordinal INTEGER CONSTRAINT ses_ordinal_check
-        CHECK(
-            -- Case 1: Normal stochastic event set
-            ((ordinal IS NOT NULL) AND (complete_logic_tree_ses = FALSE))
-            -- Case 2: Stochastic event set containing all ruptures for the entire
-            -- logic tree.
-            OR (ordinal IS NULL) AND (complete_logic_tree_ses = TRUE)),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` SES.
-    -- If `true`, there should be no `ordinal` specified.
-    complete_logic_tree_ses BOOLEAN NOT NULL DEFAULT FALSE
+    ordinal INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- A rupture as part of a Stochastic Event Set.
@@ -1200,9 +1168,11 @@ CREATE TABLE hzrdr.ses_rupture (
     rake float NOT NULL,
     tectonic_region_type VARCHAR NOT NULL,
     is_from_fault_source BOOLEAN NOT NULL,
+    is_multi_surface BOOLEAN NOT NULL,
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
+    surface BYTEA NOT NULL,
     result_grp_ordinal INTEGER NOT NULL,
     -- The sequence number of the rupture within a given task/result group
     rupture_ordinal INTEGER NOT NULL
@@ -1213,16 +1183,7 @@ CREATE TABLE hzrdr.gmf_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
     -- FK to lt_realization.id
-    lt_realization_id INTEGER CONSTRAINT gmf_collection_lt_realization_check
-        CHECK(
-            -- Case 1: Normal GMF collection
-            ((lt_realization_id IS NOT NULL) AND (complete_logic_tree_gmf= FALSE))
-            -- Case 2: GMF collection containing all ground motion fields for the entire
-            -- logic tree.
-            OR ((lt_realization_id IS NULL) AND (complete_logic_tree_gmf = TRUE))),
-    -- A flag to indicate that this is a `complete logic
-    -- tree` GMF collection.
-    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
+    lt_realization_id INTEGER
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_set (
@@ -1230,14 +1191,7 @@ CREATE TABLE hzrdr.gmf_set (
     gmf_collection_id INTEGER NOT NULL,  -- FK to gmf_collection.id
     investigation_time float NOT NULL,
     -- Keep track of the stochastic event set which this GMF set is associated with
-    ses_ordinal INTEGER CONSTRAINT gmf_set_ses_ordinal_check
-        CHECK(
-            -- Case 1: Normal GMF set
-            ((ses_ordinal IS NOT NULL) AND (complete_logic_tree_gmf = FALSE))
-            -- Case 2: GMF set containing all ground motion fields for the entire
-            -- logic tree.
-            OR ((ses_ordinal IS NULL) AND (complete_logic_tree_gmf = TRUE))),
-    complete_logic_tree_gmf BOOLEAN NOT NULL DEFAULT FALSE
+    ses_ordinal INTEGER
 ) TABLESPACE hzrdr_ts;
 
 -- This table stores ground motion values. Given an hazard calculation
@@ -1273,6 +1227,27 @@ CREATE TABLE hzrdr.gmf (
     location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+CREATE TABLE hzrdr.gmf_agg (
+    id SERIAL PRIMARY KEY,
+    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
+    ON DELETE CASCADE,  
+    imt VARCHAR NOT NULL,
+        --CONSTRAINT hazard_curve_imt
+        --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    sa_period float,
+        -- CONSTRAINT gmf_sa_period
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_period IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float,
+        --CONSTRAINT gmf_sa_damping
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_damping IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[],
+    rupture_ids int[],
+    location GEOGRAPHY(point) NOT NULL
+) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_scenario (
     id SERIAL PRIMARY KEY,
@@ -1332,16 +1307,21 @@ ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 -- composed of a set of 2D matrices, 1 matrix per site/point of interest.
 -- Each 2D matrix has a number of rows equal to `realizations` and a number of
 -- columns equal to the number of `periods`.
-CREATE TABLE hzrdr.uh_spectra (
+CREATE TABLE hzrdr.uhs (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    timespan float NOT NULL CONSTRAINT valid_uhs_timespan
-        CHECK (timespan > 0.0),
-    realizations INTEGER NOT NULL CONSTRAINT uh_spectra_realizations_is_set
-        CHECK (realizations >= 1),
-    -- There should be at least 1 period value defined.
-    periods float[] NOT NULL CONSTRAINT uh_spectra_periods_is_set
-        CHECK ((periods <> '{}'))
+    lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
+    investigation_time float NOT NULL,
+    poe float NOT NULL,
+    periods float[] NOT NULL,
+    statistics VARCHAR CONSTRAINT uhs_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT uhs_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1349,28 +1329,13 @@ CREATE TABLE hzrdr.uh_spectra (
 --
 -- * "Uniform" meaning "the same PoE"
 -- * "Spectrum" because it covers a range/band of periods/frequencies
-CREATE TABLE hzrdr.uh_spectrum (
+CREATE TABLE hzrdr.uhs_data (
     id SERIAL PRIMARY KEY,
-    uh_spectra_id INTEGER NOT NULL,
-    poe float NOT NULL CONSTRAINT uh_spectrum_poe_is_set
-        CHECK ((poe >= 0.0) AND (poe <= 1.0))
+    uhs_id INTEGER NOT NULL,
+    imls float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
-
-
--- Uniform Hazard Spectrum Data
---
--- A single "row" of data in a UHS matrix for a specific site/point of interest.
-CREATE TABLE hzrdr.uh_spectrum_data (
-    id SERIAL PRIMARY KEY,
-    uh_spectrum_id INTEGER NOT NULL, -- Unique -> (uh_spectrum_id, realization, location)
-    -- logic tree sample number for this calculation result,
-    -- from 0 to N
-    realization INTEGER NOT NULL,
-    sa_values float[] NOT NULL CONSTRAINT sa_values_is_set
-        CHECK ((sa_values <> '{}'))
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('hzrdr', 'uhs_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.uhs_data ALTER COLUMN location SET NOT NULL;
 
 
 -- keep track of logic tree realization progress for a given calculation
@@ -1402,7 +1367,15 @@ CREATE TABLE riskr.loss_map (
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
     poe float NULL CONSTRAINT valid_poe
-        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0)),
+    statistics VARCHAR CONSTRAINT loss_map_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT loss_map_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.loss_map_data (
@@ -1416,6 +1389,38 @@ CREATE TABLE riskr.loss_map_data (
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Loss fraction data.
+CREATE TABLE riskr.loss_fraction (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    hazard_output_id INTEGER NULL,
+    variable VARCHAR NOT NULL,
+    statistics VARCHAR CONSTRAINT loss_fraction_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT loss_fraction_quantile_value
+        CHECK(
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
+    -- poe is significant only for classical calculations
+    poe FLOAT NULL CONSTRAINT valid_poe
+        CHECK (poe IS NULL OR (poe >= 0.0) AND (poe <= 1.0))
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.loss_fraction_data (
+    id SERIAL PRIMARY KEY,
+    loss_fraction_id INTEGER NOT NULL, -- FK to loss_fraction.id
+    --- Holds a serialized representation of `variable`. if `variable`
+    --- is a taxonomy, then `value` is a string representing an asset
+    --- taxonomy
+    value VARCHAR NOT NULL,
+    absolute_loss FLOAT NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'loss_fraction_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Aggregate Loss.
@@ -1468,10 +1473,12 @@ CREATE TABLE riskr.loss_curve_data (
     asset_ref VARCHAR NOT NULL,
     -- needed to compute absolute losses in the export phase
     asset_value float NOT NULL,
-    loss_ratios float[] NOT NULL CONSTRAINT check_loss_ratios
-        CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
+    loss_ratios float[] NOT NULL,
     -- Probabilities of exceedence
-    poes float[] NOT NULL
+    poes float[] NOT NULL,
+
+    -- Average Loss ratio
+    average_loss_ratio FLOAT NOT NULL
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
@@ -1487,7 +1494,10 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     losses float[] NOT NULL CONSTRAINT non_negative_losses
         CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
-    poes float[] NOT NULL
+    poes float[] NOT NULL,
+
+    -- Absolute Loss
+    average_loss FLOAT NOT NULL
 ) TABLESPACE riskr_ts;
 
 -- Benefit-cost ratio distribution
@@ -1857,20 +1867,21 @@ ON DELETE CASCADE;
 
 
 -- UHS:
--- uh_spectra -> output FK
-ALTER TABLE hzrdr.uh_spectra
-ADD CONSTRAINT hzrdr_uh_spectra_output_fk
+-- uhs -> output FK
+ALTER TABLE hzrdr.uhs
+ADD CONSTRAINT hzrdr_uhs_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
--- uh_spectrum -> uh_spectra FK
-ALTER TABLE hzrdr.uh_spectrum
-ADD CONSTRAINT hzrdr_uh_spectrum_uh_spectra_fk
-FOREIGN KEY (uh_spectra_id) REFERENCES hzrdr.uh_spectra(id) ON DELETE CASCADE;
+-- uhs -> hzrdr.lt_realization FK
+ALTER TABLE hzrdr.uhs
+ADD CONSTRAINT hzrdr_uhs_lt_realization_fk
+FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
+ON DELETE CASCADE;
 
--- uh_spectrum_data -> uh_spectrum FK
-ALTER TABLE hzrdr.uh_spectrum_data
-ADD CONSTRAINT hzrdr_uh_spectrum_data_uh_spectrum_fk
-FOREIGN KEY (uh_spectrum_id) REFERENCES hzrdr.uh_spectrum(id) ON DELETE CASCADE;
+-- uhs_data -> uhs FK
+ALTER TABLE hzrdr.uhs_data
+ADD CONSTRAINT hzrdr_uhs_data_uhs_fk
+FOREIGN KEY (uhs_id) REFERENCES hzrdr.uhs(id) ON DELETE CASCADE;
 
 -- hzrdr.lt_realization -> uiapi.hazard_calculation FK
 ALTER TABLE hzrdr.lt_realization
@@ -1915,6 +1926,22 @@ ALTER TABLE riskr.loss_map
 ADD CONSTRAINT riskr_loss_map_hazard_output_fk
 FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.loss_map_data
+ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction
+ADD CONSTRAINT riskr_loss_fraction_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction
+ADD CONSTRAINT riskr_loss_fraction_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.loss_fraction_data
+ADD CONSTRAINT riskr_loss_fraction_data_loss_map_fk
+FOREIGN KEY (loss_fraction_id) REFERENCES riskr.loss_fraction(id) ON DELETE CASCADE;
+
 ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
@@ -1934,10 +1961,6 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 ALTER TABLE riskr.aggregate_loss_curve_data
 ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
-
-ALTER TABLE riskr.loss_map_data
-ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
-FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.aggregate_loss
 ADD CONSTRAINT riskr_aggregate_loss_output_fk
@@ -1998,3 +2021,35 @@ ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
+
+---------------------- views ----------------------------
+
+-- global catalog view, needed for Geonode integration
+CREATE VIEW eqcat.catalog_allfields AS
+SELECT
+    eqcat.catalog.*,
+    eqcat.surface.semi_minor, eqcat.surface.semi_major,
+    eqcat.surface.strike,
+    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
+    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
+    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
+    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
+FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
+WHERE
+    eqcat.catalog.magnitude_id = eqcat.magnitude.id
+    AND eqcat.catalog.surface_id = eqcat.surface.id;
+
+
+-- convenience view to analyze the performance of the jobs;
+-- for instance the slowest operations can be extracted with 
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
+CREATE VIEW uiapi.performance_view AS
+SELECT h.id AS hazard_calculation_id, description, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS duration,
+     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.hazard_calculation AS h
+ON h.id=o.hazard_calculation_id;

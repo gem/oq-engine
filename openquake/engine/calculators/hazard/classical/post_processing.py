@@ -24,269 +24,23 @@ E.g. mean and quantile curves.
 import math
 import numpy
 
+from celery.task.sets import TaskSet
+from django.db import transaction
+from itertools import izip
+
 import openquake.engine
 
-from celery.task.sets import TaskSet
-from scipy.stats import mstats
-
-
 from openquake.engine import logs
+from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
+from openquake.engine.writer import BulkInserter
 
 
 # Number of locations considered by each task
 DEFAULT_LOCATIONS_PER_TASK = 1000
-
-
-def setup_tasks(job, calculation, curve_finder, writers,
-                locations_per_task=DEFAULT_LOCATIONS_PER_TASK):
-    """
-    Return the tasks for the post processing computation and setup
-    the output.
-
-    Each task is responsible to calculate the mean/quantile curve
-    for a chunk of locations and for a specific intensity measure
-    type.
-
-    The setup of the output involves the creation of a aggregate
-    result container object.
-
-    :param job:
-      The job associated with this computation
-
-    :param calculation:
-      An object holding the configuration of the calculation.
-      It should implement the property intensity_measure_types_and_levels
-      (returning a dictionary imt -> levels)
-      the method #individual_curves_per_location
-
-    :param curve_finder:
-      An object used to query for individual hazard curves.
-      It should implement the methods #individual_curve_nr and
-      #individual_curve_chunks and #get_weights
-
-    :param writers:
-      An dictionary of ResultWriters classes.
-      A ResultWriter is a context manager that implement the method
-      #add_data and #create_aggregate_result. It flushes the
-      results when it exits from the generated context
-
-    :param locations_per_task:
-      Number of locations processed by each task in the post process
-      phase (optional)
-    """
-
-    tasks = []
-
-    use_weights = calculation.number_of_logic_tree_samples == 0
-    if use_weights:
-        mean_curves_fn = "mean_weighted"
-        quantile_curves_fn = "quantile_weighted"
-    else:
-        mean_curves_fn = "mean"
-        quantile_curves_fn = "quantile"
-
-    for imt in calculation.intensity_measure_types_and_levels:
-
-        chunks = curve_finder.individual_curves_chunks(
-            job, imt, locations_per_task)
-
-        if calculation.should_compute_mean_curves():
-            writer = writers['mean_curves'](job, imt)
-            writer.create_aggregate_result()
-
-            for chunk in chunks:
-                tasks.append(
-                    [mean_curves_fn, (chunk, writer, use_weights)])
-
-        if calculation.should_compute_quantile_curves():
-            for quantile in calculation.quantile_hazard_curves:
-                writer = writers['quantile_curves'](job, imt, quantile)
-                writer.create_aggregate_result()
-                for chunk in chunks:
-                    tasks.append(
-                        [quantile_curves_fn,
-                         (chunk, writer, use_weights, quantile)])
-    return tasks
-
-
-def get_post_processing_fn(key):
-    """
-    Given a key it returns a scientific function decorated with the
-    persite_result_decorator
-    """
-    base_fns = {
-        "mean_weighted": mean_curves_weighted,
-        "quantile_weighted": quantile_curves_weighted,
-        "mean": mean_curves,
-        "quantile": quantile_curves}
-    return persite_result_decorator(base_fns[key])
-
-
-def persite_result_decorator(func):
-    """
-    Decorator function to calculate per-site result (e.g. mean
-    curves). It creates a new function that fetch the curves with a
-    reader object, compute the results, write them using a writer
-    object.
-    """
-
-    def new_function(chunk_of_curves, writer, use_weights, *args, **kwargs):
-        """
-        :param chunk_of_curves is an object that implements the
-          properties poes, weights, locations and curves_per_location
-
-        :param writer:
-          an object that can save the result.
-
-        :param use_weights:
-          True if weights should be passed to func
-
-        :param *args, *kwargs:
-          other arguments passed to the wrapped function
-        """
-
-        poe_matrix, weights, locations = _fetch_curves(chunk_of_curves)
-
-        if use_weights:
-            results = func(poe_matrix, weights, *args, **kwargs)
-        else:
-            results = func(poe_matrix, *args, **kwargs)
-
-        _write_aggregate_results(writer, results, locations)
-
-    return new_function
-
-
-def _fetch_curves(chunk_of_curves):
-    """
-    Fetch the individual curves poes and their locations. See
-    `persite_result_decorator` for more details
-    """
-
-    curves = chunk_of_curves.poes
-    locations = numpy.array(chunk_of_curves.locations)
-    weights = numpy.array(chunk_of_curves.weights)
-
-    level_nr = len(curves[0])
-    loc_nr = len(curves) / chunk_of_curves.curves_per_location
-    poe_matrix = numpy.reshape(
-        curves, (chunk_of_curves.curves_per_location, loc_nr, level_nr), 'F')
-
-    return poe_matrix, weights, locations
-
-
-def _write_aggregate_results(writer, results, locations):
-    """
-    Write `results` for each location in `locations` by using `writer`
-    """
-    with writer as w:
-        for i, location in enumerate(locations):
-            w.add_data(location, results[i].tolist())
-
-
-def mean_curves(poe_matrix):
-    """
-    Calculate mean curves. Unweighted
-
-    :param poe_matrix:
-      a 3d matrix with shape given by (curves_per_location x
-      number of locations x intensity measure levels)
-    """
-    return numpy.mean(poe_matrix, axis=0)
-
-
-def mean_curves_weighted(poe_matrix, weights):
-    """
-    Calculate mean curves. Weighted version
-
-    :param poe_matrix:
-      a 3d matrix with shape given by (curves_per_location x
-      number of locations x intensity measure levels)
-
-    :param weights:
-      a vector of weights with size equal to the number of
-      curves per location
-    """
-    return numpy.average(poe_matrix, weights=weights, axis=0)
-
-
-def quantile_curves(poe_matrix, quantile):
-    """
-    Compute quantile curves. Unweighted version
-
-    :param poe_matrix:
-      a 3d matrix with shape given by (curves_per_location x
-      number of locations x intensity measure levels)
-
-    :param quantile:
-      The quantile considered by the computation
-    """
-
-    # mquantiles can not work on 3d matrixes, so we roll back the
-    # location axis as first dimension, then we iterate on each
-    # locations
-    poe_matrixes = numpy.rollaxis(poe_matrix, 1, 0)
-    return [mstats.mquantiles(curves, quantile, axis=0)[0]
-            for curves in poe_matrixes]
-
-
-def quantile_curves_weighted(poe_matrix, weights, quantile):
-    """
-    Compute quantile curves. Weighted version
-
-    :param poe_matrix:
-      a 3d matrix with shape given by (curves_per_location x
-      number of locations x intensity measure levels)
-
-    :param weights:
-      a vector of weights with size equal to the number of
-      curves per location
-
-    :param quantile:
-      The quantile considered by the computation
-    """
-    # NOTE(LB): Weights might be passed as a list of `decimal.Decimal`
-    # types, and numpy.interp can't handle this (it throws TypeErrors).
-    # So we explicitly cast to floats here before doing interpolation.
-    weights = numpy.array(weights, dtype=numpy.float64)
-
-    # Here, we expect that weight values sum to 1. A weight
-    # describes the probability that a realization is expected
-    # to occur.
-    poe_matrixes = poe_matrix.transpose()
-    ret = []
-    for curves in poe_matrixes:  # iterate on locations
-        result_curve = []
-        for poes in curves:  # iterate on levels
-            sorted_poe_idxs = numpy.argsort(poes)
-            sorted_weights = weights[sorted_poe_idxs]
-            sorted_poes = poes[sorted_poe_idxs]
-
-            cum_weights = numpy.cumsum(sorted_weights)
-            result_curve.append(
-                numpy.interp(quantile, cum_weights, sorted_poes))
-        ret.append(result_curve)
-    return numpy.array(ret).transpose()
-
-
-# Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
-# pylint: disable=W0613
-@utils_tasks.oqtask
-def do_post_process(job_id, post_processing_task):
-    """
-    Executing a post-processing work package. It could be a mean, quantile, or
-    hazard map post-processing task.
-    """
-    func_key, func_args = post_processing_task
-    func = get_post_processing_fn(func_key)
-    # Disabling 'Used * or ** magic'
-    # pylint: disable=W0142
-    func(*func_args)
-do_post_process.ignore_result = False
 
 
 def compute_hazard_maps(curves, imls, poes):
@@ -337,6 +91,10 @@ _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
     'hazard-map(%(poe)s)-%(imt)s-quantile(%(quantile)s)')
 # Hazard maps for a specific end branch
 _HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
+
+_UHS_DISP_NAME_MEAN_FMT = 'uhs-(%(poe)s)-mean'
+_UHS_DISP_NAME_QUANTILE_FMT = 'uhs-(%(poe)s)-quantile(%(quantile)s)'
+_UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
 
 
 # Silencing 'Too many local variables'
@@ -431,11 +189,11 @@ def do_hazard_map_post_process(job):
     logs.LOG.debug('> Post-processing - Hazard Maps')
     block_size = int(config.get('hazard', 'concurrent_tasks'))
 
-    poes = job.hazard_calculation.poes_hazard_maps
+    poes = job.hazard_calculation.poes
 
     # Stats for debug logging:
     hazard_curve_ids = models.HazardCurve.objects.filter(
-        output__oq_job=job).values_list('id', flat=True)
+        output__oq_job=job, imt__isnull=False).values_list('id', flat=True)
     logs.LOG.debug('num haz curves: %s' % len(hazard_curve_ids))
 
     # Limit the number of concurrent tasks to the configured concurrency level:
@@ -463,3 +221,154 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))
     logs.LOG.debug('< Done post-processing - Hazard Maps')
+
+
+def do_uhs_post_proc(job):
+    """
+    Compute and save (to the DB) Uniform Hazard Spectra for all hazard maps for
+    the given ``job``.
+
+    :param job:
+        Instance of :class:`openquake.engine.db.models.OqJob`.
+    """
+    hc = job.hazard_calculation
+
+    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+
+    for poe in hc.poes:
+        maps_for_poe = models.HazardMap.objects.filter(
+            output__oq_job=job, poe=poe
+        )
+
+        # mean (if defined)
+        mean_maps = maps_for_poe.filter(statistics='mean')
+        if mean_maps.count() > 0:
+            mean_uhs = make_uhs(mean_maps)
+            _save_uhs(job, mean_uhs, poe, statistics='mean')
+
+        # quantiles (if defined)
+        for quantile in hc.quantile_hazard_curves:
+            quantile_maps = maps_for_poe.filter(
+                statistics='quantile', quantile=quantile
+            )
+            quantile_uhs = make_uhs(quantile_maps)
+            _save_uhs(job, quantile_uhs, poe, statistics='quantile',
+                      quantile=quantile)
+
+        # for each logic tree branch:
+        for rlz in rlzs:
+            rlz_maps = maps_for_poe.filter(
+                statistics=None, lt_realization=rlz
+            )
+            rlz_uhs = make_uhs(rlz_maps)
+            _save_uhs(job, rlz_uhs, poe, rlz=rlz)
+
+
+def make_uhs(maps):
+    """
+    Make Uniform Hazard Spectra curves for each location.
+
+    It is assumed that the `lons` and `lats` for each of the ``maps`` are
+    uniform.
+
+    :param maps:
+        A sequence of :class:`openquake.engine.db.models.HazardMap` objects, or
+        equivalent objects with the same fields attributes.
+    :returns:
+        A `dict` with two values::
+            * periods: a list of the SA periods from all of the ``maps``,
+              sorted ascendingly
+            * uh_spectra: a list of triples (lon, lat, imls), where `imls`
+              is a `tuple` of the IMLs from all maps for each of the `periods`
+    """
+    result = dict()
+    result['periods'] = []
+
+    # filter out non-PGA -SA maps
+    maps = [x for x in maps if x.imt in ('PGA', 'SA')]
+
+    # give PGA maps an sa_period of 0.0
+    # this is slightly hackish, but makes the sorting simple
+    for each_map in maps:
+        if each_map.imt == 'PGA':
+            each_map.sa_period = 0.0
+
+    # sort the maps by period:
+    sorted_maps = sorted(maps, key=lambda m: m.sa_period)
+
+    # start constructing the results:
+    result['periods'] = [x.sa_period for x in sorted_maps]
+
+    # assume the `lons` and `lats` are uniform for all maps
+    lons = sorted_maps[0].lons
+    lats = sorted_maps[0].lats
+
+    result['uh_spectra'] = []
+    imls_list = izip(*(x.imls for x in sorted_maps))
+    for lon, lat, imls in izip(lons, lats, imls_list):
+        result['uh_spectra'].append((lon, lat, imls))
+
+    return result
+
+
+def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
+    """
+    Save computed UHS data to the DB.
+
+    UHS results can be either for an end branch or for mean or quantile
+    statistics.
+
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance to be associated
+        with the results.
+    :param uhs_results:
+        UHS computation results structured like the output of :func:`make_uhs`.
+    :param float poe:
+        Probability of exceedance of the hazard maps from which these UH
+        Spectra were produced.
+    :param rlz:
+        :class:`openquake.engine.db.models.LtRealization`. Specify only if
+        these results are for an end branch.
+    :param statistics:
+        'mean' or 'quantile'. Specify only if these are statistical results.
+    :param float quantile:
+        Specify only if ``statistics`` == 'quantile'.
+    """
+    output = models.Output(
+        oq_job=job,
+        owner=job.owner,
+        output_type='uh_spectra'
+    )
+    uhs = models.UHS(
+        poe=poe,
+        investigation_time=job.hazard_calculation.investigation_time,
+        periods=uhs_results['periods'],
+    )
+    if rlz is not None:
+        uhs.lt_realization = rlz
+        output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
+    elif statistics is not None:
+        uhs.statistics = statistics
+        if statistics == 'quantile':
+            uhs.quantile = quantile
+            output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
+                                % dict(poe=poe, quantile=quantile))
+        else:
+            # mean
+            output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
+    output.save()
+    uhs.output = output
+    # This should fail if neither `lt_realization` nor `statistics` is defined:
+    uhs.save()
+
+    with transaction.commit_on_success(using='reslt_writer'):
+        inserter = BulkInserter(models.UHSData,
+                                max_cache_size=CURVE_CACHE_SIZE)
+
+        for lon, lat, imls in uhs_results['uh_spectra']:
+            inserter.add_entry(
+                uhs_id=uhs.id,
+                imls='{%s}' % ','.join(str(x) for x in imls),
+                location='POINT(%s %s)' % (lon, lat)
+            )
+        inserter.flush()

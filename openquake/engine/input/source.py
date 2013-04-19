@@ -41,38 +41,78 @@ _SCALE_REL_MAP = {
 
 
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
-    """Convert a seismic source object from the NRML representation to the
-    HazardLib representation. Inputs can be point, area, simple fault, or
-    complex fault sources.
+    """
+    Convert a seismic source or rupture object from the NRML representation to
+    the HazardLib representation. Inputs can be point, area, simple fault, or
+    complex fault sources, or simple or complex fault ruptures.
 
     See :mod:`openquake.nrmllib.models` and :mod:`openquake.hazardlib.source`.
 
     :param src:
-        :mod:`openquake.nrmllib.models` seismic source instance.
+        :mod:`openquake.nrmllib.models` seismic source or rupture instance.
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
         Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
         width.
+
+        Only needed for converting seismic sources; use `None` for ruptures.
     :param float area_src_disc:
         Area source discretization, in km. Applies only to area sources.
         If the input source is known to be a type other than an area source,
         you can specify `area_src_disc=None`.
+
+        Only needed for converting seismic sources; use `None` for ruptures.
     :returns:
         The HazardLib representation of the input source.
     """
-    # The ordering of the switch here matters because:
-    #   - AreaSource inherits from PointSource
-    #   - ComplexFaultSource inherits from SimpleFaultSource
-    if isinstance(src, nrml_models.AreaSource):
-        return _area_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc)
-    elif isinstance(src, nrml_models.PointSource):
-        return _point_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.ComplexFaultSource):
-        return _complex_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.SimpleFaultSource):
-        return _simple_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.ComplexFaultRuptureModel):
+    if isinstance(src, (nrml_models.AreaSource, nrml_models.PointSource,
+                        nrml_models.ComplexFaultSource,
+                        nrml_models.SimpleFaultSource,
+                        nrml_models.CharacteristicSource)):
+        return _nrml_source_to_hazardlib(src, mesh_spacing, bin_width,
+                                         area_src_disc)
+    elif isinstance(src, (nrml_models.ComplexFaultRuptureModel,
+                          nrml_models.SimpleFaultRuptureModel)):
+        return _nrml_rupture_to_hazardlib(src, mesh_spacing)
+
+
+def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
+    """
+    Convert a NRML source object into the HazardLib representation.
+
+    Parameters and return values are the same as :func:`nrml_to_hazardlib`.
+    """
+    try:
+        # The ordering of the switch here matters because:
+        #   - AreaSource inherits from PointSource
+        #   - ComplexFaultSource inherits from SimpleFaultSource
+        if isinstance(src, nrml_models.AreaSource):
+            return _area_to_hazardlib(src, mesh_spacing, bin_width,
+                                      area_src_disc)
+        elif isinstance(src, nrml_models.PointSource):
+            return _point_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.ComplexFaultSource):
+            return _complex_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.SimpleFaultSource):
+            return _simple_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.CharacteristicSource):
+            return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
+    except Exception, err:
+        msg = (
+            "The following error has occurred with source id='%s', name='%s': "
+            "%s" % (src.id, src.name, err.message)
+        )
+        raise RuntimeError(msg)
+
+
+def _nrml_rupture_to_hazardlib(src, mesh_spacing):
+    """
+    Convert a NRML rupture object into the HazardLib representation.
+
+    Parameters and return values are similar to :func:`nrml_to_hazardlib`.
+    """
+    if isinstance(src, nrml_models.ComplexFaultRuptureModel):
         return _complex_rupture_to_hazardlib(src, mesh_spacing)
     elif isinstance(src, nrml_models.SimpleFaultRuptureModel):
         return _simple_rupture_to_hazardlib(src, mesh_spacing)
@@ -261,6 +301,76 @@ def _complex_to_hazardlib(src, mesh_spacing, bin_width):
     return cmplx
 
 
+def _characteristic_to_hazardlib(src, mesh_spacing, bin_width):
+    """
+    Convert a NRML characteristic fault source to the HazardLib equivalent.
+
+    The surface of a characteristic fault source can be one of the following:
+        * simple fault
+        * complex fault
+        * one or more planar surfaces
+
+    See :mod:`openquake.nrmllib.models` and :mod:`openquake.hazardlib.source`.
+
+    :param src:
+        :class:`openquake.nrmllib.models.CharacteristicSource` instance.
+    :param float mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param float bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :returns:
+        The HazardLib representation of the input source.
+    """
+    mf_dist = _mfd_to_hazardlib(src.mfd, bin_width)
+
+    if isinstance(src.surface, nrml_models.SimpleFaultGeometry):
+        shapely_line = wkt.loads(src.surface.wkt)
+        fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+
+        surface = geo.SimpleFaultSurface.from_fault_data(
+            fault_trace,
+            src.surface.upper_seismo_depth,
+            src.surface.lower_seismo_depth,
+            src.surface.dip,
+            mesh_spacing
+        )
+    elif isinstance(src.surface, nrml_models.ComplexFaultGeometry):
+        edges_wkt = []
+        edges_wkt.append(src.surface.top_edge_wkt)
+        edges_wkt.extend(src.surface.int_edges)
+        edges_wkt.append(src.surface.bottom_edge_wkt)
+
+        edges = []
+
+        for edge in edges_wkt:
+            shapely_line = wkt.loads(edge)
+            line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+            edges.append(line)
+
+        surface = geo.ComplexFaultSurface.from_fault_data(edges, mesh_spacing)
+    else:
+        # A collection of planar surfaces
+        planar_surfaces = []
+        for planar_surface in src.surface:
+            kwargs = planar_surface.__dict__
+            kwargs.update(dict(mesh_spacing=mesh_spacing))
+
+            planar_surfaces.append(geo.PlanarSurface(**kwargs))
+
+        surface = geo.MultiSurface(planar_surfaces)
+
+    char = source.CharacteristicFaultSource(
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        surface=surface,
+        rake=src.rake
+    )
+    return char
+
+
 def _simple_rupture_to_hazardlib(src, mesh_spacing):
     """Convert a NRML simple fault source to the HazardLib equivalent.
 
@@ -363,6 +473,8 @@ def _source_type(src_model):
         return 'complex'
     elif isinstance(src_model, nrml_models.SimpleFaultSource):
         return 'simple'
+    elif isinstance(src_model, nrml_models.CharacteristicSource):
+        return 'characteristic'
 
 
 class SourceDBWriter(object):
@@ -370,10 +482,6 @@ class SourceDBWriter(object):
     `hzrdi.parsed_source` table in the database.
 
     The source object data will be stored in the database in pickled blob form.
-    The `hzrdi.parsed_source.polygon` field will contain the "rupture
-    enclosing" polygon. We use HazardLib to generate this polygon. (See
-    :meth:`openquake.hazardlib.source.base.SeismicSource.\
-get_rupture_enclosing_polygon`.)
 
     :param inp:
         :class:`~openquake.engine.db.models.Input` object, the top-level
@@ -418,14 +526,8 @@ get_rupture_enclosing_polygon`.)
         self.inp.save()
 
         for src in self.source_model:
-            hazardlib_src = nrml_to_hazardlib(
-                src, self.mesh_spacing, self.bin_width, self.area_src_disc
-            )
-            geom = hazardlib_src.get_rupture_enclosing_polygon()
-
             ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), nrml=src,
-                polygon=geom.wkt
+                input=self.inp, source_type=_source_type(src), nrml=src
             )
             ps.save()
 

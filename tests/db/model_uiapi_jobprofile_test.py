@@ -41,7 +41,7 @@ class OqJobProfileTestCase(DjangoTestCase, helpers.DbTestCase):
         cls.teardown_job(cls.job)
 
     def setUp(self):
-        self.profile = self.setup_job_profile(self.job, False, save2db=False)
+        self.profile = self.setup_job_profile(self.job, save2db=False)
 
     def test_not_uhs_and_invalid_imt(self):
         # imt not in ("pga", "sa", "pgv", "pgd", "ia", "rsd", "mmi")

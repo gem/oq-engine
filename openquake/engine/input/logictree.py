@@ -250,6 +250,11 @@ class BranchSet(object):
                     if not isinstance(
                         source, openquake.hazardlib.source.ComplexFaultSource):
                         return False
+                elif value == 'characteristicFault':
+                    if not isinstance(
+                        source,
+                        openquake.hazardlib.source.CharacteristicFaultSource):
+                        return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
             elif key == 'applyToSources':
@@ -644,7 +649,8 @@ class SourceModelLogicTree(BaseLogicTree):
     """
     Source model logic tree parser.
     """
-    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault')
+    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
+                    'characteristicFault')
 
     def __init__(self, *args, **kwargs):
         self.source_ids = set()

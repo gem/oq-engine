@@ -25,6 +25,10 @@ CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
+-- indexes for the uiapi.performance table
+CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
+CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
+
 -- index for the 'owner_id' foreign key
 CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
@@ -53,9 +57,8 @@ CREATE INDEX hzrdr_gmf_set_gmf_collection_idx on hzrdr.gmf_set(gmf_collection_id
 CREATE INDEX hzrdr_gmf_gmf_set_idx on hzrdr.gmf(gmf_set_id);
 CREATE INDEX hzrdr_gmf_location_idx on hzrdr.gmf using gist(location);
 -- uhs
-CREATE INDEX hzrdr_uh_spectra_output_id_idx on hzrdr.uh_spectra(output_id);
-CREATE INDEX hzrdr_uh_spectrum_uh_spectra_id_idx on hzrdr.uh_spectrum(uh_spectra_id);
-CREATE INDEX hzrdr_uh_spectrum_data_uh_spectrum_id_idx on hzrdr.uh_spectrum_data(uh_spectrum_id);
+CREATE INDEX hzrdr_uhs_output_id_idx on hzrdr.uhs(output_id);
+CREATE INDEX hzrdr_uhs_data_uhs_id_idx on hzrdr.uhs_data(uhs_id);
 -- ses
 CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
 CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
@@ -64,6 +67,9 @@ CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
 CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
 -- lt_realization
 CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
+
+-- gmf_agg
+CREATE INDEX hzrdr_gmf_agg_idx on hzrdr.gmf_agg using gist(location);
 
 -- gmf_scenario
 CREATE INDEX hzrdr_gmf_scenario_output_id_idx on hzrdr.gmf_scenario(output_id);

@@ -20,7 +20,6 @@ import logging
 from datetime import datetime
 
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
 from openquake.engine.supervising import supervisor
@@ -28,9 +27,6 @@ from openquake.engine.utils import stats
 
 from tests.utils.helpers import patch
 from tests.utils.helpers import DbTestCase, cleanup_loggers
-
-
-CONFIG_FILE = "config.gem"
 
 
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
@@ -101,7 +97,7 @@ record_job_stop_time')
 
         logging.root.setLevel(logging.CRITICAL)
 
-        self.job = engine2.prepare_job()
+        self.job = engine.prepare_job()
 
     def tearDown(self):
         # Stop all the started patches

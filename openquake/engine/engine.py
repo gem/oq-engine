@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -15,474 +13,168 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Engine: A collection of fundamental functions for initializing and running
+calculations."""
 
-"""The 'Engine' is responsible for instantiating calculators and running jobs.
-"""
-
-
+import ConfigParser
+import csv
+import getpass
 import md5
 import os
-import re
+import sys
+import warnings
 
-from datetime import datetime
-from ConfigParser import ConfigParser
+import openquake.engine
 
-from django.db import transaction
-from django.contrib.gis.db import models
-from django.contrib.gis.geos import GEOSGeometry
-from django.core.exceptions import ObjectDoesNotExist
+from django.core import exceptions
+from django.db import close_connection
 
-
-from openquake.engine.db import fields
-from openquake.engine.db.models import ExposureData
-from openquake.engine.db.models import Input
-from openquake.engine.db.models import Input2job
-from openquake.engine.db.models import inputs4job
-from openquake.engine.db.models import Job2profile
-from openquake.engine.db.models import JobStats
-from openquake.engine.db.models import ModelContent
-from openquake.engine.db.models import OqJob
-from openquake.engine.db.models import OqJobProfile
-from openquake.engine.db.models import OqUser
-from openquake.engine.db.models import profile4job
-from openquake.engine.db.models import Src2ltsrc
 from openquake.engine import kvs
 from openquake.engine import logs
-from openquake.engine import shapes
-from openquake.engine.job import config as jobconf
-from openquake.engine.job.params import ARRAY_RE
-from openquake.engine.job.params import CALCULATION_MODE
-from openquake.engine.job.params import INPUT_FILE_TYPES
-from openquake.engine.job.params import PARAMS
-from openquake.engine.kvs import mark_job_as_current
-from openquake.engine.input import logictree
-
-RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
+from openquake.engine.db import models
+from openquake.engine.supervising import supervisor
+from openquake.engine.utils import monitor, get_calculator_class
 
 
-# Silencing 'Too many instance attributes'
-# pylint: disable=R0902
-class JobContext(object):
-    """Contains everything a calculator needs to run a job. This
-    includes: an :class:`OqJobProfile` object, an :class:`OqJob`, and a
-    dictionary of all of the calculation config params (which is a basically a
-    duplication of the :class:`OqJobProfile` member; in the future we would
-    like to remove this duplication).
+INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
+UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
+UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
-    This class also contains handful of utility methods for determining the
-    sites of interest for a calculation, querying the calculation status, etc.
+
+def prepare_job(user_name="openquake", log_level='progress'):
     """
+    Create job for the given user, return it.
 
-    # Silencing 'Too many arguments'
-    # pylint: disable=R0913
-    def __init__(self, params, job_id, sections=list(), base_path=None,
-                 serialize_results_to=list(), oq_job_profile=None,
-                 oq_job=None, log_level='warn', force_inputs=False):
-        """
-        :param dict params: Dict of job config params.
-        :param int job_id:
-            ID of the corresponding oq_job db record.
-        :param list sections: List of config file sections. Example::
-            ['HAZARD', 'RISK']
-        :param str base_path: base directory containing job input files
-        :param oq_job_profile:
-            :class:`openquake.engine.db.models.OqJobProfile` instance; database
-            representation of the job profile / calculation configuration.
-        :param oq_job:
-            :class:`openquake.engine.db.models.OqJob` instance; database
-            representation of the runtime thing we refer to as the
-            'calculation'.
-        :param str log_level:
-            One of 'debug', 'info', 'warn', 'error', 'critical'.
-            Defaults to 'warn'.
-        :param bool force_inputs: If `True` the model input files will be
-            parsed and the resulting content written to the database no matter
-            what.
-        """
-        self._job_id = job_id
-        mark_job_as_current(job_id)  # enables KVS gc
-
-        self.sites = []
-        self.blocks_keys = []
-        self.params = params
-        self.sections = list(set(sections))
-        self.serialize_results_to = []
-        self._base_path = base_path
-        self.serialize_results_to = list(serialize_results_to)
-
-        self.oq_job_profile = oq_job_profile
-        self.oq_job = oq_job
-        self.params['debug'] = log_level
-        self._log_level = log_level
-        self.force_inputs = force_inputs
-
-    @property
-    def log_level(self):
-        """The log level for this job. (One of 'debug', 'info', 'warn',
-        'error', 'critical'."""
-        return self._log_level
-
-    @property
-    def base_path(self):
-        """Directory containing the input files for this job.
-
-        The base_path also acts as the base directory for calculation outputs.
-        """
-        if self._base_path is not None:
-            return self._base_path
-        else:
-            return self.params.get('BASE_PATH')
-
-    @staticmethod
-    def from_kvs(job_id):
-        """Return the job in the underlying kvs system with the given id."""
-        params = kvs.get_value_json_decoded(
-            kvs.tokens.generate_job_key(job_id))
-        job_profile = profile4job(job_id)
-        job = OqJob.objects.get(id=job_id)
-        job = JobContext(params, job_id, oq_job_profile=job_profile,
-                         oq_job=job, log_level=params['debug'])
-        return job
-
-    @staticmethod
-    def get_status_from_db(job_id):
-        """
-        Get the status of the database record belonging to job ``job_id``.
-
-        :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
-        """
-        return OqJob.objects.get(id=job_id).status
-
-    @staticmethod
-    def is_job_completed(job_id):
-        """
-        Return ``True`` if the :meth:`current status <get_status_from_db>`
-        of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
-        ``False`` otherwise.
-        """
-        status = JobContext.get_status_from_db(job_id)
-        return status == 'succeeded' or status == 'failed'
-
-    def has(self, name):
-        """Return false if this job doesn't have the given parameter defined,
-        or parameter's string value otherwise."""
-        return name in self.params and self.params[name]
-
-    @property
-    def job_id(self):
-        """Return the id of this job."""
-        return self._job_id
-
-    @property
-    def key(self):
-        """Returns the kvs key for this job."""
-        return kvs.tokens.generate_job_key(self.job_id)
-
-    @property
-    def region(self):
-        """Compute valid region with appropriate cell size from config file."""
-        if not self.has('REGION_VERTEX'):
-            return None
-
-        region = shapes.RegionConstraint.from_coordinates(
-            self._extract_coords('REGION_VERTEX'))
-
-        region.cell_size = float(self['REGION_GRID_SPACING'])
-        return region
-
-    def __getitem__(self, name):
-        defined_param = PARAMS.get(name)
-        if (hasattr(defined_param, 'to_job')
-            and defined_param.to_job is not None
-            and self.params.get(name) is not None):
-            return defined_param.to_job(self.params.get(name))
-        return self.params.get(name)
-
-    def __eq__(self, other):
-        return self.params == other.params
-
-    def __str__(self):
-        return str(self.params)
-
-    def _slurp_files(self):
-        """Read referenced files and write them into kvs, keyed on their
-        sha1s."""
-        kvs_client = kvs.get_client()
-        if self.base_path is None:
-            logs.LOG.debug("Can't slurp files without a base path, homie...")
-            return
-        for key, val in self.params.items():
-            if key[-5:] == '_FILE':
-                path = os.path.join(self.base_path, val)
-                with open(path) as data_file:
-                    logs.LOG.debug("Slurping %s" % path)
-                    blob = data_file.read()
-                    file_key = kvs.tokens.generate_blob_key(self.job_id, blob)
-                    kvs_client.set(file_key, blob)
-                    self.params[key] = file_key
-                    self.params[key + "_PATH"] = path
-
-    def to_kvs(self):
-        """Store this job into kvs."""
-        self._slurp_files()
-        key = kvs.tokens.generate_job_key(self.job_id)
-        data = self.params.copy()
-        data['debug'] = self.log_level
-        kvs.set_value_json_encoded(key, data)
-
-    def sites_to_compute(self):
-        """Return the sites used to trigger the computation on the
-        hazard subsystem.
-
-        If the SITES parameter is specified, the computation is triggered
-        only on the sites specified in that parameter, otherwise
-        the region is used.
-
-        If the COMPUTE_HAZARD_AT_ASSETS_LOCATIONS parameter is specified,
-        the hazard computation is triggered only on sites defined in the risk
-        exposure file and located inside the region of interest.
-        """
-
-        if self.sites:
-            return self.sites
-
-        if jobconf.RISK_SECTION in self.sections \
-                and self.has(jobconf.COMPUTE_HAZARD_AT_ASSETS):
-
-            print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
-                "computing hazard on exposure sites..."
-
-            self.sites = read_sites_from_exposure(self)
-        elif self.has(jobconf.SITES):
-
-            coords = self._extract_coords(jobconf.SITES)
-            sites = []
-
-            for coord in coords:
-                sites.append(shapes.Site(coord[0], coord[1]))
-
-            self.sites = sites
-        else:
-            self.sites = self._sites_for_region()
-
-        return self.sites
-
-    def _extract_coords(self, config_param):
-        """Extract from a configuration parameter the list of coordinates."""
-        verts = self[config_param]
-        return zip(verts[1::2], verts[::2])
-
-    def _sites_for_region(self):
-        """Return the list of sites for the region at hand."""
-        region = shapes.Region.from_coordinates(
-            self._extract_coords('REGION_VERTEX'))
-
-        region.cell_size = self['REGION_GRID_SPACING']
-        return region.grid.centers()
-
-    def build_nrml_path(self, nrml_file):
-        """Return the complete output path for the given nrml_file"""
-        return os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], nrml_file)
-
-    def extract_values_from_config(self, param_name, separator=' ',
-                                   check_value=lambda _: True):
-        """Extract the set of valid values from the configuration file."""
-
-        def _acceptable(value):
-            """Return true if the value taken from the configuration
-            file is valid, false otherwise."""
-            try:
-                value = float(value)
-            except ValueError:
-                return False
-            else:
-                return check_value(value)
-
-        values = []
-
-        if param_name in self.params:
-            raw_values = self.params[param_name].split(separator)
-            values = [float(x) for x in raw_values if _acceptable(x)]
-
-        return values
-
-    @property
-    def imls(self):
-        "Return the intensity measure levels as specified in the config file"
-        if self.has('INTENSITY_MEASURE_LEVELS'):
-            return self['INTENSITY_MEASURE_LEVELS']
-        return None
-
-    def _record_initial_stats(self):
-        '''
-        Report initial job stats (such as start time) by adding a
-        uiapi.job_stats record to the db.
-        '''
-        job_stats = JobStats(oq_job=self.oq_job)
-        job_stats.start_time = datetime.utcnow()
-        job_stats.num_sites = len(self.sites_to_compute())
-
-        calc_mode = CALCULATION_MODE[self['CALCULATION_MODE']]
-        if jobconf.HAZARD_SECTION in self.sections:
-            if calc_mode != 'scenario':
-                job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
-
-        job_stats.save()
-
-
-def read_sites_from_exposure(job_ctxt):
-    """Given a :class:`JobContext` object, get all of the sites in the exposure
-    model which are contained by the region of interest (defined in the
-    `JobContext`).
-
-    It is assumed that exposure model is already loaded into the database.
-
-    :param job_ctxt:
-        :class:`JobContext` instance.
+    :param str username:
+        Username of the user who owns/started this job. If the username doesn't
+        exist, a user record for this name will be created.
+    :param str log_level:
+        Defaults to 'progress'. Specify a logging level for this job. This
+        level can be passed, for example, from the command line interface using
+        the `--log-level` directive.
     :returns:
-        `list` of :class:`openquake.engine.shapes.Site` objects, with no
-        duplicates
+        :class:`openquake.engine.db.models.OqJob` instance.
     """
-    em_inputs = inputs4job(job_ctxt.job_id, input_type="exposure")
-    exp_points = ExposureData.objects.filter(
-        exposure_model__input__id__in=[em.id for em in em_inputs],
-        site__contained=job_ctxt.oq_job_profile.region).values(
-            'site').distinct()
-
-    sites = [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
-    return sites
+    # See if the current user exists
+    # If not, create a record for them
+    owner = prepare_user(user_name)
+    job = models.OqJob(owner=owner, log_level=log_level)
+    job.save()
+    return job
 
 
-def _parse_config_file(config_file):
+def prepare_user(user_name):
+    """Make sure user with the given name exists, return it."""
+    # See if the current user exists
+    # If not, create a record for them
+    try:
+        user = models.OqUser.objects.get(user_name=user_name)
+    except exceptions.ObjectDoesNotExist:
+        # This user doesn't exist; let's fix that.
+        # NOTE: The Organization is currently hardcoded to 1.
+        # This org is added when the database is bootstrapped.
+        user = models.OqUser(
+            user_name=user_name, full_name=user_name, organization_id=1
+        )
+        user.save()
+    return user
+
+
+def get_current_user():
     """
-    We have a single configuration file which may contain a risk section and
-    a hazard section. This input file must be in the ConfigParser format
-    defined at: http://docs.python.org/library/configparser.html.
-
-    There may be a general section which may define configuration includes in
-    the format of "sectionname_include = someconfigname.gem". These too must be
-    in the ConfigParser format.
+    Utilty function for getting the :class:`openquake.engine.db.models.OqUser`
+    for the the current user. If the user record doesn't exist, it will be
+    created.
     """
+    return prepare_user(getpass.getuser())
 
-    config_file = os.path.abspath(config_file)
-    base_path = os.path.abspath(os.path.dirname(config_file))
 
-    if not os.path.exists(config_file):
-        raise jobconf.ValidationException(
-            ["File '%s' not found" % config_file])
+def parse_config(source):
+    """Parse a dictionary of parameters from an INI-style config file.
 
-    parser = ConfigParser()
-    parser.read(config_file)
+    :param source:
+        File-like object containing the config parameters.
+    :returns:
+        A `dict` of the parameter keys and values parsed from the config file
+        and a `dict` of :class:`~openquake.engine.db.models.Input` objects,
+        keyed by the config file parameter.
 
-    params = {}
-    sections = []
+        These dicts are return as a tuple/pair.
+    """
+    cp = ConfigParser.ConfigParser()
+    cp.readfp(source)
 
-    for section in parser.sections():
-        for key, value in parser.items(section):
-            key = key.upper()
-            # Handle includes.
-            if RE_INCLUDE.match(key):
-                config_file = os.path.join(os.path.dirname(config_file), value)
-                new_params, new_sections = _parse_config_file(config_file)
-                sections.extend(new_sections)
-                params.update(new_params)
+    base_path = os.path.dirname(
+        os.path.join(os.path.abspath('.'), source.name))
+    params = dict(base_path=base_path)
+    files = dict()
+
+    # Directory containing the config file we're parsing.
+    base_path = os.path.dirname(os.path.abspath(source.name))
+
+    for sect in cp.sections():
+        for key, value in cp.items(sect):
+            if key == 'sites_csv':
+                # Parse site coordinates from the csv file,
+                # return as MULTIPOINT WKT:
+                path = value
+                if not os.path.isabs(path):
+                    # It's a relative path
+                    path = os.path.join(base_path, path)
+                params['sites'] = _parse_sites_csv(open(path, 'r'))
+            elif key.endswith('_file'):
+                input_type = key[:-5]
+                if not input_type in INPUT_TYPES:
+                    raise ValueError(
+                        'The parameter %s in the .ini file does '
+                        'not correspond to a valid input type' % key)
+                path = value
+                # The `path` may be a path relative to the config file, or it
+                # could be an absolute path.
+                if not os.path.isabs(path):
+                    # It's a relative path.
+                    path = os.path.join(base_path, path)
+
+                files[key] = get_input(
+                    path, input_type, prepare_user(getpass.getuser())
+                )
             else:
-                sections.append(section)
                 params[key] = value
 
-    params['BASE_PATH'] = base_path
-
-    return params, list(set(sections))
+    return params, files
 
 
-def _prepare_config_parameters(params, sections):
+def _parse_sites_csv(fh):
     """
-    Pre-process configuration parameters removing unknown ones.
+    Get sites of interest from a csv file. The csv file (``fh``) is expected to
+    have 2 columns: lon,lat.
+
+    :param fh:
+        File-like containing lon,lat coordinates in csv format.
+
+    :returns:
+        MULTIPOINT WKT representing all of the sites in the csv file.
     """
+    reader = csv.reader(fh)
+    coords = []
+    for lon, lat in reader:
+        coords.append('%s %s' % (lon, lat))
 
-    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    new_params = dict()
-
-    for name, value in params.items():
-        try:
-            param = PARAMS[name]
-        except KeyError:
-            print 'Ignoring unknown parameter %r' % name
-            continue
-
-        if calc_mode not in param.modes:
-            msg = "Ignoring %s in %s, it's meaningful only in "
-            msg %= (name, calc_mode)
-            print msg, ', '.join(param.modes)
-            continue
-
-        new_params[name] = value
-
-    # Set default parameters (if applicable).
-    # TODO(LB): This probably isn't the best place for this code (since we may
-    # want to implement similar default param logic elsewhere). For now,
-    # though, it will have to do.
-
-    # If job is classical and hazard+risk:
-    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
-        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
-            # If this param is already defined, display a message to the user
-            # that this config param is being ignored and set to the default:
-            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
-        # The value is set to a string because validators still expected job
-        # config params to be strings at this point:
-        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
-
-    # Fri, 11 May 2012 11:03:03 +0200, al-maisan
-    # According to dmonelli and larsbutler the intensity measure type for UHS
-    # jobs is *always* SA irrespective of the value specified in the config
-    # file.
-    if calc_mode == "uhs":
-        new_params["INTENSITY_MEASURE_TYPE"] = "SA"
-
-    return new_params, sections
+    return 'MULTIPOINT(%s)' % ', '.join(coords)
 
 
 def _file_digest(path):
-    """Return a 32 character digest for the file with the given path.
+    """Return a 32 character digest for the file with the given pasth.
 
-    :param str path: file path
-    :returns: a string of length 32 with the md5sum digest
+    :param str path:
+        File path
+    :returns:
+        A 32 character string with the md5sum digest of the file.
     """
     checksum = md5.new()
     with open(path) as fh:
         checksum.update(fh.read())
         return checksum.hexdigest()
-
-
-def _identical_input(input_type, digest, owner_id):
-    """Get an identical input with the same type or `None`.
-
-    Identical inputs are found by comparing md5sum digests. In order to avoid
-    reusing corrupted/broken input models we ignore all the inputs that are
-    associated with a first job that failed.
-    Also, we only want inputs owned by the user who is running the current job
-    and if there is more than one input we want the most recent one.
-
-    :param str input_type: input model type
-    :param str digest: md5sum digest
-    :param int owner_id: the database key of the owner
-    :returns: an `:class:openquake.engine.db.models.Input` instance or `None`
-    """
-    q = """
-    SELECT * from uiapi.input WHERE id = (
-        SELECT MAX(input_id) AS max_input_id FROM
-            uiapi.oq_job, (
-                SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
-                FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
-                     uiapi.input AS i, admin.oq_user u
-                WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
-                    AND i.digest = %s AND i.input_type = %s
-                    AND j.owner_id = u.id AND u.id = %s
-                GROUP BY i.id ORDER BY i.id DESC) AS mjq
-            WHERE id = mjq.min_job_id AND status = 'succeeded')"""
-    ios = list(Input.objects.raw(q, [digest, input_type, owner_id]))
-    return ios[0] if ios else None
 
 
 def _get_content_type(path):
@@ -498,184 +190,327 @@ def _get_content_type(path):
         return ext[1:]
 
 
-def _insert_input_files(params, job, force_inputs):
-    """Create uiapi.input records for all input files
-
-    :param dict params: The job config params.
-    :param job: The :class:`openquake.engine.db.models.OqJob` instance to use
-    :param bool force_inputs: If `True` the model input files will be parsed
-        and the resulting content written to the database no matter what.
+def get_input(path, input_type, owner, name=None):
     """
+    Get an :class:`~openquake.engine.db.models.Input` object for the given
+    file (``path``).
 
-    inputs_seen = set()
+    :param str path:
+        Path to the input file.
+    :param str input_type:
+        The type of input. See :class:`openquake.engine.db.models.Input` for
+        a list of valid types.
+    :param owner:
+        The :class:`~openquake.engine.db.models.OqUser` who will own the input,
+        if a fresh input record is being created. If the record is being
+        reused, we will only reuse records which belong to this user (if any
+        exist).
+    :param str name:
+        Optional name to help idenfity this input.
+    :returns:
+        :class:`openquake.engine.db.models.Input` object to represent the
+        input. As a side effect, this function will also store a full raw copy
+        of the input file
+        (see :class:`openquake.engine.db.models.ModelContent`)
+        and associate it to the `Input`.
+    """
+    inp = None
 
-    def ln_input2job(path, input_type):
-        """Link identical or newly created input to the given job."""
-        digest = _file_digest(path)
-        linked_inputs = inputs4job(job.id)
-        if any(li.digest == digest and li.input_type == input_type
-               for li in linked_inputs):
-            return
+    digest = _file_digest(path)
 
-        in_model = (_identical_input(input_type, digest, job.owner.id)
-                    if not force_inputs else None)
-        if in_model is None:
-            # Save the raw input file contents to the DB:
-            model_content = ModelContent()
-            with open(path, 'rb') as fh:
-                model_content.raw_content = fh.read()
-            # Try to guess the content type:
-            model_content.content_type = _get_content_type(path)
-            model_content.save()
+    model_content = models.ModelContent()
+    with open(path, 'rb') as fh:
+        model_content.raw_content = fh.read()
+    # Try to guess the content type:
+    model_content.content_type = _get_content_type(path)
+    model_content.save()
 
-            in_model = Input(path=path, input_type=input_type, owner=job.owner,
-                             size=os.path.getsize(path), digest=digest,
-                             model_content=model_content)
-            in_model.save()
+    inp = models.Input(
+        path=path, input_type=input_type, owner=owner,
+        size=os.path.getsize(path), digest=digest,
+        model_content=model_content, name=name
+    )
+    inp.save()
 
-        # Make sure we don't link to the same input more than once.
-        if in_model.id not in inputs_seen:
-            inputs_seen.add(in_model.id)
-
-            i2j = Input2job(input=in_model, oq_job=job)
-            i2j.save()
-
-        return in_model
-
-    # insert input files in input table
-    for param_key, file_type in INPUT_FILE_TYPES.items():
-        if param_key not in params:
-            continue
-        path = os.path.join(params['BASE_PATH'], params[param_key])
-        input_obj = ln_input2job(path, file_type)
-
-        if file_type == "source_model_logic_tree":
-            # collect relative paths to source model files
-            # that are referenced by the logic tree
-            source_models = logictree.read_logic_trees(
-                params['BASE_PATH'], params['SOURCE_MODEL_LOGIC_TREE_FILE'],
-                params['GMPE_LOGIC_TREE_FILE']
-            )
-            # insert source model files
-            for srcrelpath in source_models:
-                abspath = os.path.join(params['BASE_PATH'], srcrelpath)
-                hzrd_src_input = ln_input2job(abspath, "source")
-                Src2ltsrc.objects.get_or_create(
-                    hzrd_src=hzrd_src_input, lt_src=input_obj,
-                    defaults={'filename': srcrelpath}
-                )
+    return inp
 
 
-def prepare_job(user_name="openquake"):
-    """Create job for the given user, return it."""
-    # See if the current user exists
-    # If not, create a record for them
-    owner = prepare_user(user_name)
-    job = OqJob(owner=owner)
+def create_hazard_calculation(owner, params, files):
+    """Given a params `dict` parsed from the config file, create a
+    :class:`~openquake.engine.db.models.HazardCalculation`.
+
+    :param owner:
+        The :class:`~openquake.engine.db.models.OqUser` who will own this
+        profile.
+    :param dict params:
+        Dictionary of parameter names and values. Parameter names should match
+        exactly the field names of
+        :class:`openquake.engine.db.model.HazardCalculation`.
+    :param list files:
+        List of :class:`~openquake.engine.db.models.Input` objects to be
+        linked to the calculation.
+    :returns:
+        :class:`openquake.engine.db.model.HazardCalculation` object.
+        A corresponding record will obviously be saved to the database.
+    """
+    if "export_dir" in params:
+        params["export_dir"] = os.path.abspath(params["export_dir"])
+
+    haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
+    for param in set(params.keys()) - set(haz_calc_fields):
+        msg = "Unknown parameter '%s'. Ignoring."
+        msg %= param
+        warnings.warn(msg, RuntimeWarning)
+        params.pop(param)
+
+    hc = models.HazardCalculation(**params)
+    hc.owner = owner
+    hc.full_clean()
+    hc.save()
+
+    for f in files:
+        models.Input2hcalc(input=f, hazard_calculation=hc).save()
+
+    return hc
+
+
+def create_risk_calculation(owner, params, files):
+    """Given a params `dict` parsed from the config file, create a
+    :class:`~openquake.engine.db.models.RiskCalculation`.
+
+    :param owner:
+        The :class:`~openquake.engine.db.models.OqUser` who will own this
+        profile.
+    :param dict params:
+        Dictionary of parameter names and values. Parameter names should match
+        exactly the field names of
+        :class:`openquake.engine.db.model.RiskCalculation`.
+    :param list files:
+        List of :class:`~openquake.engine.db.models.Input` objects to be
+        linked to the calculation.
+    :returns:
+        :class:`openquake.engine.db.model.RiskCalculation` object.
+        A corresponding record will obviously be saved to the database.
+    """
+    if "export_dir" in params:
+        params["export_dir"] = os.path.abspath(params["export_dir"])
+
+    rc = models.RiskCalculation(**params)
+    rc.owner = owner
+    rc.full_clean()
+    rc.save()
+
+    for f in files:
+        models.Input2rcalc(input=f, risk_calculation=rc).save()
+
+    return rc
+
+
+# used uin bin/openquake
+def run_calc(job, log_level, log_file, exports, job_type):
+    """
+    Run a calculation.
+
+    :param job:
+        :class:`openquake.engine.db.model.OqJob` instance which references a
+        valid :class:`openquake.engine.db.models.RiskCalculation` or
+        :class:`openquake.engine.db.models.HazardCalculation`.
+    :param str log_level:
+        The desired logging level. Valid choices are 'debug', 'info',
+        'progress', 'warn', 'error', and 'critical'.
+    :param str log_file:
+        Complete path (including file name) to file where logs will be written.
+        If `None`, logging will just be printed to standard output.
+    :param list exports:
+        A (potentially empty) list of export targets. Currently only "xml" is
+        supported.
+    :param calc:
+        Calculator object, which must implement the interface of
+        :class:`openquake.engine.calculators.base.CalculatorNext`.
+    :param str job_type:
+        'hazard' or 'risk'
+    """
+    calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
+    calc = get_calculator_class(job_type, calc_mode)(job)
+    # Closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes.
+    # Otherwise, if one of them closes the connection it immediately becomes
+    # unavailable for others.
+    close_connection()
+
+    job_pid = os.fork()
+
+    if not job_pid:
+        # calculation executor process
+        try:
+            logs.init_logs_amqp_send(level=log_level, job_id=job.id)
+            # run the job
+            job.is_running = True
+            job.save()
+            kvs.mark_job_as_current(job.id)
+            _do_run_calc(job, exports, calc, job_type)
+        except Exception, ex:
+            logs.LOG.critical("Calculation failed with exception: '%s'"
+                              % str(ex))
+            raise
+        finally:
+            job.is_running = False
+            job.save()
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        logs.set_logger_level(logs.logging.root, log_level)
+        # TODO: deal with KVS garbage collection
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
+
+    # Refresh the job record, since the forked processes are going to modify
+    # job state.
+    return models.OqJob.objects.get(id=job.id)
+
+
+def _switch_to_job_phase(job, ctype, status):
+    """Switch to a particular phase of execution.
+
+    This involves creating a `job_phase_stats` record and logging the new
+    status.
+
+    :param job:
+        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param str ctype: calculation type (hazard|risk)
+    :param str status: one of the following: pre_executing, executing,
+        post_executing, post_processing, export, clean_up, complete
+    """
+    job.status = status
     job.save()
+    models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
+                                        ctype=ctype)
+    logs.LOG.progress("%s (%s)" % (status, ctype))
+    if status == "executing" and not openquake.engine.no_distribute():
+        # Record the compute nodes that were available at the beginning of the
+        # execute phase so we can detect failed nodes later.
+        failed_nodes = monitor.count_failed_nodes(job)
+        if failed_nodes == -1:
+            logs.LOG.critical("No live compute nodes, aborting calculation")
+            sys.exit(1)
+
+
+def _do_run_calc(job, exports, calc, job_type):
+    """
+    Step through all of the phases of a hazard calculation, updating the job
+    status at each phase.
+
+    :param job:
+        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param list exports:
+        a (potentially empty) list of export targets, currently only "xml" is
+        supported
+    :returns:
+        The input job object when the calculation completes.
+    """
+    # - Run the calculation
+    _switch_to_job_phase(job, job_type, "pre_executing")
+
+    calc.pre_execute()
+
+    _switch_to_job_phase(job, job_type, "executing")
+    calc.execute()
+
+    _switch_to_job_phase(job, job_type, "post_executing")
+    calc.post_execute()
+
+    _switch_to_job_phase(job, job_type, "post_processing")
+    calc.post_process()
+
+    _switch_to_job_phase(job, job_type, "export")
+    calc.export(exports=exports)
+
+    _switch_to_job_phase(job, job_type, "clean_up")
+    calc.clean_up()
+
+    _switch_to_job_phase(job, job_type, "complete")
+    logs.LOG.debug("*> complete")
+
     return job
 
 
-def prepare_user(user_name):
-    """Make sure user with the given name exists, return it."""
-    # See if the current user exists
-    # If not, create a record for them
+def del_haz_calc(hc_id):
+    """
+    Delete a hazard calculation and all associated outputs.
+
+    :param hc_id:
+        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
+    """
     try:
-        user = OqUser.objects.get(user_name=user_name)
-    except ObjectDoesNotExist:
-        # This user doesn't exist; let's fix that.
-        # NOTE: The Organization is currently hardcoded to 1.
-        # This org is added when the database is bootstrapped.
-        user = OqUser(user_name=user_name, full_name=user_name,
-                       organization_id=1)
-        user.save()
-    return user
+        hc = models.HazardCalculation.objects.get(id=hc_id)
+    except exceptions.ObjectDoesNotExist:
+        raise RuntimeError('Unable to delete hazard calculation: '
+                           'ID=%s does not exist' % hc_id)
+
+    user = get_current_user()
+    if hc.owner == user:
+        # we are allowed to delete this
+
+        # but first, check if any risk calculations are referencing any of our
+        # outputs, or the hazard calculation itself
+        msg = UNABLE_TO_DEL_HC_FMT % (
+            'The following risk calculations are referencing this hazard'
+            ' calculation: %s'
+        )
+
+        # check for a reference to hazard outputs
+        assoc_outputs = models.RiskCalculation.objects.filter(
+            hazard_output__oq_job__hazard_calculation=hc_id
+        )
+        if assoc_outputs.count() > 0:
+            raise RuntimeError(msg % ', '.join([str(x.id)
+                                                for x in assoc_outputs]))
+
+        # check for a reference to the hazard calculation itself
+        assoc_calcs = models.RiskCalculation.objects.filter(
+            hazard_calculation=hc_id
+        )
+        if assoc_calcs.count() > 0:
+            raise RuntimeError(msg % ', '.join([str(x.id)
+                                                for x in assoc_calcs]))
+
+        # No risk calculation are referencing what we want to delete.
+        # Carry on with the deletion.
+        hc.delete(using='admin')
+    else:
+        # this doesn't belong to the current user
+        raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
 
 
-@transaction.commit_on_success(using='job_init')
-def _prepare_job(params, sections, owner_username, job, force_inputs):
+def del_risk_calc(rc_id):
     """
-    Create a new OqJob and fill in the related OqJobProfile entry.
+    Delete a risk calculation and all associated outputs.
 
-    Returns the newly created job object.
-
-    :param dict params:
-        The job config params.
-    :param sections:
-        The job config file sections, as a list of strings.
-    :param owner_username:
-        The username of the user who will own the returned job profile.
-    :param job:
-        The :class:`openquake.engine.db.models.OqJob` instance to use
-    :param bool force_inputs: If `True` the model input files will be parsed
-        and the resulting content written to the database no matter what.
-
-    :returns:
-        A new :class:`openquake.engine.db.models.OqJobProfile` object.
+    :param hc_id:
+        ID of a :class:`~openquake.engine.db.models.RiskCalculation`.
     """
+    try:
+        rc = models.RiskCalculation.objects.get(id=rc_id)
+    except exceptions.ObjectDoesNotExist:
+        raise RuntimeError('Unable to delete risk calculation: '
+                           'ID=%s does not exist' % rc_id)
 
-    @transaction.commit_on_success(using='job_init')
-    def _get_job_profile(calc_mode, job_type, owner):
-        """Create an OqJobProfile, save it to the db, commit, and return."""
-        job_profile = OqJobProfile(calc_mode=calc_mode, job_type=job_type)
-
-        _insert_input_files(params, job, force_inputs)
-        _store_input_parameters(params, calc_mode, job_profile)
-
-        job_profile.owner = owner
-        job_profile.force_inputs = force_inputs
-        job_profile.save()
-        Job2profile(oq_job=job, oq_job_profile=job_profile).save()
-
-        return job_profile
-
-    # TODO specify the owner as a command line parameter
-    owner = prepare_user(owner_username)
-
-    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    job_type = [s.lower() for s in sections
-        if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
-
-    job_profile = _get_job_profile(calc_mode, job_type, owner)
-
-    # When querying this record from the db, Django changes the values
-    # slightly (with respect to geometry, for example). Thus, we want a
-    # "fresh" copy of the record from the db.
-    return OqJobProfile.objects.get(id=job_profile.id)
-
-
-def _store_input_parameters(params, calc_mode, job_profile):
-    """Store parameters in uiapi.oq_job_profile columns"""
-
-    for name, param in PARAMS.items():
-        if calc_mode in param.modes and param.default is not None:
-            setattr(job_profile, param.column, param.default)
-
-    for name, value in params.items():
-        param = PARAMS[name]
-        value = value.strip()
-
-        if param.type in (models.BooleanField, models.NullBooleanField):
-            value = value.lower() not in ('0', 'false')
-        elif param.type == models.PolygonField:
-            ewkt = shapes.polygon_ewkt_from_coords(value)
-            value = GEOSGeometry(ewkt)
-        elif param.type == models.MultiPointField:
-            ewkt = shapes.multipoint_ewkt_from_coords(value)
-            value = GEOSGeometry(ewkt)
-        elif param.type == fields.FloatArrayField:
-            value = [float(v) for v in ARRAY_RE.split(value) if len(v)]
-        elif param.type == fields.CharArrayField:
-            if param.to_db is not None:
-                value = param.to_db(value)
-            value = [str(v) for v in ARRAY_RE.split(value) if len(v)]
-        elif param.to_db is not None:
-            value = param.to_db(value)
-        elif param.type == None:
-            continue
-
-        setattr(job_profile, param.column, value)
-
-    if job_profile.imt != 'sa':
-        job_profile.period = None
-        job_profile.damping = None
+    user = get_current_user()
+    if rc.owner == user:
+        # we are allowed to delete this
+        rc.delete(using='admin')
+    else:
+        # this doesn't belong to the current user
+        raise RuntimeError('Unable to delete risk calculation: '
+                           'Access denied')

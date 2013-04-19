@@ -28,7 +28,7 @@ class EventBasedBCRRiskCalculatorTestCase(
     """
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('event_based_bcr/job.ini'),
             demo_file('event_based_hazard/job.ini'), output_type="gmf")
 
