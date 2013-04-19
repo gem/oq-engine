@@ -1,10 +1,5 @@
-.. OpenQuake documentation master file, created by
-   sphinx-quickstart on Mon Aug  2 14:01:11 2010.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-OpenQuake Source Code Documentation
-===================================
+OpenQuake Engine Source Code Documentation
+==========================================
 
 Contents:
 
@@ -13,6 +8,7 @@ Contents:
     engine
     job/validation
     calculators/hazard
+    calculators/risk
     export/index
     db/models
     db/fields
@@ -22,7 +18,6 @@ Contents:
     input
     risk
     schema
-    shapes
     utils
     writer
 

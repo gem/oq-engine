@@ -13,11 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import unittest
+
 from tests.utils import helpers
 from tests.calculators.risk import general_test
 
-from openquake.engine.db import models
+from openquake.engine import engine
 from openquake.engine.calculators.risk.classical import core as classical
+from openquake.engine.db import models
 
 
 class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
@@ -37,12 +40,14 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
         patch = helpers.patch(
             'openquake.engine.calculators.risk.general.write_loss_curve')
-        mocked_writer = patch.start()
 
-        classical.classical(*self.calculator.task_arg_gen(
-            self.calculator.block_size()).next())
+        try:
+            mocked_writer = patch.start()
 
-        patch.stop()
+            classical.classical(*self.calculator.task_arg_gen(
+                self.calculator.block_size()).next())
+        finally:
+            patch.stop()
 
         # we expect 1 asset being filtered out by the region
         # constraint, so there are only two loss curves to be written
@@ -91,3 +96,60 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
 
         self.assertEqual(
             set(["hazard_curve"]), set([o.output_type for o in outputs]))
+
+
+class PreExecuteTestCase(unittest.TestCase):
+
+    def test_pre_execute_check_imts_raises(self):
+        haz_job = engine.prepare_job()
+        hazard_curve_output = models.Output.objects.create_output(
+            haz_job, 'test_hazard_curve', 'hazard_curve'
+        )
+        hazard_curve = models.HazardCurve.objects.create(
+            output=hazard_curve_output,
+            investigation_time=50.0,
+            imt='PGV',  # the vulnerability model only defines SA(0.1)
+            statistics='mean'
+        )
+
+        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        risk_job = helpers.get_risk_job(
+            cfg, hazard_output_id=hazard_curve_output.id
+        )
+        calc = classical.ClassicalRiskCalculator(risk_job)
+
+        # Check for compatibility between the IMTs defined in the vulnerability
+        # model and the chosen hazard output (--hazard-output-id)
+        with self.assertRaises(ValueError) as ar:
+            calc.pre_execute()
+        self.assertEqual(
+            "Vulnerability model and the specified hazard curve are "
+            "incompatible. Vulnerability IMT(s): ['SA(0.1)']. Hazard curve "
+            "IMT: PGV",
+            ar.exception.message
+        )
+
+    def test_pre_execute_check_imts_no_errors(self):
+        haz_job = engine.prepare_job()
+        hazard_curve_output = models.Output.objects.create_output(
+            haz_job, 'test_hazard_curve', 'hazard_curve'
+        )
+        hazard_curve = models.HazardCurve.objects.create(
+            output=hazard_curve_output,
+            investigation_time=50.0,
+            # this imt is compatible with the vuln model
+            imt='SA',
+            sa_period=0.1,
+            sa_damping=5.0,
+            statistics='mean'
+        )
+
+        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        risk_job = helpers.get_risk_job(
+            cfg, hazard_output_id=hazard_curve_output.id
+        )
+        calc = classical.ClassicalRiskCalculator(risk_job)
+
+        # In contrast to the test above (`test_pre_execute_check_imts_raises`),
+        # we expect no errors to be raised.
+        calc.pre_execute()

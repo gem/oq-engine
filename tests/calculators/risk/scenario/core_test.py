@@ -28,7 +28,7 @@ class ScenarioRiskCalculatorTestCase(
     """
 
     def setUp(self):
-        self.job, _ = helpers.get_risk_job(
+        self.job, _ = helpers.get_fake_risk_job(
             demo_file('scenario_risk/job.ini'),
             demo_file('scenario_hazard/job.ini'), output_type="gmf_scenario")
 
@@ -49,31 +49,19 @@ class ScenarioRiskCalculatorTestCase(
 
         self.assertEqual(0.0, params['asset_correlation'])
 
-    def test_imt_validation(self):
-        # Test the validation of the imt associated with the
-        # vulnerability model that must match the one of the hazard
-        # output.
-        base_path = ('openquake.engine.calculators.risk.general.'
-                     'BaseRiskCalculator.')
-        patches = [helpers.patch(base_path + 'set_risk_models'),
-                   helpers.patch(base_path + '_store_exposure')]
-        for patch in patches:
-            patch.start()
-        self.calculator.imt = 'Hope'
-        self.assertRaises(RuntimeError, self.calculator.pre_execute)
-        for patch in patches:
-            patch.stop()
-
     def test_celery_task(self):
         # Test that the celery task when called properly call the
         # specific method to write loss map data.
 
         patch_dbwriter = helpers.patch(
             'openquake.engine.calculators.risk.general.write_loss_map_data',)
-        write_lossmap_mock = patch_dbwriter.start()
-        scenario.scenario(
-            *self.calculator.task_arg_gen(self.calculator.block_size()).next())
-        patch_dbwriter.stop()
+        try:
+            write_lossmap_mock = patch_dbwriter.start()
+            scenario.scenario(
+                *self.calculator.task_arg_gen(
+                    self.calculator.block_size()).next())
+        finally:
+            patch_dbwriter.stop()
 
         self.assertEqual(1, write_lossmap_mock.call_count)
 

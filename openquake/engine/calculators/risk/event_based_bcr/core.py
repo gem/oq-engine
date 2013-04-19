@@ -17,6 +17,7 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
+import random
 import numpy
 
 from openquake.risklib import api, scientific
@@ -32,9 +33,10 @@ from django.db import transaction
 
 @tasks.oqtask
 @general.count_progress_risk('r')
-def event_based_bcr(job_id, hazard, seed,
+def event_based_bcr(job_id, hazard, task_seed,
                     vulnerability_function, vulnerability_function_retrofitted,
-                    output_containers, time_span, tses,
+                    output_containers, _statistical_output_containers,
+                    time_span, tses,
                     loss_curve_resolution, asset_correlation,
                     asset_life_expectancy, interest_rate):
     """
@@ -56,13 +58,14 @@ def event_based_bcr(job_id, hazard, seed,
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
       used to store the computed bcr distribution
+    :param statistical_output_containers: not used at this moment
     :param float time_span:
         Time Span of the hazard calculation.
     :param float tses:
         Time of the Stochastic Event Set.
     :param int loss_curve_resolution:
         Resolution of the computed loss curves (number of points).
-    :param int seed:
+    :param int task_seed:
         Seed used to generate random values.
     :param float asset_correlation:
         asset correlation (0 uncorrelated, 1 perfectly correlated).
@@ -72,17 +75,20 @@ def event_based_bcr(job_id, hazard, seed,
         The life expectancy used for every asset.
     """
 
+    rnd = random.Random()
+    rnd.seed(task_seed)
+
     for hazard_output_id, hazard_data in hazard.items():
         hazard_getter, _ = hazard_data
-        (bcr_distribution_id,) = output_containers[hazard_output_id]
+        bcr_distribution_id = output_containers[hazard_output_id][0]
 
-        # FIXME(lp). We should not pass the exact same seed for
-        # different hazard
+        seed = rnd.randint(0, models.MAX_SINT_32)
         calc_original = api.ProbabilisticEventBased(
             vulnerability_function, curve_resolution=loss_curve_resolution,
             time_span=time_span, tses=tses,
             seed=seed, correlation=asset_correlation)
 
+        seed = rnd.randint(0, models.MAX_SINT_32)
         calc_retrofitted = api.ProbabilisticEventBased(
             vulnerability_function_retrofitted,
             curve_resolution=loss_curve_resolution,
@@ -107,11 +113,11 @@ def event_based_bcr(job_id, hazard, seed,
             _, retrofitted_loss_curves = calc_retrofitted(ground_motion_values)
 
             eal_original = [
-                scientific.mean_loss(*original_loss_curves[i].xy)
+                scientific.average_loss(*original_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             eal_retrofitted = [
-                scientific.mean_loss(*retrofitted_loss_curves[i].xy)
+                scientific.average_loss(*retrofitted_loss_curves[i].xy)
                 for i in range(len(assets))]
 
             bcr_results = [
@@ -155,13 +161,17 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Specific calculator parameters returned as list suitable to be
         passed in task_arg_gen.
         """
+        time_span, tses = self.hazard_times()
 
-        super_params = super(EventBasedBCRRiskCalculator,
-                             self).calculator_parameters
+        if self.rc.asset_correlation is None:
+            correlation = 0
+        else:
+            correlation = self.rc.asset_correlation
 
-        return super_params[2:-1] + [
-            self.rc.asset_life_expectancy, self.rc.interest_rate
-        ]
+        return [time_span, tses,
+                self.rc.loss_curve_resolution, correlation,
+                self.rc.asset_life_expectancy,
+                self.rc.interest_rate]
 
     def post_process(self):
         """
@@ -190,11 +200,18 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                     "bcr_distribution")).pk
         ]
 
+    def create_statistical_outputs(self):
+        """
+        Override default behaviour as BCR and scenario calculators do
+        not compute mean/quantiles outputs"
+        """
+        pass
+
     def set_risk_models(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions = self.parse_vulnerability_model()
+        self.vulnerability_functions = self.get_vulnerability_model()
         self.vulnerability_functions_retrofitted = (
-            self.parse_vulnerability_model(True))
+            self.get_vulnerability_model(True))

@@ -40,14 +40,9 @@ import shapely
 
 from django.core import exceptions
 
-from openquake.engine.calculators.hazard.general import store_gmpe_map
-from openquake.engine.calculators.hazard.general import store_source_model
 from openquake.engine.db import models
-from openquake.engine.engine import JobContext
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine import logs
-from openquake.engine.input.logictree import LogicTreeProcessor
 from openquake.engine.utils import config, get_calculator_class
 
 CD = os.path.dirname(__file__)  # current directory
@@ -69,15 +64,6 @@ patch = functools.partial(mock_module.patch, mocksignature=True)
 def default_user():
     """Return the default user to be used for test setups."""
     return models.OqUser.objects.get(user_name="openquake")
-
-
-def delete_profile(job):
-    """Disassociate the job's profile and delete it."""
-    [j2p] = models.Job2profile.objects.extra(
-        where=["oq_job_id=%s"], params=[job.id])
-    jp = j2p.oq_job_profile
-    j2p.delete()
-    jp.delete()
 
 
 def insert_inputs(job, inputs):
@@ -125,10 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def get_output_path(file_name):
-    return os.path.join(OUTPUT_DIR, file_name)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
@@ -138,37 +120,11 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-def testdata_path(file_name):
-    """
-    Take a file name and return the full path to the file in the
-    tests/data/demos directory
-    """
-    return os.path.normpath(os.path.join(
-        os.path.dirname(__file__), "../data/demos", file_name))
-
-
-def job_from_file(config_file_path):
-    """
-    Create a JobContext instance from the given configuration file.
-
-    The results are configured to go to XML files.  *No* database record will
-    be stored for the job.  This allows running test on jobs without requiring
-    a database.
-    """
-
-    job = engine._job_from_file(config_file_path, 'xml')
-    cleanup_loggers()
-
-    return job
-
-
-def create_job(params, **kwargs):
-    job_id = kwargs.pop('job_id', 0)
-
-    return JobContext(params, job_id, **kwargs)
-
-
-def run_hazard_job(cfg, exports=None):
+# this function is used in various tests to run a computation in-process;
+# task distribution is disabled by default to make it possible to debug and
+# profile the tests; notice however that in the QA tests (see
+# BaseQATestCase.run_hazard) the distribution is enabled
+def run_hazard_job(cfg, exports=None, distribute=False):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
@@ -191,119 +147,85 @@ def run_hazard_job(cfg, exports=None):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    completed_job = engine2._do_run_calc(job, exports, calc, 'hazard')
+    if not distribute:
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
+    try:
+        engine._do_run_calc(job, exports, calc, 'hazard')
+    finally:
+        if not distribute:
+            del os.environ['OQ_NO_DISTRIBUTE']
+        job.is_running = False
+        job.calc = calc
+        job.save()
+    return job
+
+
+def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    if exports is None:
+        exports = []
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = get_risk_job(cfg, hazard_calculation_id=hazard_calculation_id,
+                       hazard_output_id=hazard_output_id)
+    job.is_running = True
+    job.save()
+
+    models.JobStats.objects.create(oq_job=job)
+
+    calc_mode = job.risk_calculation.calculation_mode
+    calc = get_calculator_class('risk', calc_mode)(job)
+    completed_job = engine._do_run_calc(job, exports, calc, 'risk')
     job.is_running = False
     job.save()
 
     return completed_job
 
 
-def run_hazard_job_sp(config_file, params=None, check_output=False,
-                      silence=False, force_inputs=True):
+def run_job_sp(job_type, config_file, hazard_id=None, params=None,
+               silence=False, log_level="error"):
     """
     Given a path to a config file, run an openquake hazard job as a separate
     process using `subprocess`.
 
+    :param str job_type:
+        'risk' or 'hazard'
     :param str config_file:
-        Path to the calculation config file.
+        Path to the calculation config file
+    :param hazard_id:
+      ID of the hazard output used by the risk calculation; None when
+      performing a hazard computation
     :param list params:
         List of additional command line params to bin/openquake. Optional.
-    :param bool check_output:
-        If `True`, use :func:`subprocess.check_output` instead of
-        :func:`subprocess.check_call`.
     :param bool silence:
-        If `True`, silence all stdout and stderr messages.
-    :param bool force_inputs:
-        Defaults to `True`. If `True`, run openquake with the `--force-inputs`
-        option.
+        If `True`, silence all stdout messages.
+    :param str log_level:
+        Log Level (default to error) used by the engine for the job
 
     :returns:
         With the default input, return the return code of the subprocess.
-
-        If ``check_output`` is set to True, return the output of the subprocess
-        call to bin/openquake as a `str`. See
-        http://docs.python.org/library/subprocess.html#subprocess.check_output
         for more details.
     :raises:
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = [RUNNER, "--run-hazard=%s" % config_file]
-    if force_inputs:
-        args.append('--force-inputs')
-
-    if params is not None:
+    args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
+            "--log-level=%s" % log_level]
+    if hazard_id:
+        args.append("--hazard-output-id=%d" % hazard_id)
+    if params:
         args.extend(params)
 
-    devnull = None
-    if silence:
-        devnull = open(os.devnull, 'wb')
-
-    try:
-        if check_output:
-            return subprocess.check_output(args, stdout=devnull,
-                                           stderr=devnull)
-        else:
-            return subprocess.check_call(args, stdout=devnull, stderr=devnull)
-    finally:
-        if devnull is not None:
-            devnull.close()
-
-
-def run_risk_job_sp(config_file, hazard_id, params=None, silence=False,
-                    force_inputs=True):
-    """
-    Given a path to a config file, run an openquake risk job as a separate
-    process using `subprocess`. See `run_hazard_job_sp` for the signature
-
-    :param hazard_id:
-      ID of the hazard output used by the risk calculation
-    """
-
-    args = [RUNNER, "--run-risk=%s" % config_file,
-            "--log-level=debug",
-            "--hazard-output-id=%d" % hazard_id]
-    if force_inputs:
-        args.append('--force-inputs')
-
-    if params is not None:
-        args.extend(params)
-
-    devnull = None
-    if silence:
-        devnull = open(os.devnull, 'wb')
-
+    # NB: stderr is never captured, so that errors are never silenced
     print 'Running:', ' '.join(args)  # this is useful for debugging
-    try:
-        return subprocess.check_call(args, stderr=devnull, stdout=devnull)
-    finally:
-        if devnull is not None:
-            devnull.close()
-
-
-def store_hazard_logic_trees(a_job):
-    """Helper function to store the source model and GMPE logic trees in the
-    KVS so that it can be read by the Java code.
-
-    :param a_job:
-        :class:`openquake.engine.engine.JobContext` instance.
-    """
-    lt_proc = LogicTreeProcessor(
-        a_job['BASE_PATH'],
-        a_job['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
-        a_job['GMPE_LOGIC_TREE_FILE_PATH'])
-
-    src_model_seed = a_job['SOURCE_MODEL_LT_RANDOM_SEED']
-    gmpe_seed = a_job['GMPE_LT_RANDOM_SEED']
-
-    src_model_rnd = random.Random()
-    src_model_rnd.seed(src_model_seed)
-    gmpe_rnd = random.Random()
-    gmpe_rnd.seed(gmpe_seed)
-
-    store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
-                       a_job.params, lt_proc)
-    store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
+    return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
+                                 if silence else None)
 
 
 def timeit(method):
@@ -324,27 +246,6 @@ def timeit(method):
     except ImportError:
         pass
     return _timed
-
-
-def skipit(method):
-    """Decorator for skipping tests"""
-    try:
-        import nose
-        from nose.plugins.skip import SkipTest
-    except ImportError:
-
-        def skip_me(*_args, **_kw):
-            """The skipped method"""
-            print "Can't raise nose SkipTest error, silently skipping %r" % (
-                method.__name__)
-        return skip_me
-
-    def skipme(*_args, **_kw):
-        """The skipped method"""
-        print "Raising a nose SkipTest error"
-        raise SkipTest("skipping method %r" % method.__name__)
-
-    return nose.tools.make_decorator(method)(skipme)
 
 
 def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
@@ -431,24 +332,6 @@ def assertModelAlmostEqual(test_case, expected, actual):
         else:
             test_case.assertEqual(exp_val, act_val)
 
-
-def wait_for_celery_tasks(celery_results,
-                          max_wait_loops=MAX_WAIT_LOOPS,
-                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
-    """celery_results is a list of celery task result objects.
-    This function waits until all tasks have finished.
-    """
-
-    # if a celery task has not yet finished, wait for a second
-    # then check again
-    counter = 0
-    while (False in [result.ready() for result in celery_results]):
-        counter += 1
-
-        if counter > max_wait_loops:
-            raise RuntimeError("wait too long for celery worker threads")
-
-        time.sleep(wait_time)
 
 # preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
 # otherwise we could just use __stdout__/__stderr__)
@@ -611,14 +494,11 @@ class DbTestCase(object):
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job, force_inputs, save2db=True):
+    def setup_job_profile(cls, job, save2db=True):
         """Create a profile for the given job.
 
         :param job: The :class:`openquake.engine.db.models.OqJob`
             instance to use.
-        :param bool force_inputs: If `True` the model input files will be
-            parsed and the resulting content written to the database no matter
-            what.
         :param bool save2db: If `False` the job profile instance will be
             returned but not saved to the database. Otherwise it is saved to
             the database and returned then.
@@ -626,7 +506,6 @@ class DbTestCase(object):
         """
         oqjp = models.OqJobProfile()
         oqjp.owner = job.owner
-        oqjp.force_inputs = force_inputs
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
         oqjp.region_grid_spacing = 0.01
@@ -684,24 +563,20 @@ class DbTestCase(object):
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, inputs=None,
-                          force_inputs=False, omit_profile=False,
-                          user_name="openquake"):
+                          omit_profile=False, user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
-        :param bool force_inputs: If `True` the model input files will be
-            parsed and the resulting content written to the database no matter
-            what.
         :param bool omit_profile: If `True` no job profile will be created.
         :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         job = engine.prepare_job(user_name)
         if not omit_profile:
-            oqjp = cls.setup_job_profile(job, force_inputs)
+            oqjp = cls.setup_job_profile(job)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
 
         # Insert input model files
@@ -741,13 +616,6 @@ class DbTestCase(object):
         except ValueError:
             # no job profile for this job
             pass
-
-    def generate_output_path(self, job, output_type="hazard_map"):
-        """Return a random output path for the given job."""
-        path = touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
-        return path
 
     def teardown_output(self, output, teardown_job=True, filesystem_only=True):
         """
@@ -946,9 +814,9 @@ def get_hazard_job(cfg, username=None):
     """
     username = username if username is not None else default_user().user_name
 
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
-    haz_calc = engine2.create_hazard_calculation(
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+    haz_calc = engine.create_hazard_calculation(
         job.owner, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
@@ -956,7 +824,35 @@ def get_hazard_job(cfg, username=None):
     return job
 
 
-def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
+def get_risk_job(cfg, username=None, hazard_calculation_id=None,
+                 hazard_output_id=None):
+    """
+    """
+    username = username if username is not None else default_user().user_name
+
+    # You can't specify both a hazard output and hazard calculation
+    # Pick one
+    assert not (hazard_calculation_id is not None
+                and hazard_output_id is not None)
+
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(cfg, 'r'))
+
+    params.update(
+        dict(hazard_output_id=hazard_output_id,
+             hazard_calculation_id=hazard_calculation_id)
+    )
+
+    risk_calc = engine.create_risk_calculation(
+        job.owner, params, files.values())
+    risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
+    job.risk_calculation = risk_calc
+    job.save()
+    return job
+
+
+def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
+                      username=None):
     """
     Takes in input the paths to a risk job config file and a hazard job config
     file.
@@ -1009,34 +905,35 @@ def get_risk_job(risk_cfg, hazard_cfg, output_type="curve", username=None):
         hazard_output = models.GmfCollection.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test Hazard output", "gmf"),
-            lt_realization=rlz,
-            complete_logic_tree_gmf=False)
+            lt_realization=rlz)
 
-        gmf_set = models.GmfSet.objects.create(
+        # creating GmfSet objects as they are needed to compute aggregate
+        # results (e.g. Event Loss table, AggregateLossCurve); see
+        # risk/event_based/core.py:EventBasedRiskCalculator.post_process, line
+        # gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
+        models.GmfSet.objects.create(
             gmf_collection=hazard_output,
             investigation_time=hc.investigation_time,
-            ses_ordinal=1,
-            complete_logic_tree_gmf=False)
+            ses_ordinal=1)
 
         for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                       "POINT(15.48 38.091)", "POINT(15.565 38.17)",
                       "POINT(15.481 38.25)"]:
-            models.Gmf.objects.create(
-                gmf_set=gmf_set,
-                imt="PGA", gmvs=[0.1, 0.2, 0.3],
+            models.GmfAgg.objects.create(
+                gmf_collection=hazard_output,
+                imt="PGA",
+                gmvs=[0.1, 0.2, 0.3],
                 rupture_ids=rupture_ids,
-                result_grp_ordinal=1,
                 location=point)
 
     hazard_job.status = "complete"
     hazard_job.save()
-    job = engine2.prepare_job(username)
-    params, files = engine2.parse_config(
-        open(risk_cfg, 'r'), force_inputs=True)
+    job = engine.prepare_job(username)
+    params, files = engine.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
-    risk_calc = engine2.create_risk_calculation(
+    risk_calc = engine.create_risk_calculation(
         job.owner, params, files.values())
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
@@ -1065,8 +962,7 @@ def get_rupture_ids(job, hc, lt_realization, num):
                 job, "Test SES Collection", "ses"),
             lt_realization=lt_realization),
         investigation_time=hc.investigation_time,
-        ordinal=1,
-        complete_logic_tree_ses=False)
+        ordinal=1)
 
     return [
         models.SESRupture.objects.create(

@@ -13,24 +13,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import getpass
 import itertools
 import string
 import unittest
+import mock
 
 import numpy
 
 from nose.plugins.attrib import attr
 
 from openquake.engine import engine
-from openquake.engine import engine2
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
-from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
 
 
 class Profile4JobTestCase(helpers.DbTestCase):
@@ -141,9 +139,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -155,9 +153,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine2.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(owner, params, files.values())
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
@@ -178,7 +176,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual([], list(models.inputs4rcalc(-1)))
 
     def test_a_few_inputs(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
@@ -192,7 +190,7 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
     def test_with_input_type(self):
-        job, files = helpers.get_risk_job(
+        job, files = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
@@ -392,8 +390,8 @@ class SESRuptureTestCase(unittest.TestCase):
             id=self.source_rupture.id)
         self.assertEqual((1, 2, 0.1), source_rupture.top_left_corner)
         self.assertEqual((3, 4, 0.2), source_rupture.top_right_corner)
-        self.assertEqual((5, 6, 0.3), source_rupture.bottom_right_corner)
-        self.assertEqual((7, 8, 0.4), source_rupture.bottom_left_corner)
+        self.assertEqual((5, 6, 0.3), source_rupture.bottom_left_corner)
+        self.assertEqual((7, 8, 0.4), source_rupture.bottom_right_corner)
 
     def test__validate_planar_surface(self):
         source_rupture = models.SESRupture.objects.get(
@@ -438,157 +436,17 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual(None, sa_damping)
 
 
-class FakeGmfSet(object):
-
-    def __init__(self, complete_logic_tree_gmf, ses_ordinal,
-                 investigation_time, gmfs):
-        self.complete_logic_tree_gmf = complete_logic_tree_gmf
-        self.ses_ordinal = ses_ordinal
-        self.investigation_time = investigation_time
-        self.gmfs = gmfs
-
-    def __iter__(self):
-        return iter(self.gmfs)
-
-
+# This class is intentionally left empty, since
+# at the present all the features of GmfSet.iter_gmvs
+# are exercised and covered in EventBasedExportTestCase.
+# In the future GmfSet will likely change (we want a
+# more efficient way to import/export large numbers of GMFs)
+# and we may want to add more specific tests here; in particular
+# we will need three tests complete_logic_tree_gmf_iter,
+# gmf_by_location_iter and no_filtering_gmf_iter.
+# NB: GmfSet.iter_gmvs is also tested in pg_importer_test.py
 class GmfSetIterTestCase(unittest.TestCase):
-    """
-    Tests for the `__iter__` and `iter_gmfs` of
-    :class:`openquake.engine.db.models.GmfSet`.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        # Run a very small job to produce some sample GMF results,
-        # which we can use for both test cases (gmf_set iter and complete logic
-        # tree iter).
-        cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
-        helpers.run_hazard_job_sp(cfg, silence=True)
-
-    def _expected_gmf_sets(self):
-        td = gmf_set_iter_test_data
-
-        exp_gmf_sets = [
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_0),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_1),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_2),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_3),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_4),
-            FakeGmfSet(complete_logic_tree_gmf=False, ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_5),
-        ]
-        return exp_gmf_sets
-
-
-    @attr('slow')
-    def test_complete_logic_tree_gmf_iter(self):
-        job = models.OqJob.objects.latest('id')
-        # Test data:
-        td = gmf_set_iter_test_data
-
-        exp_gmfs = itertools.chain(
-            td.GMFS_GMF_SET_0, td.GMFS_GMF_SET_1, td.GMFS_GMF_SET_2,
-            td.GMFS_GMF_SET_3, td.GMFS_GMF_SET_4, td.GMFS_GMF_SET_5)
-        exp_gmf_set = FakeGmfSet(complete_logic_tree_gmf=True,
-                                 ses_ordinal=None,
-                                 investigation_time=60.0,
-                                 gmfs=exp_gmfs)
-
-        [act_gmf_set] = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=True)\
-            .order_by('id')
-
-        self.assertEqual(len(list(exp_gmf_set)), len(list(act_gmf_set)))
-
-        self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                         act_gmf_set.complete_logic_tree_gmf)
-        self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-        self.assertEqual(exp_gmf_set.investigation_time,
-                         act_gmf_set.investigation_time)
-
-        for i, exp_gmf in enumerate(exp_gmf_set):
-            act_gmf = list(act_gmf_set)[i]
-
-            equal, error = helpers.deep_eq(exp_gmf, act_gmf)
-
-            self.assertTrue(equal, error)
-
-    @attr('slow')
-    def test_iter(self):
-        exp_gmf_sets = self._expected_gmf_sets()
-
-        job = models.OqJob.objects.latest('id')
-
-        gmf_sets = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=False)\
-            .order_by('gmf_collection', 'ses_ordinal')
-
-        for i, exp_gmf_set in enumerate(exp_gmf_sets):
-            act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                             act_gmf_set.complete_logic_tree_gmf)
-            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-            self.assertEqual(exp_gmf_set.investigation_time,
-                             act_gmf_set.investigation_time)
-
-            for j, exp_gmf in enumerate(exp_gmf_set):
-                act_gmf = list(act_gmf_set)[j]
-
-                equal, error = helpers.deep_eq(
-                    exp_gmf, act_gmf, exclude=["rupture_id"])
-                self.assertTrue(equal, error)
-
-    @attr('slow')
-    def test_iter_gmfs_by_location(self):
-        search_loc = 'POINT(0.0 0.5)'
-        exp_gmf_sets = self._expected_gmf_sets()
-
-        job = models.OqJob.objects.latest('id')
-
-        gmf_sets = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=False)\
-            .order_by('gmf_collection', 'ses_ordinal')
-
-        for i, exp_gmf_set in enumerate(exp_gmf_sets):
-            act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.complete_logic_tree_gmf,
-                             act_gmf_set.complete_logic_tree_gmf)
-            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-            self.assertEqual(exp_gmf_set.investigation_time,
-                             act_gmf_set.investigation_time)
-
-            for j, exp_gmf in enumerate(exp_gmf_set):
-                act_gmf = list(act_gmf_set.iter_gmfs(location=search_loc))[j]
-                act_gmf = list(act_gmf)
-
-                # filter the expected data set by location
-                # and compare to actuals
-                filtered_gmf = [node for node in exp_gmf
-                                if node.location.y == 0.5]
-
-                # Check that they have the same number of nodes. If not, the
-                # location filtering didn't work:
-                self.assertEqual(len(filtered_gmf), len(act_gmf))
-
-                for k, exp_node in enumerate(filtered_gmf):
-                    act_node = act_gmf[k]
-
-                    equal, error = helpers.deep_eq(exp_node, act_node)
-                    self.assertTrue(equal, error)
+    pass
 
 
 class PrepGeometryTestCase(unittest.TestCase):
@@ -661,3 +519,38 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+
+class LossFractionTestCase(unittest.TestCase):
+    def test_display_taxonomy_value(self):
+        lf = models.LossFraction(variable="taxonomy")
+        rc = mock.Mock()
+
+        self.assertEqual("RC", lf.display_value("RC", rc))
+
+    def test_display_magnitude_distance_value(self):
+        rc = mock.Mock()
+        rc.mag_bin_width = 2
+        rc.distance_bin_width = 10
+
+        lf = models.LossFraction(variable="magnitude_distance")
+
+        self.assertEqual("12.0000,14.0000|300.0000,310.0000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("14.0000,16.0000|210.0000,220.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,2.0000|0.0000,10.0000",
+                         lf.display_value("0, 0", rc))
+
+    def test_display_coordinate_value(self):
+        rc = mock.Mock()
+        rc.coordinate_bin_width = 0.5
+
+        lf = models.LossFraction(variable="coordinate")
+
+        self.assertEqual("3.0000,3.5000|15.0000,15.5000",
+                         lf.display_value("6, 30", rc))
+        self.assertEqual("3.5000,4.0000|10.5000,11.0000",
+                         lf.display_value("7, 21", rc))
+        self.assertEqual("0.0000,0.5000|0.0000,0.5000",
+                         lf.display_value("0.0, 0.0", rc))

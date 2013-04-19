@@ -37,7 +37,8 @@ class EventBasedHazardCase1TestCase(qa_utils.BaseQATestCase):
 
             # Test the poe values of the single curve:
             [actual_curve] = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id)
+                hazard_curve__output__oq_job=job.id,
+                hazard_curve__imt__isnull=False)
 
             numpy.testing.assert_array_almost_equal(
                 expected_curve_poes, actual_curve.poes, decimal=2)

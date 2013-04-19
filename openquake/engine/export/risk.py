@@ -27,7 +27,8 @@ from openquake.nrmllib.risk import writers
 
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
-LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s-poe-%(poe)s.xml'
+LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.xml'
+LOSS_FRACTION_FILENAME_FMT = 'loss-fractions-%(loss_fraction_id)s.xml'
 AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
 EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
@@ -78,7 +79,7 @@ def _export_common(output):
                 unit=unit)
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_agg_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
@@ -93,7 +94,7 @@ def export_agg_loss_curve_xml(output, target_dir):
 export_agg_loss_curve = export_agg_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
@@ -112,7 +113,7 @@ def export_loss_curve_xml(output, target_dir):
 export_loss_curve = export_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_map_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss map
@@ -120,12 +121,12 @@ def export_loss_map_xml(output, target_dir):
     """
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output)
-    args.update(
-        dict(path=os.path.join(target_dir, LOSS_MAP_FILENAME_FMT % {
-            'loss_map_id': output.loss_map.id,
-            'poe': output.loss_map.poe}),
-            poe=output.loss_map.poe,
-            loss_category=risk_calculation.exposure_model.category))
+    args.update(dict(
+        path=os.path.join(
+            target_dir,
+            LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id}),
+        poe=output.loss_map.poe,
+        loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
     return args['path']
@@ -133,7 +134,38 @@ def export_loss_map_xml(output, target_dir):
 export_loss_map = export_loss_map_xml
 
 
-@core.makedirs
+@core.makedirsdeco
+def export_loss_fraction_xml(output, target_dir):
+    """
+    Export `output` to `target_dir` by using a nrml loss fractions
+    serializer
+    """
+    risk_calculation = output.oq_job.risk_calculation
+    args = _export_common(output)
+    hazard_metadata = models.Output.HazardMetadata(
+        investigation_time=args['investigation_time'],
+        statistics=args['statistics'],
+        quantile=args.get('quantile'),
+        sm_path=args['source_model_tree_path'],
+        gsim_path=args['gsim_tree_path'])
+    path = os.path.join(
+        target_dir,
+        LOSS_FRACTION_FILENAME_FMT % {
+            'loss_fraction_id': output.loss_fraction.id})
+    poe = output.loss_fraction.poe
+    variable = output.loss_fraction.variable
+    loss_category = risk_calculation.exposure_model.category
+
+    writers.LossFractionsWriter(
+        path, variable, args['unit'],
+        loss_category, hazard_metadata, poe).serialize(
+            output.loss_fraction.total_fractions(), output.loss_fraction)
+    return path
+
+export_loss_fraction = export_loss_fraction_xml
+
+
+@core.makedirsdeco
 def export_bcr_distribution_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml bcr distribution
@@ -159,7 +191,7 @@ export_bcr_distribution = export_bcr_distribution_xml
 
 def make_dmg_dist_export(damagecls, writercls, filename):
     # XXX: clearly this is not a good approach for large exposures
-    @core.makedirs
+    @core.makedirsdeco
     def export_dmg_dist(output, target_dir):
         """
         Export the damage distribution identified
