@@ -557,37 +557,29 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         source_paths = logictree.read_logic_trees(
             self.hc.base_path, smlt.path, gsimlt.path)
 
-        src_inputs = []
         for src_path in source_paths:
             full_path = os.path.join(self.hc.base_path, src_path)
 
-            # Get or reuse the 'source' Input:
+            # Get the 'source' Input:
             inp = engine.get_input(full_path, 'source', self.hc.owner)
-            src_inputs.append(inp)
 
             # Associate the source input to the calculation:
             models.Input2hcalc.objects.get_or_create(
                 input=inp, hazard_calculation=self.hc)
 
-            # Associate the source input to the source model logic tree input:
-            try:
-                models.Src2ltsrc.objects.get(lt_src=smlt, filename=src_path)
-            except ObjectDoesNotExist:
-                # If it doesn't exist, this is a new input and we're not
-                # reusing an old one which is identical.
-                # Only in this case do we parse the sources and populate
-                # `hzrdi.parsed_source`.
-                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                                filename=src_path)
-                src_content = StringIO.StringIO(
-                    inp.model_content.raw_content_ascii)
-                sm_parser = nrml_parsers.SourceModelParser(src_content)
-                src_db_writer = source.SourceDBWriter(
-                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization
-                )
-                src_db_writer.serialize()
+            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                            filename=src_path)
+            src_content = StringIO.StringIO(
+                inp.model_content.raw_content_ascii)
+            sm_parser = nrml_parsers.SourceModelParser(src_content)
+
+            # Covert
+            src_db_writer = source.SourceDBWriter(
+                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization
+            )
+            src_db_writer.serialize()
 
     def parse_risk_models(self):
         """
