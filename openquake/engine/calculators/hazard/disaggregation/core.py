@@ -136,6 +136,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         hazardlib_imt = haz_general.imt_to_hazardlib(imt)
         hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
+        imls = numpy.array(imls[::-1])
+
         # loop over sites
         for site in sites:
             # get curve for this point/IMT/realization
@@ -312,11 +314,17 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     def pre_execute(self):
         """
-        Do pre-execution work. At the moment, this work entails: parsing and
-        initializing sources, parsing and initializing the site model (if there
-        is one), and generating logic tree realizations. (The latter piece
-        basically defines the work to be done in the `execute` phase.)
+        Do pre-execution work. At the moment, this work entails:
+        parsing and initializing sources, parsing and initializing the
+        site model (if there is one), parsing vulnerability and
+        exposure files, and generating logic tree realizations. (The
+        latter piece basically defines the work to be done in the
+        `execute` phase.)
         """
+
+        # Parse risk models.
+        self.parse_risk_models()
+
         # Parse logic trees and create source Inputs.
         self.initialize_sources()
 

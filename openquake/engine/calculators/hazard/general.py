@@ -31,66 +31,41 @@ import numpy
 from django.db import transaction, connections
 from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist
-
-from openquake.hazardlib import geo as hazardlib_geo
-from openquake.hazardlib import correlation
-from openquake.nrmllib import parsers as nrml_parsers
 from shapely import geometry
 
-from openquake.engine import engine2
-from openquake.engine import kvs
+from openquake.hazardlib import correlation
+from openquake.hazardlib import geo as hazardlib_geo
+from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib.risk import parsers
+
+from openquake.engine.input import exposure
+from openquake.engine import engine
+from openquake.engine import logs
 from openquake.engine import writer
+from openquake.engine.calculators import base
+from openquake.engine.calculators.post_processing import mean_curve
+from openquake.engine.calculators.post_processing import quantile_curve
+from openquake.engine.calculators.post_processing import (
+    weighted_quantile_curve
+)
+from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
-from openquake.engine.calculators import base
-from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.input import source
-from openquake.engine.job.validation import MAX_SINT_32
-from openquake.engine.job.validation import MIN_SINT_32
-from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.engine.utils import stats
+from openquake.engine.utils.general import block_splitter
 
+
+#: Maximum number of hazard curves to cache, for selects or inserts
+CURVE_CACHE_SIZE = 100000
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-
-def store_source_model(job_id, seed, params, calc):
-    """Generate source model from the source model logic tree and store it in
-    the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param dict params: the config parameters as (dict)
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing source model from job config")
-    key = kvs.tokens.source_model_key(job_id)
-    mfd_bin_width = float(params.get('WIDTH_OF_MFD_BIN'))
-    calc.sample_and_save_source_model_logictree(
-        kvs.get_client(), key, seed, mfd_bin_width)
-
-
-def store_gmpe_map(job_id, seed, calc):
-    """Generate a hash map of GMPEs (keyed by Tectonic Region Type) and store
-    it in the KVS.
-
-    :param int job_id: numeric ID of the job
-    :param int seed: seed for random logic tree sampling
-    :param calc: logic tree processor
-    :type calc: :class:`openquake.engine.input.logictree.LogicTreeProcessor`
-        instance
-    """
-    logs.LOG.info("Storing GMPE map from job config")
-    key = kvs.tokens.gmpe_key(job_id)
-    calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
 
 
 @transaction.commit_on_success(using='job_init')
@@ -476,6 +451,17 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
+    def task_arg_gen(self, block_size):
+        """
+        Generator function for creating the arguments for each task.
+
+        Subclasses must implement this.
+
+        :param int block_size:
+            The number of work items per task (sources, sites, etc.).
+        """
+        raise NotImplementedError
+
     def finalize_hazard_curves(self):
         """
         Create the final output records for hazard curves. This is done by
@@ -496,6 +482,16 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             hazard_calculation=self.hc.id)
 
         for rlz in realizations:
+            # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi"),
+                lt_realization=rlz,
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
@@ -566,8 +562,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get or reuse the 'source' Input:
-            inp = engine2.get_input(
-                full_path, 'source', self.hc.owner, self.hc.force_inputs)
+            inp = engine.get_input(full_path, 'source', self.hc.owner)
             src_inputs.append(inp)
 
             # Associate the source input to the calculation:
@@ -593,6 +588,60 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     self.hc.area_source_discretization
                 )
                 src_db_writer.serialize()
+
+    def parse_risk_models(self):
+        """
+        If any risk model is given in the hazard calculation, the
+        computation will be driven by risk data. In this case the
+        locations will be extracted from the exposure file (if there
+        is one) and the imt (and levels) will be extracted from the
+        vulnerability model (if there is one)
+        """
+
+        queryset = self.hc.inputs.filter(input_type='vulnerability')
+        if queryset.exists():
+            content = StringIO.StringIO(
+                queryset.all()[0].model_content.raw_content_ascii)
+            hc = self.hc
+            hc.intensity_measure_types_and_levels = dict([
+                (record['IMT'], record['IML'])
+                for record in parsers.VulnerabilityModelParser(content)])
+            hc.intensity_measure_types = list(set([
+                record['IMT']
+                for record in parsers.VulnerabilityModelParser(content)]))
+            hc.save()
+
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            parser = iter(parsers.FragilityModelParser(
+                StringIO.StringIO(
+                    queryset.all()[0].model_content.raw_content_ascii)))
+            hc = self.hc
+
+            fragility_format, _limit_states = parser.next()
+
+            if (fragility_format == "continuous" and
+                hc.calculation_mode != "scenario"):
+                raise NotImplementedError(
+                    "Getting IMT and levels from "
+                    "a continuous fragility model is not yet supported")
+
+            hc.intensity_measure_types_and_levels = dict([
+                (iml['IMT'], iml['imls'])
+                for _taxonomy, iml, _params, _no_damage_limit in parser])
+            hc.intensity_measure_types = (
+                hc.intensity_measure_types_and_levels.keys())
+            hc.save()
+
+        queryset = self.hc.inputs.filter(input_type='exposure')
+        if queryset.exists():
+            exposure_model_input = queryset.all()[0]
+            content = StringIO.StringIO(
+                exposure_model_input.model_content.raw_content_ascii)
+            with logs.tracing('storing exposure'):
+                exposure.ExposureDBWriter(
+                    exposure_model_input).serialize(
+                        parsers.ExposureModelParser(content))
 
     def initialize_site_model(self):
         """
@@ -693,7 +742,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id, input_type='source_model_logic_tree')
+        [smlt] = models.inputs4hcalc(hc.id,
+                                     input_type='source_model_logic_tree')
         ltp = logictree.LogicTreeProcessor(hc.id)
         hzrd_src_cache = {}
 
@@ -743,7 +793,8 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(self.hc.id, input_type='source_model_logic_tree')
+        [smlt] = models.inputs4hcalc(self.hc.id,
+                                     input_type='source_model_logic_tree')
 
         ltp = logictree.LogicTreeProcessor(self.hc.id)
 
@@ -753,11 +804,11 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
             sm_name, sm_lt_path = ltp.sample_source_model_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
-                rnd.randint(MIN_SINT_32, MAX_SINT_32))
+                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
             lt_rlz = models.LtRealization(
                 hazard_calculation=self.hc,
@@ -790,7 +841,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
                     cb(lt_rlz)
 
             # update the seed for the next realization
-            seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
+            seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
     @staticmethod
@@ -869,6 +920,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         if 'exports' in kwargs and 'xml' in kwargs['exports']:
             outputs = export_core.get_outputs(self.job.id)
 
+            if not self.hc.export_multi_curves:
+                outputs = outputs.exclude(output_type='hazard_curve_multi')
+
             for output in outputs:
                 exported_files.extend(hazard_export.export(
                     output.id, self.job.hazard_calculation.export_dir))
@@ -910,3 +964,140 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         job_stats.num_tasks = num_tasks
         job_stats.num_realizations = num_rlzs
         job_stats.save()
+
+    def do_aggregate_post_proc(self):
+        """
+        Grab hazard data for all realizations and sites from the database and
+        compute mean and/or quantile aggregates (depending on which options are
+        enabled in the calculation).
+
+        Post-processing results will be stored directly into the database.
+        """
+        num_rlzs = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc).count()
+
+        num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
+        if num_site_blocks_per_incr == 0:
+            # This means we have `num_rlzs` >= `CURVE_CACHE_SIZE`.
+            # The minimum number of sites should be 1.
+            num_site_blocks_per_incr = 1
+        slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
+
+        if self.hc.mean_hazard_curves:
+            # create a new `HazardCurve` 'container' record for mean
+            # curves (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "mean-curves-multi-imt",
+                    "hazard_curve_multi"),
+                statistics="mean",
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
+        if self.hc.quantile_hazard_curves:
+            for quantile in self.hc.quantile_hazard_curves:
+                # create a new `HazardCurve` 'container' record for quantile
+                # curves (virtual container for multiple imts)
+                models.HazardCurve.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, 'quantile(%s)-curves' % quantile,
+                        "hazard_curve_multi"),
+                    statistics="quantile",
+                    imt=None,
+                    quantile=quantile,
+                    investigation_time=self.hc.investigation_time)
+
+        for imt, imls in self.hc.intensity_measure_types_and_levels.items():
+            im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+            # prepare `output` and `hazard_curve` containers in the DB:
+            container_ids = dict()
+            if self.hc.mean_hazard_curves:
+                mean_output = models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='mean-curves-%s' % imt,
+                    output_type='hazard_curve'
+                )
+                mean_hc = models.HazardCurve.objects.create(
+                    output=mean_output,
+                    investigation_time=self.hc.investigation_time,
+                    imt=im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    statistics='mean'
+                )
+                container_ids['mean'] = mean_hc.id
+
+            if self.hc.quantile_hazard_curves:
+                for quantile in self.hc.quantile_hazard_curves:
+                    q_output = models.Output.objects.create_output(
+                        job=self.job,
+                        display_name=(
+                            'quantile(%s)-curves-%s' % (quantile, imt)
+                        ),
+                        output_type='hazard_curve'
+                    )
+                    q_hc = models.HazardCurve.objects.create(
+                        output=q_output,
+                        investigation_time=self.hc.investigation_time,
+                        imt=im_type,
+                        imls=imls,
+                        sa_period=sa_period,
+                        sa_damping=sa_damping,
+                        statistics='quantile',
+                        quantile=quantile
+                    )
+                    container_ids['q%s' % quantile] = q_hc.id
+
+            all_curves_for_imt = models.order_by_location(
+                models.HazardCurveData.objects.all_curves_for_imt(
+                    self.job.id, im_type, sa_period, sa_damping))
+
+            with transaction.commit_on_success(using='reslt_writer'):
+                inserter = writer.BulkInserter(
+                    models.HazardCurveData, max_cache_size=CURVE_CACHE_SIZE
+                )
+
+                for chunk in models.queryset_iter(all_curves_for_imt,
+                                                  slice_incr):
+                    # slice each chunk by `num_rlzs` into `site_chunk`
+                    # and compute the aggregate
+                    for site_chunk in block_splitter(chunk, num_rlzs):
+                        site = site_chunk[0].location
+                        curves_poes = [x.poes for x in site_chunk]
+                        curves_weights = [x.weight for x in site_chunk]
+
+                        # do means and quantiles
+                        # quantiles first:
+                        if self.hc.quantile_hazard_curves:
+                            for quantile in self.hc.quantile_hazard_curves:
+                                if self.hc.number_of_logic_tree_samples == 0:
+                                    # explicitly weighted quantiles
+                                    q_curve = weighted_quantile_curve(
+                                        curves_poes, curves_weights, quantile
+                                    )
+                                else:
+                                    # implicitly weighted quantiles
+                                    q_curve = quantile_curve(
+                                        curves_poes, quantile
+                                    )
+                                inserter.add_entry(
+                                    hazard_curve_id=(
+                                        container_ids['q%s' % quantile]
+                                    ),
+                                    poes=q_curve.tolist(),
+                                    location=site.wkt
+                                )
+
+                        # then means
+                        if self.hc.mean_hazard_curves:
+                            m_curve = mean_curve(
+                                curves_poes, weights=curves_weights
+                            )
+                            inserter.add_entry(
+                                hazard_curve_id=container_ids['mean'],
+                                poes=m_curve.tolist(),
+                                location=site.wkt
+                            )
+                inserter.flush()

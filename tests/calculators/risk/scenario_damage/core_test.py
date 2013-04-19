@@ -9,9 +9,8 @@ from openquake.engine.calculators.risk.scenario_damage.core import \
 FRAGILITY_FILE = StringIO('''<?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-    <fragilityModel format="continuous" imlUnit="m" minIML="0.1" maxIML="9.9">
+    <fragilityModel format="continuous">
         <description>Fragility model for Pavia (continuous)</description>
-        <IML IMT="PGA"/>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
             slight
@@ -23,6 +22,7 @@ FRAGILITY_FILE = StringIO('''<?xml version='1.0' encoding='utf-8'?>
         <!-- fragility function set, each with its own, distinct taxonomy -->
         <ffs noDamageLimit="0.05" type="lognormal">
             <taxonomy>RC/DMRF-D/LR</taxonomy>
+            <IML IMT="PGA" minIML="0.1" maxIML="9.9" imlUnit="m"/>
 
             <!-- fragility function in continuous format, 1 per limit state -->
             <ffc ls="slight">
@@ -80,4 +80,4 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
                 self.calculator.set_risk_models()
         self.assertEqual(str(cm.exception),
                          'The following taxonomies are in the exposure '
-                         "model but not in the fragility model: ['RC']")
+                         "model but not in the risk model: ['RC']")

@@ -22,12 +22,8 @@ HSD
 exit 0
 }
 
-if [ $# -eq 0 ]; then
-    help
-fi
-
 # Openquake version
-oq_version=`python -c "import openquake.engine; print '.'.join(str(x) for x in openquake.engine.__version__[:-1])"`
+oq_version=`python -c "import openquake.engine; print openquake.engine.__version__"`
 
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
@@ -38,8 +34,8 @@ tspace_path='/var/lib/postgresql/9.1/main/ts'
 tspace_list="admin eqcat hzrdi hzrdr oqmif riski riskr uiapi htemp"
 
 db_port=5432
-schema_path=""
-db_name=""
+schema_path=`dirname $0`/../openquake/engine/db/schema
+db_name=`python -c "from openquake.engine.settings import DATABASES; print DATABASES['default']['NAME']"`
 user_interaction="on"
 check_table_spaces="on"
 table_spaces_only="off"
@@ -59,11 +55,8 @@ fi
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 
-# What OpenQuake db users should be created? The construct below is the bash
-# way to assign a heredoc value to a variable BTW.
+# What OpenQuake db users should be created?
 read -r -d '' db_roles <<'EOF'
-opengeo_reader
-opengeo_writer
 oq_admin
 oq_eqcat_reader
 oq_eqcat_writer
@@ -126,13 +119,9 @@ if [ -z "$db_name" ]; then
     exit 3
 fi
 
-if [ "$(id -u)" != "0" ]; then
+if [ "$(whoami)" != "postgres" ]; then
     echo ""
-    echo "!! This script should be run as root."
-    if [ "$user_interaction" = "on" ]; then
-        echo "!! Press <enter> to continue, or <ctrl>-C to abort"
-        read
-    fi
+    echo "!! This script should be run as postgres."
 fi
 
 
@@ -145,8 +134,8 @@ if [ "$table_spaces_only" == "off" ]; then
 
     if [ "$user_interaction" = "on" ]; then
         # Last chance to abort.
-        echo '!! This will destroy *ALL* data in the OpenQuake database !!'
-        echo 'Press <enter> to continue'
+        echo "!! This will destroy *ALL* data in the OpenQuake database named $db_name !!"
+        echo 'Press <enter> to continue or Ctrl-C to abort'
         read
     fi
 

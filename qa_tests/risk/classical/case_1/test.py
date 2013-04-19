@@ -37,6 +37,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
       <poEs>0.0393347533677 0.039319630829 0.0384540639673 0.0353555683375 0.0310809359515 0.0269219661169 0.0233091854249 0.0202549286473 0.0176926044553 0.0155616221765 0.0138044829893 0.0111599850445 0.00927277820929 0.00780386210329 0.00660104748954 0.00562104810103 0.00426294495221 0.00347810187546 0.00291642896185 0.00237546166034 0.00185477228722 0.00113319071162 0.000862358303707 0.000784269030445 0.000660062215756 0.000374938542786 0.000230249004394 0.000122823654476 5.72790058706e-05 2.35807221323e-05 8.66392324538e-06</poEs>
       <losses>0.0 0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2 0.24 0.28 0.32 0.36 0.4 0.48 0.56 0.64 0.72 0.8 0.96 1.12 1.28 1.44 1.6 1.68 1.76 1.84 1.92 2.0</losses>
       <lossRatios>0.0 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.12 0.14 0.16 0.18 0.2 0.24 0.28 0.32 0.36 0.4 0.48 0.56 0.64 0.72 0.8 0.84 0.88 0.92 0.96 1.0</lossRatios>
+      <averageLoss>9.3929e-03</averageLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -119,12 +120,11 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job).order_by(
-                            'asset_ref')] +
+                    loss_curve__output__oq_job=job).order_by('asset_ref')] +
                 [point.value
                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job).order_by(
-                            'asset_ref', 'loss_map__poe')])
+                    loss_map__output__oq_job=job).order_by(
+                        'asset_ref', 'loss_map__poe')])
 
     def expected_data(self):
         return [[

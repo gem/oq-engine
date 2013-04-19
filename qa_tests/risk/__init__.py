@@ -55,11 +55,9 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        job_status = helpers.run_risk_job_sp(cfg, hazard_id, silence=True)
-        self.assertEqual(0, job_status)
-
-        completed_job = models.OqJob.objects.latest('last_update')
+        completed_job = helpers.run_risk_job(cfg, hazard_output_id=hazard_id)
         self.assertEqual('complete', completed_job.status)
+
         return completed_job
 
     def _run_test(self):
@@ -80,6 +78,11 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
+
+                    msg = "not enough outputs (expected=%d, got=%s)" % (
+                        len(expected_outputs), self.actual_xml_outputs(job))
+                    assert i < len(expected_outputs), msg
+
                     self.assert_xml_equal(
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
@@ -110,3 +113,29 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         data stored on the database
         """
         return []
+
+
+class End2EndRiskQATestCase(BaseRiskQATestCase):
+    def _run_test(self):
+        result_dir = tempfile.mkdtemp()
+
+        try:
+            expected_data = self.expected_data()
+            self.run_hazard(self.hazard_cfg)
+            job = self.run_risk(self.risk_cfg, self.hazard_id())
+
+            actual_data = self.actual_data(job)
+
+            for i, actual in enumerate(actual_data):
+                numpy.testing.assert_allclose(
+                    expected_data[i], actual,
+                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
+
+            if hasattr(self, 'expected_outputs'):
+                expected_outputs = self.expected_outputs()
+                for i, output in enumerate(self.actual_xml_outputs(job)):
+                    [exported_file] = export.risk.export(output.id, result_dir)
+                    self.assert_xml_equal(
+                        StringIO.StringIO(expected_outputs[i]), exported_file)
+        finally:
+            shutil.rmtree(result_dir)
