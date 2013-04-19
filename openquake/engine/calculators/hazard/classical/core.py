@@ -201,35 +201,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
     core_calc_task = hazard_curves
 
-    def task_arg_gen(self, block_size):
-        """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-
-        Yielded results are triples of (job_id, realization_id,
-        source_id_list).
-
-        :param int block_size:
-            The (max) number of work items for each each task. In this case,
-            sources.
-        """
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False)
-
-        for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-            source_ids = source_progress.values_list('parsed_source_id',
-                                                     flat=True)
-
-            for offset in xrange(0, len(source_ids), block_size):
-                task_args = (
-                    self.job.id,
-                    source_ids[offset:offset + block_size],
-                    lt_rlz.id
-                )
-                yield task_args
-
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails:
