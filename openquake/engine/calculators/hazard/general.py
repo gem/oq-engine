@@ -947,7 +947,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         num_rlzs = realizations.count()
 
         # Compute the number of tasks.
-        block_size = int(config.get('hazard', 'block_size'))
+        block_size = self.block_size()
         num_tasks = 0
         for lt_rlz in realizations:
             # Each realization has the potential to choose a random source
