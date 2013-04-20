@@ -147,15 +147,15 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        # Calculate stochastic event sets:
-        logs.LOG.debug('> computing stochastic event sets')
-
-        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time))
+        with EnginePerformanceMonitor(
+            'computing ses_rlz=%d, lt_rlz=%d' % (
+                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+            ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+                filtered_sources, hc.investigation_time))
         if not ses_poissonian:  # this is very common due to the filtering
             continue
         with EnginePerformanceMonitor(
-            'saving ruptures: ses_rlz=%d, lt_rlz=%d' % (
+            'saving ses_rlz=%d, lt_rlz=%d' % (
                 ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
@@ -163,12 +163,14 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                 for i, rupture in enumerate(ses_poissonian, 1)]
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
-                    'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
+                    'computing gmfs: ses_rlz=%d, lt_rlz=%d' % (
                     ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
                 gmf_cache = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
-
+            with EnginePerformanceMonitor(
+                    'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
+                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
                 # This will be the "container" for all computed GMFs
                 # for this stochastic event set.
                 gmf_set = models.GmfSet.objects.get(
@@ -178,8 +180,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
 
-        logs.LOG.debug('< done computing stochastic event set %s of %s'
-                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
