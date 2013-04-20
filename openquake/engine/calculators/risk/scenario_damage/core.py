@@ -75,9 +75,12 @@ def scenario_damage(job_id, hazard,
             num_items=len(missings), taxonomy=taxonomy)
         return
 
-    fraction_matrix = calculator(ground_motion_values)
+    with EnginePerformanceMonitor('computing', job_id, scenario_damage):
+        fraction_matrix = calculator(ground_motion_values)
+        aggfractions = sum(fraction_matrix[i] * asset.number_of_units
+                           for i, asset in enumerate(assets))
 
-    with logs.tracing('save statistics per site'), \
+    with EnginePerformanceMonitor('saving', job_id, scenario_damage), \
             db.transaction.commit_on_success(using='reslt_writer'):
         rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
         for i, asset in enumerate(assets):
@@ -85,8 +88,6 @@ def scenario_damage(job_id, hazard,
                 fraction_matrix[i] * asset.number_of_units, rc_id, asset)
 
     # send aggregate fractions to the controller, the hook will collect them
-    aggfractions = sum(fraction_matrix[i] * asset.number_of_units
-                       for i, asset in enumerate(assets))
     base.signal_task_complete(job_id=job_id,
                               num_items=len(assets) + len(missings),
                               fractions=aggfractions, taxonomy=taxonomy)
