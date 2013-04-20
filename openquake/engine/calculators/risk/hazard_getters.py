@@ -234,16 +234,7 @@ class GroundMotionValuesGetter(HazardGetter):
         # which they have been generated) for a given logic tree
         # realization and a given imt.
 
-        # We first concatenate ground motion values grouped by
-        # location (so for each location we have all the ground motion
-        # values found in different gmf_sets, collected in a column
-        # called ``allgmvs_arr``).
-
-        # For performance reasons, we help the query by filtering also
-        # on a polygon built by dilating the assets extent of the
-        # maximum distance
-
-        # Then, we perform a spatial join with the exposure table that
+        # To this aim, we perform a spatial join with the exposure table that
         # is previously filtered by the assets extent, exposure model
         # and taxonomy. We are not filtering with an IN statement on
         # the ids of the assets for perfomance reasons.
@@ -254,25 +245,22 @@ class GroundMotionValuesGetter(HazardGetter):
         query = """
   SELECT DISTINCT ON (oqmif.exposure_data.id)
   oqmif.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
-  FROM oqmif.exposure_data JOIN
-  (SELECT * FROM hzrdr.gmf_agg
-  WHERE imt = %s AND gmf_collection_id = %s {} AND location && %s) AS gmf_table
+  FROM oqmif.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-  AND taxonomy = %s AND exposure_model_id = %s
-  AND array_length(gmf_table.gmvs, 1) > 0
+  WHERE taxonomy = %s AND exposure_model_id = %s
+  AND oqmif.exposure_data.site && %s AND imt = %s AND gmf_collection_id = %s {}
   ORDER BY oqmif.exposure_data.id,
            ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance).wkt,
-                 self.max_distance * KILOMETERS_TO_METERS,
-                 assets_extent.wkt,
-                 self.assets[0].taxonomy,
-                 self.assets[0].exposure_model_id)
+        args = (self.max_distance * KILOMETERS_TO_METERS,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id,
+                assets_extent.wkt) + args
 
         cursor.execute(query, args)
+        # print cursor.mogrify(query, args)
 
         data = cursor.fetchall()
 
@@ -314,6 +302,8 @@ class GroundMotionValuesGetter(HazardGetter):
             for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
+# TODO: this calls will disappear soon: see
+# https://bugs.launchpad.net/oq-engine/+bug/1170628
 class GroundMotionScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It uses the same
@@ -335,8 +325,7 @@ class GroundMotionScenarioGetter(HazardGetter):
            AND hzrdr.gmf_scenario.output_id = %s
            AND hzrdr.gmf_scenario.location && %s) gmf_table
   ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-    AND taxonomy = %s AND exposure_model_id = %s
+  WHERE taxonomy = %s AND exposure_model_id = %s
   ORDER BY oqmif.exposure_data.id,
     ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
            """
@@ -349,9 +338,8 @@ class GroundMotionScenarioGetter(HazardGetter):
         args = (imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
                 self.max_distance * KILOMETERS_TO_METERS,
-                assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
-
+        # print cursor.mogrify(query, args)
         return OrderedDict(cursor.fetchall())
