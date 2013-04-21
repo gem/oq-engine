@@ -32,6 +32,7 @@ from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
@@ -111,14 +112,14 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
-    logs.LOG.debug('> computing hazard matrices')
-    matrices = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
-        **calc_kwargs)
-    logs.LOG.debug('< done computing hazard matrices')
+    with EnginePerformanceMonitor(
+            'computing hazard curves', job_id, hazard_curves, tracing=True):
+        matrices = openquake.hazardlib.calc.hazard_curve.\
+            hazard_curves_poissonian(**calc_kwargs)
 
-    logs.LOG.debug('> starting transaction')
-    _update_curves(hc, matrices, lt_rlz, src_ids)
-    logs.LOG.debug('< transaction complete')
+    with EnginePerformanceMonitor(
+            'saving hazard curves', job_id, hazard_curves, tracing=True):
+        _update_curves(hc, matrices, lt_rlz, src_ids)
 
 
 def _update_curves(hc, matrices, lt_rlz, src_ids):

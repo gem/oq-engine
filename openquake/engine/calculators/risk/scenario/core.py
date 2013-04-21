@@ -58,7 +58,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     hazard_getter = hazard.values()[0][0]
 
-    with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
+    with EnginePerformanceMonitor('getting input from db', job_id, scenario):
         assets, ground_motion_values, missings = hazard_getter()
 
     if not len(assets):
@@ -69,7 +69,8 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
                                   num_items=len(missings))
         return
 
-    with logs.tracing('computing risk'):
+    with EnginePerformanceMonitor(
+            'computing risk', job_id, scenario, tracing=True):
         loss_ratio_matrix = calc(ground_motion_values)
 
         if insured_losses:
@@ -88,7 +89,8 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     if insured_losses:
         insured_loss_map_id = output_containers[1]
 
-    with db.transaction.commit_on_success(using='reslt_writer'):
+    with EnginePerformanceMonitor('saving loss map', job_id, scenario), \
+            db.transaction.commit_on_success(using='reslt_writer'):
         for i, asset in enumerate(assets):
             general.write_loss_map_data(
                 loss_map_id, asset,
