@@ -29,6 +29,7 @@ from celery.task import task
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
@@ -181,11 +182,11 @@ def oqtask(task_func):
             # The job is running.
             # ... now continue with task execution.
             task_func(*args, **kwargs)
+            EnginePerformanceMonitor.bulk.flush()  # flush the performance logs
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
             logs.LOG.exception(err)
             raise
-
     celery_queue = config.get('amqp', 'celery_queue')
     return task(wrapped, ignore_result=True, queue=celery_queue)

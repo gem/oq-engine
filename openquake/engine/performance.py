@@ -1,14 +1,86 @@
 import os
 import time
+import atexit
 import threading
 from datetime import datetime
+from cStringIO import StringIO
 import psutil
+
+from django.db import connections
+from django.db import router
+from django.contrib.gis.db.models.fields import GeometryField
 
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
-from django.db import connections
 
 MB = 1024 * 1024  # 1 megabyte
+
+
+# In the future this class may replace openquake.engine.writers.BulkInserter
+# since it is much more efficient (even hundreds of times for bulky updates)
+# being based on COPY FROM. BulkInserter objects are not thread-safe.
+class BulkInserter(object):
+    """
+    Bulk insert bunches of Django objects by converting them in strings
+    and by using COPY FROM.
+    """
+    def __init__(self, max_cache_size):
+        self.max_cache_size = max_cache_size
+        self.values = []
+
+    def save(self, obj):
+        """
+        Append an object to the list of objects to save. If the list exceeds
+        the max_cache_size, flush it on the database.
+        """
+        self.values.append(obj)
+        if len(self.values) >= self.max_cache_size:
+            self.flush()
+
+    def flush(self):
+        """
+        Save the pending objects on the database with a COPY FROM.
+        """
+        if not self.values:
+            return
+
+        # perform some introspection
+        objects, last = self.values[:-1], self.values[-1]
+        alias = router.db_for_write(last.__class__)
+        meta = last.__class__._meta
+        tname = '"%s"' % meta.db_table
+        fields = []
+        for f in meta._field_name_cache[1:]:  # skip the first field, the id
+            col = getattr(last, f.name)
+            fname = f.name + '_id' if hasattr(col, 'id') else f.name
+            fields.append(fname)
+
+        # generate a big string with the objects and save it with COPY FROM
+        text = '\n'.join(self.to_line(obj, fields) for obj in objects)
+        curs = connections[alias].cursor()
+        curs.copy_from(StringIO(text), tname, columns=fields)
+        last.save()  # this "commits" the operation
+
+        logs.LOG.debug('saved %d rows in uiapi.performance', len(self.values))
+        self.values = []
+
+    @staticmethod
+    def to_line(obj, fields):
+        """
+        Convert the fields of a Django object into a line string suitable
+        for import via COPY FROM. The encoding is UTF8.
+        """
+        cols = []
+        for f in fields:
+            col = getattr(obj, f)
+            if col is None:
+                col = '\N'
+            elif isinstance(col, GeometryField):
+                col = col.wkt()
+            else:
+                col = unicode(col).encode('utf8')
+            cols.append(col)
+        return '\t'.join(cols)
 
 
 # I did not make any attempt to make this class thread-safe,
@@ -68,16 +140,18 @@ class PerformanceMonitor(object):
 
     def start(self):
         "Start the monitor thread"
-        self._running = True
         self._start_time = time.time()
         self.start_time = datetime.fromtimestamp(self._start_time)
-        self._monitor = threading.Thread(None, self._run)
-        self._monitor.start()
+        if self._procs:
+            self._running = True
+            self._monitor = threading.Thread(None, self._run)
+            self._monitor.start()
 
     def stop(self):
         "Stop the monitor thread and call on_exit"
-        self._running = False
-        self._monitor.join()
+        if self._procs:
+            self._running = False
+            self._monitor.join()
         self.duration = time.time() - self._start_time
         self.on_exit()
 
@@ -131,11 +205,22 @@ class PerformanceMonitor(object):
 
 class EnginePerformanceMonitor(PerformanceMonitor):
     """
-    PerformanceMonitor specialized for the engine. It takes in input a
+    Performance monitor specialized for the engine. It takes in input a
     string, a job_id, and a celery task; the on_exit method
-    saves in the uiapi.performance table the relevant info.
+    send the relevant info to the uiapi.performance table.
+    For efficiency reasons the saving on the database is delayed and
+    done in chunks of 1,000 rows each. That means that hundreds of
+    concurrents task can log simultaneously on the uiapi.performance table
+    without problems. You can save more often by calling the .bulk.flush()
+    method; it is automatically called for you by the oqtask decorator;
+    it is also called automatically at the end of the main process.
     """
-    def __init__(self, operation, job_id, task=None, tic=0.1, tracing=False):
+
+    bulk = BulkInserter(1000)  # store at most 1,000 objects
+
+    def __init__(self, operation, job_id, task=None, tic=0.1, tracing=False,
+                 profile_mem=False):
+        self.operation = operation
         self.job_id = job_id
         if task:
             self.task = task.__name__
@@ -143,19 +228,23 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         else:
             self.task = None
             self.task_id = None
-        self.operation = operation
-        py_pid = os.getpid()
-        pg_pid = connections['job_init'].cursor().connection.get_backend_pid()
-        try:
-            psutil.Process(pg_pid)
-        except psutil.error.NoSuchProcess:  # the db is on a different machine
-            pids = [py_pid]
+        self.tracing = tracing
+        self.profile_mem = profile_mem
+        if self.profile_mem:  # NB: this is slow
+            py_pid = os.getpid()
+            pg_pid = connections['job_init'].cursor().\
+                connection.get_backend_pid()
+            try:
+                psutil.Process(pg_pid)
+            except psutil.error.NoSuchProcess:  # db on a different machine
+                pids = [py_pid]
+            else:
+                pids = [py_pid, pg_pid]
         else:
-            pids = [py_pid, pg_pid]
+            pids = []
 
         if tracing:
             self.tracer = logs.tracing(operation)
-        self.tracing = tracing
 
         super(EnginePerformanceMonitor, self).__init__(pids, tic)
 
@@ -175,8 +264,10 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         If the database is on a different machine postgres-memory-measures
         is None.
         """
+        if not self._procs:
+            return [None], [None]
         if len(self._procs) == 1:  # pg progress not available
-            return (self.rss_measures[self._procs[0]], [None])
+            return self.rss_measures[self._procs[0]], [None]
         else:
             return super(EnginePerformanceMonitor, self).mem
 
@@ -186,7 +277,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """
         pymemory, pgmemory = self.mem_peaks
         if self.exc is None:  # save only valid calculations
-            pf = models.Performance(
+            perf = models.Performance(
                 oq_job_id=self.job_id,
                 task_id=self.task_id,
                 task=self.task,
@@ -195,7 +286,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 duration=self.duration,
                 pymemory=pymemory,
                 pgmemory=pgmemory)
-            pf.save()
+            self.bulk.save(perf)
 
     def on_running(self):
         """
@@ -210,6 +301,9 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
         if self.tracing:
             self.tracer.__exit__(etype, exc, tb)
+
+## makes sure the performance results are flushed in the db at the end
+atexit.register(EnginePerformanceMonitor.bulk.flush)
 
 
 class DummyMonitor(object):
