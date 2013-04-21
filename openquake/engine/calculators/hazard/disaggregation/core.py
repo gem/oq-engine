@@ -35,6 +35,7 @@ from openquake.engine.utils import general as general_utils
 from openquake.engine.utils import stats
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
@@ -119,7 +120,7 @@ def compute_disagg(job_id, sites, lt_rlz_id):
 
     ltp = logictree.LogicTreeProcessor(hc.id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     sources = list(_prepare_sources(hc, lt_rlz_id))
@@ -175,14 +176,18 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                     'source_site_filter': src_site_filter,
                     'rupture_site_filter': rup_site_filter,
                 }
-                bin_edges, diss_matrix = openquake.hazardlib.calc.\
-                    disagg.disaggregation_poissonian(**calc_kwargs)
+                with EnginePerformanceMonitor(
+                        'computing disaggregation', job_id, disagg_task):
+                    bin_edges, diss_matrix = openquake.hazardlib.calc.\
+                        disagg.disaggregation_poissonian(**calc_kwargs)
 
-                _save_disagg_matrix(
-                    job, site, bin_edges, diss_matrix, lt_rlz,
-                    hc.investigation_time, hc_im_type, iml, poe, sa_period,
-                    sa_damping
-                )
+                with EnginePerformanceMonitor(
+                        'saving disaggregation', job_id, disagg_task):
+                    _save_disagg_matrix(
+                        job, site, bin_edges, diss_matrix, lt_rlz,
+                        hc.investigation_time, hc_im_type, iml, poe, sa_period,
+                        sa_damping
+                    )
 
     with transaction.commit_on_success():
         # Update realiation progress,
