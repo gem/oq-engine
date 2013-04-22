@@ -474,19 +474,13 @@ class BaseHazardCalculator(base.Calculator):
         """
         point_source_block_size = self.point_source_block_size()
 
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False)
+        realizations = self._get_realizations()
 
         for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
             # point sources first
-            point_source_ids = source_progress\
-                .filter(parsed_source__source_type='point')\
-                .values_list('parsed_source_id', flat=True)
+            point_source_ids = self._get_point_source_ids(lt_rlz)
 
             for block in block_splitter(point_source_ids,
                                         point_source_block_size):
@@ -494,16 +488,53 @@ class BaseHazardCalculator(base.Calculator):
                 yield task_args
 
             # now for area and fault sources
-            other_source_ids = source_progress\
-                .filter(parsed_source__source_type__in=['area',
-                                                        'complex',
-                                                        'simple',
-                                                        'characteristic'])\
-                .values_list('parsed_source_id', flat=True)
+            other_source_ids = self._get_source_ids(lt_rlz)
 
             for block in block_splitter(other_source_ids, block_size):
                 task_args = (self.job.id, block, lt_rlz.id)
                 yield task_args
+
+    def _get_realizations(self):
+        """
+        Get all of the logic tree realizations for this calculation.
+        """
+        return models.LtRealization.objects.filter(
+            hazard_calculation=self.hc, is_complete=False
+        )
+
+    @staticmethod
+    def _get_point_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all of the point sources for a given logic
+        tree realization. See also :meth:`_get_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type='point')\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
+
+    @staticmethod
+    def _get_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all sources for a given logic tree
+        realization, except for point sources. See
+        :meth:`_get_point_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type__in=['area',
+                                                    'complex',
+                                                    'simple',
+                                                    'characteristic'])\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
 
     def finalize_hazard_curves(self):
         """
