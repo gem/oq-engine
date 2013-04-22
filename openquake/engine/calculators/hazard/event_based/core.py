@@ -430,8 +430,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
 
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False).order_by('id')
+        realizations = self._get_realizations()
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
