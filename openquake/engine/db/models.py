@@ -494,6 +494,13 @@ class OqJob(djm.Model):
 
     @property
     def calculation(self):
+        """
+        :returns: a calculation object (hazard or risk) depending on
+        the type of calculation. Useful in situations (e.g. core
+        engine, stats, kvs, progress) where you do not have enough
+        context about which kind of calculation is but still you want
+        to access the common feature of a Calculation object.
+        """
         return self.hazard_calculation or self.risk_calculation
 
 
