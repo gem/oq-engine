@@ -955,10 +955,12 @@ class HazardCalculation(djm.Model):
             if self.pk and self.inputs.filter(input_type='exposure').exists():
                 assets = self.exposure_model.exposuredata_set.all().order_by(
                     'asset_ref')
+
+                # the points here must be sorted
                 lons, lats = zip(
-                    *list(
+                    *sorted(list(
                         set([(asset.site.x, asset.site.y)
-                             for asset in assets])))
+                             for asset in assets]))))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
