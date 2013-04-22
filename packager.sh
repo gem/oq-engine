@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_DEB_PACKAGE="python-oq-nrmllib"
 GEM_DEB_SERIE="master"
@@ -11,6 +11,8 @@ GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
+
+GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
 NL="
 "
@@ -77,6 +79,37 @@ _pkgtest_innervm_run () {
 
     return
 }
+
+devtest_run () {
+    local i e lxc_name lxc_ip
+
+    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    i=-1
+    e=-1
+    for i in $(seq 1 40); do
+        sleep 2
+        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log 2>&1 ; then
+            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
+            for e in $(seq 1 40); do
+                sleep 2
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                    break
+                fi
+            done
+            break
+        fi
+    done
+    if [ $i -eq 40 -o $e -eq 40 ]; then
+        return 1
+    fi
+    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    sleep 30
+    ssh $lxc_ip "sudo halt"
+    sudo lxc-wait -s STOPPED -n $lxc_name
+    return 0
+}
+
 
 pkgtest_run () {
     local i e le_addr="$1" haddr
@@ -195,6 +228,11 @@ BUILD_FLAGS=""
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
+        -t|--test)
+            devtest_run
+            exit $?
+            break
+            ;;
         -D|--development)
             BUILD_DEVEL=1
             if [ "$DEBFULLNAME" = "" -o "$DEBEMAIL" = "" ]; then
