@@ -57,6 +57,7 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import stats, tasks as utils_tasks
+from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -426,6 +427,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             The (max) number of work items for each task. In this case,
             sources.
         """
+        point_source_block_size = self.point_source_block_size()
+
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
 
@@ -434,23 +437,41 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-            source_ids = source_progress.values_list('parsed_source_id',
-                                                     flat=True)
-            self.n_sources = len(source_ids)
-            for offset in xrange(0, self.n_sources, block_size):
+            # FIXME:
+            # This is a strange counter; it gets set for each realization. This
+            # is awkward, and the purpose is unclear.
+            self.n_sources = 0
+
+            # separate point sources from all the other types, since
+            # we distribution point sources in different sized chunks
+            # point sources first
+            point_source_ids = self._get_point_source_ids(lt_rlz)
+
+            self.n_sources += len(point_source_ids)
+
+            for block in block_splitter(point_source_ids,
+                                        point_source_block_size):
                 # Since this seed will used for numpy random seeding, it needs
                 # to be positive (since numpy will convert it to a unsigned
                 # long).
                 task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (
-                    self.job.id,
-                    source_ids[offset:offset + block_size],
-                    lt_rlz.id,
-                    task_seed,
-                    result_grp_ordinal
-                )
+                task_args = (self.job.id, block, lt_rlz.id, task_seed,
+                             result_grp_ordinal)
+                yield task_args
+                result_grp_ordinal += 1
+
+            # now for area and fault sources
+            other_source_ids = self._get_source_ids(lt_rlz)
+
+            self.n_sources += len(other_source_ids)
+
+            for block in block_splitter(other_source_ids, block_size):
+                # Since this seed will used for numpy random seeding, it needs
+                # to be positive (since numpy will convert it to a unsigned
+                # long).
+                task_seed = rnd.randint(0, models.MAX_SINT_32)
+                task_args = (self.job.id, block, lt_rlz.id, task_seed,
+                             result_grp_ordinal)
                 yield task_args
                 result_grp_ordinal += 1
 
