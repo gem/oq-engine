@@ -498,9 +498,9 @@ class BaseHazardCalculator(base.Calculator):
         """
         Get all of the logic tree realizations for this calculation.
         """
-        return models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False
-        )
+        return models.LtRealization.objects\
+            .filter(hazard_calculation=self.hc, is_complete=False)\
+            .order_by('id')
 
     @staticmethod
     def _get_point_source_ids(lt_rlz):
