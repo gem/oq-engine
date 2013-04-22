@@ -253,7 +253,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
             # check that the parameters are read correctly from the files
             self.assertEqual(hc.ses_per_logic_tree_path, 5)
-            self.assertEqual(job.calc.n_sources, 4)
 
             # Check that we have the right number of gmf_sets.
             # The correct number is (num_real * ses_per_logic_tree_path).
