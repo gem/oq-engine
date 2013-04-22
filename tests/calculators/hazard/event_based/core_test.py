@@ -20,6 +20,7 @@ import unittest
 import mock
 import numpy
 
+from collections import namedtuple
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
@@ -294,3 +295,81 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             self.assertEqual(20, maps.count())
         finally:
             self._unpatch_calc()
+
+
+class TaskArgGenTestCase(unittest.TestCase):
+    Job = namedtuple('Job', 'id, hazard_calculation')
+    HC = namedtuple('HazardCalculation', 'random_seed')
+    Rlz = namedtuple('Realization', 'id')
+
+    def test_task_arg_gen(self):
+        random_seed = 793
+        hc = self.HC(random_seed)
+        job = self.Job(1066, hc)
+
+        base_path = (
+            'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
+        )
+        calc = core.EventBasedHazardCalculator(job)
+
+        # Set up mocks:
+        # point_source_block_size
+        pt_src_block_size_patch = helpers.patch(
+            '%s.%s' % (base_path, 'point_source_block_size')
+        )
+        pt_src_block_size_mock = pt_src_block_size_patch.start()
+        pt_src_block_size_mock.return_value = 5
+
+        # _get_realizations
+        get_rlz_patch = helpers.patch(
+            '%s.%s' % (base_path, '_get_realizations')
+        )
+        get_rlz_mock = get_rlz_patch.start()
+        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
+
+        # _get_point_source_ids
+        get_pt_patch = helpers.patch(
+            '%s.%s' % (base_path, '_get_point_source_ids')
+        )
+        get_pt_mock = get_pt_patch.start()
+        get_pt_mock.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+        # _get_source_ids
+        get_src_patch = helpers.patch('%s.%s' % (base_path, '_get_source_ids'))
+        get_src_mock = get_src_patch.start()
+        get_src_mock.return_value = [100, 101, 102, 103, 104]
+
+        expected = [
+            (1066, [1, 2, 3, 4, 5], 5, 1715084553, 1),
+            (1066, [6, 7, 8, 9, 10], 5, 1610237348, 2),
+            (1066, [11], 5, 208009464, 3),
+            (1066, [100, 101], 5, 61227963, 4),
+            (1066, [102, 103], 5, 962290868, 5),
+            (1066, [104], 5, 1851493799, 6),
+            (1066, [1, 2, 3, 4, 5], 6, 1726414414, 7),
+            (1066, [6, 7, 8, 9, 10], 6, 1251340915, 8),
+            (1066, [11], 6, 1914465987, 9),
+            (1066, [100, 101], 6, 824295930, 10),
+            (1066, [102, 103], 6, 1698161031, 11),
+            (1066, [104], 6, 1690626266, 12),
+        ]
+
+        try:
+            actual = list(calc.task_arg_gen(block_size=2))
+            self.assertEqual(expected, actual)
+        finally:
+            self.assertEqual(1, pt_src_block_size_mock.call_count)
+            pt_src_block_size_mock.stop()
+            pt_src_block_size_patch.stop()
+
+            self.assertEqual(1, get_rlz_mock.call_count)
+            get_rlz_mock.stop()
+            get_rlz_patch.stop()
+
+            self.assertEqual(2, get_pt_mock.call_count)
+            get_pt_mock.stop()
+            get_pt_patch.stop()
+
+            self.assertEqual(2, get_src_mock.call_count)
+            get_src_mock.stop()
+            get_src_patch.stop()
