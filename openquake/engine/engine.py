@@ -325,7 +325,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
         supported.
     :param calc:
         Calculator object, which must implement the interface of
-        :class:`openquake.engine.calculators.base.CalculatorNext`.
+        :class:`openquake.engine.calculators.base.Calculator`.
     :param str job_type:
         'hazard' or 'risk'
     """

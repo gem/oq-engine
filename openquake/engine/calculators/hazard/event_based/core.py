@@ -404,7 +404,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     inserter.flush()
 
 
-class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
     and (optionally) ground motion fields.
