@@ -190,7 +190,7 @@ def _update_curves(hc, matrices, lt_rlz, src_ids):
             haz_general.update_realization(lt_rlz.id, len(src_ids))
 
 
-class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
     points.
@@ -249,7 +249,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculatorNext):
         Post-execution actions. At the moment, all we do is finalize the hazard
         curve results. See
         :meth:`openquake.engine.calculators.hazard.general.\
-BaseHazardCalculatorNext.finalize_hazard_curves`
+BaseHazardCalculator.finalize_hazard_curves`
         for more info.
         """
         self.finalize_hazard_curves()
