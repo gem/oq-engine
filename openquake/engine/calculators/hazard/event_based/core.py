@@ -410,8 +410,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
     and (optionally) ground motion fields.
     """
-    n_sources = None  # set by task_arg_gen
-
     core_calc_task = ses_and_gmfs
 
     def task_arg_gen(self, block_size):
@@ -437,17 +435,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            # FIXME:
-            # This is a strange counter; it gets set for each realization. This
-            # is awkward, and the purpose is unclear.
-            self.n_sources = 0
-
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
             # point sources first
             point_source_ids = self._get_point_source_ids(lt_rlz)
-
-            self.n_sources += len(point_source_ids)
 
             for block in block_splitter(point_source_ids,
                                         point_source_block_size):
@@ -462,8 +453,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
             # now for area and fault sources
             other_source_ids = self._get_source_ids(lt_rlz)
-
-            self.n_sources += len(other_source_ids)
 
             for block in block_splitter(other_source_ids, block_size):
                 # Since this seed will used for numpy random seeding, it needs
