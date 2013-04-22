@@ -446,11 +446,12 @@ class TaskArgGenTestCase(unittest.TestCase):
     The default implementation splits the calculation into blocks of sources.
     """
 
-    WithID = namedtuple('WithID', 'id')
+    Job = namedtuple('Job', 'id')
+    Rlz = namedtuple('Realization', 'id')
 
     def test_task_arg_gen(self):
         # Test the logic of `BaseHazardCalculator.task_arg_gen`.
-        job = self.WithID(1776)
+        job = self.Job(1776)
 
         base_path = (
             'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
@@ -470,7 +471,7 @@ class TaskArgGenTestCase(unittest.TestCase):
             '%s.%s' % (base_path, '_get_realizations')
         )
         get_rlz_mock = get_rlz_patch.start()
-        get_rlz_mock.return_value = [self.WithID(5), self.WithID(6)]
+        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
 
         # _get_point_source_ids
         get_pt_patch = helpers.patch(
