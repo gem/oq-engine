@@ -104,6 +104,10 @@ def _get_result_export_path(calc_id, target_dir, result):
     core.makedirs(directory)
 
     if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+        # include the poe in hazard map and uhs file names
+        if output_type in ('hazard_map', 'uh_spectra'):
+            output_type = '%s-poe_%s' % (output_type, result.poe)
+
         if result.statistics is not None:
             # we could have stats
             if result.statistics == 'quantile':
