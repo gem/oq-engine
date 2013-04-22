@@ -187,9 +187,9 @@ def event_based(job_id, hazard,
                                     asset.value,
                                     asset.deductible,
                                     asset.ins_limit),
-                                tses,
-                                time_span,
-                                loss_curve_resolution))
+                                tses=tses,
+                                time_span=time_span,
+                                curve_resolution=loss_curve_resolution))
 
                         # FIXME(lp). Insured losses are still computed
                         # as absolute values.
@@ -328,7 +328,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
 
-        tses, time_span = self.hazard_times()
+        time_span, tses = self.hazard_times()
 
         for hazard_output in self.considered_hazard_outputs():
 
@@ -344,7 +344,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
             if aggregate_losses:
                 aggregate_loss_losses, aggregate_loss_poes = (
                     scientific.event_based(
-                        aggregate_losses, tses, time_span,
+                        aggregate_losses, tses=tses, time_span=time_span,
                         curve_resolution=self.rc.loss_curve_resolution))
 
                 models.AggregateLossCurveData.objects.create(
