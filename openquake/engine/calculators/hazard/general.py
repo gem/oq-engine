@@ -410,14 +410,14 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-class BaseHazardCalculatorNext(base.CalculatorNext):
+class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
+        super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
 

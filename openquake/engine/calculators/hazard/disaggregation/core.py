@@ -294,7 +294,7 @@ def _prepare_sources(hc, lt_rlz_id):
     return sources
 
 
-class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
     parallelized fashion.
@@ -425,7 +425,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         See
         :meth:`openquake.engine.calculators.hazard.general.\
-BaseHazardCalculatorNext.get_task_complete_callback`
+BaseHazardCalculator.get_task_complete_callback`
         for more info about the expected input and output.
         """
         # prep the disaggregation task arg gen for the second phase of the
