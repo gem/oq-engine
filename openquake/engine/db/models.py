@@ -492,6 +492,10 @@ class OqJob(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"oq_job'
 
+    @property
+    def calculation(self):
+        return self.hazard_calculation or self.risk_calculation
+
 
 class Performance(djm.Model):
     '''
@@ -959,7 +963,7 @@ class HazardCalculation(djm.Model):
                 # the points here must be sorted
                 lons, lats = zip(
                     *sorted(set([(asset.site.x, asset.site.y)
-                             for asset in assets])))
+                                 for asset in assets])))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
