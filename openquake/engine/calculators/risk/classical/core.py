@@ -175,9 +175,9 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
         super(ClassicalRiskCalculator, self).pre_execute()
         if self.rc.hazard_output is not None:
             haz_output = self.rc.hazard_output
+            vuln_imts = list(set(self.taxonomies_imts.values()))
+            haz_curve = haz_output.hazardcurve
             if haz_output.output_type == 'hazard_curve':
-                vuln_imts = list(set(self.taxonomies_imts.values()))
-                haz_curve = haz_output.hazardcurve
                 hc_imt = haz_curve.imt
                 if hc_imt == 'SA':
                     hc_imt = 'SA(%s)' % haz_curve.sa_period
@@ -188,6 +188,17 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
                         "are incompatible. Vulnerability IMT(s): %s. Hazard "
                         "curve IMT: %s"
                         % (vuln_imts, haz_curve.imt)
+                    )
+                    raise ValueError(msg)
+            elif haz_output.output_type == 'hazard_curve_multi':
+                imts = [h.imt_long for h in iter(haz_curve)]
+
+                if set(imts) - set(vuln_imts):
+                    msg = (
+                        "Vulnerability model and the specified hazard curve "
+                        "are incompatible. Vulnerability IMT(s): %s. Hazard "
+                        "curve IMT: %s"
+                        % (vuln_imts, imts)
                     )
                     raise ValueError(msg)
 
@@ -290,7 +301,6 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     def hazard_outputs(self, hazard_calculation):
         """
-
         :returns:
             A list of :class:`openquake.engine.db.models.HazardCurve` object
             that stores the hazard curves associated to `hazard_calculation`

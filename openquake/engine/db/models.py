@@ -1752,6 +1752,18 @@ class HazardCurve(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
 
+    @property
+    def imt_long(self):
+        """
+        :returns: a string representing the imt associated with the
+        curve (if any) in the long form, e.g. SA(0.01)
+        """
+        if self.imt:
+            if self.imt == "SA":
+                return "%s(%s)" % (self.imt, self.sa_damping)
+            else:
+                return self.imt
+
     def __iter__(self):
         assert self.output.output_type == 'hazard_curve_multi'
 
