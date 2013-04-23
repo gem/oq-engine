@@ -1,8 +1,9 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
-GEM_DEB_PACKAGE="python-oq-nrmllib"
+GEM_GIT_PACKAGE="oq-nrmllib"
+GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -50,6 +51,27 @@ usage () {
     exit $ret
 }
 
+_devtest_innervm_run () {
+    local haddr="$1"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
+
+    pkgs_list="$(deps_list debian/control)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+    # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; PYTHONPATH="." ./run_tests"
+    trap ERR
+
+    return
+}
+
 _pkgtest_innervm_run () {
     local haddr="$1"
 
@@ -80,9 +102,37 @@ _pkgtest_innervm_run () {
     return
 }
 
+deps_list() {
+    local oldifs out_list i filename="$1"
+
+    oldifs="$IFS"
+    IFS=','
+    out_list=""
+    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g') ; do
+        item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
+        pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
+        pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
+        echo "[$pkg_name][$pkg_vers]" >&2
+        if echo "$pkg_name" | grep -q "^\${" ; then
+            continue
+        fi
+        if [ "$out_list" == "" ]; then
+            out_list="$pkg_name"
+        else
+            out_list="$out_list $pkg_name"
+        fi
+    done
+    IFS="$oldifs"
+
+    echo "$out_list"
+
+    return 0
+}
+
 devtest_run () {
     local i e lxc_name lxc_ip
 
+    sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     i=-1
     e=-1
@@ -104,10 +154,16 @@ devtest_run () {
         return 1
     fi
     echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
-    sleep 30
-    ssh $lxc_ip "sudo halt"
-    sudo lxc-wait -s STOPPED -n $lxc_name
-    return 0
+
+    set +e
+    _devtest_innervm_run $lxc_ip
+    inner_ret=$?
+    sudo lxc-shutdown -n $lxc_name -w -t 10
+    set -e
+
+    # if [ $inner_ret -ne 0 ]; then
+    return $inner_ret
+    # fi
 }
 
 
@@ -228,11 +284,6 @@ BUILD_FLAGS=""
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
-        -t|--test)
-            devtest_run
-            exit $?
-            break
-            ;;
         -D|--development)
             BUILD_DEVEL=1
             if [ "$DEBFULLNAME" = "" -o "$DEBEMAIL" = "" ]; then
@@ -253,6 +304,11 @@ while [ $# -gt 0 ]; do
             ;;
         -h|--help)
             usage 0
+            break
+            ;;
+        devtest)
+            devtest_run
+            exit $?
             break
             ;;
         pkgtest)

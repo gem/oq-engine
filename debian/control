@@ -2,7 +2,7 @@ Source: python-oq-nrmllib
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), python (>=2.6), python-setuptools, quilt
+Build-Depends: debhelper (>= 7.0.50~), python (>=2.6), python-setuptools, libxml2-utils, python-nose, quilt
 Standards-Version: 3.9.3
 Homepage: http://github.com/gem/oq-nrmllib
 #Vcs-Git: git://git.debian.org/collab-maint/python-dateutil.git
@@ -11,7 +11,7 @@ Homepage: http://github.com/gem/oq-nrmllib
 Package: python-oq-nrmllib
 Architecture: all
 Conflicts: python-nrml
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-lxml, python-numpy
 Description: Natural hazards' Risk Markup Language (NRML) is a collection of
  XML schema definitions for modelling inputs and outputs for seismic hazard
  and risk analysis.
