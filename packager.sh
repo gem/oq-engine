@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
@@ -46,7 +46,7 @@ usage () {
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
-    echo "    $0 pkgtest <last-ip-digit>                  run packaging tests into an ubuntu lxc environment"
+    echo "    $0 pkgtest <branch-name>                    run packaging tests into an ubuntu lxc environment"
     echo "    $0 devtest <branch-name>                    run development tests into an ubuntu lxc environment"
     echo
     exit $ret
@@ -172,8 +172,6 @@ _lxc_name_and_ip_get()
 }
 
 devtest_run () {
-    local i e
-
     sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
@@ -197,7 +195,7 @@ devtest_run () {
 
 
 pkgtest_run () {
-    local i e le_addr="$1" haddr
+    local i e branch_id="$1" haddr
 
     #
     #  run build of package
@@ -236,49 +234,21 @@ EOF
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
-    #
-    #  check if an istance with the same address already exists
-    export haddr="10.0.3.$le_addr"
-    running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
-    for running_machine in $running_machines ; do
-        if sudo grep -q "[^#]*address[ 	]\+$haddr[ 	]*$" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
-            echo -n "The $haddr machine seems to be already configured ... "
-            set +e
-            sudo lxc-shutdown -n $running_machine -w -t 10
-            set -e
-            echo "turned off"
-        fi
-    done
+    sudo echo
+    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
-    #
-    #  run the VM and get the VM name
-    sudo lxc-start-ephemeral-gem -i $le_addr -d -o ubuntu-lxc >${haddr}.lxc.log 2>&1
+    _wait_ssh $lxc_ip
 
-    # waiting VM startup
-    for i in $(seq 1 60); do
-        if grep -q "is running" ${haddr}.lxc.log 2>/dev/null; then
-            machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
-            echo "MACHINE NAME: [$machine_name]"
-            for e in $(seq 1 60); do
-                sleep 1
-                if lxc-ps -n "${machine_name}" | grep sshd; then
-                    sleep 1
-                    break
-                fi
-            done
-            break
-        fi
-        sleep 1
-    done
-    if [ $i -eq 60 -o $e -eq 60 ]; then
-        echo "VM not responding"
-        return 2
-    fi
     set +e
-    _pkgtest_innervm_run $haddr
+    _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $machine_name -w -t 10
+    sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
