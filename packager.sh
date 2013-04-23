@@ -52,11 +52,24 @@ usage () {
     exit $ret
 }
 
+_wait_ssh () {
+    local lxc_ip="$1"
+
+    for i in $(seq 1 20); do
+        if ssh $lxc_ip "echo begin"; then
+            break
+        fi
+        sleep 2
+    done
+    if [ $i -eq 20 ]; then
+        return 1
+    fi
+}
+
 _devtest_innervm_run () {
-    local haddr="$1"
+    local i lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
-
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -130,11 +143,10 @@ deps_list() {
     return 0
 }
 
-devtest_run () {
-    local i e lxc_name lxc_ip
+_lxc_name_and_ip_get()
+{
+    local filename="$1" i e
 
-    sudo echo
-    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     i=-1
     e=-1
     for i in $(seq 1 40); do
@@ -156,11 +168,27 @@ devtest_run () {
     fi
     echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
 
+    return 0
+}
+
+devtest_run () {
+    local i e
+
+    sudo echo
+    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
+
     set +e
     _devtest_innervm_run $lxc_ip
     inner_ret=$?
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 
     # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
