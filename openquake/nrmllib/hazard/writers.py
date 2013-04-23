@@ -17,12 +17,16 @@
 Classes for serializing various NRML XML artifacts.
 """
 
+import StringIO
+import tokenize
+
 from lxml import etree
 from collections import OrderedDict
 from itertools import izip
 
 import openquake.nrmllib
 from openquake.nrmllib import utils
+from openquake.nrmllib import models
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -42,6 +46,8 @@ _ATTR_MAP = OrderedDict([
     ('lon', 'lon'),
     ('lat', 'lat'),
 ])
+
+GML_NS = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
 
 
 def _validate_hazard_metadata(md):
@@ -859,3 +865,319 @@ class UHSXMLWriter(BaseCurveXMLWriter):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class SourceModelXMLWriter(object):
+    """
+    """
+
+    def __init__(self, path):
+        self.path = path
+
+    @staticmethod
+    def _coords_from_geom(wkt):
+        """
+        Get the coordinates points from a LINESTRING or POLYGON ``wkt`` string
+        as a 2D list.
+
+        The WKT parsing method was heavily inspired by GeoMet
+        (https://github.com/larsbutler/geomet).
+
+        This only works for simple shapes, and does not work for polygons with
+        holes, etc.. Example:
+
+        POLYGON ((35 10, 10 20, 15 40, 45 45, 35 10),
+        (20 30, 35 35, 30 20, 20 30))
+        """
+        sio = StringIO.StringIO(wkt)
+
+        tokens = (x[1] for x in tokenize.generate_tokens(sio.readline))
+        geom_type = tokens.next()
+        assert geom_type in ('POINT', 'LINESTRING', 'POLYGON')
+
+        coords = []
+        pt = []
+        negative = False
+
+        for t in tokens:
+            if t == '(':
+                continue
+            elif t == ')':
+                coords.append(pt)
+                break
+            elif t == ',':
+                coords.append(pt)
+                pt = []
+            elif t == '-':
+                negative = True
+            else:
+                if negative:
+                    t = '-' + t
+                pt.append(float(t))
+                negative = False
+
+        return coords
+
+    def _append_mfd(self, elem, src):
+        if isinstance(src.mfd, models.IncrementalMFD):
+            mfd = etree.SubElement(
+                elem,
+                'incrementalMFD',
+                attrib=OrderedDict([
+                    ('minMag', str(src.mfd.min_mag)),
+                    ('binWidth', str(src.mfd.bin_width)),
+                ])
+            )
+            occ_rates = etree.SubElement(mfd, 'occurRates')
+            occ_rates.text = ' '.join([str(x) for x in src.mfd.occur_rates])
+        elif isinstance(src.mfd, models.TGRMFD):
+            etree.SubElement(
+                elem,
+                'truncGutenbergRichterMFD',
+                attrib=OrderedDict([
+                    ('aValue', str(src.mfd.a_val)),
+                    ('bValue', str(src.mfd.b_val)),
+                    ('minMag', str(src.mfd.min_mag)),
+                    ('maxMag', str(src.mfd.max_mag)),
+                ])
+            )
+
+    def _append_npd(self, elem, src):
+        npd = etree.SubElement(elem, 'nodalPlaneDist')
+        for np in src.nodal_plane_dist:
+            etree.SubElement(
+                npd,
+                'nodalPlane',
+                attrib=OrderedDict([
+                    ('probability', str(np.probability)),
+                    ('strike', str(np.strike)),
+                    ('dip', str(np.dip)),
+                    ('rake', str(np.rake)),
+                ])
+            )
+
+    def _append_hdd(self, elem, src):
+        hdd = etree.SubElement(elem, 'hypoDepthDist')
+        for hd in src.hypo_depth_dist:
+            etree.SubElement(
+                hdd,
+                'hypoDepth',
+                attrib=OrderedDict([
+                    ('probability', str(hd.probability)),
+                    ('depth', str(hd.depth)),
+                ])
+            )
+
+    def _append_area(self, src_model_elem, src):
+        area_elem = etree.SubElement(
+            src_model_elem,
+            'areaSource',
+            attrib=OrderedDict([
+                ('id', src.id),
+                ('name', src.name),
+                ('tectonicRegion', src.trt),
+            ])
+        )
+
+        # geometry
+        area_geom_elem = etree.SubElement(area_elem, 'areaGeometry')
+        poly = etree.SubElement(area_geom_elem, '{%s}Polygon' % GML_NS)
+        exterior = etree.SubElement(poly, '{%s}exterior' % GML_NS)
+        linearring = etree.SubElement(exterior, '{%s}LinearRing' % GML_NS)
+        poslist = etree.SubElement(linearring, '{%s}posList' % GML_NS)
+        coords = self._coords_from_geom(src.geometry.wkt)
+        # Since the polygon froms a closed ring, but is not usually modeled as
+        # such, remove the last vertex; in POLYGON WKT, we expect the last
+        # vertex should be a duplicate of the first.
+        coords.pop()
+        poslist.text = ' '.join([' '.join([str(x) for x in pt])
+                                 for pt in coords])
+        upp_seis_depth = etree.SubElement(area_geom_elem, 'upperSeismoDepth')
+        upp_seis_depth.text = str(src.geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(area_geom_elem, 'lowerSeismoDepth')
+        low_seis_depth.text = str(src.geometry.lower_seismo_depth)
+
+        mag_scale_rel = etree.SubElement(area_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(area_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(area_elem, src)
+        self._append_npd(area_elem, src)
+        self._append_hdd(area_elem, src)
+
+    def _append_point(self, src_model_elem, src):
+        pt_elem = etree.SubElement(
+            src_model_elem,
+            'pointSource',
+            attrib=OrderedDict([
+                ('id', src.id),
+                ('name', src.name),
+                ('tectonicRegion', src.trt),
+            ])
+        )
+
+        # geometry
+        pt_geom_elem = etree.SubElement(pt_elem, 'pointGeometry')
+        point = etree.SubElement(pt_geom_elem, '{%s}Point' % GML_NS)
+        pos = etree.SubElement(point, '{%s}pos' % GML_NS)
+        [coord] = self._coords_from_geom(src.geometry.wkt)
+        pos.text = ' '.join([str(x) for x in coord])
+        upp_seis_depth = etree.SubElement(pt_geom_elem, 'upperSeismoDepth')
+        upp_seis_depth.text = str(src.geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(pt_geom_elem, 'lowerSeismoDepth')
+        low_seis_depth.text = str(src.geometry.lower_seismo_depth)
+
+        mag_scale_rel = etree.SubElement(pt_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(pt_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(pt_elem, src)
+        self._append_npd(pt_elem, src)
+        self._append_hdd(pt_elem, src)
+
+    def _append_fault_edge(self, edge_elem, wkt):
+        linestring = etree.SubElement(edge_elem, '{%s}LineString' % GML_NS)
+        poslist = etree.SubElement(linestring, '{%s}posList' % GML_NS)
+        coords = self._coords_from_geom(wkt)
+        poslist.text = ' '.join([' '.join([str(x) for x in pt])
+                                 for pt in coords])
+
+    def _append_simple_fault_geom(self, elem, geometry):
+        simple_geom = etree.SubElement(elem, 'simpleFaultGeometry')
+        self._append_fault_edge(simple_geom, geometry.wkt)
+        dip = etree.SubElement(simple_geom, 'dip')
+        dip.text = str(geometry.dip)
+        upp_seis_depth = etree.SubElement(simple_geom, 'upperSeismoDepth')
+        upp_seis_depth.text = str(geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(simple_geom, 'lowerSeismoDepth')
+        low_seis_depth.text = str(geometry.lower_seismo_depth)
+
+    def _append_complex_fault_geom(self, elem, geometry):
+        complex_geom = etree.SubElement(elem, 'complexFaultGeometry')
+        # top edge
+        top_edge = etree.SubElement(complex_geom, 'faultTopEdge')
+        self._append_fault_edge(top_edge, geometry.top_edge_wkt)
+        # intermedate edges
+        for edge in geometry.int_edges:
+            edge_elem = etree.SubElement(complex_geom, 'intermediateEdge')
+            self._append_fault_edge(edge_elem, edge)
+        # bottom edge
+        bottom_edge = etree.SubElement(complex_geom, 'faultBottomEdge')
+        self._append_fault_edge(bottom_edge, geometry.bottom_edge_wkt)
+
+    def _append_complex(self, src_model_elem, src):
+        complex_elem = etree.SubElement(
+            src_model_elem,
+            'complexFaultSource',
+            attrib=OrderedDict([
+                ('id', src.id),
+                ('name', src.name),
+                ('tectonicRegion', src.trt),
+            ])
+        )
+
+        # geometry
+        self._append_complex_fault_geom(complex_elem, src.geometry)
+
+        mag_scale_rel = etree.SubElement(complex_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(complex_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(complex_elem, src)
+        rake = etree.SubElement(complex_elem, 'rake')
+        rake.text = str(src.rake)
+
+    def _append_simple(self, src_model_elem, src):
+        simple_elem = etree.SubElement(
+            src_model_elem,
+            'simpleFaultSource',
+            attrib=OrderedDict([
+                ('id', src.id),
+                ('name', src.name),
+                ('tectonicRegion', src.trt),
+            ])
+        )
+
+        # geometry
+        self._append_simple_fault_geom(simple_elem, src.geometry)
+
+        mag_scale_rel = etree.SubElement(simple_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(simple_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(simple_elem, src)
+
+        rake = etree.SubElement(simple_elem, 'rake')
+        rake.text = str(src.rake)
+
+    def _append_characteristic(self, src_model_elem, src):
+        char_elem = etree.SubElement(
+            src_model_elem,
+            'characteristicFaultSource',
+            attrib=OrderedDict([
+                ('id', src.id),
+                ('name', src.name),
+                ('tectonicRegion', src.trt),
+            ])
+        )
+
+        self._append_mfd(char_elem, src)
+        rake = etree.SubElement(char_elem, 'rake')
+        rake.text = str(src.rake)
+
+        # TODO: <surface>...</surface>
+        surface = etree.SubElement(char_elem, 'surface')
+
+        if isinstance(src.surface, models.ComplexFaultGeometry):
+            self._append_complex_fault_geom(surface, src.surface)
+        elif isinstance(src.surface, models.SimpleFaultGeometry):
+            self._append_simple_fault_geom(surface, src.surface)
+        else:
+            for planar_surface in src.surface:
+                ps_elem = etree.SubElement(surface, 'planarSurface')
+                ps_elem.set('strike', str(planar_surface.strike))
+                ps_elem.set('dip', str(planar_surface.dip))
+
+                for el_name, corner in (
+                        ('topLeft', planar_surface.top_left),
+                        ('topRight', planar_surface.top_right),
+                        ('bottomLeft', planar_surface.bottom_left),
+                        ('bottomRight', planar_surface.bottom_right)):
+
+                    corner_elem = etree.SubElement(ps_elem, el_name)
+                    corner_elem.set('lon', str(corner.longitude))
+                    corner_elem.set('lat', str(corner.latitude))
+                    corner_elem.set('depth', str(corner.depth))
+
+    def serialize(self, src_model):
+        """
+        :param src_model:
+            A :class:`openquake.nrmllib.models.SourceModel` object, which is an
+            iterable collection of sources.
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element(
+                'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
+            )
+
+            src_model_elem = etree.SubElement(root, 'sourceModel')
+            src_model_elem.set('name', src_model.name)
+
+            for src in src_model:
+                if isinstance(src, models.AreaSource):
+                    self._append_area(src_model_elem, src)
+                elif isinstance(src, models.PointSource):
+                    self._append_point(src_model_elem, src)
+                elif isinstance(src, models.ComplexFaultSource):
+                    self._append_complex(src_model_elem, src)
+                elif isinstance(src, models.SimpleFaultSource):
+                    self._append_simple(src_model_elem, src)
+                elif isinstance(src, models.CharacteristicSource):
+                    self._append_characteristic(src_model_elem, src)
+
+            fh.write(etree.tostring(root, pretty_print=True,
+                                    xml_declaration=True, encoding='UTF-8'))
