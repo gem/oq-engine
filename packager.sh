@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
@@ -307,7 +307,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
-            devtest_run
+            devtest_run $2
             exit $?
             break
             ;;
