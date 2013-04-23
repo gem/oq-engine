@@ -60,22 +60,10 @@ class ExposureModelParser(object):
 
     def __init__(self, source):
         self._source = source
-        assert_is_valid(self._source)
+        openquake.nrmllib.assert_valid(self._source)
 
         # contains the data of the node currently parsed.
         self._current_meta = {}
-
-    def assert_is_valid(self):
-        """
-        Check the input file is valid according to the schema.
-        """
-
-        exposure = etree.parse(self._source)
-        xmlschema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-
-        if not xmlschema.validate(exposure):
-            raise ValueError("Exposure model is not valid.")
 
     def __iter__(self):
         for i in self._parse():
@@ -206,7 +194,7 @@ class VulnerabilityModelParser(object):
 
     def __init__(self, source):
         self._source = source
-        assert_is_valid(self._source)
+        openquake.nrmllib.assert_valid(self._source)
 
         self._vulnerability_model = etree.parse(self._source).getroot()
 
@@ -297,7 +285,7 @@ class FragilityModelParser(object):
 
     def __init__(self, source):
         self._source = source
-        assert_is_valid(self._source)
+        openquake.nrmllib.assert_valid(self._source)
         self._fragility_model = etree.parse(self._source).getroot()
         self.limit_states = None
 
@@ -348,15 +336,3 @@ class FragilityModelParser(object):
             raise ValueError('Expected limitState %s, got %s' %
                              (self.limit_states[lsi], ls))
 
-
-def assert_is_valid(source):
-    """
-    Check the input file is valid according to the schema.
-    """
-
-    exposure = etree.parse(source)
-    xmlschema = etree.XMLSchema(etree.parse(
-        openquake.nrmllib.nrml_schema_file()))
-
-    if not xmlschema.validate(exposure):
-        raise ValueError("Model %s is not valid." % exposure)
