@@ -190,7 +190,7 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
         <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
       </discreteVulnerability>
       <discreteVulnerability vulnerabilityFunctionID="PK" probabilisticDistribution="LN">
-        <lossRatio>0.18 0.36 0.36 0.36</lossRatio>
+        <lossRatio>0.18 0.36 0.36 1.36</lossRatio>
         <coefficientsVariation>0.30 0.30 0.30 0.30</coefficientsVariation>
       </discreteVulnerability>
     </discreteVulnerabilitySet>
@@ -218,7 +218,7 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
         self.assertEqual("population", model["PK"]["assetCategory"])
         self.assertEqual("LN", model["PK"]["probabilisticDistribution"])
 
-        self.assertEqual([0.18, 0.36, 0.36, 0.36], model["PK"]["lossRatio"])
+        self.assertEqual([0.18, 0.36, 0.36, 1.36], model["PK"]["lossRatio"])
 
         self.assertEqual([0.30, 0.30, 0.30, 0.30],
                          model["PK"]["coefficientsVariation"])

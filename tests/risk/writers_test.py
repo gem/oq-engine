@@ -216,7 +216,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       </gml:Point>
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
-      <lossRatios>0.4 0.6 0.8</lossRatios>
+      <lossRatios>0.4 0.6 1.8</lossRatios>
       <averageLoss>0.0000e+00</averageLoss>
     </lossCurve>
   </lossCurves>
@@ -231,7 +231,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         data = [LOSS_CURVE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
                 poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
-                loss_ratios=[0.4, 0.6, 0.8], average_loss=0.)]
+                loss_ratios=[0.4, 0.6, 1.8], average_loss=0.)]
 
         writer.serialize(data)
 

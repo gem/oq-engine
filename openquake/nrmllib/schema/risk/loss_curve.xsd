@@ -38,7 +38,7 @@
 
             <xs:element name="poEs" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1" />
             <xs:element name="losses" type="PositiveDoubleList" minOccurs="1" maxOccurs="1" />
-            <xs:element name="lossRatios" type="NormalizedDoubleList" minOccurs="0" maxOccurs="1" />
+            <xs:element name="lossRatios" type="PositiveDoubleList" minOccurs="0" maxOccurs="1" />
             <xs:element name="averageLoss" type="PositiveDoubleType" minOccurs="1" maxOccurs="1" />
         </xs:sequence>
 
