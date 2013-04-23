@@ -1368,7 +1368,6 @@ class UHSXMLWriterTestCase(unittest.TestCase):
         finally:
             os.unlink(path)
 
-
     def test_serialize_quantile(self):
         del self.metadata['smlt_path']
         del self.metadata['gsimlt_path']
