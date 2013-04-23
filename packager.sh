@@ -46,7 +46,8 @@ usage () {
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
-    echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
+    echo "    $0 pkgtest <last-ip-digit>                  run packaging tests into an ubuntu lxc environment"
+    echo "    $0 devtest <branch-name>                    run development tests into an ubuntu lxc environment"
     echo
     exit $ret
 }
