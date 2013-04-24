@@ -109,7 +109,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator.taxonomies = {'VF': 10}
         self.calculator.set_risk_models()
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
-        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomies_imts)
+        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomy_imt)
 
     def test_create_outputs(self):
         # Test that the proper output containers are created
