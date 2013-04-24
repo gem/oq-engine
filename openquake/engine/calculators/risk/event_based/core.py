@@ -133,7 +133,7 @@ def event_based(job_id, hazard,
             # in this task will either return some results or they all
             # return an empty result set.
             logs.LOG.info("Exit from task as no asset could be processed")
-            base.signal_task_complete(
+            signal_task_complete(
                 job_id=job_id,
                 event_loss_table=dict(),
                 num_items=len(missings))

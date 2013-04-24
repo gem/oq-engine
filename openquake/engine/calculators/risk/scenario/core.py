@@ -65,10 +65,10 @@ def scenario(job_id, hazard, seed, vulnerability_function, imt,
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        base.signal_task_complete(job_id=job_id,
-                                  aggregate_losses=None,
-                                  insured_aggregate_losses=None,
-                                  num_items=len(missings))
+        signal_task_complete(job_id=job_id,
+                             aggregate_losses=None,
+                             insured_aggregate_losses=None,
+                             num_items=len(missings))
         return
 
     with logs.tracing('computing risk'):

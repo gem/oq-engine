@@ -112,8 +112,7 @@ def event_based_bcr(job_id, hazard, task_seed,
                 # hazard_getter in this task will either return some
                 # results or they all return an empty result set.
                 logs.LOG.info("Exit from task as no asset could be processed")
-                base.signal_task_complete(job_id=job_id,
-                                          num_items=len(missings))
+                signal_task_complete(job_id=job_id, num_items=len(missings))
                 return
 
         with logs.tracing('computing bcr'):
