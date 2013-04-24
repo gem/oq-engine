@@ -31,6 +31,8 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
+from openquake.nrmllib.hazard import parsers as haz_parsers
+from openquake.nrmllib.hazard import writers as haz_writers
 from shapely import wkt
 
 from openquake.engine.db import models
@@ -625,3 +627,30 @@ def area_source_to_point_sources(area_src, area_src_disc):
             hypo_depth_dist=area_src.hypo_depth_dist
         )
         yield pt
+
+
+def optimize_source_model(input_path, area_src_disc, output_path):
+    """
+    Parse the source model located at ``input_path``, discretize area sources
+    by ``area_src_disc``, and write the optimized model to ``output_path``.
+
+    :returns:
+        ``output_path``
+    """
+    parser = haz_parsers.SourceModelParser(input_path)
+    src_model = parser.parse()
+
+    def split_area(model):
+        for src in model:
+            if isinstance(src, nrml_models.AreaSource):
+                for pt in area_source_to_point_sources(src, area_src_disc):
+                    yield pt
+            else:
+                yield src
+
+    out_source_model = nrml_models.SourceModel(name=src_model.name,
+                                               sources=split_area(src_model))
+    writer = haz_writers.SourceModelXMLWriter(output_path)
+    writer.serialize(out_source_model)
+
+    return output_path
