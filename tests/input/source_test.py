@@ -465,3 +465,92 @@ class SourceDBWriterTestCase(unittest.TestCase):
         # database (by unpickling them first, of course):
         for i, ns in enumerate(nrml_sources):
             self.assertTrue(*helpers.deep_eq(ns, parsed_sources[i].nrml))
+
+
+class AreaSourceToPointSourcesTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.engine.input.source.area_source_to_point_sources`.
+    """
+
+    def setUp(self):
+        self.area_source_attrib = dict(
+            id='1',
+            name='source A',
+            trt='Active Shallow Crust',
+            geometry=nrml_models.AreaGeometry(
+                upper_seismo_depth=10,
+                lower_seismo_depth=20,
+                wkt=('POLYGON((1.0 1.0, 1.0 -1.0, -1.0 -1.0, -1.0 1.0, '
+                     '1.0 1.0))'),
+            ),
+            mag_scale_rel='WC1994',
+            rupt_aspect_ratio=1.0,
+            mfd=None,
+            nodal_plane_dist=[
+                nrml_models.NodalPlane(probability=1.0, strike=0.0,
+                                       dip=90.0, rake=0.0)
+            ],
+            hypo_depth_dist=[
+                nrml_models.HypocentralDepth(probability=1.0, depth=10.0)
+            ],
+        )
+
+        self.expected = []
+        lons = [-0.100677001712, 0.798645996576, -0.100591068089,
+                0.798817863822]
+        lats = [0.100830691185, 0.100830691185, -0.798490914733,
+                -0.798490914733]
+        for i, (lon, lat) in enumerate(zip(lons, lats)):
+            point_attrib = self.area_source_attrib.copy()
+            del point_attrib['geometry']
+            point_attrib['id'] = '1-%s' % i
+            point_attrib['name'] = 'source A-%s' % i
+
+            pt_source = nrml_models.PointSource(**point_attrib)
+            pt_source.geometry = nrml_models.PointGeometry(
+                upper_seismo_depth=10,
+                lower_seismo_depth=20,
+                wkt='POINT(%s %s)' % (lon, lat),
+            )
+            self.expected.append(pt_source)
+
+
+    def test_area_with_tgr_mfd(self):
+        area_mfd = nrml_models.TGRMFD(a_val=-3.5, b_val=1.0,
+                                 min_mag=5.0, max_mag=6.5)
+        self.area_source_attrib['mfd'] = area_mfd
+
+        area_source = nrml_models.AreaSource(**self.area_source_attrib)
+
+        # Re-scaled MFD for the points
+        point_mfd = nrml_models.TGRMFD(a_val=-4.1020599913279625, b_val=1.0,
+                                       min_mag=5.0, max_mag=6.5)
+        for exp in self.expected:
+            exp.mfd = point_mfd
+
+        actual = list(source_input.area_source_to_point_sources(area_source,
+                                                                100))
+        equal, err = helpers.deep_eq(self.expected, actual)
+        self.assertTrue(equal, err)
+
+    def test_area_with_incr_mfd(self):
+        area_mfd = nrml_models.IncrementalMFD(
+            min_mag=6.55, bin_width=0.1, occur_rates=[0.1, 0.2, 0.3, 0.4]
+        )
+        self.area_source_attrib['mfd'] = area_mfd
+
+        area_source = nrml_models.AreaSource(**self.area_source_attrib)
+
+        # Re-scaled MFD for the points
+        point_mfd = nrml_models.IncrementalMFD(
+            min_mag=6.55, bin_width=0.1, occur_rates=[0.025, 0.05, 0.075, 0.1]
+        )
+
+        for exp in self.expected:
+            exp.mfd = point_mfd
+
+        actual = list(source_input.area_source_to_point_sources(area_source,
+                                                                100))
+        equal, err = helpers.deep_eq(self.expected, actual)
+        self.assertTrue(equal, err)
