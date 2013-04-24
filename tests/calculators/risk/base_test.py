@@ -19,8 +19,7 @@ import mock
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
-from openquake.engine import engine
-from openquake.engine.calculators.risk import general as risk
+from openquake.engine.calculators.risk import base
 from openquake.engine.db import models
 from openquake.engine.utils import stats
 
@@ -45,7 +44,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             'last_update').output_set.filter(output_type='hazard_curve')
 
 
-class FakeRiskCalculator(risk.BaseRiskCalculator):
+class FakeRiskCalculator(base.RiskCalculator):
     """
     Fake Risk Calculator. Used to test the base class
     """
@@ -110,7 +109,7 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.calculator.taxonomies = {'VF': 10}
         self.calculator.set_risk_models()
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
-        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomies_imts)
+        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomy_imt)
 
     def test_create_outputs(self):
         # Test that the proper output containers are created
@@ -152,7 +151,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
         self.job = helpers.get_risk_job(cfg)
-        self.calc = risk.BaseRiskCalculator(self.job)
+        self.calc = base.RiskCalculator(self.job)
 
     def test_one_taxonomy_many_imts(self):
         # Should raise a ValueError if a vulnerabilityFunctionID is used for
