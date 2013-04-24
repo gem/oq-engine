@@ -41,7 +41,7 @@ from openquake.engine.calculators.base import signal_task_complete
 @tasks.oqtask
 @base.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
-                    taxonomy, imt, fragility_functions,
+                    taxonomy, fragility_functions, imt,
                     _output_containers, _statistical_output_contaienrs):
     """
     Celery task for the scenario damage risk calculator.
@@ -231,7 +231,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        self.fragility_functions = fm = self.parse_fragility_model()
+        fm, self.taxonomies_imts = self.parse_fragility_model()
+        self.fragility_functions = fm
         self.check_taxonomies(fm)
 
     def parse_fragility_model(self):
@@ -248,8 +249,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.damage_states = ['no_damage'] + limit_states
         self.fragility_functions = collections.defaultdict(dict)
 
+        taxonomies_imts = dict()
         for taxonomy, iml, params, no_damage_limit in iterparse:
-            self.taxonomies_imts[taxonomy] = iml['IMT']
+            taxonomies_imts[taxonomy] = iml['IMT']
 
             if fmt == "discrete":
                 if no_damage_limit is None:
@@ -268,7 +270,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 self.fragility_functions[taxonomy] = [
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
-        return self.fragility_functions
+        return self.fragility_functions, taxonomies_imts
 
     def create_statistical_outputs(self):
         """
