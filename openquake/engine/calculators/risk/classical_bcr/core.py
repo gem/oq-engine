@@ -19,8 +19,8 @@ Core functionality for the classical PSHA risk calculator.
 
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.calculators.risk import base, writers
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -29,9 +29,9 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
-def classical_bcr(job_id, hazard, vulnerability_function,
-                  vulnerability_function_retrofitted,
+@base.count_progress_risk('r')
+def classical_bcr(job_id, hazard, vulnerability_function, imt,
+                  vulnerability_function_retrofitted, imt_retrofitted,
                   output_containers, _statistical_output_containers,
                   lrem_steps_per_interval,
                   asset_life_expectancy, interest_rate):
@@ -50,6 +50,8 @@ def classical_bcr(job_id, hazard, vulnerability_function,
       to 'hazard_curve') to a tuple where the first element is an instance of
       :class:`..hazard_getters.HazardCurveGetter, and the second element is the
       corresponding weight.
+    :param str imt: the imt in long string form, i.e. SA(0.1)
+    :param str imt_retrofitted: the imt, used in retrofitted case
     :param output_containers: A dictionary mapping hazard Output ID to
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
@@ -73,11 +75,16 @@ def classical_bcr(job_id, hazard, vulnerability_function,
         bcr_distribution_id = output_containers[hazard_output_id][0]
 
         with logs.tracing('getting hazard'):
-            assets, hazard_curves, missings = hazard_getter()
+            assets, hazard_curves, missings = hazard_getter(imt)
+            # hazard curves should not vary with the imt, so I ignore
+            # assets/missing information returned by the hazard getter
+            # as they are equal to the ones associated with `imt`
+            _, hazard_curves_retrofitted, __ = hazard_getter(imt_retrofitted)
 
-        with logs.tracing('computing original losses'):
+        with logs.tracing('computing bcr'):
             original_loss_curves = calc_original(hazard_curves)
-            retrofitted_loss_curves = calc_retrofitted(hazard_curves)
+            retrofitted_loss_curves = calc_retrofitted(
+                hazard_curves_retrofitted)
 
             eal_original = [
                 scientific.average_loss(*original_loss_curves[i].xy)
@@ -97,12 +104,12 @@ def classical_bcr(job_id, hazard, vulnerability_function,
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
                 for i, asset in enumerate(assets):
-                    general.write_bcr_distribution(
+                    writers.bcr_distribution(
                         bcr_distribution_id, asset,
                         eal_original[i], eal_retrofitted[i], bcr_results[i])
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+    signal_task_complete(job_id=job_id, num_items=len(assets) + len(missings))
+
 classical_bcr.ignore_result = False
 
 
@@ -120,10 +127,12 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     def __init__(self, job):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.vulnerability_functions_retrofitted = None
+        self.taxonomies_imts_retrofitted = dict()
 
-    def worker_args(self, taxonomy):
-        return (super(ClassicalBCRRiskCalculator, self).worker_args(taxonomy) +
-                [self.vulnerability_functions_retrofitted[taxonomy]])
+    def taxonomy_args(self, taxonomy):
+        return (super(ClassicalBCRRiskCalculator, self).taxonomy_args(
+            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy],
+                         self.taxonomies_imts_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -162,6 +171,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions = self.get_vulnerability_model()
-        self.vulnerability_functions_retrofitted = (
-            self.get_vulnerability_model(True))
+        self.vulnerability_functions, self.taxonomies_imts = (
+            self.get_vulnerability_model())
+        (self.vulnerability_functions_retrofitted,
+         self.taxonomies_imts_retrofitted) = self.get_vulnerability_model(True)
