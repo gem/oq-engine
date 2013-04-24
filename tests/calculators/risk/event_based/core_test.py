@@ -13,16 +13,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from StringIO import StringIO
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
-from tests.calculators.risk import general_test
+from tests.calculators.risk import base_test
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.event_based import core as event_based
 
 
-class EventBasedRiskCalculatorTestCase(
-        general_test.BaseRiskCalculatorTestCase):
+class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     Integration test for the event based risk calculator
     """
@@ -69,26 +69,36 @@ class EventBasedRiskCalculatorTestCase(
         # vulnerability model that must match the one of the hazard
         # output
 
-        base_path = ('openquake.engine.calculators.risk.general.'
-                     'BaseRiskCalculator.')
-        patches = [helpers.patch(base_path + 'set_risk_models'),
-                   helpers.patch(base_path + '_store_exposure')]
+        cont = """\
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <vulnerabilityModel>
+        <discreteVulnerabilitySet vulnerabilitySetID="QA_test1"
+                                  assetCategory="single_asset"
+                                lossCategory="loss">
+            <IML IMT="FOO">0.1    0.2    0.3    0.45    0.6</IML>
+            <discreteVulnerability vulnerabilityFunctionID="VF"
+                                   probabilisticDistribution="LN">
+                <lossRatio>0.05    0.1    0.2    0.4    0.8</lossRatio>
+                <coefficientsVariation>
+                0.5    0.4    0.3    0.2    0.1
+                </coefficientsVariation>
+            </discreteVulnerability>
+        </discreteVulnerabilitySet>
+    </vulnerabilityModel>
+</nrml>
 
-        try:
-            for patch in patches:
-                patch.start()
-            self.calculator.taxonomies_imts = {'foo': 'bar'}
-            self.assertRaises(RuntimeError, self.calculator.pre_execute)
-        finally:
-            for patch in patches:
-                patch.stop()
+        """
+        self.assertRaises(ValueError,
+                          self.calculator.parse_vulnerability_model,
+                          StringIO(cont))
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
         # specific method to write loss curves
 
-        base_path = 'openquake.engine.calculators.risk.general'
-        patch = helpers.patch('%s.write_loss_curve' % base_path)
+        base_path = 'openquake.engine.calculators.risk.writers'
+        patch = helpers.patch('%s.loss_curve' % base_path)
 
         mocked_loss_writer = patch.start()
 
