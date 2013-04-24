@@ -15,7 +15,11 @@
 
 
 import decimal
+import os
+import StringIO
 import unittest
+
+from lxml import etree
 
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
@@ -554,3 +558,271 @@ class AreaSourceToPointSourcesTestCase(unittest.TestCase):
                                                                 100))
         equal, err = helpers.deep_eq(self.expected, actual)
         self.assertTrue(equal, err)
+
+
+class OptimizeSourceModelTestCase(unittest.TestCase):
+
+    input_source_model = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel>
+        <pointSource id="1" name="point" tectonicRegion="Active Shallow Crust">
+          <pointGeometry>
+            <gml:Point>
+              <gml:pos>0.0 0.0</gml:pos>
+            </gml:Point>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </pointGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>2.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="8.0000" />
+          <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+          </nodalPlaneDist>
+          <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="10.0"/>
+          </hypoDepthDist>
+        </pointSource>
+        <areaSource id="2" name="area" tectonicRegion="Active Shallow Crust">
+          <areaGeometry>
+            <gml:Polygon>
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>-0.5 -0.5 -0.5 0.5 0.5 0.5 0.5 -0.5</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>2.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="8.0000" />
+          <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+          </nodalPlaneDist>
+          <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="10.0"/>
+          </hypoDepthDist>
+        </areaSource>
+        <simpleFaultSource id="3" name="simple fault" tectonicRegion="Active Shallow Crust">
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>-0.5 -0.5 0.5 0.5</gml:posList>
+            </gml:LineString>
+            <dip>90.0</dip>
+            <upperSeismoDepth>1.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="7.0000" />
+          <rake>90.0</rake>
+        </simpleFaultSource>
+        <complexFaultSource id="4" name="complex fault" tectonicRegion="Active Shallow Crust">
+          <complexFaultGeometry>
+            <faultTopEdge>
+              <gml:LineString>
+                <gml:posList>-0.5 -0.45 5.0 0.45 0.5 5.0</gml:posList>
+              </gml:LineString>
+            </faultTopEdge>
+            <faultBottomEdge>
+              <gml:LineString>
+                <gml:posList>-0.45 -0.5 10.0 0.5 0.45 10.0</gml:posList>
+              </gml:LineString>
+            </faultBottomEdge>
+          </complexFaultGeometry>
+          <magScaleRel>WC1994</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="7.0000" />
+          <rake>90.0</rake>
+        </complexFaultSource>
+        <characteristicFaultSource id="7" name="characteristic source, multi surface" tectonicRegion="Active Shallow Crust">
+            <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0000" maxMag="8.0000" />
+            <rake>90.0</rake>
+            <surface>
+                <!-- Characteristic source with a collection of planar surfaces -->
+                <planarSurface strike="0.0" dip="90.0">
+                    <topLeft lon="-1.0" lat="1.0" depth="21.0" />
+                    <topRight lon="1.0" lat="1.0" depth="21.0" />
+                    <bottomLeft lon="-1.0" lat="-1.0" depth="59.0" />
+                    <bottomRight lon="1.0" lat="-1.0" depth="59.0" />
+                </planarSurface>
+                <planarSurface strike="20.0" dip="45.0">
+                    <topLeft lon="0" lat="1.1" depth="20.0" />
+                    <topRight lon="1.1" lat="2" depth="20.0" />
+                    <bottomLeft lon="0.9" lat="0" depth="80.0" />
+                    <bottomRight lon="2" lat="0.9" depth="80.0" />
+                </planarSurface>
+            </surface>
+        </characteristicFaultSource>
+    </sourceModel>
+</nrml>
+"""
+
+    output_source_model = """\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel>
+    <pointSource id="1" name="point" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>0.0 0.0</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="2-0" name="area-0" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-0.0503390234986 0.0503391970406</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3.39794000867" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="2-1" name="area-1" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>0.399321953003 0.0503391970406</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3.39794000867" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="2-2" name="area-2" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-0.0503282764445 -0.399321605919</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3.39794000867" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="2-3" name="area-3" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>0.399343447111 -0.399321605919</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3.39794000867" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <simpleFaultSource id="3" name="simple fault" tectonicRegion="Active Shallow Crust">
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>-0.5 -0.5 0.5 0.5</gml:posList>
+        </gml:LineString>
+        <dip>90.0</dip>
+        <upperSeismoDepth>1.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="7.0"/>
+      <rake>90.0</rake>
+    </simpleFaultSource>
+    <complexFaultSource id="4" name="complex fault" tectonicRegion="Active Shallow Crust">
+      <complexFaultGeometry>
+        <faultTopEdge>
+          <gml:LineString>
+            <gml:posList>-0.5 -0.45 5.0 0.45 0.5 5.0</gml:posList>
+          </gml:LineString>
+        </faultTopEdge>
+        <faultBottomEdge>
+          <gml:LineString>
+            <gml:posList>-0.45 -0.5 10.0 0.5 0.45 10.0</gml:posList>
+          </gml:LineString>
+        </faultBottomEdge>
+      </complexFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="7.0"/>
+      <rake>90.0</rake>
+    </complexFaultSource>
+    <characteristicFaultSource id="7" name="characteristic source, multi surface" tectonicRegion="Active Shallow Crust">
+      <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="8.0"/>
+      <rake>90.0</rake>
+      <surface>
+        <planarSurface strike="0.0" dip="90.0">
+          <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
+          <topRight lon="1.0" lat="1.0" depth="21.0"/>
+          <bottomLeft lon="-1.0" lat="-1.0" depth="59.0"/>
+          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
+        </planarSurface>
+        <planarSurface strike="20.0" dip="45.0">
+          <topLeft lon="0.0" lat="1.1" depth="20.0"/>
+          <topRight lon="1.1" lat="2.0" depth="20.0"/>
+          <bottomLeft lon="0.9" lat="0.0" depth="80.0"/>
+          <bottomRight lon="2.0" lat="0.9" depth="80.0"/>
+        </planarSurface>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>
+"""
+
+    def test_optimize_source_model(self):
+        in_file = helpers.touch(content=self.input_source_model)
+        out_file = helpers.touch(content=self.output_source_model)
+        area_src_disc = 50.0
+        try:
+            source_input.optimize_source_model(in_file, area_src_disc,
+                                               out_file)
+            expected = etree.tostring(
+                etree.parse(StringIO.StringIO(self.output_source_model)),
+                pretty_print=True
+            )
+            actual = etree.tostring(etree.parse(out_file), pretty_print=True)
+            self.assertEqual(expected, actual)
+        finally:
+            os.unlink(in_file)
+            os.unlink(out_file)
