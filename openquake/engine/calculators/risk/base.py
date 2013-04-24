@@ -58,7 +58,7 @@ class RiskCalculator(base.CalculatorNext):
         The random number generator (initialized with a master seed) used for
         sampling.
 
-    :attribute dict taxonomies_imts:
+    :attribute dict taxonomy_imt:
         A dictionary mapping taxonomies to intensity measure type, to
         support structure dependent intensity measure types
     """
@@ -71,7 +71,7 @@ class RiskCalculator(base.CalculatorNext):
         self.taxonomies = None
         self.rnd = None
         self.vulnerability_functions = None
-        self.taxonomies_imts = dict()
+        self.taxonomy_imt = dict()
 
     def pre_execute(self):
         """
@@ -203,7 +203,7 @@ class RiskCalculator(base.CalculatorNext):
         """
         return [self.rnd.randint(0, models.MAX_SINT_32),
                 self.vulnerability_functions[taxonomy],
-                self.taxonomies_imts[taxonomy]]
+                self.taxonomy_imt[taxonomy]]
 
     def export(self, *args, **kwargs):
         """
@@ -386,7 +386,7 @@ class RiskCalculator(base.CalculatorNext):
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
-        (self.vulnerability_functions, self.taxonomies_imts) = (
+        (self.vulnerability_functions, self.taxonomy_imt) = (
             self.get_vulnerability_model())
         self.check_taxonomies(self.vulnerability_functions)
 
@@ -462,7 +462,7 @@ class RiskCalculator(base.CalculatorNext):
         """
         vfs = dict()
 
-        taxonomies_imts = {}
+        taxonomy_imt = {}
 
         for record in parsers.VulnerabilityModelParser(vuln_content):
             taxonomy = record['ID']
@@ -470,14 +470,14 @@ class RiskCalculator(base.CalculatorNext):
             loss_ratios = record['lossRatio']
             covs = record['coefficientsVariation']
 
-            registered_imt = taxonomies_imts.get(taxonomy, imt)
+            registered_imt = taxonomy_imt.get(taxonomy, imt)
 
             if imt != registered_imt:
                 raise ValueError("The same taxonomy is associated with "
                                  "different imts %s and %s" % (
                                  imt, registered_imt))
             else:
-                taxonomies_imts[taxonomy] = imt
+                taxonomy_imt[taxonomy] = imt
 
             try:
                 vfs[taxonomy] = scientific.VulnerabilityFunction(
@@ -496,13 +496,13 @@ class RiskCalculator(base.CalculatorNext):
 
         # check that the hazard data have all the imts needed by the
         # risk calculation
-        for imt in set(taxonomies_imts.values()):
+        for imt in set(taxonomy_imt.values()):
             if not imt in imts:
                 raise ValueError(
                     "There is no hazard output for the intensity measure "
                     "%s; the available IMTs are %s" % (imt, imts))
 
-        return vfs, taxonomies_imts
+        return vfs, taxonomy_imt
 
     def create_outputs(self, hazard_output):
         """

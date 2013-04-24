@@ -158,7 +158,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         return [taxonomy,
                 self.fragility_functions[taxonomy],
-                self.taxonomies_imts[taxonomy]]
+                self.taxonomy_imt[taxonomy]]
 
     def task_completed_hook(self, message):
         """
@@ -231,7 +231,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        fm, self.taxonomies_imts = self.parse_fragility_model()
+        fm, self.taxonomy_imt = self.parse_fragility_model()
         self.fragility_functions = fm
         self.check_taxonomies(fm)
 
@@ -249,9 +249,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.damage_states = ['no_damage'] + limit_states
         self.fragility_functions = collections.defaultdict(dict)
 
-        taxonomies_imts = dict()
+        taxonomy_imt = dict()
         for taxonomy, iml, params, no_damage_limit in iterparse:
-            taxonomies_imts[taxonomy] = iml['IMT']
+            taxonomy_imt[taxonomy] = iml['IMT']
 
             if fmt == "discrete":
                 if no_damage_limit is None:
@@ -270,7 +270,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 self.fragility_functions[taxonomy] = [
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
-        return self.fragility_functions, taxonomies_imts
+        return self.fragility_functions, taxonomy_imt
 
     def create_statistical_outputs(self):
         """

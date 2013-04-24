@@ -172,7 +172,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         task
         """
         return [self.vulnerability_functions[taxonomy],
-                self.taxonomies_imts[taxonomy]]
+                self.taxonomy_imt[taxonomy]]
 
     def create_getter(self, output, assets):
         """

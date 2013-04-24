@@ -156,12 +156,12 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.vulnerability_functions_retrofitted = None
-        self.taxonomies_imts_retrofitted = dict()
+        self.taxonomy_imt_retrofitted = dict()
 
     def taxonomy_args(self, taxonomy):
         return (super(EventBasedBCRRiskCalculator, self).taxonomy_args(
             taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy],
-                         self.taxonomies_imts_retrofitted[taxonomy]])
+                         self.taxonomy_imt_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -220,7 +220,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions, self.taxonomies_imts = (
+        self.vulnerability_functions, self.taxonomy_imt = (
             self.get_vulnerability_model())
         (self.vulnerability_functions_retrofitted,
-         self.taxonomies_imts_retrofitted) = self.get_vulnerability_model(True)
+         self.taxonomy_imt_retrofitted) = self.get_vulnerability_model(True)
