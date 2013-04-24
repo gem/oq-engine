@@ -928,6 +928,12 @@ class SourceModelXMLWriter(object):
     def _append_mfd(self, elem, src):
         """
         Append a MFD element to the XML tree for a given ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
         """
         if isinstance(src.mfd, models.IncrementalMFD):
             mfd = etree.SubElement(
@@ -956,6 +962,12 @@ class SourceModelXMLWriter(object):
         """
         Append a nodal plane disitribution element to the XML tree for a given
         ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
         """
         npd = etree.SubElement(elem, 'nodalPlaneDist')
         for np in src.nodal_plane_dist:
@@ -974,6 +986,12 @@ class SourceModelXMLWriter(object):
         """
         Append a hypocentral depth distribution element to XML tree for a given
         ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
         """
         hdd = etree.SubElement(elem, 'hypoDepthDist')
         for hd in src.hypo_depth_dist:
@@ -989,6 +1007,12 @@ class SourceModelXMLWriter(object):
     def _append_area(self, src_model_elem, src):
         """
         Append an area source element to the XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.AreaSource`.
         """
         area_elem = etree.SubElement(
             src_model_elem,
@@ -1030,6 +1054,12 @@ class SourceModelXMLWriter(object):
     def _append_point(self, src_model_elem, src):
         """
         Append a point source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.PointSource`.
         """
         pt_elem = etree.SubElement(
             src_model_elem,
@@ -1063,8 +1093,13 @@ class SourceModelXMLWriter(object):
 
     def _append_fault_edge(self, edge_elem, wkt):
         """
-        Append a GML linestring geometry element to the given ``edge_elem``,
+        Append a <gml:LineString> geometry element to the given ``edge_elem``,
         where the geometry is defined by ``wkt``.
+
+        :param elem:
+            An instance of :class:`lxml.etree._Element`.
+        :param str wkt:
+            A LINESTRING represented as WKT.
         """
         linestring = etree.SubElement(edge_elem, '{%s}LineString' % GML_NS)
         poslist = etree.SubElement(linestring, '{%s}posList' % GML_NS)
@@ -1116,6 +1151,12 @@ class SourceModelXMLWriter(object):
     def _append_complex(self, src_model_elem, src):
         """
         Append a complex fault source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.ComplexFaultSource`.
         """
         complex_elem = etree.SubElement(
             src_model_elem,
@@ -1142,6 +1183,12 @@ class SourceModelXMLWriter(object):
     def _append_simple(self, src_model_elem, src):
         """
         Append a simple fault source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.SimpleFaultSource`.
         """
         simple_elem = etree.SubElement(
             src_model_elem,
@@ -1173,6 +1220,12 @@ class SourceModelXMLWriter(object):
         Characteristic fault source geometries can be represented either by a
         simple fault geometry, a complex fault geometry, or a collection of
         planar surfaces.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.CharacteristicSource`.
         """
         char_elem = etree.SubElement(
             src_model_elem,
