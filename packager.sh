@@ -81,8 +81,6 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
-    echo PWD
-    pwd
     scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
 
     trap ERR
