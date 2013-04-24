@@ -141,7 +141,7 @@ def classical(job_id, hazard, vulnerability_function, imt,
 
         with logs.tracing('writing statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
-                writers.compute_and_write_statistics(
+                writers.curve_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
                     mean_loss_map_ids, quantile_loss_map_ids,
                     mean_loss_fraction_ids, quantile_loss_fraction_ids,
