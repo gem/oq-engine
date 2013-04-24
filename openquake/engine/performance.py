@@ -16,7 +16,7 @@ from openquake.engine.db import models
 MB = 1024 * 1024  # 1 megabyte
 
 
-# In the future this class may replace openquake.engine.writers.BulkInserter
+# In the future this class may replace openquake.engine.writer.BulkInserter
 # since it is much more efficient (even hundreds of times for bulky updates)
 # being based on COPY FROM. BulkInserter objects are not thread-safe.
 class BulkInserter(object):
@@ -30,6 +30,8 @@ class BulkInserter(object):
 
     def save(self, obj):
         """
+        :param obj: a Django model object
+
         Append an object to the list of objects to save. If the list exceeds
         the max_cache_size, flush it on the database.
         """
@@ -74,7 +76,7 @@ class BulkInserter(object):
         for f in fields:
             col = getattr(obj, f)
             if col is None:
-                col = '\N'
+                col = r'\N'
             elif isinstance(col, GeometryField):
                 col = col.wkt()
             else:
