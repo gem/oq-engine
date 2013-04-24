@@ -266,7 +266,7 @@ def event_based(job_id, hazard,
 
         with profile('computing and writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                writers.compute_and_write_statistics(
+                writers.curve_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
                     mean_loss_map_ids, quantile_loss_map_ids,
                     None, None,  # no mean/quantile loss fractions
