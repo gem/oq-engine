@@ -260,7 +260,6 @@ class GroundMotionValuesGetter(HazardGetter):
                 self.assets[0].exposure_model_id,
                 assets_extent.wkt) + args
 
-        logs.LOG.warn("args=%s" % str(args))
         cursor.execute(query, args)
         # print cursor.mogrify(query, args)
 
