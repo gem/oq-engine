@@ -71,7 +71,7 @@ def scenario_damage(job_id, hazard,
         assets, ground_motion_values, missings = hazard_getter(imt)
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
-        base.signal_task_complete(
+        signal_task_complete(
             job_id=job_id, fractions=None,
             num_items=len(missings), taxonomy=taxonomy)
         return
