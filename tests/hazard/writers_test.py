@@ -1553,7 +1553,11 @@ class SourceModelXMLWriterTestCase(unittest.TestCase):
         source_model = parser.parse()
 
         _, path = tempfile.mkstemp()
-        writer = writers.SourceModelXMLWriter(path)
-        writer.serialize(source_model)
+        try:
+            writer = writers.SourceModelXMLWriter(path)
+            writer.serialize(source_model)
 
-        utils.assert_xml_equal(StringIO.StringIO(test_xml), path)
+            utils.assert_xml_equal(StringIO.StringIO(test_xml), path)
+        finally:
+            # cleanup temp files
+            os.unlink(path)
