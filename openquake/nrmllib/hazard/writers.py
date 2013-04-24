@@ -1279,7 +1279,8 @@ class SourceModelXMLWriter(object):
             )
 
             src_model_elem = etree.SubElement(root, 'sourceModel')
-            src_model_elem.set('name', src_model.name)
+            if src_model.name is not None:
+                src_model_elem.set('name', src_model.name)
 
             for src in src_model:
                 if isinstance(src, models.AreaSource):
