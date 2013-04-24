@@ -69,8 +69,9 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         # vulnerability model that must match the one of the hazard
         # output
 
-        cont = """<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-              xmlns:gml="http://www.opengis.net/gml">
+        cont = """\
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
     <vulnerabilityModel>
         <discreteVulnerabilitySet vulnerabilitySetID="QA_test1"
                                   assetCategory="single_asset"
