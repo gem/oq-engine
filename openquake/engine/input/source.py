@@ -17,8 +17,12 @@
 'hzrdi.parsed_source' table.
 """
 
+import math
+
 from django.db import router
 from django.db import transaction
+from itertools import izip
+
 import openquake.nrmllib
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
@@ -566,3 +570,58 @@ class RuptureDBWriter(object):
                 'Expected Simple or Complex FaultRuptureModel, got %r' % src)
         models.ParsedRupture(
             input=self.inp, rupture_type=rupture_type, nrml=src).save()
+
+
+def area_source_to_point_sources(area_src, area_src_disc):
+    """
+    Split an area source into a generator of point sources.
+
+    MFDs will be rescaled appropriately for the number of points in the area
+    mesh.
+
+    :param area_src:
+        :class:`openquake.nrmllib.models.AreaSource`
+    :param float area_src_disc:
+        Area source discretization step, in kilometers.
+    """
+    shapely_polygon = wkt.loads(area_src.geometry.wkt)
+    area_polygon = geo.Polygon(
+        # We ignore the last coordinate in the sequence here, since it is a
+        # duplicate of the first. hazardlib will close the loop for us.
+        [geo.Point(*x) for x in list(shapely_polygon.exterior.coords)[:-1]]
+    )
+
+    mesh = area_polygon.discretize(area_src_disc)
+    num_points = len(mesh)
+
+    area_mfd = area_src.mfd
+
+    if isinstance(area_mfd, nrml_models.TGRMFD):
+        new_a_val = math.log10(10 ** area_mfd.a_val / float(num_points))
+        new_mfd = nrml_models.TGRMFD(a_val=new_a_val, b_val=area_mfd.b_val,
+                                     min_mag=area_mfd.min_mag,
+                                     max_mag=area_mfd.max_mag)
+    elif isinstance(area_mfd, nrml_models.IncrementalMFD):
+        new_occur_rates = [float(x) / num_points for x in area_mfd.occur_rates]
+        new_mfd = nrml_models.IncrementalMFD(min_mag=area_mfd.min_mag,
+                                             bin_width=area_mfd.bin_width,
+                                             occur_rates=new_occur_rates)
+
+    for i, (lon, lat) in enumerate(izip(mesh.lons, mesh.lats)):
+        pt = nrml_models.PointSource(
+            # Generate a new ID and name
+            id='%s-%s' % (area_src.id, i),
+            name='%s-%s' % (area_src.name, i),
+            trt=area_src.trt,
+            geometry=nrml_models.PointGeometry(
+                upper_seismo_depth=area_src.geometry.upper_seismo_depth,
+                lower_seismo_depth=area_src.geometry.lower_seismo_depth,
+                wkt='POINT(%s %s)' % (lon, lat)
+            ),
+            mag_scale_rel=area_src.mag_scale_rel,
+            rupt_aspect_ratio=area_src.rupt_aspect_ratio,
+            mfd=new_mfd,
+            nodal_plane_dist=area_src.nodal_plane_dist,
+            hypo_depth_dist=area_src.hypo_depth_dist
+        )
+        yield pt
