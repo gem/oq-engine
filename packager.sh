@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
@@ -269,7 +269,7 @@ EOF
     # TODO
     # app related tests (run demos)
 
-    return
+    return 0
 }
 
 #
