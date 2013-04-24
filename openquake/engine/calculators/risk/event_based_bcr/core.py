@@ -22,8 +22,8 @@ import numpy
 
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.calculators.risk import base, writers
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -32,9 +32,10 @@ from django.db import transaction
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
+@base.count_progress_risk('r')
 def event_based_bcr(job_id, hazard, task_seed,
-                    vulnerability_function, vulnerability_function_retrofitted,
+                    vulnerability_function, imt,
+                    vulnerability_function_retrofitted, imt_retrofitted,
                     output_containers, _statistical_output_containers,
                     time_span, tses,
                     loss_curve_resolution, asset_correlation,
@@ -54,6 +55,9 @@ def event_based_bcr(job_id, hazard, task_seed,
       to 'gmf_collection') to a tuple where the first element is a list
       of list (one for each asset) with the ground motion values used by the
       calculation, and the second element is the corresponding weight.
+    :param str imt: the imt in long string form, i.e. SA(0.1)
+    :param str imt_retrofitted:
+      the imt used to get hazard in the retrofitted case
     :param output_containers: A dictionary mapping hazard Output ID to
       a tuple with only the ID of the
       :class:`openquake.engine.db.models.BCRDistribution` output container
@@ -96,21 +100,24 @@ def event_based_bcr(job_id, hazard, task_seed,
             seed=seed, correlation=asset_correlation)
 
         with logs.tracing('getting hazard'):
-            assets, gmvs_ruptures, missings = hazard_getter()
+            assets, gmvs_ruptures, missings = hazard_getter(imt)
+            # assets and missings do not change with imt
+            _, gmvs_ruptures_retrofitted, __ = hazard_getter(imt_retrofitted)
+
             if len(assets):
-                ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+                gmvs = numpy.array(gmvs_ruptures)[:, 0]
+                gmvs_retrofitted = numpy.array(gmvs_ruptures_retrofitted)[:, 0]
             else:
                 # we are relying on the fact that if all the
                 # hazard_getter in this task will either return some
                 # results or they all return an empty result set.
                 logs.LOG.info("Exit from task as no asset could be processed")
-                base.signal_task_complete(job_id=job_id,
-                                          num_items=len(missings))
+                signal_task_complete(job_id=job_id, num_items=len(missings))
                 return
 
-        with logs.tracing('computing risk'):
-            _, original_loss_curves = calc_original(ground_motion_values)
-            _, retrofitted_loss_curves = calc_retrofitted(ground_motion_values)
+        with logs.tracing('computing bcr'):
+            _, original_loss_curves = calc_original(gmvs)
+            _, retrofitted_loss_curves = calc_retrofitted(gmvs_retrofitted)
 
             eal_original = [
                 scientific.average_loss(*original_loss_curves[i].xy)
@@ -130,12 +137,11 @@ def event_based_bcr(job_id, hazard, task_seed,
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
                 for i, asset in enumerate(assets):
-                    general.write_bcr_distribution(
+                    writers.bcr_distribution(
                         bcr_distribution_id, asset,
                         eal_original[i], eal_retrofitted[i], bcr_results[i])
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+    signal_task_complete(job_id=job_id, num_items=len(assets) + len(missings))
 
 event_based_bcr.ignore_result = False
 
@@ -150,10 +156,12 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.vulnerability_functions_retrofitted = None
+        self.taxonomy_imt_retrofitted = dict()
 
-    def worker_args(self, taxonomy):
-        return (super(EventBasedBCRRiskCalculator, self).worker_args(
-            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy]])
+    def taxonomy_args(self, taxonomy):
+        return (super(EventBasedBCRRiskCalculator, self).taxonomy_args(
+            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy],
+                         self.taxonomy_imt_retrofitted[taxonomy]])
 
     @property
     def calculator_parameters(self):
@@ -212,6 +220,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions = self.get_vulnerability_model()
-        self.vulnerability_functions_retrofitted = (
-            self.get_vulnerability_model(True))
+        self.vulnerability_functions, self.taxonomy_imt = (
+            self.get_vulnerability_model())
+        (self.vulnerability_functions_retrofitted,
+         self.taxonomy_imt_retrofitted) = self.get_vulnerability_model(True)
