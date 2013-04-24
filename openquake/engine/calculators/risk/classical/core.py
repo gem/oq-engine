@@ -26,16 +26,15 @@ from openquake.risklib import api, scientific
 from django.db import transaction
 
 from openquake.engine.db import models
-from openquake.engine.calculators.risk import hazard_getters
-from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.calculators.risk import base, writers, hazard_getters
 from openquake.engine.utils import tasks
 from openquake.engine import logs
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
-def classical(job_id, hazard, vulnerability_function,
+@base.count_progress_risk('r')
+def classical(job_id, hazard, vulnerability_function, imt,
               output_containers, statistical_output_containers,
               lrem_steps_per_interval, conditional_loss_poes,
               poes_disagg, hazard_montecarlo_p):
@@ -53,6 +52,7 @@ def classical(job_id, hazard, vulnerability_function,
       to 'hazard_curve') to a tuple where the first element is an instance of
       :class:`..hazard_getters.HazardCurveGetter`, and the second element is
       the corresponding weight.
+    :param str imt: the imt in long string form, i.e. SA(0.1)
     :param dict output_containers: A dictionary mapping hazard
       Output ID to a tuple (a, b) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -92,7 +92,7 @@ def classical(job_id, hazard, vulnerability_function,
             output_containers[hazard_output_id])
 
         with logs.tracing('getting hazard'):
-            assets, hazard_curves, missings = hazard_getter()
+            assets, hazard_curves, missings = hazard_getter(imt)
 
         with logs.tracing('computing risk over %d assets' % len(assets)):
             asset_outputs[hazard_output_id] = calculator(hazard_curves)
@@ -105,7 +105,7 @@ def classical(job_id, hazard, vulnerability_function,
                     asset = assets[i]
 
                     # Write Loss Curves
-                    general.write_loss_curve(
+                    writers.loss_curve(
                         loss_curve_id, asset,
                         loss_ratio_curve.ordinates,
                         loss_ratio_curve.abscissae,
@@ -115,7 +115,7 @@ def classical(job_id, hazard, vulnerability_function,
 
                     # Then conditional loss maps
                     for poe in conditional_loss_poes:
-                        general.write_loss_map_data(
+                        writers.loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
                                 loss_ratio_curve.abscissae,
@@ -123,7 +123,7 @@ def classical(job_id, hazard, vulnerability_function,
 
                     # Then loss fractions
                     for poe in poes_disagg:
-                        general.write_loss_fraction_data(
+                        writers.loss_fraction_data(
                             loss_fraction_ids[poe],
                             location=asset.site,
                             value=asset.taxonomy,
@@ -141,7 +141,7 @@ def classical(job_id, hazard, vulnerability_function,
 
         with logs.tracing('writing statistics'):
             with transaction.commit_on_success(using='reslt_writer'):
-                general.compute_and_write_statistics(
+                writers.compute_and_write_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
                     mean_loss_map_ids, quantile_loss_map_ids,
                     mean_loss_fraction_ids, quantile_loss_fraction_ids,
@@ -149,13 +149,12 @@ def classical(job_id, hazard, vulnerability_function,
                     hazard_montecarlo_p, conditional_loss_poes,
                     poes_disagg, "support")
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings))
+    signal_task_complete(job_id=job_id, num_items=len(assets) + len(missings))
 
 classical.ignore_result = False
 
 
-class ClassicalRiskCalculator(general.BaseRiskCalculator):
+class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical PSHA risk calculator. Computes loss curves and loss maps
     for a given set of assets.
@@ -166,42 +165,18 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
 
     hazard_getter = hazard_getters.HazardCurveGetterPerAsset
 
-    def pre_execute(self):
-        """
-        In addition to the base classical `pre_execute` actions, also check for
-        IMT compatibility between the specified hazard output and the
-        vulnerability model.
-        """
-        super(ClassicalRiskCalculator, self).pre_execute()
-        if self.rc.hazard_output is not None:
-            haz_output = self.rc.hazard_output
-            if haz_output.output_type == 'hazard_curve':
-                vuln_imts = list(set(self.taxonomies_imts.values()))
-                haz_curve = haz_output.hazardcurve
-                hc_imt = haz_curve.imt
-                if hc_imt == 'SA':
-                    hc_imt = 'SA(%s)' % haz_curve.sa_period
-
-                if vuln_imts != [hc_imt]:
-                    msg = (
-                        "Vulnerability model and the specified hazard curve "
-                        "are incompatible. Vulnerability IMT(s): %s. Hazard "
-                        "curve IMT: %s"
-                        % (vuln_imts, haz_curve.imt)
-                    )
-                    raise ValueError(msg)
-
-    def worker_args(self, taxonomy):
+    def taxonomy_args(self, taxonomy):
         """
         As we do not need a seed in the classical calculator we just
         have the vulnerability function as extra arg to the celery
         task
         """
-        return [self.vulnerability_functions[taxonomy]]
+        return [self.vulnerability_functions[taxonomy],
+                self.taxonomies_imts[taxonomy]]
 
-    def create_getter(self, output, imt, assets):
+    def create_getter(self, output, assets):
         """
-        See :meth:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..base.RiskCalculator.create_getter`
         """
         if not output.is_hazard_curve():
             raise RuntimeError(
@@ -218,7 +193,7 @@ class ClassicalRiskCalculator(general.BaseRiskCalculator):
             weight = None
 
         hazard_getter = self.hazard_getter(
-            hc.id, imt, assets, self.rc.best_maximum_distance)
+            hc.id, assets, self.rc.best_maximum_distance)
 
         return (hazard_getter, weight)
 
