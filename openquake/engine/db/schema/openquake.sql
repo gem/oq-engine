@@ -17,7 +17,6 @@ SET client_min_messages TO WARNING;
 -- Name space definitions go here
 ------------------------------------------------------------------------
 CREATE SCHEMA admin;
-CREATE SCHEMA eqcat;
 CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
 CREATE SCHEMA oqmif;
@@ -67,65 +66,6 @@ CREATE TABLE admin.revision_info (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
-
-
--- Earthquake catalog
-CREATE TABLE eqcat.catalog (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- This is *not* a foreign key.
-    eventid INTEGER NOT NULL,
-    agency VARCHAR NOT NULL,
-    identifier VARCHAR NOT NULL,
-    time timestamp without time zone NOT NULL,
-    -- error in seconds
-    time_error float NOT NULL,
-    -- depth in km
-    depth float NOT NULL,
-    -- error in km
-    depth_error float NOT NULL,
-    -- One of unknown, aftershock or foreshock
-    event_class VARCHAR,
-        CONSTRAINT event_class_value CHECK (
-            event_class is NULL
-            OR (event_class IN ('aftershock', 'foreshock'))),
-    magnitude_id INTEGER NOT NULL,
-    surface_id INTEGER NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
-SELECT AddGeometryColumn('eqcat', 'catalog', 'point', 4326, 'POINT', 2);
-ALTER TABLE eqcat.catalog ALTER COLUMN point SET NOT NULL;
-
-
--- Earthquake event magnitudes
-CREATE TABLE eqcat.magnitude (
-    id SERIAL PRIMARY KEY,
-    mb_val float,
-    mb_val_error float,
-    ml_val float,
-    ml_val_error float,
-    ms_val float,
-    ms_val_error float,
-    mw_val float,
-    mw_val_error float,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
-
-
--- Earthquake event surface (an ellipse with an angle)
-CREATE TABLE eqcat.surface (
-    id SERIAL PRIMARY KEY,
-    -- Semi-minor axis: The shortest radius of an ellipse.
-    semi_minor float NOT NULL,
-    -- Semi-major axis: The longest radius of an ellipse.
-    semi_major float NOT NULL,
-    strike float NOT NULL,
-        CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
 
 
 -- Site-specific parameters for hazard calculations.
@@ -1228,7 +1168,7 @@ CREATE TABLE hzrdr.gmf (
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
     gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
-    ON DELETE CASCADE,  
+    ON DELETE CASCADE,
     imt VARCHAR NOT NULL,
         --CONSTRAINT hazard_curve_imt
         --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
@@ -1697,15 +1637,6 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_magnitude_fk
-FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
-
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
-FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -2021,25 +1952,8 @@ REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
 ---------------------- views ----------------------------
-
--- global catalog view, needed for Geonode integration
-CREATE VIEW eqcat.catalog_allfields AS
-SELECT
-    eqcat.catalog.*,
-    eqcat.surface.semi_minor, eqcat.surface.semi_major,
-    eqcat.surface.strike,
-    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
-    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
-    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
-    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
-WHERE
-    eqcat.catalog.magnitude_id = eqcat.magnitude.id
-    AND eqcat.catalog.surface_id = eqcat.surface.id;
-
-
 -- convenience view to analyze the performance of the jobs;
--- for instance the slowest operations can be extracted with 
+-- for instance the slowest operations can be extracted with
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_hazard;
 CREATE VIEW uiapi.performance_hazard AS
 SELECT h.id AS hazard_calculation_id, description, p.* FROM (
