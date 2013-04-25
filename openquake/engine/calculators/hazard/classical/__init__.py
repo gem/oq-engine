@@ -39,6 +39,7 @@ Outputs
 
 * :ref:`Hazard Curves <hazard-curves>`
 * :ref:`Hazard Maps <hazard-maps>`
+* :ref:`Uniform Hazard Spectra <uniform-hazard-spectra>`
 
 .. _hazard-curves:
 
@@ -215,10 +216,104 @@ where
   the :ref:`number of hazard curves <hazard-curves>`)
 * ``E`` is the total number of probabilities of exceedance
 
+Note: This includes mean and quantile maps.
+
 Statistical Maps
 ----------------
 
 Hazard maps can be produced from any set of hazard curves, including mean and
 quantile aggregates. There are no special methods required for computing these
 maps; the process is the same for all hazard map computation.
+
+.. _uniform-hazard-spectra:
+
+Uniform Hazard Spectra
+======================
+
+Uniform Hazard Spectra (UHS) are discrete functions which are essentially
+derived from hazard maps. Thus, hazard map computation is a prerequisite step
+in producing UHS. UHS derivation isn't so much a computation, but rather a
+special arrangement or "view" of hazard map data.
+
+UHS "curves" are composed of a few key elements:
+
+* **Spectra Acceleration Periods** - These values make up the x-axis values
+  ("ordinates") of the curve.
+* **Intensity Measure Levels** - These values make up the y-axis values
+  ("abscissae") of the curve.
+* **Probability of Exceedance** - The hazard map probability value from which
+  the UHS is derived. The "Uniform" in UHS indicates a uniform PoE.
+* **Location** - A 2D geographical point, consisting of longitude and latitude.
+
+To construct UHS from a set of hazard maps, one can conceptualize this process
+as simply extracting from multiple hazard maps all of the intensity measure
+levels for a given location and arranging values in order of SA period,
+beginning with the lowest period value. This is done for all locations.
+
+Note: All maps with IMT = SA are considered, in addition to PGA. PGA is
+equivalent to SA(0.0). Hazard maps with other IMTs (such as PGV or PGD) are
+ignored.
+
+The example below illustrates extracting the IML values for a given location
+(indicated by `x`) from three hazard maps::
+
+    Hazard maps PoE: 0.1
+
+        /--------------/
+       /              /<-- PGA [equivalent to SA(0.0)]
+      /     x        /-/
+     /--------------/ /<-- SA(0.025)
+      /     x        /-/
+     /--------------/ /<-- SA(0.1)
+      /     x        /-/
+     /--------------/ /<-- SA(0.2)
+      /     x        /
+     /--------------/
+
+Assuming that the IMLs from the PGA, SA(0.025), SA(0.1), and SA(0.2) maps are
+0.3, 0.5, 0.2, and 0.1, respectively, the resulting UHS curve would look like
+this::
+
+    [IML]
+     ^
+     |
+    0.5           *
+     |
+    0.4
+     |
+    0.3   *
+     |
+    0.2                   *
+     |
+    0.1                           *
+     |
+     +----|-------|-------|-------|----> [SA Period]
+         0.0    0.025    0.1     0.2
+
+Uniform Hazard Spectra are grouped into result sets where each result set
+corresponds to a probability of exceedance and either a logic tree realization
+or statistical aggregate of realizations. Each result set contains a curve for
+each geographical point of interest in the calculation.
+
+The number of UHS results (each containing curves for all sites) is
+
+``Tr = E * (Q + M + R)``
+
+where
+
+* ``Tr`` is the total number of result sets (and also the number of files, if
+  the results are exported)
+* ``E`` is the total number of probabilities of exceedance
+* ``Q`` is the number of quantile levels
+* ``M`` is 1 if the calculation computes mean results, else 0
+* ``R`` is the total number of logic tree realizations
+
+The total of UHS curves is
+
+``T = Tr * P``
+
+where
+
+* ``Tr`` is the total number of result sets (see abov)
+* ``P`` is the number of geographical points of interest
 """
