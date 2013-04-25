@@ -204,26 +204,6 @@ COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the
 COMMENT ON COLUMN uiapi.job_stats.num_realizations IS 'The number of logic tree samples in the calculation';
 
 
-COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
-COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
-COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
-    - peak ground acceleration (pga)
-    - spectral acceleration (sa)
-    - peak ground velocity (pgv)
-    - peak ground displacement (pgd)
-    - Arias Intensity (ia)
-    - relative significant duration (rsd)
-    - Modified Mercalli Intensity';
-COMMENT ON COLUMN uiapi.oq_job_profile.job_type IS '"hazard" and/or "risk"';
-COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
-COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
-COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
-COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
-COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
-
-
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
 COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
 COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
