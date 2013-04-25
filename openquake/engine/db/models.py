@@ -118,26 +118,6 @@ def queryset_iter(queryset, chunk_size):
             offset += chunk_size
 
 
-def inputs4job(job_id, input_type=None, path=None):
-    """Return the inputs for the given job, input type and path.
-
-    :param int job_id: identifier of the job in question
-    :param str input_type: a valid input type
-    :param str path: the path of the desired input.
-    :returns: a list of :py:class:`openquake.engine.db.models.Input` instances
-    """
-    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    if not input_type and not path:
-        return list(i.input for i in i2js.all())
-    qargs = []
-    if input_type:
-        qargs.append(("input__input_type", input_type))
-    if path:
-        qargs.append(("input__path", path))
-    qargs = dict(qargs)
-    return list(i.input for i in i2js.filter(**qargs))
-
-
 def inputs4hcalc(calc_id, input_type=None):
     """
     Get all of the inputs for a given hazard calculation.
