@@ -118,16 +118,6 @@ def queryset_iter(queryset, chunk_size):
             offset += chunk_size
 
 
-def profile4job(job_id):
-    """Return the job profile for the given job.
-
-    :param int job_id: identifier of the job in question
-    :returns: a :py:class:`openquake.engine.db.models.OqJobProfile` instance
-    """
-    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    return j2p.oq_job_profile
-
-
 def inputs4job(job_id, input_type=None, path=None):
     """Return the inputs for the given job, input type and path.
 
@@ -507,17 +497,6 @@ class CNodeStats(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"cnode_stats'
-
-
-class Job2profile(djm.Model):
-    '''
-    Associates jobs with their profiles.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    oq_job_profile = djm.ForeignKey('OqJobProfile')
-
-    class Meta:
-        db_table = 'uiapi\".\"job2profile'
 
 
 class HazardCalculation(djm.Model):
