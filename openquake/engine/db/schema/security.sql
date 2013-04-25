@@ -120,7 +120,6 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.input              TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.model_content      TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.input2job          TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.src2ltsrc          TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.job2profile        TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_phase_stats    TO oq_job_init;
 -- oq_job_init is granted write access to record job start time and other job stats at job init time

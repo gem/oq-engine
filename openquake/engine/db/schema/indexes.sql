@@ -91,8 +91,6 @@ CREATE INDEX oqmif_exposure_data_site_sty_idx ON oqmif.exposure_data(ST_Y(geomet
 
 
 -- uiapi indexes
-CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
-CREATE INDEX uiapi_job2profile_job_id_idx on uiapi.job2profile(oq_job_id);
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
 
 -- htemp indexes
