@@ -15,7 +15,6 @@
 
 -- schemas ------------------------------------------------------
 COMMENT ON SCHEMA admin IS 'Administrative data';
-COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
 COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
 COMMENT ON SCHEMA oqmif IS 'OpenQuake tables for interfacing with external parties';
@@ -38,27 +37,6 @@ COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database arte
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
 COMMENT ON COLUMN admin.revision_info.step IS 'A simple counter that will be used to facilitate schema upgrades and/or data migration.';
 COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
-
-
-
--- eqcat schema tables ------------------------------------------
-COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
-COMMENT ON COLUMN eqcat.catalog.depth IS 'Earthquake depth (in km)';
-COMMENT ON COLUMN eqcat.catalog.event_class IS 'Either unknown (NULL) or one of: ''aftershock'', ''foreshock''.';
-COMMENT ON COLUMN eqcat.catalog.magnitude_id IS 'Foreign key to the row with the magnitude data.';
-COMMENT ON COLUMN eqcat.catalog.surface_id IS 'Foreign key to the row with the earthquake surface data.';
-COMMENT ON COLUMN eqcat.catalog.time IS 'Earthquake date and time';
-
-
-COMMENT ON TABLE eqcat.magnitude IS 'Table with earthquake magnitudes in different units of measurement. At least one magnitude value must be set.';
-
-
-COMMENT ON TABLE eqcat.surface IS 'Table with earthquake surface data, basically an ellipse and a strike angle.';
-COMMENT ON COLUMN eqcat.surface.semi_minor IS 'Semi-minor axis: The shortest radius of an ellipse.';
-COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radius of an ellipse.';
-
-COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed for geonode integration';
-
 
 
 -- hzrdi schema tables ------------------------------------------
