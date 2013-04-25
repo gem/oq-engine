@@ -19,7 +19,6 @@ GRANT USAGE ON SCHEMA admin TO GROUP openquake;
 GRANT USAGE ON SCHEMA htemp TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
-GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
 GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
@@ -28,7 +27,6 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA admin TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA htemp TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdr TO GROUP openquake;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA oqmif TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA riski TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA riskr TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA uiapi TO GROUP openquake;
@@ -38,7 +36,6 @@ GRANT SELECT ON ALL TABLES IN SCHEMA admin TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA htemp TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdr TO GROUP openquake;
-GRANT SELECT ON ALL TABLES IN SCHEMA oqmif TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA riski TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA riskr TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA uiapi TO GROUP openquake;
@@ -53,7 +50,6 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
-GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA oqmif TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
@@ -93,10 +89,10 @@ GRANT SELECT,INSERT        ON hzrdr.ses_collection    TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.ses               TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_reslt_writer;
 
--- oqmif schema
-GRANT SELECT,INSERT        ON oqmif.exposure_data    TO oq_job_init;
-GRANT SELECT,INSERT        ON oqmif.exposure_model   TO oq_job_init;
-GRANT SELECT,INSERT,UPDATE ON oqmif.occupancy        TO oq_job_init;
+-- riski schema
+GRANT SELECT,INSERT        ON riski.exposure_data    TO oq_job_init;
+GRANT SELECT,INSERT        ON riski.exposure_model   TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riski.occupancy        TO oq_job_init;
 
 -- riskr schema
 GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve                TO oq_reslt_writer;
