@@ -16,12 +16,6 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
--- eqcat.catalog
-CREATE INDEX eqcat_catalog_agency_idx on eqcat.catalog(agency);
-CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
-CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
-CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
-
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
@@ -30,7 +24,6 @@ CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
 CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
 
 -- index for the 'owner_id' foreign key
-CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
 
 CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
