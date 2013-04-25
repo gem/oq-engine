@@ -230,66 +230,6 @@ class RevisionInfo(djm.Model):
         db_table = 'admin\".\"revision_info'
 
 
-## Tables in the 'eqcat' schema.
-
-
-class Catalog(djm.Model):
-    '''
-    Earthquake catalog
-    '''
-    owner = djm.ForeignKey('OqUser')
-    eventid = djm.IntegerField()
-    agency = djm.TextField()
-    identifier = djm.TextField()
-    time = djm.DateTimeField()
-    time_error = djm.FloatField()
-    depth = djm.FloatField()
-    depth_error = djm.FloatField()
-    EVENT_CLASS_CHOICES = (
-        (u'aftershock', u'Aftershock'),
-        (u'foreshock', u'Foreshock'),
-    )
-    event_class = djm.TextField(null=True, choices=EVENT_CLASS_CHOICES)
-    magnitude = djm.ForeignKey('Magnitude')
-    surface = djm.ForeignKey('Surface')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'eqcat\".\"catalog'
-
-
-class Magnitude(djm.Model):
-    '''
-    Earthquake event magnitudes
-    '''
-    mb_val = djm.FloatField(null=True)
-    mb_val_error = djm.FloatField(null=True)
-    ml_val = djm.FloatField(null=True)
-    ml_val_error = djm.FloatField(null=True)
-    ms_val = djm.FloatField(null=True)
-    ms_val_error = djm.FloatField(null=True)
-    mw_val = djm.FloatField(null=True)
-    mw_val_error = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"magnitude'
-
-
-class Surface(djm.Model):
-    '''
-    Earthquake event surface (ellipse with an angle)
-    '''
-    semi_minor = djm.FloatField()
-    semi_major = djm.FloatField()
-    strike = djm.FloatField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"surface'
-
-
 ## Tables in the 'hzrdi' (Hazard Input) schema.
 
 
