@@ -16,7 +16,6 @@
 -- of our database users/roles.
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
-GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
 GRANT USAGE ON SCHEMA htemp TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
@@ -26,7 +25,6 @@ GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON ALL SEQUENCES IN SCHEMA admin TO GROUP openquake;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA eqcat TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA htemp TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdr TO GROUP openquake;
@@ -37,7 +35,6 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA uiapi TO GROUP openquake;
 
 -- Users in the `openquake` group have read access to everything
 GRANT SELECT ON ALL TABLES IN SCHEMA admin TO GROUP openquake;
-GRANT SELECT ON ALL TABLES IN SCHEMA eqcat TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA htemp TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdr TO GROUP openquake;
@@ -53,7 +50,6 @@ GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
 -- In fact, `oq_admin` is the only user that can delete records,
 -- with the exception the `htemp` schema space. See below.
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
-GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA eqcat TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
@@ -68,11 +64,6 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 -- admin schema
 GRANT SELECT,INSERT,UPDATE ON admin.oq_user      TO oq_admin;
 GRANT SELECT,INSERT,UPDATE ON admin.organization TO oq_admin;
-
--- eqcat schema
-GRANT SELECT,INSERT,UPDATE ON eqcat.catalog   TO oq_eqcat_writer;
-GRANT SELECT,INSERT,UPDATE ON eqcat.magnitude TO oq_eqcat_writer;
-GRANT SELECT,INSERT,UPDATE ON eqcat.surface   TO oq_eqcat_writer;
 
 -- htemp schema
 GRANT SELECT,INSERT,DELETE        ON htemp.site_data             TO oq_reslt_writer;
