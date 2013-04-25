@@ -31,7 +31,7 @@ psql_batch_options='--set ON_ERROR_STOP=1'
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/9.1/main/ts'
 # What table spaces should be created?
-tspace_list="admin hzrdi hzrdr oqmif riski riskr uiapi htemp"
+tspace_list="admin hzrdi hzrdr riski riskr uiapi htemp"
 
 db_port=5432
 schema_path=`dirname $0`/../openquake/engine/db/schema
