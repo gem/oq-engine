@@ -185,8 +185,6 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.input2job IS 'Associate inputs and jobs';
 
-COMMENT ON TABLE uiapi.job2profile IS 'Associate jobs with their profiles';
-
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';

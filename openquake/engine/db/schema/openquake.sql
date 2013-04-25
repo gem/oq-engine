@@ -456,16 +456,6 @@ CREATE TABLE uiapi.src2ltsrc (
 ) TABLESPACE uiapi_ts;
 
 
--- Associate jobs and their profiles, a job may be associated with one profile
--- only.
-CREATE TABLE uiapi.job2profile (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    oq_job_profile_id INTEGER NOT NULL,
-    UNIQUE (oq_job_id)
-) TABLESPACE uiapi_ts;
-
-
 -- Complete hazard map
 CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
@@ -1168,13 +1158,6 @@ FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
 FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT
-uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
-uiapi.oq_job_profile(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
