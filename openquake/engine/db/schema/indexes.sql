@@ -82,12 +82,12 @@ CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_di
 CREATE INDEX riskr_dmg_state_rc_id_idx on riskr.dmg_state(risk_calculation_id);
 CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 
--- oqmif indexes
-CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
-CREATE INDEX oqmif_exposure_data_taxonomy_idx ON oqmif.exposure_data(taxonomy);
-CREATE INDEX oqmif_exposure_data_exposure_model_id_idx on oqmif.exposure_data(exposure_model_id);
-CREATE INDEX oqmif_exposure_data_site_stx_idx ON oqmif.exposure_data(ST_X(geometry(site)));
-CREATE INDEX oqmif_exposure_data_site_sty_idx ON oqmif.exposure_data(ST_Y(geometry(site)));
+-- riski indexes
+CREATE INDEX riski_exposure_data_site_idx ON riski.exposure_data USING gist(site);
+CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
+CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
+CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
+CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
 
 
 -- uiapi indexes
