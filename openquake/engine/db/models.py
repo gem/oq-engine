@@ -2498,7 +2498,7 @@ class DmgDistTotal(djm.Model):
     class Meta:
         db_table = 'riskr\".\"dmg_dist_total'
 
-## Tables in the 'oqmif' schema.
+## Tables in the 'riski' schema.
 
 
 class ExposureModel(djm.Model):
@@ -2537,7 +2537,7 @@ class ExposureModel(djm.Model):
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_model'
+        db_table = 'riski\".\"exposure_model'
 
     def taxonomies_in(self, region_constraint):
         """
@@ -2581,7 +2581,7 @@ class Occupancy(djm.Model):
     occupants = djm.IntegerField()
 
     class Meta:
-        db_table = 'oqmif\".\"occupancy'
+        db_table = 'riski\".\"occupancy'
 
 
 class AssetManager(djm.GeoManager):
@@ -2599,7 +2599,7 @@ class AssetManager(djm.GeoManager):
 
         return list(
             self.raw("""
-            SELECT * FROM oqmif.exposure_data
+            SELECT * FROM riski.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
@@ -2619,10 +2619,10 @@ class AssetManager(djm.GeoManager):
         cursor = connections['job_init'].cursor()
 
         cursor.execute("""
-        SELECT oqmif.exposure_data.taxonomy, COUNT(*)
-        FROM oqmif.exposure_data WHERE
+        SELECT riski.exposure_data.taxonomy, COUNT(*)
+        FROM riski.exposure_data WHERE
         exposure_model_id = %s AND ST_COVERS(ST_GeographyFromText(%s), site)
-        group by oqmif.exposure_data.taxonomy
+        group by riski.exposure_data.taxonomy
         """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
 
         return dict(cursor)
@@ -2661,7 +2661,7 @@ class ExposureData(djm.Model):
     objects = AssetManager()
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_data'
+        db_table = 'riski\".\"exposure_data'
 
     def __str__(self):
         return "%s (%s-%s @ %s)" % (
