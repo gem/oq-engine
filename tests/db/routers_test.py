@@ -152,9 +152,9 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_oqmif_correct_read_db(self):
+    def test_riski_correct_read_db(self):
         '''
-        For each model in the 'oqmif' schema, test for proper db routing
+        For each model in the 'riski' schema, test for proper db routing
         for read operations.
         '''
         classes = [oq.ExposureModel, oq.ExposureData]
@@ -162,9 +162,9 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_oqmif_correct_write_db(self):
+    def test_riski_correct_write_db(self):
         '''
-        For each model in the 'oqmif' schema, test for proper db routing
+        For each model in the 'riski' schema, test for proper db routing
         for write operations.
         '''
         classes = [oq.ExposureModel, oq.ExposureData]
