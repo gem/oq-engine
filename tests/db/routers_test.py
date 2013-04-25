@@ -89,8 +89,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [oq.Input, oq.OqJob, oq.OqJobProfile,
-                   oq.Output, oq.ErrorMsg]
+        classes = [oq.Input, oq.OqJob, oq.Output, oq.ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
@@ -100,7 +99,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [oq.Input, oq.OqJob, oq.OqJobProfile, oq.ErrorMsg]
+        classes = [oq.Input, oq.OqJob, oq.ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
