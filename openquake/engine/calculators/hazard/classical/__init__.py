@@ -170,7 +170,7 @@ As with mean curves, `unweighted quantiles` are calculated when Monte-Carlo
 logic tree sampling is used and `weighted quantiles` are calculated when logic
 tree end-branch enumeration is used.
 
-The total number of mean curves calculated is
+The total number of quantile curves calculated is
 
 ``T = Q * P * I``
 
