@@ -142,44 +142,6 @@ COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
 
-CREATE OR REPLACE FUNCTION pcheck_oq_job_profile()
-  RETURNS TRIGGER
-AS $$
-    # By default we will merely consent to the insert/update operation.
-    result = "OK"
-
-    NEW = TD["new"] # new data resulting from insert or update
-
-    if NEW["calc_mode"] != "uhs":
-        imt = NEW["imt"]
-        assert imt in ("pga", "sa", "pgv", "pgd", "ia", "rsd", "mmi"), (
-            "Invalid intensity measure type: '%s'" % imt)
-
-        if imt == "sa":
-            assert NEW["period"] is not None, (
-                "Period must be set for intensity measure type 'sa'")
-        else:
-            assert NEW["period"] is None, (
-                "Period must not be set for intensity measure type '%s'" % imt)
-    else:
-        # This is a uhs job.
-        if NEW["imt"] != "sa" or NEW["period"] is not None:
-            # The trigger will return a modified row.
-            result = "MODIFY"
-
-        if NEW["imt"] != "sa":
-            NEW["imt"] = "sa"
-        if NEW["period"] is not None:
-            NEW["period"] = None
-
-    return result
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_oq_job_profile() IS
-'Make sure the inserted/updated job profile record is consistent.';
-
-
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
@@ -221,10 +183,6 @@ FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
 BEFORE INSERT ON oqmif.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
-
-CREATE TRIGGER uiapi_oq_job_profile_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON uiapi.oq_job_profile
-FOR EACH ROW EXECUTE PROCEDURE pcheck_oq_job_profile();
 
 CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 

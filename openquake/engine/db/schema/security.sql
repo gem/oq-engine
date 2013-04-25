@@ -133,7 +133,6 @@ GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.input2rcalc        TO oq_job_init;
 -- what nodes became available/unavailable at what time?
 GRANT SELECT,INSERT,UPDATE ON uiapi.cnode_stats        TO oq_job_superv;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile     TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON uiapi.error_msg          TO oq_job_superv;
 GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;

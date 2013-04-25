@@ -27,7 +27,6 @@ CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
 
 CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
-CREATE INDEX uiapi_oq_job_profile_owner_id_idx on uiapi.oq_job_profile(owner_id);
 CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
 CREATE INDEX uiapi_output_owner_id_idx on uiapi.output(owner_id);
 
