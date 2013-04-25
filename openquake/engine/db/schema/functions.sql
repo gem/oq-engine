@@ -93,7 +93,7 @@ AS $$
     NEW = TD["new"] # new data resulting from insert or update
 
     # get the associated exposure model record
-    q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
+    q = ("SELECT * FROM riski.exposure_model WHERE id = %s" %
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
 
@@ -176,12 +176,12 @@ CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
 
-CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
-BEFORE INSERT ON oqmif.exposure_model
+CREATE TRIGGER riski_exposure_model_before_insert_update_trig
+BEFORE INSERT ON riski.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
-CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
-BEFORE INSERT ON oqmif.exposure_data
+CREATE TRIGGER riski_exposure_data_before_insert_update_trig
+BEFORE INSERT ON riski.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 
 CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
