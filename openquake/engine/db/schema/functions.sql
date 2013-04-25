@@ -1,7 +1,5 @@
 /*
-  Functions used in the OpenQuake database.
-
-  Copyright (c) 2010-2012, GEM Foundation.
+  Copyright (c) 2010-2013, GEM Foundation.
 
   OpenQuake is free software: you can redistribute it and/or modify it
   under the terms of the GNU Affero General Public License as published
@@ -16,6 +14,7 @@
   You should have received a copy of the GNU Affero General Public License
   along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
 BEGIN
