@@ -157,8 +157,8 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'riski' schema, test for proper db routing
         for read operations.
         '''
-        classes = [oq.ExposureModel, oq.ExposureData]
-        expected_db = 'reslt_writer'
+        classes = [oq.ExposureModel, oq.ExposureData, oq.Occupancy]
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
