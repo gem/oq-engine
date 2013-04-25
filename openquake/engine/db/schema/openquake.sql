@@ -19,7 +19,6 @@ SET client_min_messages TO WARNING;
 CREATE SCHEMA admin;
 CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
-CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
@@ -931,7 +930,7 @@ CREATE TABLE riskr.dmg_state (
 CREATE TABLE riskr.dmg_dist_per_asset (
     id SERIAL PRIMARY KEY,
     dmg_state_id INTEGER NOT NULL REFERENCES riskr.dmg_state,
-    exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
+    exposure_data_id INTEGER NOT NULL,  -- FK to riski.exposure_data.id
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -961,7 +960,7 @@ CREATE TABLE riskr.dmg_dist_total (
 --      coco: contents cost
 --      reco: retrofitting cost
 --      stco: structural cost
-CREATE TABLE oqmif.exposure_model (
+CREATE TABLE riski.exposure_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the risk exposure model with an input file
@@ -1004,11 +1003,11 @@ CREATE TABLE oqmif.exposure_model (
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE oqmif_ts;
+) TABLESPACE riski_ts;
 
 
 -- Per-asset exposure data
-CREATE TABLE oqmif.exposure_data (
+CREATE TABLE riski.exposure_data (
     id SERIAL PRIMARY KEY,
     exposure_model_id INTEGER NOT NULL,
     -- the asset reference is unique within an exposure model.
@@ -1039,15 +1038,15 @@ CREATE TABLE oqmif.exposure_data (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (exposure_model_id, asset_ref)
-) TABLESPACE oqmif_ts;
+) TABLESPACE riski_ts;
 
 
-CREATE TABLE oqmif.occupancy (
+CREATE TABLE riski.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
     description VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
-) TABLESPACE oqmif_ts;
+) TABLESPACE riski_ts;
 
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (
@@ -1174,10 +1173,10 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
+ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_input_fk
+ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
@@ -1365,16 +1364,16 @@ FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELET
 
 ALTER TABLE riskr.dmg_dist_per_asset
 ADD CONSTRAINT riskr_dmg_dist_per_asset_exposure_data_fk
-FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
+FOREIGN KEY (exposure_data_id) REFERENCES riski.exposure_data(id) ON DELETE RESTRICT;
 
 
-ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
-oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
-REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
+ALTER TABLE riski.exposure_data ADD CONSTRAINT
+riski_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
+REFERENCES riski.exposure_model(id) ON DELETE CASCADE;
 
-ALTER TABLE oqmif.occupancy ADD CONSTRAINT
-oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
-REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
+ALTER TABLE riski.occupancy ADD CONSTRAINT
+riski_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
 
 -- htemp.source_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.source_progress
