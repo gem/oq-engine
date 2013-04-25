@@ -64,26 +64,6 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_eqcat_correct_read_db(self):
-        '''
-        For each model in the 'eqcat' schema, test for proper db routing
-        for read operations.
-        '''
-        classes = [oq.Catalog, oq.Magnitude, oq.Surface]
-        expected_db = 'eqcat_read'
-
-        self._db_for_read_helper(classes, expected_db)
-
-    def test_eqcat_correct_write_db(self):
-        '''
-        For each model in the 'eqcat' schema, test for proper db routing
-        for write operations.
-        '''
-        classes = [oq.Catalog, oq.Magnitude, oq.Surface]
-        expected_db = 'eqcat_write'
-
-        self._db_for_write_helper(classes, expected_db)
-
     def test_hzrdi_read_schema(self):
         '''
         For each model in the 'hzrdi' schema, test for proper db routing
