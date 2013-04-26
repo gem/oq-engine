@@ -22,6 +22,7 @@ import getpass
 import md5
 import os
 import sys
+import warnings
 
 import openquake.engine
 
@@ -191,8 +192,8 @@ def _get_content_type(path):
 
 def get_input(path, input_type, owner, name=None):
     """
-    Get an :class:`~openquake.engine.db.models.Input` object for the given
-    file (``path``).
+    Get (create) an :class:`~openquake.engine.db.models.Input` object for the
+    given file (``path``).
 
     :param str path:
         Path to the input file.
@@ -200,10 +201,8 @@ def get_input(path, input_type, owner, name=None):
         The type of input. See :class:`openquake.engine.db.models.Input` for
         a list of valid types.
     :param owner:
-        The :class:`~openquake.engine.db.models.OqUser` who will own the input,
-        if a fresh input record is being created. If the record is being
-        reused, we will only reuse records which belong to this user (if any
-        exist).
+        The :class:`~openquake.engine.db.models.OqUser` who will own the input
+        that will be created.
     :param str name:
         Optional name to help idenfity this input.
     :returns:
@@ -254,6 +253,13 @@ def create_hazard_calculation(owner, params, files):
     """
     if "export_dir" in params:
         params["export_dir"] = os.path.abspath(params["export_dir"])
+
+    haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
+    for param in set(params.keys()) - set(haz_calc_fields):
+        msg = "Unknown parameter '%s'. Ignoring."
+        msg %= param
+        warnings.warn(msg, RuntimeWarning)
+        params.pop(param)
 
     hc = models.HazardCalculation(**params)
     hc.owner = owner

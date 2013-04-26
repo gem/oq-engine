@@ -286,6 +286,14 @@ store_site_model'
             [sa_curves] = models.HazardCurve.objects.filter(
                 lt_realization=rlz.id, imt='SA', sa_period=0.025)
 
+            # check that the multi-hazard-curve outputs have been
+            # created for this realization
+
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization=rlz.id, imt=None, statistics=None).count())
+
             # In this calculation, we have 120 sites of interest.
             # We should have exactly that many curves per realization
             # per IMT.
@@ -300,6 +308,49 @@ store_site_model'
         self.job.status = 'post_processing'
         self.job.save()
         self.calc.post_process()
+
+        # Test for the correct number of mean/quantile curves
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="PGA").count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="SA", sa_period=0.025).count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt=None).count())
+
+        for quantile in hc.quantile_hazard_curves:
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="PGA").count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="SA", sa_period=0.025).count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt=None).count())
 
         # Test for the correct number of maps.
         # The expected count is:

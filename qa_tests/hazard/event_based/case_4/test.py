@@ -32,7 +32,8 @@ class EventBasedHazardCase4TestCase(qa_utils.BaseQATestCase):
 
         # Test the poe values of the single curve:
         [actual_curve] = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job.id)
+            hazard_curve__output__oq_job=job.id,
+            hazard_curve__imt__isnull=False)
 
         # NOTE(LB): The expected/actual results are precise, however Dr.
         # Monelli has intructed use that 1 digits of tolerance in this case

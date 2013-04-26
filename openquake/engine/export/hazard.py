@@ -24,7 +24,8 @@ from collections import namedtuple
 from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
-from openquake.nrmllib import writers as nrml_writers
+from openquake import nrmllib
+from openquake.nrmllib import writers
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -32,7 +33,7 @@ from openquake.engine.export import core
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir):
+def export(output_id, target_dir, check_schema=False):
     """
     Export the given hazard calculation output from the database to the
     specified directory.
@@ -41,6 +42,8 @@ def export(output_id, target_dir):
         ID of a :class:`openquake.engine.db.models.Output`.
     :param str target_dir:
         Directory where output artifacts should be written.
+    :param bool check_schema:
+        If True, checks that the generated file is valid for the NRML schema
     :returns:
         List of file names (including the full directory path) containing the
         exported results.
@@ -52,7 +55,11 @@ def export(output_id, target_dir):
     output = models.Output.objects.get(id=output_id)
     export_fn = globals().get(
         'export_' + output.output_type, core._export_fn_not_implemented)
-    return export_fn(output, os.path.expanduser(target_dir))
+    fnames = export_fn(output, os.path.expanduser(target_dir))
+    if check_schema:
+        for fname in fnames:
+            nrmllib.assert_valid(fname)
+    return fnames
 
 
 def _get_result_export_path(calc_id, target_dir, result):
@@ -97,6 +104,10 @@ def _get_result_export_path(calc_id, target_dir, result):
     core.makedirs(directory)
 
     if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+        # include the poe in hazard map and uhs file names
+        if output_type in ('hazard_map', 'uh_spectra'):
+            output_type = '%s-poe_%s' % (output_type, result.poe)
+
         if result.statistics is not None:
             # we could have stats
             if result.statistics == 'quantile':
@@ -121,7 +132,7 @@ def _get_result_export_path(calc_id, target_dir, result):
                 filename = '%s-smltp_%s-gsimltp_%s.xml' % (
                     output_type, sm_ltp, gsim_ltp
                 )
-    elif output_type in ('disagg_matrix', 'gmf', 'ses'):
+    elif output_type in ('gmf', 'ses'):
         # only logic trees, no stats
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
@@ -135,6 +146,23 @@ def _get_result_export_path(calc_id, target_dir, result):
             # End Branch Enumeration
             filename = '%s-smltp_%s-gsimltp_%s.xml' % (
                 output_type, sm_ltp, gsim_ltp
+            )
+    elif output_type == 'disagg_matrix':
+        # only logic trees, no stats
+        location = 'lon_%s-lat_%s' % (result.location.x, result.location.y)
+
+        ltr = result.lt_realization
+        sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
+        gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
+        if ltr.weight is None:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
+                output_type, location, sm_ltp, gsim_ltp, ltr.ordinal
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-%s-smltp_%s-gsimltp_%s.xml' % (
+                output_type, location, sm_ltp, gsim_ltp
             )
     else:
         filename = '%s.xml' % output_type
@@ -158,17 +186,35 @@ def export_hazard_curve(output, target_dir):
         file).
     """
     hc = models.HazardCurve.objects.get(output=output.id)
-    haz_calc = output.oq_job.hazard_calculation
 
-    curves = models.HazardCurveData.objects.all_curves_simple(
-        filter_args=dict(hazard_curve=hc.id)
-    )
-    # Simple object wrapper around the values, to match the interface of the
-    # XML writer:
-    Location = namedtuple('Location', 'x y')
-    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
-    hcd = (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
+    hcd = _curve_data(hc)
+    metadata, path = _curve_metadata(output, target_dir)
+    writers.HazardCurveXMLWriter(path, **metadata).serialize(hcd)
 
+    return [path]
+
+
+@core.makedirsdeco
+def export_hazard_curve_multi(output, target_dir):
+    hcs = output.hazardcurve
+
+    data = [_curve_data(hc) for hc in hcs]
+
+    metadata_set = []
+    path = None
+    for hc in hcs:
+        metadata, path = _curve_metadata(output, target_dir)
+        metadata_set.append(metadata)
+    assert(path)
+
+    writer = writers.MultiHazardCurveXMLWriter(path, metadata_set)
+    writer.serialize(data)
+
+    return [path]
+
+
+def _curve_metadata(output, target_dir):
+    hc = models.HazardCurve.objects.get(output=output.id)
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
         # get the tree paths
@@ -180,9 +226,10 @@ def export_hazard_curve(output, target_dir):
         smlt_path = None
         gsimlt_path = None
 
+    haz_calc = output.oq_job.hazard_calculation
     path = _get_result_export_path(haz_calc.id, target_dir, output.hazardcurve)
 
-    metadata = {
+    return {
         'quantile_value': hc.quantile,
         'statistics': hc.statistics,
         'smlt_path': smlt_path,
@@ -192,11 +239,18 @@ def export_hazard_curve(output, target_dir):
         'investigation_time': hc.investigation_time,
         'imt': hc.imt,
         'imls': hc.imls,
-    }
-    writer = nrml_writers.HazardCurveXMLWriter(path, **metadata)
-    writer.serialize(hcd)
+    }, path
 
-    return [path]
+
+def _curve_data(hc):
+    curves = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id)
+    )
+    # Simple object wrapper around the values, to match the interface of the
+    # XML writer:
+    Location = namedtuple('Location', 'x y')
+    HazardCurveData = namedtuple('HazardCurveData', 'location poes')
+    return (HazardCurveData(Location(x, y), poes) for x, y, poes in curves)
 
 
 @core.makedirsdeco
@@ -228,7 +282,7 @@ def export_gmf(output, target_dir):
     path = _get_result_export_path(haz_calc.id, target_dir,
                                    output.gmfcollection)
 
-    writer = nrml_writers.EventBasedGMFXMLWriter(
+    writer = writers.EventBasedGMFXMLWriter(
         path, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
@@ -258,7 +312,7 @@ def export_gmf_scenario(output, target_dir):
                                         'gmf', 'gmf.xml'))
     core.makedirs(os.path.dirname(path))
     gmfs = models.get_gmfs_scenario(output)
-    writer = nrml_writers.ScenarioGMFXMLWriter(path)
+    writer = writers.ScenarioGMFXMLWriter(path)
     writer.serialize(gmfs)
     return [path]
 
@@ -293,7 +347,7 @@ def export_ses(output, target_dir):
     path = _get_result_export_path(haz_calc.id, target_dir,
                                    output.sescollection)
 
-    writer = nrml_writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
+    writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
 
     return [path]
@@ -344,7 +398,7 @@ def export_hazard_map(output, target_dir):
         'poe': hazard_map.poe,
     }
 
-    writer = nrml_writers.HazardMapXMLWriter(path, **metadata)
+    writer = writers.HazardMapXMLWriter(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return [path]
 
@@ -440,7 +494,7 @@ def export_disagg_matrix(output, target_dir):
         gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
     )
 
-    writer = nrml_writers.DisaggXMLWriter(path, **writer_kwargs)
+    writer = writers.DisaggXMLWriter(path, **writer_kwargs)
 
     data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
                           disagg_result.poe, disagg_result.iml)
@@ -485,9 +539,10 @@ def export_uh_spectra(output, target_dir):
         'gsimlt_path': gsimlt_path,
         'poe': uhs.poe,
         'periods': uhs.periods,
+        'investigation_time': uhs.investigation_time,
     }
 
-    writer = nrml_writers.UHSXMLWriter(path, **metadata)
+    writer = writers.UHSXMLWriter(path, **metadata)
     writer.serialize(uhs)
 
     return [path]

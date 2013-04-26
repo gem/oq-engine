@@ -127,21 +127,6 @@ CREATE TABLE eqcat.surface (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 
--- global catalog view, needed for Geonode integration
-CREATE VIEW eqcat.catalog_allfields AS
-SELECT
-    eqcat.catalog.*,
-    eqcat.surface.semi_minor, eqcat.surface.semi_major,
-    eqcat.surface.strike,
-    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
-    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
-    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
-    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
-WHERE
-    eqcat.catalog.magnitude_id = eqcat.magnitude.id
-    AND eqcat.catalog.surface_id = eqcat.surface.id;
-
 
 -- Site-specific parameters for hazard calculations.
 CREATE TABLE hzrdi.site_model (
@@ -363,6 +348,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes float[],
     hazard_maps boolean DEFAULT false,
     uniform_hazard_spectra boolean DEFAULT false,
+    export_multi_curves boolean DEFAULT false,
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
@@ -1009,6 +995,7 @@ CREATE TABLE uiapi.output (
             'gmf',
             'gmf_scenario',
             'hazard_curve',
+            'hazard_curve_multi',
             'hazard_map',
             'loss_curve',
             'loss_fraction',
@@ -1051,8 +1038,6 @@ CREATE TABLE uiapi.src2ltsrc (
     hzrd_src_id INTEGER NOT NULL,
     -- foreign key to the input of type 'source_model_logic_tree'
     lt_src_id INTEGER NOT NULL,
-    -- Due to input file reuse, the original file name may deviate from
-    -- the current. We hence need to capture the latter.
     filename VARCHAR NOT NULL,
     UNIQUE (hzrd_src_id, lt_src_id)
 ) TABLESPACE uiapi_ts;
@@ -1105,9 +1090,10 @@ CREATE TABLE hzrdr.hazard_curve (
     output_id INTEGER NOT NULL,
     lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
     investigation_time float NOT NULL,
-    imt VARCHAR NOT NULL CONSTRAINT hazard_curve_imt
+    -- imt and imls might be null if hazard curve is the container for multiple hazard curve set
+    imt VARCHAR NULL CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
-    imls float[] NOT NULL,
+    imls float[] NULL,
     statistics VARCHAR CONSTRAINT hazard_curve_statistics
         CHECK(statistics IS NULL OR
               statistics IN ('mean', 'quantile')),
@@ -1239,6 +1225,27 @@ CREATE TABLE hzrdr.gmf (
     location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+CREATE TABLE hzrdr.gmf_agg (
+    id SERIAL PRIMARY KEY,
+    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
+    ON DELETE CASCADE,  
+    imt VARCHAR NOT NULL,
+        --CONSTRAINT hazard_curve_imt
+        --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    sa_period float,
+        -- CONSTRAINT gmf_sa_period
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_period IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float,
+        --CONSTRAINT gmf_sa_damping
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_damping IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[],
+    rupture_ids int[],
+    location GEOGRAPHY(point) NOT NULL
+) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_scenario (
     id SERIAL PRIMARY KEY,
@@ -2012,3 +2019,47 @@ ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
+
+---------------------- views ----------------------------
+
+-- global catalog view, needed for Geonode integration
+CREATE VIEW eqcat.catalog_allfields AS
+SELECT
+    eqcat.catalog.*,
+    eqcat.surface.semi_minor, eqcat.surface.semi_major,
+    eqcat.surface.strike,
+    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
+    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
+    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
+    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
+FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
+WHERE
+    eqcat.catalog.magnitude_id = eqcat.magnitude.id
+    AND eqcat.catalog.surface_id = eqcat.surface.id;
+
+
+-- convenience view to analyze the performance of the jobs;
+-- for instance the slowest operations can be extracted with 
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_hazard;
+CREATE VIEW uiapi.performance_hazard AS
+SELECT h.id AS hazard_calculation_id, description, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS duration,
+     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.hazard_calculation AS h
+ON h.id=o.hazard_calculation_id;
+
+-- companion view for risk
+CREATE VIEW uiapi.performance_risk AS
+SELECT r.id AS risk_calculation_id, description, p.* FROM (
+     SELECT oq_job_id, operation, sum(duration) AS duration,
+     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.risk_calculation AS r
+ON r.id=o.risk_calculation_id;

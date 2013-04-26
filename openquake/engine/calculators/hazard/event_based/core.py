@@ -40,7 +40,9 @@ from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.geo import ComplexFaultSurface
 from openquake.hazardlib.geo import MultiSurface
+from openquake.hazardlib.geo import SimpleFaultSurface
 from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
@@ -103,7 +105,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
 
-    # Compute stochastic event sets
+    # filtering sources
     with EnginePerformanceMonitor('filtering sources for lt=%d' % lt_rlz_id,
                                   job_id, ses_and_gmfs):
 
@@ -133,7 +135,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
         filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
 
-    # Save stochastic event sets
+    # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
         logs.LOG.debug('> computing stochastic event set %s of %s'
@@ -145,45 +147,45 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        # Calculate stochastic event sets:
-        logs.LOG.debug('> computing stochastic event sets')
-
-        ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-            filtered_sources, hc.investigation_time))
-
         with EnginePerformanceMonitor(
-            'saving %d ruptures, ses_rlz=%d, lt_rlz=%d' % (
-                len(ses_poissonian), ses_rlz_n, lt_rlz_id),
-                job_id, ses_and_gmfs):
+            'computing ses_rlz=%d, lt_rlz=%d' % (
+                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+            ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
+                filtered_sources, hc.investigation_time))
+        if not ses_poissonian:  # this is very common due to the filtering
+            continue
+        with EnginePerformanceMonitor(
+            'saving ses_rlz=%d, lt_rlz=%d' % (
+                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
                     ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
                 for i, rupture in enumerate(ses_poissonian, 1)]
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
-                    'saving %d gmfs, ses_rlz=%d, lt_rlz=%d' % (
-                    len(ses_poissonian), ses_rlz_n, lt_rlz_id),
-                    job_id, ses_and_gmfs):
-                gmf_cache, points_to_compute = compute_gmf_cache(
+                    'computing gmfs: ses_rlz=%d, lt_rlz=%d' % (
+                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+                gmf_cache = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
-
+            with EnginePerformanceMonitor(
+                    'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
+                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
                 # This will be the "container" for all computed GMFs
                 # for this stochastic event set.
                 gmf_set = models.GmfSet.objects.get(
                     gmf_collection__lt_realization=lt_rlz,
                     ses_ordinal=ses_rlz_n)
                 # save the GMFs to the DB
-                _save_gmfs(gmf_set, gmf_cache, points_to_compute,
+                _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
 
-        logs.LOG.debug('< done computing stochastic event set %s of %s'
-                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
-def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
+def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
+                      result_grp_ordinal):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for all IMTs.
@@ -194,10 +196,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    # For ground motion field calculation, we need the points of interest
-    # for the calculation.
-    points_to_compute = hc.points_to_compute()
-    n_points = len(points_to_compute)
+    n_points = len(hc.points_to_compute())
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
     gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
@@ -226,7 +225,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids, result_grp_ordinal):
                 gmf_cache[imt_key]['gmvs'], v, axis=1)
             gmf_cache[imt_key]['rupture_ids'].append(rupture_id)
 
-    return gmf_cache, points_to_compute
+    return gmf_cache
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -252,8 +251,12 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         The ordinal of a rupture with a given result group (indicated by
         ``result_grp_ordinal``).
     """
-    is_from_fault_source = rupture.source_typology in (
-        ComplexFaultSource, SimpleFaultSource
+    is_from_fault_source = (
+        rupture.source_typology in (ComplexFaultSource, SimpleFaultSource)
+        or
+        (rupture.source_typology is CharacteristicFaultSource
+         and isinstance(rupture.surface, (ComplexFaultSurface,
+                                          SimpleFaultSurface)))
     )
     is_multi_surface = False
     if (rupture.source_typology is CharacteristicFaultSource
@@ -363,8 +366,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-    if len(points_to_compute) == 0:  # nothing to do
-        return
 
     inserter = writer.BulkInserter(models.Gmf)
 
@@ -384,9 +385,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
             sa_damping = imt.damping
         imt_name = imt.__class__.__name__
 
-        for i, location in enumerate(points_to_compute):
-            all_gmvs = gmfs[i]
-
+        for all_gmvs, location in zip(gmfs, points_to_compute):
             # take only the nonzero ground motion values and the
             # corresponding rupture ids
             nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
@@ -645,6 +644,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
+        with EnginePerformanceMonitor(
+                'populating gmf_agg', self.job.id, tracing=True):
+            post_processing.populate_gmf_agg(self.hc)
+
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
@@ -659,6 +662,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculatorNext):
                     self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                with EnginePerformanceMonitor('generating hazard maps',
-                                              self.job.id):
+                with EnginePerformanceMonitor(
+                        'generating hazard maps', self.job.id):
                     cls_post_proc.do_hazard_map_post_process(self.job)

@@ -44,8 +44,7 @@ class BaseQATestCase(unittest.TestCase):
         :raises:
             :exc:`AssertionError` if the job was not successfully run.
         """
-        completed_job = helpers.run_hazard_job(
-            cfg, exports=exports, distribute=True)
+        completed_job = helpers.run_hazard_job(cfg, exports=exports)
         self.assertEqual('complete', completed_job.status)
 
         return completed_job
