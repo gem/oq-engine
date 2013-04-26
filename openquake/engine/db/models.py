@@ -823,6 +823,10 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    export_multi_curves = fields.OqNullBooleanField(
+        help_text=('If true hazard curve outputs that groups multiple curves '
+                   'in multiple imt will be exported when asked in export '
+                   'phase.'))
     # Event-Based params:
     #####################
     complete_logic_tree_ses = fields.OqNullBooleanField(
@@ -951,9 +955,10 @@ class HazardCalculation(djm.Model):
             if self.pk and self.inputs.filter(input_type='exposure').exists():
                 assets = self.exposure_model.exposuredata_set.all().order_by(
                     'asset_ref')
+
+                # the points here must be sorted
                 lons, lats = zip(
-                    *list(
-                        set([(asset.site.x, asset.site.y)
+                    *sorted(set([(asset.site.x, asset.site.y)
                              for asset in assets])))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
@@ -1526,6 +1531,7 @@ class Output(djm.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
         (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
         # FIXME(lp). We should distinguish between conditional losses
@@ -1547,7 +1553,7 @@ class Output(djm.Model):
         db_table = 'uiapi\".\"output'
 
     def is_hazard_curve(self):
-        return self.output_type == 'hazard_curve'
+        return self.output_type in ['hazard_curve', 'hazard_curve_multi']
 
     def is_gmf_scenario(self):
         return self.output_type == 'gmf_scenario'
@@ -1610,7 +1616,7 @@ class Output(djm.Model):
             elif rc.hazard_calculation is not None:
                 # we're consuming multiple outputs from a single hazard
                 # calculation
-                if self.output_type == 'loss_curve':
+                if self.output_type in ['loss_curve', 'agg_loss_curve']:
                     the_output = self.loss_curve
                 elif self.output_type == 'loss_map':
                     the_output = self.loss_map
@@ -1624,22 +1630,19 @@ class Output(djm.Model):
 
                 if the_output.hazard_output_id is not None:
                     haz_output = the_output.hazard_output
-                    haz_curve = haz_output.hazardcurve
 
-                    # TODO: Do we ever encounter this case?
-                    # TODO: Or will we always have a LT Realization?
-                    statistics = haz_curve.statistics
-                    quantile = haz_curve.quantile
+                    if haz_output.is_hazard_curve():
+                        haz = haz_output.hazardcurve
+                    else:
+                        haz = haz_output.gmfcollection
 
-                    if haz_curve.lt_realization is not None:
-                        sm_lt_path = (
-                            haz_curve.lt_realization.sm_lt_path
-                        )
-                        gsim_lt_path = (
-                            haz_curve.lt_realization.gsim_lt_path
-                        )
+                    if haz.lt_realization is not None:
+                        sm_lt_path = haz.lt_realization.sm_lt_path
+                        gsim_lt_path = haz.lt_realization.gsim_lt_path
                 else:
                     if self.output_type == 'loss_curve':
+                        # FIXME(lp). This is clearly not correct
+
                         # it's a mean/quantile loss curve
                         statistics = self.loss_curve.statistics
                         quantile = self.loss_curve.quantile
@@ -1715,36 +1718,6 @@ def parse_imt(imt):
     return hc_im_type, sa_period, sa_damping
 
 
-class HazardCurveManager(djm.Manager):
-    """
-    Manager class to filter and create HazardCurve objects
-    """
-
-    def create_aggregate_curve(self, output, imt, statistics, quantile=None):
-        """
-        Create an aggregate curve with intensity measure type `imt`
-        for the given `statistics` (default to mean) and `quantile`.
-        Here imt is given in long form. e.g. SA(10)
-        """
-        if quantile and not statistics == "quantile":
-            raise ValueError(
-                "A quantile level can be specified only for quantile curves")
-
-        hc = output.oq_job.hazard_calculation
-        hc_im_type, sa_period, sa_damping = parse_imt(imt)
-        levels = hc.intensity_measure_types_and_levels[imt]
-        curve = self.create(output=output,
-                            lt_realization=None,
-                            investigation_time=hc.investigation_time,
-                            imt=hc_im_type,
-                            imls=levels,
-                            statistics=statistics,
-                            quantile=quantile,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping)
-        return curve
-
-
 class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
@@ -1754,7 +1727,7 @@ class HazardCurve(djm.Model):
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
-    imt = djm.TextField(choices=IMT_CHOICES)
+    imt = djm.TextField(choices=IMT_CHOICES, default=None, blank=True)
     imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -1765,10 +1738,23 @@ class HazardCurve(djm.Model):
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
 
-    objects = HazardCurveManager()
-
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
+
+    def __iter__(self):
+        assert self.output.output_type == 'hazard_curve_multi'
+
+        siblings = self.__class__.objects.filter(
+            output__oq_job=self.output.oq_job,
+            output__output_type='hazard_curve')
+
+        if not self.statistics:
+            return iter(siblings.filter(lt_realization__isnull=False))
+        elif self.quantile:
+            return iter(
+                siblings.filter(statistics="quantile", quantile=self.quantile))
+        else:
+            return iter(siblings.filter(statistics="mean"))
 
 
 class HazardCurveDataManager(djm.GeoManager):
@@ -2192,6 +2178,25 @@ class Gmf(djm.Model):
         db_table = 'hzrdr\".\"gmf'
 
 
+class GmfAgg(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    gmf_collection = djm.ForeignKey('GmfCollection')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    rupture_ids = fields.IntArrayField()
+
+    objects = djm.GeoManager()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_agg'
+
+
 class GmfScenario(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
@@ -2259,10 +2264,10 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
+        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(output__id=output.id, imt=imt):
+        for gmf in GmfScenario.objects.filter(
+                output__id=output.id, imt=imt_long):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
                 nodes[i].append(
                     _GroundMotionFieldNode(gmv=gmv, location=gmf.location))

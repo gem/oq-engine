@@ -163,6 +163,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__enter__()
         if self.tracing:
             self.tracer.__enter__()
+        return self
 
     @property
     def mem(self):
@@ -203,9 +204,27 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         is intended for debugging purposes.
         """
         if no_distribute():
-            logs.LOG.warn('PyMem: %d mb, PgMem: %d mb' % self.mem_peaks)
+            logs.LOG.warn('PyMem: %s mb, PgMem: %s mb' % self.mem_peaks)
 
-    def __exit__(self, *args, **kwargs):
-        super(EnginePerformanceMonitor, self).__exit__(*args, **kwargs)
+    def __exit__(self, etype, exc, tb):
+        super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
         if self.tracing:
-            self.tracer.__exit__(*args, **kwargs)
+            self.tracer.__exit__(etype, exc, tb)
+
+
+class DummyMonitor(object):
+    """
+    This class makes it easy to disable the monitoring
+    in client code, by simply changing an import statement:
+
+    from openquake.engine.performance import DummyMonitor as EnginePerformanceMonitor
+    Disabling the monitor can improve the performance.
+    """
+    def __init__(self, *args, **kw):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        pass
