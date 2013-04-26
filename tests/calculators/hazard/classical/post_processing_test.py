@@ -246,7 +246,7 @@ class Bug1086719TestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
         )
-        job = helpers.run_hazard_job(cfg, distribute=True)
+        job = helpers.run_hazard_job(cfg)
         self.assertEqual(job.status, 'complete')
 
 
