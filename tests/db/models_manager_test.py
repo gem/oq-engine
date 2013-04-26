@@ -30,7 +30,7 @@ from django.contrib.gis.geos.point import Point
 from django.contrib.gis.geos.polygon import Polygon
 
 from openquake.engine.db import models
-from openquake.engine.calculators.risk import general as general_risk
+from openquake.engine.calculators.risk import base
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
@@ -74,7 +74,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
         self.job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
-        calculator = general_risk.BaseRiskCalculator(self.job)
+        calculator = base.RiskCalculator(self.job)
         calculator.pre_execute()
         self.model = self.job.risk_calculation.exposure_model
 
