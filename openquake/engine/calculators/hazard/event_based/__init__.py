@@ -126,4 +126,8 @@ post_processing.gmvs_to_haz_curve`
   for implementation details.
 * The PoEs make up the "ordinates" (y-axis values) of the produced hazard
   curve. The IMLs define the "abscissae" (x-axis values).
+
+As with the Classical calculator, it is possible to produce mean and quantile
+statistical aggregates of curve results.
+
 """
