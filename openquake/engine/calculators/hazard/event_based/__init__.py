@@ -130,4 +130,12 @@ post_processing.gmvs_to_haz_curve`
 As with the Classical calculator, it is possible to produce mean and quantile
 statistical aggregates of curve results.
 
+Hazard Maps
+===========
+
+The Event-Based Hazard calculator is capable of producing hazard maps for each
+logic tree realization, as well as mean and quantile aggregates. This method of
+extracting maps from hazard curves is identical to the Classical calculator.
+
+See `hazard maps <#hazard-maps>`_ for more information.
 """
