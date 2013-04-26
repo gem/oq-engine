@@ -370,14 +370,14 @@ class Bug1098154TestCase(unittest.TestCase):
     def test(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
 
-        job = helpers.run_hazard_job(cfg, distribute=True)
+        job = helpers.run_hazard_job(cfg)
         self.assertEqual(job.status, 'complete')
         job_stats = models.JobStats.objects.get(oq_job=job)
         self.assertEqual(236, job_stats.num_tasks)
 
         # As the bug description explains, run the same job a second time and
         # check the task count. It should not grow.
-        job = helpers.run_hazard_job(cfg, distribute=True)
+        job = helpers.run_hazard_job(cfg)
         self.assertEqual(job.status, 'complete')
         job_stats = models.JobStats.objects.get(oq_job=job)
         self.assertEqual(236, job_stats.num_tasks)
