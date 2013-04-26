@@ -113,9 +113,9 @@ Hazard curves are computed from GMFs as follows:
   hzrdr.gmf records exactly equal to the `ses_per_logic_tree_path` parameter.
   Each record contains an array with a number of ground motion values; this
   number is determined by the number of ruptures in a given stochastic event
-  (which is random--see the section "SESs" above). All of these lists GMVs are
-  flattened into a single list of GMVs (the size of which is unknown, due the
-  random element mentioned above).
+  (which is random--see the section "SESs" above). All of these lists of GMVs
+  are flattened into a single list of GMVs (the size of which is unknown,
+  due the random element mentioned above).
 * With this list of GMVs, a list of IMLs (Intensity Measure Levels) for the
   given IMT (defined in the configuration file as
   `intensity_measure_types_and_levels`), `investigation_time`, and "duration"
