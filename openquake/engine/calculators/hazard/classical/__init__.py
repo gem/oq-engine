@@ -69,9 +69,9 @@ key elements:
   SA.
 * **Source Model Logic Tree Path (SMLT Path)** - The path taken through the
   calculation's source model logic tree. Does not apply to statistical curves,
-  since these aggregate are computed over multiple logic tree realizations.
+  since these aggregates are computed over multiple logic tree realizations.
 * **GSIM (Ground Shaking Intensity Model) Logic Tree Path (GSIMLT Path)** - The
-  path take through the calculation's GSIM logic tree. As with the SMLT Path,
+  path taken through the calculation's GSIM logic tree. As with the SMLT Path,
   this does not apply to statistical curves.
 
 For a given calculation, hazard curves are computed for each logic tree
