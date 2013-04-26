@@ -559,15 +559,13 @@ BaseHazardCalculatorNext.get_task_complete_callback`
 
     def clean_up(self):
         """
-        Flush the monitor cache and delete temporary database records.
+        Delete temporary database records.
         These records represent intermediate copies of final calculation
         results and are no longer needed.
 
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
-        EnginePerformanceMonitor.cache.flush()
-
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
