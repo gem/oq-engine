@@ -589,6 +589,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'region_constraint',
             'maximum_distance',
             'loss_curve_resolution',
+            'conditional_loss_poes',
             'insured_losses',
             'master_seed',
             'asset_correlation',
@@ -942,10 +943,10 @@ def mean_loss_curves_is_valid(_mdl):
 
 
 def quantile_loss_curves_is_valid(mdl):
-    qhc = mdl.quantile_loss_curves
+    qlc = mdl.quantile_loss_curves
 
-    if qhc is not None:
-        if not all([0.0 <= x <= 1.0 for x in qhc]):
+    if qlc is not None:
+        if not all([0.0 <= x <= 1.0 for x in qlc]):
             return False, ['Quantile loss curve values must in the range '
                            '[0, 1]']
     return True, []
@@ -1090,8 +1091,8 @@ def taxonomies_from_model_is_valid(_mdl):
 
 def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
-        if mdl.interest_rate is None or mdl.interest_rate <= 0:
-            return False, ['Interest Rate must be > 0']
+        if mdl.interest_rate is None:
+            return False, "Interest Rate is mandatory for BCR analysis"
     return True, []
 
 
