@@ -1038,8 +1038,6 @@ CREATE TABLE uiapi.src2ltsrc (
     hzrd_src_id INTEGER NOT NULL,
     -- foreign key to the input of type 'source_model_logic_tree'
     lt_src_id INTEGER NOT NULL,
-    -- Due to input file reuse, the original file name may deviate from
-    -- the current. We hence need to capture the latter.
     filename VARCHAR NOT NULL,
     UNIQUE (hzrd_src_id, lt_src_id)
 ) TABLESPACE uiapi_ts;
