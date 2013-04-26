@@ -1091,8 +1091,8 @@ def taxonomies_from_model_is_valid(_mdl):
 
 def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
-        if mdl.interest_rate is None or mdl.interest_rate <= 0:
-            return False, ['Interest Rate must be > 0']
+        if mdl.interest_rate is None:
+            return False, "Interest Rate is mandatory for BCR analysis"
     return True, []
 
 
