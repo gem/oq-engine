@@ -29,13 +29,17 @@ def hazard_restore(conn, tar, chatty=False):
         conn.commit()
 
 if __name__ == '__main__':
+    # not using the predefined Django connections here since
+    # we may want to restore the tarfile into a remote db
     p = argparse.ArgumentParser()
     p.add_argument('tarfile')
     p.add_argument('host', nargs='?', default='localhost')
     p.add_argument('dbname', nargs='?', default='openquake')
     p.add_argument('user', nargs='?', default='oq_admin')
     p.add_argument('password', nargs='?', default='')
+    p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
-    conn = psycopg2.connect(host=arg.host, dbname=arg.dbname,
-                            username=arg.user, password=arg.password)
+    conn = psycopg2.connect(
+        host=arg.host, dbname=arg.dbname,
+        user=arg.user, password=arg.password, port=arg.port)
     hazard_restore(conn, arg.tarfile, chatty=True)

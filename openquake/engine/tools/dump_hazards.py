@@ -246,24 +246,27 @@ class HazardDumper(object):
         return tardir(self.dest, 'hazard_calculation')
 
 
-def main(hazard_calculation_id, host='localhost', dbname='openquake',
-         user='oq_admin', password=''):
+def main(hazard_calculation_id, out_dir=None,
+         host='localhost', dbname='openquake',
+         user='admin', password='', port=None):
     """
     Dump a hazard_calculation and its relative outputs.
     """
-    conn = psycopg2.connect(host=None if host == 'localhost' else host,
-                            dbname=dbname, user=user, password=password)
-    tar = HazardDumper(conn, 'text').dump(hazard_calculation_id)
+    conn = psycopg2.connect(
+        host=host, dbname=dbname, user=user, password=password, port=port)
+    tar = HazardDumper(conn, out_dir).dump(hazard_calculation_id)
     print 'Written %s' % tar
 
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('hazard_calculation_id')
+    p.add_argument('out_dir')
     p.add_argument('host', nargs='?', default='localhost')
     p.add_argument('dbname', nargs='?', default='openquake')
     p.add_argument('user', nargs='?', default='oq_admin')
     p.add_argument('password', nargs='?', default='')
+    p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
-    main(arg.hazard_calculation_id, arg.host, arg.dbname,
-         arg.user, arg.password)
+    main(arg.hazard_calculation_id, arg.out_dir, arg.host,
+         arg.dbname, arg.user, arg.password, arg.port)
