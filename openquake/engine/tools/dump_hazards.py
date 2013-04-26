@@ -58,13 +58,15 @@ def _tuplestr(row):
     return '(%s)' % ', '.join(str(x) for x in row)
 
 
-class Cursor(object):
+class Copier(object):
     """
     Small wrapper around a psycopg2 cursor, which a .copy method
-    writing directly to .gz files.
+    writing directly to .gz files. It remembers the copied filenames,
+    which are stored in the attribute .filenames.
     """
     def __init__(self, psycopg2_cursor):
         self._cursor = psycopg2_cursor
+        self.filenames = []
 
     def tuplestr(self, query, *args):
         "Retrieve tuples of ids a strings"
@@ -87,6 +89,7 @@ class Cursor(object):
         print '%s\n(-> %s)' % (query, fname)
         with gzip.open(fname, mode) as f:
             self._cursor.copy_expert(query, f)
+            self.filenames.append(fname)
 
 
 def tardir(dirpath, name):
@@ -114,7 +117,7 @@ class HazardDumper(object):
 
     def __init__(self, conn, out_dir=None, format='text'):
         self.conn = conn
-        self.curs = Cursor(conn.cursor())
+        self.curs = Copier(conn.cursor())
         self.format = format
         assert format == 'text', format
         # there is no binary format for geography in postgis 1.5,
@@ -127,6 +130,19 @@ class HazardDumper(object):
 
     def hazard_calculation(self, id_):
         "Dump organization, oq_user, hazard_calculation, lt_realization"
+        owner_id = self.curs.tuplestr(
+            'select owner_id from uiapi.hazard_calculation where id=%s' % id_)
+        org_id = self.curs.tuplestr(
+            'select organization_id from admin.oq_user where id in %s'
+            % owner_id)
+        self.curs.copy(
+            """copy (select * from admin.organization where id in %s
+            and id != 1) to stdout with (format '%s')""" %
+            (org_id, self.format), self.dest, 'admin.organization.csv', 'w')
+        self.curs.copy(
+            """copy (select * from admin.oq_user where id in %s and id != 1)
+                  to stdout with (format '%s')""" % (owner_id, self.format),
+            self.dest, 'admin.oq_user.csv', 'w')
         self.curs.copy(
             """copy (select * from uiapi.hazard_calculation where id=%s)
                   to stdout with (format '%s')""" % (id_, self.format),
@@ -136,22 +152,6 @@ class HazardDumper(object):
                   where hazard_calculation_id=%s)
                   to stdout with (format '%s')""" % (id_, self.format),
             self.dest, 'hzrdr.lt_realization.csv', 'w')
-        owner_id = self.curs.tuplestr(
-            'select owner_id from uiapi.hazard_calculation where id=%s' % id_)
-        self.curs.copy(
-            """copy (select * from admin.oq_user where id in %s and id != 1)
-                  to stdout with (format '%s')""" % (owner_id, self.format),
-            self.dest, 'admin.oq_user.csv', 'w')
-        org_id = self.curs.tuplestr(
-            'select organization_id from admin.oq_user where id in %s'
-            % owner_id)
-        self.curs.copy(
-            """copy (select * from admin.organization where id in %s
-            and id != 1) to stdout with (format '%s')""" %
-            (org_id, self.format), self.dest, 'admin.organization.csv', 'w')
-        return self.filenames(
-            'admin.organization', 'admin.oq_user',
-            'uiapi.hazard_calculation', 'hzrdr.lt_realization')
 
     def oq_job(self, id_):
         "Dump oq_job"
@@ -159,7 +159,6 @@ class HazardDumper(object):
             """copy (select * from uiapi.oq_job where id in %s)
                   to stdout with (format '%s')""" % (id_, self.format),
             self.dest, 'uiapi.oq_job.csv', 'w')
-        return self.filenames('uiapi.oq_job')
 
     def output(self, ids):
         "Dump output"
@@ -167,7 +166,6 @@ class HazardDumper(object):
             """copy (select * from uiapi.output where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
             self.dest, 'uiapi.output.csv', 'w')
-        return self.filenames('uiapi.output')
 
     def hazard_curve(self, output):
         "Dump hazard_curve, hazard_curve_data"
@@ -183,9 +181,6 @@ class HazardDumper(object):
                   where hazard_curve_id in {})
                   to stdout with (format '{}')""".format(ids, self.format),
             self.dest, 'hzrdr.hazard_curve_data.csv', 'w')
-
-        return self.filenames(
-            'hzrdr.hazard_curve', 'hzrdr.hazard_curve_data')
 
     def gmf_collection(self, output):
         "Dump gmf_collection, gmf_agg"
@@ -203,16 +198,12 @@ class HazardDumper(object):
                   to stdout with (format '%s')""" % (coll_ids, self.format),
             self.dest, 'hzrdr.gmf_agg.csv', 'w')
 
-        return self.filenames(
-            'hzrdr.gmf_collection', 'hzrdr.gmf_agg')
-
     def gmf_scenario(self, output):
         "Dump gmf_scenario"
         self.curs.copy("""copy (select * from hzrdr.gmf_scenario
                      where output_id in %s)
                      to stdout with (format '%s')""" % (output, self.format),
                        self.dest, 'hzrdr.gmf_scenario.csv', 'w')
-        return self.filenames('hzrdr.gmf_scenario')
 
     def dump(self, hazard_calculation_id):
         """
@@ -235,22 +226,22 @@ class HazardDumper(object):
             raise RuntimeError('No outputs for jobs %s' % jobs)
 
         # collect generated filenames
-        filenames = self.hazard_calculation(hazard_calculation_id)
-        filenames.extend(self.oq_job(jobs))
+        self.hazard_calculation(hazard_calculation_id)
+        self.oq_job(jobs)
         all_outs = sum([output_ids for output_type, output_ids in outputs], [])
-        filenames.extend(self.output(_tuplestr(all_outs)))
+        self.output(_tuplestr(all_outs))
         for output_type, output_ids in outputs:
             ids = _tuplestr(output_ids)
             if output_type == 'hazard_curve':
-                filenames.extend(self.hazard_curve(ids))
+                self.hazard_curve(ids)
             elif output_type == 'gmf':
-                filenames.extend(self.gmf_collection(ids))
+                self.gmf_collection(ids)
             elif output_type == 'gmf_scenario':
-                filenames.extend(self.gmf_scenario(ids))
+                self.gmf_scenario(ids)
 
         # save FILENAMES.txt
         with open(os.path.join(self.dest, 'FILENAMES.txt'), 'w') as f:
-            f.write('\n'.join(filenames))
+            f.write('\n'.join(map(os.path.basename, curs.filenames)))
         # return the pathname of the generated tarfile
         return tardir(self.dest, 'hazard_calculation')
 
