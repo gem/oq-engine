@@ -436,8 +436,9 @@ def _do_run_calc(job, exports, calc, job_type):
     calc.export(exports=exports)
 
     _switch_to_job_phase(job, job_type, "clean_up")
-    EnginePerformanceMonitor.cache.flush()
     calc.clean_up()
+
+    EnginePerformanceMonitor.cache.flush()  # save performance info
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
