@@ -118,36 +118,6 @@ def queryset_iter(queryset, chunk_size):
             offset += chunk_size
 
 
-def profile4job(job_id):
-    """Return the job profile for the given job.
-
-    :param int job_id: identifier of the job in question
-    :returns: a :py:class:`openquake.engine.db.models.OqJobProfile` instance
-    """
-    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    return j2p.oq_job_profile
-
-
-def inputs4job(job_id, input_type=None, path=None):
-    """Return the inputs for the given job, input type and path.
-
-    :param int job_id: identifier of the job in question
-    :param str input_type: a valid input type
-    :param str path: the path of the desired input.
-    :returns: a list of :py:class:`openquake.engine.db.models.Input` instances
-    """
-    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    if not input_type and not path:
-        return list(i.input for i in i2js.all())
-    qargs = []
-    if input_type:
-        qargs.append(("input__input_type", input_type))
-    if path:
-        qargs.append(("input__path", path))
-    qargs = dict(qargs)
-    return list(i.input for i in i2js.filter(**qargs))
-
-
 def inputs4hcalc(calc_id, input_type=None):
     """
     Get all of the inputs for a given hazard calculation.
@@ -228,66 +198,6 @@ class RevisionInfo(djm.Model):
 
     class Meta:
         db_table = 'admin\".\"revision_info'
-
-
-## Tables in the 'eqcat' schema.
-
-
-class Catalog(djm.Model):
-    '''
-    Earthquake catalog
-    '''
-    owner = djm.ForeignKey('OqUser')
-    eventid = djm.IntegerField()
-    agency = djm.TextField()
-    identifier = djm.TextField()
-    time = djm.DateTimeField()
-    time_error = djm.FloatField()
-    depth = djm.FloatField()
-    depth_error = djm.FloatField()
-    EVENT_CLASS_CHOICES = (
-        (u'aftershock', u'Aftershock'),
-        (u'foreshock', u'Foreshock'),
-    )
-    event_class = djm.TextField(null=True, choices=EVENT_CLASS_CHOICES)
-    magnitude = djm.ForeignKey('Magnitude')
-    surface = djm.ForeignKey('Surface')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'eqcat\".\"catalog'
-
-
-class Magnitude(djm.Model):
-    '''
-    Earthquake event magnitudes
-    '''
-    mb_val = djm.FloatField(null=True)
-    mb_val_error = djm.FloatField(null=True)
-    ml_val = djm.FloatField(null=True)
-    ml_val_error = djm.FloatField(null=True)
-    ms_val = djm.FloatField(null=True)
-    ms_val_error = djm.FloatField(null=True)
-    mw_val = djm.FloatField(null=True)
-    mw_val_error = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"magnitude'
-
-
-class Surface(djm.Model):
-    '''
-    Earthquake event surface (ellipse with an angle)
-    '''
-    semi_minor = djm.FloatField()
-    semi_major = djm.FloatField()
-    strike = djm.FloatField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"surface'
 
 
 ## Tables in the 'hzrdi' (Hazard Input) schema.
@@ -567,17 +477,6 @@ class CNodeStats(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"cnode_stats'
-
-
-class Job2profile(djm.Model):
-    '''
-    Associates jobs with their profiles.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    oq_job_profile = djm.ForeignKey('OqJobProfile')
-
-    class Meta:
-        db_table = 'uiapi\".\"job2profile'
 
 
 class HazardCalculation(djm.Model):
@@ -1305,184 +1204,6 @@ class Input2rcalc(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"input2rcalc'
-
-
-class OqJobProfile(djm.Model):
-    '''
-    Parameters needed to run an OpenQuake job
-    '''
-    owner = djm.ForeignKey('OqUser')
-    description = djm.TextField(default='')
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'scenario', u'Scenario'),
-        (u'scenario_damage', u'Scenario Damage'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        (u'classical_bcr', u'Classical BCR'),
-        # Benefit-cost ratio calculator based on Event Based risk calc
-        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
-    )
-    calc_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    job_type = fields.CharArrayField()
-    min_magnitude = djm.FloatField(null=True)
-    investigation_time = djm.FloatField(null=True)
-    COMPONENT_CHOICES = (
-        (u'average', u'Average horizontal'),
-        (u'gmroti50', u'Average horizontal (GMRotI50)'),
-    )
-    component = djm.TextField(choices=COMPONENT_CHOICES)
-    IMT_CHOICES = (
-        (u'pga', u'Peak Ground Acceleration'),
-        (u'sa', u'Spectral Acceleration'),
-        (u'pgv', u'Peak Ground Velocity'),
-        (u'pgd', u'Peak Ground Displacement'),
-        (u'ia', u'Arias Intensity'),
-        (u'rsd', u'Relative Significant Duration'),
-        (u'mmi', u'Modified Mercalli Intensity'),
-    )
-    imt = djm.TextField(choices=IMT_CHOICES)
-    period = djm.FloatField(null=True)
-    damping = djm.FloatField(null=True)
-    TRUNC_TYPE_CHOICES = (
-        (u'none', u'None'),
-        (u'onesided', u'One-sided'),
-        (u'twosided', u'Two-sided'),
-    )
-    truncation_type = djm.TextField(choices=TRUNC_TYPE_CHOICES)
-    # TODO(LB): We should probably find out why (from a science perspective)
-    # the default is 3.0 and document it. I definitely don't remember why it's
-    # 3.0.
-    truncation_level = djm.FloatField(default=3.0)
-    reference_vs30_value = djm.FloatField(
-        "Average shear-wave velocity in the upper 30 meters of a site")
-    imls = fields.FloatArrayField(null=True)
-    poes = fields.FloatArrayField(null=True)
-    realizations = djm.IntegerField(null=True)
-    histories = djm.IntegerField(null=True)
-    gm_correlated = djm.NullBooleanField(null=True)
-    gmf_calculation_number = djm.IntegerField(null=True)
-    rupture_surface_discretization = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    # We can specify a (region and region_grid_spacing) or sites, but not both.
-    region = djm.PolygonField(srid=DEFAULT_SRID, null=True)
-    region_grid_spacing = djm.FloatField(null=True)
-    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True)
-
-    area_source_discretization = djm.FloatField(null=True)
-    area_source_magnitude_scaling_relationship = djm.TextField(null=True)
-
-    ASSET_CORRELATION_CHOICES = (
-        (u'perfect', u'Perfect'),
-        (u'uncorrelated', u'Uncorrelated'),
-    )
-    asset_correlation = djm.TextField(null=True,
-                                      choices=ASSET_CORRELATION_CHOICES)
-    compute_mean_hazard_curve = djm.NullBooleanField(null=True)
-    conditional_loss_poe = fields.FloatArrayField(null=True)
-    fault_magnitude_scaling_relationship = djm.TextField(null=True)
-    fault_magnitude_scaling_sigma = djm.FloatField(null=True)
-    fault_rupture_offset = djm.FloatField(null=True)
-    fault_surface_discretization = djm.FloatField(null=True)
-    gmf_random_seed = djm.IntegerField(null=True)
-    gmpe_lt_random_seed = djm.IntegerField(null=True)
-    gmpe_model_name = djm.TextField(null=True)
-    grid_source_magnitude_scaling_relationship = djm.TextField(null=True)
-    include_area_sources = djm.NullBooleanField(null=True)
-    include_fault_source = djm.NullBooleanField(null=True)
-    include_grid_sources = djm.NullBooleanField(null=True)
-    include_subduction_fault_source = djm.NullBooleanField(null=True)
-    lrem_steps_per_interval = djm.IntegerField(null=True)
-    loss_curves_output_prefix = djm.TextField(null=True)
-    # Only used for Event-Based Risk calculations.
-    loss_histogram_bins = djm.IntegerField(null=True)
-    maximum_distance = djm.FloatField(null=True)
-    quantile_levels = fields.FloatArrayField(null=True)
-    reference_depth_to_2pt5km_per_sec_param = djm.FloatField(null=True)
-    rupture_aspect_ratio = djm.FloatField(null=True)
-    RUPTURE_FLOATING_TYPE_CHOICES = (
-        ('alongstrike', 'Only along strike ( rupture full DDW)'),
-        ('downdip', 'Along strike and down dip'),
-        ('centereddowndip', 'Along strike & centered down dip'),
-    )
-    rupture_floating_type = djm.TextField(
-        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
-    SADIGH_SITE_TYPE_CHOICES = (
-        ('rock', 'Rock'),
-        ('deepsoil', 'Deep-Soil'),
-    )
-    sadigh_site_type = djm.TextField(
-        null=True, choices=SADIGH_SITE_TYPE_CHOICES)
-    source_model_lt_random_seed = djm.IntegerField(null=True)
-    STANDARD_DEVIATION_TYPE_CHOICES = (
-        ('total', 'Total'),
-        ('interevent', 'Inter-Event'),
-        ('intraevent', 'Intra-Event'),
-        ('zero', 'None (zero)'),
-        ('total_mag_dependent', 'Total (Mag Dependent)'),
-        ('total_pga_dependent', 'Total (PGA Dependent)'),
-        ('intraevent_mag_dependent', 'Intra-Event (Mag Dependent)'),
-    )
-    standard_deviation_type = djm.TextField(
-        null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
-    subduction_fault_magnitude_scaling_relationship = \
-        djm.TextField(null=True)
-    subduction_fault_magnitude_scaling_sigma = djm.FloatField(null=True)
-    subduction_fault_rupture_offset = djm.FloatField(null=True)
-    subduction_fault_surface_discretization = djm.FloatField(null=True)
-    subduction_rupture_aspect_ratio = djm.FloatField(null=True)
-    subduction_rupture_floating_type = djm.TextField(
-        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
-    SOURCE_AS_CHOICES = (
-        ('pointsources', 'Point Sources'),
-        ('linesources', 'Line Sources (random or given strike)'),
-        ('crosshairsources', 'Cross Hair Line Sources'),
-        ('16spokedsources', '16 Spoked Line Sources'),
-    )
-    treat_area_source_as = djm.TextField(
-        null=True, choices=SOURCE_AS_CHOICES)
-    treat_grid_source_as = djm.TextField(
-        null=True, choices=SOURCE_AS_CHOICES)
-    width_of_mfd_bin = djm.FloatField(null=True)
-
-    # The following bin limits fields are for the Disaggregation calculator
-    # only:
-    lat_bin_limits = fields.FloatArrayField(null=True)
-    lon_bin_limits = fields.FloatArrayField(null=True)
-    mag_bin_limits = fields.FloatArrayField(null=True)
-    epsilon_bin_limits = fields.FloatArrayField(null=True)
-    distance_bin_limits = fields.FloatArrayField(null=True)
-    # PMF (Probability Mass Function) result choices for the Disaggregation
-    # calculator
-    # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
-    # constraint checking for disagg_results. For now, I'm just going to let
-    # the database check the constraints.
-    # The following are the valid options for each element of this array field:
-    #   MagPMF (Magnitude Probability Mass Function)
-    #   DistPMF (Distance PMF)
-    #   TRTPMF (Tectonic Region Type PMF)
-    #   MagDistPMF (Magnitude-Distance PMF)
-    #   MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
-    #   LatLonPMF (Latitude-Longitude PMF)
-    #   LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
-    #   LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
-    #   MagTRTPMF (Magnitude-Tectonic Region Type PMF)
-    #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
-    #   FullDisaggMatrix (The full disaggregation matrix; includes
-    #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
-    disagg_results = fields.CharArrayField(null=True)
-    uhs_periods = fields.FloatArrayField(null=True)
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
-                              null=True)
-    depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
-    asset_life_expectancy = djm.FloatField(null=True)
-    interest_rate = djm.FloatField(null=True)
-
-    class Meta:
-        db_table = 'uiapi\".\"oq_job_profile'
 
 
 class OutputManager(djm.Manager):
@@ -2777,7 +2498,7 @@ class DmgDistTotal(djm.Model):
     class Meta:
         db_table = 'riskr\".\"dmg_dist_total'
 
-## Tables in the 'oqmif' schema.
+## Tables in the 'riski' schema.
 
 
 class ExposureModel(djm.Model):
@@ -2816,7 +2537,7 @@ class ExposureModel(djm.Model):
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_model'
+        db_table = 'riski\".\"exposure_model'
 
     def taxonomies_in(self, region_constraint):
         """
@@ -2860,7 +2581,7 @@ class Occupancy(djm.Model):
     occupants = djm.IntegerField()
 
     class Meta:
-        db_table = 'oqmif\".\"occupancy'
+        db_table = 'riski\".\"occupancy'
 
 
 class AssetManager(djm.GeoManager):
@@ -2878,7 +2599,7 @@ class AssetManager(djm.GeoManager):
 
         return list(
             self.raw("""
-            SELECT * FROM oqmif.exposure_data
+            SELECT * FROM riski.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
@@ -2898,10 +2619,10 @@ class AssetManager(djm.GeoManager):
         cursor = connections['job_init'].cursor()
 
         cursor.execute("""
-        SELECT oqmif.exposure_data.taxonomy, COUNT(*)
-        FROM oqmif.exposure_data WHERE
+        SELECT riski.exposure_data.taxonomy, COUNT(*)
+        FROM riski.exposure_data WHERE
         exposure_model_id = %s AND ST_COVERS(ST_GeographyFromText(%s), site)
-        group by oqmif.exposure_data.taxonomy
+        group by riski.exposure_data.taxonomy
         """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
 
         return dict(cursor)
@@ -2940,7 +2661,7 @@ class ExposureData(djm.Model):
     objects = AssetManager()
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_data'
+        db_table = 'riski\".\"exposure_data'
 
     def __str__(self):
         return "%s (%s-%s @ %s)" % (
