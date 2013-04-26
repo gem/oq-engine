@@ -250,11 +250,11 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             user_name=getpass.getuser(), log_level=log_level)
         params, files = engine.parse_config(open(cfg_file, 'r'))
         calculation = engine.create_hazard_calculation(job.owner, params,
-                                                        files.values())
+                                                       files.values())
         job.hazard_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'hazard', files, exports)
+        error_message = validate(job, 'hazard', params, files, exports)
         if error_message:
             sys.exit(error_message)
 
@@ -468,7 +468,7 @@ def run_risk(
         job.risk_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'risk', files,  exports)
+        error_message = validate(job, 'risk', params, files,  exports)
         if error_message:
             sys.exit(error_message)
 

@@ -483,6 +483,16 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
         for rlz in realizations:
             # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi"),
+                lt_realization=rlz,
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
+            # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
@@ -547,37 +557,29 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         source_paths = logictree.read_logic_trees(
             self.hc.base_path, smlt.path, gsimlt.path)
 
-        src_inputs = []
         for src_path in source_paths:
             full_path = os.path.join(self.hc.base_path, src_path)
 
-            # Get or reuse the 'source' Input:
+            # Get the 'source' Input:
             inp = engine.get_input(full_path, 'source', self.hc.owner)
-            src_inputs.append(inp)
 
             # Associate the source input to the calculation:
             models.Input2hcalc.objects.get_or_create(
                 input=inp, hazard_calculation=self.hc)
 
-            # Associate the source input to the source model logic tree input:
-            try:
-                models.Src2ltsrc.objects.get(lt_src=smlt, filename=src_path)
-            except ObjectDoesNotExist:
-                # If it doesn't exist, this is a new input and we're not
-                # reusing an old one which is identical.
-                # Only in this case do we parse the sources and populate
-                # `hzrdi.parsed_source`.
-                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                                filename=src_path)
-                src_content = StringIO.StringIO(
-                    inp.model_content.raw_content_ascii)
-                sm_parser = nrml_parsers.SourceModelParser(src_content)
-                src_db_writer = source.SourceDBWriter(
-                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization
-                )
-                src_db_writer.serialize()
+            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                            filename=src_path)
+            src_content = StringIO.StringIO(
+                inp.model_content.raw_content_ascii)
+            sm_parser = nrml_parsers.SourceModelParser(src_content)
+
+            # Covert
+            src_db_writer = source.SourceDBWriter(
+                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization
+            )
+            src_db_writer.serialize()
 
     def parse_risk_models(self):
         """
@@ -910,6 +912,9 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         if 'exports' in kwargs and 'xml' in kwargs['exports']:
             outputs = export_core.get_outputs(self.job.id)
 
+            if not self.hc.export_multi_curves:
+                outputs = outputs.exclude(output_type='hazard_curve_multi')
+
             for output in outputs:
                 exported_files.extend(hazard_export.export(
                     output.id, self.job.hazard_calculation.export_dir))
@@ -969,6 +974,30 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
+
+        if self.hc.mean_hazard_curves:
+            # create a new `HazardCurve` 'container' record for mean
+            # curves (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "mean-curves-multi-imt",
+                    "hazard_curve_multi"),
+                statistics="mean",
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
+        if self.hc.quantile_hazard_curves:
+            for quantile in self.hc.quantile_hazard_curves:
+                # create a new `HazardCurve` 'container' record for quantile
+                # curves (virtual container for multiple imts)
+                models.HazardCurve.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, 'quantile(%s)-curves' % quantile,
+                        "hazard_curve_multi"),
+                    statistics="quantile",
+                    imt=None,
+                    quantile=quantile,
+                    investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
             im_type, sa_period, sa_damping = models.parse_imt(imt)
