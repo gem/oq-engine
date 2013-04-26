@@ -15,14 +15,13 @@
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
-from tests.calculators.risk import general_test
+from tests.calculators.risk import base_test
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.scenario import core as scenario
 
 
-class ScenarioRiskCalculatorTestCase(
-        general_test.BaseRiskCalculatorTestCase):
+class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     Integration test for the scenario risk calculator
     """
@@ -54,7 +53,7 @@ class ScenarioRiskCalculatorTestCase(
         # specific method to write loss map data.
 
         patch_dbwriter = helpers.patch(
-            'openquake.engine.calculators.risk.general.write_loss_map_data',)
+            'openquake.engine.calculators.risk.writers.loss_map_data',)
         try:
             write_lossmap_mock = patch_dbwriter.start()
             scenario.scenario(
