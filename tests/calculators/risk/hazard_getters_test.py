@@ -21,7 +21,7 @@ import cPickle as pickle
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk import hazard_getters
-from openquake.engine.calculators.risk.general import BaseRiskCalculator
+from openquake.engine.calculators.risk.base import RiskCalculator
 
 from tests.utils.helpers import demo_file
 
@@ -39,7 +39,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
             self.risk_demo, self.hazard_demo, self.hazard_output_type)
 
         # need to run pre-execute to parse exposure model
-        calc = BaseRiskCalculator(self.job)
+        calc = RiskCalculator(self.job)
         calc.pre_execute()
 
         self._assets = models.ExposureData.objects.filter(
@@ -47,7 +47,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
                 'asset_ref')
 
         self.getter = self.getter_class(
-            self.ho().id, "PGA", self.assets(), 500)
+            self.ho().id, self.assets(), 500)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
@@ -56,7 +56,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         return self.job.risk_calculation.hazard_output.hazardcurve
 
     def test_call(self):
-        assets, values, missing = self.getter()
+        assets, values, missing = self.getter("PGA")
 
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         self.assertEqual(set(), missing)
@@ -69,7 +69,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, values, missing = self.getter()
+        assets, values, missing = self.getter("PGA")
         self.assertEqual([], assets)
         self.assertEqual(set([a.id for a in self.assets()]), missing)
         self.assertEqual([], values)
@@ -87,7 +87,7 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
         return self.job.risk_calculation.hazard_output.gmfcollection
 
     def test_call(self):
-        assets, values, missing = self.getter()
+        assets, values, missing = self.getter("PGA")
 
         gmvs = numpy.array(values)[:, 0]
 
@@ -108,7 +108,7 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
         return self.job.risk_calculation.hazard_output
 
     def test_call(self):
-        assets, values, missing = self.getter()
+        assets, values, missing = self.getter("PGA")
 
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         self.assertEqual(set(), missing)
