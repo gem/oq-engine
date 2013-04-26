@@ -10,11 +10,9 @@ def hazard_restore(conn, tar, chatty=False):
 
     :param conn: the psycopg2 connection to the db
     :param tar: the pathname to the tarfile
-    :returns: the total number of imported rows
     """
     curs = conn.cursor()
     tf = tarfile.open(tar)
-    n = 0
     try:
         for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
             fname = line.rstrip()
@@ -24,13 +22,11 @@ def hazard_restore(conn, tar, chatty=False):
                 if chatty:
                     print 'Importing %s...' % fname
                 curs.copy_from(f, tname)
-                n += curs.rowcount
     except:
         conn.rollback()
         raise
     else:
         conn.commit()
-    return n
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
@@ -42,4 +38,4 @@ if __name__ == '__main__':
     arg = p.parse_args()
     conn = psycopg2.connect(host=arg.host, dbname=arg.dbname,
                             username=arg.user, password=arg.password)
-    print 'Imported %d rows', hazard_restore(conn, arg.tarfile, chatty=True)
+    hazard_restore(conn, arg.tarfile, chatty=True)
