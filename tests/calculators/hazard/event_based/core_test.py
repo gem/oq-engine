@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import getpass
 import unittest
 import mock
@@ -200,14 +201,17 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         calculator to make the test faster and independent on the stochastic
         number generator
         """
-        rupture1 = mock.Mock(tectonic_region_type='Active Shallow Crust')
-        rupture2 = mock.Mock(tectonic_region_type='Active Shallow Crust')
+        rupture1 = mock.Mock()
+        rupture1.tectonic_region_type = 'Active Shallow Crust'
+        rupture2 = mock.Mock()
+        rupture2.tectonic_region_type = 'Active Shallow Crust'
         self.patch_ses = mock.patch(
             'openquake.hazardlib.calc.stochastic.'
             'stochastic_event_set_poissonian',
-            mock.Mock(return_value=[rupture1, rupture2]))
+            mock.MagicMock(return_value=[rupture1, rupture2]))
         self.patch_gmf = mock.patch(
-            'openquake.hazardlib.calc.gmf.ground_motion_fields')
+            'openquake.hazardlib.calc.gmf.ground_motion_fields',
+            mock.MagicMock())
         self.patch_save_rup = mock.patch(
             'openquake.engine.calculators.hazard.'
             'event_based.core._save_ses_rupture')
@@ -237,8 +241,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             save_rup_mock = core._save_ses_rupture
             save_gmf_mock = core._save_gmfs
 
-            # run the calculation and check that the outputs are created
-            job = helpers.run_hazard_job(self.cfg)
+            # run the calculation in process and check the outputs
+            os.environ['OQ_NO_DISTRIBUTE'] = '1'
+            try:
+                job = helpers.run_hazard_job(self.cfg)
+            finally:
+                del os.environ['OQ_NO_DISTRIBUTE']
             hc = job.hazard_calculation
             rlz1, rlz2 = models.LtRealization.objects.filter(
                 hazard_calculation=hc.id).order_by('ordinal')
@@ -277,7 +285,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # Now check for the correct number of hazard curves:
             curves = models.HazardCurve.objects.filter(output__oq_job=job)
             # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-            self.assertEqual(10, curves.count())
+            # + 3 mean and quantiles multi-imt curves
+            self.assertEqual(13, curves.count())
 
             # Finally, check for the correct number of hazard maps:
             maps = models.HazardMap.objects.filter(output__oq_job=job)
