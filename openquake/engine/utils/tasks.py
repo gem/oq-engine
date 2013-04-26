@@ -182,7 +182,7 @@ def oqtask(task_func):
             # The job is running.
             # ... now continue with task execution.
             task_func(*args, **kwargs)
-            EnginePerformanceMonitor.bulk.flush()  # flush the performance logs
+            EnginePerformanceMonitor.cache.flush()  # flush the performance logs
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
