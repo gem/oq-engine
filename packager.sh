@@ -1,6 +1,7 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 #
+# reprise tests
 set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
@@ -173,6 +174,8 @@ _lxc_name_and_ip_get()
 }
 
 devtest_run () {
+    local branch_id="$1"
+
     sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
@@ -193,7 +196,6 @@ devtest_run () {
     return $inner_ret
     # fi
 }
-
 
 pkgtest_run () {
     local i e branch_id="$1"
