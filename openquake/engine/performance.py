@@ -7,82 +7,12 @@ from cStringIO import StringIO
 import psutil
 
 from django.db import connections
-from django.db import router
-from django.contrib.gis.db.models.fields import GeometryField
 
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
+from openquake.engine.writer import CacheInserter
 
 MB = 1024 * 1024  # 1 megabyte
-
-
-# In the future this class may replace openquake.engine.writer.BulkInserter
-# since it is much more efficient (even hundreds of times for bulky updates)
-# being based on COPY FROM. BulkInserter objects are not thread-safe.
-class BulkInserter(object):
-    """
-    Bulk insert bunches of Django objects by converting them in strings
-    and by using COPY FROM.
-    """
-    def __init__(self, max_cache_size):
-        self.max_cache_size = max_cache_size
-        self.values = []
-
-    def save(self, obj):
-        """
-        :param obj: a Django model object
-
-        Append an object to the list of objects to save. If the list exceeds
-        the max_cache_size, flush it on the database.
-        """
-        self.values.append(obj)
-        if len(self.values) >= self.max_cache_size:
-            self.flush()
-
-    def flush(self):
-        """
-        Save the pending objects on the database with a COPY FROM.
-        """
-        if not self.values:
-            return
-
-        # perform some introspection
-        objects, last = self.values[:-1], self.values[-1]
-        alias = router.db_for_write(last.__class__)
-        meta = last.__class__._meta
-        tname = '"%s"' % meta.db_table
-        fields = []
-        for f in meta._field_name_cache[1:]:  # skip the first field, the id
-            col = getattr(last, f.name)
-            fname = f.name + '_id' if hasattr(col, 'id') else f.name
-            fields.append(fname)
-
-        # generate a big string with the objects and save it with COPY FROM
-        text = '\n'.join(self.to_line(obj, fields) for obj in objects)
-        curs = connections[alias].cursor()
-        curs.copy_from(StringIO(text), tname, columns=fields)
-        last.save()  # this "commits" the operation
-
-        logs.LOG.debug('saved %d rows in uiapi.performance', len(self.values))
-        self.values = []
-
-    @staticmethod
-    def to_line(obj, fields):
-        """
-        Convert the fields of a Django object into a line string suitable
-        for import via COPY FROM. The encoding is UTF8.
-        """
-        cols = []
-        for f in fields:
-            col = getattr(obj, f)
-            if col is None:
-                col = r'\N'
-            elif isinstance(col, GeometryField):
-                col = col.wkt()
-            else:
-                col = unicode(col).encode('utf8')
-            cols.append(col)
-        return '\t'.join(cols)
 
 
 # I did not make any attempt to make this class thread-safe,
@@ -213,12 +143,12 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     For efficiency reasons the saving on the database is delayed and
     done in chunks of 1,000 rows each. That means that hundreds of
     concurrents task can log simultaneously on the uiapi.performance table
-    without problems. You can save more often by calling the .bulk.flush()
+    without problems. You can save more often by calling the .cache.flush()
     method; it is automatically called for you by the oqtask decorator;
     it is also called automatically at the end of the main process.
     """
 
-    bulk = BulkInserter(1000)  # store at most 1,000 objects
+    cache = CacheInserter(1000)  # store at most 1,000 objects
 
     def __init__(self, operation, job_id, task=None, tic=0.1, tracing=False,
                  profile_mem=False):
@@ -288,7 +218,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 duration=self.duration,
                 pymemory=pymemory,
                 pgmemory=pgmemory)
-            self.bulk.save(perf)
+            self.cache.add(perf)
 
     def on_running(self):
         """
@@ -305,7 +235,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.tracer.__exit__(etype, exc, tb)
 
 ## makes sure the performance results are flushed in the db at the end
-atexit.register(EnginePerformanceMonitor.bulk.flush)
+atexit.register(EnginePerformanceMonitor.cache.flush)
 
 
 class DummyMonitor(object):
