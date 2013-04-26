@@ -8,7 +8,7 @@ from openquake.engine.performance import \
 from openquake.engine.db.models import Performance
 from openquake.engine import engine
 
-flush = EnginePerformanceMonitor.bulk.flush
+flush = EnginePerformanceMonitor.cache.flush
 
 
 class TestCase(unittest.TestCase):
