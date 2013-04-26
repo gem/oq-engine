@@ -31,5 +31,6 @@ Daniele Vigano          April 2013
 
 Project management
 ------------------
+Joshua McKenty          August 2010
 John Tarter             November 2010
 Paul Henshaw            February 2012
