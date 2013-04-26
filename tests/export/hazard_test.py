@@ -49,11 +49,11 @@ class GetResultExportPathTestCase(unittest.TestCase):
         )
         self.FakeHazardMap = namedtuple(
             'HazardMap',
-            'output, lt_realization, imt, sa_period, statistics, quantile'
+            'output, lt_realization, imt, sa_period, poe, statistics, quantile'
         )
         self.FakeUHS = namedtuple(
             'UHS',
-            'output, lt_realization, statistics, quantile'
+            'output, lt_realization, poe, statistics, quantile'
         )
         self.FakeDisagg = namedtuple(
             'Disagg',
@@ -124,20 +124,24 @@ class GetResultExportPathTestCase(unittest.TestCase):
         output = self.FakeOutput('hazard_map')
 
         maps = [
-            self.FakeHazardMap(output, self.ltr_mc, 'PGA', None, None, None),
-            self.FakeHazardMap(output, self.ltr_mc, 'SA', 0.025, None, None),
-            self.FakeHazardMap(output, None, 'SA', 0.025, 'mean', None),
-            self.FakeHazardMap(output, None, 'SA', 0.025, 'quantile', 0.85),
+            self.FakeHazardMap(output, self.ltr_mc, 'PGA', None, 0.1,
+                               None, None),
+            self.FakeHazardMap(output, self.ltr_mc, 'SA', 0.025, 0.2,
+                               None, None),
+            self.FakeHazardMap(output, None, 'SA', 0.025, 0.3,
+                               'mean', None),
+            self.FakeHazardMap(output, None, 'SA', 0.025, 0.4,
+                               'quantile', 0.85),
         ]
         expected_paths = [
             '%s/calc_7/hazard_map/PGA/'
-            'hazard_map-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            'hazard_map-poe_0.1-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
             '%s/calc_7/hazard_map/SA-0.025/'
-            'hazard_map-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            'hazard_map-poe_0.2-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
             '%s/calc_7/hazard_map/SA-0.025/'
-            'hazard_map-mean.xml',
+            'hazard_map-poe_0.3-mean.xml',
             '%s/calc_7/hazard_map/SA-0.025/'
-            'hazard_map-quantile_0.85.xml',
+            'hazard_map-poe_0.4-quantile_0.85.xml',
         ]
         expected_paths = [x % self.target_dir for x in expected_paths]
 
@@ -151,15 +155,15 @@ class GetResultExportPathTestCase(unittest.TestCase):
         output = self.FakeOutput('uh_spectra')
 
         uh_spectra = [
-            self.FakeUHS(output, self.ltr_mc, None, None),
-            self.FakeUHS(output, None, 'mean', None),
-            self.FakeUHS(output, None, 'quantile', 0.85),
+            self.FakeUHS(output, self.ltr_mc, 0.1, None, None),
+            self.FakeUHS(output, None, 0.2, 'mean', None),
+            self.FakeUHS(output, None, 0.3, 'quantile', 0.85),
         ]
         expected_paths = [
             '%s/calc_7/uh_spectra/'
-            'uh_spectra-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
-            '%s/calc_7/uh_spectra/uh_spectra-mean.xml',
-            '%s/calc_7/uh_spectra/uh_spectra-quantile_0.85.xml',
+            'uh_spectra-poe_0.1-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/uh_spectra/uh_spectra-poe_0.2-mean.xml',
+            '%s/calc_7/uh_spectra/uh_spectra-poe_0.3-quantile_0.85.xml',
         ]
         expected_paths = [x % self.target_dir for x in expected_paths]
 

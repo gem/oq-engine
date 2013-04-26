@@ -15,35 +15,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Common functionality for Risk calculators."""
+"""Base RiskCalculator class."""
 
 import random
 import StringIO
-import numpy
-from scipy import interpolate
 
 from openquake.risklib import scientific
-
-from django import db
 
 from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.engine.db import models
-from openquake.engine.calculators import base, post_processing
+from openquake.engine.calculators import base
 from openquake.engine import export
 from openquake.engine.utils import stats
-from openquake.engine.calculators.risk import hazard_getters
 from openquake.nrmllib.risk import parsers
 
 # FIXME: why is a writer in a package called "input" ?
 from openquake.engine.input import exposure as db_writer
 
 
-#: Maximum number of loss curves to cache in buffers, for selects and inserts
-_CURVE_CACHE_SIZE = 100000
-
-
-class BaseRiskCalculator(base.CalculatorNext):
+class RiskCalculator(base.CalculatorNext):
     """
     Abstract base class for risk calculators. Contains a bunch of common
     functionality, including initialization procedures and the core
@@ -67,7 +58,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         The random number generator (initialized with a master seed) used for
         sampling.
 
-    :attribute dict taxonomies_imts:
+    :attribute dict taxonomy_imt:
         A dictionary mapping taxonomies to intensity measure type, to
         support structure dependent intensity measure types
     """
@@ -75,12 +66,12 @@ class BaseRiskCalculator(base.CalculatorNext):
     hazard_getter = None  # the name of the hazard getter class; to override
 
     def __init__(self, job):
-        super(BaseRiskCalculator, self).__init__(job)
+        super(RiskCalculator, self).__init__(job)
 
         self.taxonomies = None
         self.rnd = None
         self.vulnerability_functions = None
-        self.taxonomies_imts = dict()
+        self.taxonomy_imt = dict()
 
     def pre_execute(self):
         """
@@ -122,17 +113,6 @@ class BaseRiskCalculator(base.CalculatorNext):
 
         with logs.tracing('store risk model'):
             self.set_risk_models()
-
-        if self.hc is not None:
-            imts = self.hc.get_imts()
-
-            # check that the hazard calculation has all the imts needed by
-            # the risk calculation
-            for imt in set(self.taxonomies_imts.values()):
-                if not imt in imts:
-                    raise RuntimeError(
-                        "There is no hazard output for the intensity measure "
-                        "%s; the available IMTs are %s" % (imt, imts))
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
@@ -194,34 +174,36 @@ class BaseRiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                # Get the imt depending on the taxonomy of the assets
-                # (SD-IMT) and create the needed hazard getters for
-                # all the hazard output
-                imt = self.taxonomies_imts[taxonomy]
-                hazard = dict((ho.id, self.create_getter(ho, imt, assets))
+                hazard = dict((ho.id, self.create_getter(ho, assets))
                               for ho in self.considered_hazard_outputs())
 
-                worker_args = self.worker_args(taxonomy)
+                taxonomy_args = self.taxonomy_args(taxonomy)
 
                 logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
-                               len(assets), offset, block_size, worker_args)
+                               len(assets), offset, block_size, taxonomy_args)
 
                 yield ([self.job.id, hazard] +
-                       worker_args +
+                       taxonomy_args +
                        [output_containers] +
                        [statistical_output_containers] +
                        calculator_parameters)
 
-    def worker_args(self, taxonomy):
+    def taxonomy_args(self, taxonomy):
         """
         :returns:
-            A fixed list of arguments that a calculator may want to pass to a
-            worker. Default to a seed generated from the master seed and the
-            vulnerability function associated with the assets taxonomy. May be
-            overriden.
+            A fixed list of arguments that depends on the taxonomy that a
+            calculator pass to a worker. Default to:
+
+            1) a seed generated from the master seed
+            2) the vulnerability function associated with the assets taxonomy
+            3) the imt associated to such taxonomy
+
+            Must be overriden in order to provide more/less arguments
+            that depends on the taxonomy.
         """
         return [self.rnd.randint(0, models.MAX_SINT_32),
-                self.vulnerability_functions[taxonomy]]
+                self.vulnerability_functions[taxonomy],
+                self.taxonomy_imt[taxonomy]]
 
     def export(self, *args, **kwargs):
         """
@@ -243,6 +225,8 @@ class BaseRiskCalculator(base.CalculatorNext):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
+    # FIXME(lp). This logic (with the ones in `hazard_outputs`) should
+    # go into the models module
     def considered_hazard_outputs(self):
         """
         Returns the list of hazard outputs to be considered
@@ -317,7 +301,7 @@ class BaseRiskCalculator(base.CalculatorNext):
         return [mean_loss_curve_id, quantile_loss_curve_ids,
                 mean_loss_map_ids, quantile_loss_map_ids]
 
-    def create_getter(self, output, imt, assets):
+    def create_getter(self, output, assets):
         """
         Create an instance of :class:`.hazard_getters.HazardGetter` associated
         to an hazard output.
@@ -328,9 +312,8 @@ class BaseRiskCalculator(base.CalculatorNext):
             The ID of an :class:`openquake.engine.db.models.Output` produced by
             a hazard calculation.
 
-        :param str imt:
-            The imt used by the hazard getter to filter the hazard (a hazard
-            output may contain values computed in multiple imt).
+        :param assets:
+            The assets for which the HazardGetter should be created.
 
         :returns:
             A tuple where the first element is the hazard getter and the second
@@ -403,7 +386,8 @@ class BaseRiskCalculator(base.CalculatorNext):
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def set_risk_models(self):
-        self.vulnerability_functions = self.get_vulnerability_model()
+        (self.vulnerability_functions, self.taxonomy_imt) = (
+            self.get_vulnerability_model())
         self.check_taxonomies(self.vulnerability_functions)
 
     def check_taxonomies(self, taxonomies):
@@ -433,17 +417,16 @@ class BaseRiskCalculator(base.CalculatorNext):
         Load and parse the vulnerability model input associated with this
         calculation.
 
-        As a side effect, it also stores the mapping between
-        taxonomies and IMT (that is needed for further hazard
-        filtering) in the attribute `taxonomies_imts`.
-
         :param bool retrofitted:
             `True` if the retrofitted model is going to be parsed
 
         :returns:
-            A dictionary mapping each taxonomy to a
-            :class:`openquake.risklib.scientific.VulnerabilityFunction`
-            instance.
+            A tuple with
+               1) a dictionary mapping each taxonomy to a
+               :class:`openquake.risklib.scientific.VulnerabilityFunction`
+               instance.
+               2) a dictionary mapping each taxonomy to an intensity
+               measure type expressed as a string, i.e. SA(0.1)
         """
 
         if retrofitted:
@@ -460,7 +443,7 @@ class BaseRiskCalculator(base.CalculatorNext):
     def parse_vulnerability_model(self, vuln_content):
         """
         Parse the vulnerability model and return a `dict` of vulnerability
-        functions keyed by taxonomy.
+        functions keyed by taxonomy and a `dict` of imts keyed by taxonomy.
 
         If a taxonomy is associated with more than one Intensity Measure Type
         (IMT), a `ValueError` will be raised.
@@ -479,21 +462,22 @@ class BaseRiskCalculator(base.CalculatorNext):
         """
         vfs = dict()
 
+        taxonomy_imt = {}
+
         for record in parsers.VulnerabilityModelParser(vuln_content):
             taxonomy = record['ID']
             imt = record['IMT']
             loss_ratios = record['lossRatio']
             covs = record['coefficientsVariation']
 
-
-            registered_imt = self.taxonomies_imts.get(taxonomy, imt)
+            registered_imt = taxonomy_imt.get(taxonomy, imt)
 
             if imt != registered_imt:
                 raise ValueError("The same taxonomy is associated with "
                                  "different imts %s and %s" % (
                                  imt, registered_imt))
             else:
-                self.taxonomies_imts[taxonomy] = imt
+                taxonomy_imt[taxonomy] = imt
 
             try:
                 vfs[taxonomy] = scientific.VulnerabilityFunction(
@@ -507,7 +491,18 @@ class BaseRiskCalculator(base.CalculatorNext):
                     % (taxonomy, err.message)
                 )
                 raise ValueError(msg)
-        return vfs
+
+        imts = self.hc.get_imts()
+
+        # check that the hazard data have all the imts needed by the
+        # risk calculation
+        for imt in set(taxonomy_imt.values()):
+            if not imt in imts:
+                raise ValueError(
+                    "There is no hazard output for the intensity measure "
+                    "%s; the available IMTs are %s" % (imt, imts))
+
+        return vfs, taxonomy_imt
 
     def create_outputs(self, hazard_output):
         """
@@ -548,279 +543,6 @@ class BaseRiskCalculator(base.CalculatorNext):
                     poe=poe).pk
 
         return [loss_curve_id, loss_map_ids]
-
-
-def hazard_getter(hazard_getter_name, hazard_id, *args):
-    """
-    Initializes and returns an hazard getter
-    """
-    return getattr(hazard_getters, hazard_getter_name)(hazard_id, *args)
-
-
-@db.transaction.commit_on_success
-def update_aggregate_losses(curve_id, losses):
-    """
-    Update an aggregate loss curve with new `losses` (that will be
-    added).
-
-    :type losses:
-        Numpy array.
-    """
-
-    # to avoid race conditions we lock the table
-    query = """
-      SELECT * FROM riskr.aggregate_loss_curve_data WHERE
-      loss_curve_id = %s FOR UPDATE
-    """
-
-    [curve_data] = models.AggregateLossCurveData.objects.raw(query, [curve_id])
-
-    if curve_data.losses:
-        curve_data.losses = losses + curve_data.losses
-    else:
-        curve_data.losses = losses
-
-    curve_data.save()
-
-
-# FIXME
-# Temporary solution, loss map for Scenario Risk
-# is a different concept with respect to a loss map
-# for a different calculator.
-
-def write_loss_map_data(loss_map_id, asset, loss_ratio, std_dev=None):
-    """
-    Create :class:`openquake.engine.db.models.LossMapData`
-
-    :param int loss_map_id:
-        The ID of the output container.
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-    :param float value:
-        Loss ratio value.
-    :param float std_dev:
-        Standard devation on loss ratios.
-    """
-
-    if std_dev is not None:
-        std_dev = std_dev * asset.value
-
-    return models.LossMapData.objects.create(
-        loss_map_id=loss_map_id,
-        asset_ref=asset.asset_ref,
-        value=loss_ratio * asset.value,
-        std_dev=std_dev,
-        location=asset.site)
-
-
-def write_bcr_distribution(
-        bcr_distribution_id, asset, eal_original, eal_retrofitted, bcr):
-    """
-    Create a new :class:`openquake.engine.db.models.BCRDistributionData` from
-    `asset_output` and links it to the output container identified by
-    `bcr_distribution_id`.
-
-    :param int bcr_distribution_id:
-        The ID of :class:`openquake.engine.db.models.BCRDistribution` instance
-        that holds the BCR map.
-
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-
-    :param float eal_original:
-        Expected annual loss in the original model for the asset.
-    :param float eal_retrofitted:
-        Expected annual loss in the retrofitted model for the asset.
-    :param float bcr:
-        Benefit Cost Ratio parameter.
-    """
-    models.BCRDistributionData.objects.create(
-        bcr_distribution_id=bcr_distribution_id,
-        asset_ref=asset.asset_ref,
-        average_annual_loss_original=eal_original * asset.value,
-        average_annual_loss_retrofitted=eal_retrofitted * asset.value,
-        bcr=bcr,
-        location=asset.site)
-
-
-def write_loss_curve(
-        loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
-    """
-    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
-    where the data are got by `asset_output` and the
-    :class:`openquake.engine.db.models.LossCurve` output container is
-    identified by `loss_curve_id`.
-
-    :param int loss_curve_id:
-        The ID of the output container.
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-    :param loss_ratios:
-        A list of loss ratios.
-    :param poes:
-        A list of poes associated to `loss_ratios`.
-    :param float average_loss_ratio:
-        The average loss ratio of the curve.
-    """
-    return models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset.asset_ref,
-        location=asset.site,
-        poes=poes,
-        loss_ratios=loss_ratios,
-        asset_value=asset.value,
-        average_loss_ratio=average_loss_ratio)
-
-
-def compute_and_write_statistics(
-        mean_loss_curve_id, quantile_loss_curve_ids,
-        mean_loss_map_ids, quantile_loss_map_ids,
-        mean_loss_fraction_ids, quantile_loss_fraction_ids,
-        weights, assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
-        conditional_loss_poes, poes_disagg, assume_equal):
-    """
-    :param int mean_loss_curve_id:
-      the ID of the mean loss curve output container
-    :param dict quantile_loss_curve_id:
-      it maps quantile values to IDs of quantile loss curve output containers
-    :param dict mean_loss_map_id:
-      it maps poes to IDs of mean loss map output containers
-    :param dict quantile_loss_map_ids:
-      it maps quantile values to dicts poe -> ID of loss map output container
-    :param dict mean_loss_fraction_ids:
-      it maps poes to IDs of mean loss fraction output containers
-    :param dict quantile_loss_fraction_ids:
-      it maps quantile values to dicts poe -> ID of loss fraction output
-      containers
-    :param weights:
-      the weights of each realization considered
-    :param assets:
-      the assets on which we are computing the statistics
-    :param loss_ratio_curve_matrix:
-      a numpy 2d array that stores the individual loss curves for each asset
-      in `assets`
-    :param bool hazard_montecarlo_p:
-      True when explicit mean/quantiles calculation is used
-    :param list conditional_loss_poes:
-      The poes taken into account to compute the loss maps
-    :param list poes_disagg:
-      The poes taken into account to compute the loss maps needed for
-      disaggregation
-    :param str assume_equal:
-      equal to "support" if loss curves has the same abscissae, or "image" if
-      they have the same ordinates
-    """
-
-    for i, asset in enumerate(assets):
-        loss_ratio_curves = loss_ratio_curve_matrix[:, i]
-
-        if assume_equal == 'support':
-            loss_ratios = loss_ratio_curves[0].abscissae
-            curves_poes = [curve.ordinates for curve in loss_ratio_curves]
-        elif assume_equal == 'image':
-            non_trivial_curves = [curve
-                                  for curve in loss_ratio_curves
-                                  if curve.abscissae[-1] > 0]
-            if not non_trivial_curves:  # no damage. all trivial curves
-                logs.LOG.info("No damages in asset %s" % asset)
-                loss_ratios = loss_ratio_curves[0].abscissae
-                curves_poes = [curve.ordinates for curve in loss_ratio_curves]
-            else:  # standard case
-                max_losses = [lc.abscissae[-1] for lc in non_trivial_curves]
-                reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-                loss_ratios = reference_curve.abscissae
-                curves_poes = [interpolate.interp1d(
-                    curve.abscissae, curve.ordinates,
-                    bounds_error=False, fill_value=0)(loss_ratios)
-                    for curve in loss_ratio_curves]
-        else:
-            raise NotImplementedError
-
-        quantiles_poes = dict()
-
-        for quantile, quantile_loss_curve_id in (
-                quantile_loss_curve_ids.items()):
-            if hazard_montecarlo_p:
-                q_curve = post_processing.weighted_quantile_curve(
-                    curves_poes, weights, quantile)
-            else:
-                q_curve = post_processing.quantile_curve(curves_poes, quantile)
-
-            quantiles_poes[quantile] = q_curve.tolist()
-
-            write_loss_curve(
-                quantile_loss_curve_id,
-                asset,
-                quantiles_poes[quantile],
-                loss_ratios,
-                scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
-
-        # then mean loss curve
-        mean_poes = None
-        if mean_loss_curve_id:
-            mean_curve = post_processing.mean_curve(curves_poes, weights)
-            mean_poes = mean_curve.tolist()
-
-            write_loss_curve(
-                mean_loss_curve_id,
-                asset,
-                mean_poes,
-                loss_ratios,
-                scientific.average_loss(loss_ratios, mean_poes))
-
-        # mean and quantile loss maps
-        loss_ratios = loss_ratio_curve_matrix[0, 0].abscissae
-
-        for poe in conditional_loss_poes:
-            write_loss_map_data(
-                mean_loss_map_ids[poe],
-                asset,
-                scientific.conditional_loss_ratio(loss_ratios, mean_poes, poe))
-            for quantile, poes in quantiles_poes.items():
-                write_loss_map_data(
-                    quantile_loss_map_ids[quantile][poe],
-                    asset,
-                    scientific.conditional_loss_ratio(loss_ratios, poes, poe))
-
-        # mean and quantile loss fractions (only disaggregation by
-        # taxonomy is supported here)
-        for poe in poes_disagg:
-            write_loss_fraction_data(
-                mean_loss_fraction_ids[poe],
-                value=asset.taxonomy,
-                location=asset.site,
-                absolute_loss=scientific.conditional_loss_ratio(
-                    loss_ratios, mean_poes, poe) * asset.value)
-            for quantile, poes in quantiles_poes.items():
-                write_loss_fraction_data(
-                    quantile_loss_fraction_ids[quantile][poe],
-                    value=asset.taxonomy,
-                    location=asset.site,
-                    absolute_loss=scientific.conditional_loss_ratio(
-                        loss_ratios, poes, poe) * asset.value)
-
-
-def write_loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
-    """
-    Create, save and return an instance of
-    :class:`openquake.engine.db.models.LossFractionData` associated
-    with `loss_fraction_id`, `value`, `location` and `absolute_loss`
-    :param int loss_fraction_id:
-       an ID to an output container instance
-       of type :class:`openquake.engine.db.models.LossFraction
-    :param str value:
-       A value representing the fraction. In case of disaggregation by taxonomy
-       it is a taxonomy string.
-    :param point location: the location, the fraction refers to
-    :param float absolute_loss:
-       the absolute loss contribution of `value` in `location`
-    """
-
-    return models.LossFractionData.objects.create(
-        loss_fraction_id=loss_fraction_id,
-        value=value,
-        location=location,
-        absolute_loss=absolute_loss)
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
