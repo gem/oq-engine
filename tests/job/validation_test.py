@@ -776,9 +776,7 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
                 compulsory_arguments[field] = None
             compulsory_arguments.update(self.other_args)
             rc = models.RiskCalculation(**compulsory_arguments)
-
-            form = validation.ClassicalBCRRiskForm(
-                instance=rc, files=None)
+            form = validation.ClassicalBCRRiskForm(instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
 
