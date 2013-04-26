@@ -314,6 +314,6 @@ The total of UHS curves is
 
 where
 
-* ``Tr`` is the total number of result sets (see abov)
+* ``Tr`` is the total number of result sets (see above)
 * ``P`` is the number of geographical points of interest
 """
