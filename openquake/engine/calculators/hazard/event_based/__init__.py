@@ -25,9 +25,11 @@ by post-processing the set of computed ground-motion ﬁelds.
 Outputs
 *******
 
-* Stochastic Event Sets (SES)
-* Ground Motion Fields (GMF), optionally produced from SESs
-* Hazard Curves, optionally produced from GMFs
+* :ref:`Stochastic Event Sets (SES) <ses>`
+* :ref:`Ground Motion Fields (GMF) <gmf>`, optionally produced from SESs
+* :ref:`Hazard Curves <eb-hazard-curves>`, optionally produced from GMFs
+
+.. _ses:
 
 SESs
 ====
@@ -70,6 +72,8 @@ during the SES calculation. Structuring the calculation in this way guarantees
 consistent, reproducible results regardless of the operating system, task
 execution order, or architecture (32-bit or 64-bit).
 
+.. _gmf:
+
 GMFs
 ====
 
@@ -90,6 +94,8 @@ calculation geometry, which is specified by the `region` or `sites`
 configuration parameters. (In other words, if the calculation geometry consists
 of 10 points/sites, each computed GMF will include 10 nodes, 1 for each
 location.)
+
+.. _eb-hazard-curves:
 
 Hazard Curves
 =============
