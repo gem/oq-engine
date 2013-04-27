@@ -1413,8 +1413,8 @@ ON DELETE CASCADE;
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_hazard;
-CREATE VIEW uiapi.performance_hazard AS
-SELECT h.id AS hazard_calculation_id, description, p.* FROM (
+CREATE VIEW uiapi.performance_view AS
+SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
      max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
      FROM uiapi.performance
@@ -1422,11 +1422,9 @@ SELECT h.id AS hazard_calculation_id, description, p.* FROM (
 INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.hazard_calculation AS h
-ON h.id=o.hazard_calculation_id;
-
--- companion view for risk
-CREATE VIEW uiapi.performance_risk AS
-SELECT r.id AS risk_calculation_id, description, p.* FROM (
+ON h.id=o.hazard_calculation_id
+UNION ALL
+SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
      max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
      FROM uiapi.performance
@@ -1435,3 +1433,13 @@ INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.risk_calculation AS r
 ON r.id=o.risk_calculation_id;
+
+-- gmf_agg per job
+CREATE VIEW hzrdr.gmf_agg_job AS
+   SELECT c.oq_job_id, a.*
+   FROM hzrdr.gmf_agg AS a
+   INNER JOIN hzrdr.gmf_collection AS b
+   ON a.gmf_collection_id=b.id
+   INNER JOIN uiapi.output AS c
+   ON b.output_id=c.id
+   WHERE output_type='gmf';
