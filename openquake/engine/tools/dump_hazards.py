@@ -103,13 +103,6 @@ class HazardDumper(object):
      print hd.mktar()  # generate a tarfile
     """
 
-    @staticmethod
-    def filenames(*tnames):
-        """
-        Return a list .csv.gz filenames
-        """
-        return ['%s.csv.gz' % tname for tname in tnames]
-
     def __init__(self, conn, outdir=None, format='text'):
         self.conn = conn
         self.curs = Copier(conn.cursor())

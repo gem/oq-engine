@@ -21,6 +21,18 @@ from django.db import connection
 from openquake.engine.tools.pg_importer import PGImporter
 from openquake.engine.db.models import Output, GmfCollection, OqJob
 from tests.utils import data
+from cStringIO import StringIO
+
+
+def to_csv(conn, tname, fieldstr, wherestr):
+    query = 'COPY (SELECT %s FROM %s WHERE %s ORDER BY id) TO stdout' % (
+        fieldstr, tname, wherestr)
+    s = StringIO()
+    try:
+        conn.cursor().copy_expert(query, s)
+        return s.getvalue()
+    finally:
+        s.close()
 
 
 class PGImporterTestCase(unittest.TestCase):
@@ -53,19 +65,10 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
         gmf_coll_id = GmfCollection.objects.latest('id').id
         self.assertEqual(gmf_coll_orig_id + 1, gmf_coll_id)
 
-        # check that the db contains the expected GmfSets
+        # check that the db contains the expected GmfAgg rows
         out = Output.objects.latest('id')
-        out.oq_job = OqJob.objects.create(owner_id=1)  # fake job
-        # the fake job is unfortunately needed in GmfSet.iter_gmfs
-        out.save()
         [coll] = GmfCollection.objects.filter(output=out)
-        set1, set2, set3 = sorted(coll, key=lambda s: s.id)
-        set1_str = '\n'.join(
-            map(str, set1.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
-        set2_str = '\n'.join(
-            map(str, set2.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
-        set3_str = '\n'.join(
-            map(str, set3.iter_gmfs(num_tasks=data.num_tasks, imts=data.imts)))
-        self.assertEqual(set1_str, data.set1_exp)
-        self.assertEqual(set2_str, data.set2_exp)
-        self.assertEqual(set3_str, data.set3_exp)
+        got = to_csv(self.imp.conn, 'hzrdr.gmf_agg',
+                     'imt,sa_period,sa_damping,gmvs,rupture_ids,location',
+                     'gmf_collection_id=%d' % coll.id)
+        self.assertEqual(got, data.gmf_agg_expected)
