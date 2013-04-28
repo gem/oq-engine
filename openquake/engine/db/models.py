@@ -2038,7 +2038,7 @@ class GmfSet(djm.Model):
         """
         return self.iter_gmfs()
 
-    def iter_gmfs(self, location=None, num_tasks=None, imts=None):
+    def iter_gmfs(self, location=None, imts=None):
         """
         Queries for and iterates over child :class:`Gmf` records, with the
         option of specifying a ``location``.
@@ -2048,11 +2048,6 @@ class GmfSet(djm.Model):
             ``location`` is expected to be a point represented as WKT.
 
             Example: `POINT(21.1 45.8)`
-
-       :param num_tasks:
-            If given, only the result_grp_ordinal <= num_tasks are returned,
-            otherwise there is no filtering; this is used only in a test and
-            will disappear in the future
 
         :param imts:
             A list of IMT triples; if not given, all the calculated IMTs
@@ -2072,8 +2067,7 @@ class GmfSet(djm.Model):
                       for each_set in lt_gmf_sets)):
                 yield gmf
         else:
-            num_tasks = num_tasks or \
-                JobStats.objects.get(oq_job=job.id).num_tasks
+            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
             imts = imts or \
                 map(parse_imt, job.hazard_calculation.intensity_measure_types)
 
