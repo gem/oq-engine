@@ -34,6 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
@@ -304,7 +305,7 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
-# used uin bin/openquake
+# used by bin/openquake
 def run_calc(job, log_level, log_file, exports, job_type):
     """
     Run a calculation.
@@ -406,7 +407,7 @@ def _switch_to_job_phase(job, ctype, status):
 
 def _do_run_calc(job, exports, calc, job_type):
     """
-    Step through all of the phases of a hazard calculation, updating the job
+    Step through all of the phases of a calculation, updating the job
     status at each phase.
 
     :param job:
@@ -436,6 +437,8 @@ def _do_run_calc(job, exports, calc, job_type):
 
     _switch_to_job_phase(job, job_type, "clean_up")
     calc.clean_up()
+
+    EnginePerformanceMonitor.cache.flush()  # save performance info
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
