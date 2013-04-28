@@ -21,8 +21,7 @@ A script to dump hazard outputs. If you launch it with a given
 hazard_calculation_id, it will dump all the hazard outputs relevant for
 risk calculations in a tarfile named hc<hazard-calculation-id>.tar.
 The tar file can then be moved around and restored in a different
-database. Just untar it and follow the instructions in the README.txt file,
-i.e. run the included RESTORE.py file.
+database with the companion script restore_hazards.py.
 Internally the dump and restore procedures are based on
 COPY TO and COPY FROM commands, so they are quite performant
 even for large datasets. They cannot trivially be extended to perform
@@ -32,14 +31,13 @@ PostGIS 1.5.
 To restore a hazard computation and all of its outputs into a new database
 run ``python restore_hazards.py <tarfile> <host> <dbname> <user> <password>``
 
-The <user> must have sufficient permissions to write on <dbname>.
-The restore will fail if your database already contains a hazard calculation
-with the same id. If you think that the hazard calculation on your database
-is not important and can removed together with all of its outputs, then
-remove it by using ``bin/openquake --delete-hazard-calculation`` (which
-must be run by a user with sufficient permissions). Then run again
-``restore_hazards.py``.
-'''
+The <user> must have sufficient permissions to write on <dbname>.  If
+your database already contains a hazard calculation with the same id,
+the restore will not override it. If you think that the hazard
+calculation on your database is not important and can removed together
+with all of its outputs, then remove it by using ``bin/openquake
+--delete-hazard-calculation`` (which must be run by a user with
+sufficient permissions). Then run again ``restore_hazards.py``.
 """
 
 import os
@@ -227,10 +225,10 @@ class HazardDumper(object):
         ids = _tuplestr(hazard_calculation_ids)
         curs = self.curs
 
-        # retrieve all the jobs associated to the given calculation
+        # retrieve the last job associated to the given calculation
         jobs = curs.tuplestr(
-            'select id from uiapi.oq_job where hazard_calculation_id in %s' %
-            ids)
+            'select max(id) from uiapi.oq_job '
+            'where hazard_calculation_id in %s' % ids)
 
         outputs = curs.fetchall("""\
         select output_type, array_agg(id) from uiapi.output
@@ -238,7 +236,7 @@ class HazardDumper(object):
         having output_type in ('gmf', 'hazard_curve', 'gmf_scenario')
            """ % jobs)
         if not outputs:
-            raise RuntimeError('No outputs for jobs %s' % jobs)
+            raise RuntimeError('No outputs for job %s' % jobs)
 
         # dump data and collect generated filenames
         self.oq_job(jobs)

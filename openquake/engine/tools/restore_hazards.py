@@ -26,11 +26,13 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     curs.execute('select id from %s' % tablename)
     ids = set(r[0] for r in curs.fetchall())
     s = StringIO()
+    imported = 0
     try:
         for i, line in enumerate(gzfile, 1):
             id_ = int(line.split('\t', 1)[0])
             if id_ not in ids:
                 s.write(line)
+                imported += 1
             if i % BLOCKSIZE == 0:
                 s.seek(0)
                 curs.copy_from(s, tablename)
@@ -40,6 +42,7 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
         s.seek(0)
         curs.copy_from(s, tablename)
         s.close()
+    return imported
 
 
 def hazard_restore(conn, tar):
@@ -58,7 +61,8 @@ def hazard_restore(conn, tar):
             fileobj = tf.extractfile('hazard_calculation/%s' % fname)
             with gzip.GzipFile(fname, fileobj=fileobj) as f:
                 log.info('Importing %s...', fname)
-                safe_restore(curs, f, tname)
+                imported = safe_restore(curs, f, tname)
+                log.info('Imported %d new rows', imported)
     except:
         conn.rollback()
         raise
