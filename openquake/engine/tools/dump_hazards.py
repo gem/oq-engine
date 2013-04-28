@@ -37,7 +37,7 @@ The restore will fail if your database already contains a hazard calculation
 with the same id. If you think that the hazard calculation on your database
 is not important and can removed together with all of its outputs, then
 remove it by using ``bin/openquake --delete-hazard-calculation`` (which
-must be run by an user with sufficient permissions). Then run again
+must be run by a user with sufficient permissions). Then run again
 ``restore_hazards.py``.
 '''
 """
@@ -49,13 +49,14 @@ import gzip
 import argparse
 import psycopg2
 import tempfile
+import logging
 
-THISDIR = os.path.dirname(__file__)
+log = logging.getLogger()
 
 
 # return a string which is a valid SQL tuple
-def _tuplestr(row):
-    return '(%s)' % ', '.join(str(x) for x in row)
+def _tuplestr(tup):
+    return '(%s)' % ', '.join(str(x) for x in tup)
 
 
 class Copier(object):
@@ -69,43 +70,39 @@ class Copier(object):
         self.filenames = []
 
     def tuplestr(self, query, *args):
-        "Retrieve tuples of ids a strings"
+        """Retrieve tuples of ids a strings"""
         self._cursor.execute(query, args)
         return _tuplestr(row[0] for row in self._cursor)
 
     def fetchall(self, query, *args):
-        "Dispatch to .fetchall"
+        """Dispatch to .fetchall"""
         self._cursor.execute(query, args)
         return self._cursor.fetchall()
 
     def copy(self, query, dest, name, mode):
         """
-        Performs a COPY TO/FROM operation; sql is the query, dest
-        is the destination directory, name is the destination name
-        and mode is 'w' (for COPY TO) or 'r' (for COPY FROM).
-        It works directly with gzipped files.
+        Performs a COPY TO/FROM operation. <Works directly with gzipped files.
+
+        :param str query: the COPY query
+        :param str dest: the destination directory
+        :param str name: the destination file name (no .gz)
+        :param chr mode: 'w' (for COPY TO) or 'r' (for COPY FROM)
         """
         fname = os.path.join(dest, name + '.gz')
-        print '%s\n(-> %s)' % (query, fname)
+        log.info('%s\n(-> %s)', query, fname)
         with gzip.open(fname, mode) as f:
             self._cursor.copy_expert(query, f)
             self.filenames.append(fname)
 
 
-def tardir(dirpath, name):
-    """
-    Tar the contents of a directory into a tarfile and remove the directory
-    """
-    with tarfile.open(dirpath + '.tar', 'w') as t:
-        t.add(dirpath, name)
-    shutil.rmtree(dirpath)
-    return dirpath + '.tar'
-
-
 class HazardDumper(object):
     """
-    Class to dump a hazard_calculation.
-    The important method to call is .dump(hazard_calculation_id).
+    Class to dump a hazard_calculation and related tables.
+    The typical usage is
+
+     hd = HazardDumper(conn, '/tmp/somedir')
+     hd.dump(42)  # dump the hazard computation #42
+     print hd.mktar()  # generate a tarfile
     """
 
     @staticmethod
@@ -115,64 +112,81 @@ class HazardDumper(object):
         """
         return ['%s.csv.gz' % tname for tname in tnames]
 
-    def __init__(self, conn, out_dir=None, format='text'):
+    def __init__(self, conn, outdir=None, format='text'):
         self.conn = conn
         self.curs = Copier(conn.cursor())
         self.format = format
-        assert format == 'text', format
         # there is no binary format for geography in postgis 1.5,
         # this is why we are requiring text format
-        out_dir = out_dir or tempfile.mkdtemp(prefix='hazard_calculation-')
-        if os.path.exists(out_dir):
-            shutil.rmtree(out_dir)
-        os.mkdir(out_dir)
-        self.dest = out_dir
+        assert format == 'text', format
+        if outdir:
+            os.mkdir(outdir)
+        else:
+            outdir = tempfile.mkdtemp(prefix='hazard_calculation-')
+        self.outdir = outdir
 
-    def hazard_calculation(self, id_):
-        "Dump organization, oq_user, hazard_calculation, lt_realization"
-        owner_id = self.curs.tuplestr(
-            'select owner_id from uiapi.hazard_calculation where id=%s' % id_)
-        org_id = self.curs.tuplestr(
-            'select organization_id from admin.oq_user where id in %s'
-            % owner_id)
+    def hazard_calculation(self, ids):
+        """Dump hazard_calculation, lt_realization"""
         self.curs.copy(
-            """copy (select * from admin.organization where id in %s
-            and id != 1) to stdout with (format '%s')""" %
-            (org_id, self.format), self.dest, 'admin.organization.csv', 'w')
-        self.curs.copy(
-            """copy (select * from admin.oq_user where id in %s and id != 1)
-                  to stdout with (format '%s')""" % (owner_id, self.format),
-            self.dest, 'admin.oq_user.csv', 'w')
-        self.curs.copy(
-            """copy (select * from uiapi.hazard_calculation where id=%s)
-                  to stdout with (format '%s')""" % (id_, self.format),
-            self.dest, 'uiapi.hazard_calculation.csv', 'w')
+            """copy (select * from uiapi.hazard_calculation where id in %s)
+                  to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'uiapi.hazard_calculation.csv', 'w')
         self.curs.copy(
             """copy (select * from hzrdr.lt_realization
-                  where hazard_calculation_id=%s)
-                  to stdout with (format '%s')""" % (id_, self.format),
-            self.dest, 'hzrdr.lt_realization.csv', 'w')
+                  where hazard_calculation_id in %s)
+                  to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'hzrdr.lt_realization.csv', 'w')
 
-    def oq_job(self, id_):
-        "Dump oq_job"
+    def performance(self, *job_ids):
+        """Dump performance"""
+        ids = _tuplestr(job_ids)
+        self.oq_job(ids)
+        self.curs.copy(
+            """copy (select * from uiapi.performance where oq_job_id in %s)
+                  to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'uiapi.performance.csv', 'w')
+
+    def oq_job(self, ids):
+        """Dump organization, oq_user, hazard_calculation, oq_job"""
+        owner_ids = self.curs.tuplestr(
+            'select owner_id from uiapi.oq_job where id in %s' % ids)
+        org_ids = self.curs.tuplestr(
+            'select organization_id from admin.oq_user where id in %s'
+            % owner_ids)
+        self.curs.copy(
+            """copy (select * from admin.organization where id in %s)
+               to stdout with (format '%s')""" %
+            (org_ids, self.format), self.outdir, 'admin.organization.csv', 'w')
+        self.curs.copy(
+            """copy (select * from admin.oq_user where id in %s)
+               to stdout with (format '%s')""" % (owner_ids, self.format),
+            self.outdir, 'admin.oq_user.csv', 'w')
+
+        hc_ids = self.curs.tuplestr(
+            'select hazard_calculation_id from uiapi.oq_job where id in %s'
+            % ids)
+        if 'None' in hc_ids:
+            raise TypeError('Job %s is not associated to a hazard calculation!'
+                            % ids)
+        self.hazard_calculation(hc_ids)
         self.curs.copy(
             """copy (select * from uiapi.oq_job where id in %s)
-                  to stdout with (format '%s')""" % (id_, self.format),
-            self.dest, 'uiapi.oq_job.csv', 'w')
+               to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'uiapi.oq_job.csv', 'w')
 
     def output(self, ids):
-        "Dump output"
+        """Dump output"""
         self.curs.copy(
             """copy (select * from uiapi.output where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
-            self.dest, 'uiapi.output.csv', 'w')
+            self.outdir, 'uiapi.output.csv', 'w')
 
     def hazard_curve(self, output):
-        "Dump hazard_curve, hazard_curve_data"
+        """Dump hazard_curve, hazard_curve_data"""
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.dest, 'hzrdr.hazard_curve.csv', 'w')
+            self.outdir, 'hzrdr.hazard_curve.csv', 'w')
 
         ids = self.curs.tuplestr(
             'select id from hzrdr.hazard_curve where output_id in %s' % output)
@@ -180,15 +194,15 @@ class HazardDumper(object):
             """copy (select * from hzrdr.hazard_curve_data
                   where hazard_curve_id in {})
                   to stdout with (format '{}')""".format(ids, self.format),
-            self.dest, 'hzrdr.hazard_curve_data.csv', 'w')
+            self.outdir, 'hzrdr.hazard_curve_data.csv', 'w')
 
     def gmf_collection(self, output):
-        "Dump gmf_collection, gmf_agg"
+        """Dump gmf_collection, gmf_agg"""
         self.curs.copy(
             """copy (select * from hzrdr.gmf_collection
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.dest, 'hzrdr.gmf_collection.csv', 'w')
+            self.outdir, 'hzrdr.gmf_collection.csv', 'w')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf_collection '
                                       'where output_id in %s' % output)
@@ -196,26 +210,27 @@ class HazardDumper(object):
             """copy (select * from hzrdr.gmf_agg
                   where gmf_collection_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.dest, 'hzrdr.gmf_agg.csv', 'w')
+            self.outdir, 'hzrdr.gmf_agg.csv', 'w')
 
     def gmf_scenario(self, output):
-        "Dump gmf_scenario"
+        """Dump gmf_scenario"""
         self.curs.copy("""copy (select * from hzrdr.gmf_scenario
                      where output_id in %s)
                      to stdout with (format '%s')""" % (output, self.format),
-                       self.dest, 'hzrdr.gmf_scenario.csv', 'w')
+                       self.outdir, 'hzrdr.gmf_scenario.csv', 'w')
 
-    def dump(self, hazard_calculation_id):
+    def dump(self, *hazard_calculation_ids):
         """
         Dump all the data associated to a given hazard_calculation_id
         and relevant for risk.
         """
+        ids = _tuplestr(hazard_calculation_ids)
         curs = self.curs
 
         # retrieve all the jobs associated to the given calculation
         jobs = curs.tuplestr(
-            'select id from uiapi.oq_job where hazard_calculation_id =%s',
-            hazard_calculation_id)
+            'select id from uiapi.oq_job where hazard_calculation_id in %s' %
+            ids)
 
         outputs = curs.fetchall("""\
         select output_type, array_agg(id) from uiapi.output
@@ -225,8 +240,7 @@ class HazardDumper(object):
         if not outputs:
             raise RuntimeError('No outputs for jobs %s' % jobs)
 
-        # collect generated filenames
-        self.hazard_calculation(hazard_calculation_id)
+        # dump data and collect generated filenames
         self.oq_job(jobs)
         all_outs = sum([output_ids for output_type, output_ids in outputs], [])
         self.output(_tuplestr(all_outs))
@@ -239,34 +253,48 @@ class HazardDumper(object):
             elif output_type == 'gmf_scenario':
                 self.gmf_scenario(ids)
 
+    def mktar(self):
+        """
+        Tar the contents of outdir into a tarfile and remove the directory
+        """
         # save FILENAMES.txt
-        with open(os.path.join(self.dest, 'FILENAMES.txt'), 'w') as f:
-            f.write('\n'.join(map(os.path.basename, curs.filenames)))
-        # return the pathname of the generated tarfile
-        return tardir(self.dest, 'hazard_calculation')
+        with open(os.path.join(self.outdir, 'FILENAMES.txt'), 'w') as f:
+            f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
+        # tar outdir
+        with tarfile.open(self.outdir + '.tar', 'w') as t:
+            t.add(self.outdir, 'hazard_calculation')
+        shutil.rmtree(self.outdir)
+        # return pathname of the generated tarfile
+        tarname = self.outdir + '.tar'
+        logging.info('Generated %s', tarname)
+        return tarname
 
 
-def main(hazard_calculation_id, out_dir=None,
+def main(hazard_calculation_id, outdir=None,
          host='localhost', dbname='openquake',
          user='admin', password='', port=None):
     """
-    Dump a hazard_calculation and its relative outputs.
+    Dump a hazard_calculation and its relative outputs
     """
+    # this is not using the predefined Django connections since
+    # the typical use case is to dump from a remote database
+    logging.basicConfig(level=logging.INFO)
     conn = psycopg2.connect(
         host=host, dbname=dbname, user=user, password=password, port=port)
-    tar = HazardDumper(conn, out_dir).dump(hazard_calculation_id)
-    print 'Written %s' % tar
+    hc = HazardDumper(conn, outdir)
+    hc.dump(hazard_calculation_id)
+    log.info('Written %s' % hc.mktar())
 
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('hazard_calculation_id')
-    p.add_argument('out_dir')
+    p.add_argument('outdir')
     p.add_argument('host', nargs='?', default='localhost')
     p.add_argument('dbname', nargs='?', default='openquake')
     p.add_argument('user', nargs='?', default='oq_admin')
     p.add_argument('password', nargs='?', default='')
     p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
-    main(arg.hazard_calculation_id, arg.out_dir, arg.host,
+    main(arg.hazard_calculation_id, arg.outdir, arg.host,
          arg.dbname, arg.user, arg.password, arg.port)
