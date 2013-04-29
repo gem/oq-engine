@@ -71,7 +71,7 @@ class ClassicalBCRRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             self.calculator.rc.get_hazard_calculation())
 
         self.assertEqual(
-            set(["hazard_curve"]), set([o.output_type for o in outputs]))
+            set(["hazard_curve_multi"]), set([o.output_type for o in outputs]))
 
     def test_create_outputs(self):
         """
