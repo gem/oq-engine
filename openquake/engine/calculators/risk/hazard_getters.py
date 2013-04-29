@@ -243,15 +243,15 @@ class GroundMotionValuesGetter(HazardGetter):
         # ``ORDER BY ST_Distance`` does the job to select the closest
         # gmvs
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id)
-        oqmif.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
-  FROM oqmif.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
-  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
+  SELECT DISTINCT ON (riski.exposure_data.id)
+        riski.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
+  FROM riski.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
+  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s AND
-        oqmif.exposure_data.site && %s AND imt = %s AND
+        riski.exposure_data.site && %s AND imt = %s AND
         gmf_collection_id = %s {}
-  ORDER BY oqmif.exposure_data.id,
-           ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
+  ORDER BY riski.exposure_data.id,
+           ST_Distance(riski.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
@@ -317,18 +317,18 @@ class GroundMotionScenarioGetter(HazardGetter):
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
+  SELECT DISTINCT ON (riski.exposure_data.id) riski.exposure_data.id,
          gmf_table.gmvs
-  FROM oqmif.exposure_data JOIN (
+  FROM riski.exposure_data JOIN (
     SELECT location, gmvs
            FROM hzrdr.gmf_scenario
            WHERE hzrdr.gmf_scenario.imt = %s
            AND hzrdr.gmf_scenario.output_id = %s
            AND hzrdr.gmf_scenario.location && %s) gmf_table
-  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
+  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s
-  ORDER BY oqmif.exposure_data.id,
-    ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
+  ORDER BY riski.exposure_data.id,
+    ST_Distance(riski.exposure_data.site, gmf_table.location, false)
            """
 
         assets_extent = self._assets_mesh.get_convex_hull()
