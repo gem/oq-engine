@@ -575,7 +575,7 @@ def _loss_ratio_exceedance_matrix_per_poos(
     imls = vuln_function.mean_imls()
 
     # compute the PoOs (Probability of Occurence) from the PoEs
-    pos = curve.Curve(hazard_curve_values).ordinate_diffs(imls)
+    pos = pairwise_diff(curve.Curve(hazard_curve_values).ordinate_for(imls))
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
     return lrem_po

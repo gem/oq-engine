@@ -68,25 +68,3 @@ class CurveTestCase(unittest.TestCase):
 
         # test high-end:
         self.assertEqual([3.0], self.straight_curve.ordinate_for([3.1]))
-
-    def test_can_construct_with_unordered_values(self):
-        curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
-
-        self.assertEqual([1.0], curve.ordinate_for([0.5]))
-        self.assertEqual([2.0], curve.ordinate_for([0.4]))
-        self.assertEqual([2.0], curve.ordinate_for([0.3]))
-
-    def test_ordinate_diffs(self):
-        hazard_curve = Curve([
-            (0.01, 0.99), (0.08, 0.96),
-            (0.17, 0.89), (0.26, 0.82),
-            (0.36, 0.70), (0.55, 0.40),
-            (0.70, 0.01),
-        ])
-
-        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
-        pes = [0.05, 0.15, 0.3, 0.5, 0.7]
-
-        self.assertTrue(allclose(expected_pos,
-                                 hazard_curve.ordinate_diffs(pes),
-                                 atol=0.00005))

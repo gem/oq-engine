@@ -32,7 +32,6 @@ class Curve(object):
         The value on the first position of the tuple is the x value,
         the value(s) on the second position is the y value(s).
         """
-        pairs = sorted(pairs)  # sort the pairs on x axis
         npairs = len(pairs)
         self.abscissae = numpy.empty(npairs)
         self.ordinates = numpy.empty(npairs)
@@ -54,10 +53,3 @@ class Curve(object):
         numpy.putmask(val, val > max_val, max_val)
 
         return interp1d(self.abscissae, self.ordinates)(val)
-
-    def ordinate_diffs(self, xs):
-        """
-        Returns the differences y_i - y_{i+1} for the given x_i
-        """
-        ys = self.ordinate_for(xs)
-        return [i - j for i, j in zip(ys, ys[1:])]
