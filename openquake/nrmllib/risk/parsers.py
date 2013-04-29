@@ -100,7 +100,8 @@ class ExposureModelParser(object):
                 # type and unit for area, contents cost, retrofitting cost
                 # and structural cost.
                 attrs = ("areaType", "areaUnit", "cocoType", "cocoUnit",
-                         "recoType", "recoUnit", "stcoType", "stcoUnit")
+                         "recoType", "recoUnit", "stcoType", "stcoUnit",
+                         "nonStcoType", "nonStcoUnit")
                 for attr_name in attrs:
                     attr_value = element.get(attr_name)
                     if attr_value is not None:
@@ -122,6 +123,7 @@ class ExposureModelParser(object):
 
         # Optional elements.
         attrs = (('coco', float), ('reco', float), ('stco', float),
+                 ('nonstco', float),
                  ('area', float), ('number', float), ('limit', float),
                  ('deductible', float))
         for (attr_name, attr_type) in attrs:
