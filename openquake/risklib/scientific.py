@@ -557,7 +557,7 @@ def classical(vulnerability_function, hazard_curve_values, steps=10):
 
 
 def _loss_ratio_exceedance_matrix_per_poos(
-        vuln_function, lrem, hazard_curve_values):
+        vuln_function, lrem, hazard_curves):
     """Compute the LREM * PoOs (Probability of Occurence) matrix.
 
     :param vuln_function: the vulnerability function used
@@ -572,10 +572,20 @@ def _loss_ratio_exceedance_matrix_per_poos(
     """
     lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
-    imls = vuln_function.mean_imls()
+    imls = numpy.array(vuln_function.mean_imls())
 
-    # compute the PoOs (Probability of Occurence) from the PoEs
-    pos = pairwise_diff(curve.Curve(hazard_curve_values).ordinate_for(imls))
+    hazard_imls, hazard_poes = zip(*hazard_curves)
+
+    # saturate imls to hazard imls
+    min_val, max_val = hazard_imls[0], hazard_imls[-1]
+    numpy.putmask(imls, imls < min_val, min_val)
+    numpy.putmask(imls, imls > max_val, max_val)
+
+    # interpolate the hazard curve
+    poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+
+    # compute the poos
+    pos = pairwise_diff(poes)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
     return lrem_po

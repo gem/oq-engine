@@ -38,18 +38,3 @@ class Curve(object):
         for index, (key, val) in enumerate(pairs):
             self.abscissae[index] = key
             self.ordinates[index] = val
-
-    def ordinate_for(self, val):
-        """
-        Cached attribute. Returns the interpolated function.
-        This is very useful to speed up the computation and feed
-        "directly" numpy.
-        """
-        min_val, max_val = min(self.abscissae), max(self.abscissae)
-
-        # convert to numpy.array so we can use numpy.putmask:
-        val = numpy.array(val)
-        numpy.putmask(val, val < min_val, min_val)
-        numpy.putmask(val, val > max_val, max_val)
-
-        return interp1d(self.abscissae, self.ordinates)(val)

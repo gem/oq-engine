@@ -16,6 +16,7 @@
 
 import unittest
 import numpy
+from scipy.interpolate import interp1d
 
 from openquake.risklib.curve import Curve
 from openquake.risklib import scientific
@@ -204,35 +205,20 @@ class ClassicalTestCase(unittest.TestCase):
         vulnerability_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN")
 
-        # pre computed values just use one intermediate
-        # values between the imls, so steps=2
-        lrem = [[1., 1., 1., 1.],
-                [8.90868149e-01, 9.99932030e-01, 1., 1.],
-                [4.06642478e-01, 9.27063668e-01, 1., 1.],
-                [2.14297309e-01, 7.12442306e-01, 9.99999988e-01, 1.],
-                [1.09131851e-01, 4.41652761e-01, 9.99997019e-01, 1.],
-                [7.84971008e-03, 2.00321301e-02, 9.55620783e-01, 1.],
-                [7.59869969e-04, 5.41393717e-04, 4.60560758e-01, 1.],
-                [2.79797605e-05, 1.66547090e-06, 1.59210054e-02,
-                 9.97702369e-01],
-                [1.75697664e-06, 9.04938835e-09, 1.59710253e-04,
-                 4.80110732e-01],
-                [2.89163471e-09, 2.43138842e-14, 6.60395072e-11,
-                 7.56938368e-09],
-                [2.38464803e-11, 0., 1.11022302e-16, 0.]]
-
         loss_ratio_curve = Curve(zip(*scientific.classical(
             vulnerability_function, hazard_curve, 2)))
 
-        expected_curve = Curve([
+        expected_curve = [
             (0.0, 0.96), (0.025, 0.96),
             (0.05, 0.91), (0.065, 0.87),
             (0.08, 0.83), (0.14, 0.75),
             (0.2, 0.60), (0.3, 0.47),
             (0.4, 0.23), (0.7, 0.00),
-            (1.0, 0.00)])
+            (1.0, 0.00)]
 
-        for x_value in expected_curve.abscissae:
+        actual_poes_interp = interp1d(loss_ratio_curve.abscissae,
+                                      loss_ratio_curve.ordinates)
+
+        for loss, poe in expected_curve:
             numpy.testing.assert_allclose(
-                expected_curve.ordinate_for([x_value]),
-                loss_ratio_curve.ordinate_for([x_value]), atol=0.005)
+                poe, actual_poes_interp(loss), atol=0.005)
