@@ -153,18 +153,18 @@ def curve_statistics(
 
         if assume_equal == 'support':
             # get the loss ratios only from the first curve
-            loss_ratios = loss_ratio_curves[0][0]
-            curves_poes = [curve[1] for curve in loss_ratio_curves]
+            loss_ratios, _poes = loss_ratio_curves[0]
+            curves_poes = [poes for _losses, poes in loss_ratio_curves]
         elif assume_equal == 'image':
             non_trivial_curves = [(losses, poes)
                                   for losses, poes in loss_ratio_curves
                                   if losses[-1] > 0]
             if not non_trivial_curves:  # no damage. all trivial curves
                 logs.LOG.info("No damages in asset %s" % asset)
-                loss_ratios = loss_ratio_curves[0][0]
-                curves_poes = [curve[1] for curve in loss_ratio_curves]
+                loss_ratios, _poes = loss_ratio_curves[0]
+                curves_poes = [poes for _losses, poes in loss_ratio_curves]
             else:  # standard case
-                max_losses = [losses[-1]
+                max_losses = [losses[-1]  # we assume non-decreasing losses
                               for losses, _poes in non_trivial_curves]
                 reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
                 loss_ratios = reference_curve[0]
