@@ -265,7 +265,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     def hazard_outputs(self, hazard_calculation):
         """
-
         :returns:
             A list of :class:`openquake.engine.db.models.HazardCurve` object
             that stores the hazard curves associated to `hazard_calculation`
@@ -274,7 +273,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
-                output_type='hazard_curve',
+                output_type='hazard_curve_multi',
                 hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property
