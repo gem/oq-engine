@@ -1412,7 +1412,7 @@ ON DELETE CASCADE;
 ---------------------- views ----------------------------
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
--- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_hazard;
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
 CREATE VIEW uiapi.performance_view AS
 SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
