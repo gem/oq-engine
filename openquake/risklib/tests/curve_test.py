@@ -43,9 +43,9 @@ class CurveTestCase(unittest.TestCase):
         Test that we can find the appropriate y value given the basic Curve
         definition.
         """
-        self.assertEqual(1, self.simple_curve.ordinate_for(1))
-        self.assertEqual(4, self.simple_curve.ordinate_for(2))
-        self.assertEqual(9, self.simple_curve.ordinate_for(3))
+        self.assertEqual([1], self.simple_curve.ordinate_for([1]))
+        self.assertEqual([4], self.simple_curve.ordinate_for([2]))
+        self.assertEqual([9], self.simple_curve.ordinate_for([3]))
 
     def test_ordinate_for_interpolate(self):
         """
@@ -54,8 +54,8 @@ class CurveTestCase(unittest.TestCase):
         """
         # Since this line is straight, the interpolated y value should be the
         # same as the x value passed to ordinate_for.
-        self.assertEqual(1.11, self.straight_curve.ordinate_for(1.11))
-        self.assertEqual(2.9999, self.straight_curve.ordinate_for(2.9999))
+        self.assertEqual([1.11], self.straight_curve.ordinate_for([1.11]))
+        self.assertEqual([2.9999], self.straight_curve.ordinate_for([2.9999]))
 
     def test_curve_ordinate_for_clipping(self):
         """
@@ -64,17 +64,17 @@ class CurveTestCase(unittest.TestCase):
         interpolation errors).
         """
         # test low-end:
-        self.assertEqual(1.0, self.straight_curve.ordinate_for(0.9))
+        self.assertEqual([1.0], self.straight_curve.ordinate_for([0.9]))
 
         # test high-end:
-        self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
+        self.assertEqual([3.0], self.straight_curve.ordinate_for([3.1]))
 
     def test_can_construct_with_unordered_values(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
 
-        self.assertEqual(1.0, curve.ordinate_for(0.5))
-        self.assertEqual(2.0, curve.ordinate_for(0.4))
-        self.assertEqual(2.0, curve.ordinate_for(0.3))
+        self.assertEqual([1.0], curve.ordinate_for([0.5]))
+        self.assertEqual([2.0], curve.ordinate_for([0.4]))
+        self.assertEqual([2.0], curve.ordinate_for([0.3]))
 
     def test_ordinate_diffs(self):
         hazard_curve = Curve([

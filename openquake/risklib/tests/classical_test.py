@@ -234,5 +234,5 @@ class ClassicalTestCase(unittest.TestCase):
 
         for x_value in expected_curve.abscissae:
             numpy.testing.assert_allclose(
-                expected_curve.ordinate_for(x_value),
-                loss_ratio_curve.ordinate_for(x_value), atol=0.005)
+                expected_curve.ordinate_for([x_value]),
+                loss_ratio_curve.ordinate_for([x_value]), atol=0.005)
