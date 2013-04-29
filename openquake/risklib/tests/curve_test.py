@@ -69,25 +69,12 @@ class CurveTestCase(unittest.TestCase):
         # test high-end:
         self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
 
-    def test_equals_when_have_the_same_values(self):
-        curve1 = Curve([(0.1, 1.0), (0.2, 2.0)])
-        curve2 = Curve([(0.1, 1.0), (0.2, 2.0)])
-        curve3 = Curve([(0.1, 1.0), (0.2, 5.0)])
-
-        self.assertEquals(curve1, curve2)
-        self.assertNotEquals(curve1, curve3)
-
     def test_can_construct_with_unordered_values(self):
         curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
 
         self.assertEqual(1.0, curve.ordinate_for(0.5))
         self.assertEqual(2.0, curve.ordinate_for(0.4))
         self.assertEqual(2.0, curve.ordinate_for(0.3))
-
-    def test_can_pickle(self):
-        curve = Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
-        curve.ordinate_for(0.35)
-        self.assertEqual(pickle.loads(pickle.dumps(curve)), curve)
 
     def test_ordinate_diffs(self):
         hazard_curve = Curve([

@@ -102,33 +102,9 @@ class Curve(object):
             return max_val
         return val
 
-    # so that the curve is pickeable even if self.interp has been instantiated
-    def __getstate__(self):
-        return dict(abscissae=self.abscissae, ordinates=self.ordinates,
-                    _interp=None)
-
-    def __eq__(self, other):
-        return numpy.allclose(self.abscissae, other.abscissae)\
-            and numpy.allclose(self.ordinates, other.ordinates)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __len__(self):
-        return len(self.abscissae)
-
-    def __str__(self):
-        return "X Values: %s\nY Values: %s" % (self.abscissae, self.ordinates)
-
     def ordinate_diffs(self, xs):
         """
         Returns the differences y_i - y_{i+1} for the given x_i
         """
         ys = self.ordinate_for(xs)
         return [i - j for i, j in zip(ys, ys[1:])]
-
-    @property
-    def xy(self):
-        return self.abscissae, self.ordinates
-
-EMPTY_CURVE = Curve(())

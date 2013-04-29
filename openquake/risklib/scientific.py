@@ -50,7 +50,7 @@ class VulnerabilityFunction(object):
             must be arranged in ascending order with no duplicates
 
         :param list mean_loss_ratios: Mean Loss ratio values, equal in
-        length to imls, where 0.0 <= value <= 1.0.
+        length to imls, where value >= 0.
 
         :param list covs: Coefficients of Variation. Equal in length
         to mean loss ratios. All values must be >= 0.0.
