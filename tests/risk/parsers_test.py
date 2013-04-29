@@ -56,7 +56,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
     <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP"
       assetCategory="buildings" cocoType="per_area" cocoUnit="CHF"
       recoType="aggregated" recoUnit="EUR" stcoType="aggregated"
-      stcoUnit="USD">
+      stcoUnit="USD" nonStcoType="aggregated"
+      nonStcoUnit="USD">
 
       <gml:description>Buildings in Pavia</gml:description>
       <taxonomySource>Pavia taxonomy</taxonomySource>
@@ -74,6 +75,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
         <number>7</number>
         <reco>109876</reco>
         <stco>150000</stco>
+        <nonstco>25000</nonstco>
         <taxonomy>RC/DMRF-D/LR</taxonomy>
       </assetDefinition>
 
@@ -120,13 +122,17 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 "recoType": "aggregated",
                 "recoUnit": "EUR",
                 "stco": 150000.0,
+                "nonstco": 25000.0,
                 "stcoType": "aggregated",
                 "stcoUnit": "USD",
+                "nonStcoType": "aggregated",
+                "nonStcoUnit": "USD",
                 "taxonomy": "RC/DMRF-D/LR",
                 "taxonomySource": "Pavia taxonomy",
             }),
             ([9.15333, 45.12200], [
-            parsers.OCCUPANCY(12, "day"), parsers.OCCUPANCY(50, "night")], {
+                parsers.OCCUPANCY(12, "day"),
+                parsers.OCCUPANCY(50, "night")], {
                  "area": 119.0,
                  "areaType": "per_asset",
                  "areaUnit": "GBP",
@@ -146,6 +152,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
                  "stco": 250000.0,
                  "stcoType": "aggregated",
                  "stcoUnit": "USD",
+                 "nonStcoType": "aggregated",
+                 "nonStcoUnit": "USD",
                  "taxonomy": "RC/DMRF-D/HR",
                  "taxonomySource": "Pavia taxonomy",
             }),
