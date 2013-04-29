@@ -27,19 +27,18 @@ from django import db
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators.risk import hazard_getters
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.risk import base, writers, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.calculators import base
+from openquake.engine.calculators.base import signal_task_complete
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
+@base.count_progress_risk('r')
 def event_based(job_id, hazard,
-                task_seed, vulnerability_function,
+                task_seed, vulnerability_function, imt,
                 output_containers,
                 statistical_output_containers,
                 conditional_loss_poes, insured_losses,
@@ -64,6 +63,7 @@ def event_based(job_id, hazard,
       and the second element is the corresponding weight.
     :param task_seed:
       the seed used to initialize the rng
+    :param str imt: the imt in long string form, i.e. SA(0.1)
     :param dict output_containers: a dictionary mapping hazard Output
       ID to a list (a, b, c, d, e) where a is the ID of the
       :class:`openquake.engine.db.models.LossCurve` output container used to
@@ -123,7 +123,7 @@ def event_based(job_id, hazard,
             correlation=asset_correlation)
 
         with profile('getting input data from db'):
-            assets, gmvs_ruptures, missings = hazard_getter()
+            assets, gmvs_ruptures, missings = hazard_getter(imt)
 
         if len(assets):
             ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
@@ -133,7 +133,7 @@ def event_based(job_id, hazard,
             # in this task will either return some results or they all
             # return an empty result set.
             logs.LOG.info("Exit from task as no asset could be processed")
-            base.signal_task_complete(
+            signal_task_complete(
                 job_id=job_id,
                 event_loss_table=dict(),
                 num_items=len(missings))
@@ -150,7 +150,7 @@ def event_based(job_id, hazard,
                     asset = assets[i]
 
                     # loss curves
-                    general.write_loss_curve(
+                    writers.loss_curve(
                         loss_curve_id, asset,
                         loss_ratio_curve.ordinates,
                         loss_ratio_curve.abscissae,
@@ -166,7 +166,7 @@ def event_based(job_id, hazard,
 
                     # loss maps
                     for poe in conditional_loss_poes:
-                        general.write_loss_map_data(
+                        writers.loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
                                 loss_ratio_curve.abscissae,
@@ -195,7 +195,7 @@ def event_based(job_id, hazard,
                         # as absolute values.
                         insured_losses_losses /= asset.value
 
-                        general.write_loss_curve(
+                        writers.loss_curve(
                             insured_curve_id, asset,
                             insured_losses_poes, insured_losses_losses,
                             scientific.average_loss(
@@ -236,7 +236,7 @@ def event_based(job_id, hazard,
                                     rupture.surface.get_joyner_boore_distance(
                                         site_mesh))[0] / distance_bin_width)
 
-                            general.write_loss_fraction_data(
+                            writers.loss_fraction_data(
                                 loss_fractions_magnitude_distance_id,
                                 location=asset.site,
                                 value="%d,%d" % magnitude_distance,
@@ -250,7 +250,7 @@ def event_based(job_id, hazard,
                                 closest_point.longitude / coordinate_bin_width,
                                 closest_point.latitude / coordinate_bin_width)
 
-                            general.write_loss_fraction_data(
+                            writers.loss_fraction_data(
                                 loss_fractions_coords_id,
                                 location=asset.site,
                                 value="%d,%d" % coordinate,
@@ -266,7 +266,7 @@ def event_based(job_id, hazard,
 
         with profile('computing and writing statistics'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                general.compute_and_write_statistics(
+                writers.curve_statistics(
                     mean_loss_curve_id, quantile_loss_curve_ids,
                     mean_loss_map_ids, quantile_loss_map_ids,
                     None, None,  # no mean/quantile loss fractions
@@ -276,13 +276,13 @@ def event_based(job_id, hazard,
                     [],  # no mean/quantile loss fractions
                     "image")
 
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings),
-                              event_loss_table=event_loss_table)
+    signal_task_complete(job_id=job_id,
+                         num_items=len(assets) + len(missings),
+                         event_loss_table=event_loss_table)
 event_based.ignore_result = False
 
 
-class EventBasedRiskCalculator(general.BaseRiskCalculator):
+class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Probabilistic Event Based PSHA risk calculator. Computes loss
     curves, loss maps, aggregate losses and insured losses for a given
@@ -370,9 +370,9 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
                     rupture_id=rupture_id,
                     aggregate_loss=aggregate_loss)
 
-    def create_getter(self, output, imt, assets):
+    def create_getter(self, output, assets):
         """
-        See :meth:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..base.RiskCalculator.create_getter`
         """
         if not output.output_type in ('gmf', 'complete_lt_gmf'):
             raise RuntimeError(
@@ -381,7 +381,7 @@ class EventBasedRiskCalculator(general.BaseRiskCalculator):
         gmf = output.gmfcollection
 
         hazard_getter = self.hazard_getter(
-            gmf.id, imt, assets, self.rc.best_maximum_distance)
+            gmf.id, assets, self.rc.best_maximum_distance)
         return (hazard_getter, gmf.lt_realization.weight)
 
     def hazard_outputs(self, hazard_calculation):
