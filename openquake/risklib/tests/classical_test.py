@@ -18,7 +18,6 @@ import unittest
 import numpy
 from scipy.interpolate import interp1d
 
-from openquake.risklib.curve import Curve
 from openquake.risklib import scientific
 
 
@@ -205,8 +204,8 @@ class ClassicalTestCase(unittest.TestCase):
         vulnerability_function = scientific.VulnerabilityFunction(
             imls, loss_ratios, covs, "LN")
 
-        loss_ratio_curve = Curve(zip(*scientific.classical(
-            vulnerability_function, hazard_curve, 2)))
+        loss_ratio_curve = scientific.classical(
+            vulnerability_function, hazard_curve, 2)
 
         expected_curve = [
             (0.0, 0.96), (0.025, 0.96),
@@ -216,8 +215,8 @@ class ClassicalTestCase(unittest.TestCase):
             (0.4, 0.23), (0.7, 0.00),
             (1.0, 0.00)]
 
-        actual_poes_interp = interp1d(loss_ratio_curve.abscissae,
-                                      loss_ratio_curve.ordinates)
+        actual_poes_interp = interp1d(loss_ratio_curve[0],
+                                      loss_ratio_curve[1])
 
         for loss, poe in expected_curve:
             numpy.testing.assert_allclose(
