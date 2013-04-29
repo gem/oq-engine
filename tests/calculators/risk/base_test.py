@@ -41,7 +41,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     @property
     def hazard_outputs(self):
         return self.hazard_calculation.oqjob_set.latest(
-            'last_update').output_set.filter(output_type='hazard_curve')
+            'last_update').output_set.filter(output_type='hazard_curve_multi')
 
 
 class FakeRiskCalculator(base.RiskCalculator):
