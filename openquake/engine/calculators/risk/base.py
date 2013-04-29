@@ -34,7 +34,7 @@ from openquake.nrmllib.risk import parsers
 from openquake.engine.input import exposure as db_writer
 
 
-class BaseRiskCalculator(base.Calculator):
+class RiskCalculator(base.Calculator):
     """
     Abstract base class for risk calculators. Contains a bunch of common
     functionality, including initialization procedures and the core
@@ -66,7 +66,7 @@ class BaseRiskCalculator(base.Calculator):
     hazard_getter = None  # the name of the hazard getter class; to override
 
     def __init__(self, job):
-        super(BaseRiskCalculator, self).__init__(job)
+        super(RiskCalculator, self).__init__(job)
 
         self.taxonomies = None
         self.rnd = None
