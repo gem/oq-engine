@@ -242,7 +242,8 @@ UHS "curves" are composed of a few key elements:
 * **Intensity Measure Levels** - These values make up the y-axis values
   ("abscissae") of the curve.
 * **Probability of Exceedance** - The hazard map probability value from which
-  the UHS is derived. The "Uniform" in UHS indicates a uniform PoE.
+  the UHS is derived. The "Uniform" in UHS indicates a uniform PoE over all
+  periods.
 * **Location** - A 2D geographical point, consisting of longitude and latitude.
 
 To construct UHS from a set of hazard maps, one can conceptualize this process
