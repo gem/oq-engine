@@ -145,18 +145,15 @@ def event_based(job_id, hazard,
 
         with profile('writing loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
+                for i, (losses, poes) in enumerate(
                         loss_ratio_curves[hazard_output_id]):
                     asset = assets[i]
 
                     # loss curves
                     writers.loss_curve(
                         loss_curve_id, asset,
-                        loss_ratio_curve.ordinates,
-                        loss_ratio_curve.abscissae,
-                        scientific.average_loss(
-                            loss_ratio_curve.abscissae,
-                            loss_ratio_curve.ordinates))
+                        poes, losses,
+                        scientific.average_loss(losses, poes))
 
         with profile('writing and computing loss maps'):
             with db.transaction.commit_on_success(using='reslt_writer'):
@@ -169,8 +166,7 @@ def event_based(job_id, hazard,
                         writers.loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates, poe))
+                                losses, poes, poe))
 
         with profile('writing and computing insured loss curves'):
             with db.transaction.commit_on_success(using='reslt_writer'):
