@@ -24,7 +24,6 @@ import unittest
 from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.utils import stats
-from tests.utils import helpers
 from tests.utils.helpers import patch
 
 

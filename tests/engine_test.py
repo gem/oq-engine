@@ -18,7 +18,6 @@ import getpass
 import os
 import StringIO
 import subprocess
-import sys
 import unittest
 import warnings
 
@@ -277,8 +276,8 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         ]
 
         with warnings.catch_warnings(record=True) as w:
-            hc = engine.create_hazard_calculation(self.owner, self.params,
-                                                  self.files)
+            engine.create_hazard_calculation(self.owner, self.params,
+                                             self.files)
         actual_warnings = [msg.message.message for msg in w]
         self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
