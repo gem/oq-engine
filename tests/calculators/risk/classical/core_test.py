@@ -94,7 +94,7 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             self.calculator.rc.get_hazard_calculation())
 
         self.assertEqual(
-            set([]), set([o.output_type for o in outputs]))
+            set(["hazard_curve_multi"]), set([o.output_type for o in outputs]))
 
 
 class PreExecuteTestCase(unittest.TestCase):
