@@ -136,6 +136,11 @@ def set_up_arg_parser():
         '--yes', '-y', action='store_true',
         help='Automatically answer "yes" when asked to confirm an action'
     )
+    general_grp.add_argument(
+        '--config-file',
+        help='Custom openquake.cfg file, to override default configurations',
+        metavar='CONFIG_FILE'
+    )
 
     hazard_grp = parser.add_argument_group('Hazard')
     hazard_grp.add_argument(
@@ -557,6 +562,10 @@ def main():
 
     if args.version:
         complain_and_exit(__version__)
+
+    if args.config_file:
+        os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
+        config.refresh()
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
