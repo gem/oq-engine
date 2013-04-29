@@ -20,11 +20,12 @@ Base classes for the output methods of the various codecs.
 """
 
 import logging
+from cStringIO import StringIO
 
 from django.db import transaction
 from django.db import connections
 from django.db import router
-from django.contrib.gis.db import models as gis_models
+from django.contrib.gis.db.models.fields import GeometryField
 
 LOGGER = logging.getLogger('serializer')
 
@@ -89,7 +90,7 @@ class BulkInserter(object):
 
         for f in self.fields:
             col = field_map[f]
-            if isinstance(col, gis_models.GeometryField):
+            if isinstance(col, GeometryField):
                 value_args.append('GeomFromText(%%s, %d)' % col.srid)
             else:
                 value_args.append('%s')
@@ -103,3 +104,74 @@ class BulkInserter(object):
         self.fields = None
         self.values = []
         self.count = 0
+
+
+# In the future this class may replace openquake.engine.writer.BulkInserter
+# since it is much more efficient (even hundreds of times for bulky updates)
+# being based on COPY FROM. CacheInserter objects are not thread-safe.
+class CacheInserter(object):
+    """
+    Bulk insert bunches of Django objects by converting them in strings
+    and by using COPY FROM.
+    """
+    def __init__(self, max_cache_size):
+        self.max_cache_size = max_cache_size
+        self.values = []
+
+    def add(self, obj):
+        """
+        :param obj: a Django model object
+
+        Append an object to the list of objects to save. If the list exceeds
+        the max_cache_size, flush it on the database.
+        """
+        self.values.append(obj)
+        if len(self.values) >= self.max_cache_size:
+            self.flush()
+
+    def flush(self):
+        """
+        Save the pending objects on the database with a COPY FROM.
+        """
+        if not self.values:
+            return
+
+        # perform some introspection
+        objects, last = self.values[:-1], self.values[-1]
+        alias = router.db_for_write(last.__class__)
+        meta = last.__class__._meta
+        tname = '"%s"' % meta.db_table
+        fields = []
+        for f in meta._field_name_cache[1:]:  # skip the first field, the id
+            col = getattr(last, f.name)
+            fname = f.name + '_id' if hasattr(col, 'id') else f.name
+            fields.append(fname)
+
+        # generate a big string with the objects and save it with COPY FROM
+        text = '\n'.join(self.to_line(obj, fields) for obj in objects)
+        curs = connections[alias].cursor()
+        curs.copy_from(StringIO(text), tname, columns=fields)
+        last.save()  # this "commits" the operation
+
+        LOGGER.debug('saved %d rows in uiapi.performance', len(self.values))
+        self.values = []
+
+    @staticmethod
+    def to_line(obj, fields):
+        """
+        Convert the fields of a Django object into a line string suitable
+        for import via COPY FROM. The encoding is UTF8.
+        """
+        cols = []
+        for f in fields:
+            col = getattr(obj, f)
+            if col is None:
+                col = r'\N'
+            elif isinstance(col, GeometryField):
+                col = col.wkt()
+            elif isinstance(col, list):  # for arrays; this is fragile
+                col = '{%s}' % str(col)[1:-1]
+            else:
+                col = unicode(col).encode('utf8')
+            cols.append(col)
+        return '\t'.join(cols)

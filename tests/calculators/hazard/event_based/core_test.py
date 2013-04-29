@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import getpass
 import unittest
 import mock
@@ -240,8 +241,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             save_rup_mock = core._save_ses_rupture
             save_gmf_mock = core._save_gmfs
 
-            # run the calculation and check that the outputs are created
-            job = helpers.run_hazard_job(self.cfg)
+            # run the calculation in process and check the outputs
+            os.environ['OQ_NO_DISTRIBUTE'] = '1'
+            try:
+                job = helpers.run_hazard_job(self.cfg)
+            finally:
+                del os.environ['OQ_NO_DISTRIBUTE']
             hc = job.hazard_calculation
             rlz1, rlz2 = models.LtRealization.objects.filter(
                 hazard_calculation=hc.id).order_by('ordinal')

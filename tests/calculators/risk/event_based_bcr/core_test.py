@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from tests.calculators.risk import general_test
+from tests.calculators.risk import base_test
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
 
@@ -22,7 +22,7 @@ from openquake.engine.calculators.risk.event_based_bcr import core
 
 
 class EventBasedBCRRiskCalculatorTestCase(
-        general_test.BaseRiskCalculatorTestCase):
+        base_test.BaseRiskCalculatorTestCase):
     """
     Integration test for the event based bcr risk calculator
     """

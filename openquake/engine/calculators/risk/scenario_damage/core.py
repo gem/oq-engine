@@ -30,18 +30,18 @@ from django import db
 from openquake.nrmllib.risk import parsers
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import logs
-from openquake.engine.calculators import base
+from openquake.engine.calculators.base import signal_task_complete
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
+@base.count_progress_risk('r')
 def scenario_damage(job_id, hazard,
-                    taxonomy, fragility_functions,
+                    taxonomy, fragility_functions, imt,
                     _output_containers, _statistical_output_contaienrs):
     """
     Celery task for the scenario damage risk calculator.
@@ -56,6 +56,7 @@ def scenario_damage(job_id, hazard,
         element is the corresponding weight.
     :param taxonomy:
         The taxonomy being considered
+    :param str imt: the imt in long string form, i.e. SA(0.1)
     :param list fragility_functions:
         A list of callables representing the fragility functions used by the
         risklib calculator
@@ -67,90 +68,35 @@ def scenario_damage(job_id, hazard,
     # Scenario Damage works only on one hazard
     hazard_getter = hazard.values()[0][0]
     with EnginePerformanceMonitor('hazard_getter', job_id, scenario_damage):
-        assets, ground_motion_values, missings = hazard_getter()
+        assets, ground_motion_values, missings = hazard_getter(imt)
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
-        base.signal_task_complete(
+        signal_task_complete(
             job_id=job_id, fractions=None,
             num_items=len(missings), taxonomy=taxonomy)
         return
 
-    fraction_matrix = calculator(ground_motion_values)
+    with EnginePerformanceMonitor('computing', job_id, scenario_damage):
+        fraction_matrix = calculator(ground_motion_values)
+        aggfractions = sum(fraction_matrix[i] * asset.number_of_units
+                           for i, asset in enumerate(assets))
 
-    with logs.tracing('save statistics per site'), \
+    with EnginePerformanceMonitor('saving', job_id, scenario_damage), \
             db.transaction.commit_on_success(using='reslt_writer'):
         rc_id = models.OqJob.objects.get(id=job_id).risk_calculation.id
         for i, asset in enumerate(assets):
-            save_dist_per_asset(
+            writers.damage_distribution_per_asset(
                 fraction_matrix[i] * asset.number_of_units, rc_id, asset)
 
     # send aggregate fractions to the controller, the hook will collect them
-    aggfractions = sum(fraction_matrix[i] * asset.number_of_units
-                       for i, asset in enumerate(assets))
-    base.signal_task_complete(job_id=job_id,
-                              num_items=len(assets) + len(missings),
-                              fractions=aggfractions, taxonomy=taxonomy)
+    signal_task_complete(job_id=job_id,
+                         num_items=len(assets) + len(missings),
+                         fractions=aggfractions, taxonomy=taxonomy)
 
 scenario_damage.ignore_result = False
 
 
-def save_dist_per_asset(fractions, rc_id, asset):
-    """
-    Save the damage distribution for a given asset.
-
-    :param fractions: numpy array with the damage fractions
-    :param rc_id: the risk_calculation_id
-    :param asset: an ExposureData instance
-    """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddpa = models.DmgDistPerAsset(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi],
-            exposure_data=asset)
-        ddpa.save()
-
-
-def save_dist_per_taxonomy(fractions, rc_id, taxonomy):
-    """
-    Save the damage distribution for a given taxonomy, by summing over
-    all assets.
-
-    :param fractions: numpy array with the damage fractions
-    :param int rc_id: the risk_calculation_id
-    :param str: the taxonomy string
-    """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddpt = models.DmgDistPerTaxonomy(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi],
-            taxonomy=taxonomy)
-        ddpt.save()
-
-
-def save_dist_total(fractions, rc_id):
-    """
-    Save the total distribution, by summing over all assets and taxonomies.
-
-    :param fractions: numpy array with the damage fractions
-    :param int rc_id: the risk_calculation_id
-    """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddt = models.DmgDistTotal(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi])
-        ddt.save()
-
-
-class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
+class ScenarioDamageRiskCalculator(base.RiskCalculator):
     """
     Scenario Damage Risk Calculator. Computes four kinds of damage
     distributions: per asset, per taxonomy, total and collapse map.
@@ -166,7 +112,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     #: The core calculation celery task function
     core_calc_task = scenario_damage
 
-    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
+    hazard_getter = hazard_getters.GroundMotionScenarioGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -191,9 +137,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             'last_update').output_set.get(
                 output_type='gmf_scenario')
 
-    def create_getter(self, output, imt, assets):
+    def create_getter(self, output, assets):
         """
-        See :meth:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..base.RiskCalculator.create_getter`
         """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
@@ -201,17 +147,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 % output.output_type)
 
         return (self.hazard_getter(
-            output.id, imt, assets, self.rc.best_maximum_distance), 1)
+            output.id, assets, self.rc.best_maximum_distance), 1)
 
-    def worker_args(self, taxonomy):
+    def taxonomy_args(self, taxonomy):
         """
         :returns:
-            A fixed list of arguments that a calculator may want to pass to a
-            worker. In this case taxonomy, fragility_model and
-            fragility_functions for the given taxonomy.
+            A fixed list of taxonomy dependant arguments that
+            the calculator pass to a worker. In this case taxonomy,
+            fragility_model and fragility_functions for the given
+            taxonomy.
         """
         return [taxonomy,
-                self.fragility_functions[taxonomy]]
+                self.fragility_functions[taxonomy],
+                self.taxonomy_imt[taxonomy]]
 
     def task_completed_hook(self, message):
         """
@@ -236,12 +184,13 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         tot = None
         for taxonomy, fractions in self.ddpt.iteritems():
-            save_dist_per_taxonomy(fractions, self.rc.id, taxonomy)
+            writers.damage_distribution_per_taxonomy(
+                fractions, self.rc.id, taxonomy)
             if tot is None:  # only the first time
                 tot = numpy.zeros(fractions.shape)
             tot += fractions
         if tot is not None:
-            save_dist_total(tot, self.rc.id)
+            writers.total_damage_distribution(tot, self.rc.id)
 
     # must be overridden, otherwise the parent will create loss curves
     def create_outputs(self, _hazard_ouput):
@@ -283,7 +232,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        self.fragility_functions = fm = self.parse_fragility_model()
+        fm, self.taxonomy_imt = self.parse_fragility_model()
+        self.fragility_functions = fm
         self.check_taxonomies(fm)
 
     def parse_fragility_model(self):
@@ -300,8 +250,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.damage_states = ['no_damage'] + limit_states
         self.fragility_functions = collections.defaultdict(dict)
 
+        taxonomy_imt = dict()
         for taxonomy, iml, params, no_damage_limit in iterparse:
-            self.taxonomies_imts[taxonomy] = iml['IMT']
+            taxonomy_imt[taxonomy] = iml['IMT']
 
             if fmt == "discrete":
                 if no_damage_limit is None:
@@ -320,7 +271,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 self.fragility_functions[taxonomy] = [
                     scientific.FragilityFunctionContinuous(*mean_stddev)
                     for mean_stddev in params]
-        return self.fragility_functions
+        return self.fragility_functions, taxonomy_imt
 
     def create_statistical_outputs(self):
         """
