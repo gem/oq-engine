@@ -1,7 +1,7 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 #
-# reprise tests 21
+# reprise tests 22
 set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
