@@ -120,12 +120,12 @@ def event_based_bcr(job_id, hazard, task_seed,
             _, retrofitted_loss_curves = calc_retrofitted(gmvs_retrofitted)
 
             eal_original = [
-                scientific.average_loss(*original_loss_curves[i].xy)
-                for i in range(len(assets))]
+                scientific.average_loss(losses, poes)
+                for losses, poes in original_loss_curves]
 
             eal_retrofitted = [
-                scientific.average_loss(*retrofitted_loss_curves[i].xy)
-                for i in range(len(assets))]
+                scientific.average_loss(losses, poes)
+                for losses, poes in retrofitted_loss_curves]
 
             bcr_results = [
                 scientific.bcr(
