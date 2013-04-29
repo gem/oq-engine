@@ -99,7 +99,7 @@ def classical(job_id, hazard, vulnerability_function, imt,
 
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
+                for i, (losses, poes) in enumerate(
                         asset_outputs[hazard_output_id]):
 
                     asset = assets[i]
@@ -107,19 +107,15 @@ def classical(job_id, hazard, vulnerability_function, imt,
                     # Write Loss Curves
                     writers.loss_curve(
                         loss_curve_id, asset,
-                        loss_ratio_curve.ordinates,
-                        loss_ratio_curve.abscissae,
-                        scientific.average_loss(
-                            loss_ratio_curve.abscissae,
-                            loss_ratio_curve.ordinates))
+                        poes, losses,
+                        scientific.average_loss(losses, poes))
 
                     # Then conditional loss maps
                     for poe in conditional_loss_poes:
                         writers.loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates, poe))
+                                losses, poes, poe))
 
                     # Then loss fractions
                     for poe in poes_disagg:
@@ -128,8 +124,7 @@ def classical(job_id, hazard, vulnerability_function, imt,
                             location=asset.site,
                             value=asset.taxonomy,
                             absolute_loss=scientific.conditional_loss_ratio(
-                                loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates, poe) * asset.value)
+                                losses, poes, poe) * asset.value)
 
     if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
