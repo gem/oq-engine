@@ -2,6 +2,7 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 #
 #  RESET FOR TEST
+#  RETURN TO TEST
 #
 set -x
 set -e
