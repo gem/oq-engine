@@ -158,3 +158,13 @@ def flag_set(section, setting):
     if setting is None:
         return False
     return general.str2bool(setting)
+
+
+def refresh():
+    """
+    Re-parse config files and refresh the cached configuration.
+
+    NOTE: Use with caution. Calling this during some phases of a calculation
+    could cause undesirable side-effects.
+    """
+    Config()._load_from_file()
