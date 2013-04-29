@@ -27,7 +27,7 @@ import bisect
 import numpy
 from scipy import interpolate, stats
 
-from openquake.risklib import curve, utils
+from openquake.risklib import utils
 
 ###
 ### Constants & Defaults

@@ -19,7 +19,6 @@ import unittest
 import numpy
 
 from openquake.risklib import api
-from openquake.risklib import curve
 from openquake.risklib import scientific
 
 
@@ -71,10 +70,8 @@ class ClassicalTestCase(unittest.TestCase):
             5.72790058705e-05, 2.35807221322e-05,
             8.66392324535e-06]
 
-        numpy.testing.assert_allclose(
-            self.loss_ratios, loss_ratio_curve.abscissae)
-        numpy.testing.assert_allclose(
-            poes, loss_ratio_curve.ordinates)
+        numpy.testing.assert_allclose(self.loss_ratios, loss_ratio_curve[0])
+        numpy.testing.assert_allclose(poes, loss_ratio_curve[1])
 
         asset_value = 2.
 
@@ -112,10 +109,8 @@ class ClassicalTestCase(unittest.TestCase):
             0.000266286103069, 0.000124036890130,
             3.28497166702e-05, 2.178664466e-06, 0.0]
 
-        numpy.testing.assert_allclose(self.loss_ratios,
-                                      loss_ratio_curve.abscissae)
-        numpy.testing.assert_allclose(poes,
-                                      loss_ratio_curve.ordinates)
+        numpy.testing.assert_allclose(self.loss_ratios, loss_ratio_curve[0])
+        numpy.testing.assert_allclose(poes, loss_ratio_curve[1])
 
         asset_value = 2.
         self.assertAlmostEqual(
