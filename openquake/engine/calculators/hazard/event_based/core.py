@@ -106,8 +106,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     'lt_realization_id=%s') % (job_id, lt_rlz_id))
 
     # filtering sources
-    with EnginePerformanceMonitor('filtering sources for lt=%d' % lt_rlz_id,
-                                  job_id, ses_and_gmfs):
+    with EnginePerformanceMonitor('filtering sources', job_id, ses_and_gmfs):
 
         numpy.random.seed(task_seed)
 
@@ -147,36 +146,30 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         ses = models.SES.objects.get(
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        with EnginePerformanceMonitor(
-            'computing ses_rlz=%d, lt_rlz=%d' % (
-                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+        with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
             ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
                 filtered_sources, hc.investigation_time))
         if not ses_poissonian:  # this is very common due to the filtering
             continue
-        with EnginePerformanceMonitor(
-            'saving ses_rlz=%d, lt_rlz=%d' % (
-                ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+
+        with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
                     ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
                 for i, rupture in enumerate(ses_poissonian, 1)]
+
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
-                    'computing gmfs: ses_rlz=%d, lt_rlz=%d' % (
-                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+                    'computing gmfs', job_id, ses_and_gmfs):
                 gmf_cache = compute_gmf_cache(
                     hc, gsims, ses_poissonian, rupture_ids,
                     result_grp_ordinal)
-            with EnginePerformanceMonitor(
-                    'saving gmfs: ses_rlz=%d, lt_rlz=%d' % (
-                    ses_rlz_n, lt_rlz_id), job_id, ses_and_gmfs):
+            with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
                 # This will be the "container" for all computed GMFs
                 # for this stochastic event set.
                 gmf_set = models.GmfSet.objects.get(
                     gmf_collection__lt_realization=lt_rlz,
                     ses_ordinal=ses_rlz_n)
-                # save the GMFs to the DB
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
 
