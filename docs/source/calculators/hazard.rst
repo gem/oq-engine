@@ -47,12 +47,4 @@ into account ground-motion aleatory variability.
 Disaggregation Calculator
 *************************
 
-The Disaggregation approach allows calculating relative contribution to a seismic hazard level.
-Contributions are defined in terms of latitude, longitude, magnitude, distance,
-epsilon, and tectonic region type.
-
-Sources:
-
-* | Disaggregation of Seismic Hazard
-  | by Paolo Bazzurro and C. Allin Cornell
-  | Bulletin of the Seismological Society of America, 89, 2, pp. 501-520, April 1999
+.. automodule:: openquake.engine.calculators.hazard.disaggregation.__init__
