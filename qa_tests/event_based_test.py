@@ -39,12 +39,11 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=0, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
-                                     [1., 2., 3., 4., 5.]])
+        _loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                      [1., 2., 3., 4., 5.]])
 
         first_curve = outputs[0]
-        first_curve_integral = scientific.average_loss(
-            first_curve.abscissae, first_curve.ordinates)
+        first_curve_integral = scientific.average_loss(*first_curve)
 
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
@@ -57,11 +56,10 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=0.5, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
-                                     [1., 2., 3., 4., 5.]])
+        _loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                      [1., 2., 3., 4., 5.]])
         first_curve = outputs[0]
-        first_curve_integral = scientific.average_loss(
-            first_curve.abscissae, first_curve.ordinates)
+        first_curve_integral = scientific.average_loss(*first_curve)
 
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
@@ -74,12 +72,11 @@ class EventBasedTestCase(unittest.TestCase):
         calc = api.ProbabilisticEventBased(
             vf, 30, 120, seed=1, correlation=1, curve_resolution=4)
 
-        loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
-                                     [1., 2., 3., 4., 5.]])
+        _loss_ratios, outputs = calc([[10., 20., 30., 40., 50.],
+                                      [1., 2., 3., 4., 5.]])
 
         first_curve = outputs[0]
-        first_curve_integral = scientific.average_loss(
-            first_curve.abscissae, first_curve.ordinates)
+        first_curve_integral = scientific.average_loss(*first_curve)
 
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
@@ -100,28 +97,26 @@ class EventBasedTestCase(unittest.TestCase):
         calculator_rc = api.ProbabilisticEventBased(
             vulnerability_function_rc, 50, 50)
 
-        loss_ratios, curves_rm = calculator_rm(gmf[0:2])
+        _loss_ratios, curves_rm = calculator_rm(gmf[0:2])
         loss_ratios, [curve_rc] = calculator_rc([gmf[2]])
 
         for i, curve_rm in enumerate(curves_rm):
 
             conditional_loss = scientific.conditional_loss_ratio(
-                curve_rm.abscissae, curve_rm.ordinates, 0.8)
+                curve_rm[0], curve_rm[1], 0.8)
             self.assertAlmostEqual([0.0490311, 0.0428061][i], conditional_loss)
 
             self.assertAlmostEqual(
                 [0.070219108, 0.04549904][i],
-                scientific.average_loss(
-                    curve_rm.abscissae, curve_rm.ordinates))
+                scientific.average_loss(curve_rm[0], curve_rm[1]))
 
         conditional_loss = scientific.conditional_loss_ratio(
-            curve_rc.abscissae, curve_rc.ordinates, 0.8)
+            curve_rc[0], curve_rc[1], 0.8)
         self.assertAlmostEqual(0.0152273, conditional_loss)
 
         self.assertAlmostEqual(
             0.0152393,
-            scientific.average_loss(
-                curve_rc.abscissae, curve_rc.ordinates))
+            scientific.average_loss(curve_rc[0], curve_rc[1]))
 
     def test_insured_loss_mean_based(self):
         vf = scientific.VulnerabilityFunction(
