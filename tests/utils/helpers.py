@@ -124,7 +124,7 @@ def demo_file(file_name):
 # task distribution is disabled by default to make it possible to debug and
 # profile the tests; notice however that in the QA tests (see
 # BaseQATestCase.run_hazard) the distribution is enabled
-def run_hazard_job(cfg, exports=None, distribute=False):
+def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
     successful. If this assertion passes, return the completed job.
@@ -147,13 +147,9 @@ def run_hazard_job(cfg, exports=None, distribute=False):
 
     calc_mode = job.hazard_calculation.calculation_mode
     calc = get_calculator_class('hazard', calc_mode)(job)
-    if not distribute:
-        os.environ['OQ_NO_DISTRIBUTE'] = '1'
     try:
         engine._do_run_calc(job, exports, calc, 'hazard')
     finally:
-        if not distribute:
-            del os.environ['OQ_NO_DISTRIBUTE']
         job.is_running = False
         job.calc = calc
         job.save()
@@ -186,46 +182,6 @@ def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
     job.save()
 
     return completed_job
-
-
-def run_job_sp(job_type, config_file, hazard_id=None, params=None,
-               silence=False, log_level="error"):
-    """
-    Given a path to a config file, run an openquake hazard job as a separate
-    process using `subprocess`.
-
-    :param str job_type:
-        'risk' or 'hazard'
-    :param str config_file:
-        Path to the calculation config file
-    :param hazard_id:
-      ID of the hazard output used by the risk calculation; None when
-      performing a hazard computation
-    :param list params:
-        List of additional command line params to bin/openquake. Optional.
-    :param bool silence:
-        If `True`, silence all stdout messages.
-    :param str log_level:
-        Log Level (default to error) used by the engine for the job
-
-    :returns:
-        With the default input, return the return code of the subprocess.
-        for more details.
-    :raises:
-        If the return code of the subprocess call is not 0, a
-        :exception:`subprocess.CalledProcessError` is raised.
-    """
-    args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
-            "--log-level=%s" % log_level]
-    if hazard_id:
-        args.append("--hazard-output-id=%d" % hazard_id)
-    if params:
-        args.extend(params)
-
-    # NB: stderr is never captured, so that errors are never silenced
-    print 'Running:', ' '.join(args)  # this is useful for debugging
-    return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
-                                 if silence else None)
 
 
 def timeit(method):

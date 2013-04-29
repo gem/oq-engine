@@ -23,16 +23,17 @@ from django import db
 from openquake.risklib import api, scientific
 
 from openquake.engine import logs
-from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import general
+from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.calculators.risk import base, writers, hazard_getters
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-@general.count_progress_risk('r')
-def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
+@base.count_progress_risk('r')
+def scenario(job_id, hazard, seed, vulnerability_function, imt,
+             output_containers,
              _statistical_output_containers,
              insured_losses, asset_correlation):
     """
@@ -47,6 +48,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
       :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
       element is the corresponding weight.
     :param seed: the seed used to initialize the rng
+    :param str imt: the imt in long string form, i.e. SA(0.1)
     :param output_containers: a dictionary {hazard_id: output_id}
         where output id represents the id of the loss map
     :param statistical_output_containers: not used at this moment
@@ -58,18 +60,19 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 
     hazard_getter = hazard.values()[0][0]
 
-    with EnginePerformanceMonitor('hazard_getter', job_id, scenario):
-        assets, ground_motion_values, missings = hazard_getter()
+    with EnginePerformanceMonitor('getting input from db', job_id, scenario):
+        assets, ground_motion_values, missings = hazard_getter(imt)
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        base.signal_task_complete(job_id=job_id,
-                                  aggregate_losses=None,
-                                  insured_aggregate_losses=None,
-                                  num_items=len(missings))
+        signal_task_complete(job_id=job_id,
+                             aggregate_losses=None,
+                             insured_aggregate_losses=None,
+                             num_items=len(missings))
         return
 
-    with logs.tracing('computing risk'):
+    with EnginePerformanceMonitor(
+            'computing risk', job_id, scenario, tracing=True):
         loss_ratio_matrix = calc(ground_motion_values)
 
         if insured_losses:
@@ -88,15 +91,16 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     if insured_losses:
         insured_loss_map_id = output_containers[1]
 
-    with db.transaction.commit_on_success(using='reslt_writer'):
+    with EnginePerformanceMonitor('saving loss map', job_id, scenario), \
+            db.transaction.commit_on_success(using='reslt_writer'):
         for i, asset in enumerate(assets):
-            general.write_loss_map_data(
+            writers.loss_map_data(
                 loss_map_id, asset,
                 loss_ratio_matrix[i].mean(),
                 std_dev=loss_ratio_matrix[i].std(ddof=1))
 
             if insured_losses:
-                general.write_loss_map_data(
+                writers.loss_map_data(
                     insured_loss_map_id, asset,
                     insured_loss_matrix[i].mean() / asset.value,
                     std_dev=insured_loss_matrix[i].std(ddof=1) / asset.value)
@@ -110,7 +114,7 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
     else:
         insured_aggregate_losses = "Not computed"
 
-    base.signal_task_complete(
+    signal_task_complete(
         job_id=job_id,
         num_items=len(assets) + len(missings),
         aggregate_losses=aggregate_losses,
@@ -118,12 +122,12 @@ def scenario(job_id, hazard, seed, vulnerability_function, output_containers,
 scenario.ignore_result = False
 
 
-class ScenarioRiskCalculator(general.BaseRiskCalculator):
+class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Scenario Risk Calculator. Computes a Loss Map,
     for a given set of assets.
     """
-    hazard_getter = general.hazard_getters.GroundMotionScenarioGetter
+    hazard_getter = hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
 
@@ -202,9 +206,9 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.get(output_type='gmf_scenario')
 
-    def create_getter(self, output, imt, assets):
+    def create_getter(self, output, assets):
         """
-        See :meth:`..general.BaseRiskCalculator.create_getter`
+        See :meth:`..base.RiskCalculator.create_getter`
         """
         if output.output_type != 'gmf_scenario':
             raise RuntimeError(
@@ -214,7 +218,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         # As in scenario calculation we are considering only a single
         # realization with fix the weight to 1
         return (self.hazard_getter(
-            output.id, imt, assets, self.rc.best_maximum_distance), 1)
+            output.id, assets, self.rc.best_maximum_distance), 1)
 
     @property
     def calculator_parameters(self):

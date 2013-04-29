@@ -34,6 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
@@ -192,8 +193,8 @@ def _get_content_type(path):
 
 def get_input(path, input_type, owner, name=None):
     """
-    Get an :class:`~openquake.engine.db.models.Input` object for the given
-    file (``path``).
+    Get (create) an :class:`~openquake.engine.db.models.Input` object for the
+    given file (``path``).
 
     :param str path:
         Path to the input file.
@@ -201,10 +202,8 @@ def get_input(path, input_type, owner, name=None):
         The type of input. See :class:`openquake.engine.db.models.Input` for
         a list of valid types.
     :param owner:
-        The :class:`~openquake.engine.db.models.OqUser` who will own the input,
-        if a fresh input record is being created. If the record is being
-        reused, we will only reuse records which belong to this user (if any
-        exist).
+        The :class:`~openquake.engine.db.models.OqUser` who will own the input
+        that will be created.
     :param str name:
         Optional name to help idenfity this input.
     :returns:
@@ -306,7 +305,7 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
-# used uin bin/openquake
+# used by bin/openquake
 def run_calc(job, log_level, log_file, exports, job_type):
     """
     Run a calculation.
@@ -408,7 +407,7 @@ def _switch_to_job_phase(job, ctype, status):
 
 def _do_run_calc(job, exports, calc, job_type):
     """
-    Step through all of the phases of a hazard calculation, updating the job
+    Step through all of the phases of a calculation, updating the job
     status at each phase.
 
     :param job:
@@ -438,6 +437,8 @@ def _do_run_calc(job, exports, calc, job_type):
 
     _switch_to_job_phase(job, job_type, "clean_up")
     calc.clean_up()
+
+    EnginePerformanceMonitor.cache.flush()  # save performance info
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
