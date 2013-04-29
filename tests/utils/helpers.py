@@ -831,6 +831,12 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
     if output_type == "curve":
+        models.HazardCurve.objects.create(
+            lt_realization=rlz,
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve_multi"),
+            investigation_time=hc.investigation_time)
+
         hazard_output = models.HazardCurve.objects.create(
             lt_realization=rlz,
             output=models.Output.objects.create_output(
