@@ -18,6 +18,7 @@
 """Base RiskCalculator class."""
 
 import random
+import collections
 import StringIO
 
 from openquake.risklib import scientific
@@ -62,8 +63,6 @@ class RiskCalculator(base.CalculatorNext):
         A dictionary mapping taxonomies to intensity measure type, to
         support structure dependent intensity measure types
     """
-
-    hazard_getter = None  # the name of the hazard getter class; to override
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
@@ -116,6 +115,12 @@ class RiskCalculator(base.CalculatorNext):
 
         self._initialize_progress(sum(self.taxonomies.values()))
 
+        try:
+            self.rc.hazard_calculation
+        except models.ObjectDoesNotExist:
+            raise RuntimeError(
+                "The provided hazard calculation ID does not exist")
+
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
@@ -147,21 +152,15 @@ class RiskCalculator(base.CalculatorNext):
             An iterator over a list of arguments. Each contains:
 
             1. the job id
-            2. the exposure subset on which the celery task is applied on
-            3. the hazard getter and the hazard_id to be used
-            4. a seed (eventually generated from a master seed)
-            5. the output containers to be populated
-            6. the specific calculator parameter set
+            2. a getter object needed to get the hazard data
+            3. the needed risklib calculators
+            4. the output containers to be populated
+            5. the specific calculator parameter set
         """
-        output_containers = dict(
-            (hazard_output.id,
-             self.create_outputs(hazard_output))
-            for hazard_output in self.considered_hazard_outputs())
+        output_containers = self.create_statistical_outputs()
 
-        if self.rc.hazard_calculation:
-            statistical_output_containers = self.create_statistical_outputs()
-        else:
-            statistical_output_containers = []
+        for hazard in self.rc.hazard_outputs():
+            output_containers.update(self.create_outputs(hazard))
 
         calculator_parameters = self.calculator_parameters
 
@@ -174,36 +173,10 @@ class RiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                hazard = dict((ho.id, self.create_getter(ho, assets))
-                              for ho in self.considered_hazard_outputs())
+                risklib_calculators = self.calculation_units(assets)
 
-                taxonomy_args = self.taxonomy_args(taxonomy)
-
-                logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
-                               len(assets), offset, block_size, taxonomy_args)
-
-                yield ([self.job.id, hazard] +
-                       taxonomy_args +
-                       [output_containers] +
-                       [statistical_output_containers] +
-                       calculator_parameters)
-
-    def taxonomy_args(self, taxonomy):
-        """
-        :returns:
-            A fixed list of arguments that depends on the taxonomy that a
-            calculator pass to a worker. Default to:
-
-            1) a seed generated from the master seed
-            2) the vulnerability function associated with the assets taxonomy
-            3) the imt associated to such taxonomy
-
-            Must be overriden in order to provide more/less arguments
-            that depends on the taxonomy.
-        """
-        return [self.rnd.randint(0, models.MAX_SINT_32),
-                self.vulnerability_functions[taxonomy],
-                self.taxonomy_imt[taxonomy]]
+                yield [self.job.id, risklib_calculators,
+                       output_containers] + calculator_parameters
 
     def export(self, *args, **kwargs):
         """
@@ -225,106 +198,57 @@ class RiskCalculator(base.CalculatorNext):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
-    # FIXME(lp). This logic (with the ones in `hazard_outputs`) should
-    # go into the models module
-    def considered_hazard_outputs(self):
-        """
-        Returns the list of hazard outputs to be considered
-        """
-        if self.rc.hazard_output:
-            return [self.rc.hazard_output]
-        else:
-            return self.hazard_outputs(self.rc.hazard_calculation)
-
-    def hazard_outputs(self, hazard_calculation):
-        """
-        Calculators must override this to select from the hazard calculation
-        given in input which are the Output objects to be considered by the
-        risk calculation to get the actual hazard input.
-
-        Result objects should be ordered (e.g. by id) and be associated to a
-        hazard logic tree realization.
-
-        :returns:
-            A list of :class:`openquake.engine.db.models.Output`
-            objects to be used for a risk calculation.
-        """
-        raise NotImplementedError
-
     def create_statistical_outputs(self):
         """
-        Create mean/quantile `Output` and `LossCurve`/`LossMap` containers.
+        Create mean/quantile `models.LossCurve`/`LossMap` containers.
+
+        :returns:
+           a dict mapping `OutputKey` objects to generated container ids
         """
 
-        mean_loss_curve_id = models.LossCurve.objects.create(
+        ret = OutputDict()
+
+        if len(self.rc.hazard_outputs()) < 2:
+            return ret
+
+        ret.set(models.LossCurve.objects.create(
             output=models.Output.objects.create_output(
                 job=self.job,
                 display_name='Mean Loss Curves',
                 output_type='loss_curve'),
-            statistics='mean').id
+            statistics='mean'))
 
-        quantile_loss_curve_ids = dict(
-            (quantile,
-             models.LossCurve.objects.create(
-                 output=models.Output.objects.create_output(
-                     job=self.job,
-                     display_name='quantile(%s)-curves' % quantile,
-                     output_type='loss_curve'),
-                 statistics='quantile',
-                 quantile=quantile).id)
-            for quantile in self.rc.quantile_loss_curves or [])
+        for quantile in self.rc.quantile_loss_curves or []:
+            ret.set(models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='quantile(%s)-curves' % quantile,
+                    output_type='loss_curve'),
+                statistics='quantile',
+                quantile=quantile))
 
-        mean_loss_map_ids = dict(
-            (poe,
-             models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     job=self.job,
-                     display_name="Mean Loss Map poe=%.4f" % poe,
-                     output_type="loss_map"),
-                 statistics="mean").id)
-            for poe in self.rc.conditional_loss_poes or [])
+        for poe in self.rc.conditional_loss_poes or []:
+            ret.set(models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name="Mean Loss Map poe=%.4f" % poe,
+                    output_type="loss_map"),
+                statistics="mean",
+                poe=poe))
 
-        quantile_loss_map_ids = dict(
-            (quantile,
-             dict(
-                 (poe, models.LossMap.objects.create(
-                     output=models.Output.objects.create_output(
-                         job=self.job,
-                         display_name="Quantile Loss Map poe=%.4f q=%.4f" % (
-                             poe, quantile),
-                         output_type="loss_map"),
-                     statistics="quantile",
-                     quantile=quantile).id)
-                 for poe in self.rc.conditional_loss_poes))
-            for quantile in self.rc.quantile_loss_curves or [])
+        for quantile in self.rc.quantile_loss_curves or []:
+            for poe in self.rc.conditional_loss_poes or []:
+                name = "Quantile Loss Map poe=%.4f q=%.4f" % (poe, quantile)
+                ret.set(models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        job=self.job,
+                        display_name=name,
+                        output_type="loss_map"),
+                    statistics="quantile",
+                    quantile=quantile,
+                    poe=poe))
 
-        return [mean_loss_curve_id, quantile_loss_curve_ids,
-                mean_loss_map_ids, quantile_loss_map_ids]
-
-    def create_getter(self, output, assets):
-        """
-        Create an instance of :class:`.hazard_getters.HazardGetter` associated
-        to an hazard output.
-
-        Calculator must override this to create the proper hazard getter.
-
-        :param output:
-            The ID of an :class:`openquake.engine.db.models.Output` produced by
-            a hazard calculation.
-
-        :param assets:
-            The assets for which the HazardGetter should be created.
-
-        :returns:
-            A tuple where the first element is the hazard getter and the second
-            is the associated weight (if `output` is associated with a logic
-            tree realization).
-
-        :raises:
-            `RuntimeError` if the hazard associated with the `output` is not
-            suitable to be used with this calculator.
-        """
-        raise NotImplementedError
+        return ret
 
     @property
     def rc(self):
@@ -346,7 +270,7 @@ class RiskCalculator(base.CalculatorNext):
     def calculator_parameters(self):
         """
         The specific calculation parameters passed as args to the
-        celery task function. Calculators should override this to
+        celery task function. A calculator must override this to
         provide custom arguments to its celery task
         """
         return []
@@ -515,34 +439,33 @@ class RiskCalculator(base.CalculatorNext):
         output.
 
         :returns:
-            A dictionary mapping an Output object ID to a list of int (id of
-            containers) or dict (poe->int)
+            A dictionary mapping an OutputKey object to ids of generated
+            containers
         """
+
+        ret = OutputDict()
 
         job = self.job
 
         # add loss curve containers
-        loss_curve_id = models.LossCurve.objects.create(
+        ret.set(models.LossCurve.objects.create(
             hazard_output_id=hazard_output.id,
             output=models.Output.objects.create_output(
-                job, "Loss Curve set for hazard %s" % hazard_output.id,
-                "loss_curve")).pk
+                job,
+                "Loss Curve set for hazard %s" % hazard_output.id,
+                "loss_curve")))
 
-        # loss maps (or conditional loss maps) ...
-        loss_map_ids = dict()
-
-        if self.rc.conditional_loss_poes is not None:
-            for poe in self.rc.conditional_loss_poes:
-                loss_map_ids[poe] = models.LossMap.objects.create(
+        for poe in self.rc.conditional_loss_poes or []:
+            ret.set(models.LossMap.objects.create(
                     hazard_output_id=hazard_output.id,
                     output=models.Output.objects.create_output(
                         self.job,
                         "Loss Map Set with poe %s for hazard %s" % (
                             poe, hazard_output.id),
                         "loss_map"),
-                    poe=poe).pk
+                    poe=poe))
 
-        return [loss_curve_id, loss_map_ids]
+        return ret
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
@@ -551,9 +474,45 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
     celery task where the number of items (i.e. assets) are embedded in hazard
     getters.
     """
-    def get_task_data(self, job_id, hazard_data, *args):
+    def get_task_data(self, job_id, calculators, *_args):
+        first_getter = calculators[0].getter
+        return job_id, len(first_getter.assets)
 
-        first_hazard_data = hazard_data.values()[0]
 
-        getter, _weight = first_hazard_data
-        return job_id, len(getter.assets)
+OutputKey = collections.namedtuple('OutputKey', [
+    'output_type', 'hazard_output_id', 'poe', 'quantile', 'statistics'])
+
+
+class OutputDict(dict):
+    """
+    A dict keying OutputKey instances to database ID, with convenience
+    setter and getter methods to manage Output containers
+    """
+
+    def get(self,
+            output_type=None,
+            hazard_output_id=None,
+            poe=None,
+            quantile=None,
+            statistics=None):
+        return self[OutputKey(output_type, hazard_output_id,
+                              poe, quantile, statistics)]
+
+    def set(self, container):
+
+        hazard_output_id = getattr(container, "hazard_output_id")
+        poe = getattr(container, "poe", None)
+        quantile = getattr(container, "quantile", None)
+        statistics = getattr(container, "statistics", None)
+
+        self[OutputKey(
+            output_type=container.output.output_type,
+            hazard_output_id=hazard_output_id,
+            poe=poe,
+            quantile=quantile,
+            statistics=statistics)] = container.id
+
+
+#: A calculation unit holds a risklib calculator and a getter that
+#: retrieves the data to work on
+CalculationUnit = collections.namedtuple('CalculationUnit', 'calc getter')
