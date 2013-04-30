@@ -21,6 +21,15 @@ TB="	"
 
 #
 #  functions
+sig_hand () {
+    if [ "$lxc_name" != "" ]; then
+        lxc-stop -n $lxc_name
+        umount /var/lib/lxc/$lxc_name/rootfs
+        umount /var/lib/lxc/$lxc_name/ephemeralbind
+        lxc-destroy -n $lxc_name
+    fi
+}
+
 mksafedir () {
     local dname
 
@@ -288,6 +297,8 @@ BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
+
+trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
