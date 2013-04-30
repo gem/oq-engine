@@ -23,10 +23,12 @@ TB="	"
 #  functions
 sig_hand () {
     if [ "$lxc_name" != "" ]; then
-        lxc-stop -n $lxc_name
-        umount /var/lib/lxc/$lxc_name/rootfs
-        umount /var/lib/lxc/$lxc_name/ephemeralbind
-        lxc-destroy -n $lxc_name
+        set +e
+        echo "Destroying [$lxc_name] lxc"
+        sudo lxc-stop -n $lxc_name
+        sudo umount /var/lib/lxc/$lxc_name/rootfs
+        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
+        sudo lxc-destroy -n $lxc_name
     fi
 }
 
