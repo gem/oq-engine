@@ -410,14 +410,14 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-class BaseHazardCalculatorNext(base.CalculatorNext):
+class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
+        super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
 
@@ -444,6 +444,13 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'block_size'))
 
+    def point_source_block_size(self):
+        """
+        Similar to :meth:`block_size`, except that this parameter applies
+        specifically to grouping of point sources.
+        """
+        return int(config.get('hazard', 'point_source_block_size'))
+
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
@@ -453,14 +460,81 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
 
     def task_arg_gen(self, block_size):
         """
-        Generator function for creating the arguments for each task.
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
 
-        Subclasses must implement this.
+        For this default implementation, yielded results are triples of
+        (job_id, realization_id, source_id_list).
+
+        Override this in subclasses as necessary.
 
         :param int block_size:
-            The number of work items per task (sources, sites, etc.).
+            The (max) number of work items for each each task. In this case,
+            sources.
         """
-        raise NotImplementedError
+        point_source_block_size = self.point_source_block_size()
+
+        realizations = self._get_realizations()
+
+        for lt_rlz in realizations:
+            # separate point sources from all the other types, since
+            # we distribution point sources in different sized chunks
+            # point sources first
+            point_source_ids = self._get_point_source_ids(lt_rlz)
+
+            for block in block_splitter(point_source_ids,
+                                        point_source_block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
+
+            # now for area and fault sources
+            other_source_ids = self._get_source_ids(lt_rlz)
+
+            for block in block_splitter(other_source_ids, block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
+
+    def _get_realizations(self):
+        """
+        Get all of the logic tree realizations for this calculation.
+        """
+        return models.LtRealization.objects\
+            .filter(hazard_calculation=self.hc, is_complete=False)\
+            .order_by('id')
+
+    @staticmethod
+    def _get_point_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all of the point sources for a given logic
+        tree realization. See also :meth:`_get_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type='point')\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
+
+    @staticmethod
+    def _get_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all sources for a given logic tree
+        realization, except for point sources. See
+        :meth:`_get_point_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type__in=['area',
+                                                    'complex',
+                                                    'simple',
+                                                    'characteristic'])\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
 
     def finalize_hazard_curves(self):
         """
@@ -940,7 +1014,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         num_rlzs = realizations.count()
 
         # Compute the number of tasks.
-        block_size = int(config.get('hazard', 'block_size'))
+        block_size = self.block_size()
         num_tasks = 0
         for lt_rlz in realizations:
             # Each realization has the potential to choose a random source
