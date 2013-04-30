@@ -557,6 +557,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
     calc_mode = 'classical_bcr'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -572,6 +573,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
     calc_mode = 'event_based_bcr'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -589,6 +591,7 @@ class EventBasedRiskForm(BaseOQModelForm):
     calc_mode = 'event_based'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -626,6 +629,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'region_constraint',
@@ -637,6 +641,7 @@ class ScenarioRiskForm(BaseOQModelForm):
     calc_mode = 'scenario'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
