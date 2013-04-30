@@ -26,10 +26,7 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         echo "Destroying [$lxc_name] lxc"
-        sudo lxc-shutdown -n $lxc_name
-        # sudo umount /var/lib/lxc/$lxc_name/rootfs
-        # sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
-        # sudo lxc-destroy -n $lxc_name
+        sudo lxc-shutdown -n $lxc_name -w -t 10
     fi
 }
 
