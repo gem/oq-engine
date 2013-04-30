@@ -29,7 +29,7 @@ sig_hand () {
         echo "Destroying [$lxc_name] lxc"
         mount
         echo "POST"
-        upper="$(mount | grep "$lxc_name" | sed 's@.*upperdir=@@g;s@,.*@@g')"
+        upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         echo "UPPER: $upper"
         sudo lxc-stop -n $lxc_name || true
         sudo umount /var/lib/lxc/$lxc_name/rootfs || true
