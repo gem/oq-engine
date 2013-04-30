@@ -55,8 +55,7 @@ def loss_map(loss_map_id, assets, loss_ratios, std_devs=None):
             location=asset.site)
 
 
-def bcr_distribution(
-        bcr_distribution_id, asset, eal_original, eal_retrofitted, bcr):
+def bcr_distribution(bcr_distribution_id, assets, bcr_data):
     """
     Create a new :class:`openquake.engine.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -66,23 +65,22 @@ def bcr_distribution(
         The ID of :class:`openquake.engine.db.models.BCRDistribution` instance
         that holds the BCR map.
 
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
+    :param assets:
+        A list of instance of :class:`openquake.engine.db.models.ExposureData`
 
-    :param float eal_original:
-        Expected annual loss in the original model for the asset.
-    :param float eal_retrofitted:
-        Expected annual loss in the retrofitted model for the asset.
-    :param float bcr:
-        Benefit Cost Ratio parameter.
+    :param tuple bcr_data: a 3-tuple with
+      1) eal_original: expected annual loss in the original model
+      2) eal_retrofitted: expected annual loss in the retrofitted model
+      3) bcr: Benefit Cost Ratio parameter.
     """
-    models.BCRDistributionData.objects.create(
-        bcr_distribution_id=bcr_distribution_id,
-        asset_ref=asset.asset_ref,
-        average_annual_loss_original=eal_original * asset.value,
-        average_annual_loss_retrofitted=eal_retrofitted * asset.value,
-        bcr=bcr,
-        location=asset.site)
+    for asset, (eal_original, eal_retrofitted, bcr) in zip(assets, bcr_data):
+        models.BCRDistributionData.objects.create(
+            bcr_distribution_id=bcr_distribution_id,
+            asset_ref=asset.asset_ref,
+            average_annual_loss_original=eal_original * asset.value,
+            average_annual_loss_retrofitted=eal_retrofitted * asset.value,
+            bcr=bcr,
+            location=asset.site)
 
 
 def loss_curve(loss_curve_id, assets, curves):
