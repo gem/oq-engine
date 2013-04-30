@@ -90,12 +90,11 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         `openquake.engine.db.models.HazardCurve` object
         """
 
-        self.calculator.imt = 'PGA'
         outputs = self.calculator.hazard_outputs(
             self.calculator.rc.get_hazard_calculation())
 
         self.assertEqual(
-            set(["hazard_curve"]), set([o.output_type for o in outputs]))
+            set(["hazard_curve_multi"]), set([o.output_type for o in outputs]))
 
 
 class PreExecuteTestCase(unittest.TestCase):

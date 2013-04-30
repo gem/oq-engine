@@ -99,7 +99,7 @@ def classical(job_id, hazard, vulnerability_function, imt,
 
         with logs.tracing('writing results'):
             with transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
+                for i, (losses, poes) in enumerate(
                         asset_outputs[hazard_output_id]):
 
                     asset = assets[i]
@@ -107,19 +107,15 @@ def classical(job_id, hazard, vulnerability_function, imt,
                     # Write Loss Curves
                     writers.loss_curve(
                         loss_curve_id, asset,
-                        loss_ratio_curve.ordinates,
-                        loss_ratio_curve.abscissae,
-                        scientific.average_loss(
-                            loss_ratio_curve.abscissae,
-                            loss_ratio_curve.ordinates))
+                        poes, losses,
+                        scientific.average_loss(losses, poes))
 
                     # Then conditional loss maps
                     for poe in conditional_loss_poes:
                         writers.loss_map_data(
                             loss_map_ids[poe], asset,
                             scientific.conditional_loss_ratio(
-                                loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates, poe))
+                                losses, poes, poe))
 
                     # Then loss fractions
                     for poe in poes_disagg:
@@ -128,8 +124,7 @@ def classical(job_id, hazard, vulnerability_function, imt,
                             location=asset.site,
                             value=asset.taxonomy,
                             absolute_loss=scientific.conditional_loss_ratio(
-                                loss_ratio_curve.abscissae,
-                                loss_ratio_curve.ordinates, poe) * asset.value)
+                                losses, poes, poe) * asset.value)
 
     if statistical_output_containers:
         weights = [data[1] for _, data in hazard.items()]
@@ -265,7 +260,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     def hazard_outputs(self, hazard_calculation):
         """
-
         :returns:
             A list of :class:`openquake.engine.db.models.HazardCurve` object
             that stores the hazard curves associated to `hazard_calculation`
@@ -274,7 +268,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         return hazard_calculation.oqjob_set.filter(status="complete").latest(
             'last_update').output_set.filter(
-                output_type='hazard_curve',
+                output_type='hazard_curve_multi',
                 hazardcurve__lt_realization__isnull=False).order_by('id')
 
     @property
