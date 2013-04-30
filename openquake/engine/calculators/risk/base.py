@@ -34,7 +34,7 @@ from openquake.nrmllib.risk import parsers
 from openquake.engine.input import exposure as db_writer
 
 
-class RiskCalculator(base.CalculatorNext):
+class RiskCalculator(base.Calculator):
     """
     Abstract base class for risk calculators. Contains a bunch of common
     functionality, including initialization procedures and the core

@@ -68,7 +68,7 @@ class TaskCompleteCallbackTest(unittest.TestCase):
         # Mock `finalize_hazard_curves`
         general_path = 'openquake.engine.calculators.hazard.general'
         self.finalize_curves_patch = helpers.patch(
-            '%s.BaseHazardCalculatorNext.finalize_hazard_curves'
+            '%s.BaseHazardCalculator.finalize_hazard_curves'
             % general_path)
         self.finalize_curves_mock = self.finalize_curves_patch.start()
 
