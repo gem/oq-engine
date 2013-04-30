@@ -22,7 +22,9 @@ TB="	"
 #
 #  functions
 sig_hand () {
+    echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
+        echo "Destroying [$lxc_name] lxc"
         sudo lxc-stop -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
