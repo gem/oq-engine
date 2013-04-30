@@ -89,29 +89,29 @@ _devtest_innervm_run () {
 }
 
 _pkgtest_innervm_run () {
-    local haddr="$1"
+    local lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
-    ssh $haddr "sudo apt-get update"
-    ssh $haddr "sudo apt-get -y upgrade"
-    gpg -a --export | ssh $haddr "sudo apt-key add -"
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
-    ssh $haddr "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
-    ssh $haddr mkdir -p repo/${GEM_DEB_PACKAGE}
+    ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
     scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/${GEM_DEB_PACKAGE}
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
-    ssh $haddr "sudo apt-get update"
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+    ssh $lxc_ip "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     trap ERR
 
@@ -197,7 +197,7 @@ devtest_run () {
 
 
 pkgtest_run () {
-    local i e branch_id="$1" haddr
+    local i e branch_id="$1"
 
     #
     #  run build of package
