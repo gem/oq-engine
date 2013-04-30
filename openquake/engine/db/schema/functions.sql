@@ -1,7 +1,5 @@
 /*
-  Functions used in the OpenQuake database.
-
-  Copyright (c) 2010-2012, GEM Foundation.
+  Copyright (c) 2010-2013, GEM Foundation.
 
   OpenQuake is free software: you can redistribute it and/or modify it
   under the terms of the GNU Affero General Public License as published
@@ -17,45 +15,12 @@
   along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
 CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
 BEGIN
     RETURN operation || ': error: ' || error || ' (' || tab_name || ')';
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION check_magnitude_data() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    num_sources INTEGER := 0;
-    exception_msg TEXT := '';
-BEGIN
-    IF NEW.mb_val IS NOT NULL THEN
-        num_sources := num_sources + 1;
-    END IF;
-    IF NEW.ml_val IS NOT NULL THEN
-        num_sources := num_sources + 1;
-    END IF;
-    IF NEW.ms_val IS NOT NULL THEN
-        num_sources := num_sources + 1;
-    END IF;
-    IF NEW.mw_val IS NOT NULL THEN
-        num_sources := num_sources + 1;
-    END IF;
-    IF num_sources = 0 THEN
-        exception_msg := format_exc(TG_OP, 'no magnitude value set', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_magnitude_data() IS
-'Make sure that at least one magnitude value is set.';
 
 CREATE OR REPLACE FUNCTION refresh_last_update() RETURNS TRIGGER
 LANGUAGE plpgsql AS
@@ -127,7 +92,7 @@ AS $$
     NEW = TD["new"] # new data resulting from insert or update
 
     # get the associated exposure model record
-    q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
+    q = ("SELECT * FROM riski.exposure_model WHERE id = %s" %
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
 
@@ -176,44 +141,6 @@ COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
 
-CREATE OR REPLACE FUNCTION pcheck_oq_job_profile()
-  RETURNS TRIGGER
-AS $$
-    # By default we will merely consent to the insert/update operation.
-    result = "OK"
-
-    NEW = TD["new"] # new data resulting from insert or update
-
-    if NEW["calc_mode"] != "uhs":
-        imt = NEW["imt"]
-        assert imt in ("pga", "sa", "pgv", "pgd", "ia", "rsd", "mmi"), (
-            "Invalid intensity measure type: '%s'" % imt)
-
-        if imt == "sa":
-            assert NEW["period"] is not None, (
-                "Period must be set for intensity measure type 'sa'")
-        else:
-            assert NEW["period"] is None, (
-                "Period must not be set for intensity measure type '%s'" % imt)
-    else:
-        # This is a uhs job.
-        if NEW["imt"] != "sa" or NEW["period"] is not None:
-            # The trigger will return a modified row.
-            result = "MODIFY"
-
-        if NEW["imt"] != "sa":
-            NEW["imt"] = "sa"
-        if NEW["period"] is not None:
-            NEW["period"] = None
-
-    return result
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_oq_job_profile() IS
-'Make sure the inserted/updated job profile record is consistent.';
-
-
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
@@ -248,29 +175,17 @@ CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
 
-CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
-BEFORE INSERT ON oqmif.exposure_model
+CREATE TRIGGER riski_exposure_model_before_insert_update_trig
+BEFORE INSERT ON riski.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
-CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
-BEFORE INSERT ON oqmif.exposure_data
+CREATE TRIGGER riski_exposure_data_before_insert_update_trig
+BEFORE INSERT ON riski.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
-
-CREATE TRIGGER uiapi_oq_job_profile_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON uiapi.oq_job_profile
-FOR EACH ROW EXECUTE PROCEDURE pcheck_oq_job_profile();
-
-CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON eqcat.magnitude
-FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
 
 CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 
 /*
