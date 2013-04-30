@@ -30,6 +30,9 @@ import openquake.engine
 from openquake.engine.utils import general
 
 OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
+#: Environment variable name for specifying a custom openquake.cfg.
+#: The file name doesn't matter.
+OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
 
 
 @general.singleton
@@ -67,7 +70,13 @@ class Config(object):
         global_path = os.environ.get("OQ_SITE_CFG_PATH", self.GLOBAL_PATH)
         local_path = os.environ.get(
             "OQ_LOCAL_CFG_PATH", os.path.abspath(self.LOCAL_PATH))
-        return [global_path, local_path]
+        paths = [global_path, local_path]
+
+        # User specified
+        user_path = os.environ.get(OQ_CONFIG_FILE_VAR)
+        if user_path is not None:
+            paths.append(user_path)
+        return paths
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
@@ -149,3 +158,13 @@ def flag_set(section, setting):
     if setting is None:
         return False
     return general.str2bool(setting)
+
+
+def refresh():
+    """
+    Re-parse config files and refresh the cached configuration.
+
+    NOTE: Use with caution. Calling this during some phases of a calculation
+    could cause undesirable side-effects.
+    """
+    Config()._load_from_file()
