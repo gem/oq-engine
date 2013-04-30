@@ -43,20 +43,38 @@ class HazardGetter(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr hazard_id:
-        The ID of an Hazard output container (e.g.
-        :class:`openquake.engine.db.models.HazardCurve`)
+    :attr int hazard_output_id:
+        The ID of an Hazard Output object
+        :class:`openquake.engine.db.models.Output`
+
+    :attr int hazard_id:
+        The ID of an Hazard Output container object
+        (e.g. :class:`openquake.engine.db.models.HazardCurve`)
 
     :attr assets:
         The assets for which we wants to compute.
 
     :attr max_distance:
         The maximum distance, in kilometers, to use.
+
+    :attr imt:
+        The imt (in long form) for which data have to be retrieved
+
+    :attr float weight:
+        The weight (if applicable) to be given to the retrieved data
     """
-    def __init__(self, hazard_id, assets, max_distance):
-        self.hazard_id = hazard_id
+    def __init__(self, hazard_output, assets, max_distance, imt):
+        self.hazard_output_id = hazard_output.id
+        hazard = self.container(hazard_output)
+        self.hazard_id = hazard.id
         self.assets = assets
         self.max_distance = max_distance
+        self.imt = imt
+
+        if hazard.lt_realization is not None:
+            self.weight = hazard.lt_realization.weight
+        else:
+            self.weight = None
 
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
@@ -65,6 +83,13 @@ class HazardGetter(object):
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+
+    def container(self, hazard_output):
+        """
+        Returns the corresponding output container object from an
+        Hazard :class:`openquake.engine.db.models.Output` instance
+        """
+        raise NotImplementedError
 
     def __repr__(self):
         return """HazardGetter max_distance=%s assets=%s""" % (
@@ -88,12 +113,8 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
-    def __call__(self, imt):
+    def __call__(self):
         """
-        :param str imt: a string representation of the intensity
-        measure type (e.g. SA(0.1)) in which the hazard data should be
-        returned
-
         :returns:
             A tuple with three elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
@@ -101,7 +122,7 @@ class HazardGetter(object):
             IDs of assets that has been filtered out by the getter by the
             ``maximum_distance`` criteria.
         """
-        data = self.get_data(imt)
+        data = self.get_data(self.imt)
 
         filtered_asset_ids = set(data.keys())
         all_asset_ids = set(self.asset_dict.keys())
@@ -140,10 +161,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
         A cache of the computed hazard curve object on a per-location basis.
     """
 
-    def __init__(self, hazard_id, assets, max_distance):
+    def __init__(self, hazard, assets, max_distance, imt):
         super(HazardCurveGetterPerAsset, self).__init__(
-            hazard_id, assets, max_distance)
+            hazard, assets, max_distance, imt)
         self._cache = {}
+
+    def container(self, hazard_output):
+        return hazard_output.hazardcurve
 
     def get_data(self, imt):
         """
@@ -217,6 +241,9 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """
+
+    def container(self, hazard_output):
+        return hazard_output.gmfcollection
 
     def get_data(self, imt):
         cursor = connections['job_init'].cursor()
@@ -340,3 +367,6 @@ class GroundMotionScenarioGetter(HazardGetter):
         cursor.execute(query, args)
         # print cursor.mogrify(query, args)
         return OrderedDict(cursor.fetchall())
+
+    def container(self, hazard_output):
+        return hazard_output
