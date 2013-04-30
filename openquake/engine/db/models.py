@@ -402,6 +402,17 @@ class OqJob(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"oq_job'
 
+    @property
+    def calculation(self):
+        """
+        :returns: a calculation object (hazard or risk) depending on
+        the type of calculation. Useful in situations (e.g. core
+        engine, stats, kvs, progress) where you do not have enough
+        context about which kind of calculation is but still you want
+        to access the common feature of a Calculation object.
+        """
+        return self.hazard_calculation or self.risk_calculation
+
 
 class Performance(djm.Model):
     '''
@@ -858,7 +869,7 @@ class HazardCalculation(djm.Model):
                 # the points here must be sorted
                 lons, lats = zip(
                     *sorted(set([(asset.site.x, asset.site.y)
-                             for asset in assets])))
+                                 for asset in assets])))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
@@ -1461,6 +1472,18 @@ class HazardCurve(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
+
+    @property
+    def imt_long(self):
+        """
+        :returns: a string representing the imt associated with the
+        curve (if any) in the long form, e.g. SA(0.01)
+        """
+        if self.imt:
+            if self.imt == "SA":
+                return "%s(%s)" % (self.imt, self.sa_damping)
+            else:
+                return self.imt
 
     def __iter__(self):
         assert self.output.output_type == 'hazard_curve_multi'
