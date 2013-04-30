@@ -939,10 +939,7 @@ class SourceModelXMLWriter(object):
             mfd = etree.SubElement(
                 elem,
                 'incrementalMFD',
-                attrib=OrderedDict([
-                    ('minMag', str(src.mfd.min_mag)),
-                    ('binWidth', str(src.mfd.bin_width)),
-                ])
+                attrib=src.mfd.attrib
             )
             occ_rates = etree.SubElement(mfd, 'occurRates')
             occ_rates.text = ' '.join([str(x) for x in src.mfd.occur_rates])
@@ -950,12 +947,7 @@ class SourceModelXMLWriter(object):
             etree.SubElement(
                 elem,
                 'truncGutenbergRichterMFD',
-                attrib=OrderedDict([
-                    ('aValue', str(src.mfd.a_val)),
-                    ('bValue', str(src.mfd.b_val)),
-                    ('minMag', str(src.mfd.min_mag)),
-                    ('maxMag', str(src.mfd.max_mag)),
-                ])
+                attrib=src.mfd.attrib
             )
 
     def _append_npd(self, elem, src):
@@ -974,12 +966,7 @@ class SourceModelXMLWriter(object):
             etree.SubElement(
                 npd,
                 'nodalPlane',
-                attrib=OrderedDict([
-                    ('probability', str(np.probability)),
-                    ('strike', str(np.strike)),
-                    ('dip', str(np.dip)),
-                    ('rake', str(np.rake)),
-                ])
+                attrib=np.attrib
             )
 
     def _append_hdd(self, elem, src):
@@ -998,10 +985,7 @@ class SourceModelXMLWriter(object):
             etree.SubElement(
                 hdd,
                 'hypoDepth',
-                attrib=OrderedDict([
-                    ('probability', str(hd.probability)),
-                    ('depth', str(hd.depth)),
-                ])
+                attrib=hd.attrib
             )
 
     def _append_area(self, src_model_elem, src):
@@ -1017,11 +1001,7 @@ class SourceModelXMLWriter(object):
         area_elem = etree.SubElement(
             src_model_elem,
             'areaSource',
-            attrib=OrderedDict([
-                ('id', src.id),
-                ('name', src.name),
-                ('tectonicRegion', src.trt),
-            ])
+            attrib=src.attrib
         )
 
         # geometry
@@ -1064,11 +1044,7 @@ class SourceModelXMLWriter(object):
         pt_elem = etree.SubElement(
             src_model_elem,
             'pointSource',
-            attrib=OrderedDict([
-                ('id', src.id),
-                ('name', src.name),
-                ('tectonicRegion', src.trt),
-            ])
+            attrib=src.attrib
         )
 
         # geometry
@@ -1161,11 +1137,7 @@ class SourceModelXMLWriter(object):
         complex_elem = etree.SubElement(
             src_model_elem,
             'complexFaultSource',
-            attrib=OrderedDict([
-                ('id', src.id),
-                ('name', src.name),
-                ('tectonicRegion', src.trt),
-            ])
+            attrib=src.attrib
         )
 
         # geometry
@@ -1193,11 +1165,7 @@ class SourceModelXMLWriter(object):
         simple_elem = etree.SubElement(
             src_model_elem,
             'simpleFaultSource',
-            attrib=OrderedDict([
-                ('id', src.id),
-                ('name', src.name),
-                ('tectonicRegion', src.trt),
-            ])
+            attrib=src.attrib
         )
 
         # geometry
@@ -1230,11 +1198,7 @@ class SourceModelXMLWriter(object):
         char_elem = etree.SubElement(
             src_model_elem,
             'characteristicFaultSource',
-            attrib=OrderedDict([
-                ('id', src.id),
-                ('name', src.name),
-                ('tectonicRegion', src.trt),
-            ])
+            attrib=src.attrib
         )
 
         self._append_mfd(char_elem, src)
