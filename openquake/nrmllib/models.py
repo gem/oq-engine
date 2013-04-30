@@ -356,6 +356,18 @@ class NodalPlane(object):
         self.dip = dip
         self.rake = rake
 
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this NodalPlane.
+        """
+        return OrderedDict([
+            ('probability', str(self.probability)),
+            ('strike', str(self.strike)),
+            ('dip', str(self.dip)),
+            ('rake', str(self.rake)),
+        ])
+
 
 class HypocentralDepth(object):
     """Basic object representation of a single node in a Hypocentral Depth
@@ -371,6 +383,17 @@ class HypocentralDepth(object):
     def __init__(self, probability=None, depth=None):
         self.probability = probability
         self.depth = depth
+
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attribute for this HypocentralDepth.
+        """
+        return OrderedDict([
+            ('probability', str(self.probability)),
+            ('depth', str(self.depth)),
+        ])
+
 
 
 class SiteModel(object):
