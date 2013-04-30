@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """Simple objects models to represent elements of NRML artifacts. These models
 are intended to be produced by NRML XML parsers and consumed by NRML XML
 serializers.
 """
+
+from collections import OrderedDict
 
 
 class SourceModel(object):
@@ -271,6 +272,16 @@ class IncrementalMFD(object):
         self.bin_width = bin_width
         self.occur_rates = occur_rates
 
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this MFD.
+        """
+        return OrderedDict([
+            ('minMag', str(self.min_mag)),
+            ('binWidth', str(self.bin_width)),
+        ])
+
 
 class TGRMFD(object):
     """Basic object representation of a Truncated Gutenberg-Richter Magnitude
@@ -292,6 +303,18 @@ class TGRMFD(object):
         self.b_val = b_val
         self.min_mag = min_mag
         self.max_mag = max_mag
+
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this MFD.
+        """
+        return OrderedDict([
+            ('aValue', str(self.a_val)),
+            ('bValue', str(self.b_val)),
+            ('minMag', str(self.min_mag)),
+            ('maxMag', str(self.max_mag)),
+        ])
 
 
 class NodalPlane(object):
