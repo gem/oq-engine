@@ -40,7 +40,29 @@ class SourceModel(object):
         return iter(self.sources)
 
 
-class PointSource(object):
+class SeismicSource(object):
+    """
+    General base class for seismic sources.
+    """
+
+    def __init__(self, id=None, name=None, trt=None):
+        self.id = id
+        self.name = name
+        self.trt = trt
+
+    @property
+    def attrib(self):
+        """
+        General XML element attributes for a seismic source, as an OrderedDict.
+        """
+        return OrderedDict([
+            ('id', str(self.id)),
+            ('name', str(self.name)),
+            ('tectonicRegion', str(self.trt)),
+        ])
+
+
+class PointSource(SeismicSource):
     """Basic object representation of a Point Source.
 
     :param str id:
@@ -69,9 +91,7 @@ class PointSource(object):
     def __init__(self, id=None, name=None, trt=None, geometry=None,
                  mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
                  nodal_plane_dist=None, hypo_depth_dist=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(PointSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
@@ -137,7 +157,7 @@ class AreaGeometry(PointGeometry):
     """
 
 
-class SimpleFaultSource(object):
+class SimpleFaultSource(SeismicSource):
     """Basic object representation of a Simple Fault Source.
 
     :param str id:
@@ -162,9 +182,7 @@ class SimpleFaultSource(object):
     def __init__(self, id=None, name=None, trt=None, geometry=None,
                  mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
                  rake=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(SimpleFaultSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
@@ -421,7 +439,7 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
     """
 
 
-class CharacteristicSource(object):
+class CharacteristicSource(SeismicSource):
     """
     Basic object representation of a characteristic fault source.
 
@@ -442,9 +460,7 @@ class CharacteristicSource(object):
     """
     def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
                  surface=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(CharacteristicSource, self).__init__(id=id, name=name, trt=trt)
         self.mfd = mfd
         self.rake = rake
         self.surface = surface
