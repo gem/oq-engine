@@ -259,7 +259,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ]),
         ]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, MESH_SPACING
+            edges, 10
         )
 
         char = source.CharacteristicFaultSource(
@@ -363,7 +363,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     def test_characteristic_complex(self):
         exp = self._expected_char_complex
         actual = source_input.nrml_to_hazardlib(
-            self.char_complex, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+            self.char_complex, 10, BIN_WIDTH, AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
