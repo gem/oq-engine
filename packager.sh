@@ -256,8 +256,8 @@ EOF
     fi
 
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
-        if [ "${GIT_BRANCH}" != "" ]; then
-            CUSTOM_SERIE="devel/$(git remote -vv | grep '(fetch)$' | sed 's/^[^ 	]\+[ 	]\+git:\/\///g;s/.git[ 	]\+(fetch)$//g;s@/@__@g;s/\./-/g')_${GIT_BRANCH}"
+        if [ "${branch_id}" != "" ]; then
+            CUSTOM_SERIE="devel/$(git remote -vv | grep '(fetch)$' | sed 's/^[^ 	]\+[ 	]\+git:\/\///g;s/.git[ 	]\+(fetch)$//g;s@/@__@g;s/\./-/g')__${branch_id}"
             if [ "$CUSTOM_SERIE" != "" ]; then
                 GEM_DEB_SERIE="$CUSTOM_SERIE"
             fi
