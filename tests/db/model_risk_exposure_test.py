@@ -21,6 +21,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
 
+from openquake.engine import engine
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -33,11 +34,7 @@ class ExposureModelTestCase(DjangoTestCase, helpers.DbTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = cls.setup_classic_job()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
+        cls.job = engine.prepare_job()
 
     def setUp(self):
         emdl_input = models.Input(
@@ -298,11 +295,7 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.job = cls.setup_classic_job()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
+        cls.job = engine.prepare_job()
 
     def setUp(self):
         emdl_input = models.Input(
