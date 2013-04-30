@@ -152,7 +152,8 @@ class FaultGeometryParserMixin(object):
 
 class SourceModelParser(FaultGeometryParserMixin):
     """NRML source model parser. Reads point sources, area sources, simple
-    fault sources, and complex fault sources from a given source.
+    fault sources, characteristic fault sources, and complex fault sources
+    from a given source.
 
     :param source:
         Filename or file-like object containing the XML data.
