@@ -34,7 +34,7 @@ sig_hand () {
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind || true
         if echo "$upper" | grep -q '^/tmp/' ; then
             sudo umount "$upper"
-            rm -r "$upper"
+            sudo rm -r "$upper"
         fi
         sudo lxc-destroy -n $lxc_name
     fi
