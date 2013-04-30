@@ -1076,9 +1076,11 @@ class RiskCalculation(djm.Model):
         `filters` to the default queryset
         """
 
-        if self.calc_mode == "classical":
+        if self.calculation_mode == "classical":
             filters = dict(output_type='hazard_curve_multi',
                            hazardcurve__lt_realization__isnull=False)
+        else:
+            raise NotImplementedError
 
         if self.hazard_output:
             return [self.hazard_output]

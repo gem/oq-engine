@@ -18,21 +18,20 @@
 """Base RiskCalculator class."""
 
 import random
+import itertools
 import collections
 import StringIO
 
 from openquake.risklib import scientific
 
-from openquake.engine import logs
-from openquake.engine.utils import config
-from openquake.engine.db import models
-from openquake.engine.calculators import base
-from openquake.engine import export
-from openquake.engine.utils import stats
 from openquake.nrmllib.risk import parsers
 
-# FIXME: why is a writer in a package called "input" ?
-from openquake.engine.input import exposure as db_writer
+from openquake.engine import logs, export
+from openquake.engine.utils import config, stats
+from openquake.engine.db import models
+from openquake.engine.calculators import base, post_processing
+from openquake.engine.calculators.risk import writers
+from openquake.engine.input.exposure import ExposureDBWriter
 
 
 class RiskCalculator(base.CalculatorNext):
@@ -294,7 +293,7 @@ class RiskCalculator(base.CalculatorNext):
 
         content = StringIO.StringIO(
             exposure_model_input.model_content.raw_content_ascii)
-        db_writer.ExposureDBWriter(exposure_model_input).serialize(
+        ExposureDBWriter(exposure_model_input).serialize(
             parsers.ExposureModelParser(content))
         return exposure_model_input.exposuremodel
 
@@ -498,6 +497,19 @@ class OutputDict(dict):
         return self[OutputKey(output_type, hazard_output_id,
                               poe, quantile, statistics)]
 
+    def write(self, *args, **kwargs):
+        output_id = self.get(**kwargs)
+        writer = getattr(writers, kwargs['output_type'])
+        writer(output_id, *args)
+
+    def write_all(self, arg, values, items,
+                  *initial_args, **initial_kwargs):
+        for value, item in itertools.izip(values, items):
+            kwargs = {arg: value}
+            kwargs.update(initial_kwargs)
+            args = list(initial_args) + [item]
+            self.write(*args, **kwargs)
+
     def set(self, container):
 
         hazard_output_id = getattr(container, "hazard_output_id")
@@ -516,3 +528,31 @@ class OutputDict(dict):
 #: A calculation unit holds a risklib calculator and a getter that
 #: retrieves the data to work on
 CalculationUnit = collections.namedtuple('CalculationUnit', 'calc getter')
+
+
+def site_statistics(losses, curves_poes, quantiles, weights, poes):
+    montecarlo = weights[0] is not None
+
+    quantile_curves = []
+    for quantile in quantiles:
+        if montecarlo:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(curves_poes, quantile)
+
+        quantile_curves.append(q_curve.tolist())
+
+    # then mean loss curve
+    mean_curve = post_processing.mean_curve(curves_poes, weights)
+
+    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve, poe)
+                for poe in poes]
+
+    quantile_maps = [[scientific.conditional_loss_ratio(
+        losses, mean_curve, poe)
+        for poe in poes]
+        for quantile in quantiles]
+
+    return ((losses, mean_curve), (losses, quantile_curves),
+            mean_map, quantile_maps)
