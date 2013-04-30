@@ -42,7 +42,7 @@ def classical(job_id,
     :param int job_id:
       ID of the currently running job
     :param list units:
-      A list of :class:`..base.CalculationUnit`
+      A list of :class:`..base.CalculationUnit` to be run
     :param dict containers:
       A dictionary mapping :class:`..general.OutputKey` to database ID
       of output containers (e.g. a LossCurve)
