@@ -27,9 +27,9 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         echo "Destroying [$lxc_name] lxc"
+        sudo mount | grep "$lxc_name"
         upper="$(sudo mount | grep "$lxc_name" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         echo "UPPER: $upper"
-        sudo mount | grep "$lxc_name" | sed 's@.*upperdir=@@g;s@,.*@@g'
         sudo lxc-stop -n $lxc_name || true
         sudo umount /var/lib/lxc/$lxc_name/rootfs || true
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind || true
