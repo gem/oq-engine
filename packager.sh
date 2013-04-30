@@ -22,11 +22,21 @@ TB="	"
 #
 #  functions
 sig_hand () {
+    trap ERR
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
         echo "Destroying [$lxc_name] lxc"
-        sudo lxc-shutdown -n $lxc_name -w -t 10
+        sudo lxc-stop -n $lxc_name -w -t 10
+        upper="$(sudo mount | grep "$lxc_name" | sed 's@.*upperdir=@@g;s@,.*@@g')"
+        sudo umount /var/lib/lxc/$lxc_name/rootfs
+        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
+        echo "$upper" | grep '^/tmp/'
+        if [ $? -eq 0 ]; then
+            sudo umount "$upper"
+            rm -r "$upper"
+        fi
+        sudo lxc-destroy -n $lxc_name
     fi
 }
 
