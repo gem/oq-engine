@@ -17,38 +17,42 @@
 
 """DB writing functionality for Risk calculators."""
 
+import itertools
 import numpy
 from scipy import interpolate
 from openquake.risklib import scientific
 
 from openquake.engine import logs
-from openquake.engine.calculators import post_processing
 from openquake.engine.db import models
 
 
-def loss_map_data(loss_map_id, asset, loss_ratio, std_dev=None):
+def loss_map(loss_map_id, assets, loss_ratios, std_devs=None):
     """
     Create :class:`openquake.engine.db.models.LossMapData`
 
     :param int loss_map_id:
         The ID of the output container.
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-    :param float value:
-        Loss ratio value.
-    :param float std_dev:
-        Standard devation on loss ratios.
+    :param list assets:
+        A list of instances of :class:`openquake.engine.db.models.ExposureData`
+    :param loss_ratios:
+        Loss ratio values to be written.
+    :param float std_devs:
+        Standard devations on each loss ratio.
     """
 
-    if std_dev is not None:
-        std_dev = std_dev * asset.value
+    for i, asset in enumerate(assets):
+        loss_ratio = loss_ratios[i]
+        if std_devs is not None:
+            std_dev = std_devs[i] * asset.value
+        else:
+            std_dev = None
 
-    return models.LossMapData.objects.create(
-        loss_map_id=loss_map_id,
-        asset_ref=asset.asset_ref,
-        value=loss_ratio * asset.value,
-        std_dev=std_dev,
-        location=asset.site)
+        models.LossMapData.objects.create(
+            loss_map_id=loss_map_id,
+            asset_ref=asset.asset_ref,
+            value=loss_ratio * asset.value,
+            std_dev=std_dev,
+            location=asset.site)
 
 
 def bcr_distribution(
@@ -81,7 +85,7 @@ def bcr_distribution(
         location=asset.site)
 
 
-def loss_curve(loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
+def loss_curve(loss_curve_id, assets, curves):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -99,14 +103,16 @@ def loss_curve(loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
     :param float average_loss_ratio:
         The average loss ratio of the curve.
     """
-    return models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset.asset_ref,
-        location=asset.site,
-        poes=poes,
-        loss_ratios=loss_ratios,
-        asset_value=asset.value,
-        average_loss_ratio=average_loss_ratio)
+
+    for asset, (losses, poes) in itertools.izip(assets, curves):
+        models.LossCurveData.objects.create(
+            loss_curve_id=loss_curve_id,
+            asset_ref=asset.asset_ref,
+            location=asset.site,
+            poes=poes,
+            loss_ratios=losses,
+            asset_value=asset.value,
+            average_loss_ratio=scientific.average_loss(losses, poes))
 
 
 def curve_statistics(
@@ -114,7 +120,7 @@ def curve_statistics(
         mean_loss_map_ids, quantile_loss_map_ids,
         mean_loss_fraction_ids, quantile_loss_fraction_ids,
         weights, assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
-        conditional_loss_poes, poes_disagg, assume_equal):
+        conditional_loss_poes):
     """
     :param int mean_loss_curve_id:
       the ID of the mean loss curve output container
@@ -140,40 +146,27 @@ def curve_statistics(
       True when explicit mean/quantiles calculation is used
     :param list conditional_loss_poes:
       The poes taken into account to compute the loss maps
-    :param list poes_disagg:
-      The poes taken into account to compute the loss maps needed for
-      disaggregation
-    :param str assume_equal:
-      equal to "support" if loss curves has the same abscissae, or "image" if
-      they have the same ordinates
     """
 
     for i, asset in enumerate(assets):
         loss_ratio_curves = loss_ratio_curve_matrix[:, i]
 
-        if assume_equal == 'support':
-            # get the loss ratios only from the first curve
+        non_trivial_curves = [(losses, poes)
+                              for losses, poes in loss_ratio_curves
+                              if losses[-1] > 0]
+        if not non_trivial_curves:  # no damage. all trivial curves
+            logs.LOG.info("No damages in asset %s" % asset)
             loss_ratios, _poes = loss_ratio_curves[0]
             curves_poes = [poes for _losses, poes in loss_ratio_curves]
-        elif assume_equal == 'image':
-            non_trivial_curves = [(losses, poes)
-                                  for losses, poes in loss_ratio_curves
-                                  if losses[-1] > 0]
-            if not non_trivial_curves:  # no damage. all trivial curves
-                logs.LOG.info("No damages in asset %s" % asset)
-                loss_ratios, _poes = loss_ratio_curves[0]
-                curves_poes = [poes for _losses, poes in loss_ratio_curves]
-            else:  # standard case
-                max_losses = [losses[-1]  # we assume non-decreasing losses
-                              for losses, _poes in non_trivial_curves]
-                reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-                loss_ratios = reference_curve[0]
-                curves_poes = [interpolate.interp1d(
-                    losses, poes, bounds_error=False, fill_value=0)(
-                        loss_ratios)
-                    for losses, poes in loss_ratio_curves]
-        else:
-            raise NotImplementedError
+        else:  # standard case
+            max_losses = [losses[-1]  # we assume non-decreasing losses
+                          for losses, _poes in non_trivial_curves]
+            reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
+            loss_ratios = reference_curve[0]
+            curves_poes = [interpolate.interp1d(
+                losses, poes, bounds_error=False, fill_value=0)(
+                    loss_ratios)
+                for losses, poes in loss_ratio_curves]
 
         quantiles_poes = dict()
 
@@ -218,25 +211,8 @@ def curve_statistics(
                     asset,
                     scientific.conditional_loss_ratio(loss_ratios, poes, poe))
 
-        # mean and quantile loss fractions (only disaggregation by
-        # taxonomy is supported here)
-        for poe in poes_disagg:
-            loss_fraction_data(
-                mean_loss_fraction_ids[poe],
-                value=asset.taxonomy,
-                location=asset.site,
-                absolute_loss=scientific.conditional_loss_ratio(
-                    loss_ratios, mean_poes, poe) * asset.value)
-            for quantile, poes in quantiles_poes.items():
-                loss_fraction_data(
-                    quantile_loss_fraction_ids[quantile][poe],
-                    value=asset.taxonomy,
-                    location=asset.site,
-                    absolute_loss=scientific.conditional_loss_ratio(
-                        loss_ratios, poes, poe) * asset.value)
 
-
-def loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
+def loss_fraction(loss_fraction_id, assets, values, fractions):
     """
     Create, save and return an instance of
     :class:`openquake.engine.db.models.LossFractionData` associated
@@ -244,19 +220,19 @@ def loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
     :param int loss_fraction_id:
        an ID to an output container instance
        of type :class:`openquake.engine.db.models.LossFraction
-    :param str value:
-       A value representing the fraction. In case of disaggregation by taxonomy
-       it is a taxonomy string.
-    :param point location: the location, the fraction refers to
-    :param float absolute_loss:
-       the absolute loss contribution of `value` in `location`
+    :param list values:
+       A list of value representing the fraction. In case of
+       disaggregation by taxonomy it is a taxonomy string.
+    :param assets: the assets, the fractions refer to
+    :param absolute_losses:
+       the absolute loss contributions of `values` in `assets`
     """
-
-    return models.LossFractionData.objects.create(
-        loss_fraction_id=loss_fraction_id,
-        value=value,
-        location=location,
-        absolute_loss=absolute_loss)
+    for asset, value, fraction in zip(assets, values, fractions):
+        models.LossFractionData.objects.create(
+            loss_fraction_id=loss_fraction_id,
+            value=value,
+            location=asset.site,
+            absolute_loss=fraction * asset.value)
 
 
 ###
