@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_GIT_PACKAGE="oq-nrmllib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
@@ -256,6 +256,12 @@ EOF
     fi
 
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
+        if [ "${GIT_BRANCH}" != "" ]; then
+            CUSTOM_SERIE="devel/$(git remote -vv | grep '(fetch)$' | sed 's/^[^ 	]\+[ 	]\+git:\/\///g;s/.git[ 	]\+(fetch)$//g;s@/@__@g;s/\./-/g')_${GIT_BRANCH}"
+            if [ "$CUSTOM_SERIE" != "" ]; then
+                GEM_DEB_SERIE="$CUSTOM_SERIE"
+            fi
+        fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
         cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
