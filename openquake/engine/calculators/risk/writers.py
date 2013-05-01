@@ -152,24 +152,26 @@ def curve_statistics(
         loss_ratio_curves = loss_ratio_curve_matrix[:, i]
 
         if assume_equal == 'support':
-            loss_ratios = loss_ratio_curves[0].abscissae
-            curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+            # get the loss ratios only from the first curve
+            loss_ratios, _poes = loss_ratio_curves[0]
+            curves_poes = [poes for _losses, poes in loss_ratio_curves]
         elif assume_equal == 'image':
-            non_trivial_curves = [curve
-                                  for curve in loss_ratio_curves
-                                  if curve.abscissae[-1] > 0]
+            non_trivial_curves = [(losses, poes)
+                                  for losses, poes in loss_ratio_curves
+                                  if losses[-1] > 0]
             if not non_trivial_curves:  # no damage. all trivial curves
                 logs.LOG.info("No damages in asset %s" % asset)
-                loss_ratios = loss_ratio_curves[0].abscissae
-                curves_poes = [curve.ordinates for curve in loss_ratio_curves]
+                loss_ratios, _poes = loss_ratio_curves[0]
+                curves_poes = [poes for _losses, poes in loss_ratio_curves]
             else:  # standard case
-                max_losses = [lc.abscissae[-1] for lc in non_trivial_curves]
+                max_losses = [losses[-1]  # we assume non-decreasing losses
+                              for losses, _poes in non_trivial_curves]
                 reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-                loss_ratios = reference_curve.abscissae
+                loss_ratios = reference_curve[0]
                 curves_poes = [interpolate.interp1d(
-                    curve.abscissae, curve.ordinates,
-                    bounds_error=False, fill_value=0)(loss_ratios)
-                    for curve in loss_ratio_curves]
+                    losses, poes, bounds_error=False, fill_value=0)(
+                        loss_ratios)
+                    for losses, poes in loss_ratio_curves]
         else:
             raise NotImplementedError
 
@@ -204,9 +206,6 @@ def curve_statistics(
                 mean_poes,
                 loss_ratios,
                 scientific.average_loss(loss_ratios, mean_poes))
-
-        # mean and quantile loss maps
-        loss_ratios = loss_ratio_curve_matrix[0, 0].abscissae
 
         for poe in conditional_loss_poes:
             loss_map_data(

@@ -87,12 +87,12 @@ def classical_bcr(job_id, hazard, vulnerability_function, imt,
                 hazard_curves_retrofitted)
 
             eal_original = [
-                scientific.average_loss(*original_loss_curves[i].xy)
-                for i in range(len(assets))]
+                scientific.average_loss(losses, poes)
+                for losses, poes in original_loss_curves]
 
             eal_retrofitted = [
-                scientific.average_loss(*retrofitted_loss_curves[i].xy)
-                for i in range(len(assets))]
+                scientific.average_loss(losses, poes)
+                for losses, poes in retrofitted_loss_curves]
 
             bcr_results = [
                 scientific.bcr(
