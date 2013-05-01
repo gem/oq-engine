@@ -25,9 +25,11 @@ by post-processing the set of computed ground-motion ﬁelds.
 Outputs
 *******
 
-* Stochastic Event Sets (SES)
-* Ground Motion Fields (GMF), optionally produced from SESs
-* Hazard Curves, optionally produced from GMFs
+* :ref:`Stochastic Event Sets (SES) <ses>`
+* :ref:`Ground Motion Fields (GMF) <gmf>`, optionally produced from SESs
+* :ref:`Hazard Curves <eb-hazard-curves>`, optionally produced from GMFs
+
+.. _ses:
 
 SESs
 ====
@@ -70,6 +72,8 @@ during the SES calculation. Structuring the calculation in this way guarantees
 consistent, reproducible results regardless of the operating system, task
 execution order, or architecture (32-bit or 64-bit).
 
+.. _gmf:
+
 GMFs
 ====
 
@@ -91,6 +95,8 @@ configuration parameters. (In other words, if the calculation geometry consists
 of 10 points/sites, each computed GMF will include 10 nodes, 1 for each
 location.)
 
+.. _eb-hazard-curves:
+
 Hazard Curves
 =============
 
@@ -107,9 +113,9 @@ Hazard curves are computed from GMFs as follows:
   hzrdr.gmf records exactly equal to the `ses_per_logic_tree_path` parameter.
   Each record contains an array with a number of ground motion values; this
   number is determined by the number of ruptures in a given stochastic event
-  (which is random--see the section "SESs" above). All of these lists GMVs are
-  flattened into a single list of GMVs (the size of which is unknown, due the
-  random element mentioned above).
+  (which is random--see the section "SESs" above). All of these lists of GMVs
+  are flattened into a single list of GMVs (the size of which is unknown,
+  due the random element mentioned above).
 * With this list of GMVs, a list of IMLs (Intensity Measure Levels) for the
   given IMT (defined in the configuration file as
   `intensity_measure_types_and_levels`), `investigation_time`, and "duration"
@@ -120,4 +126,16 @@ post_processing.gmvs_to_haz_curve`
   for implementation details.
 * The PoEs make up the "ordinates" (y-axis values) of the produced hazard
   curve. The IMLs define the "abscissae" (x-axis values).
+
+As with the Classical calculator, it is possible to produce mean and quantile
+statistical aggregates of curve results.
+
+Hazard Maps
+===========
+
+The Event-Based Hazard calculator is capable of producing hazard maps for each
+logic tree realization, as well as mean and quantile aggregates. This method of
+extracting maps from hazard curves is identical to the Classical calculator.
+
+See `hazard maps <#hazard-maps>`_ for more information.
 """
