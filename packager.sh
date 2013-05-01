@@ -128,7 +128,7 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; 
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; 
                  cd oq-engine ;
                  ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
