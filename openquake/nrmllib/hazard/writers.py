@@ -17,12 +17,16 @@
 Classes for serializing various NRML XML artifacts.
 """
 
+import StringIO
+import tokenize
+
 from lxml import etree
 from collections import OrderedDict
 from itertools import izip
 
 import openquake.nrmllib
 from openquake.nrmllib import utils
+from openquake.nrmllib import models
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -42,6 +46,8 @@ _ATTR_MAP = OrderedDict([
     ('lon', 'lon'),
     ('lat', 'lat'),
 ])
+
+GML_NS = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
 
 
 def _validate_hazard_metadata(md):
@@ -178,26 +184,75 @@ class HazardCurveXMLWriter(BaseCurveXMLWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
-
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            self.add_hazard_curves(root, self.metadata, data)
 
-            hazard_curves = etree.SubElement(root, 'hazardCurves')
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
 
-            _set_metadata(hazard_curves, self.metadata, _ATTR_MAP)
+    def add_hazard_curves(self, root, metadata, data):
+        """
+        Add hazard curves stored into `data` as child of the `root`
+        element with `metadata`. See the documentation of the method
+        `serialize` and the constructor for a description of `data`
+        and `metadata`, respectively.
+        """
+        hazard_curves = etree.SubElement(root, 'hazardCurves')
 
-            imls_elem = etree.SubElement(hazard_curves, 'IMLs')
-            imls_elem.text = ' '.join([str(x) for x in self.metadata['imls']])
+        _set_metadata(hazard_curves, metadata, _ATTR_MAP)
 
-            for hc in data:
-                hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
-                gml_point = etree.SubElement(hc_elem, '{%s}Point' % gml_ns)
-                gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
-                gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
-                poes_elem = etree.SubElement(hc_elem, 'poEs')
-                poes_elem.text = ' '.join([str(x) for x in hc.poes])
+        imls_elem = etree.SubElement(hazard_curves, 'IMLs')
+        imls_elem.text = ' '.join([str(x) for x in metadata['imls']])
+        gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
+
+        for hc in data:
+            hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
+            gml_point = etree.SubElement(hc_elem, '{%s}Point' % gml_ns)
+            gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+            gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
+            poes_elem = etree.SubElement(hc_elem, 'poEs')
+            poes_elem.text = ' '.join([str(x) for x in hc.poes])
+
+
+class MultiHazardCurveXMLWriter(object):
+    """
+    A serializer of multiple hazard curve set having multiple
+    metadata. It uses
+    :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter` to
+    actually serialize the single set of curves.
+
+    :attr str path:
+         The path of the filename to be written
+    :attr metadata_set:
+         Iterable over metadata suitable to create instances of
+         :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+    """
+    def __init__(self, path, metadata_set):
+        self.path = path
+        self.metadata_set = metadata_set
+
+        for metadata in metadata_set:
+            _validate_hazard_metadata(metadata)
+
+    def serialize(self, curve_set):
+        """
+        Write a set of sequence of hazard curves to the specified file.
+        :param curve_set:
+
+           Iterable over sequence of curves. Each element returned by
+           the iterable is an iterable suitable to be used by the
+           :meth:`serialize` of the class
+           :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element('nrml',
+                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+            for metadata, curve_data in zip(self.metadata_set, curve_set):
+                writer = HazardCurveXMLWriter(self.path, **metadata)
+                writer.add_hazard_curves(root, metadata, curve_data)
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
@@ -810,3 +865,398 @@ class UHSXMLWriter(BaseCurveXMLWriter):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class SourceModelXMLWriter(object):
+    """
+    Writes source model XML from a given
+    :class:`openquake.nrmllib.models.SourceModel`.
+
+    This class is the writer counterpart to
+    :class:`openquake.nrmllib.hazard.SourceModelParser`.
+
+    :param str path:
+        Path to the file where we want to write the source model.
+    """
+    def __init__(self, path):
+        self.path = path
+
+    @staticmethod
+    def _coords_from_geom(wkt):
+        """
+        Get the coordinates points from a LINESTRING or POLYGON ``wkt`` string
+        as a 2D list.
+
+        The WKT parsing method was heavily inspired by GeoMet
+        (https://github.com/larsbutler/geomet).
+
+        This only works for simple shapes, and does not work for polygons with
+        holes, etc.. Example:
+
+        POLYGON ((35 10, 10 20, 15 40, 45 45, 35 10),
+        (20 30, 35 35, 30 20, 20 30))
+        """
+        sio = StringIO.StringIO(wkt)
+
+        tokens = (x[1] for x in tokenize.generate_tokens(sio.readline))
+        geom_type = tokens.next()
+        assert geom_type in ('POINT', 'LINESTRING', 'POLYGON')
+
+        coords = []
+        pt = []
+        negative = False
+
+        for t in tokens:
+            if t == '(':
+                continue
+            elif t == ')':
+                coords.append(pt)
+                break
+            elif t == ',':
+                coords.append(pt)
+                pt = []
+            elif t == '-':
+                negative = True
+            else:
+                if negative:
+                    t = '-' + t
+                pt.append(float(t))
+                negative = False
+
+        return coords
+
+    def _append_mfd(self, elem, src):
+        """
+        Append a MFD element to the XML tree for a given ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
+        """
+        if isinstance(src.mfd, models.IncrementalMFD):
+            mfd = etree.SubElement(
+                elem,
+                'incrementalMFD',
+                attrib=src.mfd.attrib
+            )
+            occ_rates = etree.SubElement(mfd, 'occurRates')
+            occ_rates.text = ' '.join([str(x) for x in src.mfd.occur_rates])
+        elif isinstance(src.mfd, models.TGRMFD):
+            etree.SubElement(
+                elem,
+                'truncGutenbergRichterMFD',
+                attrib=src.mfd.attrib
+            )
+
+    def _append_npd(self, elem, src):
+        """
+        Append a nodal plane disitribution element to the XML tree for a given
+        ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
+        """
+        npd = etree.SubElement(elem, 'nodalPlaneDist')
+        for np in src.nodal_plane_dist:
+            etree.SubElement(
+                npd,
+                'nodalPlane',
+                attrib=np.attrib
+            )
+
+    def _append_hdd(self, elem, src):
+        """
+        Append a hypocentral depth distribution element to XML tree for a given
+        ``src``.
+
+        :param elem:
+            A :class:`lxml.etree._Element`.
+        :param src:
+            One of the five source types defined in
+            :mod:`openquake.nrmllib.models`.
+        """
+        hdd = etree.SubElement(elem, 'hypoDepthDist')
+        for hd in src.hypo_depth_dist:
+            etree.SubElement(
+                hdd,
+                'hypoDepth',
+                attrib=hd.attrib
+            )
+
+    def _append_area(self, src_model_elem, src):
+        """
+        Append an area source element to the XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.AreaSource`.
+        """
+        area_elem = etree.SubElement(
+            src_model_elem,
+            'areaSource',
+            attrib=src.attrib
+        )
+
+        # geometry
+        area_geom_elem = etree.SubElement(area_elem, 'areaGeometry')
+        poly = etree.SubElement(area_geom_elem, '{%s}Polygon' % GML_NS)
+        exterior = etree.SubElement(poly, '{%s}exterior' % GML_NS)
+        linearring = etree.SubElement(exterior, '{%s}LinearRing' % GML_NS)
+        poslist = etree.SubElement(linearring, '{%s}posList' % GML_NS)
+        coords = self._coords_from_geom(src.geometry.wkt)
+        # Since the polygon froms a closed ring, but is not usually modeled as
+        # such, remove the last vertex; in POLYGON WKT, we expect the last
+        # vertex should be a duplicate of the first.
+        coords.pop()
+        poslist.text = ' '.join([' '.join([str(x) for x in pt])
+                                 for pt in coords])
+        upp_seis_depth = etree.SubElement(area_geom_elem, 'upperSeismoDepth')
+        upp_seis_depth.text = str(src.geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(area_geom_elem, 'lowerSeismoDepth')
+        low_seis_depth.text = str(src.geometry.lower_seismo_depth)
+
+        mag_scale_rel = etree.SubElement(area_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(area_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(area_elem, src)
+        self._append_npd(area_elem, src)
+        self._append_hdd(area_elem, src)
+
+    def _append_point(self, src_model_elem, src):
+        """
+        Append a point source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.PointSource`.
+        """
+        pt_elem = etree.SubElement(
+            src_model_elem,
+            'pointSource',
+            attrib=src.attrib
+        )
+
+        # geometry
+        pt_geom_elem = etree.SubElement(pt_elem, 'pointGeometry')
+        point = etree.SubElement(pt_geom_elem, '{%s}Point' % GML_NS)
+        pos = etree.SubElement(point, '{%s}pos' % GML_NS)
+        [coord] = self._coords_from_geom(src.geometry.wkt)
+        pos.text = ' '.join([str(x) for x in coord])
+        upp_seis_depth = etree.SubElement(pt_geom_elem, 'upperSeismoDepth')
+        upp_seis_depth.text = str(src.geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(pt_geom_elem, 'lowerSeismoDepth')
+        low_seis_depth.text = str(src.geometry.lower_seismo_depth)
+
+        mag_scale_rel = etree.SubElement(pt_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(pt_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(pt_elem, src)
+        self._append_npd(pt_elem, src)
+        self._append_hdd(pt_elem, src)
+
+    def _append_fault_edge(self, edge_elem, wkt):
+        """
+        Append a <gml:LineString> geometry element to the given ``edge_elem``,
+        where the geometry is defined by ``wkt``.
+
+        :param elem:
+            An instance of :class:`lxml.etree._Element`.
+        :param str wkt:
+            A LINESTRING represented as WKT.
+        """
+        linestring = etree.SubElement(edge_elem, '{%s}LineString' % GML_NS)
+        poslist = etree.SubElement(linestring, '{%s}posList' % GML_NS)
+        coords = self._coords_from_geom(wkt)
+        poslist.text = ' '.join([' '.join([str(x) for x in pt])
+                                 for pt in coords])
+
+    def _append_simple_fault_geom(self, elem, geometry):
+        """
+        Append simple fault geometry elements to a given ``elem``.
+
+        :param elem:
+            An instance of :class:`lxml.etree._Element`.
+        :param geometry:
+            An instance of
+            :class:`openquake.nrmllib.models.SimpleFaultGeometry`.
+        """
+        simple_geom = etree.SubElement(elem, 'simpleFaultGeometry')
+        self._append_fault_edge(simple_geom, geometry.wkt)
+        dip = etree.SubElement(simple_geom, 'dip')
+        dip.text = str(geometry.dip)
+        upp_seis_depth = etree.SubElement(simple_geom, 'upperSeismoDepth')
+        upp_seis_depth.text = str(geometry.upper_seismo_depth)
+        low_seis_depth = etree.SubElement(simple_geom, 'lowerSeismoDepth')
+        low_seis_depth.text = str(geometry.lower_seismo_depth)
+
+    def _append_complex_fault_geom(self, elem, geometry):
+        """
+        Append complex fault geometry elements to a given ``elem``.
+
+        :param elem:
+            An instance of :class:`lxml.etree._Element`.
+        :param geometry:
+            An instance of
+            :class:`openquake.nrmllib.models.ComplexFaultGeometry`.
+        """
+        complex_geom = etree.SubElement(elem, 'complexFaultGeometry')
+        # top edge
+        top_edge = etree.SubElement(complex_geom, 'faultTopEdge')
+        self._append_fault_edge(top_edge, geometry.top_edge_wkt)
+        # intermedate edges
+        for edge in geometry.int_edges:
+            edge_elem = etree.SubElement(complex_geom, 'intermediateEdge')
+            self._append_fault_edge(edge_elem, edge)
+        # bottom edge
+        bottom_edge = etree.SubElement(complex_geom, 'faultBottomEdge')
+        self._append_fault_edge(bottom_edge, geometry.bottom_edge_wkt)
+
+    def _append_complex(self, src_model_elem, src):
+        """
+        Append a complex fault source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.ComplexFaultSource`.
+        """
+        complex_elem = etree.SubElement(
+            src_model_elem,
+            'complexFaultSource',
+            attrib=src.attrib
+        )
+
+        # geometry
+        self._append_complex_fault_geom(complex_elem, src.geometry)
+
+        mag_scale_rel = etree.SubElement(complex_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(complex_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(complex_elem, src)
+        rake = etree.SubElement(complex_elem, 'rake')
+        rake.text = str(src.rake)
+
+    def _append_simple(self, src_model_elem, src):
+        """
+        Append a simple fault source element to the source model XML tree.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.SimpleFaultSource`.
+        """
+        simple_elem = etree.SubElement(
+            src_model_elem,
+            'simpleFaultSource',
+            attrib=src.attrib
+        )
+
+        # geometry
+        self._append_simple_fault_geom(simple_elem, src.geometry)
+
+        mag_scale_rel = etree.SubElement(simple_elem, 'magScaleRel')
+        mag_scale_rel.text = src.mag_scale_rel
+        rar = etree.SubElement(simple_elem, 'ruptAspectRatio')
+        rar.text = str(src.rupt_aspect_ratio)
+
+        self._append_mfd(simple_elem, src)
+
+        rake = etree.SubElement(simple_elem, 'rake')
+        rake.text = str(src.rake)
+
+    def _append_characteristic(self, src_model_elem, src):
+        """
+        Append a characteristic fault source to the source model XML tree.
+
+        Characteristic fault source geometries can be represented either by a
+        simple fault geometry, a complex fault geometry, or a collection of
+        planar surfaces.
+
+        :param src_model_elem:
+            The :class:`lxml.etree._Element` representing the <sourceModel>
+            element in the document.
+        :param src:
+            A :class:`openquake.nrmllib.models.CharacteristicSource`.
+        """
+        char_elem = etree.SubElement(
+            src_model_elem,
+            'characteristicFaultSource',
+            attrib=src.attrib
+        )
+
+        self._append_mfd(char_elem, src)
+        rake = etree.SubElement(char_elem, 'rake')
+        rake.text = str(src.rake)
+
+        # TODO: <surface>...</surface>
+        surface = etree.SubElement(char_elem, 'surface')
+
+        if isinstance(src.surface, models.ComplexFaultGeometry):
+            self._append_complex_fault_geom(surface, src.surface)
+        elif isinstance(src.surface, models.SimpleFaultGeometry):
+            self._append_simple_fault_geom(surface, src.surface)
+        else:
+            for planar_surface in src.surface:
+                ps_elem = etree.SubElement(surface, 'planarSurface')
+                ps_elem.set('strike', str(planar_surface.strike))
+                ps_elem.set('dip', str(planar_surface.dip))
+
+                for el_name, corner in (
+                        ('topLeft', planar_surface.top_left),
+                        ('topRight', planar_surface.top_right),
+                        ('bottomLeft', planar_surface.bottom_left),
+                        ('bottomRight', planar_surface.bottom_right)):
+
+                    corner_elem = etree.SubElement(ps_elem, el_name)
+                    corner_elem.set('lon', str(corner.longitude))
+                    corner_elem.set('lat', str(corner.latitude))
+                    corner_elem.set('depth', str(corner.depth))
+
+    def serialize(self, src_model):
+        """
+        Write a source model to the target file.
+
+        :param src_model:
+            A :class:`openquake.nrmllib.models.SourceModel` object, which is an
+            iterable collection of sources.
+        """
+        with open(self.path, 'w') as fh:
+            root = etree.Element(
+                'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
+            )
+
+            src_model_elem = etree.SubElement(root, 'sourceModel')
+            if src_model.name is not None:
+                src_model_elem.set('name', src_model.name)
+
+            for src in src_model:
+                if isinstance(src, models.AreaSource):
+                    self._append_area(src_model_elem, src)
+                elif isinstance(src, models.PointSource):
+                    self._append_point(src_model_elem, src)
+                elif isinstance(src, models.ComplexFaultSource):
+                    self._append_complex(src_model_elem, src)
+                elif isinstance(src, models.SimpleFaultSource):
+                    self._append_simple(src_model_elem, src)
+                elif isinstance(src, models.CharacteristicSource):
+                    self._append_characteristic(src_model_elem, src)
+
+            fh.write(etree.tostring(root, pretty_print=True,
+                                    xml_declaration=True, encoding='UTF-8'))

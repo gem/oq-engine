@@ -471,11 +471,11 @@ class RuptureModelParserTestCase(unittest.TestCase):
         </node>
     </bcrMap>
 </nrml>
-'''  # idiot, you are trying to parse a bcrMap with a RuptureParser!
+'''  # you are trying to parse a bcrMap with a RuptureParser!
 
     def test_parse(self):
         for fname, expected_model in zip(
-                    self.SAMPLE_FILES, self.EXPECTED_MODELS):
+                self.SAMPLE_FILES, self.EXPECTED_MODELS):
             parser = parsers.RuptureModelParser(fname)
             model = parser.parse()
             self.assertTrue(*_utils.deep_eq(model, expected_model))
@@ -488,3 +488,21 @@ class RuptureModelParserTestCase(unittest.TestCase):
         inv2 = StringIO.StringIO(self.INVALID_2)
         self.assertRaises(ValueError,
                           parsers.RuptureModelParser(inv2).parse)
+
+
+class GMFScenarioParserTestCase(unittest.TestCase):
+    SAMPLE_FILE = 'examples/gmf-scenario.xml'
+    EXPECTED = [
+        ('SA(0.025)', '{0.2}', 'POINT(0.0 0.0)'),
+        ('SA(0.025)', '{1.4}', 'POINT(1.0 0.0)'),
+        ('SA(0.025)', '{0.6}', 'POINT(0.0 1.0)'),
+        ('PGA', '{0.2,0.3}', 'POINT(0.0 0.0)'),
+        ('PGA', '{1.4,1.5}', 'POINT(1.0 0.0)'),
+        ('PGA', '{0.6,0.7}', 'POINT(0.0 1.0)'),
+        ('PGV', '{0.2}', 'POINT(0.0 0.0)'),
+        ('PGV', '{1.4}', 'POINT(1.0 0.0)'),
+        ('PGV', '{0.6}', 'POINT(0.0 1.0)')]
+
+    def test_parse(self):
+        parser = parsers.GMFScenarioParser(self.SAMPLE_FILE)
+        self.assertEqual(list(parser.parse()), self.EXPECTED)

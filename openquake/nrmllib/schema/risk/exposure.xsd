@@ -41,6 +41,9 @@
                 <!-- structural cost type and unit -->
                 <xs:attribute name="stcoType" type="CostType"/>
                 <xs:attribute name="stcoUnit" type="AssetValueUnit"/>
+                <!-- non-structural cost type and unit -->
+                <xs:attribute name="nonStcoType" type="CostType"/>
+                <xs:attribute name="nonStcoUnit" type="AssetValueUnit"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -64,6 +67,8 @@
                     <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <!-- structural cost -->
                     <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
+                    <!-- non-structural cost -->
+                    <xs:element name="nonstco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <xs:element name="taxonomy" type="Taxonomy"/>
                 </xs:sequence>
             </xs:extension>

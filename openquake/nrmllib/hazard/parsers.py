@@ -21,6 +21,7 @@ See :module:`openquake.nrmllib.models`.
 """
 
 import decimal
+from collections import OrderedDict
 
 from lxml import etree
 
@@ -151,7 +152,8 @@ class FaultGeometryParserMixin(object):
 
 class SourceModelParser(FaultGeometryParserMixin):
     """NRML source model parser. Reads point sources, area sources, simple
-    fault sources, and complex fault sources from a given source.
+    fault sources, characteristic fault sources, and complex fault sources
+    from a given source.
 
     :param source:
         Filename or file-like object containing the XML data.
@@ -223,7 +225,7 @@ class SourceModelParser(FaultGeometryParserMixin):
                                        './/nrml:incrementalMFD'))
 
         if mfd_elem.tag == '{%s}truncGutenbergRichterMFD' % (
-            openquake.nrmllib.NAMESPACE):
+                openquake.nrmllib.NAMESPACE):
             mfd = models.TGRMFD()
             mfd.a_val = float(mfd_elem.get('aValue'))
             mfd.b_val = float(mfd_elem.get('bValue'))
@@ -231,7 +233,7 @@ class SourceModelParser(FaultGeometryParserMixin):
             mfd.max_mag = float(mfd_elem.get('maxMag'))
 
         elif mfd_elem.tag == '{%s}incrementalMFD' % (
-            openquake.nrmllib.NAMESPACE):
+                openquake.nrmllib.NAMESPACE):
             mfd = models.IncrementalMFD()
             mfd.min_mag = float(mfd_elem.get('minMag'))
             mfd.bin_width = float(mfd_elem.get('binWidth'))
@@ -554,7 +556,7 @@ class RuptureModelParser(FaultGeometryParserMixin):
             :class:`openquake.nrmllib.models.ComplexFaultRuptureModel` instance
         """
         schema = etree.XMLSchema(etree.parse(
-                openquake.nrmllib.nrml_schema_file()))
+            openquake.nrmllib.nrml_schema_file()))
         tree = etree.iterparse(self.source, schema=schema)
         for _, element in tree:
             parse_fn = self._parse_fn_map.get(element.tag)
@@ -564,3 +566,45 @@ class RuptureModelParser(FaultGeometryParserMixin):
         raise ValueError('<%s> or <%s> element not found.'
                          % (self._SIMPLE_RUPT_TAG,
                             self._COMPLEX_RUPT_TAG))
+
+
+class GMFScenarioParser(object):
+
+    _GMF_TAG = '{%s}gmf' % openquake.nrmllib.NAMESPACE
+    _NODE_TAG = '{%s}node' % openquake.nrmllib.NAMESPACE
+
+    def __init__(self, source):
+        self.source = source
+
+    def parse(self):
+        """
+        Parse the source XML content for a GMF scenario.
+        :returns:
+            an iterable over triples (imt, gmvs, location)
+        """
+        schema = etree.XMLSchema(etree.parse(
+            openquake.nrmllib.nrml_schema_file()))
+        tree = etree.iterparse(self.source, schema=schema)
+        gmf = OrderedDict()  # (imt, location) -> gmvs
+        point_value_list = []
+        for _, element in tree:
+            a = element.attrib
+            if element.tag == self._NODE_TAG:
+                point_value_list.append(
+                    ['POINT(%(lon)s %(lat)s)' % a, a['gmv']])
+            elif element.tag == self._GMF_TAG:
+                imt = a['IMT']
+                try:
+                    imt += '(%s)' % a['saPeriod']
+                except KeyError:
+                    pass
+                for point, value in point_value_list:
+                    try:
+                        values = gmf[point, imt]
+                    except KeyError:
+                        gmf[point, imt] = [value]
+                    else:
+                        values.append(value)
+                point_value_list = []
+        for (location, imt), gmvs in gmf.iteritems():
+            yield imt, '{%s}' % ','.join(gmvs), location

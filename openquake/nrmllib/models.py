@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """Simple objects models to represent elements of NRML artifacts. These models
 are intended to be produced by NRML XML parsers and consumed by NRML XML
 serializers.
 """
+
+from collections import OrderedDict
 
 
 class SourceModel(object):
@@ -39,7 +40,29 @@ class SourceModel(object):
         return iter(self.sources)
 
 
-class PointSource(object):
+class SeismicSource(object):
+    """
+    General base class for seismic sources.
+    """
+
+    def __init__(self, id=None, name=None, trt=None):
+        self.id = id
+        self.name = name
+        self.trt = trt
+
+    @property
+    def attrib(self):
+        """
+        General XML element attributes for a seismic source, as an OrderedDict.
+        """
+        return OrderedDict([
+            ('id', str(self.id)),
+            ('name', str(self.name)),
+            ('tectonicRegion', str(self.trt)),
+        ])
+
+
+class PointSource(SeismicSource):
     """Basic object representation of a Point Source.
 
     :param str id:
@@ -68,9 +91,7 @@ class PointSource(object):
     def __init__(self, id=None, name=None, trt=None, geometry=None,
                  mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
                  nodal_plane_dist=None, hypo_depth_dist=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(PointSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
@@ -136,7 +157,7 @@ class AreaGeometry(PointGeometry):
     """
 
 
-class SimpleFaultSource(object):
+class SimpleFaultSource(SeismicSource):
     """Basic object representation of a Simple Fault Source.
 
     :param str id:
@@ -161,9 +182,7 @@ class SimpleFaultSource(object):
     def __init__(self, id=None, name=None, trt=None, geometry=None,
                  mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
                  rake=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(SimpleFaultSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
@@ -271,6 +290,16 @@ class IncrementalMFD(object):
         self.bin_width = bin_width
         self.occur_rates = occur_rates
 
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this MFD.
+        """
+        return OrderedDict([
+            ('minMag', str(self.min_mag)),
+            ('binWidth', str(self.bin_width)),
+        ])
+
 
 class TGRMFD(object):
     """Basic object representation of a Truncated Gutenberg-Richter Magnitude
@@ -292,6 +321,18 @@ class TGRMFD(object):
         self.b_val = b_val
         self.min_mag = min_mag
         self.max_mag = max_mag
+
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this MFD.
+        """
+        return OrderedDict([
+            ('aValue', str(self.a_val)),
+            ('bValue', str(self.b_val)),
+            ('minMag', str(self.min_mag)),
+            ('maxMag', str(self.max_mag)),
+        ])
 
 
 class NodalPlane(object):
@@ -315,6 +356,18 @@ class NodalPlane(object):
         self.dip = dip
         self.rake = rake
 
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attributes for this NodalPlane.
+        """
+        return OrderedDict([
+            ('probability', str(self.probability)),
+            ('strike', str(self.strike)),
+            ('dip', str(self.dip)),
+            ('rake', str(self.rake)),
+        ])
+
 
 class HypocentralDepth(object):
     """Basic object representation of a single node in a Hypocentral Depth
@@ -330,6 +383,17 @@ class HypocentralDepth(object):
     def __init__(self, probability=None, depth=None):
         self.probability = probability
         self.depth = depth
+
+    @property
+    def attrib(self):
+        """
+        An `OrderedDict` of XML element attribute for this HypocentralDepth.
+        """
+        return OrderedDict([
+            ('probability', str(self.probability)),
+            ('depth', str(self.depth)),
+        ])
+
 
 
 class SiteModel(object):
@@ -398,7 +462,7 @@ class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
     """
 
 
-class CharacteristicSource(object):
+class CharacteristicSource(SeismicSource):
     """
     Basic object representation of a characteristic fault source.
 
@@ -419,9 +483,7 @@ class CharacteristicSource(object):
     """
     def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
                  surface=None):
-        self.id = id
-        self.name = name
-        self.trt = trt
+        super(CharacteristicSource, self).__init__(id=id, name=name, trt=trt)
         self.mfd = mfd
         self.rake = rake
         self.surface = surface

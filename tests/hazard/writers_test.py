@@ -25,6 +25,7 @@ from collections import namedtuple
 from lxml import etree
 
 from openquake.nrmllib.hazard import writers
+from openquake.nrmllib.hazard import parsers
 
 from tests import _utils as utils
 
@@ -314,6 +315,108 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         )
         writer = writers.HazardCurveXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
+
+        utils.assert_xml_equal(expected, self.path)
+        self.assertTrue(utils.validates_against_xml_schema(self.path))
+
+
+class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
+    """
+    Tests for the `serialize` method of the hazard curve XML writer.
+    """
+
+    def setUp(self):
+        self.data1 = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.1, 0.2, 0.3]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.4, 0.5, 0.6]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.7, 0.8, 0.8]),
+        ]
+
+        self.data2 = [
+            HazardCurveData(location=Location(38.0, -20.1),
+                            poes=[0.01, 0.02, 0.03]),
+            HazardCurveData(location=Location(38.1, -20.2),
+                            poes=[0.04, 0.05, 0.06]),
+            HazardCurveData(location=Location(38.2, -20.3),
+                            poes=[0.07, 0.08, 0.08]),
+        ]
+
+        _, self.path = tempfile.mkstemp()
+
+    def tearDown(self):
+        os.unlink(self.path)
+
+    def test_serialize(self):
+        # Just a basic serialization test.
+        expected = StringIO.StringIO("""\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves sourceModelTreePath="b1_b2_b4"
+                gsimTreePath="b1_b4_b5" IMT="SA" investigationTime="50"
+                saPeriod="0.025" saDamping="5.0">
+    <IMLs>0.005 0.007 0.0098</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.1 0.2 0.3</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.4 0.5 0.6</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.7 0.8 0.8</poEs>
+    </hazardCurve>
+  </hazardCurves>
+  <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b4_b5" IMT="PGA"
+                investigationTime="30">
+    <IMLs>0.05 0.07 0.8</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.0 -20.1</gml:pos>
+      </gml:Point>
+      <poEs>0.01 0.02 0.03</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.1 -20.2</gml:pos>
+      </gml:Point>
+      <poEs>0.04 0.05 0.06</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>38.2 -20.3</gml:pos>
+      </gml:Point>
+      <poEs>0.07 0.08 0.08</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
+""")
+
+        metadata1 = dict(
+            investigation_time=50, imt='SA', imls=[0.005, 0.007, 0.0098],
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5'
+        )
+
+        metadata2 = dict(
+            investigation_time=30, imt='PGA', imls=[0.05, 0.07, 0.8],
+            smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
+        )
+
+        writer = writers.MultiHazardCurveXMLWriter(
+            self.path, [metadata1, metadata2])
+        writer.serialize([self.data1, self.data2])
 
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
@@ -1265,7 +1368,6 @@ class UHSXMLWriterTestCase(unittest.TestCase):
         finally:
             os.unlink(path)
 
-
     def test_serialize_quantile(self):
         del self.metadata['smlt_path']
         del self.metadata['gsimlt_path']
@@ -1280,4 +1382,182 @@ class UHSXMLWriterTestCase(unittest.TestCase):
 
             utils.assert_xml_equal(self.expected_quantile_xml, path)
         finally:
+            os.unlink(path)
+
+
+class SourceModelXMLWriterTestCase(unittest.TestCase):
+
+    def test_serialize(self):
+        # Parse an XML model into a source model object, re-serialize using the
+        # SourceModelXMLWriter, and compare the new file with the original.
+        test_xml = """\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="Some Source Model">
+    <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>-122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>10.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>PeerMSR</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <incrementalMFD minMag="6.55" binWidth="0.1">
+        <occurRates>0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="0.5" depth="4.0"/>
+        <hypoDepth probability="0.5" depth="8.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <pointSource id="2" name="point" tectonicRegion="Stable Continental Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-122.0 38.0</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>10.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>0.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="0.5" depth="4.0"/>
+        <hypoDepth probability="0.5" depth="8.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <simpleFaultSource id="3" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>-121.8229 37.7301 -122.0388 37.8771</gml:posList>
+        </gml:LineString>
+        <dip>45.0</dip>
+        <upperSeismoDepth>10.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <incrementalMFD minMag="5.0" binWidth="0.1">
+        <occurRates>0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653</occurRates>
+      </incrementalMFD>
+      <rake>30.0</rake>
+    </simpleFaultSource>
+    <complexFaultSource id="4" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
+      <complexFaultGeometry>
+        <faultTopEdge>
+          <gml:LineString>
+            <gml:posList>-124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734</gml:posList>
+          </gml:LineString>
+        </faultTopEdge>
+        <intermediateEdge>
+          <gml:LineString>
+            <gml:posList>-124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734</gml:posList>
+          </gml:LineString>
+        </intermediateEdge>
+        <intermediateEdge>
+          <gml:LineString>
+            <gml:posList>-124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734</gml:posList>
+          </gml:LineString>
+        </intermediateEdge>
+        <faultBottomEdge>
+          <gml:LineString>
+            <gml:posList>-123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274</gml:posList>
+          </gml:LineString>
+        </faultBottomEdge>
+      </complexFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>2.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5"/>
+      <rake>30.0</rake>
+    </complexFaultSource>
+    <characteristicFaultSource id="5" name="characteristic source, simple fault" tectonicRegion="Volcanic">
+      <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5"/>
+      <rake>30.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8229 37.7301 -122.0388 37.8771</gml:posList>
+          </gml:LineString>
+          <dip>45.0</dip>
+          <upperSeismoDepth>10.0</upperSeismoDepth>
+          <lowerSeismoDepth>20.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="6" name="characteristic source, complex fault" tectonicRegion="Volcanic">
+      <incrementalMFD minMag="5.0" binWidth="0.1">
+        <occurRates>0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653</occurRates>
+      </incrementalMFD>
+      <rake>60.0</rake>
+      <surface>
+        <complexFaultGeometry>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <intermediateEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734</gml:posList>
+            </gml:LineString>
+          </intermediateEdge>
+          <intermediateEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734</gml:posList>
+            </gml:LineString>
+          </intermediateEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </complexFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="7" name="characteristic source, multi surface" tectonicRegion="Volcanic">
+      <truncGutenbergRichterMFD aValue="-3.6" bValue="1.0" minMag="5.2" maxMag="6.4"/>
+      <rake>90.0</rake>
+      <surface>
+        <planarSurface strike="0.0" dip="90.0">
+          <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
+          <topRight lon="1.0" lat="1.0" depth="21.0"/>
+          <bottomLeft lon="-1.0" lat="-1.0" depth="59.0"/>
+          <bottomRight lon="1.0" lat="-1.0" depth="59.0"/>
+        </planarSurface>
+        <planarSurface strike="20.0" dip="45.0">
+          <topLeft lon="1.0" lat="1.0" depth="20.0"/>
+          <topRight lon="3.0" lat="1.0" depth="20.0"/>
+          <bottomLeft lon="1.0" lat="-1.0" depth="80.0"/>
+          <bottomRight lon="3.0" lat="-1.0" depth="80.0"/>
+        </planarSurface>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>"""
+
+        parser = parsers.SourceModelParser(StringIO.StringIO(test_xml))
+        source_model = parser.parse()
+
+        _, path = tempfile.mkstemp()
+        try:
+            writer = writers.SourceModelXMLWriter(path)
+            writer.serialize(source_model)
+
+            utils.assert_xml_equal(StringIO.StringIO(test_xml), path)
+        finally:
+            # cleanup temp files
             os.unlink(path)

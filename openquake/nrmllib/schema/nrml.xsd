@@ -65,7 +65,7 @@
             <!-- For Scenario GMFs, or 'complete logic tree' GMF sets for Event-Based calculations -->
             <!-- In the case of Scenario results, the `investigationTime` is omitted -->
             <xs:element name="gmfSet" type="GMFSet" />
-            <xs:element ref="hazardCurves" />
+            <xs:element ref="hazardCurves" maxOccurs="unbounded" />
             <xs:element ref="hazardMap" />
             <xs:element ref="logicTree" />
             <xs:element ref="lossCurves" />
