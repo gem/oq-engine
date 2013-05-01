@@ -99,7 +99,7 @@ _devtest_innervm_run () {
     IFS=" "
     for dep in $GEM_GIT_DEPS; do
         # extract dependencies for source dependencies
-        pkgs_list="$(deps_list _jenkins_deps/$dep/debian/control)"
+        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian/control)"
         ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
         # install source dependencies
@@ -110,7 +110,7 @@ _devtest_innervm_run () {
     IFS="$old_ifs"
 
     # extract dependencies for this package
-    pkgs_list="$(deps_list debian/control)"
+    pkgs_list="$(deps_list "all" debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # install sources of this package
@@ -200,12 +200,22 @@ _pkgtest_innervm_run () {
 }
 
 deps_list() {
-    local oldifs out_list skip i d filename="$1"
+    local oldifs out_list skip i d listtype="$1" filename="$2"
 
     oldifs="$IFS"
     IFS=','
     out_list=""
-    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g') ; do
+    if [ "$listtype" = "all" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "deprec" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "build" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+    else
+        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+    fi
+
+    for i in $in_list ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
         pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
