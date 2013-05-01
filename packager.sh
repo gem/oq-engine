@@ -88,20 +88,39 @@ _wait_ssh () {
 }
 
 _devtest_innervm_run () {
-    local i branch_id="$1" lxc_ip="$2"
+    local i old_ifs pkgs_list dep branch_id="$1" lxc_ip="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        # extract dependencies for source dependencies
+        pkgs_list="$(deps_list _jenkins_deps/$dep/debian/control)"
+        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+        # install source dependencies
+        cd _jenkins_deps/$dep
+        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+        cd -
+    done
+    IFS="$old_ifs"
+
+    # extract dependencies for this package
     pkgs_list="$(deps_list debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # TODO: version check
+    # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; PYTHONPATH="." ./run_tests"
+
+    # TODO: version check
+    echo "NOW PRESS ENTER TO CONTINUE"
+    read aaa
+    # ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; PYTHONPATH="." ./run_tests"
     trap ERR
 
     return
@@ -274,8 +293,6 @@ devtest_run () {
         echo "${var_pref}_BRANCH=$branch" >> _jenkins_deps_info
     done
     IFS="$old_ifs"
-
-exit 123
 
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
