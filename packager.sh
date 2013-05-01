@@ -122,7 +122,6 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w openquake"
-    ssh $lxc_ip "oq_create_db --yes --db-user=openquake --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
     ssh $lxc_ip "cd oq-engine ; bin/create_oq_schema --yes --db-user=openquake --db-name=openquake --no-tab-spaces --schema-path=\$(pwd)/openquake/engine/db/schema"
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
