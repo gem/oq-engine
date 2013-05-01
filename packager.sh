@@ -116,6 +116,24 @@ _devtest_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
+    # configure the machine to run tests
+    ssh $lxc_ip "echo \"local   all             openquake          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+    ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
+
+    ssh $lxc_ip "sudo service postgresql restart"
+    ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w openquake"
+    ssh $lxc_ip "oq_create_db --yes --db-user=openquake --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
+    ssh $lxc_ip "cd oq-engine ; bin/create_oq_schema --yes --db-user=openquake --db-name=openquake --no-tab-spaces --schema-path=\$(pwd)/openquake/engine/db/schema"
+    # run celeryd daemon
+    ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+
+
+
+
+
+
+
+
 
     # TODO: version check
     echo "NOW PRESS ENTER TO CONTINUE"
@@ -278,13 +296,14 @@ _lxc_name_and_ip_get()
 devtest_run () {
     local deps old_ifs branch_id="$1"
 
+    mkdir _jenkins_deps
+
     sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
 
-    mkdir _jenkins_deps
     repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
         repos="${repo_id} ${GEM_GIT_REPO}"
