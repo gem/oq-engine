@@ -126,9 +126,27 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
 
     # run celeryd daemon
-    # ssh $lxc_ip "cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; 
+                 cd oq-engine ;
+                 ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
+                 # OQ Engine QA tests (splitted into multiple execution to track the performance)
+                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml "
+
+#                 ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
+#                 ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
+#                 ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
+
+#                 ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
+#                 ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
+#                 ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
+#                 ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
+#                 ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
+#                 ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+
+#                 python $(which coverage) xml --include="openquake/*"
 
 
 
