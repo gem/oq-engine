@@ -215,7 +215,7 @@ deps_list() {
         fi
         skip=0
         for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
-            if [ "$pkg_name" = "$d" ]; then
+            if [ "$pkg_name" = "python-${d}" ]; then
                 skip=1
                 break
             fi
