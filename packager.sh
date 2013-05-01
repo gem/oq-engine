@@ -200,7 +200,7 @@ _pkgtest_innervm_run () {
 }
 
 deps_list() {
-    local oldifs out_list i filename="$1"
+    local oldifs out_list skip i d filename="$1"
 
     oldifs="$IFS"
     IFS=','
@@ -213,7 +213,18 @@ deps_list() {
         if echo "$pkg_name" | grep -q "^\${" ; then
             continue
         fi
-        if [ "$out_list" == "" ]; then
+        skip=0
+        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+            if [ "$pkg_name" = "$d" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 1 ]; then
+            continue
+        fi
+
+        if [ "$out_list" = "" ]; then
             out_list="$pkg_name"
         else
             out_list="$out_list $pkg_name"
