@@ -43,17 +43,15 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         Test that the specific calculation parameters are present
         """
 
-        params = dict(zip(['asset_correlation'],
-                          self.calculator.calculator_parameters))
-
-        self.assertEqual(0.0, params['asset_correlation'])
+        self.assertTrue(
+            self.calculator.calculator_parameters.insured_losses is False)
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
         # specific method to write loss map data.
 
         patch_dbwriter = helpers.patch(
-            'openquake.engine.calculators.risk.writers.loss_map_data',)
+            'openquake.engine.calculators.risk.writers.loss_map',)
         try:
             write_lossmap_mock = patch_dbwriter.start()
             scenario.scenario(
