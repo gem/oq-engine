@@ -92,6 +92,7 @@ from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
+from openquake.engine.input import source
 from openquake.engine.job.validation import validate
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
@@ -225,6 +226,16 @@ def set_up_arg_parser():
         '--list-imported-outputs', action='store_true',
         help=('List outputs which were imported from a file, not calculated '
               'from a job'))
+
+    pre_proc_grp = parser.add_argument_group('Pre-processing')
+    pre_proc_grp.add_argument(
+        '--optimize-source-model',
+        '--osm',
+        help=('Optimize a source model by discretizating an area source into'
+              ' point sources, given a discretization step (in km)'),
+        nargs=3,
+        metavar=('INPUT_FILE', 'AREA_DISCRETIZATION', 'OUTPUT_FILE')
+    )
 
     return parser
 
@@ -555,6 +566,17 @@ def confirm(prompt):
         return answer == 'y'
 
 
+def optimize_source_model(input_path, area_src_disc, output_path):
+    """
+    Read a source model and generate a new one, converting area sources to
+    point sources.
+    """
+    area_src_disc = float(area_src_disc)
+    source.optimize_source_model(input_path, area_src_disc,
+                                 output_path)
+    complain_and_exit(output_path)
+
+
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -566,6 +588,9 @@ def main():
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
         config.refresh()
+
+    if args.optimize_source_model:
+        optimize_source_model(*args.optimize_source_model)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
