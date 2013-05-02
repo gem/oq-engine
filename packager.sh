@@ -143,34 +143,33 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    # ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; 
-    #              cd oq-engine ;
-    #              ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
+    # run tests
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+                 cd oq-engine ;
+                 ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
-    #              # OQ Engine QA tests (splitted into multiple execution to track the performance)
-    #              ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
-    #              ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
-    #              ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
-    #              ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
+                 # OQ Engine QA tests (splitted into multiple execution to track the performance)
+                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
+                 ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
+                 ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
+                 ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
 
-    #              ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
-    #              ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
-    #              ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
-    #              ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
-    #              ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
-    #              ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+                 ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
+                 ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
+                 ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
+                 ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
+                 ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
+                 ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
-    #              python $(which coverage) xml --include=\"openquake/*\" "
+                 python $(which coverage) xml --include=\"openquake/*\" "
 
-    # scp "${lxc_ip}:oq-engine/nosetests.xml" .
-    # scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
-    # scp "${lxc_ip}:oq-engine/coverage.xml" .
-    
+    scp "${lxc_ip}:oq-engine/nosetests.xml" .
+    scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
+    scp "${lxc_ip}:oq-engine/coverage.xml" .
 
     # TODO: version check
     echo "NOW PRESS ENTER TO CONTINUE"
     read aaa
-    # ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; PYTHONPATH="." ./run_tests"
     trap ERR
 
     return
