@@ -644,5 +644,5 @@ class HazardCurveParser(object):
             elif element.tag == self._CURVE_TAG:
                 point, poes = element
                 location = 'POINT(%s)' % ' '.join(point[0].text.split())
-                poes_array = '{%s}' % ','.join(poes.text.split())
+                poes_array = map(float, poes.text.split())
                 yield poes_array, location

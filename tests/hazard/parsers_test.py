@@ -518,8 +518,8 @@ class HazardCurveParserTestCase(unittest.TestCase):
              'sa_damping': None,
              'sa_period': None,
              'statistics': None},
-            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
-            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
+            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
         ],
         'examples/hazard-curves-sa.xml': [
             {'imls': [0.005, 0.007, 0.0137],
@@ -529,8 +529,8 @@ class HazardCurveParserTestCase(unittest.TestCase):
              'sa_damping': '5.0',
              'sa_period': '0.025',
              'statistics': None},
-            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
-            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
+            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
         ],
         'examples/hazard-curves-quantile.xml': [
             {'imls': [0.005, 0.007, 0.0137],
@@ -540,8 +540,8 @@ class HazardCurveParserTestCase(unittest.TestCase):
              'sa_damping': None,
              'sa_period': None,
              'statistics': 'quantile'},
-            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
-            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
+            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
         ],
         'examples/hazard-curves-mean.xml': [
             {'imls': [0.005, 0.007, 0.0137],
@@ -551,8 +551,8 @@ class HazardCurveParserTestCase(unittest.TestCase):
              'sa_damping': None,
              'sa_period': None,
              'statistics': 'mean'},
-            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
-            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
+            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
         ],
     }
 
