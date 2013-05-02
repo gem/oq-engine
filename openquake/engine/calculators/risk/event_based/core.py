@@ -110,7 +110,7 @@ def do_event_based(units, containers, params, profile):
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
-        stats = statistics(loss_curves.transpose(), weights, params)
+        stats = statistics(loss_curves.transpose(1, 0, 2, 3), weights, params)
 
     with profile('saving risk statistics'):
         save_statistical_output(containers, outputs.assets, stats, params)
@@ -319,7 +319,6 @@ Compute disaggregation outputs given the individual `outputs` and `params`
                 disaggregate_site(asset.site, losses, ruptures, params)))
             assets_disagg.append(asset)
     if assets_disagg:
-        logs.LOG.warn("disagg_matrix=%s", disagg_matrix)
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
         magnitudes, coordinates, fractions = [], [], []

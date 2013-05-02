@@ -29,6 +29,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.utils import tasks
+from openquake.engine import logs
 
 
 @tasks.oqtask
@@ -174,15 +175,28 @@ class StatisticalOutputs(collections.namedtuple(
         ['assets', 'mean_curves', 'mean_maps', 'mean_fractions',
          'quantile_curves', 'quantile_maps', 'quantile_fractions'])):
     """The statistical outputs computed by the classical calculator.
-Each attribute is a numpy array with a collection of N outputs,
-where N is the number of assets.
 
-    :attr assets: the assets over which outputs have been computed
-    :attr mean_curves: N mean loss curves. A loss curve is a 2-ple losses/poes
-    :attr mean_maps: N x P mean map value (P = number of PoEs)
-    :attr mean_fractions: N x F mean fraction value (F = number of disagg PoEs)
-    :attr quantile_curves: N x Q quantile loss curves (Q = number of quantiles)
-    :attr quantile_maps: N x Q x F quantile fractions
+    :attr list assets:
+       the assets (instances of
+       :class:`openquake.engine.db.models.ExposureData`) of which outputs
+       have been computed
+    :attr list mean_curves:
+       Holds N mean loss curves. A loss curve is a 2-ple losses/poes
+    :attr list mean_maps:
+       Holds P lists, where each of them holds N mean map value
+       (P = number of PoEs)
+    :attr mean_fractions:
+       Holds F lists, where each of them holds N loss fraction value
+       (F = number of disagg PoEs)
+    :attr list quantile_curves:
+       Holds Q lists, where each of them has N quantile loss curves
+       (Q = number of quantiles)
+    :attr list quantile_maps:
+       Holds Q lists, where each of them has P lists. Each of the latter
+       holds N quantile map value
+    :attr list quantile_fractions:
+       Holds Q lists, where each of them has F lists. Each of the latter
+       holds N quantile loss fraction value
 """
 
 
@@ -202,7 +216,7 @@ def statistics(outputs, weights, params):
 
     # traverse the curve matrix on the second dimension (the assets)
     # accumulating results in `ret`, then return `ret` unzipped
-    for loss_ratio_curves in outputs.curve_matrix.transpose():
+    for loss_ratio_curves in outputs.curve_matrix.transpose(1, 0, 2, 3):
 
         # get the loss ratios only from the first curve
         loss_ratios, _poes = loss_ratio_curves[0]
@@ -223,14 +237,28 @@ def statistics(outputs, weights, params):
             for poe in params.poes_disagg]
             for quantile_curve in quantile_curves]
 
-        ret.append(outputs.assets, mean_curve, mean_maps, mean_fractions,
-                   quantile_curves, quantile_maps, quantile_fractions)
+        ret.append((mean_curve, mean_maps, mean_fractions,
+                    quantile_curves, quantile_maps, quantile_fractions))
 
-    return StatisticalOutputs(*zip(*ret))
+    (mean_curve, mean_maps, mean_fractions,
+     quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
+    # now all the lists keep N items
+
+    # transpose maps and fractions to have P/F/Q items of N-sized lists
+    mean_maps = numpy.array(mean_maps).transpose()
+    mean_fractions = numpy.array(mean_fractions).transpose()
+    quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
+    quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+    quantile_fractions = numpy.array(quantile_fractions).transpose(2, 1, 0)
+
+    return StatisticalOutputs(
+        outputs.assets, mean_curve, mean_maps,
+        mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
 
 
 def save_statistical_output(containers, stats, params):
     # mean curves, maps and fractions
+
     containers.write(
         stats.assets, stats.mean_curves,
         output_type="loss_curve", statistics="mean")
@@ -251,11 +279,12 @@ def save_statistical_output(containers, stats, params):
         "quantile", params.quantiles, stats.quantile_curves,
         stats.assets, output_type="loss_curve", statistics="quantile")
 
-    for quantile, maps, fractions in zip(
-            params.quantiles, stats.quantile_maps, stats.quantile_fractions):
+    for quantile, maps in zip(params.quantiles, stats.quantile_maps):
         containers.write_all("poe", params.conditional_loss_poes, maps,
                              stats.assets, output_type="loss_map",
                              statistics="quantile", quantile=quantile)
+
+    for quantile, maps in zip(params.quantiles, stats.quantile_fractions):
         containers.write_all("poe", params.poes_disagg, fractions,
                              stats.assets, [a.taxonomy for a in stats.assets],
                              output_type="loss_fraction",
@@ -299,7 +328,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         Checks that the given hazard is an hazard curve
         """
         if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calc_mode != 'classical':
+            if self.rc.hazard_calculation.calculation_mode != 'classical':
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not a classical calculation")
