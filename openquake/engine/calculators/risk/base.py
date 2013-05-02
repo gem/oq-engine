@@ -161,8 +161,6 @@ class RiskCalculator(base.CalculatorNext):
         for hazard in self.rc.hazard_outputs():
             output_containers.update(self.create_outputs(hazard))
 
-        calculator_parameters = self.calculator_parameters
-
         for taxonomy, assets_nr in self.taxonomies.items():
             asset_offsets = range(0, assets_nr, block_size)
 
@@ -172,10 +170,10 @@ class RiskCalculator(base.CalculatorNext):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                risklib_calculators = self.calculation_units(assets)
-
-                yield [self.job.id, risklib_calculators,
-                       output_containers] + calculator_parameters
+                yield [self.job.id,
+                       self.calculation_units(assets),
+                       output_containers,
+                       self.calculator_parameters]
 
     def export(self, *args, **kwargs):
         """
@@ -479,7 +477,14 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
 
 
 OutputKey = collections.namedtuple('OutputKey', [
-    'output_type', 'hazard_output_id', 'poe', 'quantile', 'statistics'])
+    'output_type',  # as in :class:`openquake.engine.db.models.Output`
+    'hazard_output_id',  # as in risk output containers
+    'poe',  # for loss map and classical loss fractions
+    'quantile',  # for quantile outputs
+    'statistics',  # as in risk output containers
+    'variable',  # for disaggregation outputs
+    'insured',  # as in :class:`openquake.engine.db.models.LossCurve`
+])
 
 
 class OutputDict(dict):
@@ -489,21 +494,46 @@ class OutputDict(dict):
     """
 
     def get(self,
-            output_type=None,
-            hazard_output_id=None,
-            poe=None,
-            quantile=None,
-            statistics=None):
-        return self[OutputKey(output_type, hazard_output_id,
-                              poe, quantile, statistics)]
+            output_type=None, hazard_output_id=None, poe=None,
+            quantile=None, statistics=None, variable=None, insured=False):
+        """
+        Get the ID associated with the `OutputKey` instance built with the
+        given kwargs.
+        """
+        return self[OutputKey(output_type, hazard_output_id, poe, quantile,
+                              statistics, variable, insured)]
 
     def write(self, *args, **kwargs):
+        """
+        1) Get the ID associated with the `OutputKey` instance built with
+        the given kwargs.
+        2) Get a writer function from the `writers` module with
+        function name given by the `output_type` argument.
+        3) Call such function with the given positional arguments.
+        """
         output_id = self.get(**kwargs)
         writer = getattr(writers, kwargs['output_type'])
         writer(output_id, *args)
 
     def write_all(self, arg, values, items,
                   *initial_args, **initial_kwargs):
+        """
+        Call iteraly `write`.
+
+        In each call, the keyword arguments are built by merging
+        `initial_kwargs` with a dict storing the association between
+        `arg` and the value taken iteratively from `values`. The
+        positional arguments are built by chaining `initial_args` with
+        a value taken iteratively from `items`.
+
+        :param str arg: a keyword argument to be passed to `write`
+
+        :param list values: a list of keyword argument values to be
+        passed to `write`
+
+        :param list items: a list of positional arguments to be passed
+        to `write`
+        """
         for value, item in itertools.izip(values, items):
             kwargs = {arg: value}
             kwargs.update(initial_kwargs)
@@ -511,26 +541,106 @@ class OutputDict(dict):
             self.write(*args, **kwargs)
 
     def set(self, container):
+        """Store an ID (got from `container`) keyed by a new
+        `OutputKey` built with the attributes guessed on `container`
 
+        :param container: a django model instance of an output
+        container (e.g. a LossCurve)
+        """
         hazard_output_id = getattr(container, "hazard_output_id")
         poe = getattr(container, "poe", None)
         quantile = getattr(container, "quantile", None)
         statistics = getattr(container, "statistics", None)
+        variable = getattr(container, "variable", None)
+        insured = getattr(container, "insured", False)
 
         self[OutputKey(
             output_type=container.output.output_type,
             hazard_output_id=hazard_output_id,
             poe=poe,
             quantile=quantile,
-            statistics=statistics)] = container.id
+            statistics=statistics,
+            variable=variable,
+            insured=insured)] = container.id
 
 
-#: A calculation unit holds a risklib calculator and a getter that
+#: A calculation unit holds a risklib calculator (e.g. an instance of
+#: :class:`openquake.risklib.api.Classical`) and a getter that
 #: retrieves the data to work on
 CalculationUnit = collections.namedtuple('CalculationUnit', 'calc getter')
 
 
-def site_statistics(losses, curves_poes, quantiles, weights, poes):
+#: Calculator parameters are used to compute derived outputs like loss
+#: maps, disaggregation plots, quantile/mean curves. See
+#: :class:`openquake.engine.db.models.RiskCalculation` for a description
+
+CalcParams = collections.namedtuple(
+    'CalcParams', [
+        'conditional_loss_poes',
+        'poes_disagg',
+        'sites_disagg',
+        'insured_losses',
+        'quantiles',
+        'asset_life_expectancy',
+        'interest_rate',
+        'mag_bin_width',
+        'distance_bin_width',
+        'coordinate_bin_width',
+        'damage_state_ids'
+    ])
+
+
+def make_calc_params(conditional_loss_poes=None,
+                     poes_disagg=None,
+                     sites_disagg=None,
+                     insured_losses=None,
+                     quantiles=None,
+                     asset_life_expectancy=None,
+                     interest_rate=None,
+                     mag_bin_width=None,
+                     distance_bin_width=None,
+                     coordinate_bin_width=None,
+                     damage_state_ids=None):
+    """
+    Constructor of CalculatorParameters
+    """
+    return CalcParams(conditional_loss_poes,
+                      poes_disagg,
+                      sites_disagg,
+                      insured_losses,
+                      quantiles,
+                      asset_life_expectancy,
+                      interest_rate,
+                      mag_bin_width,
+                      distance_bin_width,
+                      coordinate_bin_width,
+                      damage_state_ids)
+
+
+def asset_statistics(losses, curves_poes, quantiles, weights, poes):
+    """
+    Compute output statistics (mean/quantile loss curves and maps)
+    for a single asset
+
+    :param losses:
+       the losses on which the loss curves are defined
+    :param curves_poes:
+       a numpy matrix suitable to be used with
+       :func:`openquake.engine.calculators.post_processing`
+    :param list quantiles:
+       an iterable over the quantile levels to be considered for
+       quantile outputs
+    :param list weights:
+       the weights associated with each realization. If all the elements are
+       `None`, implicit weights are taken into account
+    :param list poes:
+       the poe taken into account for computing loss maps
+
+    :returns:
+       a tuple with
+       1) mean loss curve
+       2) a list of quantile curves
+    """
     montecarlo = weights[0] is not None
 
     quantile_curves = []
@@ -541,18 +651,17 @@ def site_statistics(losses, curves_poes, quantiles, weights, poes):
         else:
             q_curve = post_processing.quantile_curve(curves_poes, quantile)
 
-        quantile_curves.append(q_curve.tolist())
+        quantile_curves.append((losses, q_curve))
 
     # then mean loss curve
-    mean_curve = post_processing.mean_curve(curves_poes, weights)
+    mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
+    mean_curve = (losses, mean_curve_poes)
 
-    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve, poe)
+    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
                 for poe in poes]
 
-    quantile_maps = [[scientific.conditional_loss_ratio(
-        losses, mean_curve, poe)
-        for poe in poes]
-        for quantile in quantiles]
+    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
+                      for losses, poes in quantile_curves]
+                     for poe in poes]
 
-    return ((losses, mean_curve), (losses, quantile_curves),
-            mean_map, quantile_maps)
+    return (mean_curve, quantile_curves, mean_map, quantile_maps)
