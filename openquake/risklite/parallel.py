@@ -119,15 +119,15 @@ class BaseRunner(object):
         chunksize = self.chunksize or (nelements // self.poolsize + 1)
         chunks = list(chop(sequence, chunksize))
         nchunks = len(chunks)
-        acc = [None] * nchunks  # chunk accumulator
+        reslist = [None] * nchunks  # chunk accumulator
         for i, fut in enumerate(self.futures(func, chunks, args, kw)):
             res, exc, tb = fut.result()
             if exc is not None:
                 err = 'in chunk %s: %s' % (fut.chunkno, exc)
                 raise res, err, tb
-            acc[fut.chunkno] = res
+            reslist[fut.chunkno] = res
             self.processed_future(fut, progress=float(i + 1) / nchunks)
-        return reduce(self.agg, acc, self.seed)
+        return reduce(self.agg, reslist, self.seed)
 
     def __repr__(self):
         return '<%s(%s(%d))>' % (
