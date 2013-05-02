@@ -36,7 +36,7 @@ from datetime import datetime
 import openquake.hazardlib
 import numpy
 
-from django.db import connection
+from django.db import connections
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -116,36 +116,6 @@ def queryset_iter(queryset, chunk_size):
         else:
             yield chunk
             offset += chunk_size
-
-
-def profile4job(job_id):
-    """Return the job profile for the given job.
-
-    :param int job_id: identifier of the job in question
-    :returns: a :py:class:`openquake.engine.db.models.OqJobProfile` instance
-    """
-    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    return j2p.oq_job_profile
-
-
-def inputs4job(job_id, input_type=None, path=None):
-    """Return the inputs for the given job, input type and path.
-
-    :param int job_id: identifier of the job in question
-    :param str input_type: a valid input type
-    :param str path: the path of the desired input.
-    :returns: a list of :py:class:`openquake.engine.db.models.Input` instances
-    """
-    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
-    if not input_type and not path:
-        return list(i.input for i in i2js.all())
-    qargs = []
-    if input_type:
-        qargs.append(("input__input_type", input_type))
-    if path:
-        qargs.append(("input__path", path))
-    qargs = dict(qargs)
-    return list(i.input for i in i2js.filter(**qargs))
 
 
 def inputs4hcalc(calc_id, input_type=None):
@@ -228,66 +198,6 @@ class RevisionInfo(djm.Model):
 
     class Meta:
         db_table = 'admin\".\"revision_info'
-
-
-## Tables in the 'eqcat' schema.
-
-
-class Catalog(djm.Model):
-    '''
-    Earthquake catalog
-    '''
-    owner = djm.ForeignKey('OqUser')
-    eventid = djm.IntegerField()
-    agency = djm.TextField()
-    identifier = djm.TextField()
-    time = djm.DateTimeField()
-    time_error = djm.FloatField()
-    depth = djm.FloatField()
-    depth_error = djm.FloatField()
-    EVENT_CLASS_CHOICES = (
-        (u'aftershock', u'Aftershock'),
-        (u'foreshock', u'Foreshock'),
-    )
-    event_class = djm.TextField(null=True, choices=EVENT_CLASS_CHOICES)
-    magnitude = djm.ForeignKey('Magnitude')
-    surface = djm.ForeignKey('Surface')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'eqcat\".\"catalog'
-
-
-class Magnitude(djm.Model):
-    '''
-    Earthquake event magnitudes
-    '''
-    mb_val = djm.FloatField(null=True)
-    mb_val_error = djm.FloatField(null=True)
-    ml_val = djm.FloatField(null=True)
-    ml_val_error = djm.FloatField(null=True)
-    ms_val = djm.FloatField(null=True)
-    ms_val_error = djm.FloatField(null=True)
-    mw_val = djm.FloatField(null=True)
-    mw_val_error = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"magnitude'
-
-
-class Surface(djm.Model):
-    '''
-    Earthquake event surface (ellipse with an angle)
-    '''
-    semi_minor = djm.FloatField()
-    semi_major = djm.FloatField()
-    strike = djm.FloatField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'eqcat\".\"surface'
 
 
 ## Tables in the 'hzrdi' (Hazard Input) schema.
@@ -492,6 +402,17 @@ class OqJob(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"oq_job'
 
+    @property
+    def calculation(self):
+        """
+        :returns: a calculation object (hazard or risk) depending on
+        the type of calculation. Useful in situations (e.g. core
+        engine, stats, kvs, progress) where you do not have enough
+        context about which kind of calculation is but still you want
+        to access the common feature of a Calculation object.
+        """
+        return self.hazard_calculation or self.risk_calculation
+
 
 class Performance(djm.Model):
     '''
@@ -567,17 +488,6 @@ class CNodeStats(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"cnode_stats'
-
-
-class Job2profile(djm.Model):
-    '''
-    Associates jobs with their profiles.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    oq_job_profile = djm.ForeignKey('OqJobProfile')
-
-    class Meta:
-        db_table = 'uiapi\".\"job2profile'
 
 
 class HazardCalculation(djm.Model):
@@ -823,6 +733,10 @@ class HazardCalculation(djm.Model):
         null=True,
         blank=True,
     )
+    export_multi_curves = fields.OqNullBooleanField(
+        help_text=('If true hazard curve outputs that groups multiple curves '
+                   'in multiple imt will be exported when asked in export '
+                   'phase.'))
     # Event-Based params:
     #####################
     complete_logic_tree_ses = fields.OqNullBooleanField(
@@ -951,10 +865,11 @@ class HazardCalculation(djm.Model):
             if self.pk and self.inputs.filter(input_type='exposure').exists():
                 assets = self.exposure_model.exposuredata_set.all().order_by(
                     'asset_ref')
+
+                # the points here must be sorted
                 lons, lats = zip(
-                    *list(
-                        set([(asset.site.x, asset.site.y)
-                             for asset in assets])))
+                    *sorted(set([(asset.site.x, asset.site.y)
+                                 for asset in assets])))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
@@ -1195,6 +1110,12 @@ class RiskCalculation(djm.Model):
         hc = self.get_hazard_calculation()
         if hc.sites is None and hc.region_grid_spacing is not None:
             dist = min(dist, hc.region_grid_spacing * numpy.sqrt(2) / 2)
+
+        # if we are computing hazard at exact location we set the
+        # maximum_distance to a very small number in order to help the
+        # query to find the results.
+        if hc.inputs.filter(input_type='exposure').exists():
+            dist = 0.001
         return dist
 
     @property
@@ -1296,184 +1217,6 @@ class Input2rcalc(djm.Model):
         db_table = 'uiapi\".\"input2rcalc'
 
 
-class OqJobProfile(djm.Model):
-    '''
-    Parameters needed to run an OpenQuake job
-    '''
-    owner = djm.ForeignKey('OqUser')
-    description = djm.TextField(default='')
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'scenario', u'Scenario'),
-        (u'scenario_damage', u'Scenario Damage'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        (u'classical_bcr', u'Classical BCR'),
-        # Benefit-cost ratio calculator based on Event Based risk calc
-        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
-    )
-    calc_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    job_type = fields.CharArrayField()
-    min_magnitude = djm.FloatField(null=True)
-    investigation_time = djm.FloatField(null=True)
-    COMPONENT_CHOICES = (
-        (u'average', u'Average horizontal'),
-        (u'gmroti50', u'Average horizontal (GMRotI50)'),
-    )
-    component = djm.TextField(choices=COMPONENT_CHOICES)
-    IMT_CHOICES = (
-        (u'pga', u'Peak Ground Acceleration'),
-        (u'sa', u'Spectral Acceleration'),
-        (u'pgv', u'Peak Ground Velocity'),
-        (u'pgd', u'Peak Ground Displacement'),
-        (u'ia', u'Arias Intensity'),
-        (u'rsd', u'Relative Significant Duration'),
-        (u'mmi', u'Modified Mercalli Intensity'),
-    )
-    imt = djm.TextField(choices=IMT_CHOICES)
-    period = djm.FloatField(null=True)
-    damping = djm.FloatField(null=True)
-    TRUNC_TYPE_CHOICES = (
-        (u'none', u'None'),
-        (u'onesided', u'One-sided'),
-        (u'twosided', u'Two-sided'),
-    )
-    truncation_type = djm.TextField(choices=TRUNC_TYPE_CHOICES)
-    # TODO(LB): We should probably find out why (from a science perspective)
-    # the default is 3.0 and document it. I definitely don't remember why it's
-    # 3.0.
-    truncation_level = djm.FloatField(default=3.0)
-    reference_vs30_value = djm.FloatField(
-        "Average shear-wave velocity in the upper 30 meters of a site")
-    imls = fields.FloatArrayField(null=True)
-    poes = fields.FloatArrayField(null=True)
-    realizations = djm.IntegerField(null=True)
-    histories = djm.IntegerField(null=True)
-    gm_correlated = djm.NullBooleanField(null=True)
-    gmf_calculation_number = djm.IntegerField(null=True)
-    rupture_surface_discretization = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    # We can specify a (region and region_grid_spacing) or sites, but not both.
-    region = djm.PolygonField(srid=DEFAULT_SRID, null=True)
-    region_grid_spacing = djm.FloatField(null=True)
-    sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True)
-
-    area_source_discretization = djm.FloatField(null=True)
-    area_source_magnitude_scaling_relationship = djm.TextField(null=True)
-
-    ASSET_CORRELATION_CHOICES = (
-        (u'perfect', u'Perfect'),
-        (u'uncorrelated', u'Uncorrelated'),
-    )
-    asset_correlation = djm.TextField(null=True,
-                                      choices=ASSET_CORRELATION_CHOICES)
-    compute_mean_hazard_curve = djm.NullBooleanField(null=True)
-    conditional_loss_poe = fields.FloatArrayField(null=True)
-    fault_magnitude_scaling_relationship = djm.TextField(null=True)
-    fault_magnitude_scaling_sigma = djm.FloatField(null=True)
-    fault_rupture_offset = djm.FloatField(null=True)
-    fault_surface_discretization = djm.FloatField(null=True)
-    gmf_random_seed = djm.IntegerField(null=True)
-    gmpe_lt_random_seed = djm.IntegerField(null=True)
-    gmpe_model_name = djm.TextField(null=True)
-    grid_source_magnitude_scaling_relationship = djm.TextField(null=True)
-    include_area_sources = djm.NullBooleanField(null=True)
-    include_fault_source = djm.NullBooleanField(null=True)
-    include_grid_sources = djm.NullBooleanField(null=True)
-    include_subduction_fault_source = djm.NullBooleanField(null=True)
-    lrem_steps_per_interval = djm.IntegerField(null=True)
-    loss_curves_output_prefix = djm.TextField(null=True)
-    # Only used for Event-Based Risk calculations.
-    loss_histogram_bins = djm.IntegerField(null=True)
-    maximum_distance = djm.FloatField(null=True)
-    quantile_levels = fields.FloatArrayField(null=True)
-    reference_depth_to_2pt5km_per_sec_param = djm.FloatField(null=True)
-    rupture_aspect_ratio = djm.FloatField(null=True)
-    RUPTURE_FLOATING_TYPE_CHOICES = (
-        ('alongstrike', 'Only along strike ( rupture full DDW)'),
-        ('downdip', 'Along strike and down dip'),
-        ('centereddowndip', 'Along strike & centered down dip'),
-    )
-    rupture_floating_type = djm.TextField(
-        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
-    SADIGH_SITE_TYPE_CHOICES = (
-        ('rock', 'Rock'),
-        ('deepsoil', 'Deep-Soil'),
-    )
-    sadigh_site_type = djm.TextField(
-        null=True, choices=SADIGH_SITE_TYPE_CHOICES)
-    source_model_lt_random_seed = djm.IntegerField(null=True)
-    STANDARD_DEVIATION_TYPE_CHOICES = (
-        ('total', 'Total'),
-        ('interevent', 'Inter-Event'),
-        ('intraevent', 'Intra-Event'),
-        ('zero', 'None (zero)'),
-        ('total_mag_dependent', 'Total (Mag Dependent)'),
-        ('total_pga_dependent', 'Total (PGA Dependent)'),
-        ('intraevent_mag_dependent', 'Intra-Event (Mag Dependent)'),
-    )
-    standard_deviation_type = djm.TextField(
-        null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
-    subduction_fault_magnitude_scaling_relationship = \
-        djm.TextField(null=True)
-    subduction_fault_magnitude_scaling_sigma = djm.FloatField(null=True)
-    subduction_fault_rupture_offset = djm.FloatField(null=True)
-    subduction_fault_surface_discretization = djm.FloatField(null=True)
-    subduction_rupture_aspect_ratio = djm.FloatField(null=True)
-    subduction_rupture_floating_type = djm.TextField(
-        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
-    SOURCE_AS_CHOICES = (
-        ('pointsources', 'Point Sources'),
-        ('linesources', 'Line Sources (random or given strike)'),
-        ('crosshairsources', 'Cross Hair Line Sources'),
-        ('16spokedsources', '16 Spoked Line Sources'),
-    )
-    treat_area_source_as = djm.TextField(
-        null=True, choices=SOURCE_AS_CHOICES)
-    treat_grid_source_as = djm.TextField(
-        null=True, choices=SOURCE_AS_CHOICES)
-    width_of_mfd_bin = djm.FloatField(null=True)
-
-    # The following bin limits fields are for the Disaggregation calculator
-    # only:
-    lat_bin_limits = fields.FloatArrayField(null=True)
-    lon_bin_limits = fields.FloatArrayField(null=True)
-    mag_bin_limits = fields.FloatArrayField(null=True)
-    epsilon_bin_limits = fields.FloatArrayField(null=True)
-    distance_bin_limits = fields.FloatArrayField(null=True)
-    # PMF (Probability Mass Function) result choices for the Disaggregation
-    # calculator
-    # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
-    # constraint checking for disagg_results. For now, I'm just going to let
-    # the database check the constraints.
-    # The following are the valid options for each element of this array field:
-    #   MagPMF (Magnitude Probability Mass Function)
-    #   DistPMF (Distance PMF)
-    #   TRTPMF (Tectonic Region Type PMF)
-    #   MagDistPMF (Magnitude-Distance PMF)
-    #   MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
-    #   LatLonPMF (Latitude-Longitude PMF)
-    #   LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
-    #   LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
-    #   MagTRTPMF (Magnitude-Tectonic Region Type PMF)
-    #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
-    #   FullDisaggMatrix (The full disaggregation matrix; includes
-    #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
-    disagg_results = fields.CharArrayField(null=True)
-    uhs_periods = fields.FloatArrayField(null=True)
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
-                              null=True)
-    depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
-    asset_life_expectancy = djm.FloatField(null=True)
-    interest_rate = djm.FloatField(null=True)
-
-    class Meta:
-        db_table = 'uiapi\".\"oq_job_profile'
-
-
 class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
@@ -1520,6 +1263,7 @@ class Output(djm.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
         (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
         (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
         # FIXME(lp). We should distinguish between conditional losses
@@ -1541,7 +1285,7 @@ class Output(djm.Model):
         db_table = 'uiapi\".\"output'
 
     def is_hazard_curve(self):
-        return self.output_type == 'hazard_curve'
+        return self.output_type in ['hazard_curve', 'hazard_curve_multi']
 
     def is_gmf_scenario(self):
         return self.output_type == 'gmf_scenario'
@@ -1604,7 +1348,7 @@ class Output(djm.Model):
             elif rc.hazard_calculation is not None:
                 # we're consuming multiple outputs from a single hazard
                 # calculation
-                if self.output_type == 'loss_curve':
+                if self.output_type in ['loss_curve', 'agg_loss_curve']:
                     the_output = self.loss_curve
                 elif self.output_type == 'loss_map':
                     the_output = self.loss_map
@@ -1618,22 +1362,19 @@ class Output(djm.Model):
 
                 if the_output.hazard_output_id is not None:
                     haz_output = the_output.hazard_output
-                    haz_curve = haz_output.hazardcurve
 
-                    # TODO: Do we ever encounter this case?
-                    # TODO: Or will we always have a LT Realization?
-                    statistics = haz_curve.statistics
-                    quantile = haz_curve.quantile
+                    if haz_output.is_hazard_curve():
+                        haz = haz_output.hazardcurve
+                    else:
+                        haz = haz_output.gmfcollection
 
-                    if haz_curve.lt_realization is not None:
-                        sm_lt_path = (
-                            haz_curve.lt_realization.sm_lt_path
-                        )
-                        gsim_lt_path = (
-                            haz_curve.lt_realization.gsim_lt_path
-                        )
+                    if haz.lt_realization is not None:
+                        sm_lt_path = haz.lt_realization.sm_lt_path
+                        gsim_lt_path = haz.lt_realization.gsim_lt_path
                 else:
                     if self.output_type == 'loss_curve':
+                        # FIXME(lp). This is clearly not correct
+
                         # it's a mean/quantile loss curve
                         statistics = self.loss_curve.statistics
                         quantile = self.loss_curve.quantile
@@ -1662,7 +1403,7 @@ class HazardMap(djm.Model):
     '''
     Hazard Map header (information which pertains to entire map)
     '''
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1709,36 +1450,6 @@ def parse_imt(imt):
     return hc_im_type, sa_period, sa_damping
 
 
-class HazardCurveManager(djm.Manager):
-    """
-    Manager class to filter and create HazardCurve objects
-    """
-
-    def create_aggregate_curve(self, output, imt, statistics, quantile=None):
-        """
-        Create an aggregate curve with intensity measure type `imt`
-        for the given `statistics` (default to mean) and `quantile`.
-        Here imt is given in long form. e.g. SA(10)
-        """
-        if quantile and not statistics == "quantile":
-            raise ValueError(
-                "A quantile level can be specified only for quantile curves")
-
-        hc = output.oq_job.hazard_calculation
-        hc_im_type, sa_period, sa_damping = parse_imt(imt)
-        levels = hc.intensity_measure_types_and_levels[imt]
-        curve = self.create(output=output,
-                            lt_realization=None,
-                            investigation_time=hc.investigation_time,
-                            imt=hc_im_type,
-                            imls=levels,
-                            statistics=statistics,
-                            quantile=quantile,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping)
-        return curve
-
-
 class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
@@ -1748,7 +1459,7 @@ class HazardCurve(djm.Model):
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
     investigation_time = djm.FloatField()
-    imt = djm.TextField(choices=IMT_CHOICES)
+    imt = djm.TextField(choices=IMT_CHOICES, default=None, blank=True)
     imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -1759,10 +1470,35 @@ class HazardCurve(djm.Model):
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
 
-    objects = HazardCurveManager()
-
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
+
+    @property
+    def imt_long(self):
+        """
+        :returns: a string representing the imt associated with the
+        curve (if any) in the long form, e.g. SA(0.01)
+        """
+        if self.imt:
+            if self.imt == "SA":
+                return "%s(%s)" % (self.imt, self.sa_damping)
+            else:
+                return self.imt
+
+    def __iter__(self):
+        assert self.output.output_type == 'hazard_curve_multi'
+
+        siblings = self.__class__.objects.filter(
+            output__oq_job=self.output.oq_job,
+            output__output_type='hazard_curve')
+
+        if not self.statistics:
+            return iter(siblings.filter(lt_realization__isnull=False))
+        elif self.quantile:
+            return iter(
+                siblings.filter(statistics="quantile", quantile=self.quantile))
+        else:
+            return iter(siblings.filter(statistics="mean"))
 
 
 class HazardCurveDataManager(djm.GeoManager):
@@ -1847,7 +1583,7 @@ class SESCollection(djm.Model):
 
     See also :class:`SES` and :class:`SESRupture`.
     """
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     # If `lt_realization` is None, this is a `complete logic tree`
     # Stochastic Event Set Collection, containing a single stochastic
     # event set containing all of the ruptures from the entire
@@ -2046,7 +1782,7 @@ class GmfSet(djm.Model):
         """
         return self.iter_gmfs()
 
-    def iter_gmfs(self, location=None):
+    def iter_gmfs(self, location=None, num_tasks=None, imts=None):
         """
         Queries for and iterates over child :class:`Gmf` records, with the
         option of specifying a ``location``.
@@ -2056,9 +1792,17 @@ class GmfSet(djm.Model):
             ``location`` is expected to be a point represented as WKT.
 
             Example: `POINT(21.1 45.8)`
+
+       :param num_tasks:
+            If given, only the result_grp_ordinal <= num_tasks are returned,
+            otherwise there is no filtering; this is used only in a test and
+            will disappear in the future
+
+        :param imts:
+            A list of IMT triples; if not given, all the calculated IMTs
+            are taken in consideration (no filtering)
         """
         job = self.gmf_collection.output.oq_job
-        hc = job.hazard_calculation
         if self.ses_ordinal is None:  # complete logic tree
             # Get all of the GmfSets associated with a logic tree realization,
             # for this calculation.
@@ -2072,12 +1816,12 @@ class GmfSet(djm.Model):
                       for each_set in lt_gmf_sets)):
                 yield gmf
         else:
-            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
-
-            imts = [parse_imt(x) for x in hc.intensity_measure_types]
+            num_tasks = num_tasks or \
+                JobStats.objects.get(oq_job=job.id).num_tasks
+            imts = imts or \
+                map(parse_imt, job.hazard_calculation.intensity_measure_types)
 
             for imt, sa_period, sa_damping in imts:
-
                 for result_grp_ordinal in xrange(1, num_tasks + 1):
                     gmfs = order_by_location(
                         Gmf.objects.filter(
@@ -2102,13 +1846,12 @@ class GmfSet(djm.Model):
                     # collect gmf nodes for each event
                     gmf_nodes = collections.OrderedDict()
                     for gmf in gmfs:
-                        for i, rupture_id in enumerate(gmf.rupture_ids):
+                        for gmv, rupture_id in zip(gmf.gmvs, gmf.rupture_ids):
                             if not rupture_id in gmf_nodes:
                                 gmf_nodes[rupture_id] = []
                             gmf_nodes[rupture_id].append(
                                 _GroundMotionFieldNode(
-                                    gmv=gmf.gmvs[i],
-                                    location=gmf.location))
+                                    gmv=gmv, location=gmf.location))
 
                     # then yield ground motion fields for each rupture
                     first = gmfs[0]
@@ -2135,12 +1878,28 @@ class _GroundMotionField(object):
     def __getitem__(self, key):
         return self.gmf_nodes[key]
 
+    def __str__(self):
+        """
+        String representation of a _GroundMotionField object showing the
+        content of the nodes (lon, lat an gmv). This is useful for debugging
+        and testing.
+        """
+        mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
+                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
+                 vars(self))
+        return 'GMF(%s\n%s)' % (mdata, '\n'.join(map(str, self.gmf_nodes)))
+
 
 class _GroundMotionFieldNode(object):
 
     def __init__(self, gmv, location):
         self.gmv = gmv
         self.location = location  # must have x and y attributes
+
+    def __str__(self):
+        "Return lon, lat and gmv of the node in a compact string form"
+        return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
+            self.location.x, self.location.y, self.gmv)
 
 
 class Gmf(djm.Model):
@@ -2161,6 +1920,25 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
+
+
+class GmfAgg(djm.Model):
+    """
+    Ground Motion Field: A collection of ground motion values and their
+    respective geographical locations.
+    """
+    gmf_collection = djm.ForeignKey('GmfCollection')
+    imt = djm.TextField(choices=IMT_CHOICES)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
+    location = djm.PointField(srid=DEFAULT_SRID)
+    gmvs = fields.FloatArrayField()
+    rupture_ids = fields.IntArrayField()
+
+    objects = djm.GeoManager()
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_agg'
 
 
 class GmfScenario(djm.Model):
@@ -2230,10 +2008,10 @@ def get_gmfs_scenario(output, imt=None):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
+        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(output__id=output.id, imt=imt):
+        for gmf in GmfScenario.objects.filter(
+                output__id=output.id, imt=imt_long):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
                 nodes[i].append(
                     _GroundMotionFieldNode(gmv=gmv, location=gmf.location))
@@ -2277,7 +2055,7 @@ class DisaggResult(djm.Model):
     hazard curve, logic tree path information, and investigation time.
     """
 
-    output = djm.ForeignKey('Output')
+    output = djm.OneToOneField('Output')
     lt_realization = djm.ForeignKey('LtRealization')
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
@@ -2443,7 +2221,7 @@ class LossFraction(djm.Model):
         (e.g. the absolute losses for assets of a taxonomy) and the
         percentage (expressed in decimal format) over the total losses
         """
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         total = self.lossfractiondata_set.aggregate(
             djm.Sum('absolute_loss')).values()[0]
@@ -2477,7 +2255,7 @@ class LossFraction(djm.Model):
         the fraction of losses occurring in that location.
         """
         rc = self.output.oq_job.risk_calculation
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         # Partition by lon,lat because partitioning on geometry types
         # seems not supported in postgis 1.5
@@ -2743,7 +2521,7 @@ class DmgDistTotal(djm.Model):
     class Meta:
         db_table = 'riskr\".\"dmg_dist_total'
 
-## Tables in the 'oqmif' schema.
+## Tables in the 'riski' schema.
 
 
 class ExposureModel(djm.Model):
@@ -2782,7 +2560,7 @@ class ExposureModel(djm.Model):
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_model'
+        db_table = 'riski\".\"exposure_model'
 
     def taxonomies_in(self, region_constraint):
         """
@@ -2826,7 +2604,7 @@ class Occupancy(djm.Model):
     occupants = djm.IntegerField()
 
     class Meta:
-        db_table = 'oqmif\".\"occupancy'
+        db_table = 'riski\".\"occupancy'
 
 
 class AssetManager(djm.GeoManager):
@@ -2844,7 +2622,7 @@ class AssetManager(djm.GeoManager):
 
         return list(
             self.raw("""
-            SELECT * FROM oqmif.exposure_data
+            SELECT * FROM riski.exposure_data
             WHERE exposure_model_id = %s AND taxonomy = %s AND
             ST_COVERS(ST_GeographyFromText(%s), site)
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
@@ -2861,13 +2639,13 @@ class AssetManager(djm.GeoManager):
             `exposure_model` and contained in `region_constraint` with the
             number of assets.
         """
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         cursor.execute("""
-        SELECT oqmif.exposure_data.taxonomy, COUNT(*)
-        FROM oqmif.exposure_data WHERE
+        SELECT riski.exposure_data.taxonomy, COUNT(*)
+        FROM riski.exposure_data WHERE
         exposure_model_id = %s AND ST_COVERS(ST_GeographyFromText(%s), site)
-        group by oqmif.exposure_data.taxonomy
+        group by riski.exposure_data.taxonomy
         """, [exposure_model_id, "SRID=4326; %s" % region_constraint.wkt])
 
         return dict(cursor)
@@ -2906,7 +2684,7 @@ class ExposureData(djm.Model):
     objects = AssetManager()
 
     class Meta:
-        db_table = 'oqmif\".\"exposure_data'
+        db_table = 'riski\".\"exposure_data'
 
     def __str__(self):
         return "%s (%s-%s @ %s)" % (

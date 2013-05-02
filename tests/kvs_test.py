@@ -24,7 +24,6 @@ import unittest
 from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.utils import stats
-from tests.utils import helpers
 from tests.utils.helpers import patch
 
 
@@ -47,9 +46,6 @@ def read_one_line(path):
     :returns: first line from the file
     """
     return open(path, 'r').readline().strip('\n')
-
-
-ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
 
 
 class JSONEncoderTestCase(unittest.TestCase):
