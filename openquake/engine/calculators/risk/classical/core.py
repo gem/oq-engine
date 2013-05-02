@@ -284,7 +284,7 @@ def save_statistical_output(containers, stats, params):
                              stats.assets, output_type="loss_map",
                              statistics="quantile", quantile=quantile)
 
-    for quantile, maps in zip(params.quantiles, stats.quantile_fractions):
+    for quantile, fractions in zip(params.quantiles, stats.quantile_fractions):
         containers.write_all("poe", params.poes_disagg, fractions,
                              stats.assets, [a.taxonomy for a in stats.assets],
                              output_type="loss_fraction",
