@@ -475,6 +475,15 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
         first_getter = calculators[0].getter
         return job_id, len(first_getter.assets)
 
+# A namedtuple that identifies an Output object in a risk calculation
+# E.g. A Quantile LossCurve associated with a specific hazard output is
+# OutputKey(output_type="loss_curve",
+#           hazard_output_id=foo,
+#           poe=None,
+#           quantile=bar,
+#           statistics="quantile",
+#           variable=None,
+#           insured=False)
 
 OutputKey = collections.namedtuple('OutputKey', [
     'output_type',  # as in :class:`openquake.engine.db.models.Output`
@@ -490,7 +499,16 @@ OutputKey = collections.namedtuple('OutputKey', [
 class OutputDict(dict):
     """
     A dict keying OutputKey instances to database ID, with convenience
-    setter and getter methods to manage Output containers
+    setter and getter methods to manage Output containers.
+
+    It also automatically links an Output type with its specific
+    writer.
+
+    Risk Calculators create OutputDict instances with Output IDs keyed
+    by OutputKey instances.
+
+    Worker tasks compute results than get the proper writer and use it
+    to actually write the results
     """
 
     def get(self,
