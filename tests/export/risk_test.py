@@ -148,10 +148,74 @@ class ClassicalExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
         try:
             haz_cfg = helpers.get_data_path(
-                'end-to-end-hazard-risk/job_haz.ini'
+                'end-to-end-hazard-risk/job_haz_classical.ini'
             )
             risk_cfg = helpers.get_data_path(
-                'end-to-end-hazard-risk/job_risk.ini'
+                'end-to-end-hazard-risk/job_risk_classical.ini'
+            )
+
+            haz_job = helpers.run_hazard_job(haz_cfg)
+            # Run the risk on all outputs produced by the haz calc:
+            risk_job = helpers.run_risk_job(
+                risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
+            )
+
+            risk_outputs = models.Output.objects.filter(oq_job=risk_job)
+
+            loss_curve_outputs = risk_outputs.filter(output_type='loss_curve')
+            loss_map_outputs = risk_outputs.filter(output_type='loss_map')
+
+            # 16 logic tree realizations + 1 mean + 2 quantiles = 19
+            self.assertEqual(19, loss_curve_outputs.count())
+            # make sure the mean and quantile curve sets got created correctly
+            loss_curves = models.LossCurve.objects.filter(
+                output__oq_job=risk_job
+            )
+            # sanity check
+            self.assertEqual(19, loss_curves.count())
+            # mean
+            self.assertEqual(1, loss_curves.filter(statistics='mean').count())
+            # quantiles
+            self.assertEqual(
+                2, loss_curves.filter(statistics='quantile').count()
+            )
+
+            # 16 logic tree realizations = 16 loss map + 1 mean loss
+            # map + 2 quantile loss map
+            self.assertEqual(19, loss_map_outputs.count())
+
+            # Now try to export everything, just to do a "smoketest" of the
+            # exporter code:
+            loss_curve_files = []
+            for o in loss_curve_outputs:
+                loss_curve_files.extend(risk.export(o.id, target_dir))
+
+            loss_map_files = []
+            for o in loss_map_outputs:
+                loss_map_files.extend(risk.export(o.id, target_dir))
+
+            self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(19, len(loss_map_files))
+
+            for f in loss_curve_files:
+                self._test_exported_file(f)
+            for f in loss_map_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
+
+
+class EventBasedExportTestCase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_event_based_risk_export(self):
+        target_dir = tempfile.mkdtemp()
+        try:
+            haz_cfg = helpers.get_data_path(
+                'end-to-end-hazard-risk/job_haz_event_based.ini'
+            )
+            risk_cfg = helpers.get_data_path(
+                'end-to-end-hazard-risk/job_risk_event_based.ini'
             )
 
             haz_job = helpers.run_hazard_job(haz_cfg)
