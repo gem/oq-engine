@@ -16,14 +16,14 @@
 import unittest
 
 from tests.utils import helpers
-from tests.calculators.risk import general_test
+from tests.calculators.risk import base_test
 
 from openquake.engine import engine
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.db import models
 
 
-class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
+class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     Integration test for the classical risk calculator
     """
@@ -39,7 +39,7 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         self.job.save()
 
         patch = helpers.patch(
-            'openquake.engine.calculators.risk.general.write_loss_curve')
+            'openquake.engine.calculators.risk.writers.loss_curve')
 
         try:
             mocked_writer = patch.start()
@@ -90,22 +90,27 @@ class ClassicalRiskCalculatorTestCase(general_test.BaseRiskCalculatorTestCase):
         `openquake.engine.db.models.HazardCurve` object
         """
 
-        self.calculator.imt = 'PGA'
         outputs = self.calculator.hazard_outputs(
             self.calculator.rc.get_hazard_calculation())
 
         self.assertEqual(
-            set(["hazard_curve"]), set([o.output_type for o in outputs]))
+            set(["hazard_curve_multi"]), set([o.output_type for o in outputs]))
 
 
 class PreExecuteTestCase(unittest.TestCase):
 
     def test_pre_execute_check_imts_raises(self):
         haz_job = engine.prepare_job()
+        cfg = helpers.get_data_path('classical_job.ini')
+        params, files = engine.parse_config(open(cfg, 'r'))
+        haz_job.hazard_calculation = engine.create_hazard_calculation(
+            haz_job.owner, params, files.values())
+        haz_job.save()
+
         hazard_curve_output = models.Output.objects.create_output(
             haz_job, 'test_hazard_curve', 'hazard_curve'
         )
-        hazard_curve = models.HazardCurve.objects.create(
+        models.HazardCurve.objects.create(
             output=hazard_curve_output,
             investigation_time=50.0,
             imt='PGV',  # the vulnerability model only defines SA(0.1)
@@ -123,23 +128,28 @@ class PreExecuteTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ar:
             calc.pre_execute()
         self.assertEqual(
-            "Vulnerability model and the specified hazard curve are "
-            "incompatible. Vulnerability IMT(s): ['SA(0.1)']. Hazard curve "
-            "IMT: PGV",
-            ar.exception.message
-        )
+            "There is no hazard output for the intensity measure SA(0.1); "
+            "the available IMTs are ['PGA']",
+            ar.exception.message)
 
     def test_pre_execute_check_imts_no_errors(self):
         haz_job = engine.prepare_job()
+
+        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_haz.ini')
+        params, files = engine.parse_config(open(cfg, 'r'))
+        haz_job.hazard_calculation = engine.create_hazard_calculation(
+            haz_job.owner, params, files.values())
+        haz_job.save()
+
         hazard_curve_output = models.Output.objects.create_output(
             haz_job, 'test_hazard_curve', 'hazard_curve'
         )
-        hazard_curve = models.HazardCurve.objects.create(
+        models.HazardCurve.objects.create(
             output=hazard_curve_output,
             investigation_time=50.0,
             # this imt is compatible with the vuln model
             imt='SA',
-            sa_period=0.1,
+            sa_period=0.025,
             sa_damping=5.0,
             statistics='mean'
         )
