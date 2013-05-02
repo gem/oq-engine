@@ -115,7 +115,7 @@ def do_event_based(units, containers, params, profile):
     with profile('saving risk statistics'):
         save_statistical_output(containers, outputs.assets, stats, params)
 
-    return dict(event_loss_table)
+    return event_loss_table
 
 
 class UnitOutputs(collections.namedtuple(
@@ -127,24 +127,24 @@ class UnitOutputs(collections.namedtuple(
   :attr assets:
     an iterable over the assets considered by the calculation units
 
-  :attr loss_matrix:
-    a numpy array shaped N x R (N = number of assets, R = number of
-    ruptures)
+  :attr list loss_matrix:
+    a list holding N numpy arrays of dimension R (N = number of assets,
+    R = number of ruptures) with the losses associated to each rupture event
+    for each asset. The value of R varies with the asset
 
-  :attr rupture_id_matrix:
-    a numpy array shaped N x R storing the database ID of
+  :attr list rupture_id_matrix:
+    a list where each of the N elements is a list of R database ID of
     :class:`openquake.engine.db.models.Rupture` objects.
 
   :attr loss_curves:
-    a numpy array storing N loss curves (where a loss curve is a 2-tuple
-    losses/poes)
+    a list of N loss curves (where a loss curve is a 2-tuple losses/poes)
 
   :attr loss_maps:
-    a numpy array with N x P loss map values where P is the number of
-    `conditional_loss_poes`
+    a list of P elements holding list of N loss map values where P is the
+    number of `conditional_loss_poes`
 
    :attr dict event_loss_table:
-    mapping between each rupture id to a loss value
+    a mapping between each rupture id to a loss value
     """
 
 
@@ -165,7 +165,7 @@ def individual_outputs(unit, params, profile):
 
         for i, asset in enumerate(assets):
             for j, rupture_id in enumerate(rupture_matrix[i]):
-                event_loss_table[rupture_id] = loss_matrix[i][j] * asset.value
+                event_loss_table[rupture_id] += loss_matrix[i][j] * asset.value
     return UnitOutputs(
         assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
 
@@ -339,15 +339,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
-        self.event_loss_table = dict()
+        self.event_loss_table = collections.Counter()
 
     def task_completed_hook(self, message):
         """
         Updates the event loss table
         """
-        for rupture_id, aggregate_loss in message['event_loss_table'].items():
-            self.event_loss_table[rupture_id] = (
-                self.event_loss_table.get(rupture_id, 0) + aggregate_loss)
+        self.event_loss_table += message['event_loss_table']
 
     def pre_execute(self):
         """
