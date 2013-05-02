@@ -226,17 +226,22 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             risk_outputs = models.Output.objects.filter(oq_job=risk_job)
 
+            agg_loss_curve_outputs = risk_outputs.filter(
+                output_type='agg_loss_curve')
             loss_curve_outputs = risk_outputs.filter(output_type='loss_curve')
             loss_map_outputs = risk_outputs.filter(output_type='loss_map')
 
             # 16 logic tree realizations + 1 mean + 2 quantiles = 19
             self.assertEqual(19, loss_curve_outputs.count())
+
+            self.assertEqual(16, agg_loss_curve_outputs.count())
+
             # make sure the mean and quantile curve sets got created correctly
             loss_curves = models.LossCurve.objects.filter(
                 output__oq_job=risk_job
             )
-            # sanity check
-            self.assertEqual(19, loss_curves.count())
+            # sanity check (16 aggregate loss curve + 19 loss curves)
+            self.assertEqual(35, loss_curves.count())
             # mean
             self.assertEqual(1, loss_curves.filter(statistics='mean').count())
             # quantiles
@@ -248,17 +253,31 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # map + 2 quantile loss map
             self.assertEqual(19, loss_map_outputs.count())
 
+            # 1 event loss table
+            event_loss_tables = risk_outputs.filter(output_type="event_loss")
+            self.assertEqual(1, event_loss_tables.count())
+
             # Now try to export everything, just to do a "smoketest" of the
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
                 loss_curve_files.extend(risk.export(o.id, target_dir))
 
+            agg_loss_curve_files = []
+            for o in agg_loss_curve_outputs:
+                agg_loss_curve_files.extend(risk.export(o.id, target_dir))
+
+            event_loss_table_files = []
+            for o in event_loss_tables:
+                event_loss_table_files.extend(risk.export(o.id, target_dir))
+
             loss_map_files = []
             for o in loss_map_outputs:
                 loss_map_files.extend(risk.export(o.id, target_dir))
 
             self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(16, len(agg_loss_curve_files))
+            self.assertEqual(1, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:
