@@ -110,7 +110,9 @@ def do_event_based(units, containers, params, profile):
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
-        stats = statistics(loss_curves.transpose(1, 0, 2, 3), weights, params)
+        stats = statistics(
+            outputs.assets, numpy.array(loss_curves).transpose(1, 0, 2, 3),
+            weights, params)
 
     with profile('saving risk statistics'):
         save_statistical_output(containers, outputs.assets, stats, params)
@@ -231,7 +233,7 @@ where N is the number of assets.
 """
 
 
-def statistics(curve_matrix, weights, params):
+def statistics(assets, curve_matrix, weights, params):
     ret = []
 
     for curves in curve_matrix:
@@ -255,18 +257,27 @@ def statistics(curve_matrix, weights, params):
 
         ret.append((mean_curve, mean_maps, quantile_curves, quantile_maps))
 
-    return StatisticalOutputs(*zip(*ret))
+    (mean_curves, mean_maps, quantile_curves, quantile_maps) = zip(*ret)
+    # now all the lists keep N items
+
+    # transpose maps and fractions to have P/F/Q items of N-sized lists
+    mean_maps = numpy.array(mean_maps).transpose()
+    quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
+    quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+
+    return StatisticalOutputs(
+        assets, mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
 def save_statistical_output(containers, assets, stats, params):
-    # mean curves, maps and fractions
+    # mean curves and maps
     containers.write(
         assets, stats.mean_curves, output_type="loss_curve", statistics="mean")
 
     containers.write_all("poe", params.conditional_loss_poes, stats.mean_maps,
                          assets, output_type="loss_map", statistics="mean")
 
-    # quantile curves, maps and fractions
+    # quantile curves and maps
     containers.write_all(
         "quantile", params.quantiles, stats.quantile_curves,
         assets, output_type="loss_curve", statistics="quantile")
@@ -358,7 +369,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         the deductible and insurance limit
         """
         if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calc_mode != "event_based":
+            if self.rc.hazard_calculation.calculation_mode != "event_based":
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not an event based calculation")
@@ -468,6 +479,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         return base.make_calc_params(
             conditional_loss_poes=self.rc.conditional_loss_poes or [],
+            quantiles=self.rc.quantile_loss_curves or [],
             insured_losses=self.rc.insured_losses,
             sites_disagg=self.rc.sites_disagg or [],
             mag_bin_width=self.rc.mag_bin_width,

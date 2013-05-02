@@ -126,7 +126,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Check that the given hazard input is of the proper type.
         """
         if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calc_mode != "scenario":
+            if self.rc.hazard_calculation.calculation_mode != "scenario":
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not a scenario calculation")
