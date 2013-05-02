@@ -41,28 +41,10 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     def test_calculator_parameters(self):
         # Test that the specific calculation parameters are present
 
-        params = dict(zip(
-            ['conditional_loss_poes', 'insured_losses',
-             'time_span', 'tses', 'loss_curve_resolution',
-             'asset_correlation'], self.calculator.calculator_parameters))
+        params = self.calculator.calculator_parameters
 
-        self.assertEqual(80, params['loss_curve_resolution'])
-        self.assertEqual([0.1, 0.2, 0.3], params['conditional_loss_poes'])
-        self.assertEqual(True, params['insured_losses'])
-        self.assertEqual(250, params['tses'])
-        self.assertEqual(50, params['time_span'])
-        self.assertEqual(0.0, params['asset_correlation'])
-
-    def test_hazard_id(self):
-        # Test that the hazard output used by the calculator is a
-        # `openquake.engine.db.models.GmfCollection` object
-
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(1, outputs.count())
-
-        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
+        self.assertEqual([0.1, 0.2, 0.3], params.conditional_loss_poes)
+        self.assertEqual(True, params.insured_losses)
 
     def test_imt_validation(self):
         # Test the validation of the imt associated with the
