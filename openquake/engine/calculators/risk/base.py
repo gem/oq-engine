@@ -34,7 +34,7 @@ from openquake.engine.calculators.risk import writers
 from openquake.engine.input.exposure import ExposureDBWriter
 
 
-class RiskCalculator(base.CalculatorNext):
+class RiskCalculator(base.Calculator):
     """
     Abstract base class for risk calculators. Contains a bunch of common
     functionality, including initialization procedures and the core
