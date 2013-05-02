@@ -71,7 +71,8 @@ class HazardGetter(object):
         self.max_distance = max_distance
         self.imt = imt
 
-        if hazard.lt_realization is not None:
+        if (hasattr(hazard, 'lt_realization') and
+            hazard.lt_realization is not None):
             self.weight = hazard.lt_realization.weight
         else:
             self.weight = None

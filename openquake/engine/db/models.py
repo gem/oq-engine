@@ -1079,6 +1079,11 @@ class RiskCalculation(djm.Model):
         if self.calculation_mode in ["classical", "classical_bcr"]:
             filters = dict(output_type='hazard_curve_multi',
                            hazardcurve__lt_realization__isnull=False)
+        elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+            filters = dict(output_type='gmf',
+                           gmfcollection__lt_realization__isnull=False)
+        elif self.calculation_mode in ['scenario', 'scenario_damage']:
+            filters = dict(output_type='gmf_scenario')
         else:
             raise NotImplementedError
 
