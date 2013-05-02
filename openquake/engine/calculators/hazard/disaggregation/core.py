@@ -294,7 +294,7 @@ def _prepare_sources(hc, lt_rlz_id):
     return sources
 
 
-class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
     parallelized fashion.
@@ -367,7 +367,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         # Update stats to consider the disagg tasks as well:
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
-        block_size = int(config.get('hazard', 'block_size'))
+        block_size = self.block_size()
         job_stats.num_tasks += int(
             math.ceil(float(num_points) * num_rlzs / block_size)
         )
@@ -382,32 +382,10 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
         self.initialize_pr_data()
 
     def task_arg_gen(self, block_size):
-        """
-        Generate task args for the first phase of the disaggregation
-        calculations. This phase is concerned with computing hazard curves,
-        which must be completed in full before disaggregation calculation
-        can begin.
+        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(block_size)
 
-        See also :meth:`disagg_task_arg_gen`.
-
-        :param int block_size:
-            The number of items per task. In this case, this the number of
-            sources for hazard curve calc task, or number of sites for disagg
-            calc tasks.
-        """
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc, is_complete=False)
-
-        # first, distribute tasks for hazard curve computation
-        for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                is_complete=False, lt_realization=lt_rlz).order_by('id')
-            source_ids = source_progress.values_list(
-                'parsed_source_id', flat=True)
-
-            for block in general_utils.block_splitter(source_ids, block_size):
-                # job_id, source id block, lt rlz, calc_type
-                yield (self.job.id, block, lt_rlz.id, 'hazard_curve')
+        for args in arg_gen:
+            yield args + ('hazard_curve', )
 
     def disagg_task_arg_gen(self, block_size):
         """
@@ -447,7 +425,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculatorNext):
 
         See
         :meth:`openquake.engine.calculators.hazard.general.\
-BaseHazardCalculatorNext.get_task_complete_callback`
+BaseHazardCalculator.get_task_complete_callback`
         for more info about the expected input and output.
         """
         # prep the disaggregation task arg gen for the second phase of the
