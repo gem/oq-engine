@@ -32,8 +32,7 @@ from django.db import transaction
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def classical_bcr(
-        job_id, units, containers, asset_life_expectancy, interest_rate):
+def classical_bcr(job_id, units, containers, params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -45,30 +44,27 @@ def classical_bcr(
       ID of the currently running job
     :param list units:
       A list of :class:`..base.CalculationUnit` to be run
-    :param dict containers:
-      A dictionary mapping :class:`..general.OutputKey` to database ID
-      of output containers (in this case only `BCRDistribution`)
-    :param float interest_rate
-      The interest rate used in the Cost Benefit Analysis
-    :param float asset_life_expectancy
-      The life expectancy used for every asset
+    :param containers:
+      An instance of :class:`..base.OutputDict` containing
+      output container instances (in this case only `BCRDistribution`)
+    :param params:
+      An instance of :class:`..base.CalcParams` used to compute
+      derived outputs
     """
 
     def profile(name):
         return EnginePerformanceMonitor(
             name, job_id, classical_bcr, tracing=True)
 
-    # Actuall we do the job in other functions, such that it can be
-    # unit tested without the celery machinery
+    # Do the job in other functions, such that it can be unit tested
+    # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        do_classical_bcr(
-            units, containers, asset_life_expectancy, interest_rate, profile)
+        do_classical_bcr(units, containers, params, profile)
     signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
 classical_bcr.ignore_result = False
 
 
-def do_classical_bcr(
-        units, containers, asset_life_expectancy, interest_rate, profile):
+def do_classical_bcr(units, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
         with profile('getting hazard'):
             assets, hazard_curves, _missings = unit_orig.getter()
@@ -90,7 +86,7 @@ def do_classical_bcr(
             bcr_results = [
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
-                    interest_rate, asset_life_expectancy,
+                    params.interest_rate, params.asset_life_expectancy,
                     asset.value, asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
@@ -153,7 +149,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         passed in task_arg_gen
         """
 
-        return [self.rc.asset_life_expectancy, self.rc.interest_rate]
+        return base.make_calc_params(
+            asset_life_expectancy=self.rc.asset_life_expectancy,
+            interest_rate=self.rc.interest_rate)
 
     def create_outputs(self, hazard_output):
         """
