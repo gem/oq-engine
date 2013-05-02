@@ -137,7 +137,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the deductible and insurance limit
         """
         if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calc_mode != "scenario":
+            if self.rc.hazard_calculation.calculation_mode != "scenario":
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not a scenario calculation")

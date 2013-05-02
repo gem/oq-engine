@@ -375,6 +375,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         for poe in self.rc.poes_disagg or []:
             containers.set(models.LossFraction.objects.create(
                 variable="taxonomy",
+                poe=poe,
                 output=models.Output.objects.create_output(
                     job=self.job,
                     display_name="Mean Loss Fractions poe=%.4f" % poe,
@@ -387,6 +388,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     poe, quantile)
                 containers.set(models.LossFraction.objects.create(
                     variable="taxonomy",
+                    poe=poe,
                     output=models.Output.objects.create_output(
                         job=self.job,
                         display_name=name,
