@@ -1,12 +1,18 @@
 /*
-  Roles and permissions for the OpenQuake database.
+  Copyright (c) 2010-2013, GEM Foundation.
 
-    Copyright (c) 2010-2012, GEM Foundation.
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    OpenQuake database is made available under the Open Database License:
-    http://opendatacommons.org/licenses/odbl/1.0/. Any rights in individual
-    contents of the database are licensed under the Database Contents License:
-    http://opendatacommons.org/licenses/dbcl/1.0/
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -16,32 +22,26 @@
 -- of our database users/roles.
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
-GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
 GRANT USAGE ON SCHEMA htemp TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
-GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
 GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON ALL SEQUENCES IN SCHEMA admin TO GROUP openquake;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA eqcat TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA htemp TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdr TO GROUP openquake;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA oqmif TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA riski TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA riskr TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA uiapi TO GROUP openquake;
 
 -- Users in the `openquake` group have read access to everything
 GRANT SELECT ON ALL TABLES IN SCHEMA admin TO GROUP openquake;
-GRANT SELECT ON ALL TABLES IN SCHEMA eqcat TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA htemp TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdr TO GROUP openquake;
-GRANT SELECT ON ALL TABLES IN SCHEMA oqmif TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA riski TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA riskr TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA uiapi TO GROUP openquake;
@@ -53,11 +53,9 @@ GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
 -- In fact, `oq_admin` is the only user that can delete records,
 -- with the exception the `htemp` schema space. See below.
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
-GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA eqcat TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
-GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA oqmif TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
@@ -68,11 +66,6 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 -- admin schema
 GRANT SELECT,INSERT,UPDATE ON admin.oq_user      TO oq_admin;
 GRANT SELECT,INSERT,UPDATE ON admin.organization TO oq_admin;
-
--- eqcat schema
-GRANT SELECT,INSERT,UPDATE ON eqcat.catalog   TO oq_eqcat_writer;
-GRANT SELECT,INSERT,UPDATE ON eqcat.magnitude TO oq_eqcat_writer;
-GRANT SELECT,INSERT,UPDATE ON eqcat.surface   TO oq_eqcat_writer;
 
 -- htemp schema
 GRANT SELECT,INSERT,DELETE        ON htemp.site_data             TO oq_reslt_writer;
@@ -92,6 +85,7 @@ GRANT SELECT,INSERT        ON hzrdr.gmf_collection    TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.gmf_set           TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.gmf               TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.gmf_scenario      TO oq_reslt_writer;
+GRANT SELECT,INSERT        ON hzrdr.gmf_agg           TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.disagg_result     TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_map        TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.uhs               TO oq_reslt_writer;
@@ -101,10 +95,10 @@ GRANT SELECT,INSERT        ON hzrdr.ses_collection    TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.ses               TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_reslt_writer;
 
--- oqmif schema
-GRANT SELECT,INSERT        ON oqmif.exposure_data    TO oq_job_init;
-GRANT SELECT,INSERT        ON oqmif.exposure_model   TO oq_job_init;
-GRANT SELECT,INSERT,UPDATE ON oqmif.occupancy        TO oq_job_init;
+-- riski schema
+GRANT SELECT,INSERT        ON riski.exposure_data    TO oq_job_init;
+GRANT SELECT,INSERT        ON riski.exposure_model   TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON riski.occupancy        TO oq_job_init;
 
 -- riskr schema
 GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve                TO oq_reslt_writer;
@@ -128,7 +122,6 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.input              TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.model_content      TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.input2job          TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.src2ltsrc          TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.job2profile        TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_phase_stats    TO oq_job_init;
 -- oq_job_init is granted write access to record job start time and other job stats at job init time
@@ -141,7 +134,6 @@ GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.input2rcalc        TO oq_job_init;
 -- what nodes became available/unavailable at what time?
 GRANT SELECT,INSERT,UPDATE ON uiapi.cnode_stats        TO oq_job_superv;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile     TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON uiapi.error_msg          TO oq_job_superv;
 GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;

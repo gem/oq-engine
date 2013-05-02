@@ -44,13 +44,14 @@ import numpy
 import openquake
 
 from celery.task.sets import TaskSet
+from django import db
 
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.utils.general import block_splitter
-
+from openquake.engine.performance import EnginePerformanceMonitor
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
 
@@ -162,23 +163,47 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
         Spectral Acceleration damping. Used only with ``imt`` of 'SA'.
     """
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    gmfs = models.Gmf.objects.filter(
-        gmf_set__gmf_collection__lt_realization=lt_rlz_id,
+    gmfs = models.GmfAgg.objects.filter(
+        gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
         sa_period=sa_period,
         sa_damping=sa_damping).extra(where=[
             "location::geometry ~= 'SRID=4326;%s'::geometry" % point.wkt2d])
-    # Collect all of the ground motion values:
     gmvs = list(itertools.chain(*(g.gmvs for g in gmfs)))
+
     # Compute the hazard curve PoEs:
     hc_poes = gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
-
     # Save:
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
-        weight=lt_rlz.weight
-    )
+        weight=lt_rlz.weight)
 gmf_to_hazard_curve_task.ignore_result = False
+
+
+def populate_gmf_agg(hc):
+    """
+    Populate the table gmf_agg from gmf and gmf_set.
+    """
+    # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
+    # if location is of geography type, hence the need to cast it to geometry
+    GMF_AGG = '''\
+    INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
+                               location, gmvs, rupture_ids)
+    SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
+       array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
+       array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
+    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
+    WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
+'''
+    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+    curs = db.connections['reslt_writer'].cursor()
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        for rlz in rlzs:
+            coll = models.GmfCollection.objects.get(lt_realization=rlz)
+            curs.execute(GMF_AGG % coll.id)
+            # TODO: delete the copied rows from gmf; this can be done
+            # only after changing the export procedure to read from gmf_agg
 
 
 def do_post_process(job):
@@ -198,6 +223,7 @@ def do_post_process(job):
     n_imts = len(hc.intensity_measure_types_and_levels)
     n_sites = len(hc.points_to_compute())
     n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
+
     total_blocks = int(math.ceil(
         (n_imts * n_sites * n_rlzs) / float(block_size)))
 
@@ -205,17 +231,18 @@ def do_post_process(job):
         logs.LOG.debug('> GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        if openquake.engine.no_distribute():
-            for the_args in block:
-                gmf_to_hazard_curve_task(*the_args)
-        else:
-            tasks = []
-            for the_args in block:
-                tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
-            results = TaskSet(tasks=tasks).apply_async()
+        with EnginePerformanceMonitor('gmf_to_hazard, block=%d' % i, job.id):
+            if openquake.engine.no_distribute():
+                for the_args in block:
+                    gmf_to_hazard_curve_task(*the_args)
+            else:
+                tasks = []
+                for the_args in block:
+                    tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
+                results = TaskSet(tasks=tasks).apply_async()
 
-            # Check for Exceptions in the results and raise
-            utils_tasks._check_exception(results)
+                # Check for Exceptions in the results and raise
+                utils_tasks._check_exception(results)
 
         logs.LOG.debug('< Done GMF post-processing block, %s of %s'
                        % (i + 1, total_blocks))

@@ -92,6 +92,7 @@ from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
+from openquake.engine.input import source
 from openquake.engine.job.validation import validate
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
@@ -135,6 +136,11 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--yes', '-y', action='store_true',
         help='Automatically answer "yes" when asked to confirm an action'
+    )
+    general_grp.add_argument(
+        '--config-file',
+        help='Custom openquake.cfg file, to override default configurations',
+        metavar='CONFIG_FILE'
     )
 
     hazard_grp = parser.add_argument_group('Hazard')
@@ -221,6 +227,16 @@ def set_up_arg_parser():
         help=('List outputs which were imported from a file, not calculated '
               'from a job'))
 
+    pre_proc_grp = parser.add_argument_group('Pre-processing')
+    pre_proc_grp.add_argument(
+        '--optimize-source-model',
+        '--osm',
+        help=('Optimize a source model by discretizating an area source into'
+              ' point sources, given a discretization step (in km)'),
+        nargs=3,
+        metavar=('INPUT_FILE', 'AREA_DISCRETIZATION', 'OUTPUT_FILE')
+    )
+
     return parser
 
 
@@ -250,11 +266,11 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             user_name=getpass.getuser(), log_level=log_level)
         params, files = engine.parse_config(open(cfg_file, 'r'))
         calculation = engine.create_hazard_calculation(job.owner, params,
-                                                        files.values())
+                                                       files.values())
         job.hazard_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'hazard', files, exports)
+        error_message = validate(job, 'hazard', params, files, exports)
         if error_message:
             sys.exit(error_message)
 
@@ -468,7 +484,7 @@ def run_risk(
         job.risk_calculation = calculation
         job.save()
 
-        error_message = validate(job, 'risk', files,  exports)
+        error_message = validate(job, 'risk', params, files,  exports)
         if error_message:
             sys.exit(error_message)
 
@@ -550,6 +566,17 @@ def confirm(prompt):
         return answer == 'y'
 
 
+def optimize_source_model(input_path, area_src_disc, output_path):
+    """
+    Read a source model and generate a new one, converting area sources to
+    point sources.
+    """
+    area_src_disc = float(area_src_disc)
+    source.optimize_source_model(input_path, area_src_disc,
+                                 output_path)
+    complain_and_exit(output_path)
+
+
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -557,6 +584,13 @@ def main():
 
     if args.version:
         complain_and_exit(__version__)
+
+    if args.config_file:
+        os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
+        config.refresh()
+
+    if args.optimize_source_model:
+        optimize_source_model(*args.optimize_source_model)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'

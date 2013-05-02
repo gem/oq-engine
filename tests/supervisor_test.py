@@ -29,18 +29,10 @@ from tests.utils.helpers import patch
 from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 
-CONFIG_FILE = "config.gem"
-
-
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
-    def setUp(self):
-        self.job = self.setup_classic_job(create_job_path=False)
 
-    def tearDown(self):
-        if self.job:
-            ErrorMsg.objects.using('admin')\
-                            .filter(oq_job=self.job.id).delete()
-            self.teardown_job(self.job, filesystem_only=True)
+    def setUp(self):
+        self.job = engine.prepare_job()
 
     def test_record_job_stop_time(self):
         """

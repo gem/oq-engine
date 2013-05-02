@@ -28,7 +28,7 @@ from openquake.engine.utils import config
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
-class CalculatorNext(object):
+class Calculator(object):
     """
     Base class for all calculators.
 
