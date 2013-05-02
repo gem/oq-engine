@@ -506,3 +506,58 @@ class GMFScenarioParserTestCase(unittest.TestCase):
     def test_parse(self):
         parser = parsers.GMFScenarioParser(self.SAMPLE_FILE)
         self.assertEqual(list(parser.parse()), self.EXPECTED)
+
+
+class HazardCurveParserTestCase(unittest.TestCase):
+    EXPECTED = {
+        'examples/hazard-curves-pga.xml': [
+            {'imls': [0.005, 0.007, 0.0137],
+             'imt': 'PGA',
+             'investigation_time': '50.0',
+             'quantile': None,
+             'sa_damping': None,
+             'sa_period': None,
+             'statistics': None},
+            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
+            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+        ],
+        'examples/hazard-curves-sa.xml': [
+            {'imls': [0.005, 0.007, 0.0137],
+             'imt': 'SA',
+             'investigation_time': '50.0',
+             'quantile': None,
+             'sa_damping': '5.0',
+             'sa_period': '0.025',
+             'statistics': None},
+            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
+            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+        ],
+        'examples/hazard-curves-quantile.xml': [
+            {'imls': [0.005, 0.007, 0.0137],
+             'imt': 'PGD',
+             'investigation_time': '50.0',
+             'quantile': '0.6',
+             'sa_damping': None,
+             'sa_period': None,
+             'statistics': 'quantile'},
+            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
+            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+        ],
+        'examples/hazard-curves-mean.xml': [
+            {'imls': [0.005, 0.007, 0.0137],
+             'imt': 'PGD',
+             'investigation_time': '50.0',
+             'quantile': None,
+             'sa_damping': None,
+             'sa_period': None,
+             'statistics': 'mean'},
+            ('{9.8728e-01,9.8266e-01,9.4957e-01}', 'POINT(-122.5000 37.5000)'),
+            ('{9.8728e-02,9.8266e-02,9.4957e-02}', 'POINT(-123.5000 37.5000)')
+        ],
+    }
+
+    def test_parse(self):
+        for curve, expected in self.EXPECTED.iteritems():
+            parser = parsers.HazardCurveParser(curve)
+            parsed = list(parser.parse())
+            self.assertEqual(parsed, expected)
