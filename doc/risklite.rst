@@ -10,7 +10,7 @@ distributions in csv format.  Moreover it provides several pre-built
 calculators. The list of available calculators can be obtained
 as follows:
 
->>> from openquake.risklite.calculators import registy
+>>> from openquake.risklite.calculators import registry
 >>> sorted(registry)
 ['scenario', 'scenario_damage', ...]
 
