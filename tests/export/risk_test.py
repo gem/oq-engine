@@ -184,6 +184,11 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # map + 2 quantile loss map
             self.assertEqual(19, loss_map_outputs.count())
 
+            # 19 loss fractions
+            loss_fraction_outputs = risk_outputs.filter(
+                output_type="loss_fractions")
+            self.assertEqual(19, loss_fraction_outputs.count())
+
             # Now try to export everything, just to do a "smoketest" of the
             # exporter code:
             loss_curve_files = []
@@ -256,6 +261,11 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # 1 event loss table
             event_loss_tables = risk_outputs.filter(output_type="event_loss")
             self.assertEqual(1, event_loss_tables.count())
+
+            # 32 loss fractions
+            loss_fraction_outputs = risk_outputs.filter(
+                output_type="loss_fractions")
+            self.assertEqual(32, loss_fraction_outputs.count())
 
             # Now try to export everything, just to do a "smoketest" of the
             # exporter code:
