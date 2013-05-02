@@ -40,6 +40,9 @@ sig_hand () {
         fi
         sudo lxc-destroy -n $lxc_name
     fi
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 }
 
 mksafedir () {
@@ -109,6 +112,14 @@ _devtest_innervm_run () {
     done
     IFS="$old_ifs"
 
+    # build oq-hazardlib speedups and put in the right place
+    ssh $lxc_ip "cd oq-hazardlib
+                 python ./setup.py build
+                 for i in \$(find build/ -name *.so); do
+                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
+                     cp \$i \$o
+                 done"
+
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
@@ -130,33 +141,31 @@ _devtest_innervm_run () {
     done
 
     # run celeryd daemon
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; 
-                 cd oq-engine ;
-                 ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
+    # ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; 
+    #              cd oq-engine ;
+    #              ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
-                 # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml "
+    #              # OQ Engine QA tests (splitted into multiple execution to track the performance)
+    #              ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
+    #              ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
+    #              ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
+    #              ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
 
-#                 ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
-#                 ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
-#                 ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
+    #              ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
+    #              ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
+    #              ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
+    #              ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
+    #              ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
+    #              ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
-#                 ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
-#                 ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
-#                 ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
-#                 ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
-#                 ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
-#                 ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+    #              python $(which coverage) xml --include=\"openquake/*\" "
 
-#                 python $(which coverage) xml --include="openquake/*"
-
-
-
-
-
-
+    # scp "${lxc_ip}:oq-engine/nosetests.xml" .
+    # scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
+    # scp "${lxc_ip}:oq-engine/coverage.xml" .
+    
 
     # TODO: version check
     echo "NOW PRESS ENTER TO CONTINUE"
@@ -296,8 +305,8 @@ _lxc_name_and_ip_get()
     e=-1
     for i in $(seq 1 40); do
         sleep 2
-        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log 2>&1 ; then
-            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
+        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" $filename 2>&1 ; then
+            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
                 if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
@@ -324,6 +333,7 @@ devtest_run () {
     sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
 
@@ -363,9 +373,8 @@ devtest_run () {
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
-    if [ -f /tmp/packager.eph.$$.log ]; then
-        rm /tmp/packager.eph.$$.log
-    fi
+    pylint --rcfile pylintrc -f parseable openquake > pylint.txt
+
 
     # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
@@ -415,6 +424,7 @@ EOF
     sudo echo
     sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    rm /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
 
@@ -423,10 +433,6 @@ EOF
     inner_ret=$?
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
-
-    if [ -f /tmp/packager.eph.$$.log ]; then
-        rm /tmp/packager.eph.$$.log
-    fi
 
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
