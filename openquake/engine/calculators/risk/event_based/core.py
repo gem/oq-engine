@@ -18,16 +18,16 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-import random
-from collections import OrderedDict
+import collections
 import numpy
+from scipy import interpolate
 
 from django import db
 
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators.risk import base, writers, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -37,245 +37,294 @@ from openquake.engine.calculators.base import signal_task_complete
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def event_based(job_id, hazard,
-                task_seed, vulnerability_function, imt,
-                output_containers,
-                statistical_output_containers,
-                conditional_loss_poes, insured_losses,
-                time_span, tses,
-                loss_curve_resolution, asset_correlation,
-                sites_disagg,
-                mag_bin_width,
-                distance_bin_width,
-                coordinate_bin_width,
-                hazard_montecarlo_p):
+def event_based(job_id, units, containers, params):
     """
     Celery task for the event based risk calculator.
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param dict hazard:
-      A dictionary mapping IDs of
-      :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmf_collection') to a tuple where the first element is an
-      instance of
-      :class:`..hazard_getters.GroundMotionValuesGetter`,
-      and the second element is the corresponding weight.
-    :param task_seed:
-      the seed used to initialize the rng
-    :param str imt: the imt in long string form, i.e. SA(0.1)
-    :param dict output_containers: a dictionary mapping hazard Output
-      ID to a list (a, b, c, d, e) where a is the ID of the
-      :class:`openquake.engine.db.models.LossCurve` output container used to
-      store the computed loss curves; b is the dictionary poe->ID of
-      the :class:`openquake.engine.db.models.LossMap` output container used
-      to store the computed loss maps; c is the same as a but for
-      insured losses; d and e are the IDs of the magnitude_distance and
-      coordinate loss fractions disaggregation matrix (
-      :class:`openquake.engine.db.models.LossFraction`), respectively.
-    :param conditional_loss_poes:
-      The poes taken into accout to compute the loss maps
-    :param bool insured_losses: True if insured losses should be computed
-    :param time_span: the time span considered
-    :param tses: time of the stochastic event set
-    :param loss_curve_resolution:
-      the curve resolution, i.e. the number of points which defines the loss
-      curves
-    :param sites_disagg:
-      A list of Point objects where the disaggregation should occurr
-    :param float mag_bin_width:
-      Width of magnitude bins when losses are disaggregated
-    :param float distance_bin_width:
-      Width of distance bins when losses are disaggregated
-    :param float coordinate_bin_width:
-      Width of coordinate bins when losses are disaggregated
-    :param float asset_correlation: a number ranging from 0 to 1
-    representing the correlation between the generated loss ratios
+    :param list units:
+      A list of :class:`..base.CalculationUnit` to be run
+    :param containers:
+      An instance of :class:`..base.OutputDict` containing
+      output container instances (e.g. a LossCurve)
+    :param params:
+      An instance of :class:`..base.CalcParams` used to compute
+      derived outputs
     """
 
     def profile(name):
         return EnginePerformanceMonitor(
             name, job_id, event_based, tracing=True)
 
-    loss_ratio_curves = OrderedDict()
-    event_loss_table = dict()
-
-    rnd = random.Random()
-    rnd.seed(task_seed)
-
-    for hazard_output_id, hazard_data in hazard.items():
-        hazard_getter, _ = hazard_data
-
-        (loss_curve_id, loss_map_ids, insured_curve_id,
-         loss_fractions_magnitude_distance_id, loss_fractions_coords_id) = (
-             output_containers[hazard_output_id])
-
-        seed = rnd.randint(0, models.MAX_SINT_32)
-        logs.LOG.info("Using seed %s with hazard output %s" % (
-            seed, hazard_output_id))
-
-        calculator = api.ProbabilisticEventBased(
-            vulnerability_function,
-            curve_resolution=loss_curve_resolution,
-            time_span=time_span,
-            tses=tses,
-            seed=seed,
-            correlation=asset_correlation)
-
-        with profile('getting input data from db'):
-            assets, gmvs_ruptures, missings = hazard_getter(imt)
-
-        if len(assets):
-            ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
-            rupture_id_matrix = numpy.array(gmvs_ruptures)[:, 1]
-        else:
-            # we are relying on the fact that if all the hazard_getter
-            # in this task will either return some results or they all
-            # return an empty result set.
-            logs.LOG.info("Exit from task as no asset could be processed")
-            signal_task_complete(
-                job_id=job_id,
-                event_loss_table=dict(),
-                num_items=len(missings))
-            return
-
-        with profile('computing losses and loss curves'):
-            loss_ratio_matrix, loss_ratio_curves[hazard_output_id] = (
-                calculator(ground_motion_values))
-
-        with profile('writing loss curves'):
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, (losses, poes) in enumerate(
-                        loss_ratio_curves[hazard_output_id]):
-                    asset = assets[i]
-
-                    # loss curves
-                    writers.loss_curve(
-                        loss_curve_id, asset,
-                        poes, losses,
-                        scientific.average_loss(losses, poes))
-
-        with profile('writing and computing loss maps'):
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
-                        loss_ratio_curves[hazard_output_id]):
-                    asset = assets[i]
-
-                    # loss maps
-                    for poe in conditional_loss_poes:
-                        writers.loss_map_data(
-                            loss_map_ids[poe], asset,
-                            scientific.conditional_loss_ratio(
-                                losses, poes, poe))
-
-        with profile('writing and computing insured loss curves'):
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
-                        loss_ratio_curves[hazard_output_id]):
-                    asset = assets[i]
-
-                    # insured losses
-                    if insured_losses:
-                        insured_losses_losses, insured_losses_poes = (
-                            scientific.event_based(
-                                scientific.insured_losses(
-                                    loss_ratio_matrix[i],
-                                    asset.value,
-                                    asset.deductible,
-                                    asset.ins_limit),
-                                tses=tses,
-                                time_span=time_span,
-                                curve_resolution=loss_curve_resolution))
-
-                        # FIXME(lp). Insured losses are still computed
-                        # as absolute values.
-                        insured_losses_losses /= asset.value
-
-                        writers.loss_curve(
-                            insured_curve_id, asset,
-                            insured_losses_poes, insured_losses_losses,
-                            scientific.average_loss(
-                                insured_losses_losses, insured_losses_poes))
-
-        with profile('computing event loss table'):
-            for i, asset in enumerate(assets):
-                for j, rupture_id in enumerate(rupture_id_matrix[i]):
-                    # update the event loss table of this task
-                    loss = loss_ratio_matrix[i][j] * asset.value
-                    event_loss_table[rupture_id] = (
-                        event_loss_table.get(rupture_id, 0) + loss)
-
-        # compute and save disaggregation
-        with profile('computing and writing disaggregation'):
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                for i, loss_ratio_curve in enumerate(
-                        loss_ratio_curves[hazard_output_id]):
-                    asset = assets[i]
-                    if asset.site in sites_disagg:
-                        for j, rupture_id in enumerate(rupture_id_matrix[i]):
-
-                            # As the path of the code is not frequent
-                            # (we expect few request for
-                            # disaggregation and few elements in
-                            # `sites_disagg` this query is performed
-                            # here and not directly in the getter
-                            rupture = models.SESRupture.objects.get(
-                                pk=rupture_id)
-                            loss = loss_ratio_matrix[i][j] * asset.value
-                            site = asset.site
-                            site_mesh = mesh.Mesh(numpy.array([site.x]),
-                                                  numpy.array([site.y]), None)
-
-                            magnitude_distance = (
-                                numpy.floor(rupture.magnitude / mag_bin_width),
-                                numpy.floor(
-                                    rupture.surface.get_joyner_boore_distance(
-                                        site_mesh))[0] / distance_bin_width)
-
-                            writers.loss_fraction_data(
-                                loss_fractions_magnitude_distance_id,
-                                location=asset.site,
-                                value="%d,%d" % magnitude_distance,
-                                absolute_loss=loss)
-
-                            closest_point = iter(
-                                rupture.surface.get_closest_points(
-                                    site_mesh)).next()
-
-                            coordinate = (
-                                closest_point.longitude / coordinate_bin_width,
-                                closest_point.latitude / coordinate_bin_width)
-
-                            writers.loss_fraction_data(
-                                loss_fractions_coords_id,
-                                location=asset.site,
-                                value="%d,%d" % coordinate,
-                                absolute_loss=loss)
-
-    # compute mean and quantile outputs
-    if statistical_output_containers:
-        weights = [data[1] for _, data in hazard.items()]
-
-        (mean_loss_curve_id, quantile_loss_curve_ids,
-         mean_loss_map_ids, quantile_loss_map_ids) = (
-             statistical_output_containers)
-
-        with profile('computing and writing statistics'):
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                writers.curve_statistics(
-                    mean_loss_curve_id, quantile_loss_curve_ids,
-                    mean_loss_map_ids, quantile_loss_map_ids,
-                    None, None,  # no mean/quantile loss fractions
-                    weights, assets,
-                    numpy.array(loss_ratio_curves.values()),
-                    hazard_montecarlo_p, conditional_loss_poes,
-                    [],  # no mean/quantile loss fractions
-                    "image")
-
+    # Do the job in other functions, such that they can be unit tested
+    # without the celery machinery
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        event_loss_table = do_event_based(units, containers, params, profile)
     signal_task_complete(job_id=job_id,
-                         num_items=len(assets) + len(missings),
+                         num_items=len(units[0].getter.assets),
                          event_loss_table=event_loss_table)
 event_based.ignore_result = False
+
+
+def do_event_based(units, containers, params, profile):
+    """
+    See `event_based` for a description of the params
+
+    :returns: the event loss table generated by `units`
+    """
+    loss_curves = []
+    event_loss_table = collections.Counter()
+
+    for unit in units:
+        hid = unit.getter.hazard_output_id
+        outputs = individual_outputs(unit, params, profile)
+
+        if not outputs.assets:
+            logs.LOG.info("Exit from task as no asset could be processed")
+            return {}
+
+        if params.sites_disagg:
+            with profile('disaggregating results'):
+                disagg_outputs = disaggregate(outputs, params)
+        else:
+            disagg_outputs = None
+
+        loss_curves.append(outputs.loss_curves)
+        event_loss_table += outputs.event_loss_table
+
+        with profile('saving individual risk'):
+            save_individual_outputs(
+                containers, hid, outputs, disagg_outputs, params)
+
+        if params.insured_losses:
+            insured_curves = list(
+                insured_losses(unit, outputs.assets, outputs.loss_matrix))
+            containers.write(
+                outputs.assets, insured_curves,
+                output_type="loss_curve", insured=True, hazard_output_id=hid)
+
+    # compute mean and quantile outputs
+    if len(units) < 2:
+        return event_loss_table
+
+    with profile('computing risk statistics'):
+        weights = [unit.getter.weight for unit in units]
+        stats = statistics(loss_curves.transpose(), weights, params)
+
+    with profile('saving risk statistics'):
+        save_statistical_output(containers, outputs.assets, stats, params)
+
+    return dict(event_loss_table)
+
+
+class UnitOutputs(collections.namedtuple(
+    'UnitOutputs',
+    ['assets', 'loss_matrix', 'rupture_id_matrix',
+     'loss_curves', 'loss_maps', 'event_loss_table'])):
+    """Record the results computed in one calculation units.
+
+  :attr assets:
+    an iterable over the assets considered by the calculation units
+
+  :attr loss_matrix:
+    a numpy array shaped N x R (N = number of assets, R = number of
+    ruptures)
+
+  :attr rupture_id_matrix:
+    a numpy array shaped N x R storing the database ID of
+    :class:`openquake.engine.db.models.Rupture` objects.
+
+  :attr loss_curves:
+    a numpy array storing N loss curves (where a loss curve is a 2-tuple
+    losses/poes)
+
+  :attr loss_maps:
+    a numpy array with N x P loss map values where P is the number of
+    `conditional_loss_poes`
+
+   :attr dict event_loss_table:
+    mapping between each rupture id to a loss value
+    """
+
+
+def individual_outputs(unit, params, profile):
+    event_loss_table = collections.Counter()
+    with profile('getting hazard'):
+        assets, gmvs_ruptures, _missings = unit.getter()
+
+    ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
+    rupture_matrix = numpy.array(gmvs_ruptures)[:, 1]
+
+    with profile('computing losses, loss curves and maps'):
+        loss_matrix, curves = unit.calc(ground_motion_values)
+
+        maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
+                 for losses, poes in curves]
+                for poe in params.conditional_loss_poes]
+
+        for i, asset in enumerate(assets):
+            for j, rupture_id in enumerate(rupture_matrix[i]):
+                event_loss_table[rupture_id] = loss_matrix[i][j] * asset.value
+    return UnitOutputs(
+        assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
+
+
+def save_individual_outputs(containers, hid, outputs, disagg_outputs, params):
+    # loss curves, maps and fractions
+    containers.write(
+        outputs.assets,
+        outputs.loss_curves,
+        output_type="loss_curve", hazard_output_id=hid)
+
+    containers.write_all(
+        "poe", params.conditional_loss_poes,
+        outputs.loss_maps,
+        outputs.assets,
+        output_type="loss_map", hazard_output_id=hid)
+
+    if params.sites_disagg:
+        containers.write(
+            disagg_outputs.assets_disagg,
+            disagg_outputs.magnitude_distance,
+            disagg_outputs.fractions,
+            output_type="loss_fraction",
+            hazard_output_id=hid,
+            variable="magnitude_distance")
+        containers.write(
+            disagg_outputs.assets_disagg,
+            disagg_outputs.coordinate, disagg_outputs.fractions,
+            output_type="loss_fraction",
+            hazard_output_id=hid,
+            variable="coordinate")
+
+
+def insured_losses(unit, assets, loss_ratio_matrix):
+    for asset, losses in zip(assets, loss_ratio_matrix):
+        asset_insured_losses, poes = scientific.event_based(
+            scientific.insured_losses(
+                losses,
+                asset.value,
+                asset.deductible,
+                asset.ins_limit),
+            tses=unit.calc.tses,
+            time_span=unit.calc.time_span)
+        # FIXME(lp). Insured losses are still computed as absolute
+        # values.
+        yield asset_insured_losses / asset.value, poes
+
+
+class StatisticalOutputs(collections.namedtuple(
+    'StatisticalOutputs',
+    ['assets', 'mean_curves', 'mean_maps', 'quantile_curves',
+     'quantile_maps'])):
+    """The statistical outputs computed by the classical calculator.
+Each attribute is a numpy array with a collection of N outputs,
+where N is the number of assets.
+
+    :attr assets: the assets over which outputs have been computed
+    :attr mean_curves: N mean loss curves. A loss curve is a 2-ple losses/poes
+    :attr mean_maps: N x P mean map value (P = number of PoEs)
+    :attr mean_fractions: N x F mean fraction value (F = number of disagg PoEs)
+    :attr quantile_curves: N x Q quantile loss curves (Q = number of quantiles)
+    :attr quantile_maps: N x Q x F quantile fractions
+"""
+
+
+def statistics(curve_matrix, weights, params):
+    ret = []
+
+    for curves in curve_matrix:
+        non_trivial_curves = [(losses, poes)
+                              for losses, poes in curves if losses[-1] > 0]
+        if not non_trivial_curves:  # no damage. all trivial curves
+            loss_ratios, _poes = curves[0]
+            curves_poes = [poes for _losses, poes in curves]
+        else:  # standard case
+            max_losses = [losses[-1]  # we assume non-decreasing losses
+                          for losses, _poes in non_trivial_curves]
+            reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
+            loss_ratios = reference_curve[0]
+            curves_poes = [interpolate.interp1d(
+                losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
+                for losses, poes in curves]
+        mean_curve, quantile_curves, mean_maps, quantile_maps = (
+            base.asset_statistics(
+                loss_ratios, curves_poes,
+                params.quantiles, weights, params.conditional_loss_poes))
+
+        ret.append((mean_curve, mean_maps, quantile_curves, quantile_maps))
+
+    return StatisticalOutputs(*zip(*ret))
+
+
+def save_statistical_output(containers, assets, stats, params):
+    # mean curves, maps and fractions
+    containers.write(
+        assets, stats.mean_curves, output_type="loss_curve", statistics="mean")
+
+    containers.write_all("poe", params.conditional_loss_poes, stats.mean_maps,
+                         assets, output_type="loss_map", statistics="mean")
+
+    # quantile curves, maps and fractions
+    containers.write_all(
+        "quantile", params.quantiles, stats.quantile_curves,
+        assets, output_type="loss_curve", statistics="quantile")
+
+    for quantile, maps in zip(params.quantiles, stats.quantile_maps):
+        containers.write_all("poe", params.conditional_loss_poes, maps,
+                             assets, output_type="loss_map",
+                             statistics="quantile", quantile=quantile)
+
+
+DisaggregationOutputs = collections.namedtuple(
+    'DisaggregationOutputs',
+    ['assets_disagg', 'magnitude_distance', 'coordinate', 'fractions'])
+
+
+def disaggregate(outputs, params):
+    """
+Compute disaggregation outputs given the individual `outputs` and `params`
+
+    :param outputs:
+      an instance of :class:`UnitOutputs`
+    :param params:
+      an instance of :class:`..base.CalcParams`
+    :returns:
+      an instance of :class:`DisaggregationOutputs`
+"""
+    def disaggregate_site(site, loss_ratios, ruptures, params):
+        for fraction, rupture_id in zip(loss_ratios, ruptures):
+
+            rupture = models.SESRupture.objects.get(pk=rupture_id)
+            s = rupture.surface
+            m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
+
+            mag = numpy.floor(rupture.magnitude / params.mag_bin_width)
+            dist = numpy.floor(
+                s.get_joyner_boore_distance(m))[0] / params.distance_bin_width
+
+            closest_point = iter(s.get_closest_points(m)).next()
+            lon = closest_point.longitude / params.coordinate_bin_width
+            lat = closest_point.latitude / params.coordinate_bin_width
+
+            yield "%d,%d" % (mag, dist), "%d,%d" % (lon, lat), fraction
+
+    assets_disagg = []
+    disagg_matrix = []
+    for asset, losses, ruptures in zip(
+            outputs.assets, outputs.loss_matrix, outputs.rupture_id_matrix):
+        if asset.site in params.sites_disagg:
+            disagg_matrix.append(list(
+                disaggregate_site(asset.site, losses, ruptures, params)))
+            assets_disagg.append(asset)
+    if assets_disagg:
+        magnitudes, coordinates, fractions = zip(*disagg_matrix)
+    else:
+        magnitudes, coordinates, fractions = [], [], []
+
+    return DisaggregationOutputs(
+        assets_disagg, magnitudes, coordinates, fractions)
 
 
 class EventBasedRiskCalculator(base.RiskCalculator):
@@ -287,8 +336,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     #: The core calculation celery task function
     core_calc_task = event_based
-
-    hazard_getter = hazard_getters.GroundMotionValuesGetter
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
@@ -307,9 +354,22 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Override the default pre_execute to provide more detailed
         validation.
 
+        1) check that the given hazard comes from an event based calculation
+
         2) If insured losses are required we check for the presence of
         the deductible and insurance limit
         """
+        if self.rc.hazard_calculation:
+            if self.rc.hazard_calculation.calc_mode != "event_based":
+                raise RuntimeError(
+                    "The provided hazard calculation ID "
+                    "is not an event based calculation")
+        elif not self.rc.hazard_output.output_type == "gmf":
+            raise RuntimeError(
+                "The provided hazard output is not a gmf collection")
+
+        # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
+
         super(EventBasedRiskCalculator, self).pre_execute()
 
         if (self.rc.insured_losses and
@@ -326,8 +386,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
-        for hazard_output in self.considered_hazard_outputs():
-
+        for hazard_output in self.rc.hazard_outputs():
             gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
 
             aggregate_losses = [
@@ -366,33 +425,33 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     rupture_id=rupture_id,
                     aggregate_loss=aggregate_loss)
 
-    def create_getter(self, output, assets):
+    def calculation_units(self, assets):
         """
-        See :meth:`..base.RiskCalculator.create_getter`
-        """
-        if not output.output_type in ('gmf', 'complete_lt_gmf'):
-            raise RuntimeError(
-                "The provided hazard output is not a ground motion field")
-
-        gmf = output.gmfcollection
-
-        hazard_getter = self.hazard_getter(
-            gmf.id, assets, self.rc.best_maximum_distance)
-        return (hazard_getter, gmf.lt_realization.weight)
-
-    def hazard_outputs(self, hazard_calculation):
-        """
-        :returns: a list of :class:`openquake.engine.db.models.Output` hazard
-        object that stores the ground motion fields associated with
-        `hazard_calculation` and a logic tree realization
+        :returns:
+          a list of instances of `..base.CalculationUnit` for the given
+          `assets` to be run in the celery task
         """
 
-        # In order to avoid a big joint to filter per imt now, we let
-        # the hazard getter do the job
-        return hazard_calculation.oqjob_set.filter(status="complete").latest(
-            'last_update').output_set.filter(
-                output_type='gmf',
-                gmfcollection__lt_realization__isnull=False).order_by('id')
+        # assume all assets have the same taxonomy
+        taxonomy = assets[0].taxonomy
+        vulnerability_function = self.vulnerability_functions[taxonomy]
+
+        time_span, tses = self.hazard_times()
+
+        return [base.CalculationUnit(
+            api.ProbabilisticEventBased(
+                vulnerability_function,
+                curve_resolution=self.rc.loss_curve_resolution,
+                time_span=time_span,
+                tses=tses,
+                seed=self.rnd.randint(0, models.MAX_SINT_32),
+                correlation=self.rc.asset_correlation),
+            hazard_getters.GroundMotionValuesGetter(
+                ho,
+                assets,
+                self.rc.best_maximum_distance,
+                self.taxonomy_imt[taxonomy]))
+                for ho in self.rc.hazard_outputs()]
 
     def hazard_times(self):
         """
@@ -409,32 +468,24 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Calculator specific parameters
         """
 
-        time_span, tses = self.hazard_times()
-
-        if self.rc.asset_correlation is None:
-            correlation = 0
-        else:
-            correlation = self.rc.asset_correlation
-
-        return [self.rc.conditional_loss_poes or [],
-                self.rc.insured_losses,
-                time_span, tses,
-                self.rc.loss_curve_resolution, correlation,
-                self.rc.sites_disagg or [],
-                self.rc.mag_bin_width,
-                self.rc.distance_bin_width,
-                self.rc.coordinate_bin_width,
-                self.hc.number_of_logic_tree_samples == 0]
+        return base.make_calc_params(
+            conditional_loss_poes=self.rc.conditional_loss_poes or [],
+            insured_losses=self.rc.insured_losses,
+            sites_disagg=self.rc.sites_disagg or [],
+            mag_bin_width=self.rc.mag_bin_width,
+            distance_bin_width=self.rc.distance_bin_width,
+            coordinate_bin_width=self.rc.coordinate_bin_width)
 
     def create_outputs(self, hazard_output):
         """
         Add Insured Curve output containers
         """
+        # includes loss curves and loss maps
         outputs = super(EventBasedRiskCalculator, self).create_outputs(
             hazard_output)
 
         if self.rc.insured_losses:
-            insured_curve_id = (
+            outputs.set(
                 models.LossCurve.objects.create(
                     insured=True,
                     hazard_output=hazard_output,
@@ -442,12 +493,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         self.job,
                         "Insured Loss Curve Set for hazard %s" % hazard_output,
                         "loss_curve")
-                ).id)
-        else:
-            insured_curve_id = None
+                ))
 
         if self.rc.sites_disagg:
-            loss_fractions_magnitude_distance_id = (
+            outputs.set(
                 models.LossFraction.objects.create(
                     output=models.Output.objects.create_output(
                         self.job,
@@ -455,19 +504,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         "magnitude/distance for hazard %s" % hazard_output,
                         "loss_fraction"),
                     hazard_output=hazard_output,
-                    variable="magnitude_distance").id)
-            loss_fractions_coords_id = models.LossFraction.objects.create(
+                    variable="magnitude_distance"))
+            outputs.set(models.LossFraction.objects.create(
                 output=models.Output.objects.create_output(
                     self.job,
                     "Loss Fractions by ruptures grouped by range of "
                     "coordinates for hazard %s" % hazard_output,
                     "loss_fraction"),
                 hazard_output=hazard_output,
-                variable="coordinate").id
-        else:
-            loss_fractions_magnitude_distance_id = None
-            loss_fractions_coords_id = None
+                variable="coordinate"))
 
-        return outputs + [insured_curve_id,
-                          loss_fractions_magnitude_distance_id,
-                          loss_fractions_coords_id]
+        return outputs
