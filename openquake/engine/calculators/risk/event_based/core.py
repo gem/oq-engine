@@ -315,10 +315,11 @@ Compute disaggregation outputs given the individual `outputs` and `params`
     for asset, losses, ruptures in zip(
             outputs.assets, outputs.loss_matrix, outputs.rupture_id_matrix):
         if asset.site in params.sites_disagg:
-            disagg_matrix.append(list(
+            disagg_matrix.extend(list(
                 disaggregate_site(asset.site, losses, ruptures, params)))
             assets_disagg.append(asset)
     if assets_disagg:
+        logs.LOG.warn("disagg_matrix=%s", disagg_matrix)
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
         magnitudes, coordinates, fractions = [], [], []
