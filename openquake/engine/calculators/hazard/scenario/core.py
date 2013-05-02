@@ -37,6 +37,8 @@ from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
 from openquake.engine.utils.general import block_splitter
+from openquake.engine.performance import EnginePerformanceMonitor
+
 
 BLOCK_SIZE = 1000  # TODO: decide where to put this parameter
 
@@ -50,10 +52,9 @@ def gmfs(job_id, sites, rupture_id, output_id, task_seed, realizations):
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
-    with logs.tracing('computing gmfs'):
-        numpy.random.seed(task_seed)
-        compute_gmfs(job_id, sites, rupture_id, output_id, realizations)
-        base.signal_task_complete(job_id=job_id, num_items=len(sites))
+    numpy.random.seed(task_seed)
+    compute_gmfs(job_id, sites, rupture_id, output_id, realizations)
+    base.signal_task_complete(job_id=job_id, num_items=len(sites))
 
 
 def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
@@ -81,11 +82,15 @@ def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
             for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     correlation_model = haz_general.get_correl_model(hc)
-    gmf = ground_motion_fields(
-        rupture_mdl, sites, imts, gsim,
-        hc.truncation_level, realizations=realizations,
-        correlation_model=correlation_model)
-    save_gmf(output_id, gmf, sites.mesh)
+
+    with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
+        gmf = ground_motion_fields(
+            rupture_mdl, sites, imts, gsim,
+            hc.truncation_level, realizations=realizations,
+            correlation_model=correlation_model)
+
+    with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
+        save_gmf(output_id, gmf, sites.mesh)
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -123,7 +128,7 @@ def save_gmf(output_id, gmf_dict, points_to_compute):
     inserter.flush()
 
 
-class ScenarioHazardCalculator(haz_general.BaseHazardCalculatorNext):
+class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Scenario hazard calculator. Computes ground motion fields.
     """

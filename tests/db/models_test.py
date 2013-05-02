@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import getpass
 import itertools
 import string
@@ -30,108 +29,6 @@ from openquake.engine.db import models
 
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
-from tests.db import _gmf_set_iter_test_data as gmf_set_iter_test_data
-
-
-class Profile4JobTestCase(helpers.DbTestCase):
-    """Tests for :function:`profile4job`."""
-
-    def test_profile4job_with_existing(self):
-        # The correct job profile is found.
-        job = self.setup_classic_job()
-        self.assertIsNot(None, models.profile4job(job.id))
-
-    def test_profile4job_with_non_existing(self):
-        # No job profile is found, exception is raised.
-        self.assertRaises(ValueError, models.profile4job, -123)
-
-
-class Inputs4JobTestCase(unittest.TestCase):
-    """Tests for :function:`inputs4job`."""
-
-    sizes = itertools.count(10)
-    paths = itertools.cycle(string.ascii_lowercase)
-
-    def setUp(self):
-        self.job = engine.prepare_job()
-
-    def test_inputs4job_with_no_input(self):
-        # No inputs exist, an empty list is returned.
-        self.assertEqual([], models.inputs4job(self.job.id))
-
-    def test_inputs4job_with_single_input(self):
-        # The single input is returned.
-        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
-                           input_type="exposure", size=self.sizes.next())
-        inp.save()
-        models.Input2job(oq_job=self.job, input=inp).save()
-        self.assertEqual([inp], models.inputs4job(self.job.id))
-
-    def test_inputs4job_with_wrong_input_type(self):
-        # No input is returned.
-        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
-                           input_type="exposure", size=self.sizes.next())
-        inp.save()
-        models.Input2job(oq_job=self.job, input=inp).save()
-        self.assertEqual([], models.inputs4job(self.job.id, input_type="xxx"))
-
-    def test_inputs4job_with_correct_input_type(self):
-        # The exposure inputs are returned.
-        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="exposure", size=self.sizes.next())
-        inp1.save()
-        models.Input2job(oq_job=self.job, input=inp1).save()
-        inp2 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="rupture_model", size=self.sizes.next())
-        inp2.save()
-        models.Input2job(oq_job=self.job, input=inp2).save()
-        inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="exposure", size=self.sizes.next())
-        inp3.save()
-        models.Input2job(oq_job=self.job, input=inp3).save()
-        actual = sorted(models.inputs4job(self.job.id, input_type="exposure"),
-                        key=lambda input: input.id)
-        self.assertEqual([inp1, inp3], actual)
-
-    def test_inputs4job_with_wrong_path(self):
-        # No input is returned.
-        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
-                           input_type="exposure", size=self.sizes.next())
-        inp.save()
-        models.Input2job(oq_job=self.job, input=inp).save()
-        self.assertEqual([], models.inputs4job(self.job.id, path="xyz"))
-
-    def test_inputs4job_with_correct_path(self):
-        # The exposure inputs are returned.
-        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="exposure", size=self.sizes.next())
-        inp1.save()
-        models.Input2job(oq_job=self.job, input=inp1).save()
-        path = self.paths.next()
-        inp2 = models.Input(owner=self.job.owner, path=path,
-                            input_type="rupture_model", size=self.sizes.next())
-        inp2.save()
-        models.Input2job(oq_job=self.job, input=inp2).save()
-        self.assertEqual([inp2], models.inputs4job(self.job.id, path=path))
-
-    def test_inputs4job_with_correct_input_type_and_path(self):
-        # The source inputs are returned.
-        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="source", size=self.sizes.next())
-        inp1.save()
-        models.Input2job(oq_job=self.job, input=inp1).save()
-        path = self.paths.next()
-        inp2 = models.Input(owner=self.job.owner, path=path,
-                            input_type="source", size=self.sizes.next())
-        inp2.save()
-        models.Input2job(oq_job=self.job, input=inp2).save()
-        inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
-                            input_type="source", size=self.sizes.next())
-        inp3.save()
-        models.Input2job(oq_job=self.job, input=inp3).save()
-        self.assertEqual(
-            [inp2],
-            models.inputs4job(self.job.id, input_type="source", path=path))
 
 
 class Inputs4HazCalcTestCase(unittest.TestCase):
@@ -438,146 +335,17 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual(None, sa_damping)
 
 
-class FakeGmfSet(object):
-
-    def __init__(self, ses_ordinal, investigation_time, gmfs):
-        self.ses_ordinal = ses_ordinal
-        self.investigation_time = investigation_time
-        self.gmfs = gmfs
-
-    def __iter__(self):
-        return iter(self.gmfs)
-
-
+# This class is intentionally left empty, since
+# at the present all the features of GmfSet.iter_gmvs
+# are exercised and covered in EventBasedExportTestCase.
+# In the future GmfSet will likely change (we want a
+# more efficient way to import/export large numbers of GMFs)
+# and we may want to add more specific tests here; in particular
+# we will need three tests complete_logic_tree_gmf_iter,
+# gmf_by_location_iter and no_filtering_gmf_iter.
+# NB: GmfSet.iter_gmvs is also tested in pg_importer_test.py
 class GmfSetIterTestCase(unittest.TestCase):
-    """
-    Tests for the `__iter__` and `iter_gmfs` of
-    :class:`openquake.engine.db.models.GmfSet`.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        # Run a very small job to produce some sample GMF results,
-        # which we can use for both test cases (gmf_set iter and complete logic
-        # tree iter).
-        cfg = helpers.get_data_path('db/models_test/event-based-job.ini')
-        helpers.run_job_sp('hazard', cfg, silence=True)
-
-    def _expected_gmf_sets(self):
-        td = gmf_set_iter_test_data
-
-        exp_gmf_sets = [
-            FakeGmfSet(ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_0),
-            FakeGmfSet(ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_1),
-            FakeGmfSet(ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_2),
-            FakeGmfSet(ses_ordinal=1,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_3),
-            FakeGmfSet(ses_ordinal=2,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_4),
-            FakeGmfSet(ses_ordinal=3,
-                       investigation_time=10.0,
-                       gmfs=td.GMFS_GMF_SET_5),
-        ]
-        return exp_gmf_sets
-
-    @attr('slow')
-    def test_complete_logic_tree_gmf_iter(self):
-        job = models.OqJob.objects.latest('id')
-        # Test data:
-        td = gmf_set_iter_test_data
-
-        exp_gmfs = itertools.chain(
-            td.GMFS_GMF_SET_0, td.GMFS_GMF_SET_1, td.GMFS_GMF_SET_2,
-            td.GMFS_GMF_SET_3, td.GMFS_GMF_SET_4, td.GMFS_GMF_SET_5)
-        exp_gmf_set = FakeGmfSet(ses_ordinal=None,
-                                 investigation_time=60.0,
-                                 gmfs=exp_gmfs)
-
-        [act_gmf_set] = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=True)\
-            .order_by('id')
-
-        self.assertEqual(len(list(exp_gmf_set)), len(list(act_gmf_set)))
-        self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-        self.assertEqual(exp_gmf_set.investigation_time,
-                         act_gmf_set.investigation_time)
-
-        for i, exp_gmf in enumerate(exp_gmf_set):
-            act_gmf = list(act_gmf_set)[i]
-
-            equal, error = helpers.deep_eq(exp_gmf, act_gmf)
-
-            self.assertTrue(equal, error)
-
-    @attr('slow')
-    def test_iter(self):
-        exp_gmf_sets = self._expected_gmf_sets()
-
-        job = models.OqJob.objects.latest('id')
-
-        gmf_sets = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=False)\
-            .order_by('gmf_collection', 'ses_ordinal')
-
-        for i, exp_gmf_set in enumerate(exp_gmf_sets):
-            act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-            self.assertEqual(exp_gmf_set.investigation_time,
-                             act_gmf_set.investigation_time)
-
-            for j, exp_gmf in enumerate(exp_gmf_set):
-                act_gmf = list(act_gmf_set)[j]
-
-                equal, error = helpers.deep_eq(
-                    exp_gmf, act_gmf, exclude=["rupture_id"])
-                self.assertTrue(equal, error)
-
-    @attr('slow')
-    def test_iter_gmfs_by_location(self):
-        search_loc = 'POINT(0.0 0.5)'
-        exp_gmf_sets = self._expected_gmf_sets()
-
-        job = models.OqJob.objects.latest('id')
-
-        gmf_sets = models.GmfSet.objects\
-            .filter(gmf_collection__output__oq_job=job.id,
-                    gmf_collection__lt_realization__isnull=False)\
-            .order_by('gmf_collection', 'ses_ordinal')
-
-        for i, exp_gmf_set in enumerate(exp_gmf_sets):
-            act_gmf_set = gmf_sets[i]
-            self.assertEqual(exp_gmf_set.ses_ordinal, act_gmf_set.ses_ordinal)
-            self.assertEqual(exp_gmf_set.investigation_time,
-                             act_gmf_set.investigation_time)
-
-            for j, exp_gmf in enumerate(exp_gmf_set):
-                act_gmf = list(act_gmf_set.iter_gmfs(location=search_loc))[j]
-                act_gmf = list(act_gmf)
-
-                # filter the expected data set by location
-                # and compare to actuals
-                filtered_gmf = [node for node in exp_gmf
-                                if node.location.y == 0.5]
-
-                # Check that they have the same number of nodes. If not, the
-                # location filtering didn't work:
-                self.assertEqual(len(filtered_gmf), len(act_gmf))
-
-                for k, exp_node in enumerate(filtered_gmf):
-                    act_node = act_gmf[k]
-
-                    equal, error = helpers.deep_eq(exp_node, act_node)
-                    self.assertTrue(equal, error)
+    pass
 
 
 class PrepGeometryTestCase(unittest.TestCase):

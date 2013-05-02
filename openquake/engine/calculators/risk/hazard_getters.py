@@ -26,7 +26,7 @@ from collections import OrderedDict
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from django.db import connection
+from django.db import connections
 
 
 #: Scaling constant do adapt to the postgis functions (that work with
@@ -47,37 +47,36 @@ class HazardGetter(object):
         The ID of an Hazard output container (e.g.
         :class:`openquake.engine.db.models.HazardCurve`)
 
-    :attr imt:
-        The imt of the hazard considered by the getter.
-
     :attr assets:
         The assets for which we wants to compute.
 
     :attr max_distance:
         The maximum distance, in kilometers, to use.
     """
-    def __init__(self, hazard_id, imt, assets, max_distance):
+    def __init__(self, hazard_id, assets, max_distance):
         self.hazard_id = hazard_id
-        self.imt = imt
         self.assets = assets
         self.max_distance = max_distance
 
+        # FIXME(lp). It is better to directly store the convex hull
+        # instead of the mesh. We are not doing it because
+        # hazardlib.Polygon is not (yet) pickeable
         self._assets_mesh = geo.mesh.Mesh.from_points_list([
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets])
-        self._imt, self._sa_period, self._sa_damping = (
-            models.parse_imt(self.imt))
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
 
-        self._cache = {}
-
     def __repr__(self):
-        return """HazardGetter imt=%s max_distance=%s assets=%s""" % (
-            self.imt, self.max_distance, self.assets)
+        return """HazardGetter max_distance=%s assets=%s""" % (
+            self.max_distance, [a.id for a in self.assets])
 
-    def get_data(self):
+    def get_data(self, imt):
         """
         Subclasses must implement this.
+
+        :param str imt: a string representation of the intensity
+        measure type (e.g. SA(0.1)) in which the hazard data should be
+        returned
 
         :returns:
             An OrderedDict mapping ID of
@@ -89,8 +88,12 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
-    def __call__(self):
+    def __call__(self, imt):
         """
+        :param str imt: a string representation of the intensity
+        measure type (e.g. SA(0.1)) in which the hazard data should be
+        returned
+
         :returns:
             A tuple with three elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
@@ -98,7 +101,7 @@ class HazardGetter(object):
             IDs of assets that has been filtered out by the getter by the
             ``maximum_distance`` criteria.
         """
-        data = self.get_data()
+        data = self.get_data(imt)
 
         filtered_asset_ids = set(data.keys())
         all_asset_ids = set(self.asset_dict.keys())
@@ -137,26 +140,45 @@ class HazardCurveGetterPerAsset(HazardGetter):
         A cache of the computed hazard curve object on a per-location basis.
     """
 
-    def __init__(self, hazard_id, imt, assets, max_distance):
+    def __init__(self, hazard_id, assets, max_distance):
         super(HazardCurveGetterPerAsset, self).__init__(
-            hazard_id, imt, assets, max_distance)
-        self.imls = models.HazardCurve.objects.get(
-            pk=self.hazard_id).imls
+            hazard_id, assets, max_distance)
+        self._cache = {}
 
-    def get_data(self):
+    def get_data(self, imt):
         """
-        Calls ``get_by_site`` for each asset and pack the results as requested
-        by the :meth:`HazardGetter.get_data` interface.
+        Calls ``get_by_site`` for each asset and pack the results as
+        requested by the :meth:`HazardGetter.get_data` interface.
         """
-        hazard_assets = [(asset.id, self.get_by_site(asset.site))
-                         for asset in self.assets]
+        imt_type, sa_period, sa_damping = models.parse_imt(imt)
+
+        hc = models.HazardCurve.objects.get(pk=self.hazard_id)
+
+        if hc.output.output_type == 'hazard_curve':
+            imls = hc.imls
+            hazard_id = self.hazard_id
+        elif hc.output.output_type == 'hazard_curve_multi':
+            hc = models.HazardCurve.objects.get(
+                output__oq_job=hc.output.oq_job,
+                output__output_type='hazard_curve',
+                statistics=hc.statistics,
+                lt_realization=hc.lt_realization,
+                imt=imt_type,
+                sa_period=sa_period,
+                sa_damping=sa_damping)
+            imls = hc.imls
+            hazard_id = hc.id
+
+        hazard_assets = [(asset.id, self.get_by_site(
+            asset.site, hazard_id, imls))
+            for asset in self.assets]
 
         return OrderedDict(
             [(asset_id, hazard_curve)
              for asset_id, (hazard_curve, distance) in hazard_assets
              if distance < self.max_distance * KILOMETERS_TO_METERS])
 
-    def get_by_site(self, site):
+    def get_by_site(self, site, hazard_id, imls):
         """
         :param site:
             An instance of :class:`django.contrib.gis.geos.point.Point`
@@ -165,7 +187,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = connection.cursor()
+        cursor = connections['job_init'].cursor()
 
         query = """
         SELECT
@@ -179,12 +201,12 @@ class HazardCurveGetterPerAsset(HazardGetter):
         ORDER BY min_distance
         LIMIT 1;"""
 
-        args = (site.wkt, self.hazard_id)
+        args = (site.wkt, hazard_id)
 
         cursor.execute(query, args)
         poes, distance = cursor.fetchone()
 
-        hazard = zip(self.imls, poes)
+        hazard = zip(imls, poes)
 
         self._cache[site.wkt] = (hazard, distance)
 
@@ -196,43 +218,23 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def get_data(self):
-        gmf_collection = models.GmfCollection.objects.get(
-            id=self.hazard_id)
+    def get_data(self, imt):
+        cursor = connections['job_init'].cursor()
 
-        if gmf_collection.output.output_type == "gmf":
-            gmf_set_ids = tuple(
-                gmf_collection.gmfset_set.values_list('id', flat=True))
-        else:
-            raise ValueError(
-                "Output must be of type `gmf`. "
-                "At the moment, we only support computation of loss curves "
-                "for a specific logic tree branch.")
-
-        cursor = connection.cursor()
-
+        imt_type, sa_period, sa_damping = models.parse_imt(imt)
         spectral_filters = ""
-        args = (self._imt, gmf_set_ids)
+        args = (imt_type, self.hazard_id)
 
-        if self._imt == "SA":
+        if imt_type == "SA":
             spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            args += (self._sa_period, self._sa_damping)
+            args += (sa_period, sa_damping)
 
         # Query explanation. We need to get for each asset the closest
         # ground motion values (and the corresponding rupture ids from
         # which they have been generated) for a given logic tree
         # realization and a given imt.
 
-        # We first concatenate ground motion values grouped by
-        # location (so for each location we have all the ground motion
-        # values found in different gmf_sets, collected in a column
-        # called ``allgmvs_arr``).
-
-        # For performance reasons, we help the query by filtering also
-        # on a polygon built by dilating the assets extent of the
-        # maximum distance
-
-        # Then, we perform a spatial join with the exposure table that
+        # To this aim, we perform a spatial join with the exposure table that
         # is previously filtered by the assets extent, exposure model
         # and taxonomy. We are not filtering with an IN statement on
         # the ids of the assets for perfomance reasons.
@@ -241,34 +243,25 @@ class GroundMotionValuesGetter(HazardGetter):
         # ``ORDER BY ST_Distance`` does the job to select the closest
         # gmvs
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id)
-  oqmif.exposure_data.id, gmf_table.allgmvs_arr, gmf_table.allrupture_ids
-  FROM oqmif.exposure_data JOIN
-    (SELECT location,
-            array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal)
-            AS allgmvs_arr,
-            array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-            AS allrupture_ids
-     FROM hzrdr.gmf
-     WHERE imt = %s AND gmf_set_id IN %s {}
-     AND location && %s
-     GROUP BY location) AS gmf_table
-  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-  AND taxonomy = %s AND exposure_model_id = %s
-  AND array_length(gmf_table.allgmvs_arr, 1) > 0
-  ORDER BY oqmif.exposure_data.id,
-           ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
+  SELECT DISTINCT ON (riski.exposure_data.id)
+        riski.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
+  FROM riski.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
+  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
+  WHERE taxonomy = %s AND exposure_model_id = %s AND
+        riski.exposure_data.site && %s AND imt = %s AND
+        gmf_collection_id = %s {}
+  ORDER BY riski.exposure_data.id,
+           ST_Distance(riski.exposure_data.site, gmf_table.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
-        args += (assets_extent.dilate(self.max_distance).wkt,
-                 self.max_distance * KILOMETERS_TO_METERS,
-                 assets_extent.wkt,
-                 self.assets[0].taxonomy,
-                 self.assets[0].exposure_model_id)
+        args = (self.max_distance * KILOMETERS_TO_METERS,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id,
+                assets_extent.wkt) + args
 
         cursor.execute(query, args)
+        # print cursor.mogrify(query, args)
 
         data = cursor.fetchall()
 
@@ -310,44 +303,40 @@ class GroundMotionValuesGetter(HazardGetter):
             for asset_id, asset_data in assets_ruptures_gmvs.items()])
 
 
+# TODO: this calls will disappear soon: see
+# https://bugs.launchpad.net/oq-engine/+bug/1170628
 class GroundMotionScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It uses the same
     approach used in :class:`GroundMotionValuesGetter`.
     """
 
-    def get_data(self):
-        cursor = connection.cursor()
+    def get_data(self, imt):
+        cursor = connections['job_init'].cursor()
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
         query = """
-  SELECT DISTINCT ON (oqmif.exposure_data.id) oqmif.exposure_data.id,
+  SELECT DISTINCT ON (riski.exposure_data.id) riski.exposure_data.id,
          gmf_table.gmvs
-  FROM oqmif.exposure_data JOIN (
+  FROM riski.exposure_data JOIN (
     SELECT location, gmvs
            FROM hzrdr.gmf_scenario
            WHERE hzrdr.gmf_scenario.imt = %s
            AND hzrdr.gmf_scenario.output_id = %s
            AND hzrdr.gmf_scenario.location && %s) gmf_table
-  ON ST_DWithin(oqmif.exposure_data.site, gmf_table.location, %s)
-  WHERE oqmif.exposure_data.site && %s
-    AND taxonomy = %s AND exposure_model_id = %s
-  ORDER BY oqmif.exposure_data.id,
-    ST_Distance(oqmif.exposure_data.site, gmf_table.location, false)
+  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
+  WHERE taxonomy = %s AND exposure_model_id = %s
+  ORDER BY riski.exposure_data.id,
+    ST_Distance(riski.exposure_data.site, gmf_table.location, false)
            """
-
-        imt = self._imt
-        if self._sa_period is not None:
-            imt = '%s(%s)' % (imt, self._sa_period)
 
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (imt, self.hazard_id,
                 assets_extent.dilate(self.max_distance).wkt,
                 self.max_distance * KILOMETERS_TO_METERS,
-                assets_extent.wkt,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
-
+        # print cursor.mogrify(query, args)
         return OrderedDict(cursor.fetchall())
