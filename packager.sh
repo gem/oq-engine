@@ -161,7 +161,7 @@ _devtest_innervm_run () {
                  ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
                  ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
-                 python $(which coverage) xml --include=\"openquake/*\" 
+                 python-coverage xml --include=\"openquake/*\" 
                 "
 
     scp "${lxc_ip}:oq-engine/nosetests.xml" .
