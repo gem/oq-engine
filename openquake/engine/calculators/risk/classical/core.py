@@ -29,7 +29,6 @@ from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.utils import tasks
-from openquake.engine import logs
 
 
 @tasks.oqtask
@@ -127,7 +126,7 @@ def individual_outputs(units, conditional_loss_poes, poes_disagg, profile):
 
     for unit in units:
         with profile('getting hazard'):
-            assets, hazard_curves, _missings = unit.getter()
+            assets, hazard_curves = unit.getter()
 
         with profile('computing individual risk'):
             curves = unit.calc(hazard_curves)
