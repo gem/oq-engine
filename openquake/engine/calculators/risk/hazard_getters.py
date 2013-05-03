@@ -92,6 +92,7 @@ class HazardGetter(object):
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+        self.all_asset_ids = set(self.asset_dict)
 
     def container(self, hazard_output):
         """
@@ -132,26 +133,19 @@ class HazardGetter(object):
             IDs of assets that has been filtered out by the getter by the
             ``maximum_distance`` criteria.
         """
-        data = self.get_data(self.imt)
+        # data is a gmf or a set of hazard curves
+        asset_ids, data = self.get_data(self.imt)
 
-        filtered_asset_ids = set(data)
-        all_asset_ids = set(self.asset_dict)
-        missing_asset_ids = all_asset_ids - filtered_asset_ids
-
-        # filtered_asset_ids must be a subset of all_asset_ids
-        extra_asset_ids = filtered_asset_ids - all_asset_ids
-        assert not extra_asset_ids, extra_asset_ids
+        missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         if missing_asset_ids:
             logs.LOG.warn(
                 "No hazard has been found for %d assets (of %d) "
-                "within %s km" % (len(missing_asset_ids), len(all_asset_ids),
+                "within %s km" % (len(missing_asset_ids), len(self.asset_dict),
                                   self.max_distance))
 
-        ret = ([self.asset_dict[asset_id] for asset_id in data
-                if asset_id in self.asset_dict],
-               numpy.array([data[asset_id] for asset_id in data
-                            if asset_id in self.asset_dict]))
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
+               numpy.array(data))
 
         return ret
 
@@ -204,10 +198,14 @@ class HazardCurveGetterPerAsset(HazardGetter):
             asset.site, hazard_id, imls))
             for asset in self.assets]
 
-        return OrderedDict(
-            [(asset_id, hazard_curve)
-             for asset_id, (hazard_curve, distance) in hazard_assets
-             if distance < self.max_distance * KILOMETERS_TO_METERS])
+        assets = []
+        curves = []
+        for asset_id, (hazard_curve, distance) in hazard_assets:
+            if distance < self.max_distance * KILOMETERS_TO_METERS:
+                assets.append(asset_id)
+                curves.append(hazard_curve)
+
+        return assets, curves
 
     def get_by_site(self, site, hazard_id, imls):
         """
@@ -243,6 +241,8 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
         return hazard, distance
 
+from memory_profiler import profile
+
 
 class GroundMotionValuesGetter(HazardGetter):
     """
@@ -252,6 +252,7 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
+    @profile
     def get_data(self, imt):
         cursor = getcursor('job_init')
 
@@ -329,14 +330,15 @@ class GroundMotionValuesGetter(HazardGetter):
                 ruptures_gmvs_dict[rupture_id] = 0.
 
         # maps asset_id -> to a 2-tuple (gmvs, ruptures)
-        odict = OrderedDict()
+        assets, gmf = [], []
         for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.iteritems():
             rups = numpy.array(sorted(ruptures_gmvs_dict), numpy.int32)
             gmvs = numpy.array([ruptures_gmvs_dict[r] for r in rups],
                                numpy.float32)
-            odict[asset_id] = numpy.array([gmvs, rups])
+            assets.append(asset_id)
+            gmf.append(numpy.array([gmvs, rups]))
 
-        return odict
+        return assets, gmf
 
 
 # TODO: this calls will disappear soon: see
@@ -346,7 +348,6 @@ class GroundMotionScenarioGetter(HazardGetter):
     Hazard getter for loading ground motion values. It uses the same
     approach used in :class:`GroundMotionValuesGetter`.
     """
-
     def get_data(self, imt):
         cursor = getcursor('job_init')
 
@@ -375,7 +376,11 @@ class GroundMotionScenarioGetter(HazardGetter):
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
         # print cursor.mogrify(query, args)
-        return OrderedDict(cursor.fetchall())
+        assets, gmf = [], []
+        for asset_id, gmvs in cursor.fetchall():
+            assets.append(asset_id)
+            gmf.append(gmvs)
+        return assets, gmf
 
     def container(self, hazard_output):
         return hazard_output
