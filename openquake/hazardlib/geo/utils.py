@@ -200,11 +200,12 @@ def get_orthographic_projection(west, east, north, south):
             xx = numpy.degrees(lambda0 + lambdas)
             yy = numpy.degrees(phis)
             # shift longitudes greater than 180 back into the western
-            # emisphere, that is in range [0, -180]. No need to check for
-            # values smaller than -180, because the formula used computes
-            # longitudes in the range [0, 360]
+            # hemisphere, that is in range [0, -180], and longitudes
+            # smaller than -180, to the heastern emisphere [0, 180]
             idx = xx >= 180.
             xx[idx] = xx[idx] - 360.
+            idx = xx <= -180.
+            xx[idx] = xx[idx] + 360.
             return xx, yy
     return proj
 
