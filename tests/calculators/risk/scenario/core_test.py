@@ -43,8 +43,7 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         Test that the specific calculation parameters are present
         """
 
-        self.assertTrue(
-            self.calculator.calculator_parameters.insured_losses is False)
+        self.assertFalse(self.calculator.calculator_parameters.insured_losses)
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
