@@ -89,10 +89,7 @@ def do_classical(units, containers, params, profile):
         save_statistical_output(containers, stats, params)
 
 
-class AssetsIndividualOutputs(
-        collections.namedtuple(
-            'AssetsIndividualOutputs',
-            ['assets', 'curve_matrix', 'map_matrix', 'fraction_matrix'])):
+class AssetsIndividualOutputs(object):
     """Record the results computed for ALL the calculation units.
 
   :attr assets:
@@ -111,6 +108,12 @@ class AssetsIndividualOutputs(
     a numpy array with N x F x A loss fraction value where F is the number of
     `poes_disagg`
     """
+
+    def __init__(self, assets, curve_matrix, map_matrix, fraction_matrix):
+        self.assets = assets
+        self.curve_matrix = curve_matrix
+        self.map_matrix = map_matrix
+        self.fraction_matrix = fraction_matrix
 
 
 def individual_outputs(units, conditional_loss_poes, poes_disagg, profile):
@@ -169,10 +172,7 @@ def save_individual_outputs(containers, hids, outputs, params):
             variable="taxonomy")
 
 
-class StatisticalOutputs(collections.namedtuple(
-        'StatisticalOutputs',
-        ['assets', 'mean_curves', 'mean_maps', 'mean_fractions',
-         'quantile_curves', 'quantile_maps', 'quantile_fractions'])):
+class StatisticalOutputs(object):
     """The statistical outputs computed by the classical calculator.
 
     :attr list assets:
@@ -196,7 +196,16 @@ class StatisticalOutputs(collections.namedtuple(
     :attr list quantile_fractions:
        Holds Q lists, where each of them has F lists. Each of the latter
        holds N quantile loss fraction value
-"""
+       """
+    def __init__(self, assets, mean_curves, mean_maps, mean_fractions,
+                 quantile_curves, quantile_maps, quantile_fractions):
+        self.assets = assets
+        self.mean_curves = mean_curves
+        self.mean_maps = mean_maps
+        self.mean_fractions = mean_fractions
+        self.quantile_curves = quantile_curves
+        self.quantile_maps = quantile_maps
+        self.quantile_fractions = quantile_fractions
 
 
 def statistics(outputs, weights, params):
