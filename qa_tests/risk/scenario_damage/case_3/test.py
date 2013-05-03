@@ -131,6 +131,6 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,
+                self.EXPECTED_COLLAPSE_MAP,
                 self.EXPECTED_DMG_DIST_PER_TAXONOMY,
-                self.EXPECTED_DMG_DIST_TOTAL,
-                self.EXPECTED_COLLAPSE_MAP]
+                self.EXPECTED_DMG_DIST_TOTAL]
