@@ -186,7 +186,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
 
             # 19 loss fractions
             loss_fraction_outputs = risk_outputs.filter(
-                output_type="loss_fractions")
+                output_type="loss_fraction")
             self.assertEqual(19, loss_fraction_outputs.count())
 
             # Now try to export everything, just to do a "smoketest" of the
@@ -264,7 +264,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             # 32 loss fractions
             loss_fraction_outputs = risk_outputs.filter(
-                output_type="loss_fractions")
+                output_type="loss_fraction")
             self.assertEqual(32, loss_fraction_outputs.count())
 
             # Now try to export everything, just to do a "smoketest" of the

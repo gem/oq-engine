@@ -120,11 +120,9 @@ def do_event_based(units, containers, params, profile):
     return event_loss_table
 
 
-class UnitOutputs(collections.namedtuple(
-    'UnitOutputs',
-    ['assets', 'loss_matrix', 'rupture_id_matrix',
-     'loss_curves', 'loss_maps', 'event_loss_table'])):
-    """Record the results computed in one calculation units.
+class UnitOutputs(object):
+    """
+  Record the results computed in one calculation units.
 
   :attr assets:
     an iterable over the assets considered by the calculation units
@@ -145,9 +143,17 @@ class UnitOutputs(collections.namedtuple(
     a list of P elements holding list of N loss map values where P is the
     number of `conditional_loss_poes`
 
-   :attr dict event_loss_table:
+  :attr dict event_loss_table:
     a mapping between each rupture id to a loss value
     """
+    def __init__(self, assets, loss_matrix, rupture_id_matrix,
+                 loss_curves, loss_maps, event_loss_table):
+        self.assets = assets
+        self.loss_matrix = loss_matrix
+        self.rupture_id_matrix = rupture_id_matrix
+        self.loss_curves = loss_curves
+        self.loss_maps = loss_maps
+        self.event_loss_table = event_loss_table
 
 
 def individual_outputs(unit, params, profile):
@@ -217,13 +223,11 @@ def insured_losses(unit, assets, loss_ratio_matrix):
         yield asset_insured_losses / asset.value, poes
 
 
-class StatisticalOutputs(collections.namedtuple(
-    'StatisticalOutputs',
-    ['assets', 'mean_curves', 'mean_maps', 'quantile_curves',
-     'quantile_maps'])):
-    """The statistical outputs computed by the classical calculator.
-Each attribute is a numpy array with a collection of N outputs,
-where N is the number of assets.
+class StatisticalOutputs(object):
+    """
+    The statistical outputs computed by the classical calculator.
+    Each attribute is a numpy array with a collection of N outputs,
+    where N is the number of assets.
 
     :attr assets: the assets over which outputs have been computed
     :attr mean_curves: N mean loss curves. A loss curve is a 2-ple losses/poes
@@ -231,7 +235,14 @@ where N is the number of assets.
     :attr mean_fractions: N x F mean fraction value (F = number of disagg PoEs)
     :attr quantile_curves: N x Q quantile loss curves (Q = number of quantiles)
     :attr quantile_maps: N x Q x F quantile fractions
-"""
+    """
+    def __init__(self, assets, mean_curves, mean_maps, quantile_curves,
+                 quantile_maps):
+        self.assets = assets
+        self.mean_curves = mean_curves
+        self.mean_maps = mean_maps
+        self.quantile_curves = quantile_curves
+        self.quantile_maps = quantile_maps
 
 
 def statistics(assets, curve_matrix, weights, params):
@@ -289,9 +300,13 @@ def save_statistical_output(containers, assets, stats, params):
                              statistics="quantile", quantile=quantile)
 
 
-DisaggregationOutputs = collections.namedtuple(
-    'DisaggregationOutputs',
-    ['assets_disagg', 'magnitude_distance', 'coordinate', 'fractions'])
+class DisaggregationOutputs(object):
+    def __init__(self, assets_disagg, magnitude_distance,
+                 coordinate, fractions):
+        self.assets_disagg = assets_disagg
+        self.magnitude_distance = magnitude_distance
+        self.coordinate = coordinate
+        self.fractions = fractions
 
 
 def disaggregate(outputs, params):
