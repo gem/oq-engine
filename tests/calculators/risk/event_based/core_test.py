@@ -44,7 +44,7 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         params = self.calculator.calculator_parameters
 
         self.assertEqual([0.1, 0.2, 0.3], params.conditional_loss_poes)
-        self.assertEqual(True, params.insured_losses)
+        self.assertTrue(params.insured_losses)
 
     def test_imt_validation(self):
         # Test the validation of the imt associated with the
