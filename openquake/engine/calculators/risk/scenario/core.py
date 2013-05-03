@@ -68,7 +68,7 @@ def do_scenario(unit, containers, params, profile):
     """
 
     with profile('getting hazard'):
-        assets, ground_motion_values, _ = unit.getter()
+        assets, ground_motion_values = unit.getter()
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")

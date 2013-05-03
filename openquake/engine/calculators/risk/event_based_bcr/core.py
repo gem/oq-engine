@@ -17,8 +17,6 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
-import numpy
-
 from openquake.risklib import api, scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
@@ -70,12 +68,12 @@ def do_event_based_bcr(units, containers, params, profile):
     """
     for unit_orig, unit_retro in utils.pairwise(units):
         with profile('getting hazard'):
-            assets, gmvs_ruptures, _missings = unit_orig.getter()
-            _, gmvs_ruptures_retrofitted, __ = unit_retro.getter()
+            assets, gmvs_ruptures = unit_orig.getter()
+            _, gmvs_ruptures_retrofitted = unit_retro.getter()
 
             if len(assets):
-                gmvs = numpy.array(gmvs_ruptures)[:, 0]
-                gmvs_retrofitted = numpy.array(gmvs_ruptures_retrofitted)[:, 0]
+                gmvs = gmvs_ruptures[:, 0]
+                gmvs_retrofitted = gmvs_ruptures_retrofitted[:, 0]
             else:
                 logs.LOG.info("Exit from task as no asset could be processed")
                 return
