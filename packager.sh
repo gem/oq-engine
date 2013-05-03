@@ -354,7 +354,7 @@ devtest_run () {
 
     repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="${repo_id} ${GEM_GIT_REPO}"
+        repos="git://${repo_id} ${GEM_GIT_REPO}"
     else
         repos="${GEM_GIT_REPO}"
     fi
