@@ -49,9 +49,7 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         finally:
             patch.stop()
 
-        # we expect 1 asset being filtered out by the region
-        # constraint, so there are only two loss curves to be written
-        self.assertEqual(2, mocked_writer.call_count)
+        self.assertEqual(1, mocked_writer.call_count)
 
     def test_complete_workflow(self):
         """
@@ -84,18 +82,6 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         files = self.calculator.export(exports=True)
         self.assertEqual(4, len(files))
 
-    def test_hazard_id(self):
-        """
-        Test that the hazard output used by the calculator is a
-        `openquake.engine.db.models.HazardCurve` object
-        """
-
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(
-            set(["hazard_curve_multi"]), set([o.output_type for o in outputs]))
-
 
 class PreExecuteTestCase(unittest.TestCase):
 
@@ -117,7 +103,8 @@ class PreExecuteTestCase(unittest.TestCase):
             statistics='mean'
         )
 
-        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        cfg = helpers.get_data_path(
+            'end-to-end-hazard-risk/job_risk_classical.ini')
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
@@ -135,7 +122,8 @@ class PreExecuteTestCase(unittest.TestCase):
     def test_pre_execute_check_imts_no_errors(self):
         haz_job = engine.prepare_job()
 
-        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_haz.ini')
+        cfg = helpers.get_data_path(
+            'end-to-end-hazard-risk/job_haz_classical.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         haz_job.hazard_calculation = engine.create_hazard_calculation(
             haz_job.owner, params, files.values())
@@ -154,7 +142,8 @@ class PreExecuteTestCase(unittest.TestCase):
             statistics='mean'
         )
 
-        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        cfg = helpers.get_data_path(
+            'end-to-end-hazard-risk/job_risk_classical.ini')
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
