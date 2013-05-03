@@ -45,6 +45,9 @@ sig_hand () {
     fi
 }
 
+dep2var () {
+    echo "$1" | sed 's/[-.]/_/g;s/\(.*\)/\U\1/g'
+}
 mksafedir () {
     local dname
 
@@ -177,7 +180,7 @@ _devtest_innervm_run () {
 }
 
 _pkgtest_innervm_run () {
-    local lxc_ip="$1"
+    local lxc_ip="$1" old_ifs
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -193,28 +196,40 @@ _pkgtest_innervm_run () {
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
-# TODO: use the correct repo
+    # TODO: use the correct repo
 
     #
     #  dependencies repos
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
 
-    # python-oq-nrmllib
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-nrmllib $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-nrmllib ./\""
+    old_ifs="$IFS"
+    IFS=" $NL"
+    for dep in $GEM_GIT_DEPS; do
+        var_pfx="$(dep2var "$dep")"
+        var_repo="${var_pfx}_REPO"
+        var_branch="${var_pfx}_BRANCH"
+        if [ "${!var_repo}" != "" ]; then
+            repo="${!var_repo}"
+        else
+            repo="$GEM_GIT_REPO"
+        fi
+        if [ "${!var_branch}" != "" ]; then
+            branch="${!var_branch}"
+        else
+            branch="master"
+        fi
 
-    # python-oq-hazardlib
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-hazardlib $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-hazardlib ./\""
-
-    # python-oq-risklib
-    scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-oq-risklib $haddr:repo/
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-oq-risklib ./\""
-
-
-
-
-
-
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "$master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+        fi
+        scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $lxc_ip:repo/
+        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    done
+    IFS="$old_ifs"
 
     ssh $lxc_ip "sudo apt-get update"
 
@@ -225,21 +240,21 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     # configure the machine to run tests
-    ssh $haddr "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
-    ssh $haddr "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
+    ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+    ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
-    ssh $haddr "sudo service postgresql restart"
-    ssh $haddr "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
-    ssh $haddr "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
+    ssh $lxc_ip "sudo service postgresql restart"
+    ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
+    ssh $lxc_ip "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
     # run celeryd daemon
-    ssh $haddr "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     # copy demos file to $HOME
-    ssh $haddr "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
+    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
     # run all demos found
-    ssh $haddr "cd demos
+    ssh $lxc_ip "cd demos
     for ini in \$(find . -name job.ini); do
         DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
@@ -250,10 +265,8 @@ _pkgtest_innervm_run () {
 }
 
 deps_list() {
-    local oldifs out_list skip i d listtype="$1" filename="$2"
+    local old_ifs out_list skip i d listtype="$1" filename="$2"
 
-    oldifs="$IFS"
-    IFS=','
     out_list=""
     if [ "$listtype" = "all" ]; then
         in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
@@ -265,6 +278,8 @@ deps_list() {
         in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
     fi
 
+    old_ifs="$IFS"
+    IFS=','
     for i in $in_list ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
@@ -290,7 +305,7 @@ deps_list() {
             out_list="$out_list $pkg_name"
         fi
     done
-    IFS="$oldifs"
+    IFS="$old_ifs"
 
     echo "$out_list"
 
@@ -361,9 +376,9 @@ devtest_run () {
             git clone $repo/${dep}.git _jenkins_deps/$dep
             branch="master"
         fi
-        var_pref="$(echo "$dep" | sed 's/[-.]/_/g;s/\(.*\)/\U\1/g')"
-        echo "${var_pref}_REPO=$repo" >> _jenkins_deps_info
-        echo "${var_pref}_BRANCH=$branch" >> _jenkins_deps_info
+        var_pfx="$(dep2var "$dep")"
+        echo "${var_pfx}_REPO=$repo" >> _jenkins_deps_info
+        echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
     done
     IFS="$old_ifs"
 
