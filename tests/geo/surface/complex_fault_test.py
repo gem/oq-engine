@@ -115,6 +115,16 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
             'mesh spacing 30.1 km is too big for mean width 15.0 km'
         )
 
+    def test_surface_crossing_international_date_line(self):
+        edge1 = Line([Point(179.95, 0., 0.), Point(-179.95, 0., 0.)])
+        edge2 = Line([Point(179.95, 0., 10.), Point(-179.95, 0., 10.)])
+        surface = ComplexFaultSurface.from_fault_data([edge1, edge2], 
+                                                      mesh_spacing=10.)
+        self.assert_mesh_is(surface=surface, expected_mesh=[
+            [(179.95, 0., 0.), (-179.95, 0., 0.)],
+            [(179.95, 0., 10.), (-179.95, 0., 10.)]
+        ])
+
 
 class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
     def test(self):
