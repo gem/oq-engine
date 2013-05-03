@@ -178,6 +178,18 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(lons, comp_lons)
         numpy.testing.assert_allclose(lats, comp_lats)
 
+        west = 179.
+        east = -179.
+        north = 1
+        south = -1
+        proj = utils.get_orthographic_projection(west, east, north, south)
+        lons = numpy.array([179.0, -179.0])
+        lats = numpy.array([-1, 1])
+        xx, yy = proj(lons, lats)
+        comp_lons, comp_lats = proj(xx, yy, reverse=True)
+        numpy.testing.assert_allclose(lons, comp_lons)
+        numpy.testing.assert_allclose(lats, comp_lats)
+
 
 class GetMiddlePointTestCase(unittest.TestCase):
     def test_same_points(self):
