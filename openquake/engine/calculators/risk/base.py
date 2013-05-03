@@ -536,7 +536,7 @@ class OutputDict(dict):
     def write_all(self, arg, values, items,
                   *initial_args, **initial_kwargs):
         """
-        Call iteraly `write`.
+        Call iteratively `write`.
 
         In each call, the keyword arguments are built by merging
         `initial_kwargs` with a dict storing the association between
