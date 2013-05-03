@@ -23,6 +23,8 @@ calculation.
 """
 
 from collections import OrderedDict
+import numpy
+
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
@@ -32,6 +34,13 @@ from django.db import connections
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
 KILOMETERS_TO_METERS = 1000
+
+
+# a Django cursor perform some caching which is polluting the
+# memory profiler, this is why we are using the underlying cursor
+def getcursor(route):
+    """Return a psycogp2 cursor from a Django route"""
+    return connections[route].connection.cursor()
 
 
 class HazardGetter(object):
@@ -71,8 +80,7 @@ class HazardGetter(object):
         self.max_distance = max_distance
         self.imt = imt
 
-        if (hasattr(hazard, 'lt_realization') and
-            hazard.lt_realization is not None):
+        if hasattr(hazard, 'lt_realization') and hazard.lt_realization:
             self.weight = hazard.lt_realization.weight
         else:
             self.weight = None
@@ -93,8 +101,9 @@ class HazardGetter(object):
         raise NotImplementedError
 
     def __repr__(self):
-        return """HazardGetter max_distance=%s assets=%s""" % (
-            self.max_distance, [a.id for a in self.assets])
+        return "<%s max_distance=%s assets=%s>" % (
+            self.__class__.__name__, self.max_distance,
+            [a.id for a in self.assets])
 
     def get_data(self, imt):
         """
@@ -125,29 +134,26 @@ class HazardGetter(object):
         """
         data = self.get_data(self.imt)
 
-        filtered_asset_ids = set(data.keys())
-        all_asset_ids = set(self.asset_dict.keys())
+        filtered_asset_ids = set(data)
+        all_asset_ids = set(self.asset_dict)
         missing_asset_ids = all_asset_ids - filtered_asset_ids
+
+        # filtered_asset_ids must be a subset of all_asset_ids
         extra_asset_ids = filtered_asset_ids - all_asset_ids
+        assert not extra_asset_ids, extra_asset_ids
 
-        # FIXME(lp). It might happens that the convex hull contains
-        # more assets than the requested ones. At this moment, we just
-        # ignore them.
-        if extra_asset_ids:
-            logs.LOG.debug("Extra asset have been computed ids: %s" % (
-                models.ExposureData.objects.filter(
-                    pk__in=extra_asset_ids)))
-
-        for missing_asset_id in missing_asset_ids:
+        if missing_asset_ids:
             logs.LOG.warn(
-                "No hazard has been found for the asset %s within %s km" % (
-                    self.asset_dict[missing_asset_id], self.max_distance))
+                "No hazard has been found for %d assets (of %d) "
+                "within %s km" % (len(missing_asset_ids), len(all_asset_ids),
+                                  self.max_distance))
 
-        return ([self.asset_dict[asset_id] for asset_id in data
-                 if asset_id in self.asset_dict],
-                [data[asset_id] for asset_id in data
-                 if asset_id in self.asset_dict],
-                missing_asset_ids)
+        ret = ([self.asset_dict[asset_id] for asset_id in data
+                if asset_id in self.asset_dict],
+               numpy.array([data[asset_id] for asset_id in data
+                            if asset_id in self.asset_dict]))
+
+        return ret
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -212,7 +218,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         query = """
         SELECT
@@ -247,7 +253,7 @@ class GroundMotionValuesGetter(HazardGetter):
         return hazard_output.gmfcollection
 
     def get_data(self, imt):
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         imt_type, sa_period, sa_damping = models.parse_imt(imt)
         spectral_filters = ""
@@ -297,12 +303,11 @@ class GroundMotionValuesGetter(HazardGetter):
         assets_ruptures_gmvs = OrderedDict()
 
         # store all the ruptures returned by the query
-        ruptures = []
+        ruptures = set()
 
         for asset_id, gmvs, rupture_ids in data:
             assets_ruptures_gmvs[asset_id] = dict(zip(rupture_ids, gmvs))
-            ruptures.extend(rupture_ids)
-        ruptures = set(ruptures)
+            ruptures.update(rupture_ids)
 
         # We expect that the query may return a different number of
         # gmvs and ruptures for each asset (because only the ruptures
@@ -311,7 +316,7 @@ class GroundMotionValuesGetter(HazardGetter):
         # values for each rupture that has not given a contribute.
 
         # for each asset, we look for missing ruptures
-        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.items():
+        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.iteritems():
 
             # all the ruptures producing a positive ground shaking for
             # `asset`
@@ -323,12 +328,15 @@ class GroundMotionValuesGetter(HazardGetter):
             for rupture_id in missing_ruptures:
                 ruptures_gmvs_dict[rupture_id] = 0.
 
-        # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
-        return OrderedDict([
-            (asset_id, zip(
-                *sorted(zip(asset_data.values(), asset_data.keys()),
-                        key=lambda x: x[1])))
-            for asset_id, asset_data in assets_ruptures_gmvs.items()])
+        # maps asset_id -> to a 2-tuple (gmvs, ruptures)
+        odict = OrderedDict()
+        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.iteritems():
+            rups = numpy.array(sorted(ruptures_gmvs_dict), numpy.int32)
+            gmvs = numpy.array([ruptures_gmvs_dict[r] for r in rups],
+                               numpy.float32)
+            odict[asset_id] = numpy.array([gmvs, rups])
+
+        return odict
 
 
 # TODO: this calls will disappear soon: see
@@ -340,7 +348,7 @@ class GroundMotionScenarioGetter(HazardGetter):
     """
 
     def get_data(self, imt):
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
