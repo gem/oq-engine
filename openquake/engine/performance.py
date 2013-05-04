@@ -1,18 +1,15 @@
 import os
 import time
 import atexit
-import threading
 from datetime import datetime
-from cStringIO import StringIO
 import psutil
 
+import numpy
 from django.db import connections
 
-from openquake.engine import logs, no_distribute
+from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.writer import CacheInserter
-
-MB = 1024 * 1024  # 1 megabyte
 
 
 # I did not make any attempt to make this class thread-safe,
@@ -26,7 +23,7 @@ class PerformanceMonitor(object):
 
      with PerformanceMonitor([os.getpid()]) as mm:
          do_something()
-     maxmemory, = mm.mem_peaks
+     maxmemory, = mm.mem
 
     At the end of the block the PerformanceMonitor object will have the
     following 5 public attributes:
@@ -34,56 +31,48 @@ class PerformanceMonitor(object):
     .start_time: when the monitor started (a datetime object)
     .duration: time elapsed between start and stop (in seconds)
     .exc: None unless an exception happened inside the block of code
-    .mem: a tuple of lists with the memory measures (in megabytes)
-    .mem_peaks: a tuple with the maximum memory occupations (in megabytes)
+    .mem: an array with the memory deltas (in megabytes)
 
     The memory tuples have the same length as the number of processes.
     The behaviour of the PerformanceMonitor can be customized by subclassing it
-    and by overriding the methods on_exit() and on_running().
-    The on_exit() method is called at end and it is used to display
+    and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis; the on_running() method is
     called while the analysis is running and can be used to display
-    or store the partial results. It is also possible to specify the .tic
-    attribute (the interval of time between measures, 1 second by default)
-    to perform a finer grained analysis.
+    or store the partial results.
     """
 
-    def __init__(self, pids, tic=1.0):
+    def __init__(self, pids):
         self._procs = [psutil.Process(pid) for pid in pids]
-        self.tic = tic  # measure the memory at every tic
-        self._monitor = None  # monitor thread polling for memory occupation
-        self._running = False  # associated to the monitor thread
         self._start_time = None  # seconds from the epoch
         self.start_time = None  # datetime object
         self.duration = None  # seconds
+        self.mem = None  # megabytes
         self.exc = None  # exception
-        self.rss_measures = dict((proc, []) for proc in self._procs)
-        self.poll_memory()
 
-    @property
-    def mem(self):
-        "A tuple of memory measurements, a list of integers (MB) for process"
-        return tuple(self.rss_measures[proc] for proc in self._procs)
-
-    @property
-    def mem_peaks(self):
-        "A tuple of peak memory measurements, an integer (MB) for process"
-        return tuple(map(max, self.mem))
+    def measure_mem(self):
+        "An array of memory measurements (in bytes), one per process"
+        mem = []
+        for proc in list(self._procs):
+            try:
+                rss = proc.get_memory_info().rss
+            except psutil.AccessDenied:
+                # no access to information about this process
+                # don't not try to check it anymore
+                self._procs.remove(proc)
+            else:
+                mem.append(rss)
+        return numpy.array(mem)
 
     def start(self):
         "Start the monitor thread"
         self._start_time = time.time()
         self.start_time = datetime.fromtimestamp(self._start_time)
-        if self._procs:
-            self._running = True
-            self._monitor = threading.Thread(None, self._run)
-            self._monitor.start()
+        self.start_mem = self.measure_mem()
 
     def stop(self):
         "Stop the monitor thread and call on_exit"
-        if self._procs:
-            self._running = False
-            self._monitor.join()
+        self.stop_mem = self.measure_mem()
+        self.mem = self.stop_mem - self.start_mem
         self.duration = time.time() - self._start_time
         self.on_exit()
 
@@ -98,41 +87,12 @@ class PerformanceMonitor(object):
         self.exc = exc
         self.stop()
 
-    def _run(self):
-        """
-        Poll the /proc/<pid> file every .tic seconds and stores
-        the memory information in self.rss_measures for each process
-        """
-        while self._running:
-            self.poll_memory()
-            self.on_running()
-            time.sleep(self.tic)
-
-    def poll_memory(self):
-        """
-        Poll the memory occupation for each process and update
-        the dictionary self.rss_measures
-        """
-        for proc in list(self._procs):
-            try:
-                rss = proc.get_memory_info().rss // MB
-            except psutil.AccessDenied:
-                # no access to information about this process
-                # don't not try to check it anymore
-                self._procs.remove(proc)
-            else:
-                self.rss_measures[proc].append(rss)  # in mbytes
-
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
         print 'start_time =', self.start_time
         print 'duration =', self.duration
-        print 'mem_peaks =', self.mem_peaks
+        print 'mem =', self.mem
         print 'exc =', self.exc
-
-    def on_running(self):
-        "Save the partial results: to be overridden in subclasses"
-        print 'Mem peaks:', self.mem_peaks
 
 
 class EnginePerformanceMonitor(PerformanceMonitor):
@@ -148,10 +108,13 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     it is also called automatically at the end of the main process.
     """
 
+    # globals per process
     cache = CacheInserter(1000)  # store at most 1,000 objects
+    pg_pid = None
+    py_pid = None
 
-    def __init__(self, operation, job_id, task=None, tic=0.1, tracing=False,
-                 profile_mem=False):
+    def __init__(self, operation, job_id, task=None, tracing=False,
+                 profile_mem=True):
         self.operation = operation
         self.job_id = job_id
         if task:
@@ -162,23 +125,25 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.task_id = None
         self.tracing = tracing
         self.profile_mem = profile_mem
-        if self.profile_mem:  # NB: this is slow
-            py_pid = os.getpid()
-            pg_pid = connections['job_init'].cursor().\
-                connection.get_backend_pid()
+        if self.profile_mem:  # NB: this may be slow
+            if self.py_pid is None:
+                self.__class__.py_pid = os.getpid()
+            if self.pg_pid is None:
+                self.__class__.pg_pid = connections['job_init'].cursor().\
+                    connection.get_backend_pid()
             try:
-                psutil.Process(pg_pid)
+                psutil.Process(self.pg_pid)
             except psutil.error.NoSuchProcess:  # db on a different machine
-                pids = [py_pid]
+                pids = [self.py_pid]
             else:
-                pids = [py_pid, pg_pid]
+                pids = [self.py_pid, self.pg_pid]
         else:
             pids = []
 
         if tracing:
             self.tracer = logs.tracing(operation)
 
-        super(EnginePerformanceMonitor, self).__init__(pids, tic)
+        super(EnginePerformanceMonitor, self).__init__(pids)
 
     def __enter__(self):
         super(EnginePerformanceMonitor, self).__enter__()
@@ -186,28 +151,21 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.tracer.__enter__()
         return self
 
-    @property
-    def mem(self):
-        """
-        Returns the pair
-
-          (python-memory-measures, postgres-memory-measures)
-
-        If the database is on a different machine postgres-memory-measures
-        is None.
-        """
-        if not self._procs:
-            return [None], [None]
-        if len(self._procs) == 1:  # pg progress not available
-            return self.rss_measures[self._procs[0]], [None]
-        else:
-            return super(EnginePerformanceMonitor, self).mem
-
     def on_exit(self):
         """
-        Save the peak memory consumption on the uiapi.performance table.
+        Save the memory consumption on the uiapi.performance table.
         """
-        pymemory, pgmemory = self.mem_peaks
+        n_measures = len(self.mem)
+        if n_measures == 2:
+            pymemory, pgmemory = self.mem
+        elif n_measures == 1:
+            pymemory, = self.mem
+            pgmemory = None
+        elif n_measures == 0:  # profile_mem was False
+            pymemory = pgmemory = None
+        else:
+            raise ValueError(
+                'Got %d memory measurements, must be <= 2' % n_measures)
         if self.exc is None:  # save only valid calculations
             perf = models.Performance(
                 oq_job_id=self.job_id,
@@ -219,15 +177,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=pymemory,
                 pgmemory=pgmemory)
             self.cache.add(perf)
-
-    def on_running(self):
-        """
-        Log memory consumption as the computation goes on; it only works
-        when the environment variable OQ_NO_DISTRIBUTE is set, since it
-        is intended for debugging purposes.
-        """
-        if no_distribute():
-            logs.LOG.warn('PyMem: %s mb, PgMem: %s mb' % self.mem_peaks)
 
     def __exit__(self, etype, exc, tb):
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
