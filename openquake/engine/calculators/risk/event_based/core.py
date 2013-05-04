@@ -55,7 +55,7 @@ def event_based(job_id, units, containers, params):
 
     def profile(name):
         return EnginePerformanceMonitor(
-            name, job_id, event_based, tracing=True, profile_mem=True)
+            name, job_id, event_based, tracing=True)
 
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
