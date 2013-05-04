@@ -1416,7 +1416,7 @@ ON DELETE CASCADE;
 CREATE VIEW uiapi.performance_view AS
 SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
-     avg(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
      GROUP BY oq_job_id, operation) AS p
@@ -1427,7 +1427,7 @@ ON h.id=o.hazard_calculation_id
 UNION ALL
 SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
-     avg(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
      GROUP BY oq_job_id, operation) AS p
