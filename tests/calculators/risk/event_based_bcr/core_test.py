@@ -60,26 +60,3 @@ class EventBasedBCRRiskCalculatorTestCase(
 
         self.assertEqual(3, models.BCRDistributionData.objects.filter(
             bcr_distribution__output__oq_job=self.job).count())
-
-    def test_hazard_id(self):
-        """
-        Test that the hazard output used by the calculator is a
-        `openquake.engine.db.models.HazardCurve` object
-        """
-
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(1, outputs.count())
-
-        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
-
-    def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
-
-        for hazard_output in self.hazard_outputs:
-            self.assertTrue(models.BCRDistribution.objects.filter(
-                hazard_output=hazard_output,
-                pk=self.calculator.create_outputs(hazard_output)[0]).exists())

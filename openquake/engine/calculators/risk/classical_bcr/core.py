@@ -17,24 +17,22 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from openquake.risklib import api, scientific
+from openquake.risklib import scientific, utils
+from openquake.risklib.api import Classical
 
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, writers
+from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.utils import tasks
 from openquake.engine import logs
 from openquake.engine.db import models
+from openquake.engine.performance import EnginePerformanceMonitor
 from django.db import transaction
 
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def classical_bcr(job_id, hazard, vulnerability_function, imt,
-                  vulnerability_function_retrofitted, imt_retrofitted,
-                  output_containers, _statistical_output_containers,
-                  lrem_steps_per_interval,
-                  asset_life_expectancy, interest_rate):
+def classical_bcr(job_id, units, containers, params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -44,46 +42,37 @@ def classical_bcr(job_id, hazard, vulnerability_function, imt,
 
     :param int job_id:
       ID of the currently running job
-    :param dict hazard:
-      A dictionary mapping IDs of
-      :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'hazard_curve') to a tuple where the first element is an instance of
-      :class:`..hazard_getters.HazardCurveGetter, and the second element is the
-      corresponding weight.
-    :param str imt: the imt in long string form, i.e. SA(0.1)
-    :param str imt_retrofitted: the imt, used in retrofitted case
-    :param output_containers: A dictionary mapping hazard Output ID to
-      a tuple with only the ID of the
-      :class:`openquake.engine.db.models.BCRDistribution` output container
-      used to store the computed bcr distribution
-    :param statistical_output_containers: not used at this moment
-    :param int lrem_steps_per_interval
-      Steps per interval used to compute the Loss Ratio Exceedance matrix
-    :param float interest_rate
-      The interest rate used in the Cost Benefit Analysis
-    :param float asset_life_expectancy
-      The life expectancy used for every asset
+    :param list units:
+      A list of :class:`..base.CalculationUnit` to be run
+    :param containers:
+      An instance of :class:`..base.OutputDict` containing
+      output container instances (in this case only `BCRDistribution`)
+    :param params:
+      An instance of :class:`..base.CalcParams` used to compute
+      derived outputs
     """
 
-    calc_original = api.Classical(
-        vulnerability_function, lrem_steps_per_interval)
-    calc_retrofitted = api.Classical(
-        vulnerability_function_retrofitted, lrem_steps_per_interval)
+    def profile(name):
+        return EnginePerformanceMonitor(
+            name, job_id, classical_bcr, tracing=True)
 
-    for hazard_output_id, hazard_data in hazard.items():
-        hazard_getter, _ = hazard_data
-        bcr_distribution_id = output_containers[hazard_output_id][0]
+    # Do the job in other functions, such that it can be unit tested
+    # without the celery machinery
+    with transaction.commit_on_success(using='reslt_writer'):
+        do_classical_bcr(units, containers, params, profile)
+    signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
+classical_bcr.ignore_result = False
 
-        with logs.tracing('getting hazard'):
-            assets, hazard_curves, missings = hazard_getter(imt)
-            # hazard curves should not vary with the imt, so I ignore
-            # assets/missing information returned by the hazard getter
-            # as they are equal to the ones associated with `imt`
-            _, hazard_curves_retrofitted, __ = hazard_getter(imt_retrofitted)
 
-        with logs.tracing('computing bcr'):
-            original_loss_curves = calc_original(hazard_curves)
-            retrofitted_loss_curves = calc_retrofitted(
+def do_classical_bcr(units, containers, params, profile):
+    for unit_orig, unit_retro in utils.pairwise(units):
+        with profile('getting hazard'):
+            assets, hazard_curves, _missings = unit_orig.getter()
+            _, hazard_curves_retrofitted, __ = unit_retro.getter()
+
+        with profile('computing bcr'):
+            original_loss_curves = unit_orig.calc(hazard_curves)
+            retrofitted_loss_curves = unit_retro.calc(
                 hazard_curves_retrofitted)
 
             eal_original = [
@@ -97,20 +86,15 @@ def classical_bcr(job_id, hazard, vulnerability_function, imt,
             bcr_results = [
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
-                    interest_rate, asset_life_expectancy,
+                    params.interest_rate, params.asset_life_expectancy,
                     asset.value, asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):
-            with transaction.commit_on_success(using='reslt_writer'):
-                for i, asset in enumerate(assets):
-                    writers.bcr_distribution(
-                        bcr_distribution_id, asset,
-                        eal_original[i], eal_retrofitted[i], bcr_results[i])
-
-    signal_task_complete(job_id=job_id, num_items=len(assets) + len(missings))
-
-classical_bcr.ignore_result = False
+            containers.write(
+                assets, zip(eal_original, eal_retrofitted, bcr_results),
+                output_type="bcr_distribution",
+                hazard_output_id=unit_orig.getter.hazard_output_id)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
@@ -129,10 +113,34 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         self.vulnerability_functions_retrofitted = None
         self.taxonomy_imt_retrofitted = dict()
 
-    def taxonomy_args(self, taxonomy):
-        return (super(ClassicalBCRRiskCalculator, self).taxonomy_args(
-            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy],
-                         self.taxonomy_imt_retrofitted[taxonomy]])
+    def calculation_units(self, assets):
+        units = []
+
+        taxonomy = assets[0].taxonomy
+        vf_orig = self.vulnerability_functions[taxonomy]
+        vf_retro = self.vulnerability_functions_retrofitted[taxonomy]
+
+        for ho in self.rc.hazard_outputs():
+            units.extend([
+                base.CalculationUnit(
+                    Classical(
+                        vulnerability_function=vf_orig,
+                        steps=self.rc.lrem_steps_per_interval),
+                    hazard_getters.HazardCurveGetterPerAsset(
+                        ho,
+                        assets,
+                        self.rc.best_maximum_distance,
+                        self.taxonomy_imt[taxonomy])),
+                base.CalculationUnit(
+                    Classical(
+                        vulnerability_function=vf_retro,
+                        steps=self.rc.lrem_steps_per_interval),
+                    hazard_getters.HazardCurveGetterPerAsset(
+                        ho,
+                        assets,
+                        self.rc.best_maximum_distance,
+                        self.taxonomy_imt_retrofitted[taxonomy]))])
+        return units
 
     @property
     def calculator_parameters(self):
@@ -141,8 +149,9 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         passed in task_arg_gen
         """
 
-        return [self.rc.lrem_steps_per_interval,
-                self.rc.asset_life_expectancy, self.rc.interest_rate]
+        return base.make_calc_params(
+            asset_life_expectancy=self.rc.asset_life_expectancy,
+            interest_rate=self.rc.interest_rate)
 
     def create_outputs(self, hazard_output):
         """
@@ -152,19 +161,21 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
         :returns: A list containing the output container id
         """
-        return [
-            models.BCRDistribution.objects.create(
+        ret = base.OutputDict()
+
+        ret.set(models.BCRDistribution.objects.create(
                 hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
                     self.job, "BCR Distribution for hazard %s" % hazard_output,
-                    "bcr_distribution")).pk]
+                    "bcr_distribution")))
+        return ret
 
     def create_statistical_outputs(self):
         """
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        pass
+        return base.OutputDict()
 
     def set_risk_models(self):
         """
