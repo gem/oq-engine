@@ -240,8 +240,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
         return hazard, distance
 
-from memory_profiler import profile
-
 
 class GroundMotionValuesGetter(HazardGetter):
     """
@@ -251,7 +249,7 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
-    @profile
+    #@profile
     def get_data(self, imt):
         cursor = getcursor('job_init')
 
@@ -302,14 +300,13 @@ class GroundMotionValuesGetter(HazardGetter):
         rupture_set = set()
         for _, _, ruptures in data:
             rupture_set.update(ruptures)
-        sorted_ruptures = numpy.array(sorted(rupture_set), numpy.int32)
+        sorted_ruptures = numpy.array(sorted(rupture_set))
 
         # maps asset_id -> to a 2-tuple (gmvs, ruptures)
         assets, gmf = [], []
         for asset_id, gmvs, ruptures in data:
             gmv = dict(zip(ruptures, gmvs))
-            gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures],
-                               numpy.float32)
+            gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
             assets.append(asset_id)
             gmf.append(numpy.array([gmvs, sorted_ruptures]))
 
