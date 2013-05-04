@@ -47,16 +47,16 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
                 'asset_ref')
 
         self.getter = self.getter_class(
-            self.ho().id, self.assets(), 500)
+            self.ho(), self.assets(), 500, "PGA")
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
 
     def ho(self):
-        return self.job.risk_calculation.hazard_output.hazardcurve
+        return self.job.risk_calculation.hazard_output
 
     def test_call(self):
-        assets, values, missing = self.getter("PGA")
+        assets, values, missing = self.getter()
 
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         self.assertEqual(set(), missing)
@@ -69,7 +69,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, values, missing = self.getter("PGA")
+        assets, values, missing = self.getter()
         self.assertEqual([], assets)
         self.assertEqual(set([a.id for a in self.assets()]), missing)
         self.assertEqual([], values)
@@ -83,11 +83,8 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
 
-    def ho(self):
-        return self.job.risk_calculation.hazard_output.gmfcollection
-
     def test_call(self):
-        assets, values, missing = self.getter("PGA")
+        assets, values, missing = self.getter()
 
         gmvs = numpy.array(values)[:, 0]
 
@@ -104,11 +101,8 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     getter_class = hazard_getters.GroundMotionScenarioGetter
     taxonomy = 'RM'
 
-    def ho(self):
-        return self.job.risk_calculation.hazard_output
-
     def test_call(self):
-        assets, values, missing = self.getter("PGA")
+        assets, values, missing = self.getter()
 
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         self.assertEqual(set(), missing)

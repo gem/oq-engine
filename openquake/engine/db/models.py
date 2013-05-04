@@ -824,27 +824,6 @@ class HazardCalculation(djm.Model):
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
 
-    def should_compute_mean_curves(self):
-        """
-        Return True if mean curve calculation has been requested
-        """
-        return self.mean_hazard_curves is True
-
-    def should_compute_quantile_curves(self):
-        """
-        Return True if quantile curve calculation has been requested
-        """
-        return (self.quantile_hazard_curves is not None
-                and len(self.quantile_hazard_curves) > 0)
-
-    def should_consider_weights_in_aggregates(self):
-        """
-        Return True if the calculation of aggregate result should
-        consider the weight of the individual curves
-        """
-        return not (
-            self.number_of_logic_tree_samples > 0)
-
     def points_to_compute(self):
         """
         Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
@@ -1090,6 +1069,33 @@ class RiskCalculation(djm.Model):
         hcalc = (self.hazard_calculation or
                  self.hazard_output.oq_job.hazard_calculation)
         return hcalc
+
+    def hazard_outputs(self):
+        """
+        Returns the list of hazard outputs to be considered. Apply
+        `filters` to the default queryset
+        """
+
+        if self.calculation_mode in ["classical", "classical_bcr"]:
+            filters = dict(output_type='hazard_curve_multi',
+                           hazardcurve__lt_realization__isnull=False)
+        elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+            filters = dict(output_type='gmf',
+                           gmfcollection__lt_realization__isnull=False)
+        elif self.calculation_mode in ['scenario', 'scenario_damage']:
+            filters = dict(output_type='gmf_scenario')
+        else:
+            raise NotImplementedError
+
+        if self.hazard_output:
+            return [self.hazard_output]
+        elif self.hazard_calculation:
+            return self.hazard_calculation.oqjob_set.filter(
+                status="complete").latest(
+                    'last_update').output_set.filter(**filters).order_by('id')
+        else:
+            raise RuntimeError("Neither hazard calculation "
+                               "neither a hazard output has been provided")
 
     @property
     def best_maximum_distance(self):
