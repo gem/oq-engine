@@ -22,7 +22,6 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-from collections import OrderedDict
 import numpy
 
 from openquake.engine import logs
@@ -300,43 +299,19 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # nested dicts with structure: asset_id -> (rupture_id -> gmv)
-        assets_ruptures_gmvs = OrderedDict()
-
-        # store all the ruptures returned by the query
-        ruptures = set()
-
-        for asset_id, gmvs, rupture_ids in data:
-            assets_ruptures_gmvs[asset_id] = dict(zip(rupture_ids, gmvs))
-            ruptures.update(rupture_ids)
-
-        # We expect that the query may return a different number of
-        # gmvs and ruptures for each asset (because only the ruptures
-        # that gives a positive ground shaking are stored). Here on,
-        # we finalize `assets_ruptures_gmvs` by filling in with zero
-        # values for each rupture that has not given a contribute.
-
-        # for each asset, we look for missing ruptures
-        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.iteritems():
-
-            # all the ruptures producing a positive ground shaking for
-            # `asset`
-            asset_ruptures = set(ruptures_gmvs_dict)
-
-            missing_ruptures = ruptures - asset_ruptures
-
-            # we finalize the asset data with 0
-            for rupture_id in missing_ruptures:
-                ruptures_gmvs_dict[rupture_id] = 0.
+        rupture_set = set()
+        for _, _, ruptures in data:
+            rupture_set.update(ruptures)
+        sorted_ruptures = numpy.array(sorted(rupture_set), numpy.int32)
 
         # maps asset_id -> to a 2-tuple (gmvs, ruptures)
         assets, gmf = [], []
-        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.iteritems():
-            rups = numpy.array(sorted(ruptures_gmvs_dict), numpy.int32)
-            gmvs = numpy.array([ruptures_gmvs_dict[r] for r in rups],
+        for asset_id, gmvs, ruptures in data:
+            gmv = dict(zip(ruptures, gmvs))
+            gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures],
                                numpy.float32)
             assets.append(asset_id)
-            gmf.append(numpy.array([gmvs, rups]))
+            gmf.append(numpy.array([gmvs, sorted_ruptures]))
 
         return assets, gmf
 
