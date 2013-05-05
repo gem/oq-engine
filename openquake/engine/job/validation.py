@@ -137,6 +137,16 @@ class BaseOQModelForm(ModelForm):
             del kwargs['exports']
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
 
+    def has_vulnerability(self):
+        """
+        :returns: True if a vulnerability file has been given
+        """
+        vfiles = [itype
+                  for itype, _desc in models.Input.INPUT_TYPES
+                  if itype.endswith('vulnerability_file')
+                  if itype in self.files]
+        return vfiles
+
     def _add_error(self, field_name, error_msg):
         """
         Add an error to the `errors` dict.
@@ -319,7 +329,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
         super_valid = super(ClassicalHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types_and_levels is not None:
                 msg = (
                     '`intensity_measure_types_and_levels` is ignored when a '
@@ -391,7 +401,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
         # If a vulnerability model is defined, show warnings if the user also
         # specified `intensity_measure_types_and_levels` or
         # `intensity_measure_types`:
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if (self.instance.intensity_measure_types_and_levels
                     is not None):
                 msg = (
@@ -482,7 +492,7 @@ class DisaggHazardForm(BaseHazardModelForm):
         super_valid = super(DisaggHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types_and_levels is not None:
                 msg = (
                     '`intensity_measure_types_and_levels` is ignored when a '
@@ -524,7 +534,7 @@ class ScenarioHazardForm(BaseHazardModelForm):
         super_valid = super(ScenarioHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types is not None:
                 msg = (
                     '`intensity_measure_types` is ignored when a '
