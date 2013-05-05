@@ -159,10 +159,10 @@ class UnitOutputs(object):
 def individual_outputs(unit, params, profile):
     event_loss_table = collections.Counter()
     with profile('getting hazard'):
-        assets, gmvs_ruptures, _missings = unit.getter()
+        assets, gmvs_ruptures = unit.getter()
 
-    ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
-    rupture_matrix = numpy.array(gmvs_ruptures)[:, 1]
+    ground_motion_values = gmvs_ruptures[:, 0]
+    rupture_matrix = gmvs_ruptures[:, 1]
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
@@ -174,6 +174,7 @@ def individual_outputs(unit, params, profile):
         for i, asset in enumerate(assets):
             for j, rupture_id in enumerate(rupture_matrix[i]):
                 event_loss_table[rupture_id] += loss_matrix[i][j] * asset.value
+
     return UnitOutputs(
         assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
 
@@ -461,7 +462,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         vulnerability_function = self.vulnerability_functions[taxonomy]
 
         time_span, tses = self.hazard_times()
-
         return [base.CalculationUnit(
             api.ProbabilisticEventBased(
                 vulnerability_function,
