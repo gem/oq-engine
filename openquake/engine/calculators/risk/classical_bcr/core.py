@@ -42,6 +42,7 @@ def classical_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
+    :param dict units:
       A dict of :class:`..base.CalculationUnit` instances keyed by
       loss type string
     :param containers:
@@ -60,8 +61,9 @@ def classical_bcr(job_id, units, containers, params):
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
         for loss_type in units:
-            num_items = do_classical_bcr(
+            do_classical_bcr(
                 loss_type, units[loss_type], containers, params, profile)
+    num_items = len(units.values()[0][0].getter.assets)
     signal_task_complete(job_id=job_id, num_items=num_items)
 classical_bcr.ignore_result = False
 
@@ -98,7 +100,6 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
                 output_type="bcr_distribution",
                 loss_type=loss_type,
                 hazard_output_id=unit_orig.getter.hazard_output_id)
-    return len(assets)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
@@ -177,7 +178,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         :class:`openquake.engine.db.models.BCRDistribution` instance and its
         :class:`openquake.engine.db.models.Output` container.
 
-        :returns: A list containing the output container id
+        :returns: an instance of OutputDict
         """
         ret = writers.OutputDict()
 
