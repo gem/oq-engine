@@ -83,6 +83,10 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
+#: Kind of supported type of loss outputs
+LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
@@ -286,8 +290,12 @@ class Input(djm.Model):
         (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
-        (u'vulnerability', u'Vulnerability'),
-        (u'vulnerability_retrofitted', u'Vulnerability Retrofitted'),
+        (u'structural_vulnerability', u'Structural Vulnerability'),
+        (u'non_structural_vulnerability', u'Non Structural Vulnerability'),
+        (u'contents_vulnerability', u'Contents Vulnerability'),
+        (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
+        (u'structural_vulnerability_retrofitted',
+         u'Structural Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
@@ -2181,6 +2189,7 @@ class LossFraction(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2345,6 +2354,7 @@ class LossMap(djm.Model):
     poe = djm.FloatField(null=True)
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
@@ -2371,6 +2381,7 @@ class AggregateLoss(djm.Model):
     insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss'
@@ -2390,6 +2401,7 @@ class LossCurve(djm.Model):
     # hazard_output the following fields must be set
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2444,6 +2456,7 @@ class EventLoss(djm.Model):
     output = djm.OneToOneField('Output')
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"event_loss'
@@ -2457,6 +2470,7 @@ class BCRDistribution(djm.Model):
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_bcr_distribution")
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'

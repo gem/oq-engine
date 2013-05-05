@@ -27,7 +27,7 @@ from django import db
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -46,7 +46,7 @@ def event_based(job_id, units, containers, params):
     :param list units:
       A list of :class:`..base.CalculationUnit` to be run
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute

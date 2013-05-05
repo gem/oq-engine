@@ -17,7 +17,6 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-import collections
 import numpy
 from openquake.risklib.api import Classical
 from openquake.risklib.scientific import conditional_loss_ratio
@@ -39,10 +38,11 @@ def classical(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`..base.CalculationUnit` to be run
+    :param dict units:
+      A dict of :class:`..base.CalculationUnit` instances keyed by
+      loss type string
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -54,14 +54,19 @@ def classical(job_id, units, containers, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        do_classical(units, containers, params, profile)
-    signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
+        for loss_type in units:
+            num_items = do_classical(
+                loss_type, units[loss_type], containers, params, profile)
+    signal_task_complete(job_id=job_id, num_items=num_items)
 classical.ignore_result = False
 
 
-def do_classical(units, containers, params, profile):
+def do_classical(loss_type, units, containers, params, profile):
     """
     See `classical` for a description of the parameters.
+
+    :param str loss_type:
+      the type of losses we are considering
 
     :param profile:
       a context manager for logging/profiling purposes
@@ -76,17 +81,19 @@ def do_classical(units, containers, params, profile):
 
     with profile('saving individual risk'):
         hids = [unit.getter.hazard_output_id for unit in units]
-        save_individual_outputs(containers, hids, outputs, params)
+        save_individual_outputs(loss_type, containers, hids, outputs, params)
 
     if len(units) < 2:  # skip statistics if we are working on a single unit
-        return
+        return len(outputs.assets)
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
         stats = statistics(outputs, weights, params)
 
     with profile('saving risk statistics'):
-        save_statistical_output(containers, stats, params)
+        save_statistical_output(loss_type, containers, stats, params)
+
+    return len(outputs.assets)
 
 
 class AssetsIndividualOutputs(object):
@@ -147,7 +154,7 @@ def individual_outputs(units, conditional_loss_poes, poes_disagg, profile):
         numpy.array(fractions))
 
 
-def save_individual_outputs(containers, hids, outputs, params):
+def save_individual_outputs(loss_type, containers, hids, outputs, params):
     """
     Save an instance of `AssetsIndividualOutputs` in the proper
     `containers`
@@ -155,13 +162,15 @@ def save_individual_outputs(containers, hids, outputs, params):
     # loss curves
     containers.write_all(
         "hazard_output_id", hids,
-        outputs.curve_matrix, outputs.assets, output_type="loss_curve")
+        outputs.curve_matrix, outputs.assets,
+        output_type="loss_curve", loss_type=loss_type)
 
     # loss maps
     for hid, maps in zip(hids, outputs.map_matrix):
         containers.write_all(
             "poe", params.conditional_loss_poes, maps, outputs.assets,
-            hazard_output_id=hid, output_type="loss_map")
+            hazard_output_id=hid,
+            output_type="loss_map", loss_type=loss_type)
 
     # loss fractions
     for hid, fractions in zip(hids, outputs.fraction_matrix):
@@ -169,7 +178,7 @@ def save_individual_outputs(containers, hids, outputs, params):
             "poe", params.poes_disagg, fractions,
             outputs.assets, [a.taxonomy for a in outputs.assets],
             hazard_output_id=hid, output_type="loss_fraction",
-            variable="taxonomy")
+            variable="taxonomy", loss_type=loss_type)
 
 
 class StatisticalOutputs(object):
@@ -264,40 +273,43 @@ def statistics(outputs, weights, params):
         mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
 
 
-def save_statistical_output(containers, stats, params):
+def save_statistical_output(loss_type, containers, stats, params):
     # mean curves, maps and fractions
 
     containers.write(
         stats.assets, stats.mean_curves,
-        output_type="loss_curve", statistics="mean")
+        output_type="loss_curve", statistics="mean", loss_type=loss_type)
 
     containers.write_all("poe", params.conditional_loss_poes,
                          stats.mean_maps, stats.assets,
-                         output_type="loss_map", statistics="mean")
+                         output_type="loss_map",
+                         statistics="mean", loss_type=loss_type)
 
     containers.write_all("poe", params.poes_disagg,
                          stats.mean_fractions,
                          stats.assets,
                          [a.taxonomy for a in stats.assets],
                          output_type="loss_fraction", statistics="mean",
-                         variable="taxonomy")
+                         variable="taxonomy", loss_type=loss_type)
 
     # quantile curves, maps and fractions
     containers.write_all(
         "quantile", params.quantiles, stats.quantile_curves,
-        stats.assets, output_type="loss_curve", statistics="quantile")
+        stats.assets, output_type="loss_curve", statistics="quantile",
+        loss_type=loss_type)
 
     for quantile, maps in zip(params.quantiles, stats.quantile_maps):
         containers.write_all("poe", params.conditional_loss_poes, maps,
                              stats.assets, output_type="loss_map",
-                             statistics="quantile", quantile=quantile)
+                             statistics="quantile", quantile=quantile,
+                             loss_type=loss_type)
 
     for quantile, fractions in zip(params.quantiles, stats.quantile_fractions):
         containers.write_all("poe", params.poes_disagg, fractions,
                              stats.assets, [a.taxonomy for a in stats.assets],
                              output_type="loss_fraction",
                              statistics="quantile", quantile=quantile,
-                             variable="taxonomy")
+                             variable="taxonomy", loss_type=loss_type)
 
 
 class ClassicalRiskCalculator(base.RiskCalculator):
@@ -309,7 +321,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     #: celery task
     core_calc_task = classical
 
-    def calculation_units(self, assets):
+    def calculation_units(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -318,23 +330,24 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
-        vulnerability_function = self.vulnerability_functions[taxonomy]
+        model = self.risk_models[taxonomy][loss_type]
 
         return [base.CalculationUnit(
             Classical(
-                vulnerability_function=vulnerability_function,
+                vulnerability_function=model.vulnerability_function,
                 steps=self.rc.lrem_steps_per_interval),
             hazard_getters.HazardCurveGetterPerAsset(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
-                self.taxonomy_imt[taxonomy]))
+                model.imt))
                 for ho in self.rc.hazard_outputs()]
 
-    def pre_execute(self):
+    def validate_hazard(self):
         """
-        Checks that the given hazard is an hazard curve
+        Checks that the given hazard has hazard curves
         """
+        super(ClassicalRiskCalculator, self).validate_hazard()
         if self.rc.hazard_calculation:
             if self.rc.hazard_calculation.calculation_mode != 'classical':
                 raise RuntimeError(
@@ -343,7 +356,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         elif not self.rc.hazard_output.is_hazard_curve():
             raise RuntimeError(
                 "The provided hazard output is not an hazard curve")
-        super(ClassicalRiskCalculator, self).pre_execute()
 
     def create_outputs(self, hazard_output):
         """
@@ -355,16 +367,19 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         containers = super(ClassicalRiskCalculator, self).create_outputs(
             hazard_output)
 
-        for poe in self.rc.poes_disagg or []:
-            containers.set(models.LossFraction.objects.create(
-                hazard_output_id=hazard_output.id,
-                variable="taxonomy",
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "Loss Fractions with poe %s for hazard %s" % (
-                        poe, hazard_output.id), "loss_fraction"),
-                poe=poe))
-        return containers
+        for loss_type in base.loss_types(self.risk_models):
+            for poe in self.rc.poes_disagg or []:
+                containers.set(models.LossFraction.objects.create(
+                    hazard_output_id=hazard_output.id,
+                    variable="taxonomy",
+                    loss_type=loss_type,
+                    output=models.Output.objects.create_output(
+                        self.job,
+                        "loss fractions. type=%s poe=%s hazard=%s" % (
+                            loss_type, poe, hazard_output.id),
+                        "loss_fraction"),
+                    poe=poe))
+            return containers
 
     def create_statistical_outputs(self):
         """
@@ -380,29 +395,35 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if len(self.rc.hazard_outputs()) < 2:
             return containers
 
-        for poe in self.rc.poes_disagg or []:
-            containers.set(models.LossFraction.objects.create(
-                variable="taxonomy",
-                poe=poe,
-                output=models.Output.objects.create_output(
-                    job=self.job,
-                    display_name="Mean Loss Fractions poe=%.4f" % poe,
-                    output_type="loss_fraction"),
-                statistics="mean"))
-
-        for quantile in self.rc.quantile_loss_curves or []:
+        for loss_type in base.loss_types(self.risk_models):
             for poe in self.rc.poes_disagg or []:
-                name = "Quantile Loss Fractions poe=%.4f q=%.4f" % (
-                    poe, quantile)
+                name = "mean loss fractions. type=%s poe=%.4f" % (
+                    loss_type, poe)
                 containers.set(models.LossFraction.objects.create(
                     variable="taxonomy",
                     poe=poe,
+                    loss_type=loss_type,
                     output=models.Output.objects.create_output(
                         job=self.job,
                         display_name=name,
                         output_type="loss_fraction"),
-                    statistics="quantile",
-                    quantile=quantile))
+                    statistics="mean"))
+
+        for loss_type in base.loss_types(self.risk_models):
+            for quantile in self.rc.quantile_loss_curves or []:
+                for poe in self.rc.poes_disagg or []:
+                    name = ("quantile(%.4f) loss fractions "
+                            "loss_type=%s poe=%.4f" % (
+                                quantile, loss_type, poe))
+                    containers.set(models.LossFraction.objects.create(
+                        variable="taxonomy",
+                        poe=poe,
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name=name,
+                            output_type="loss_fraction"),
+                        statistics="quantile",
+                        quantile=quantile))
 
         return containers
 
