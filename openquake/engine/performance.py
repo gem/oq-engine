@@ -23,7 +23,7 @@ class PerformanceMonitor(object):
 
      with PerformanceMonitor([os.getpid()]) as mm:
          do_something()
-     maxmemory, = mm.mem
+     deltamemory, = mm.mem
 
     At the end of the block the PerformanceMonitor object will have the
     following 5 public attributes:
@@ -31,14 +31,12 @@ class PerformanceMonitor(object):
     .start_time: when the monitor started (a datetime object)
     .duration: time elapsed between start and stop (in seconds)
     .exc: None unless an exception happened inside the block of code
-    .mem: an array with the memory deltas (in megabytes)
+    .mem: an array with the memory deltas (in bytes)
 
-    The memory tuples have the same length as the number of processes.
+    The memory array has the same length as the number of processes.
     The behaviour of the PerformanceMonitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
-    or store the results of the analysis; the on_running() method is
-    called while the analysis is running and can be used to display
-    or store the partial results.
+    or store the results of the analysis.
     """
 
     def __init__(self, pids):
@@ -46,7 +44,7 @@ class PerformanceMonitor(object):
         self._start_time = None  # seconds from the epoch
         self.start_time = None  # datetime object
         self.duration = None  # seconds
-        self.mem = None  # megabytes
+        self.mem = None  # bytes
         self.exc = None  # exception
 
     def measure_mem(self):
@@ -63,29 +61,21 @@ class PerformanceMonitor(object):
                 mem.append(rss)
         return numpy.array(mem)
 
-    def start(self):
-        "Start the monitor thread"
-        self._start_time = time.time()
-        self.start_time = datetime.fromtimestamp(self._start_time)
-        self.start_mem = self.measure_mem()
-
-    def stop(self):
-        "Stop the monitor thread and call on_exit"
-        self.stop_mem = self.measure_mem()
-        self.mem = self.stop_mem - self.start_mem
-        self.duration = time.time() - self._start_time
-        self.on_exit()
-
     def __enter__(self):
         "Call .start"
         self.exc = None
-        self.start()
+        self._start_time = time.time()
+        self.start_time = datetime.fromtimestamp(self._start_time)
+        self.start_mem = self.measure_mem()
         return self
 
     def __exit__(self, etype, exc, tb):
         "Call .stop"
         self.exc = exc
-        self.stop()
+        self.stop_mem = self.measure_mem()
+        self.mem = self.stop_mem - self.start_mem
+        self.duration = time.time() - self._start_time
+        self.on_exit()
 
     def on_exit(self):
         "Save the results: to be overridden in subclasses"
@@ -105,7 +95,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     concurrents task can log simultaneously on the uiapi.performance table
     without problems. You can save more often by calling the .cache.flush()
     method; it is automatically called for you by the oqtask decorator;
-    it is also called automatically at the end of the main process.
+    it is also called at the end of the main engine process.
     """
 
     # globals per process
@@ -145,12 +135,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
         super(EnginePerformanceMonitor, self).__init__(pids)
 
-    def __enter__(self):
-        super(EnginePerformanceMonitor, self).__enter__()
-        if self.tracing:
-            self.tracer.__enter__()
-        return self
-
     def on_exit(self):
         """
         Save the memory consumption on the uiapi.performance table.
@@ -177,6 +161,12 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=pymemory,
                 pgmemory=pgmemory)
             self.cache.add(perf)
+
+    def __enter__(self):
+        super(EnginePerformanceMonitor, self).__enter__()
+        if self.tracing:
+            self.tracer.__enter__()
+        return self
 
     def __exit__(self, etype, exc, tb):
         super(EnginePerformanceMonitor, self).__exit__(etype, exc, tb)
