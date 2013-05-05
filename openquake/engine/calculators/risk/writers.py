@@ -17,6 +17,7 @@
 
 """DB writing functionality for Risk calculators."""
 
+import collections
 import itertools
 from openquake.risklib import scientific
 from openquake.engine.db import models
@@ -195,3 +196,114 @@ def total_damage_distribution(fractions, dmg_state_ids):
     for mean, std, dmg_state in zip(means, stds, dmg_state_ids):
         models.DmgDistTotal.objects.create(
             dmg_state_id=dmg_state, mean=mean, stddev=std)
+
+
+# A namedtuple that identifies an Output object in a risk calculation
+# E.g. A Quantile LossCurve associated with a specific hazard output is
+# OutputKey(output_type="loss_curve",
+#           loss_type="structural",
+#           hazard_output_id=foo,
+#           poe=None,
+#           quantile=bar,
+#           statistics="quantile",
+#           variable=None,
+#           insured=False)
+
+OutputKey = collections.namedtuple('OutputKey', [
+    'output_type',  # as in :class:`openquake.engine.db.models.Output`
+    'loss_type',  # as in risk output containers
+    'hazard_output_id',  # as in risk output containers
+    'poe',  # for loss map and classical loss fractions
+    'quantile',  # for quantile outputs
+    'statistics',  # as in risk output containers
+    'variable',  # for disaggregation outputs
+    'insured',  # as in :class:`openquake.engine.db.models.LossCurve`
+])
+
+
+class OutputDict(dict):
+    """
+    A dict keying OutputKey instances to database ID, with convenience
+    setter and getter methods to manage Output containers.
+
+    It also automatically links an Output type with its specific
+    writer.
+
+    Risk Calculators create OutputDict instances with Output IDs keyed
+    by OutputKey instances.
+
+    Worker tasks compute results than get the proper writer and use it
+    to actually write the results
+    """
+
+    def get(self,
+            output_type=None, loss_type=None, hazard_output_id=None, poe=None,
+            quantile=None, statistics=None, variable=None, insured=False):
+        """
+        Get the ID associated with the `OutputKey` instance built with the
+        given kwargs.
+        """
+        return self[OutputKey(output_type, loss_type, hazard_output_id, poe,
+                              quantile, statistics, variable, insured)]
+
+    def write(self, *args, **kwargs):
+        """
+        1) Get the ID associated with the `OutputKey` instance built with
+        the given kwargs.
+        2) Get a writer function from the `writers` module with
+        function name given by the `output_type` argument.
+        3) Call such function with the given positional arguments.
+        """
+        output_id = self.get(**kwargs)
+        writer = globals().get(kwargs['output_type'])
+        writer(output_id, *args)
+
+    def write_all(self, arg, values, items,
+                  *initial_args, **initial_kwargs):
+        """
+        Call iteratively `write`.
+
+        In each call, the keyword arguments are built by merging
+        `initial_kwargs` with a dict storing the association between
+        `arg` and the value taken iteratively from `values`. The
+        positional arguments are built by chaining `initial_args` with
+        a value taken iteratively from `items`.
+
+        :param str arg: a keyword argument to be passed to `write`
+
+        :param list values: a list of keyword argument values to be
+        passed to `write`
+
+        :param list items: a list of positional arguments to be passed
+        to `write`
+        """
+        for value, item in itertools.izip(values, items):
+            kwargs = {arg: value}
+            kwargs.update(initial_kwargs)
+            args = list(initial_args) + [item]
+            self.write(*args, **kwargs)
+
+    def set(self, container):
+        """Store an ID (got from `container`) keyed by a new
+        `OutputKey` built with the attributes guessed on `container`
+
+        :param container: a django model instance of an output
+        container (e.g. a LossCurve)
+        """
+        hazard_output_id = getattr(container, "hazard_output_id")
+        loss_type = getattr(container, "loss_type")
+        poe = getattr(container, "poe", None)
+        quantile = getattr(container, "quantile", None)
+        statistics = getattr(container, "statistics", None)
+        variable = getattr(container, "variable", None)
+        insured = getattr(container, "insured", False)
+
+        self[OutputKey(
+            output_type=container.output.output_type,
+            loss_type=loss_type,
+            hazard_output_id=hazard_output_id,
+            poe=poe,
+            quantile=quantile,
+            statistics=statistics,
+            variable=variable,
+            insured=insured)] = container.id

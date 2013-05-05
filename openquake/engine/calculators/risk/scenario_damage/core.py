@@ -49,7 +49,7 @@ def scenario_damage(job_id, units, containers, params):
     :param list units:
       A list of :class:`..base.CalculationUnit` to be run
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -260,14 +260,14 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Override default behaviour as scenario damage calculator does
         not use output containers"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
     def create_outputs(self, _ho):
         """
         Override default behaviour as scenario damage calculator does
         not use output containers"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
     @property
     def calculator_parameters(self):
