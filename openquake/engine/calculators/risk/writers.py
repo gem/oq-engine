@@ -298,7 +298,7 @@ class OutputDict(dict):
         variable = getattr(container, "variable", None)
         insured = getattr(container, "insured", False)
 
-        self[OutputKey(
+        key = OutputKey(
             output_type=container.output.output_type,
             loss_type=loss_type,
             hazard_output_id=hazard_output_id,
@@ -306,4 +306,9 @@ class OutputDict(dict):
             quantile=quantile,
             statistics=statistics,
             variable=variable,
-            insured=insured)] = container.id
+            insured=insured)
+        assert super(
+            OutputDict, self).get(
+                key, None) is None, "OutputDict can not be updated"
+
+        self[key] = container.id
