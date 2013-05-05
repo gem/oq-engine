@@ -115,7 +115,7 @@ class PreExecuteTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ar:
             calc.pre_execute()
         self.assertEqual(
-            "There is no hazard output for the intensity measure SA(0.1); "
+            "There is no hazard output in SA(0.1); "
             "the available IMTs are ['PGA']",
             ar.exception.message)
 

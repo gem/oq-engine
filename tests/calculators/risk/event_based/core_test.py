@@ -47,33 +47,9 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.assertTrue(params.insured_losses)
 
     def test_imt_validation(self):
-        # Test the validation of the imt associated with the
-        # vulnerability model that must match the one of the hazard
-        # output
-
-        cont = """\
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-    <vulnerabilityModel>
-        <discreteVulnerabilitySet vulnerabilitySetID="QA_test1"
-                                  assetCategory="single_asset"
-                                lossCategory="loss">
-            <IML IMT="FOO">0.1    0.2    0.3    0.45    0.6</IML>
-            <discreteVulnerability vulnerabilityFunctionID="VF"
-                                   probabilisticDistribution="LN">
-                <lossRatio>0.05    0.1    0.2    0.4    0.8</lossRatio>
-                <coefficientsVariation>
-                0.5    0.4    0.3    0.2    0.1
-                </coefficientsVariation>
-            </discreteVulnerability>
-        </discreteVulnerabilitySet>
-    </vulnerabilityModel>
-</nrml>
-
-        """
         self.assertRaises(ValueError,
-                          self.calculator.parse_vulnerability_model,
-                          StringIO(cont))
+                          self.calculator.check_imts,
+                          ["FOO"])
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the
