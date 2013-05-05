@@ -22,7 +22,7 @@ import numpy
 from openquake.risklib import api, scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -46,7 +46,7 @@ def event_based_bcr(job_id, units, containers, params):
     :param list units:
       A list of :class:`..base.CalculationUnit` to be run
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -192,7 +192,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         :returns: A list containing the output container id.
         """
-        ret = base.OutputDict()
+        ret = writers.OutputDict()
         ret.set(models.BCRDistribution.objects.create(
                 hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
@@ -206,7 +206,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
     def set_risk_models(self):
         """

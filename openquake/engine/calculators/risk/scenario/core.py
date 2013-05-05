@@ -25,7 +25,7 @@ from openquake.risklib import api, scientific
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -42,7 +42,7 @@ def scenario(job_id, units, containers, params):
     :param list units:
       A list of :class:`..base.CalculationUnit` to be run
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -232,7 +232,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Create the the output of a ScenarioRisk calculator
         which is a LossMap.
         """
-        ret = base.OutputDict()
+        ret = writers.OutputDict()
 
         if self.rc.insured_losses:
             ret.set(models.LossMap.objects.create(
@@ -252,4 +252,4 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
