@@ -339,8 +339,8 @@ class RiskCalculator(base.Calculator):
         missing = set(model_imts) - set(imts)
         if missing:
             raise ValueError(
-                "There is no hazard output for the intensity measure types"
-                "%s; the available IMTs are %s" % (missing, imts))
+                "There is no hazard output in "
+                "%s; the available IMTs are %s" % (", ".join(missing), imts))
 
     def check_taxonomies(self, taxonomies):
         """
@@ -416,8 +416,10 @@ class RiskCalculator(base.Calculator):
             distribution = record['probabilisticDistribution']
 
             if taxonomy in vfs:
-                raise ValueError("A taxonomy %s can not be associated with "
-                                 "different vulnerability function" % (
+                raise ValueError("Error creating vulnerability function for "
+                                 "taxonomy %s. A taxonomy can not "
+                                 "be associated with "
+                                 "different vulnerability functions" % (
                                  taxonomy))
 
             try:
