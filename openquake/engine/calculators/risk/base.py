@@ -179,9 +179,7 @@ class RiskCalculator(base.Calculator):
                         taxonomy,
                         self.rc.region_constraint, offset, block_size)
 
-                calculation_units = dict(
-                    [(loss_type, self.calculation_units(loss_type, assets))
-                     for loss_type in loss_types(self.risk_models)])
+                calculation_units = self.get_calculation_units(assets)
 
                 num_tasks += 1
                 yield [self.job.id,
@@ -196,20 +194,15 @@ class RiskCalculator(base.Calculator):
             js.num_tasks = num_tasks
             js.save()
 
-    def calculation_units(self, loss_type, assets):
+    def get_calculation_units(self, assets):
         """
-        :returns: a list of instances of
-        :class:`openquake.engine.calculators.risk.CalculationUnit` to
-        be run for the given `loss_type` and `assets`
-
-        :param str loss_type:
-            Any vaue in `openquake.engine.db.models.LOSS_TYPES`
-
-        :param assets:
-            An iterable over instances of
-            :class:`openquake.engine.db.models.ExposureData`
+        :returns: the calculation units to be considered. Default
+        behavior is to returns a dict keyed by loss types. Calculators
+        that do not support multiple loss types must override this
+        method.
         """
-        raise NotImplementedError
+        return dict([(loss_type, self.calculation_units(loss_type, assets))
+                     for loss_type in loss_types(self.risk_models)])
 
     def export(self, *args, **kwargs):
         """
@@ -566,7 +559,7 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
 #: the IMT associated to it
 RiskModel = collections.namedtuple(
     'RiskModel',
-    'imt vulnerability_function fragility_function_set')
+    'imt vulnerability_function fragility_functions')
 
 
 #: A calculation unit holds a risklib calculator (e.g. an instance of
