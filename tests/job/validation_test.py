@@ -313,7 +313,8 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
         form = validation.ClassicalHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -494,7 +495,8 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         self.hc.intensity_measure_types_and_levels = subset_iml_imt
 
         form = validation.EventBasedHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -623,7 +625,8 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
         form = validation.DisaggHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -688,7 +691,8 @@ openquake.hazardlib.gsim"],
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types`
         form = validation.ScenarioHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:

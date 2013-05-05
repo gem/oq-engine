@@ -417,6 +417,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     containers.set(models.LossFraction.objects.create(
                         variable="taxonomy",
                         poe=poe,
+                        loss_type=loss_type,
                         output=models.Output.objects.create_output(
                             job=self.job,
                             display_name=name,
