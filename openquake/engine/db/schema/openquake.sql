@@ -29,6 +29,7 @@ CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
 CREATE SCHEMA htemp;
+CREATE SCHEMA rtemp;
 
 
 
@@ -1075,6 +1076,7 @@ CREATE TABLE riski.occupancy (
     description VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
 ) TABLESPACE riski_ts;
+
 
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (

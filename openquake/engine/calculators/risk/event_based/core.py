@@ -18,6 +18,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import random
 import collections
 import numpy
 from scipy import interpolate
@@ -27,7 +28,7 @@ from django import db
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import api, scientific
 
-from openquake.engine.calculators.risk import base, hazard_getters, writers
+from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -43,8 +44,10 @@ def event_based(job_id, units, containers, params):
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param list units:
-      A list of :class:`..base.CalculationUnit` to be run
+    :param int job_id:
+      ID of the currently running job
+      A dict of :class:`..base.CalculationUnit` instances keyed by
+      loss type string
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -59,15 +62,19 @@ def event_based(job_id, units, containers, params):
 
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
+    event_loss_tables = dict()
+
     with db.transaction.commit_on_success(using='reslt_writer'):
-        event_loss_table = do_event_based(units, containers, params, profile)
+        for loss_type in units:
+            event_loss_tables[loss_type], num_items = do_event_based(
+                loss_type, units[loss_type], containers, params, profile)
     signal_task_complete(job_id=job_id,
-                         num_items=len(units[0].getter.assets),
-                         event_loss_table=event_loss_table)
+                         num_items=num_items,
+                         event_loss_tables=event_loss_tables)
 event_based.ignore_result = False
 
 
-def do_event_based(units, containers, params, profile):
+def do_event_based(loss_type, units, containers, params, profile):
     """
     See `event_based` for a description of the params
 
@@ -95,18 +102,19 @@ def do_event_based(units, containers, params, profile):
 
         with profile('saving individual risk'):
             save_individual_outputs(
-                containers, hid, outputs, disagg_outputs, params)
+                loss_type, containers, hid, outputs, disagg_outputs, params)
 
         if params.insured_losses:
             insured_curves = list(
                 insured_losses(unit, outputs.assets, outputs.loss_matrix))
             containers.write(
                 outputs.assets, insured_curves,
-                output_type="loss_curve", insured=True, hazard_output_id=hid)
+                output_type="loss_curve", insured=True, hazard_output_id=hid,
+                loss_type=loss_type)
 
     # compute mean and quantile outputs
     if len(units) < 2:
-        return event_loss_table
+        return event_loss_table, len(outputs.assets)
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
@@ -115,9 +123,10 @@ def do_event_based(units, containers, params, profile):
             weights, params)
 
     with profile('saving risk statistics'):
-        save_statistical_output(containers, outputs.assets, stats, params)
+        save_statistical_output(
+            loss_type, containers, outputs.assets, stats, params)
 
-    return event_loss_table
+    return event_loss_table, len(outputs.assets)
 
 
 class UnitOutputs(object):
@@ -179,18 +188,19 @@ def individual_outputs(unit, params, profile):
         assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
 
 
-def save_individual_outputs(containers, hid, outputs, disagg_outputs, params):
+def save_individual_outputs(
+        loss_type, containers, hid, outputs, disagg_outputs, params):
     # loss curves, maps and fractions
     containers.write(
         outputs.assets,
         outputs.loss_curves,
-        output_type="loss_curve", hazard_output_id=hid)
+        output_type="loss_curve", hazard_output_id=hid, loss_type=loss_type)
 
     containers.write_all(
         "poe", params.conditional_loss_poes,
         outputs.loss_maps,
         outputs.assets,
-        output_type="loss_map", hazard_output_id=hid)
+        output_type="loss_map", hazard_output_id=hid, loss_type=loss_type)
 
     if params.sites_disagg:
         containers.write(
@@ -199,13 +209,15 @@ def save_individual_outputs(containers, hid, outputs, disagg_outputs, params):
             disagg_outputs.fractions,
             output_type="loss_fraction",
             hazard_output_id=hid,
-            variable="magnitude_distance")
+            variable="magnitude_distance",
+            loss_type=loss_type)
         containers.write(
             disagg_outputs.assets_disagg,
             disagg_outputs.coordinate, disagg_outputs.fractions,
             output_type="loss_fraction",
             hazard_output_id=hid,
-            variable="coordinate")
+            variable="coordinate",
+            loss_type=loss_type)
 
 
 def insured_losses(unit, assets, loss_ratio_matrix):
@@ -281,23 +293,27 @@ def statistics(assets, curve_matrix, weights, params):
         assets, mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
-def save_statistical_output(containers, assets, stats, params):
+def save_statistical_output(loss_type, containers, assets, stats, params):
     # mean curves and maps
     containers.write(
-        assets, stats.mean_curves, output_type="loss_curve", statistics="mean")
+        assets, stats.mean_curves,
+        output_type="loss_curve", statistics="mean", loss_type=loss_type)
 
-    containers.write_all("poe", params.conditional_loss_poes, stats.mean_maps,
-                         assets, output_type="loss_map", statistics="mean")
+    containers.write_all(
+        "poe", params.conditional_loss_poes, stats.mean_maps,
+        assets, output_type="loss_map", statistics="mean", loss_type=loss_type)
 
     # quantile curves and maps
     containers.write_all(
         "quantile", params.quantiles, stats.quantile_curves,
-        assets, output_type="loss_curve", statistics="quantile")
+        assets, output_type="loss_curve",
+        statistics="quantile", loss_type=loss_type)
 
     for quantile, maps in zip(params.quantiles, stats.quantile_maps):
-        containers.write_all("poe", params.conditional_loss_poes, maps,
-                             assets, output_type="loss_map",
-                             statistics="quantile", quantile=quantile)
+        containers.write_all(
+            "poe", params.conditional_loss_poes, maps,
+            assets, output_type="loss_map",
+            statistics="quantile", quantile=quantile, loss_type=loss_type)
 
 
 class DisaggregationOutputs(object):
@@ -366,24 +382,23 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
-        self.event_loss_table = collections.Counter()
+        self.event_loss_tables = dict()
+        self.rnd = random.Random()
+        self.rnd.seed(self.rc.master_seed)
 
     def task_completed_hook(self, message):
         """
         Updates the event loss table
         """
-        self.event_loss_table += message['event_loss_table']
+        for loss_type in base.loss_types(self.risk_models):
+            task_loss_table = message['event_loss_tables'][loss_type]
+            self.event_loss_tables[loss_type] += task_loss_table
 
-    def pre_execute(self):
+    def validate_hazard(self):
         """
-        Override the default pre_execute to provide more detailed
-        validation.
-
-        1) check that the given hazard comes from an event based calculation
-
-        2) If insured losses are required we check for the presence of
-        the deductible and insurance limit
+        Check that the given hazard comes from an event based calculation
         """
+        super(EventBasedRiskCalculator, self).validate_hazard()
         if self.rc.hazard_calculation:
             if self.rc.hazard_calculation.calculation_mode != "event_based":
                 raise RuntimeError(
@@ -393,9 +408,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a gmf collection")
 
-        # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
-
-        super(EventBasedRiskCalculator, self).pre_execute()
+    def get_taxonomies(self):
+        """
+        If insured losses are required we check for the presence of
+        the deductible and insurance limit
+        """
+        taxonomies = super(EventBasedRiskCalculator, self).get_taxonomies()
 
         if (self.rc.insured_losses and
             self.rc.exposure_model.exposuredata_set.filter(
@@ -404,6 +422,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             raise RuntimeError(
                 "Deductible or insured limit missing in exposure")
 
+        # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
+
+        return taxonomies
+
     def post_process(self):
         """
           Compute aggregate loss curves and event loss tables
@@ -411,46 +433,50 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
-        for hazard_output in self.rc.hazard_outputs():
-            gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
+        for loss_type, event_loss_table in self.event_loss_tables.items():
+            for hazard_output in self.rc.hazard_outputs():
+                gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
 
-            aggregate_losses = [
-                self.event_loss_table[rupture.id]
-                for rupture in models.SESRupture.objects.filter(
-                    ses__pk__in=[gmf_set.stochastic_event_set_id
-                                 for gmf_set in gmf_sets])
-                if rupture.id in self.event_loss_table]
+                aggregate_losses = [
+                    event_loss_table[rupture.id]
+                    for rupture in models.SESRupture.objects.filter(
+                        ses__pk__in=[gmf_set.stochastic_event_set_id
+                                     for gmf_set in gmf_sets])
+                    if rupture.id in event_loss_table]
 
-            if aggregate_losses:
-                aggregate_loss_losses, aggregate_loss_poes = (
-                    scientific.event_based(
-                        aggregate_losses, tses=tses, time_span=time_span,
-                        curve_resolution=self.rc.loss_curve_resolution))
+                if aggregate_losses:
+                    aggregate_loss_losses, aggregate_loss_poes = (
+                        scientific.event_based(
+                            aggregate_losses, tses=tses, time_span=time_span,
+                            curve_resolution=self.rc.loss_curve_resolution))
 
-                models.AggregateLossCurveData.objects.create(
-                    loss_curve=models.LossCurve.objects.create(
-                        aggregate=True, insured=False,
-                        hazard_output=hazard_output,
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "Aggregate Loss Curve "
-                            "for hazard %s" % hazard_output,
-                            "agg_loss_curve")),
-                    losses=aggregate_loss_losses, poes=aggregate_loss_poes,
-                    average_loss=scientific.average_loss(
-                        aggregate_loss_losses, aggregate_loss_poes))
+                    models.AggregateLossCurveData.objects.create(
+                        loss_curve=models.LossCurve.objects.create(
+                            aggregate=True, insured=False,
+                            hazard_output=hazard_output,
+                            loss_type=loss_type,
+                            output=models.Output.objects.create_output(
+                                self.job,
+                                "aggregate loss curves. "
+                                "loss_type=%s hazard=%s" % (
+                                    loss_type, hazard_output),
+                                "agg_loss_curve")),
+                        losses=aggregate_loss_losses, poes=aggregate_loss_poes,
+                        average_loss=scientific.average_loss(
+                            aggregate_loss_losses, aggregate_loss_poes))
 
-        event_loss_table_output = models.Output.objects.create_output(
-            self.job, "Event Loss Table", "event_loss")
+            event_loss_table_output = models.Output.objects.create_output(
+                self.job, "Event Loss Table", "event_loss")
 
-        with db.transaction.commit_on_success(using='reslt_writer'):
-            for rupture_id, aggregate_loss in self.event_loss_table.items():
-                models.EventLoss.objects.create(
-                    output=event_loss_table_output,
-                    rupture_id=rupture_id,
-                    aggregate_loss=aggregate_loss)
+            with db.transaction.commit_on_success(using='reslt_writer'):
+                for rupture_id, aggregate_loss in event_loss_table.items():
+                    models.EventLoss.objects.create(
+                        output=event_loss_table_output,
+                        rupture_id=rupture_id,
+                        loss_type=loss_type,
+                        aggregate_loss=aggregate_loss)
 
-    def calculation_units(self, assets):
+    def calculation_units(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -459,12 +485,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
-        vulnerability_function = self.vulnerability_functions[taxonomy]
+        risk_model = self.risk_models[taxonomy][loss_type]
 
         time_span, tses = self.hazard_times()
         return [base.CalculationUnit(
             api.ProbabilisticEventBased(
-                vulnerability_function,
+                risk_model.vulnerability_function,
                 curve_resolution=self.rc.loss_curve_resolution,
                 time_span=time_span,
                 tses=tses,
@@ -474,7 +500,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
-                self.taxonomy_imt[taxonomy]))
+                risk_model.imt))
                 for ho in self.rc.hazard_outputs()]
 
     def hazard_times(self):
@@ -509,34 +535,41 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         outputs = super(EventBasedRiskCalculator, self).create_outputs(
             hazard_output)
 
-        if self.rc.insured_losses:
-            outputs.set(
-                models.LossCurve.objects.create(
-                    insured=True,
-                    hazard_output=hazard_output,
-                    output=models.Output.objects.create_output(
-                        self.job,
-                        "Insured Loss Curve Set for hazard %s" % hazard_output,
-                        "loss_curve")
-                ))
+        for loss_type in base.loss_types(self.risk_models):
+            name = "insured loss curves. type=%s hazard %s" % (
+                loss_type, hazard_output),
+            if self.rc.insured_losses:
+                outputs.set(
+                    models.LossCurve.objects.create(
+                        insured=True,
+                        loss_type=loss_type,
+                        hazard_output=hazard_output,
+                        output=models.Output.objects.create_output(
+                            self.job, name, "loss_curve")))
 
-        if self.rc.sites_disagg:
-            outputs.set(
-                models.LossFraction.objects.create(
+            if self.rc.sites_disagg:
+                name = ("loss fractions. type=%s variable=magnitude_distance "
+                        "hazard=%s" % (loss_type, hazard_output))
+                outputs.set(
+                    models.LossFraction.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.job, name, "loss_fraction"),
+                        hazard_output=hazard_output,
+                        loss_type=loss_type,
+                        variable="magnitude_distance"))
+                name = ("loss fractions. type=%s variable=coordinates "
+                        "hazard=%s" % (loss_type, hazard_output))
+                outputs.set(models.LossFraction.objects.create(
                     output=models.Output.objects.create_output(
-                        self.job,
-                        "Loss Fractions by ruptures grouped by range of "
-                        "magnitude/distance for hazard %s" % hazard_output,
-                        "loss_fraction"),
+                        self.job, name, "loss_fraction"),
                     hazard_output=hazard_output,
-                    variable="magnitude_distance"))
-            outputs.set(models.LossFraction.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "Loss Fractions by ruptures grouped by range of "
-                    "coordinates for hazard %s" % hazard_output,
-                    "loss_fraction"),
-                hazard_output=hazard_output,
-                variable="coordinate"))
+                    loss_type=loss_type,
+                    variable="coordinate"))
 
         return outputs
+
+    def create_statistical_outputs(self):
+        for loss_type in base.loss_types(self.risk_models):
+            self.event_loss_tables[loss_type] = collections.Counter()
+        return super(
+            EventBasedRiskCalculator, self).create_statistical_outputs()
