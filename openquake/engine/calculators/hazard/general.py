@@ -664,17 +664,28 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
 
-        queryset = self.hc.inputs.filter(input_type='vulnerability')
+        queryset = self.hc.inputs.filter(input_type__in=[
+            'structural_vulnerability', 'non_structural_vulnerability',
+            'contents_vulnerability', 'occupancy_vulnerability'])
+
         if queryset.exists():
-            content = StringIO.StringIO(
-                queryset.all()[0].model_content.raw_content_ascii)
             hc = self.hc
-            hc.intensity_measure_types_and_levels = dict([
-                (record['IMT'], record['IML'])
-                for record in parsers.VulnerabilityModelParser(content)])
-            hc.intensity_measure_types = list(set([
-                record['IMT']
-                for record in parsers.VulnerabilityModelParser(content)]))
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
+            for input_type in queryset:
+                content = StringIO.StringIO(
+                    input_type.model_content.raw_content_ascii)
+                intensity_measure_types_and_levels = dict([
+                    (record['IMT'], record['IML'])
+                    for record in parsers.VulnerabilityModelParser(content)])
+                intensity_measure_types = list(set([
+                    record['IMT']
+                    for record in parsers.VulnerabilityModelParser(content)]))
+
+                hc.intensity_measure_types_and_levels.update(
+                    intensity_measure_types_and_levels)
+                hc.intensity_measure_types.extend(intensity_measure_types)
             hc.save()
 
         queryset = self.hc.inputs.filter(input_type='fragility')

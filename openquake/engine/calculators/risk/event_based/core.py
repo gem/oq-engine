@@ -44,8 +44,7 @@ def event_based(job_id, units, containers, params):
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param int job_id:
-      ID of the currently running job
+    :param dict units:
       A dict of :class:`..base.CalculationUnit` instances keyed by
       loss type string
     :param containers:
@@ -66,8 +65,9 @@ def event_based(job_id, units, containers, params):
 
     with db.transaction.commit_on_success(using='reslt_writer'):
         for loss_type in units:
-            event_loss_tables[loss_type], num_items = do_event_based(
+            event_loss_tables[loss_type] = do_event_based(
                 loss_type, units[loss_type], containers, params, profile)
+    num_items = len(units.values()[0][0].getter.assets)
     signal_task_complete(job_id=job_id,
                          num_items=num_items,
                          event_loss_tables=event_loss_tables)
@@ -114,7 +114,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
     # compute mean and quantile outputs
     if len(units) < 2:
-        return event_loss_table, len(outputs.assets)
+        return event_loss_table
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
@@ -126,7 +126,7 @@ def do_event_based(loss_type, units, containers, params, profile):
         save_statistical_output(
             loss_type, containers, outputs.assets, stats, params)
 
-    return event_loss_table, len(outputs.assets)
+    return event_loss_table
 
 
 class UnitOutputs(object):

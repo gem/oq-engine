@@ -55,8 +55,9 @@ def classical(job_id, units, containers, params):
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
         for loss_type in units:
-            num_items = do_classical(
+            do_classical(
                 loss_type, units[loss_type], containers, params, profile)
+    num_items = len(units.values()[0][0].getter.assets)
     signal_task_complete(job_id=job_id, num_items=num_items)
 classical.ignore_result = False
 
@@ -84,7 +85,7 @@ def do_classical(loss_type, units, containers, params, profile):
         save_individual_outputs(loss_type, containers, hids, outputs, params)
 
     if len(units) < 2:  # skip statistics if we are working on a single unit
-        return len(outputs.assets)
+        return
 
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
@@ -92,8 +93,6 @@ def do_classical(loss_type, units, containers, params, profile):
 
     with profile('saving risk statistics'):
         save_statistical_output(loss_type, containers, stats, params)
-
-    return len(outputs.assets)
 
 
 class AssetsIndividualOutputs(object):
