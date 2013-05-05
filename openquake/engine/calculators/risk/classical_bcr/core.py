@@ -69,8 +69,8 @@ classical_bcr.ignore_result = False
 def do_classical_bcr(loss_type, units, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
         with profile('getting hazard'):
-            assets, hazard_curves, _missings = unit_orig.getter()
-            _, hazard_curves_retrofitted, __ = unit_retro.getter()
+            assets, hazard_curves = unit_orig.getter()
+            _, hazard_curves_retrofitted = unit_retro.getter()
 
         with profile('computing bcr'):
             original_loss_curves = unit_orig.calc(hazard_curves)
