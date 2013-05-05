@@ -167,7 +167,10 @@ class RiskCalculator(base.Calculator):
         for hazard in self.rc.hazard_outputs():
             output_containers.update(self.create_outputs(hazard))
 
+        num_tasks = 0
+        num_assets = 0
         for taxonomy, assets_nr in self.taxonomies.items():
+            num_assets += assets_nr
             asset_offsets = range(0, assets_nr, block_size)
 
             for offset in asset_offsets:
@@ -180,10 +183,18 @@ class RiskCalculator(base.Calculator):
                     [(loss_type, self.calculation_units(loss_type, assets))
                      for loss_type in loss_types(self.risk_models)])
 
+                num_tasks += 1
                 yield [self.job.id,
                        calculation_units,
                        output_containers,
                        self.calculator_parameters]
+
+        job_stats = models.JobStats.objects.filter(oq_job=self.job.id)
+        if job_stats:  # regular case, but they may be missing in some tests
+            js = job_stats[0]
+            js.num_sites = num_assets
+            js.num_tasks = num_tasks
+            js.save()
 
     def calculation_units(self, loss_type, assets):
         """
