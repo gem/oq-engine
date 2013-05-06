@@ -205,8 +205,8 @@ class RiskCalculator(base.Calculator):
         # logic
         expected_tasks = self.expected_tasks(block_size)
         if num_tasks != expected_tasks:
-            raise ValueError('Expected %d tasks, generated %d!' % (
-                             expected_tasks, num_tasks))
+            raise RuntimeError('Expected %d tasks, generated %d!' % (
+                               expected_tasks, num_tasks))
 
     def export(self, *args, **kwargs):
         """
