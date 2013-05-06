@@ -144,7 +144,8 @@ class HazardGetter(object):
                                   self.max_distance))
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids
-                if asset_id in self.asset_dict], data)
+                if asset_id in self.asset_dict],
+               numpy.array(data))
 
         return ret
 
