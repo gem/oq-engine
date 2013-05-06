@@ -1059,6 +1059,11 @@ class RiskCalculation(djm.Model):
     interest_rate = djm.FloatField(null=True, blank=True)
     asset_life_expectancy = djm.FloatField(null=True, blank=True)
 
+    ######################################
+    # Scenario parameters:
+    ######################################
+    time_event = djm.TextField(blank=True, null=True)
+
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
 
@@ -2748,13 +2753,25 @@ class ExposureData(djm.Model):
                 return cost * area * number_of_units
         raise ValueError("Invalid input")
 
-    @property
-    def value(self):
+    def value(self, loss_type):
         """
-        The structural per-asset value.
+        The per-asset value.
         """
+        if loss_type == "structural":
+            cost = self.stco
+            cost_type = self.exposure_model.stco_type
+        elif loss_type == "non_structural":
+            cost = self.non_stco
+            cost_type = self.non_stco_type
+        elif loss_type == "contents":
+            cost = self.coco
+            cost_type = self.exposure_model.coco_type
+        elif loss_type == "occupancy":
+            # we expect an annotation called occupants to be present
+            cost_type = "aggregated"
+            cost = self.occupants
         return self.per_asset_value(
-            cost=self.stco, cost_type=self.exposure_model.stco_type,
+            cost=cost, cost_type=cost_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
