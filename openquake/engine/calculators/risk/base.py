@@ -20,8 +20,9 @@
 import collections
 import StringIO
 
-from openquake.risklib import scientific
+from django.core.exceptions import ObjectDoesNotExist
 
+from openquake.risklib import scientific
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine import logs, export
@@ -94,8 +95,8 @@ class RiskCalculator(base.Calculator):
         # that it exists
         try:
             self.rc.hazard_calculation
-        except models.ObjectDoesNotExist:
-            raise ValueError(
+        except ObjectDoesNotExist:
+            raise RuntimeError(
                 "The provided hazard calculation ID does not exist")
 
     def get_taxonomies(self):
@@ -186,9 +187,8 @@ class RiskCalculator(base.Calculator):
 
             for offset in asset_offsets:
                 with logs.tracing("getting assets"):
-                    assets = self.rc.exposure_model.get_asset_chunk(
-                        taxonomy,
-                        self.rc.region_constraint, offset, block_size)
+                    assets = models.ExposureData.objects.get_asset_chunk(
+                        self.rc, taxonomy, offset, block_size)
 
                 calculation_units = self.get_calculation_units(assets)
 
