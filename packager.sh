@@ -164,7 +164,7 @@ _devtest_innervm_run () {
                  ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
-#                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
+                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
 #                 ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
 #                 ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
 #                 ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
