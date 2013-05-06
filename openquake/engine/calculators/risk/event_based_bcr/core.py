@@ -68,19 +68,16 @@ def do_event_based_bcr(units, containers, params, profile):
     """
     for unit_orig, unit_retro in utils.pairwise(units):
         with profile('getting hazard'):
-            assets, gmvs_ruptures = unit_orig.getter()
-            _, gmvs_ruptures_retrofitted = unit_retro.getter()
-
-            if len(assets):
-                gmvs = gmvs_ruptures[:, 0]
-                gmvs_retrofitted = gmvs_ruptures_retrofitted[:, 0]
-            else:
+            assets, (gmvs, _) = unit_orig.getter()
+            if len(assets) == 0:
                 logs.LOG.info("Exit from task as no asset could be processed")
                 return
 
+            _, (gmvs_retro, _) = unit_retro.getter()
+
         with profile('computing bcr'):
             _, original_loss_curves = unit_orig.calc(gmvs)
-            _, retrofitted_loss_curves = unit_retro.calc(gmvs_retrofitted)
+            _, retrofitted_loss_curves = unit_retro.calc(gmvs_retro)
 
             eal_original = [
                 scientific.average_loss(losses, poes)
