@@ -300,7 +300,6 @@ class RiskCalculator(base.Calculator):
         job_stats.num_tasks = self.expected_tasks(self.block_size())
         job_stats.save()
 
-
     def get_risk_models(self, retrofitted=False):
         """
         Parse vulnerability models for each loss type in
