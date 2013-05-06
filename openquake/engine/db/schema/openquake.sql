@@ -375,8 +375,10 @@ CREATE TABLE uiapi.risk_calculation (
 
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
-    asset_life_expectancy float
+    asset_life_expectancy float,
 
+    -- Scenario parameters:
+    time_event VARCHAR
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
@@ -1030,6 +1032,13 @@ CREATE TABLE riski.exposure_model (
     -- structural cost unit
     stco_unit VARCHAR,
 
+    -- non structural cost type
+    non_stco_type VARCHAR CONSTRAINT non_stco_type_value
+        CHECK(non_stco_type IS NULL OR non_stco_type = 'per_asset'
+              OR non_stco_type = 'per_area' OR non_stco_type = 'aggregated'),
+    -- non structural cost unit
+    non_stco_unit VARCHAR,
+
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1047,6 +1056,8 @@ CREATE TABLE riski.exposure_data (
 
     -- structural cost
     stco float CONSTRAINT stco_value CHECK(stco >= 0.0),
+    -- non structural cost
+    non_stco float CONSTRAINT non_stco_value CHECK(stco >= 0.0),
     -- retrofitting cost
     reco float CONSTRAINT reco_value CHECK(reco >= 0.0),
     -- contents cost
