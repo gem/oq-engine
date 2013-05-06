@@ -17,9 +17,9 @@ class TestCase(unittest.TestCase):
         # check that the attributes start_time, duration and mem_peaks
         # are populated
         self.assertGreater(datetime.now(), pmon.start_time)
-        self.assertGreater(pmon.duration, 0)
-        self.assertGreater(pmon.mem_peaks[0], 0)
-        self.assertEqual(len(pmon.mem_peaks), nproc)
+        self.assertGreaterEqual(pmon.duration, 0)
+        self.assertGreaterEqual(pmon.mem[0], 0)
+        self.assertEqual(len(pmon.mem), nproc)
 
     # the base monitor does not save on the engine db
     def test_performance_monitor(self):
@@ -35,7 +35,7 @@ class TestCase(unittest.TestCase):
         mock_task.__name__ = 'mock_task'
         mock_task.request.id = task_id = str(uuid.uuid1())
         with EnginePerformanceMonitor(
-                'test', job.id, mock_task, profile_mem=True) as pmon:
+                'test', job.id, mock_task, profile_pgmem=True) as pmon:
             pass
         self._check_result(pmon, nproc=2)
         # check that one record was stored on the db, as it should
@@ -46,7 +46,7 @@ class TestCase(unittest.TestCase):
         job = engine.prepare_job()
         operation = str(uuid.uuid1())
         with EnginePerformanceMonitor(
-                operation, job.id, profile_mem=True) as pmon:
+                operation, job.id, profile_pgmem=True) as pmon:
             pass
         self._check_result(pmon, nproc=2)
         flush()
