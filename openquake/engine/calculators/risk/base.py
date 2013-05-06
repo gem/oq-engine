@@ -22,8 +22,9 @@ import itertools
 import collections
 import StringIO
 
-from openquake.risklib import scientific
+from django.core.exceptions import ObjectDoesNotExist
 
+from openquake.risklib import scientific
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine import logs, export
@@ -117,14 +118,17 @@ class RiskCalculator(base.Calculator):
         self._initialize_progress(num_assets)
 
         # update job_stats
-        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        try:
+            job_stats = models.JobStats.objects.get(oq_job=self.job)
+        except ObjectDoesNotExist:  # in the hazard_getters tests
+            job_stats = models.JobStats.objects.create(oq_job=self.job)
         job_stats.num_sites = num_assets
         job_stats.num_tasks = self.expected_tasks(self.block_size())
         job_stats.save()
 
         try:
             self.rc.hazard_calculation
-        except models.ObjectDoesNotExist:
+        except ObjectDoesNotExist:
             raise RuntimeError(
                 "The provided hazard calculation ID does not exist")
 
