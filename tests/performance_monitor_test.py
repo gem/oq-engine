@@ -35,7 +35,7 @@ class TestCase(unittest.TestCase):
         mock_task.__name__ = 'mock_task'
         mock_task.request.id = task_id = str(uuid.uuid1())
         with EnginePerformanceMonitor(
-                'test', job.id, mock_task, profile_mem=True) as pmon:
+                'test', job.id, mock_task, profile_pgmem=True) as pmon:
             pass
         self._check_result(pmon, nproc=2)
         # check that one record was stored on the db, as it should
@@ -46,7 +46,7 @@ class TestCase(unittest.TestCase):
         job = engine.prepare_job()
         operation = str(uuid.uuid1())
         with EnginePerformanceMonitor(
-                operation, job.id, profile_mem=True) as pmon:
+                operation, job.id, profile_pgmem=True) as pmon:
             pass
         self._check_result(pmon, nproc=2)
         flush()
