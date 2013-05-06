@@ -103,16 +103,16 @@ class RiskCalculator(base.Calculator):
             self.taxonomies = self.rc.exposure_model.taxonomies_in(
                 self.rc.region_constraint)
 
-            num_assets = sum(self.taxonomies.values())
-            if num_assets == 0:
-                raise RuntimeError(
-                    ['Region of interest is not covered by the exposure input.'
-                     ' This configuration is invalid. '
-                     ' Change the region constraint input or use a proper '
-                     ' exposure file'])
-
         with logs.tracing('store risk model'):
-            self.set_risk_models()
+            self.set_risk_models()  # populate the taxonomies
+
+        num_assets = sum(self.taxonomies.values())
+        if num_assets == 0:
+            raise RuntimeError(
+                ['Region of interest is not covered by the exposure input.'
+                 ' This configuration is invalid. '
+                 ' Change the region constraint input or use a proper '
+                 ' exposure file'])
 
         self._initialize_progress(num_assets)
 
