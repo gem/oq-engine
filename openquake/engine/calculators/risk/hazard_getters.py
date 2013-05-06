@@ -143,8 +143,8 @@ class HazardGetter(object):
                 "within %s km" % (len(missing_asset_ids), len(self.asset_dict),
                                   self.max_distance))
 
-        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               numpy.array(data))
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids
+                if asset_id in self.asset_dict], data)
 
         return ret
 
