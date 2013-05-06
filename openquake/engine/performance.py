@@ -12,9 +12,7 @@ from openquake.engine.db import models
 from openquake.engine.writer import CacheInserter
 
 
-# I did not make any attempt to make this class thread-safe,
-# since it is intended to be used in single-threaded programs, as
-# in the engine
+# this is not thread-safe
 class PerformanceMonitor(object):
     """
     Measure the resident memory occupied by a list of processes during
@@ -40,7 +38,7 @@ class PerformanceMonitor(object):
     """
 
     def __init__(self, pids):
-        self._procs = [psutil.Process(pid) for pid in pids]
+        self._procs = [psutil.Process(pid) for pid in pids if pid]
         self._start_time = None  # seconds from the epoch
         self.start_time = None  # datetime object
         self.duration = None  # seconds
@@ -100,11 +98,11 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
     # globals per process
     cache = CacheInserter(1000)  # store at most 1,000 objects
-    pg_pid = None
-    py_pid = None
+    pgpid = None
+    pypid = None
 
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 profile_mem=True):
+                 profile_pymem=True, profile_pgmem=False):
         self.operation = operation
         self.job_id = job_id
         if task:
@@ -114,26 +112,25 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.task = None
             self.task_id = None
         self.tracing = tracing
-        self.profile_mem = profile_mem
-        if self.profile_mem:  # NB: this may be slow
-            if self.py_pid is None:
-                self.__class__.py_pid = os.getpid()
-            if self.pg_pid is None:
-                self.__class__.pg_pid = connections['job_init'].cursor().\
-                    connection.get_backend_pid()
+        self.profile_pymem = profile_pymem
+        self.profile_pgmem = profile_pgmem
+        if self.profile_pymem and self.pypid is None:
+            self.__class__.pypid = os.getpid()
+        if self.profile_pgmem and self.pgpid is None:
+            # this may be slow
+            pgpid = connections['job_init'].cursor().\
+                connection.get_backend_pid()
             try:
-                psutil.Process(self.pg_pid)
+                psutil.Process(pgpid)
             except psutil.error.NoSuchProcess:  # db on a different machine
-                pids = [self.py_pid]
+                pass
             else:
-                pids = [self.py_pid, self.pg_pid]
-        else:
-            pids = []
-
+                self.__class__.pgpid = pgpid
         if tracing:
             self.tracer = logs.tracing(operation)
 
-        super(EnginePerformanceMonitor, self).__init__(pids)
+        super(EnginePerformanceMonitor, self).__init__(
+            [self.pypid, self.pgpid])
 
     def on_exit(self):
         """
@@ -145,7 +142,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         elif n_measures == 1:
             pymemory, = self.mem
             pgmemory = None
-        elif n_measures == 0:  # profile_mem was False
+        elif n_measures == 0:  # profile_pymem was False
             pymemory = pgmemory = None
         else:
             raise ValueError(
