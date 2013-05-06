@@ -658,9 +658,22 @@ class ScenarioRiskForm(BaseOQModelForm):
             'maximum_distance',
             'master_seed',
             'asset_correlation',
-            'insured_losses'
+            'insured_losses',
+            'time_event'
         )
 
+    def is_valid(self):
+        super_valid = super(ScenarioRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if 'occupancy_vulnerability_file' in self.files:
+            if rc.time_event is None:
+                self._add_error('time_event', "Scenario Risk requires "
+                                "time_event when an occupancy vulnerability "
+                                "model is given")
+
+                return False
+        return super_valid
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
 # functions (the latter because some of the function names are very long).

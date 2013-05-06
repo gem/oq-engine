@@ -102,7 +102,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
         with profile('saving individual risk'):
             save_individual_outputs(
-                loss_type, containers, hid, outputs, disagg_outputs, params)
+                containers, hid, outputs, disagg_outputs, params)
 
         if params.insured_losses:
             insured_curves = list(
@@ -182,7 +182,8 @@ def individual_outputs(unit, params, profile):
 
         for i, asset in enumerate(assets):
             for j, rupture_id in enumerate(rupture_matrix[i]):
-                event_loss_table[rupture_id] += loss_matrix[i][j] * asset.value
+                event_loss_table[rupture_id] += (
+                    loss_matrix[i][j] * asset.value)
 
     return UnitOutputs(
         assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)

@@ -53,7 +53,7 @@ def export(output_id, target_dir, file_format=None):
     return [fn(output, os.path.expanduser(target_dir))]
 
 
-def _export_common(output):
+def _export_common(output, loss_type):
     """
     Returns a dict containing the output metadata which are serialized
     by nrml writers before actually writing the `output` data.
@@ -69,7 +69,17 @@ def _export_common(output):
     else:
         gsim_tree_path = None
 
-    unit = output.oq_job.risk_calculation.exposure_model.stco_unit
+    model = output.oq_job.risk_calculation.exposure_model
+    if loss_type == "structural":
+        unit = model.stco_unit
+    elif loss_type == "non_structural":
+        unit = model.non_stco_unit
+    elif loss_type == "contents":
+        unit = model.coco_unit
+    elif loss_type == "occupancy":
+        unit = "occupants"
+    else:
+        raise RuntimeError("invalid loss type")
 
     return dict(investigation_time=metadata.investigation_time,
                 statistics=metadata.statistics,
@@ -85,7 +95,7 @@ def export_agg_loss_curve_xml(output, target_dir):
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
     """
-    args = _export_common(output)
+    args = _export_common(output, output.loss_curve.loss_type)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
@@ -100,7 +110,7 @@ def export_loss_curve_xml(output, target_dir):
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
     """
-    args = _export_common(output)
+    args = _export_common(output, output.loss_curve.loss_type)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     args['insured'] = output.loss_curve.insured
@@ -120,7 +130,7 @@ def export_loss_map_xml(output, target_dir):
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.loss_map.loss_type)
     args.update(dict(
         path=os.path.join(
             target_dir,
@@ -141,7 +151,7 @@ def export_loss_fraction_xml(output, target_dir):
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.loss_fraction.loss_type)
     hazard_metadata = models.Output.HazardMetadata(
         investigation_time=args['investigation_time'],
         statistics=args['statistics'],
@@ -172,7 +182,7 @@ def export_bcr_distribution_xml(output, target_dir):
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.bcr_distribution.loss_type)
 
     args.update(
         dict(path=os.path.join(target_dir, BCR_FILENAME_FMT % {
