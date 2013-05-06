@@ -138,11 +138,10 @@ class HazardGetter(object):
 
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
-        if missing_asset_ids:
+        for missing_asset_id in missing_asset_ids:
             logs.LOG.warn(
-                "No hazard has been found for %d assets (of %d) "
-                "within %s km" % (len(missing_asset_ids), len(self.asset_dict),
-                                  self.max_distance))
+                "No hazard has been found for the asset %s within %s km" % (
+                    self.asset_dict[missing_asset_id], self.max_distance))
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids], data)
 
@@ -353,11 +352,13 @@ class GroundMotionScenarioGetter(HazardGetter):
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
         # print cursor.mogrify(query, args)
-        assets, gmf = [], []
+        assets, gmfs = [], []
         for asset_id, gmvs in cursor.fetchall():
-            assets.append(asset_id)
-            gmf.append(gmvs)
-        return assets, gmf
+            # the query may return spurious assets outside the considered block
+            if asset_id in self.asset_dict:  # in block
+                assets.append(asset_id)
+                gmfs.append(gmvs)
+        return assets, gmfs
 
     def container(self, hazard_output):
         return hazard_output
