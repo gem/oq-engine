@@ -56,23 +56,21 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         return self.job.risk_calculation.hazard_output
 
     def test_call(self):
-        assets, values, missing = self.getter()
-
+        assets, values = self.getter()
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        self.assertEqual(set(), missing)
-        self.assertEqual([[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
-                          [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
-                          [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], values)
+        numpy.testing.assert_allclose(
+            [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
+             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
+             [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], values)
 
     def assets(self):
         return self._assets.filter(taxonomy=self.taxonomy)
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, values, missing = self.getter()
+        assets, values = self.getter()
         self.assertEqual([], assets)
-        self.assertEqual(set([a.id for a in self.assets()]), missing)
-        self.assertEqual([], values)
+        self.assertEqual(0, len(values))
 
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -84,13 +82,16 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        assets, values, missing = self.getter()
-
-        gmvs = numpy.array(values)[:, 0]
-
+        assets, (gmfs, ruptures) = self.getter()
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        self.assertEqual(set(), missing)
-        self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], gmvs.tolist())
+        numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
+                                      gmfs)
+
+    def test_filter(self):
+        self.getter.max_distance = 0.00001  # 1 cm
+        assets, (gmfs, ruptures) = self.getter()
+        self.assertEqual([], assets)
+        self.assertEqual(0, len(gmfs))
 
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -102,8 +103,7 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        assets, values, missing = self.getter()
-
+        assets, values = self.getter()
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        self.assertEqual(set(), missing)
-        self.assertEqual([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
+        numpy.testing.assert_allclose(
+            [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)

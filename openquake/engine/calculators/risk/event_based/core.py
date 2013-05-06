@@ -146,11 +146,11 @@ class UnitOutputs(object):
   :attr dict event_loss_table:
     a mapping between each rupture id to a loss value
     """
-    def __init__(self, assets, loss_matrix, rupture_id_matrix,
+    def __init__(self, assets, loss_matrix, rupture_ids,
                  loss_curves, loss_maps, event_loss_table):
         self.assets = assets
         self.loss_matrix = loss_matrix
-        self.rupture_id_matrix = rupture_id_matrix
+        self.rupture_ids = rupture_ids
         self.loss_curves = loss_curves
         self.loss_maps = loss_maps
         self.event_loss_table = event_loss_table
@@ -159,10 +159,7 @@ class UnitOutputs(object):
 def individual_outputs(unit, params, profile):
     event_loss_table = collections.Counter()
     with profile('getting hazard'):
-        assets, gmvs_ruptures, _missings = unit.getter()
-
-    ground_motion_values = numpy.array(gmvs_ruptures)[:, 0]
-    rupture_matrix = numpy.array(gmvs_ruptures)[:, 1]
+        assets, (ground_motion_values, ruptures) = unit.getter()
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
@@ -172,10 +169,11 @@ def individual_outputs(unit, params, profile):
                 for poe in params.conditional_loss_poes]
 
         for i, asset in enumerate(assets):
-            for j, rupture_id in enumerate(rupture_matrix[i]):
+            for j, rupture_id in enumerate(ruptures):
                 event_loss_table[rupture_id] += loss_matrix[i][j] * asset.value
+
     return UnitOutputs(
-        assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
+        assets, loss_matrix, ruptures, curves, maps, event_loss_table)
 
 
 def save_individual_outputs(containers, hid, outputs, disagg_outputs, params):
@@ -338,8 +336,8 @@ Compute disaggregation outputs given the individual `outputs` and `params`
 
     assets_disagg = []
     disagg_matrix = []
-    for asset, losses, ruptures in zip(
-            outputs.assets, outputs.loss_matrix, outputs.rupture_id_matrix):
+    ruptures = outputs.rupture_ids
+    for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
             disagg_matrix.extend(list(
                 disaggregate_site(asset.site, losses, ruptures, params)))
@@ -461,7 +459,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         vulnerability_function = self.vulnerability_functions[taxonomy]
 
         time_span, tses = self.hazard_times()
-
         return [base.CalculationUnit(
             api.ProbabilisticEventBased(
                 vulnerability_function,
