@@ -15,6 +15,9 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
+if [ "$GEM_EPHEM_CMD" = "" ]; then
+    GEM_EPHEM_CMD="lxc-start-ephemeral"
+fi
 GEM_EPHEM_NAME="ubuntu-lxc-eph"
 
 NL="
@@ -30,6 +33,9 @@ sig_hand () {
         set +e
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
+        if [ -f "${upper}.dsk" ]; then
+            loop_dev="$(sudo losetup -a | grep "(${upper})$" | cut -d ':' -f1)"
+        fi
         sudo lxc-stop -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
         sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
@@ -37,6 +43,12 @@ sig_hand () {
         if [ $? -eq 0 ]; then
             sudo umount "$upper"
             sudo rm -r "$upper"
+            if [ "$loop_dev" != "" ]; then
+                sudo losetup -d "$loop_dev"
+                if [ -f "${upper}.dsk" ]; then
+                    sudo rm -f "${upper}.dsk"
+                fi
+            fi
         fi
         sudo lxc-destroy -n $lxc_name
     fi
@@ -346,7 +358,7 @@ devtest_run () {
     mkdir _jenkins_deps
 
     sudo echo
-    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     rm /tmp/packager.eph.$$.log
 
@@ -437,7 +449,7 @@ EOF
     cd -
 
     sudo echo
-    sudo lxc-start-ephemeral -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     rm /tmp/packager.eph.$$.log
 
