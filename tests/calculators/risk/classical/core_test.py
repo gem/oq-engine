@@ -108,6 +108,7 @@ class PreExecuteTestCase(unittest.TestCase):
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
+        models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
 
         # Check for compatibility between the IMTs defined in the vulnerability
@@ -147,6 +148,7 @@ class PreExecuteTestCase(unittest.TestCase):
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
+        models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
 
         # In contrast to the test above (`test_pre_execute_check_imts_raises`),
