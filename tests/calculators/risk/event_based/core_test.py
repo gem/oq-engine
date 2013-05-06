@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from StringIO import StringIO
 from tests.utils import helpers
 from tests.utils.helpers import demo_file
 from tests.calculators.risk import base_test
@@ -32,8 +31,8 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             demo_file('event_based_hazard/job.ini'), output_type="gmf")
 
         self.calculator = event_based.EventBasedRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         self.calculator.pre_execute()
-
         self.job.is_running = True
         self.job.status = 'executing'
         self.job.save()
