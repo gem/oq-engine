@@ -143,8 +143,7 @@ class HazardGetter(object):
                 "within %s km" % (len(missing_asset_ids), len(self.asset_dict),
                                   self.max_distance))
 
-        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids
-                if asset_id in self.asset_dict],
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
                numpy.array(data))
 
         return ret
@@ -298,19 +297,21 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        rupture_set = set()
+        # generate an ordered array with all the ruptures
+        _rupture_set = set()
         for _, _, ruptures in data:
-            rupture_set.update(ruptures)
-        sorted_ruptures = numpy.array(sorted(rupture_set))
+            _rupture_set.update(ruptures)
+        sorted_ruptures = numpy.array(sorted(_rupture_set))
 
         # maps asset_id -> to a 2-tuple (gmvs, ruptures)
         assets, gmf = [], []
         for asset_id, gmvs, ruptures in data:
-            gmv = dict(zip(ruptures, gmvs))
-            gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
-            assets.append(asset_id)
-            gmf.append(numpy.array([gmvs, sorted_ruptures]))
-
+            # the query may return spurious assets outside the considered block
+            if asset_id in self.asset_dict:  # in block
+                gmv = dict(zip(ruptures, gmvs))
+                gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
+                assets.append(asset_id)
+                gmf.append(numpy.array([gmvs, sorted_ruptures]))
         return assets, gmf
 
 
