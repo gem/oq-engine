@@ -139,6 +139,7 @@ class HazardGetter(object):
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
+            # please dont' remove this log: it was required by Vitor
             logs.LOG.warn(
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
