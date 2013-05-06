@@ -313,10 +313,20 @@ class RiskCalculator(base.Calculator):
                     occupancy=dict(occupany__isnull=True))[loss_type]
                 if self.rc.exposure_model.exposuredata_set.filter(
                         **field_kwarg).exists():
-                    raise ValueError("Invalid vulnerability model "
-                                     "type %s. Some assets don't match "
+                    raise ValueError("Invalid exposure model "
+                                     "for type %s. Some assets don't match "
                                      "with filter %s" % (
                                          loss_type, field_kwarg))
+                fields = dict(
+                    structural=["stco_type", "stco_unit"],
+                    non_structural=["non_stco_type", "non_stco_unit"],
+                    contents=["coco_type", "coco_unit"])
+                if loss_type in fields:
+                    if any([not getattr(self.rc.exposure_model, field, False)
+                            for field in fields[loss_type]]):
+                        raise ValueError("Invalid exposure model "
+                                         "for type %s. %s are required" % (
+                                             loss_type, fields[loss_type]))
 
         if not risk_models:
             raise ValueError(
