@@ -32,6 +32,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
+        models.JobStats.objects.create(oq_job=self.job)
 
     @property
     def hazard_calculation(self):
