@@ -91,7 +91,7 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
                     params.interest_rate, params.asset_life_expectancy,
-                    asset.value, asset.retrofitting_cost)
+                    asset.value(loss_type), asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):

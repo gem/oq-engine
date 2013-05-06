@@ -22,6 +22,7 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
+import collections
 import numpy
 
 from openquake.engine import logs
@@ -143,9 +144,7 @@ class HazardGetter(object):
                 "within %s km" % (len(missing_asset_ids), len(self.asset_dict),
                                   self.max_distance))
 
-        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids
-                if asset_id in self.asset_dict],
-               numpy.array(data))
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids], data)
 
         return ret
 
@@ -242,6 +241,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
         return hazard, distance
 
 
+GmfsRuptures = collections.namedtuple('GmfsRuptures', 'gmfs ruptures')
+
+
 class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
@@ -298,20 +300,22 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        rupture_set = set()
+        # generate an ordered array with all the ruptures
+        _rupture_set = set()
         for _, _, ruptures in data:
-            rupture_set.update(ruptures)
-        sorted_ruptures = numpy.array(sorted(rupture_set))
+            _rupture_set.update(ruptures)
+        sorted_ruptures = numpy.array(sorted(_rupture_set))
 
         # maps asset_id -> to a 2-tuple (gmvs, ruptures)
-        assets, gmf = [], []
+        assets, gmfs = [], []
         for asset_id, gmvs, ruptures in data:
-            gmv = dict(zip(ruptures, gmvs))
-            gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
-            assets.append(asset_id)
-            gmf.append(numpy.array([gmvs, sorted_ruptures]))
-
-        return assets, gmf
+            # the query may return spurious assets outside the considered block
+            if asset_id in self.asset_dict:  # in block
+                gmv = dict(zip(ruptures, gmvs))
+                gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
+                assets.append(asset_id)
+                gmfs.append(gmvs)
+        return assets, GmfsRuptures(numpy.array(gmfs), sorted_ruptures)
 
 
 # TODO: this calls will disappear soon: see

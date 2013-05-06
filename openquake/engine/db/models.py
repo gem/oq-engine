@@ -2599,25 +2599,6 @@ class ExposureModel(djm.Model):
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
-    def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
-        """
-
-        :param str taxonomy:
-            The taxonomy of the returned objects.
-        :param Polygon region_constraint:
-            A Polygon object with a wkt property used to filter the exposure.
-        :param int offset:
-            An offset used to paginate the returned set.
-        :param int count:
-            An offset used to paginate the returned set.
-
-        :returns:
-            A list of `openquake.engine.db.models.ExposureData` objects of a
-            given taxonomy contained in a region and paginated.
-        """
-        return ExposureData.objects.contained_in(
-            self.id, taxonomy, region_constraint, offset, count)
-
 
 class Occupancy(djm.Model):
     '''
@@ -2636,25 +2617,44 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, taxonomy,
-                     region_constraint, offset, size):
+    def get_asset_chunk(self, rc, taxonomy, offset, size):
         """
         :returns the asset ids (ordered by location) contained in
-        `region_constraint` of `taxonomy` associated with an
-        `openquake.engine.db.models.ExposureModel` with ID equal to
-        `exposure_model_id`
+        `region_constraint`(embedded in the risk calculation `rc`) of
+        `taxonomy` associated with the
+        `openquake.engine.db.models.ExposureModel` associated with
+        `rc`.
+
+        It also add an annotation to each ExposureData object to provide the
+        right occupants value for the risk calculation given in input
         """
+
+        args = (rc.exposure_model.id, taxonomy,
+                "SRID=4326; %s" % rc.region_constraint.wkt)
+        if rc.time_event is None:
+            occupants = "AVG(riski.occupancy.occupants)"
+            occupants_cond = "1 = 1"
+        else:
+            occupants = "riski.occupancy.occupants"
+            occupants_cond = "riski.occupancy.description = %s"
+            args += (rc.time_event,)
+        args += (size, offset)
 
         return list(
             self.raw("""
-            SELECT * FROM riski.exposure_data
-            WHERE exposure_model_id = %s AND taxonomy = %s AND
-            ST_COVERS(ST_GeographyFromText(%s), site)
+            SELECT riski.exposure_data.*, {occupants} AS occupancy
+            FROM riski.exposure_data
+            LEFT JOIN riski.occupancy
+            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+            WHERE exposure_model_id = %s AND
+                  taxonomy = %s AND
+                  ST_COVERS(ST_GeographyFromText(%s), site) AND
+                  {occupants_cond}
+            GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
-            """, [exposure_model_id, taxonomy,
-                  "SRID=4326; %s" % region_constraint.wkt,
-                  size, offset]))
+            """.format(occupants=occupants, occupants_cond=occupants_cond),
+            args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
@@ -2767,7 +2767,8 @@ class ExposureData(djm.Model):
             cost = self.coco
             cost_type = self.exposure_model.coco_type
         elif loss_type == "occupancy":
-            # we expect an annotation called occupants to be present
+            # we expect a django annotation called occupants to be
+            # present (like the one provided by #get_asset_chunk)
             cost_type = "aggregated"
             cost = self.occupants
         return self.per_asset_value(
