@@ -23,7 +23,8 @@ from openquake.risklib import scientific
 from openquake.engine.db import models
 
 
-def loss_map(loss_map_id, assets, losses, std_devs=None, absolute=False):
+def loss_map(
+        loss_type, loss_map_id, assets, losses, std_devs=None, absolute=False):
     """
     Create :class:`openquake.engine.db.models.LossMapData`
 
@@ -47,9 +48,9 @@ def loss_map(loss_map_id, assets, losses, std_devs=None, absolute=False):
             std_dev = None
 
         if not absolute:
-            loss *= asset.value
+            loss *= asset.value(loss_type)
             if std_devs is not None:
-                std_dev *= asset.value
+                std_dev *= asset.value(loss_type)
 
         models.LossMapData.objects.create(
             loss_map_id=loss_map_id,
@@ -59,7 +60,7 @@ def loss_map(loss_map_id, assets, losses, std_devs=None, absolute=False):
             location=asset.site)
 
 
-def bcr_distribution(bcr_distribution_id, assets, bcr_data):
+def bcr_distribution(loss_type, bcr_distribution_id, assets, bcr_data):
     """
     Create a new :class:`openquake.engine.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -81,13 +82,14 @@ def bcr_distribution(bcr_distribution_id, assets, bcr_data):
         models.BCRDistributionData.objects.create(
             bcr_distribution_id=bcr_distribution_id,
             asset_ref=asset.asset_ref,
-            average_annual_loss_original=eal_original * asset.value,
-            average_annual_loss_retrofitted=eal_retrofitted * asset.value,
+            average_annual_loss_original=eal_original * asset.value(loss_type),
+            average_annual_loss_retrofitted=(eal_retrofitted *
+                                             asset.value(loss_type)),
             bcr=bcr,
             location=asset.site)
 
 
-def loss_curve(loss_curve_id, assets, curves):
+def loss_curve(loss_type, loss_curve_id, assets, curves):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -113,11 +115,11 @@ def loss_curve(loss_curve_id, assets, curves):
             location=asset.site,
             poes=poes,
             loss_ratios=losses,
-            asset_value=asset.value,
+            asset_value=asset.value(loss_type),
             average_loss_ratio=scientific.average_loss(losses, poes))
 
 
-def loss_fraction(loss_fraction_id, assets, values, fractions):
+def loss_fraction(loss_type, loss_fraction_id, assets, values, fractions):
     """
     Create, save and return an instance of
     :class:`openquake.engine.db.models.LossFractionData` associated
@@ -137,7 +139,7 @@ def loss_fraction(loss_fraction_id, assets, values, fractions):
             loss_fraction_id=loss_fraction_id,
             value=value,
             location=asset.site,
-            absolute_loss=fraction * asset.value)
+            absolute_loss=fraction * asset.value(loss_type))
 
 
 ###
@@ -256,7 +258,9 @@ class OutputDict(dict):
         """
         output_id = self.get(**kwargs)
         writer = globals().get(kwargs['output_type'])
-        writer(output_id, *args)
+        loss_type = kwargs['loss_type']
+        del kwargs['loss_type']
+        writer(loss_type, output_id, *args)
 
     def write_all(self, arg, values, items,
                   *initial_args, **initial_kwargs):

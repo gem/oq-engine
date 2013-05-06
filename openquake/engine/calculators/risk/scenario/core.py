@@ -85,7 +85,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
         if params.insured_losses:
             insured_loss_matrix = [
                 scientific.insured_losses(
-                    loss_ratio_matrix[i], asset.value,
+                    loss_ratio_matrix[i], asset.value(loss_type),
                     asset.deductible, asset.ins_limit)
                 for i, asset in enumerate(assets)]
 
@@ -110,7 +110,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
                 hazard_output_id=unit.getter.hazard_output_id,
                 insured=True)
 
-    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
+    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)
                            for i, asset in enumerate(assets))
 
     if params.insured_losses:

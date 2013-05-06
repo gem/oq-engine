@@ -85,7 +85,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
     for unit in units:
         hid = unit.getter.hazard_output_id
-        outputs = individual_outputs(unit, params, profile)
+        outputs = individual_outputs(loss_type, unit, params, profile)
 
         if not outputs.assets:
             logs.LOG.info("Exit from task as no asset could be processed")
@@ -102,11 +102,12 @@ def do_event_based(loss_type, units, containers, params, profile):
 
         with profile('saving individual risk'):
             save_individual_outputs(
-                containers, hid, outputs, disagg_outputs, params)
+                loss_type, containers, hid, outputs, disagg_outputs, params)
 
         if params.insured_losses:
             insured_curves = list(
-                insured_losses(unit, outputs.assets, outputs.loss_matrix))
+                insured_losses(
+                    loss_type, unit, outputs.assets, outputs.loss_matrix))
             containers.write(
                 outputs.assets, insured_curves,
                 output_type="loss_curve", insured=True, hazard_output_id=hid,
@@ -155,23 +156,20 @@ class UnitOutputs(object):
   :attr dict event_loss_table:
     a mapping between each rupture id to a loss value
     """
-    def __init__(self, assets, loss_matrix, rupture_id_matrix,
+    def __init__(self, assets, loss_matrix, rupture_ids,
                  loss_curves, loss_maps, event_loss_table):
         self.assets = assets
         self.loss_matrix = loss_matrix
-        self.rupture_id_matrix = rupture_id_matrix
+        self.rupture_ids = rupture_ids
         self.loss_curves = loss_curves
         self.loss_maps = loss_maps
         self.event_loss_table = event_loss_table
 
 
-def individual_outputs(unit, params, profile):
+def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
     with profile('getting hazard'):
-        assets, gmvs_ruptures = unit.getter()
-
-    ground_motion_values = gmvs_ruptures[:, 0]
-    rupture_matrix = gmvs_ruptures[:, 1]
+        assets, (ground_motion_values, ruptures) = unit.getter()
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
@@ -181,12 +179,12 @@ def individual_outputs(unit, params, profile):
                 for poe in params.conditional_loss_poes]
 
         for i, asset in enumerate(assets):
-            for j, rupture_id in enumerate(rupture_matrix[i]):
+            for j, rupture_id in enumerate(ruptures):
                 event_loss_table[rupture_id] += (
-                    loss_matrix[i][j] * asset.value)
+                    loss_matrix[i][j] * asset.value(loss_type))
 
     return UnitOutputs(
-        assets, loss_matrix, rupture_matrix, curves, maps, event_loss_table)
+        assets, loss_matrix, ruptures, curves, maps, event_loss_table)
 
 
 def save_individual_outputs(
@@ -221,19 +219,19 @@ def save_individual_outputs(
             loss_type=loss_type)
 
 
-def insured_losses(unit, assets, loss_ratio_matrix):
+def insured_losses(loss_type, unit, assets, loss_ratio_matrix):
     for asset, losses in zip(assets, loss_ratio_matrix):
         asset_insured_losses, poes = scientific.event_based(
             scientific.insured_losses(
                 losses,
-                asset.value,
+                asset.value(loss_type),
                 asset.deductible,
                 asset.ins_limit),
             tses=unit.calc.tses,
             time_span=unit.calc.time_span)
         # FIXME(lp). Insured losses are still computed as absolute
         # values.
-        yield asset_insured_losses / asset.value, poes
+        yield asset_insured_losses / asset.value(loss_type), poes
 
 
 class StatisticalOutputs(object):
@@ -356,8 +354,8 @@ Compute disaggregation outputs given the individual `outputs` and `params`
 
     assets_disagg = []
     disagg_matrix = []
-    for asset, losses, ruptures in zip(
-            outputs.assets, outputs.loss_matrix, outputs.rupture_id_matrix):
+    ruptures = outputs.rupture_ids
+    for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
             disagg_matrix.extend(list(
                 disaggregate_site(asset.site, losses, ruptures, params)))

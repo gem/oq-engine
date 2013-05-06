@@ -144,7 +144,7 @@ CREATE TABLE uiapi.input (
                              'contents_vulnerability',
                              'non_structural_vulnerability',
                              'occupancy_vulnerability',
-                             'vulnerability_retrofitted',
+                             'structural_vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
