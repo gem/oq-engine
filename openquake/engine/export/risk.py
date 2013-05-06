@@ -79,7 +79,7 @@ def _export_common(output, loss_type):
     elif loss_type == "occupancy":
         unit = "occupants"
     else:
-        raise RuntimeError("invalid loss type")
+        raise RuntimeError("invalid loss type %s" % loss_type)
 
     return dict(investigation_time=metadata.investigation_time,
                 statistics=metadata.statistics,
