@@ -51,7 +51,7 @@ from openquake.engine.utils import monitor
 from openquake.engine.utils import stats
 
 
-LOG_FORMAT = ('[%(asctime)s %(calc_domain) #%(calc_id)s %(hostname)s '
+LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s %(name)s] '
               '%(message)s')
 
