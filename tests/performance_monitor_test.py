@@ -14,12 +14,10 @@ flush = EnginePerformanceMonitor.cache.flush
 class TestCase(unittest.TestCase):
 
     def _check_result(self, pmon, nproc):
-        # check that the attributes start_time, duration and mem_peaks
-        # are populated
+        # check that the attributes start_time, duration and mem are populated
         self.assertGreater(datetime.now(), pmon.start_time)
         self.assertGreaterEqual(pmon.duration, 0)
         self.assertGreaterEqual(pmon.mem[0], 0)
-        self.assertEqual(len(pmon.mem), nproc)
 
     # the base monitor does not save on the engine db
     def test_performance_monitor(self):
