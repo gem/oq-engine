@@ -145,9 +145,11 @@ def _update_log_record(self, record):
     """
     if not hasattr(record, 'hostname'):
         record.hostname = '-'
-    if not hasattr(record, 'job_id'):
-        record.job_id = self.job_id
-    logger_name_prefix = 'oq.job.%s' % record.job_id
+    if not hasattr(record, 'calc_domain'):
+        record.calc_domain = self.calc_domain
+    if not hasattr(record, 'calc_id'):
+        record.calc_id = self.calc_id
+    logger_name_prefix = 'oq.%s.%s' % (record.calc_domain, record.calc_id)
     if record.name.startswith(logger_name_prefix):
         record.name = record.name[len(logger_name_prefix):].lstrip('.')
         if not record.name:
@@ -232,13 +234,22 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     FCC_DELAY = 60
 
     def __init__(self, job_id, job_pid, timeout=1):
-        self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
-        self.selflogger.debug('Entering supervisor for job %s', job_id)
-        logger_name = 'oq.job.%s' % job_id
+        self.job_id = job_id
+        job = OqJob.objects.get(id=job_id)
+        self.calc_id = job.calculation.id
+        if job.hazard_calculation is not None:
+            self.calc_domain = 'hazard'
+        else:
+            self.calc_domain = 'risk'
+
+        self.selflogger = logging.getLogger('oq.%s.%s.supervisor'
+                                            % (self.calc_domain, self.calc_id))
+        self.selflogger.debug('Entering supervisor for %s calc %s'
+                              % (self.calc_domain, self.calc_id))
+        logger_name = 'oq.%s.%s' % (self.calc_domain, self.calc_id)
         key = '%s.#' % logger_name
         super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
                                                            routing_key=key)
-        self.job_id = job_id
         self.job_pid = job_pid
         self.joblogger = logging.getLogger(logger_name)
         self.jobhandler = logging.Handler(logging.ERROR)
@@ -254,10 +265,12 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         started = datetime.utcnow()
         super(SupervisorLogMessageConsumer, self).run()
         stopped = datetime.utcnow()
-        self.selflogger.info('Job %s finished in %s',
-                             self.job_id, stopped - started)
+        self.selflogger.info('%s calc %s finished in %s'
+                             % (self.calc_domain, self.calc_id,
+                                stopped - started))
         self.joblogger.removeHandler(self.jobhandler)
-        self.selflogger.debug('Exiting supervisor for job %s', self.job_id)
+        self.selflogger.debug('Exiting supervisor for %s calc %s'
+                              % (self.calc_domain, self.calc_id))
 
     def log_callback(self, record):
         """
@@ -343,26 +356,36 @@ def supervise(pid, job_id, timeout=1, log_file=None):
     Supervise a job process, entering a loop that ends only when the job
     terminates.
 
-    :param pid: the process id
-    :type pid: int
-    :param job_id: the job id
-    :type job_id: int
-    :param timeout: timeout value in seconds
-    :type timeout: float
+    :param int pid:
+        the process id
+    :param int job_id:
+        the job id
+    :param float timeout:
+        timeout value in seconds
     :param str log_file:
         Optional log file location. If specified, log messages will be appended
         to this file. If not specified, log messages will be printed to the
         console.
     """
+    the_job = OqJob.objects.get(id=job_id)
+    calc_id = the_job.calculation.id
+    if the_job.hazard_calculation is not None:
+        calc_domain = 'hazard'
+    else:
+        calc_domain = 'risk'
     # Set the name of this process (as reported by /bin/ps)
-    setproctitle('openquake supervisor for job_id=%s job_pid=%s'
-                 % (job_id, pid))
+    setproctitle('openquake supervisor for %s calc_id=%s job_pid=%s'
+                 % (calc_domain, calc_id, pid))
     ignore_sigint()
 
     if log_file is not None:
-        logging.root.addHandler(SupervisorLogFileHandler(job_id, log_file))
+        logging.root.addHandler(
+            SupervisorLogFileHandler(calc_domain, calc_id, log_file)
+        )
     else:
-        logging.root.addHandler(SupervisorLogStreamHandler(job_id))
+        logging.root.addHandler(
+            SupervisorLogStreamHandler(calc_domain, calc_id)
+        )
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
 
