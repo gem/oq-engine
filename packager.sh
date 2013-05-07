@@ -398,10 +398,14 @@ devtest_run () {
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
     sudo lxc-shutdown -n $lxc_name -w -t 10
+
+    # NOTE: pylint returns errors too frequently to consider them a critical event
+    if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
+        echo "pylint exits without errors"
+    else
+        echo "WARNING: pylint exits with $? value"
+    fi
     set -e
-
-    pylint --rcfile pylintrc -f parseable openquake > pylint.txt
-
 
     # if [ $inner_ret -ne 0 ]; then
     return $inner_ret
