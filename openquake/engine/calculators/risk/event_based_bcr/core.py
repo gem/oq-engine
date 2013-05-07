@@ -17,29 +17,21 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
-import random
-import numpy
-
-from openquake.risklib import api, scientific
+from openquake.risklib import api, scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, writers
+from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.utils import tasks
 from openquake.engine import logs
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
 from django.db import transaction
 
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def event_based_bcr(job_id, hazard, task_seed,
-                    vulnerability_function, imt,
-                    vulnerability_function_retrofitted, imt_retrofitted,
-                    output_containers, _statistical_output_containers,
-                    time_span, tses,
-                    loss_curve_resolution, asset_correlation,
-                    asset_life_expectancy, interest_rate):
+def event_based_bcr(job_id, units, containers, params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -48,76 +40,44 @@ def event_based_bcr(job_id, hazard, task_seed,
     and stores results to db in a single transaction.
 
     :param int job_id:
-        ID of the currently running job.
-    :param dict hazard:
-      A dictionary mapping IDs of
-      :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmf_collection') to a tuple where the first element is a list
-      of list (one for each asset) with the ground motion values used by the
-      calculation, and the second element is the corresponding weight.
-    :param str imt: the imt in long string form, i.e. SA(0.1)
-    :param str imt_retrofitted:
-      the imt used to get hazard in the retrofitted case
-    :param output_containers: A dictionary mapping hazard Output ID to
-      a tuple with only the ID of the
-      :class:`openquake.engine.db.models.BCRDistribution` output container
-      used to store the computed bcr distribution
-    :param statistical_output_containers: not used at this moment
-    :param float time_span:
-        Time Span of the hazard calculation.
-    :param float tses:
-        Time of the Stochastic Event Set.
-    :param int loss_curve_resolution:
-        Resolution of the computed loss curves (number of points).
-    :param int task_seed:
-        Seed used to generate random values.
-    :param float asset_correlation:
-        asset correlation (0 uncorrelated, 1 perfectly correlated).
-    :param float interest_rate
-        The interest rate used in the Cost Benefit Analysis.
-    :param float asset_life_expectancy
-        The life expectancy used for every asset.
+      ID of the currently running job
+    :param list units:
+      A list of :class:`..base.CalculationUnit` to be run
+    :param containers:
+      An instance of :class:`..base.OutputDict` containing
+      output container instances (in this case only `BCRDistribution`)
+    :param params:
+      An instance of :class:`..base.CalcParams` used to compute
+      derived outputs
     """
+    def profile(name):
+        return EnginePerformanceMonitor(
+            name, job_id, event_based_bcr, tracing=True)
 
-    rnd = random.Random()
-    rnd.seed(task_seed)
+    # Do the job in other functions, such that it can be unit tested
+    # without the celery machinery
+    with transaction.commit_on_success(using='reslt_writer'):
+        do_event_based_bcr(units, containers, params, profile)
+    signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
+event_based_bcr.ignore_result = False
 
-    for hazard_output_id, hazard_data in hazard.items():
-        hazard_getter, _ = hazard_data
-        bcr_distribution_id = output_containers[hazard_output_id][0]
 
-        seed = rnd.randint(0, models.MAX_SINT_32)
-        calc_original = api.ProbabilisticEventBased(
-            vulnerability_function, curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=tses,
-            seed=seed, correlation=asset_correlation)
-
-        seed = rnd.randint(0, models.MAX_SINT_32)
-        calc_retrofitted = api.ProbabilisticEventBased(
-            vulnerability_function_retrofitted,
-            curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=tses,
-            seed=seed, correlation=asset_correlation)
-
-        with logs.tracing('getting hazard'):
-            assets, gmvs_ruptures, missings = hazard_getter(imt)
-            # assets and missings do not change with imt
-            _, gmvs_ruptures_retrofitted, __ = hazard_getter(imt_retrofitted)
-
-            if len(assets):
-                gmvs = numpy.array(gmvs_ruptures)[:, 0]
-                gmvs_retrofitted = numpy.array(gmvs_ruptures_retrofitted)[:, 0]
-            else:
-                # we are relying on the fact that if all the
-                # hazard_getter in this task will either return some
-                # results or they all return an empty result set.
+def do_event_based_bcr(units, containers, params, profile):
+    """
+    See `event_based_bcr` for docstring
+    """
+    for unit_orig, unit_retro in utils.pairwise(units):
+        with profile('getting hazard'):
+            assets, (gmvs, _) = unit_orig.getter()
+            if len(assets) == 0:
                 logs.LOG.info("Exit from task as no asset could be processed")
-                signal_task_complete(job_id=job_id, num_items=len(missings))
                 return
 
-        with logs.tracing('computing bcr'):
-            _, original_loss_curves = calc_original(gmvs)
-            _, retrofitted_loss_curves = calc_retrofitted(gmvs_retrofitted)
+            _, (gmvs_retro, _) = unit_retro.getter()
+
+        with profile('computing bcr'):
+            _, original_loss_curves = unit_orig.calc(gmvs)
+            _, retrofitted_loss_curves = unit_retro.calc(gmvs_retro)
 
             eal_original = [
                 scientific.average_loss(losses, poes)
@@ -130,20 +90,15 @@ def event_based_bcr(job_id, hazard, task_seed,
             bcr_results = [
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
-                    interest_rate, asset_life_expectancy,
+                    params.interest_rate, params.asset_life_expectancy,
                     asset.value, asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
-        with logs.tracing('writing results'):
-            with transaction.commit_on_success(using='reslt_writer'):
-                for i, asset in enumerate(assets):
-                    writers.bcr_distribution(
-                        bcr_distribution_id, asset,
-                        eal_original[i], eal_retrofitted[i], bcr_results[i])
-
-    signal_task_complete(job_id=job_id, num_items=len(assets) + len(missings))
-
-event_based_bcr.ignore_result = False
+        with profile('writing results'):
+            containers.write(
+                assets, zip(eal_original, eal_retrofitted, bcr_results),
+                output_type="bcr_distribution",
+                hazard_output_id=unit_orig.getter.hazard_output_id)
 
 
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
@@ -158,10 +113,51 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         self.vulnerability_functions_retrofitted = None
         self.taxonomy_imt_retrofitted = dict()
 
-    def taxonomy_args(self, taxonomy):
-        return (super(EventBasedBCRRiskCalculator, self).taxonomy_args(
-            taxonomy) + [self.vulnerability_functions_retrofitted[taxonomy],
-                         self.taxonomy_imt_retrofitted[taxonomy]])
+    def calculation_units(self, assets):
+        """
+        :returns:
+          a list of instances of `..base.CalculationUnit` for the given
+          `assets` to be run in the celery task
+        """
+
+        # assume all assets have the same taxonomy
+        taxonomy = assets[0].taxonomy
+        vf_orig = self.vulnerability_functions[taxonomy]
+        vf_retro = self.vulnerability_functions_retrofitted[taxonomy]
+
+        time_span, tses = self.hazard_times()
+
+        units = []
+
+        for ho in self.rc.hazard_outputs():
+            units.extend([
+                base.CalculationUnit(
+                    api.ProbabilisticEventBased(
+                        vf_orig,
+                        curve_resolution=self.rc.loss_curve_resolution,
+                        time_span=time_span,
+                        tses=tses,
+                        seed=self.rnd.randint(0, models.MAX_SINT_32),
+                        correlation=self.rc.asset_correlation),
+                hazard_getters.GroundMotionValuesGetter(
+                    ho,
+                    assets,
+                    self.rc.best_maximum_distance,
+                    self.taxonomy_imt[taxonomy])),
+                base.CalculationUnit(
+                    api.ProbabilisticEventBased(
+                        vf_retro,
+                        curve_resolution=self.rc.loss_curve_resolution,
+                        time_span=time_span,
+                        tses=tses,
+                        seed=self.rnd.randint(0, models.MAX_SINT_32),
+                        correlation=self.rc.asset_correlation),
+                hazard_getters.GroundMotionValuesGetter(
+                    ho,
+                    assets,
+                    self.rc.best_maximum_distance,
+                    self.taxonomy_imt_retrofitted[taxonomy]))])
+        return units
 
     @property
     def calculator_parameters(self):
@@ -169,17 +165,9 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Specific calculator parameters returned as list suitable to be
         passed in task_arg_gen.
         """
-        time_span, tses = self.hazard_times()
-
-        if self.rc.asset_correlation is None:
-            correlation = 0
-        else:
-            correlation = self.rc.asset_correlation
-
-        return [time_span, tses,
-                self.rc.loss_curve_resolution, correlation,
-                self.rc.asset_life_expectancy,
-                self.rc.interest_rate]
+        return base.make_calc_params(
+            asset_life_expectancy=self.rc.asset_life_expectancy,
+            interest_rate=self.rc.interest_rate)
 
     def post_process(self):
         """
@@ -199,21 +187,21 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         :returns: A list containing the output container id.
         """
-        return [
-            models.BCRDistribution.objects.create(
+        ret = base.OutputDict()
+        ret.set(models.BCRDistribution.objects.create(
                 hazard_output=hazard_output,
                 output=models.Output.objects.create_output(
                     self.job,
                     "BCR Distribution for hazard %s" % hazard_output,
-                    "bcr_distribution")).pk
-        ]
+                    "bcr_distribution")))
+        return ret
 
     def create_statistical_outputs(self):
         """
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        pass
+        return base.OutputDict()
 
     def set_risk_models(self):
         """
