@@ -127,6 +127,10 @@ _devtest_innervm_run () {
     done
     IFS="$old_ifs"
 
+    # extract dependencies for this package
+    pkgs_list="$(deps_list "all" debian/control)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
     # build oq-hazardlib speedups and put in the right place
     ssh $lxc_ip "cd oq-hazardlib
                  python ./setup.py build
@@ -134,10 +138,6 @@ _devtest_innervm_run () {
                      o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
                      cp \$i \$o
                  done"
-
-    # extract dependencies for this package
-    pkgs_list="$(deps_list "all" debian/control)"
-    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
