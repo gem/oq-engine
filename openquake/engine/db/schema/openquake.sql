@@ -191,8 +191,8 @@ CREATE TABLE uiapi.performance (
     task VARCHAR,
     operation VARCHAR NOT NULL,
     duration FLOAT,
-    pymemory INTEGER,
-    pgmemory INTEGER
+    pymemory BIGINT,
+    pgmemory BIGINT
 )  TABLESPACE uiapi_ts;
 
 
