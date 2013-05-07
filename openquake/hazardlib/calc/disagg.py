@@ -326,18 +326,13 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                             diss_idx = (i_mag, i_dist, i_lon,
                                         i_lat, i_eps, i_trt)
 
-                            # compute probability of exceedance due to the set
-                            # of ruptures in the current disaggregation bin
-                            poe = 1.0
-                            for i_src in src_indices:
-                                src_idx = src_idxs == i_src
-                                prob_idx = (mag_idx & dist_idx & lon_idx
-                                            & lat_idx & trt_idx & src_idx)
+                            prob_idx = (mag_idx & dist_idx & lon_idx
+                                        & lat_idx & trt_idx)
 
-                                poe *= numpy.prod(
-                                    (1 - probs_one_or_more[prob_idx]) **
-                                    probs_exceed_given_rup[prob_idx, i_eps]
-                                )
+                            poe = numpy.prod(
+                                (1 - probs_one_or_more[prob_idx]) **
+                                probs_exceed_given_rup[prob_idx, i_eps]
+                            )
                             poe = 1 - poe
 
                             diss_matrix[diss_idx] = poe

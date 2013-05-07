@@ -426,7 +426,8 @@ class RectangularMesh(Mesh):
             return super(RectangularMesh, self)._get_proj_enclosing_polygon()
 
         proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+            *geo_utils.get_spherical_bounding_box(self.lons.flatten(),
+                                                  self.lats.flatten())
         )
         mesh2d = numpy.array(proj(self.lons.transpose(),
                                   self.lats.transpose())).transpose()

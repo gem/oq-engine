@@ -159,6 +159,37 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
                          'some points are too far from the projection '
                          'center lon=180.0 lat=45.0')
 
+    def test_projection_across_international_date_line(self):
+        # tests that given a polygon crossing the internation date line,
+        # projecting its coordinates from spherical to cartesian and then back
+        # to spherical gives the original values
+        west = 179.7800
+        east = -179.8650
+        north = 51.4320
+        south = 50.8410
+        proj = utils.get_orthographic_projection(west, east, north, south)
+
+        lons = numpy.array([179.8960, 179.9500, -179.9930, -179.9120,
+                            -179.8650, -179.9380, 179.9130, 179.7800])
+        lats = numpy.array([50.8410, 50.8430, 50.8490, 50.8540, 51.4160,
+                            51.4150, 51.4270, 51.4320])
+        xx, yy = proj(lons, lats)
+        comp_lons, comp_lats = proj(xx, yy, reverse=True)
+        numpy.testing.assert_allclose(lons, comp_lons)
+        numpy.testing.assert_allclose(lats, comp_lats)
+
+        west = 179.
+        east = -179.
+        north = 1
+        south = -1
+        proj = utils.get_orthographic_projection(west, east, north, south)
+        lons = numpy.array([179.0, -179.0])
+        lats = numpy.array([-1, 1])
+        xx, yy = proj(lons, lats)
+        comp_lons, comp_lats = proj(xx, yy, reverse=True)
+        numpy.testing.assert_allclose(lons, comp_lons)
+        numpy.testing.assert_allclose(lats, comp_lats)
+
 
 class GetMiddlePointTestCase(unittest.TestCase):
     def test_same_points(self):
