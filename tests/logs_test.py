@@ -35,11 +35,11 @@ from tests.utils import helpers
 
 class PythonAMQPLogTestCase(unittest.TestCase):
     LOGGER_NAME = 'tests.PythonAMQPLogTestCase'
-    ROUTING_KEY = 'oq.job.None.%s.#' % LOGGER_NAME
+    ROUTING_KEY = 'oq.None.None.%s.#' % LOGGER_NAME
 
     def setUp(self):
         self.amqp_handler = logs.AMQPHandler(level=logging.DEBUG)
-        self.amqp_handler.set_job_id(None)
+        self.amqp_handler.set_calc_info(None, None)
 
         self.log = logging.getLogger(self.LOGGER_NAME)
         self.log.setLevel(logging.DEBUG)
@@ -99,9 +99,9 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         (info_key, info), (warning_key, warning) = messages
 
         self.assertEqual(info_key,
-                         'oq.job.None.tests.PythonAMQPLogTestCase.child1')
+                         'oq.None.None.tests.PythonAMQPLogTestCase.child1')
         self.assertEqual(warning_key,
-                         'oq.job.None.tests.PythonAMQPLogTestCase.child2')
+                         'oq.None.None.tests.PythonAMQPLogTestCase.child2')
 
         # checking info message
         self.assertAlmostEqual(info['created'], time.time(), delta=1)
@@ -200,57 +200,52 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         logging.root.handlers = self.root_handlers_orig
 
     def test_init_logs_amqp_send_with_no_amqp_handler(self):
-        """
-        init_logs_amqp_send() will add an `AMQPHandler` instance to the
-        root logger if none is present.
-        """
+        # init_logs_amqp_send() will add an `AMQPHandler` instance to the
+        # root logger if none is present.
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
         with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             with helpers.patch("logging.root.addHandler") as mah:
-                logs.init_logs_amqp_send("info", 321)
+                logs.init_logs_amqp_send("info", 'hazard', 321)
                 self.assertEqual(1, mah.call_count)
                 (single_arg,) = mah.call_args[0]
                 self.assertTrue(isinstance(single_arg, logs.AMQPHandler))
         self.assertEqual(logging.root.level, logging.INFO)
 
     def test_init_logs_amqp_send_with_existing_amqp_handler(self):
-        """
-        init_logs_amqp_send() will not add more than one `AMQPHandler`
-        instance to the root logger.
-        """
+        # init_logs_amqp_send() will not add more than one `AMQPHandler`
+        # instance to the root logger.
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
         with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             handler = logs.AMQPHandler()
-            handler.set_job_id = mock.Mock()
+            handler.set_calc_info = mock.Mock()
             logging.root.handlers.append(handler)
             with helpers.patch("logging.root.addHandler") as mah:
-                logs.init_logs_amqp_send("info", 322)
+                logs.init_logs_amqp_send("info", 'risk', 322)
                 self.assertEqual(0, mah.call_count)
-                self.assertEqual(1, handler.set_job_id.call_count)
-                self.assertEqual((322,), handler.set_job_id.call_args[0])
+                self.assertEqual(1, handler.set_calc_info.call_count)
+                self.assertEqual(('risk', 322,),
+                                 handler.set_calc_info.call_args[0])
 
     def test_init_logs_amqp_send_changes_logging_level(self):
-        """
-        init_logs_amqp_send() will change the root level logger anyway.
-        """
+        # init_logs_amqp_send() will change the root level logger anyway.
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
         with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             handler = logs.AMQPHandler()
             logging.root.handlers.append(handler)
-            handler.set_job_id = mock.Mock()
+            handler.set_calc_info = mock.Mock()
 
             logging.root.setLevel(logging.INFO)
 
-            logs.init_logs_amqp_send("warning", 322)
+            logs.init_logs_amqp_send("warning", 'hazard', 322)
             self.assertEqual(logging.root.level, logging.WARNING)
 
-            logs.init_logs_amqp_send("debug", 323)
+            logs.init_logs_amqp_send("debug", 'risk', 323)
             self.assertEqual(logging.root.level, logging.DEBUG)
 
-            logs.init_logs_amqp_send("error", 324)
+            logs.init_logs_amqp_send("error", 'hazard', 324)
             self.assertEqual(logging.root.level, logging.ERROR)
 
 
