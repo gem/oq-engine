@@ -116,7 +116,7 @@ def log_percent_complete(job_id, ctype):
 def init_logs_amqp_send(level, calc_domain, calc_id):
     """
     Initialize logs to send records with level `level` or above from loggers
-    'oq.job.*' through AMQP.
+    'oq.hazard.*' or 'oq.risk.*' through AMQP.
 
     Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
