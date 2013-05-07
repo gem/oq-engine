@@ -184,8 +184,8 @@ _devtest_innervm_run () {
     scp "${lxc_ip}:oq-engine/coverage.xml" .
 
     # TODO: version check
-    echo "NOW PRESS ENTER TO CONTINUE"
-    read aaa
+#    echo "NOW PRESS ENTER TO CONTINUE"
+#    read aaa
     trap ERR
 
     return
