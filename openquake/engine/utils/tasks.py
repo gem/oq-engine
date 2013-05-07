@@ -145,7 +145,6 @@ def oqtask(task_func):
                                          calc_domain='risk',
                                          calc_id=calculation.id)
 
-
             logs.LOG.debug('job.is_running == %s' % job.is_running)
             logs.LOG.debug('job.status == %s' % job.status)
             # Tasks can be used in either the `execute` or `post-process` phase
@@ -156,7 +155,8 @@ def oqtask(task_func):
             # The job is running.
             # ... now continue with task execution.
             task_func(*args, **kwargs)
-            EnginePerformanceMonitor.cache.flush()  # flush the performance logs
+            # flush the performance logs
+            EnginePerformanceMonitor.cache.flush()
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
