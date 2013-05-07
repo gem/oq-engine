@@ -22,7 +22,9 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-from collections import OrderedDict
+import collections
+import numpy
+
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
@@ -34,6 +36,13 @@ from django.db import connections
 KILOMETERS_TO_METERS = 1000
 
 
+# a Django cursor perform some caching which is polluting the
+# memory profiler, this is why we are using the underlying cursor
+def getcursor(route):
+    """Return a psycogp2 cursor from a Django route"""
+    return connections[route].connection.cursor()
+
+
 class HazardGetter(object):
     """
     Base abstract class of an Hazard Getter.
@@ -43,20 +52,38 @@ class HazardGetter(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr hazard_id:
-        The ID of an Hazard output container (e.g.
-        :class:`openquake.engine.db.models.HazardCurve`)
+    :attr int hazard_output_id:
+        The ID of an Hazard Output object
+        :class:`openquake.engine.db.models.Output`
+
+    :attr int hazard_id:
+        The ID of an Hazard Output container object
+        (e.g. :class:`openquake.engine.db.models.HazardCurve`)
 
     :attr assets:
         The assets for which we wants to compute.
 
     :attr max_distance:
         The maximum distance, in kilometers, to use.
+
+    :attr imt:
+        The imt (in long form) for which data have to be retrieved
+
+    :attr float weight:
+        The weight (if applicable) to be given to the retrieved data
     """
-    def __init__(self, hazard_id, assets, max_distance):
-        self.hazard_id = hazard_id
+    def __init__(self, hazard_output, assets, max_distance, imt):
+        self.hazard_output_id = hazard_output.id
+        hazard = self.container(hazard_output)
+        self.hazard_id = hazard.id
         self.assets = assets
         self.max_distance = max_distance
+        self.imt = imt
+
+        if hasattr(hazard, 'lt_realization') and hazard.lt_realization:
+            self.weight = hazard.lt_realization.weight
+        else:
+            self.weight = None
 
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
@@ -65,10 +92,19 @@ class HazardGetter(object):
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+        self.all_asset_ids = set(self.asset_dict)
+
+    def container(self, hazard_output):
+        """
+        Returns the corresponding output container object from an
+        Hazard :class:`openquake.engine.db.models.Output` instance
+        """
+        raise NotImplementedError
 
     def __repr__(self):
-        return """HazardGetter max_distance=%s assets=%s""" % (
-            self.max_distance, [a.id for a in self.assets])
+        return "<%s max_distance=%s assets=%s>" % (
+            self.__class__.__name__, self.max_distance,
+            [a.id for a in self.assets])
 
     def get_data(self, imt):
         """
@@ -88,12 +124,8 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
-    def __call__(self, imt):
+    def __call__(self):
         """
-        :param str imt: a string representation of the intensity
-        measure type (e.g. SA(0.1)) in which the hazard data should be
-        returned
-
         :returns:
             A tuple with three elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
@@ -101,31 +133,20 @@ class HazardGetter(object):
             IDs of assets that has been filtered out by the getter by the
             ``maximum_distance`` criteria.
         """
-        data = self.get_data(imt)
+        # data is a gmf or a set of hazard curves
+        asset_ids, data = self.get_data(self.imt)
 
-        filtered_asset_ids = set(data.keys())
-        all_asset_ids = set(self.asset_dict.keys())
-        missing_asset_ids = all_asset_ids - filtered_asset_ids
-        extra_asset_ids = filtered_asset_ids - all_asset_ids
-
-        # FIXME(lp). It might happens that the convex hull contains
-        # more assets than the requested ones. At this moment, we just
-        # ignore them.
-        if extra_asset_ids:
-            logs.LOG.debug("Extra asset have been computed ids: %s" % (
-                models.ExposureData.objects.filter(
-                    pk__in=extra_asset_ids)))
+        missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
+            # please dont' remove this log: it was required by Vitor
             logs.LOG.warn(
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        return ([self.asset_dict[asset_id] for asset_id in data
-                 if asset_id in self.asset_dict],
-                [data[asset_id] for asset_id in data
-                 if asset_id in self.asset_dict],
-                missing_asset_ids)
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids], data)
+
+        return ret
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -140,10 +161,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
         A cache of the computed hazard curve object on a per-location basis.
     """
 
-    def __init__(self, hazard_id, assets, max_distance):
+    def __init__(self, hazard, assets, max_distance, imt):
         super(HazardCurveGetterPerAsset, self).__init__(
-            hazard_id, assets, max_distance)
+            hazard, assets, max_distance, imt)
         self._cache = {}
+
+    def container(self, hazard_output):
+        return hazard_output.hazardcurve
 
     def get_data(self, imt):
         """
@@ -173,10 +197,14 @@ class HazardCurveGetterPerAsset(HazardGetter):
             asset.site, hazard_id, imls))
             for asset in self.assets]
 
-        return OrderedDict(
-            [(asset_id, hazard_curve)
-             for asset_id, (hazard_curve, distance) in hazard_assets
-             if distance < self.max_distance * KILOMETERS_TO_METERS])
+        assets = []
+        curves = []
+        for asset_id, (hazard_curve, distance) in hazard_assets:
+            if distance < self.max_distance * KILOMETERS_TO_METERS:
+                assets.append(asset_id)
+                curves.append(hazard_curve)
+
+        return assets, curves
 
     def get_by_site(self, site, hazard_id, imls):
         """
@@ -187,7 +215,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         query = """
         SELECT
@@ -213,13 +241,20 @@ class HazardCurveGetterPerAsset(HazardGetter):
         return hazard, distance
 
 
+GmfsRuptures = collections.namedtuple('GmfsRuptures', 'gmfs ruptures')
+
+
 class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """
 
+    def container(self, hazard_output):
+        return hazard_output.gmfcollection
+
+    #@profile
     def get_data(self, imt):
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         imt_type, sa_period, sa_damping = models.parse_imt(imt)
         spectral_filters = ""
@@ -265,42 +300,22 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # nested dicts with structure: asset_id -> (rupture_id -> gmv)
-        assets_ruptures_gmvs = OrderedDict()
+        # generate an ordered array with all the ruptures
+        _rupture_set = set()
+        for _, _, ruptures in data:
+            _rupture_set.update(ruptures)
+        sorted_ruptures = numpy.array(sorted(_rupture_set))
 
-        # store all the ruptures returned by the query
-        ruptures = []
-
-        for asset_id, gmvs, rupture_ids in data:
-            assets_ruptures_gmvs[asset_id] = dict(zip(rupture_ids, gmvs))
-            ruptures.extend(rupture_ids)
-        ruptures = set(ruptures)
-
-        # We expect that the query may return a different number of
-        # gmvs and ruptures for each asset (because only the ruptures
-        # that gives a positive ground shaking are stored). Here on,
-        # we finalize `assets_ruptures_gmvs` by filling in with zero
-        # values for each rupture that has not given a contribute.
-
-        # for each asset, we look for missing ruptures
-        for asset_id, ruptures_gmvs_dict in assets_ruptures_gmvs.items():
-
-            # all the ruptures producing a positive ground shaking for
-            # `asset`
-            asset_ruptures = set(ruptures_gmvs_dict)
-
-            missing_ruptures = ruptures - asset_ruptures
-
-            # we finalize the asset data with 0
-            for rupture_id in missing_ruptures:
-                ruptures_gmvs_dict[rupture_id] = 0.
-
-        # maps asset_id -> to a 2-tuple (rupture_ids, gmvs)
-        return OrderedDict([
-            (asset_id, zip(
-                *sorted(zip(asset_data.values(), asset_data.keys()),
-                        key=lambda x: x[1])))
-            for asset_id, asset_data in assets_ruptures_gmvs.items()])
+        # maps asset_id -> to a 2-tuple (gmvs, ruptures)
+        assets, gmfs = [], []
+        for asset_id, gmvs, ruptures in data:
+            # the query may return spurious assets outside the considered block
+            if asset_id in self.asset_dict:  # in block
+                gmv = dict(zip(ruptures, gmvs))
+                gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
+                assets.append(asset_id)
+                gmfs.append(gmvs)
+        return assets, GmfsRuptures(numpy.array(gmfs), sorted_ruptures)
 
 
 # TODO: this calls will disappear soon: see
@@ -310,9 +325,8 @@ class GroundMotionScenarioGetter(HazardGetter):
     Hazard getter for loading ground motion values. It uses the same
     approach used in :class:`GroundMotionValuesGetter`.
     """
-
     def get_data(self, imt):
-        cursor = connections['job_init'].cursor()
+        cursor = getcursor('job_init')
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
@@ -339,4 +353,13 @@ class GroundMotionScenarioGetter(HazardGetter):
                 self.assets[0].exposure_model_id)
         cursor.execute(query, args)
         # print cursor.mogrify(query, args)
-        return OrderedDict(cursor.fetchall())
+        assets, gmfs = [], []
+        for asset_id, gmvs in cursor.fetchall():
+            # the query may return spurious assets outside the considered block
+            if asset_id in self.asset_dict:  # in block
+                assets.append(asset_id)
+                gmfs.append(gmvs)
+        return assets, gmfs
+
+    def container(self, hazard_output):
+        return hazard_output
