@@ -133,9 +133,18 @@ def oqtask(task_func):
         try:
             # check if the job is still running
             job = models.OqJob.objects.get(id=job_id)
+            calculation = job.calculation
 
             # Setup task logging, via AMQP ...
-            logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
+            if isinstance(calculation, models.HazardCalculation):
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='hazard',
+                                         calc_id=calculation.id)
+            else:
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='risk',
+                                         calc_id=calculation.id)
+
 
             logs.LOG.debug('job.is_running == %s' % job.is_running)
             logs.LOG.debug('job.status == %s' % job.status)
