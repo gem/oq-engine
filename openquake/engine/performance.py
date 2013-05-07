@@ -80,7 +80,8 @@ class PerformanceMonitor(object):
         print 'start_time =', self.start_time
         print 'duration =', self.duration
         print 'mem =', self.mem
-        print 'exc =', self.exc
+        if self.exc:
+            print 'exc = %s(%s)' % (self.exc.__class__.__name__, self.exc)
 
 
 class EnginePerformanceMonitor(PerformanceMonitor):
